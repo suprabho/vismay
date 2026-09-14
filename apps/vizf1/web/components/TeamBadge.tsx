@@ -19,9 +19,11 @@ const SIZE = {
 }
 
 /**
- * Compact team badge: a square chip with either the constructor's logo (on a
- * light background) or a tinted abbreviation in the team's primary colour as
- * fallback. Used next to driver rows and on team pages.
+ * Compact team badge: a square chip tinted in the team's primary colour with
+ * either the constructor's logo mark or, as fallback, the team's abbreviation.
+ * The bundled marks are white glyphs (see @vizf1/brand constructorLogos), so
+ * the chip background is always the dark team tint — never white.
+ * Used next to driver rows and on team pages.
  */
 export function TeamBadge({
   constructorId,
@@ -51,11 +53,7 @@ export function TeamBadge({
     <span className="inline-flex items-center gap-2 align-middle">
       <span
         className={`inline-flex shrink-0 items-center justify-center rounded-md wdth-dense font-semibold tracking-wide ${box} ${showLogo ? pad : ''} ${text}`}
-        style={
-          showLogo
-            ? { backgroundColor: 'rgba(255,255,255,0.95)' }
-            : { backgroundColor: `${resolved}22`, color: resolved }
-        }
+        style={{ backgroundColor: `${resolved}22`, color: resolved }}
       >
         {showLogo ? (
           <img

@@ -36,22 +36,33 @@ export const F1_BRAND = {
    * pushes these into vizf1_constructors.logo_url on every upsert. UI reads
    * from the DB at runtime; this map is the seed/source-of-truth.
    *
-   * URLs point at Wikimedia / Wikipedia for stability — swap to a private CDN
-   * if licensing requires it. Missing entries are fine; UI falls back to the
-   * abbreviation chip when logo_url is null.
+   * The 2026 marks are single-colour white glyphs bundled with the web app at
+   * apps/vizf1/web/public/constructors/<id>.avif (48×48, transparent). Paths
+   * are root-relative so they resolve against whichever origin serves the
+   * app; render them on a dark or team-tinted surface, never on white.
+   * OpenF1 has spelled some teams more than one way over time (e.g. "Haas"
+   * vs "Haas F1 Team"), so both slug forms point at the same file.
+   *
+   * Missing entries are fine; UI falls back to the abbreviation chip when
+   * logo_url is null.
    */
   constructorLogos: {
-    red_bull_racing: 'https://upload.wikimedia.org/wikipedia/en/f/fa/Red_Bull_Racing_Logo_2026.svg',
-    ferrari: 'https://upload.wikimedia.org/wikipedia/en/d/df/Scuderia_Ferrari_HP_logo_24.svg',
-    mercedes:
-      'https://upload.wikimedia.org/wikipedia/commons/f/fc/Mercedes-AMG_Petronas_F1_Team_logo_%282026%29.svg',
-    mclaren: 'https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg',
-    aston_martin: 'https://upload.wikimedia.org/wikipedia/en/1/15/Aston_Martin_Aramco_2024_logo.png',
-    alpine: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/BWT_Alpine_F1_Team_Logo.png',
-    williams: 'https://upload.wikimedia.org/wikipedia/commons/1/12/Atlassian_Williams_F1_Team_logo.svg',
-    rb: 'https://upload.wikimedia.org/wikipedia/en/2/2b/VCARB_F1_logo.svg',
-    kick_sauber: 'https://upload.wikimedia.org/wikipedia/commons/9/94/Logo_sauber_2023.jpg',
-    haas: 'https://upload.wikimedia.org/wikipedia/commons/1/18/TGR_Haas_F1_Team_Logo_%282026%29.svg',
+    red_bull_racing: '/constructors/red_bull_racing.avif',
+    red_bull: '/constructors/red_bull_racing.avif',
+    ferrari: '/constructors/ferrari.avif',
+    mercedes: '/constructors/mercedes.avif',
+    mclaren: '/constructors/mclaren.avif',
+    aston_martin: '/constructors/aston_martin.avif',
+    williams: '/constructors/williams.avif',
+    haas: '/constructors/haas.avif',
+    haas_f1_team: '/constructors/haas.avif',
+    audi: '/constructors/audi.avif',
+    cadillac: '/constructors/cadillac.avif',
+    alpine: '/constructors/alpine.avif',
+    // Racing Bulls share the bulls emblem with the senior team; the supplied
+    // mark is the same glyph, kept as its own file so it can diverge later.
+    rb: '/constructors/racing_bulls.avif',
+    racing_bulls: '/constructors/racing_bulls.avif',
   } as Record<string, string>,
 } as const
 
