@@ -18,7 +18,7 @@ import { flushSync } from 'react-dom'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
 import { seedTemplate, detectSupport, SEED_GRAPHIC_ID } from './layers/seedTemplate'
-import { isUmamiKind, type CardComposition, type MapSpec, type TemplateKind, type Transform, type UmamiTemplateKind } from './layers/types'
+import { isUmamiKind, reflowMapAspects, type CardComposition, type MapSpec, type TemplateKind, type Transform, type UmamiTemplateKind } from './layers/types'
 import { remapCompositionTheme } from './layers/retheme'
 import { UMAMI_PAPER, UMAMI_SPICE, UMAMI_THEMES, umamiThemeName, type UmamiThemeName } from './umami/themes'
 import { seedUmamiTemplate, type UmamiDishLite, type UmamiSeedContent } from './umami/seeds'
@@ -540,6 +540,13 @@ export function ShareCardCreator({
     },
     [activeUmamiTheme],
   )
+
+  // Card format change: percentages are relative to card edges, so re-derive
+  // every aspect-locked map box's height against the new format.
+  const pickRatio = useCallback((next: AspectRatio) => {
+    setRatio(next)
+    setComposition((prev) => (prev ? { ...prev, elements: reflowMapAspects(prev.elements, next) } : prev))
+  }, [])
 
   const pickStory = useCallback(
     (nextSlug: string) => {
@@ -1324,6 +1331,18 @@ export function ShareCardCreator({
   })()
   const mapEditIsBackground = mapEditSel?.kind === 'background'
 
+  // Camera-editor frame for a map ELEMENT: its real box in output pixels (an
+  // unboxed legacy map is square), so the picker previews the exact shape the
+  // card renders — not a fixed 1:1.
+  const mapElementFrame = (() => {
+    const el = mapEditSel?.kind === 'element' ? composition?.elements.find((e) => e.id === mapEditSel.id) : undefined
+    const out = OUTPUT_SIZE[ratio]
+    const w = el ? Math.round((el.transform.widthPct / 100) * out.w) : 1080
+    const h = el?.transform.heightPct != null ? Math.round((el.transform.heightPct / 100) * out.h) : w
+    const shape = el?.kind === 'map' && el.aspect ? el.aspect : `${w}×${h}`
+    return { width: w, height: h, label: `Map element · ${shape}` }
+  })()
+
   // Seed for a "+ Chart" graphic: the current section's story chart id (if any).
   const defaultChartId = useMemo(() => detectSupport(selectedUnit).chartId ?? '', [selectedUnit])
 
@@ -1623,7 +1642,7 @@ export function ShareCardCreator({
                 </label>
                 <label className={labelCls}>
                   Format
-                  <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
+                  <select value={ratio} onChange={(e) => pickRatio(e.target.value as AspectRatio)} className={selectCls}>
                     {(isUmami ? ASPECT_RATIOS.filter((r) => r.id === '1:1' || r.id === '4:5') : ASPECT_RATIOS).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.label}
@@ -1730,6 +1749,7 @@ export function ShareCardCreator({
               setSelection={setSelection}
               story={{ slug: story.slug, theme: story.theme, assets }}
               sections={['elements']}
+              ratio={ratio}
               defaultChartId={defaultChartId}
               fillHeight
               multiSel={multiSel}
@@ -1896,7 +1916,7 @@ export function ShareCardCreator({
           focusArea={mapEditIsBackground ? SHARE_FOCUS_AREA[ratio] : CONTAINED_FOCUS}
           frame={
             mapEditSel?.kind === 'element'
-              ? { width: 1080, height: 1080, label: `Map element · ${ratio}` }
+              ? mapElementFrame
               : { width: OUTPUT_SIZE[ratio].w, height: OUTPUT_SIZE[ratio].h, label: `Share card · ${ratio}` }
           }
           onApplyView={applyMapView}

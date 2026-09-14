@@ -5,7 +5,7 @@ import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 import { FLAG_COUNTRIES, flagImageUrl, flagThumbUrl } from '../flags'
 import type { CardComposition, ElementGroup, ElementLayer, TextBlock, Transform } from '../layers/types'
-import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TRANSFORM, emptyMapSpec } from '../layers/types'
+import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TRANSFORM, emptyMapSpec, mapBoxHeightPct } from '../layers/types'
 import {
   addAnnotation,
   addElement,
@@ -47,6 +47,8 @@ interface Props {
    *  single section). Layer-level controls live in the right-hand Inspector;
    *  this panel only lists, adds, orders and selects. */
   sections?: LayerSection[]
+  /** Card format — sizes a new map's square box against the card. */
+  ratio?: AspectRatio
   /** Story chart id used to seed a "+ Chart" graphic (blank → custom chart). */
   defaultChartId?: string
   /** Fill the parent's height and scroll only the element list (the Foreground
@@ -68,11 +70,13 @@ const ELEMENT_DEFAULT_WIDTH: Record<ElementLayer['kind'], number> = {
   map: 60,
 }
 
-/** Newly added graphics get a width×height box; decorations size by width only. */
-function newTransform(kind: ElementLayer['kind']): Transform {
+/** Newly added graphics get a width×height box; decorations size by width only.
+ *  A new map starts as a locked 1:1 box (the inspector's Aspect control switches
+ *  it to other shapes). */
+function newTransform(kind: ElementLayer['kind'], ratio: AspectRatio): Transform {
   const base: Transform = { ...DEFAULT_TRANSFORM, widthPct: ELEMENT_DEFAULT_WIDTH[kind] }
   if (kind === 'chart') return { ...base, yPct: 56, heightPct: DEFAULT_GRAPHIC_HEIGHT_PCT }
-  if (kind === 'map') return { ...base, heightPct: 45 }
+  if (kind === 'map') return { ...base, heightPct: mapBoxHeightPct(base.widthPct, '1:1', ratio) }
   return base
 }
 
@@ -88,6 +92,7 @@ export function LayerPanel({
   setSelection,
   story,
   sections,
+  ratio = '1:1',
   defaultChartId,
   fillHeight,
   multiSel = [],
@@ -106,7 +111,7 @@ export function LayerPanel({
 
   const addEl = (data: Partial<ElementLayer> & { kind: ElementLayer['kind'] }, name: string) => {
     const id = uid('el')
-    const full = { id, name, visible: true, locked: false, transform: newTransform(data.kind), ...data } as ElementLayer
+    const full = { id, name, visible: true, locked: false, transform: newTransform(data.kind, ratio), ...data } as ElementLayer
     onChange(addElement(composition, full))
     setSelection({ kind: 'element', id })
     setAddMode(null)
@@ -235,7 +240,7 @@ export function LayerPanel({
               + Chart
             </button>
             <button
-              onClick={() => addEl({ kind: 'map', ...emptyMapSpec() }, 'Map')}
+              onClick={() => addEl({ kind: 'map', aspect: '1:1', ...emptyMapSpec() }, 'Map')}
               className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
             >
               + Map

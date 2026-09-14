@@ -10,8 +10,9 @@ import type {
   FontFamily,
   MapSpec,
   TextBlock,
+  Transform,
 } from '../layers/types'
-import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TEXT_PANEL, emptyMapSpec, isBoxSized } from '../layers/types'
+import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TEXT_PANEL, MAP_ASPECTS, emptyMapSpec, isBoxSized, mapBoxHeightPct, type MapAspect } from '../layers/types'
 import {
   groupName,
   patchBackground,
@@ -394,10 +395,45 @@ function ElementInspector({
   const el = composition.elements.find((e) => e.id === id)
   if (!el) return null
 
-  // Box-fit toggle for map / image graphics (a `heightPct` boxes them W×H; its
-  // absence reverts to a square map / intrinsic-ratio image).
+  // Map box aspect: a locked preset drives heightPct from widthPct (so W is the
+  // only size field); "Free" exposes both W and H. An unboxed legacy map renders
+  // square, so it reads as 1:1 here.
+  const mapAspectValue: MapAspect | 'free' =
+    el.kind === 'map' ? (el.aspect ?? (el.transform.heightPct == null ? '1:1' : 'free')) : 'free'
+  const setMapAspect = (v: MapAspect | 'free') => {
+    if (el.kind !== 'map') return
+    if (v === 'free') {
+      onChange(updateElement(composition, id, { aspect: undefined, transform: { ...el.transform, heightPct: el.transform.heightPct ?? mapBoxHeightPct(el.transform.widthPct, '1:1', ratio) } }))
+      return
+    }
+    onChange(updateElement(composition, id, { aspect: v, transform: { ...el.transform, heightPct: mapBoxHeightPct(el.transform.widthPct, v, ratio) } }))
+  }
+  const mapAspectSelect =
+    el.kind === 'map' ? (
+      <Field label="Aspect">
+        <select value={mapAspectValue} onChange={(e) => setMapAspect(e.target.value as MapAspect | 'free')} className={selectCls}>
+          {MAP_ASPECTS.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.label}
+            </option>
+          ))}
+          <option value="free">Free (W × H)</option>
+        </select>
+      </Field>
+    ) : null
+  const aspectLocked = el.kind === 'map' && !!el.aspect
+  // With a locked aspect, a width change re-derives the height.
+  const patchTransform = (patch: Partial<Transform>) => {
+    if (el.kind === 'map' && el.aspect && patch.widthPct != null) {
+      patch = { ...patch, heightPct: mapBoxHeightPct(patch.widthPct, el.aspect, ratio) }
+    }
+    onChange(patchElementTransform(composition, id, patch))
+  }
+
+  // Box-fit toggle for image graphics (a `heightPct` boxes them W×H; its
+  // absence reverts to the intrinsic ratio).
   const fillBoxToggle =
-    el.kind === 'image' || el.kind === 'map' ? (
+    el.kind === 'image' ? (
       <label className="mt-2 flex items-center gap-2 text-[12px] text-neutral-200">
         <input
           type="checkbox"
@@ -418,10 +454,11 @@ function ElementInspector({
   return (
     <Panel title={elementTitle(el)}>
       <InspectorSection title="Transform">
+        {mapAspectSelect && <div className="mb-2">{mapAspectSelect}</div>}
         <TransformControls
           transform={el.transform}
-          showHeight={isBoxSized(el)}
-          onChange={(patch) => onChange(patchElementTransform(composition, id, patch))}
+          showHeight={isBoxSized(el) && !aspectLocked}
+          onChange={patchTransform}
         />
         {fillBoxToggle}
       </InspectorSection>
