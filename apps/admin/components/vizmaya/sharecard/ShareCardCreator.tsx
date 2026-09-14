@@ -1335,7 +1335,14 @@ export function ShareCardCreator({
 
       {/* ── Top bar: title · saved cards · actions ─────────────────────────── */}
       <div className="flex shrink-0 items-center gap-3">
-        <h1 className="text-lg font-semibold text-neutral-100">{isUmami ? 'Social frames' : 'Share cards'}</h1>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-neutral-100">{isUmami ? 'Social frames' : 'Share cards'}</h1>
+          <p className="text-[11px] text-neutral-500">
+            {currentCardId
+              ? `Editing “${savedCards.find((c) => c.id === currentCardId)?.name ?? 'saved card'}”`
+              : 'Layers on the left · canvas in the middle · selected-layer controls on the right.'}
+          </p>
+        </div>
 
         <div ref={savedRef} className="relative">
           <button
@@ -1557,7 +1564,9 @@ export function ShareCardCreator({
           ))}
         </div>
 
-        {/* active-category panel */}
+        {/* active-category panel — card setup, theme, and the layer LISTS
+            (background / foreground / text). Every layer-level control lives in
+            the right-hand Inspector column, like the footshorts composer. */}
         <div className="min-w-0 flex-1 space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           {error && (
             <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">{error}</p>
@@ -1699,21 +1708,28 @@ export function ShareCardCreator({
             />
           )}
 
-          {composition && inspectorStory && activeTab === 'background' && (
-            <Inspector composition={composition} selection={{ kind: 'background' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+          {composition && story && activeTab === 'background' && (
+            <>
+              <LayerPanel
+                composition={composition}
+                onChange={setComposition}
+                selection={selection}
+                setSelection={setSelection}
+                story={{ slug: story.slug, theme: story.theme, assets }}
+                sections={['background', 'branding']}
+              />
+              <p className="text-[10px] text-neutral-600">Pick a row to edit its type and settings on the right.</p>
+            </>
           )}
 
-          {composition && inspectorStory && activeTab === 'elements' && (
+          {composition && story && activeTab === 'elements' && (
             <LayerPanel
               composition={composition}
               onChange={setComposition}
               selection={selection}
               setSelection={setSelection}
-              story={{ slug: story!.slug, theme: story!.theme, assets }}
+              story={{ slug: story.slug, theme: story.theme, assets }}
               sections={['elements']}
-              inspectorStory={inspectorStory}
-              ratio={ratio}
-              onEditMap={onEditMap}
               defaultChartId={defaultChartId}
               fillHeight
               multiSel={multiSel}
@@ -1721,22 +1737,15 @@ export function ShareCardCreator({
             />
           )}
 
-          {composition && activeTab === 'text' && (
-            <>
-              <LayerPanel
-                composition={composition}
-                onChange={setComposition}
-                selection={selection}
-                setSelection={setSelection}
-                story={{ slug: story!.slug, theme: story!.theme, assets }}
-                sections={['text']}
-              />
-              {(selection?.kind === 'text' || selection?.kind === 'annotation') && inspectorStory && (
-                <div className="border-t border-white/10 pt-3">
-                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
-                </div>
-              )}
-            </>
+          {composition && story && activeTab === 'text' && (
+            <LayerPanel
+              composition={composition}
+              onChange={setComposition}
+              selection={selection}
+              setSelection={setSelection}
+              story={{ slug: story.slug, theme: story.theme, assets }}
+              sections={['text']}
+            />
           )}
 
           {!composition && !loading && <p className="text-[11px] text-neutral-600">Pick a story to start.</p>}
@@ -1858,6 +1867,22 @@ export function ShareCardCreator({
           </div>
         ) : (
           <p className="py-20 text-center text-xs text-neutral-600">{loading ? 'Loading story…' : 'Pick a story and section to start.'}</p>
+        )}
+      </div>
+
+      {/* ── Right: selected-layer properties (transform · content) ─────────── */}
+      <div className="w-full shrink-0 lg:h-full lg:min-h-0 lg:w-80 lg:overflow-y-auto lg:pl-1">
+        {composition && inspectorStory ? (
+          <Inspector
+            composition={composition}
+            selection={selection}
+            onChange={setComposition}
+            story={inspectorStory}
+            ratio={ratio}
+            onEditMap={onEditMap}
+          />
+        ) : (
+          <p className="px-1 py-2 text-[11px] text-neutral-600">Select a layer to edit it.</p>
         )}
       </div>
       </div>
