@@ -34,6 +34,7 @@ import { LogoPicker } from './LogoPicker'
 import { IconPicker } from './IconPicker'
 import { EmojiPicker } from './EmojiPicker'
 import { Inspector, type MapDefaults } from './Inspector'
+import type { MapImportSources } from './MapSectionImport'
 import { labelCls } from './controls'
 
 export type LayerSection = 'background' | 'text' | 'elements' | 'branding'
@@ -44,6 +45,7 @@ export interface InspectorStory {
   theme: Theme
   assets: AssetEntry[]
   defaults: MapDefaults
+  mapSources?: MapImportSources
 }
 
 interface Props {
