@@ -1,0 +1,73 @@
+{
+  "steps": [
+    {
+      "title": "How far the front moved between beats (km, shift in mean latitude)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}<br/>≈ {c} km"
+        },
+        "grid": { "left": "3%", "right": "10%", "bottom": "3%", "top": "10%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 320,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "formatter": "{value} km" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "inverse": true,
+          "data": [
+            "Jun → Jul 1950 · to the Kum",
+            "Jul → Sep 1950 · to the Naktong",
+            "Sep → Oct 1950 · Inchon",
+            "Oct → Nov 1950 · to the Yalu",
+            "Nov → Dec 1950 · Chinese offensive",
+            "Dec → Jan 1951 · Seoul falls again",
+            "Jan → Apr 1951 · Line Kansas",
+            "Apr → May 1951 · spring offensive",
+            "May → Jun 1951 · Kansas–Wyoming",
+            "Jul 1951 → Jun 1953 · stalemate",
+            "Jun → Jul 1953 · armistice"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 11 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Front movement",
+            "type": "bar",
+            "barWidth": 14,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "IBM Plex Mono",
+              "fontSize": 11,
+              "formatter": "{c} km"
+            },
+            "data": [
+              { "value": 106, "itemStyle": { "color": "$red" } },
+              { "value": 151, "itemStyle": { "color": "$red" } },
+              { "value": 264, "itemStyle": { "color": "$red" } },
+              { "value": 300, "itemStyle": { "color": "$red" } },
+              { "value": 299, "itemStyle": { "color": "$red" } },
+              { "value": 95, "itemStyle": { "color": "$red" } },
+              { "value": 94, "itemStyle": { "color": "$red" } },
+              { "value": 38, "itemStyle": { "color": "$red" } },
+              { "value": 48, "itemStyle": { "color": "$red" } },
+              { "value": 10, "itemStyle": { "color": "$muted" } },
+              { "value": 2, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

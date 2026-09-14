@@ -1,0 +1,660 @@
+# Story config — korean-war-frontline
+#
+# Source: research brief "Up and down the peninsula — the Korean War's moving
+# frontline" (Vizmaya, September 2026). Twelve positions of one line, June 1950
+# to July 1953, plus the share of the peninsula north of each line.
+#
+# Custom GeoJSON (built for this story):
+#   /data/korean-war-frontlines.geojson  — idProperty "id"
+#     held-<beat>   land north of the line (communist-held), closed along the
+#                   coast + Yalu so the fill follows the line exactly
+#     front-<beat>  ±2.5 km strip along the line itself, clipped to land
+#     parallel-38   the 38th parallel reference strip (same geometry as
+#                   front-parallel; stable id so every section can show it)
+#   beats: parallel july50 pusan oct50 nov50 dec50 jan51 apr51 may51 jun51
+#          stalemate armistice
+#   Source of record + build script: vizmaya-data/korean-war-frontline/
+#   (frontlines.csv → scripts/build-geojson.mjs). Swap in better geometry
+#   there; nothing in this file changes.
+#
+# Layer recipe per beat:
+#   held-<beat>     brick fill      #9B3B2E @ 0.42
+#   front-<beat>    brick strip     #C24C3B @ 0.95   (the line itself)
+#   front-<prev>    stone strip     #DCD5C3 @ 0.35   (ghost of the previous line)
+#   parallel-38     gold strip      #E0B25A @ 0.85   (reference, every section)
+#
+# Reference coordinates (lng, lat):
+#   Seoul     126.978 37.566   Pyongyang 125.754 39.039   Pusan    129.075 35.180
+#   Inchon    126.705 37.456   Kaesong   126.554 37.971   Panmunjom 126.677 37.956
+#   Chorwon   127.310 38.250   Chosin    127.250 40.500   Hungnam  127.620 39.830
+#   Hyesan    128.177 41.400   Chongjin  129.776 41.796   Chosan   125.790 40.830
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.6
+  pinColor: "#E0B25A"
+  pinRadius: 7
+  flySpeed: 1.1
+  mapPalette:
+    land: "#2B3944"
+    water: "#1B252E"
+    border: "#4A5A66"
+    labelText: "#C9C2B2"
+    labelHalo: "#1B252E"
+
+# Camera presets (the prose rail sits on the right 63vw, so desktop centers
+# sit east of the peninsula to keep it in the open left third):
+#   full peninsula  desktop [130.4, 38.4] z5.5   mobile [127.4, 38.0] z4.9
+#   central front   desktop [128.9, 38.15] z7.2  mobile [127.5, 38.15] z6.5
+
+sections:
+
+  # ── HERO ─────────────────────────────────────────
+  - id: hero
+    kind: hero
+    text: "Up and down the peninsula"
+    eyebrow: "Korean War · June 1950 – July 1953 · The moving frontline"
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 10
+      bearing: 0
+      opacity: 0.55
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#E0B25A"
+        lineWidth: 0.4
+        items:
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      textLabels:
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [125.754, 39.039], text: "Pyongyang", anchor: right }
+        - { coordinates: [129.075, 35.180], text: "Pusan", anchor: right }
+
+  # ── 1 · 25 Jun 1950 · 38th parallel · 57% ────────
+  - id: beat-01-parallel
+    text: "A border drawn in half an hour"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-parallel", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.9 }
+      textLabels:
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [125.754, 39.039], text: "Pyongyang", anchor: right }
+        - { coordinates: [126.554, 37.971], text: "Kaesong", anchor: left }
+        - { coordinates: [129.075, 35.180], text: "Pusan", anchor: right }
+
+  # ── 2 · 5 Jul 1950 · Kum River line · 68% ────────
+  - id: beat-02-july50
+    text: "Seoul falls in three days"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 3]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-july50", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-july50", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      textLabels:
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [127.070, 37.150], text: "Osan", anchor: left }
+        - { coordinates: [127.385, 36.351], text: "Taejon", anchor: right }
+        - { coordinates: [127.920, 37.340], text: "Wonju", anchor: right }
+
+  # ── 3 · 4 Aug–15 Sep 1950 · Pusan Perimeter · 94% ─
+  - id: beat-03-pusan
+    text: "A pocket around Pusan"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 3]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-pusan", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-july50", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-pusan", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [129.075, 35.180]
+          label: "Pusan"
+          pulse: true
+      textLabels:
+        - { coordinates: [128.601, 35.871], text: "Taegu", anchor: right }
+        - { coordinates: [128.570, 35.200], text: "Masan", anchor: left }
+        - { coordinates: [129.365, 36.019], text: "Pohang", anchor: right }
+
+  # ── STAT: 94% ────────────────────────────────────
+  - id: stat-94
+    kind: stat
+    text: "94%"
+    subheading: "of the peninsula in North Korean hands"
+    mobileParagraphs:
+      - [0, 2]
+    map:
+      center: [129.6, 36.2]
+      zoom: 6.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [128.4, 36.0]
+        zoom: 5.6
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-pusan", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-pusan", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [129.075, 35.180]
+          label: "Pusan"
+          pulse: true
+
+  # ── 4 · 15 Sep–1 Oct 1950 · Inchon · 56% ─────────
+  - id: beat-04-oct50
+    text: "Inchon turns the war round"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-oct50", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-pusan", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-oct50", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [126.705, 37.456]
+          label: "Inchon landing · 15 Sep"
+          pulse: true
+          labelAnchor: left
+      textLabels:
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [125.754, 39.039], text: "Pyongyang", anchor: right }
+        - { coordinates: [129.075, 35.180], text: "Pusan", anchor: right }
+
+  # ── 5 · 24 Nov 1950 · To the Yalu · 18% ──────────
+  - id: beat-05-nov50
+    text: "To the Yalu"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [130.6, 39.6]
+      zoom: 5.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.6, 39.4]
+        zoom: 5.0
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-nov50", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-oct50", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-nov50", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [125.790, 40.830]
+          label: "Chosan · 26 Oct"
+          labelAnchor: left
+        - coordinates: [128.177, 41.400]
+          label: "Hyesan · 21 Nov"
+          labelAnchor: top
+      textLabels:
+        - { coordinates: [125.754, 39.039], text: "Pyongyang", anchor: right }
+        - { coordinates: [129.776, 41.796], text: "Chongjin", anchor: right }
+        - { coordinates: [127.250, 40.500], text: "Chosin", anchor: right }
+        - { coordinates: [125.790, 40.020], text: "Unsan", anchor: left }
+
+  # ── STAT: 18% ────────────────────────────────────
+  - id: stat-18
+    kind: stat
+    text: "18%"
+    subheading: "of the peninsula left to the North"
+    mobileParagraphs:
+      - [0, 2]
+    map:
+      center: [130.6, 39.6]
+      zoom: 5.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.6, 39.4]
+        zoom: 5.0
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-nov50", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-nov50", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+
+  # ── 6 · 25 Nov–24 Dec 1950 · The longest retreat · 56% ─
+  - id: beat-06-dec50
+    text: "The longest retreat"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [130.4, 38.9]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.4, 38.6]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-dec50", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-nov50", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-dec50", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [127.250, 40.500]
+          label: "Chosin Reservoir · 27 Nov–13 Dec"
+          labelAnchor: right
+        - coordinates: [127.620, 39.830]
+          label: "Hungnam evacuation · 24 Dec"
+          labelAnchor: right
+      textLabels:
+        - { coordinates: [125.754, 39.039], text: "Pyongyang", anchor: left }
+        - { coordinates: [127.440, 39.150], text: "Wonsan", anchor: right }
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+
+  # ── 7 · 4–24 Jan 1951 · ~37°N · 67% ──────────────
+  - id: beat-07-jan51
+    text: "Seoul changes hands a third time"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 3]
+    map:
+      center: [130.2, 37.9]
+      zoom: 5.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.5, 37.6]
+        zoom: 5.1
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-jan51", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-dec50", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-jan51", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [126.978, 37.566]
+          label: "Seoul · falls 4 Jan"
+          labelAnchor: right
+      textLabels:
+        - { coordinates: [127.090, 36.990], text: "Pyongtaek", anchor: left }
+        - { coordinates: [127.920, 37.340], text: "Wonju", anchor: bottom }
+        - { coordinates: [129.170, 37.450], text: "Samchok", anchor: right }
+        - { coordinates: [127.385, 36.351], text: "Taejon", anchor: right }
+
+  # ── 8 · 25 Jan–21 Apr 1951 · Line Kansas · 57% ───
+  - id: beat-08-apr51
+    text: "Killer, Ripper, Rugged, Dauntless"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [130.2, 37.9]
+      zoom: 5.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.5, 37.8]
+        zoom: 5.1
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-apr51", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-jan51", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-apr51", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [126.978, 37.566]
+          label: "Seoul · retaken 14 Mar"
+          labelAnchor: right
+      textLabels:
+        - { coordinates: [127.730, 37.880], text: "Chunchon", anchor: right }
+        - { coordinates: [127.310, 38.250], text: "Chorwon", anchor: right }
+        - { coordinates: [126.554, 37.971], text: "Kaesong", anchor: left }
+
+  # ── 9 · 22 Apr–20 May 1951 · Line No Name · 61% ──
+  - id: beat-09-may51
+    text: "The last great offensive"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 3]
+    map:
+      center: [129.9, 37.9]
+      zoom: 6.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.6, 37.9]
+        zoom: 5.5
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-may51", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-apr51", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-may51", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [126.920, 37.940]
+          label: "Imjin · 22–25 Apr"
+          labelAnchor: left
+        - coordinates: [127.510, 37.830]
+          label: "Kapyong · 23–24 Apr"
+          labelAnchor: bottom
+      textLabels:
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [127.730, 37.880], text: "Chunchon", anchor: right }
+        - { coordinates: [127.310, 38.250], text: "Chorwon", anchor: top }
+
+  # ── 10 · Mid-Jun 1951 · Kansas–Wyoming · 56% ─────
+  - id: beat-10-jun51
+    text: "The line settles"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [128.9, 38.15]
+      zoom: 7.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.5, 38.15]
+        zoom: 6.5
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-jun51", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-may51", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-jun51", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [126.554, 37.971]
+          label: "Kaesong · talks open 10 Jul"
+          labelAnchor: left
+      textLabels:
+        - { coordinates: [127.310, 38.250], text: "Chorwon · Iron Triangle", anchor: top }
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [127.730, 37.880], text: "Chunchon", anchor: right }
+
+  # ── 11 · Jul 1951–Jun 1953 · Stalemate · 56% ─────
+  - id: beat-11-stalemate
+    text: "Two years for a few hills"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [128.9, 38.15]
+      zoom: 7.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.5, 38.15]
+        zoom: 6.5
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-stalemate", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-jun51", color: "#DCD5C3", opacity: 0.35 }
+          - { code: "front-stalemate", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+      pins:
+        - coordinates: [127.980, 38.270]
+          label: "Bloody Ridge · Aug–Sep 1951"
+          radius: 5
+          labelAnchor: bottom
+        - coordinates: [128.050, 38.310]
+          label: "Heartbreak Ridge · Sep–Oct 1951"
+          radius: 5
+          labelAnchor: right
+        - coordinates: [127.200, 38.320]
+          label: "White Horse · Oct 1952"
+          radius: 5
+          labelAnchor: left
+        - coordinates: [127.500, 38.340]
+          label: "Triangle Hill · Oct–Nov 1952"
+          radius: 5
+          labelAnchor: top
+        - coordinates: [127.100, 38.220]
+          label: "Pork Chop Hill · Apr & Jul 1953"
+          radius: 5
+          labelAnchor: bottom
+      textLabels:
+        - { coordinates: [126.677, 37.956], text: "Panmunjom", anchor: left }
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [127.310, 38.250], text: "Chorwon", anchor: bottom }
+
+  # ── 12 · 27 Jul 1953 · Military Demarcation Line · 56% ─
+  - id: beat-12-armistice
+    text: "Where it stopped"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 3]
+    map:
+      center: [128.9, 38.15]
+      zoom: 7.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      mobile:
+        center: [127.5, 38.15]
+        zoom: 6.5
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-armistice", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-armistice", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.9 }
+      pins:
+        - coordinates: [126.677, 37.956]
+          label: "Panmunjom · armistice 27 Jul 1953"
+          pulse: true
+          labelAnchor: left
+        - coordinates: [127.850, 38.420]
+          label: "Kumsong · 13–20 Jul 1953"
+          radius: 5
+          labelAnchor: top
+      textLabels:
+        - { coordinates: [126.978, 37.566], text: "Seoul", anchor: right }
+        - { coordinates: [127.310, 38.250], text: "Chorwon", anchor: bottom }
+        - { coordinates: [126.554, 37.971], text: "Kaesong", anchor: bottom }
+
+  # ── STAT: 1,400 km + movement chart ──────────────
+  - id: stat-1400
+    kind: stat
+    text: "1,400 km"
+    subheading: "of frontline travel in the first year"
+    chart: data:front-movement
+    mobileParagraphs:
+      - [0, 2]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.5
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.4
+        items:
+          - { code: "front-pusan", color: "#DCD5C3", opacity: 0.3 }
+          - { code: "front-nov50", color: "#DCD5C3", opacity: 0.3 }
+          - { code: "front-jan51", color: "#DCD5C3", opacity: 0.3 }
+          - { code: "front-armistice", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.85 }
+
+  # ── Outro + share chart ──────────────────────────
+  - id: outro
+    text: "Three years of war, a mile of difference"
+    chart: data:held-share
+    mobileParagraphs:
+      - [0, 2]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.5
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.9
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.5
+        items:
+          - { code: "held-armistice", color: "#9B3B2E", opacity: 0.42 }
+          - { code: "front-armistice", color: "#C24C3B", opacity: 0.95 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.9 }
+
+  # ── Methodology ──────────────────────────────────
+  - id: methodology
+    text: "Methodology & Sources"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [130.4, 38.4]
+      zoom: 5.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.3
+      mobile:
+        center: [127.4, 38.0]
+        zoom: 4.7
+      regions:
+        level: custom
+        geojsonUrl: "/data/korean-war-frontlines.geojson"
+        idProperty: "id"
+        lineColor: "#9B3B2E"
+        lineWidth: 0.4
+        items:
+          - { code: "front-armistice", color: "#C24C3B", opacity: 0.7 }
+          - { code: "parallel-38", color: "#E0B25A", opacity: 0.7 }

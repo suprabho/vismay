@@ -1,0 +1,13 @@
+beat,order,date_shown,line_name,held_by_north_pct,headline,ghost
+parallel,1,25 Jun 1950,38th parallel,57,A border drawn in half an hour,
+july50,2,5 Jul 1950,Kum River line,68,Seoul falls in three days,parallel
+pusan,3,4 Aug – 15 Sep 1950,Pusan Perimeter (Naktong),94,A pocket around Pusan,july50
+oct50,4,15 Sep – 1 Oct 1950,Back at the parallel,56,Inchon turns the war round,pusan
+nov50,5,24 Nov 1950,Chongchon–Chosin–Hyesan–Chongjin,18,To the Yalu,oct50
+dec50,6,25 Nov – 24 Dec 1950,Back at the parallel; Hungnam pocket,56,The longest retreat,nov50
+jan51,7,4 – 24 Jan 1951,Pyongtaek–Wonju–Samchok (~37°N),67,Seoul changes hands a third time,dec50
+apr51,8,25 Jan – 21 Apr 1951,Line Kansas,57,"Killer, Ripper, Rugged, Dauntless",jan51
+may51,9,22 Apr – 20 May 1951,Line No Name (north of Seoul),61,The last great offensive,apr51
+jun51,10,Mid-June 1951,Kansas–Wyoming,56,The line settles,may51
+stalemate,11,Jul 1951 – Jun 1953,"Same, ±5 km",56,Two years for a few hills,jun51
+armistice,12,27 Jul 1953,Military Demarcation Line,56,Where it stopped,parallel
