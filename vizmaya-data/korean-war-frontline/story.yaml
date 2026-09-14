@@ -1,0 +1,42 @@
+id: korean-war-frontline
+slug: korean-war-frontline
+title: "Up and down the peninsula"
+deck: >
+  In the first seven months of the Korean War the frontline swept the length
+  of Korea twice, then swung back again. For the next two and a half years it
+  barely moved. This is the whole war, drawn as one line.
+status: draft
+period: 1950-06-25 to 1953-07-27
+reporting_date: 2026-09-14
+data_cutoff: 2026-09-14
+authors:
+  - Vizmaya editorial
+license: CC-BY-4.0
+
+tokens:
+  slate: "#24303B"
+  stone: "#DCD5C3"
+  brick: "#9B3B2E"
+  gold:  "#E0B25A"
+  paper: "#EDE8DB"
+
+datasets:
+  beats:
+    file: beats.csv
+    schema: [beat, order, date_shown, line_name, held_by_north_pct, headline, ghost]
+    rows: 12
+  frontlines:
+    file: frontlines.csv
+    schema: [beat, seq, lon, lat]
+    rows: 100
+    source_of_record: CMH + West Point Atlas campaign maps, hand-traced
+  cities:
+    file: cities.csv
+    schema: [name, lon, lat, source]
+  outline:
+    file: korea-outline.geojson
+    source_of_record: Natural Earth 1:10m admin-0
+
+charts:
+  held-share: "Share of the peninsula held by the North, per beat (line)"
+  front-movement: "Shift in the line's mean latitude between beats, km (bar)"
