@@ -1310,6 +1310,10 @@ export function ShareCardCreator({
           pinColor: story.defaults.pinColor,
           pinRadius: story.defaults.pinRadius,
         },
+        // Map layers can import any section's map block — from the attached
+        // story (units already in memory) or another story (fetched on pick).
+        // Umami frames are story-less, so they get no importer.
+        mapSources: isUmami ? undefined : { currentSlug: story.slug, units, stories },
       }
     : null
 

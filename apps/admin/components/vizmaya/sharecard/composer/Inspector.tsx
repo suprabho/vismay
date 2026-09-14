@@ -26,6 +26,7 @@ import { IconPicker } from './IconPicker'
 import { EmojiPicker } from './EmojiPicker'
 import { ChartJsonDrawer } from './ChartJsonDrawer'
 import { MapYamlDrawer } from './MapYamlDrawer'
+import { MapSectionImport, type MapImportSources } from './MapSectionImport'
 
 export interface MapDefaults {
   mapStyle?: string
@@ -38,7 +39,14 @@ interface Props {
   composition: CardComposition
   selection: Selection | null
   onChange: (next: CardComposition) => void
-  story: { slug: string; theme: Theme; assets: AssetEntry[]; defaults: MapDefaults }
+  story: {
+    slug: string
+    theme: Theme
+    assets: AssetEntry[]
+    defaults: MapDefaults
+    /** Story sections (this story + others) a map layer can import its data from. */
+    mapSources?: MapImportSources
+  }
   ratio: AspectRatio
   onEditMap: (sel: Selection) => void
 }
@@ -83,11 +91,13 @@ function MapControls({
   defaults,
   onPatch,
   onEditCamera,
+  sources,
 }: {
   spec: MapSpec
   defaults: { mapStyle?: string; mapOpacity?: number; pinColor?: string; pinRadius?: number }
   onPatch: (patch: Partial<MapSpec>) => void
   onEditCamera: () => void
+  sources?: MapImportSources
 }) {
   const a = spec.appearance
   const [yamlOpen, setYamlOpen] = useState(false)
@@ -99,6 +109,14 @@ function MapControls({
       >
         Edit camera (drag &amp; zoom)
       </button>
+      {sources && (
+        <MapSectionImport
+          sources={sources}
+          // Imported data carries its own camera; drop the per-ratio camera
+          // overrides so the section's view shows instead of a stale drag.
+          onImport={(data) => onPatch({ data, camera: {} })}
+        />
+      )}
       <button
         onClick={() => setYamlOpen(true)}
         className="w-full rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-100 hover:bg-white/10"
@@ -233,6 +251,7 @@ function BackgroundInspector({
           defaults={story.defaults}
           onPatch={(patch) => onChange(patchBackground(composition, patch))}
           onEditCamera={() => onEditMap({ kind: 'background' })}
+          sources={story.mapSources}
         />
       )}
 
@@ -480,7 +499,13 @@ function ElementInspector({
 
       {el.kind === 'map' && (
         <div className="space-y-2">
-          <MapControls spec={el} defaults={story.defaults} onPatch={(patch) => onChange(updateElement(composition, id, patch))} onEditCamera={() => onEditMap({ kind: 'element', id })} />
+          <MapControls
+            spec={el}
+            defaults={story.defaults}
+            onPatch={(patch) => onChange(updateElement(composition, id, patch))}
+            onEditCamera={() => onEditMap({ kind: 'element', id })}
+            sources={story.mapSources}
+          />
           {fillBoxToggle}
         </div>
       )}
