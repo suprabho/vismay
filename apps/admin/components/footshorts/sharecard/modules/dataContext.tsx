@@ -13,6 +13,8 @@ export interface CompMeta {
   season: string
   /** League logo URL (unproxied), or null. */
   crestUrl: string | null
+  /** League brand color (`#RRGGBB`) from the asset studio, or null. */
+  primaryColor: string | null
 }
 
 /**

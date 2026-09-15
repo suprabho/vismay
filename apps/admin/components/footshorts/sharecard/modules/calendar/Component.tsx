@@ -20,11 +20,16 @@ export default function CalendarCardComponent({
   const compMeta = useFootshortsCompMeta(config.compKeys)
 
   // Competition logos (league entity crest_url) for the cell watermarks —
-  // proxied like the team crests so html-to-image capture stays untainted.
-  const competitionLogos = useMemo(() => {
-    const m: Record<string, string> = {}
-    for (const c of compMeta) if (c.crestUrl) m[c.slug] = proxiedImage(c.crestUrl)
-    return m
+  // proxied like the team crests so html-to-image capture stays untainted —
+  // and the asset-studio brand colors that override the bundled palette.
+  const { competitionLogos, competitionColors } = useMemo(() => {
+    const logos: Record<string, string> = {}
+    const colors: Record<string, string> = {}
+    for (const c of compMeta) {
+      if (c.crestUrl) logos[c.slug] = proxiedImage(c.crestUrl)
+      if (c.primaryColor) colors[c.slug] = c.primaryColor
+    }
+    return { competitionLogos: logos, competitionColors: colors }
   }, [compMeta])
 
   const teamFixtures = useMemo(
@@ -65,6 +70,7 @@ export default function CalendarCardComponent({
         showScores={config.showScores}
         showLegend={config.showLegend}
         competitionLogos={competitionLogos}
+        competitionColors={competitionColors}
         watermarkAlpha={config.watermarkAlpha}
       />
     </div>

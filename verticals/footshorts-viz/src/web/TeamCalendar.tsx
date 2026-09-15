@@ -7,8 +7,8 @@ import { Crest } from '../data/Crest'
 import { findTeam } from '../data/teams'
 import {
   getCompetitionDisplayName,
-  getCompetitionPalette,
   getCompetitionShortCode,
+  resolveCompetitionColor,
 } from '../competitionMeta'
 import {
   formatCalendarMonth,
@@ -24,7 +24,9 @@ import {
  * One team's month, as a wall calendar: a 7-column day grid where every match
  * day carries the three things a schedule glance needs —
  *
- *   - competition  → the cell is tinted with the competition's brand color and
+ *   - competition  → the cell is tinted with the competition's brand color
+ *                    (the league entity's `primary_color` via
+ *                    `competitionColors`, else the bundled palette) and
  *                    carries its logo (when `competitionLogos` has one for the
  *                    slug — the league entity's `crest_url`) or, failing that,
  *                    its short code ("PL", "LAL", "UCL") as a faint watermark
@@ -124,8 +126,16 @@ const CELL = {
   watermarkLogo: 'clamp(20px, 86cqw, 84px)',
 } as const
 
-function CompetitionChip({ slug, size }: { slug: string; size: string }) {
-  const color = getCompetitionPalette(slug)
+function CompetitionChip({
+  slug,
+  size,
+  color,
+}: {
+  slug: string
+  size: string
+  /** Resolved competition color (override or bundled palette); undefined → neutral. */
+  color?: string
+}) {
   const style: CSSProperties = color
     ? { background: color, color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.22)' }
     : { background: ink(0.14), color: 'inherit', border: `1px solid ${ink(0.2)}` }
@@ -212,13 +222,15 @@ function CompetitionWatermark({
   slug,
   logoUrl,
   alpha,
+  compColor,
 }: {
   slug: string
   logoUrl?: string
   /** Watermark opacity, 0–1. */
   alpha: number
+  /** Resolved competition color for the short-code fallback. */
+  compColor?: string
 }) {
-  const compColor = getCompetitionPalette(slug)
   const base: CSSProperties = {
     position: 'absolute',
     left: '50%',
@@ -270,6 +282,7 @@ function DayCell({
   teamColor,
   showScores,
   competitionLogos,
+  competitionColors,
   watermarkAlpha,
 }: {
   day: number | null
@@ -277,6 +290,7 @@ function DayCell({
   teamColor?: string
   showScores: boolean
   competitionLogos?: Record<string, string>
+  competitionColors?: Record<string, string>
   watermarkAlpha: number
 }) {
   const base: CSSProperties = {
@@ -317,7 +331,10 @@ function DayCell({
   }
 
   const { home, opponent, opponentName, fixture } = first
-  const compColor = getCompetitionPalette(fixture.competition_slug)
+  const compColor = resolveCompetitionColor(
+    fixture.competition_slug,
+    competitionColors?.[fixture.competition_slug],
+  )
   const tint = teamColor && HEX6.test(teamColor) ? teamColor : undefined
   const dim = fixture.status === 'postponed' || fixture.status === 'cancelled'
 
@@ -337,6 +354,7 @@ function DayCell({
         slug={fixture.competition_slug}
         logoUrl={competitionLogos?.[fixture.competition_slug]}
         alpha={watermarkAlpha}
+        compColor={compColor}
       />
 
       {/* Row 1: day number (left) · venue icon (right). */}
@@ -416,6 +434,10 @@ type Props = {
    *  day whose competition has a logo here shows it as the cell watermark
    *  instead of the short code. */
   competitionLogos?: Record<string, string>
+  /** Competition slug → `#RRGGBB` brand color (the league entity's
+   *  `primary_color`, as set in the asset studio). Overrides the bundled
+   *  palette for that competition's cell tint, legend chip and text watermark. */
+  competitionColors?: Record<string, string>
   /** Opacity of the competition watermark (logo or short code) behind each
    *  match day, 0–1. Defaults to 0.22; lower it on busy backgrounds, 0 hides it. */
   watermarkAlpha?: number
@@ -431,6 +453,7 @@ export function TeamCalendar({
   showLegend = true,
   teamColor,
   competitionLogos,
+  competitionColors,
   watermarkAlpha = DEFAULT_WATERMARK_ALPHA,
 }: Props) {
   const rows = monthGrid(month, weekStart)
@@ -510,6 +533,7 @@ export function TeamCalendar({
               teamColor={tint}
               showScores={showScores}
               competitionLogos={competitionLogos}
+              competitionColors={competitionColors}
               watermarkAlpha={normalizeWatermarkAlpha(watermarkAlpha)}
             />
           )),
@@ -545,7 +569,11 @@ export function TeamCalendar({
           </span>
           {competitions.map((slug) => (
             <span key={slug} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4em' }}>
-              <CompetitionChip slug={slug} size={SIZE.chip} />
+              <CompetitionChip
+                slug={slug}
+                size={SIZE.chip}
+                color={resolveCompetitionColor(slug, competitionColors?.[slug])}
+              />
               {getCompetitionDisplayName(slug)}
             </span>
           ))}

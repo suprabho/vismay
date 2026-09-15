@@ -39,6 +39,9 @@ export interface CompetitionOption {
   name: string
   /** The league entity's logo (`crest_url`), for competition watermarks. */
   crestUrl: string | null
+  /** The league entity's brand color (`primary_color`, set in the asset
+   *  studio) — overrides the bundled competition palette where present. */
+  primaryColor: string | null
   season: string
   hasStandings: boolean
   hasFixtures: boolean
@@ -402,17 +405,20 @@ export async function listFootshortsCompetitions(): Promise<CompetitionOption[]>
   const [standRes, fixRes, leagueRes] = await Promise.all([
     supabase.from('standings').select('competition_slug, season'),
     supabase.from('fixtures').select('competition_slug, season'),
-    supabase.from('entities').select('slug, name, crest_url').eq('type', 'league'),
+    supabase.from('entities').select('slug, name, crest_url, primary_color').eq('type', 'league'),
   ])
   const names = new Map<string, string>()
   const crests = new Map<string, string>()
+  const colors = new Map<string, string>()
   for (const l of (leagueRes.data ?? []) as Array<{
     slug: string
     name: string
     crest_url: string | null
+    primary_color: string | null
   }>) {
     names.set(l.slug, l.name)
     if (l.crest_url) crests.set(l.slug, l.crest_url)
+    if (l.primary_color) colors.set(l.slug, l.primary_color)
   }
   const acc = new Map<string, CompetitionOption>()
   const note = (slug: string, season: string, which: 'standings' | 'fixtures') => {
@@ -425,6 +431,7 @@ export async function listFootshortsCompetitions(): Promise<CompetitionOption[]>
         season,
         name: names.get(slug) ?? slug,
         crestUrl: crests.get(slug) ?? null,
+        primaryColor: colors.get(slug) ?? null,
         hasStandings: false,
         hasFixtures: false,
       }

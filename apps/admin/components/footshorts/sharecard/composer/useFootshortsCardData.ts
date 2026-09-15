@@ -173,6 +173,7 @@ export function useFootshortsCardData({
         name: c.name,
         season: c.season,
         crestUrl: c.crestUrl ?? null,
+        primaryColor: c.primaryColor ?? null,
       }
     }
     return m

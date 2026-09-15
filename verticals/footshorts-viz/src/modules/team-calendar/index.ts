@@ -34,6 +34,8 @@ import {
  *       teamColor: '#EF0107'        # optional — home-day ring (defaults to the team's brand color)
  *       competitionLogos:           # optional — slug → logo URL, watermarked on that competition's days
  *         premier-league: https://…/premier-league.png
+ *       competitionColors:          # optional — slug → #RRGGBB, overrides the bundled competition palette
+ *         premier-league: '#3D195B'
  *       watermarkAlpha: 0.22        # optional — watermark opacity 0–1 (0 hides it)
  *       fixtures:
  *         - id: f1
@@ -61,6 +63,8 @@ export interface TeamCalendarConfig extends FsBackgroundConfig {
   teamColor?: string
   /** Competition slug → logo URL, watermarked behind that competition's match days. */
   competitionLogos?: Record<string, string>
+  /** Competition slug → `#RRGGBB`, overriding the bundled palette for that competition. */
+  competitionColors?: Record<string, string>
   /** Watermark opacity, 0–1. */
   watermarkAlpha: number
 }
@@ -95,16 +99,24 @@ function parseAlpha(raw: unknown, label: string): number {
   return raw
 }
 
-/** `{ slug: url }` — keeps only non-empty string pairs; undefined when empty. */
-function parseCompetitionLogos(raw: unknown, label: string): Record<string, string> | undefined {
+/** `{ slug: value }` — keeps only the pairs whose value is a string passing
+ *  `accept`; undefined when nothing survives. */
+function parseSlugMap(
+  raw: unknown,
+  field: string,
+  accept: (v: string) => boolean,
+  label: string,
+): Record<string, string> | undefined {
   if (raw === undefined || raw === null) return undefined
-  if (!isObj(raw)) throw new Error(`${label}: fs:team-calendar 'competitionLogos' must be a map of slug → url`)
+  if (!isObj(raw)) throw new Error(`${label}: fs:team-calendar '${field}' must be a map keyed by competition slug`)
   const out: Record<string, string> = {}
-  for (const [slug, url] of Object.entries(raw)) {
-    if (typeof url === 'string' && url.length > 0 && slug.length > 0) out[slug] = url
+  for (const [slug, v] of Object.entries(raw)) {
+    if (typeof v === 'string' && slug.length > 0 && accept(v)) out[slug] = v
   }
   return Object.keys(out).length > 0 ? out : undefined
 }
+
+const HEX6 = /^#[0-9a-fA-F]{6}$/
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamCalendarConfig {
   if (!isObj(raw)) throw new Error(`${ctx.label}: fs:team-calendar layer must be an object`)
@@ -122,10 +134,11 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamCa
   }
   const label = typeof raw.label === 'string' && raw.label.length > 0 ? raw.label : undefined
   const teamColor =
-    typeof raw.teamColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(raw.teamColor)
+    typeof raw.teamColor === 'string' && HEX6.test(raw.teamColor)
       ? raw.teamColor
       : undefined
-  const competitionLogos = parseCompetitionLogos(raw.competitionLogos, ctx.label)
+  const competitionLogos = parseSlugMap(raw.competitionLogos, 'competitionLogos', (v) => v.length > 0, ctx.label)
+  const competitionColors = parseSlugMap(raw.competitionColors, 'competitionColors', (v) => HEX6.test(v), ctx.label)
   return {
     type: 'fs:team-calendar',
     fixtures: raw.fixtures as unknown as FixtureRow[],
@@ -138,6 +151,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamCa
     ...(label ? { label } : {}),
     ...(teamColor ? { teamColor } : {}),
     ...(competitionLogos ? { competitionLogos } : {}),
+    ...(competitionColors ? { competitionColors } : {}),
     ...parseFsBackground(raw),
   }
 }
@@ -157,6 +171,7 @@ function adminForm(): AdminFormField[] {
     { kind: 'boolean', key: 'showLegend', label: 'Show legend' },
     { kind: 'text', key: 'teamColor', label: 'Home-day ring (#RRGGBB; blank = team brand color)' },
     { kind: 'json', key: 'competitionLogos', label: 'Competition logos (slug → URL, watermarked on match days)' },
+    { kind: 'json', key: 'competitionColors', label: 'Competition colors (slug → #RRGGBB; blank = bundled palette)' },
     {
       kind: 'number',
       key: 'watermarkAlpha',
@@ -179,7 +194,7 @@ const teamCalendarModule: VizModule<TeamCalendarConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (config) =>
-    `fs:team-calendar:${config.teamId}:${config.month}:${config.weekStart}:${config.showScores ? 1 : 0}${config.showLegend ? 1 : 0}:${config.watermarkAlpha}:${config.teamColor ?? ''}:${Object.entries(config.competitionLogos ?? {}).map(([k, v]) => `${k}=${v}`).join(',')}:${config.fixtures.map((f) => f.id).join('|')}:${config.backgroundImage ?? ''}`,
+    `fs:team-calendar:${config.teamId}:${config.month}:${config.weekStart}:${config.showScores ? 1 : 0}${config.showLegend ? 1 : 0}:${config.watermarkAlpha}:${config.teamColor ?? ''}:${Object.entries(config.competitionLogos ?? {}).map(([k, v]) => `${k}=${v}`).join(',')}:${Object.entries(config.competitionColors ?? {}).map(([k, v]) => `${k}=${v}`).join(',')}:${config.fixtures.map((f) => f.id).join('|')}:${config.backgroundImage ?? ''}`,
 }
 
 export default teamCalendarModule
