@@ -65,6 +65,7 @@ export default function CalendarCardComponent({
         showScores={config.showScores}
         showLegend={config.showLegend}
         competitionLogos={competitionLogos}
+        watermarkAlpha={config.watermarkAlpha}
       />
     </div>
   )

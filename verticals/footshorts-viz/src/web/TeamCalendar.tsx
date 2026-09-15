@@ -195,9 +195,29 @@ function StatusPill({ tf, showScores }: { tf: TeamFixture; showScores: boolean }
   return null
 }
 
+/** Default watermark opacity — faint enough to sit under the crest on a flat
+ *  card, dial it down via `watermarkAlpha` on busy backgrounds. */
+export const DEFAULT_WATERMARK_ALPHA = 0.22
+
+/** Clamp a consumer-supplied alpha to 0–1; anything non-numeric → the default. */
+export function normalizeWatermarkAlpha(raw: unknown): number {
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(1, Math.max(0, raw))
+    : DEFAULT_WATERMARK_ALPHA
+}
+
 /** Faint competition mark behind the cell content: the logo image when one is
  *  known, else the short code in the competition color. Clipped by the cell. */
-function CompetitionWatermark({ slug, logoUrl }: { slug: string; logoUrl?: string }) {
+function CompetitionWatermark({
+  slug,
+  logoUrl,
+  alpha,
+}: {
+  slug: string
+  logoUrl?: string
+  /** Watermark opacity, 0–1. */
+  alpha: number
+}) {
   const compColor = getCompetitionPalette(slug)
   const base: CSSProperties = {
     position: 'absolute',
@@ -219,7 +239,7 @@ function CompetitionWatermark({ slug, logoUrl }: { slug: string; logoUrl?: strin
           width: CELL.watermarkLogo,
           height: CELL.watermarkLogo,
           objectFit: 'contain',
-          opacity: 0.22,
+          opacity: alpha,
         }}
       />
     )
@@ -235,7 +255,8 @@ function CompetitionWatermark({ slug, logoUrl }: { slug: string; logoUrl?: strin
         letterSpacing: '-0.04em',
         whiteSpace: 'nowrap',
         color: compColor ?? 'currentColor',
-        opacity: compColor ? 0.16 : 0.08,
+        // Text reads heavier than a logo at the same alpha, so ease it back.
+        opacity: alpha * (compColor ? 0.75 : 0.4),
       }}
     >
       {getCompetitionShortCode(slug)}
@@ -249,12 +270,14 @@ function DayCell({
   teamColor,
   showScores,
   competitionLogos,
+  watermarkAlpha,
 }: {
   day: number | null
   matches: TeamFixture[]
   teamColor?: string
   showScores: boolean
   competitionLogos?: Record<string, string>
+  watermarkAlpha: number
 }) {
   const base: CSSProperties = {
     position: 'relative',
@@ -313,6 +336,7 @@ function DayCell({
       <CompetitionWatermark
         slug={fixture.competition_slug}
         logoUrl={competitionLogos?.[fixture.competition_slug]}
+        alpha={watermarkAlpha}
       />
 
       {/* Row 1: day number (left) · venue icon (right). */}
@@ -392,6 +416,9 @@ type Props = {
    *  day whose competition has a logo here shows it as the cell watermark
    *  instead of the short code. */
   competitionLogos?: Record<string, string>
+  /** Opacity of the competition watermark (logo or short code) behind each
+   *  match day, 0–1. Defaults to 0.22; lower it on busy backgrounds, 0 hides it. */
+  watermarkAlpha?: number
 }
 
 export function TeamCalendar({
@@ -404,6 +431,7 @@ export function TeamCalendar({
   showLegend = true,
   teamColor,
   competitionLogos,
+  watermarkAlpha = DEFAULT_WATERMARK_ALPHA,
 }: Props) {
   const rows = monthGrid(month, weekStart)
   if (rows.length === 0) return null
@@ -482,6 +510,7 @@ export function TeamCalendar({
               teamColor={tint}
               showScores={showScores}
               competitionLogos={competitionLogos}
+              watermarkAlpha={normalizeWatermarkAlpha(watermarkAlpha)}
             />
           )),
         )}

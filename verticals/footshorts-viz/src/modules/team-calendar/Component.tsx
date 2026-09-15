@@ -44,6 +44,8 @@ export default function TeamCalendarVizComponent({
             showScores={config.showScores}
             showLegend={config.showLegend}
             teamColor={config.teamColor}
+            competitionLogos={config.competitionLogos}
+            watermarkAlpha={config.watermarkAlpha}
           />
         </div>
       </div>

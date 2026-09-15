@@ -11,7 +11,7 @@ export { EntityCard } from './EntityCard'
 export { Bracket, TieCard } from './Bracket'
 export { BracketTree } from './BracketTree'
 export { TeamFormStrip } from './TeamFormStrip'
-export { TeamCalendar } from './TeamCalendar'
+export { TeamCalendar, DEFAULT_WATERMARK_ALPHA } from './TeamCalendar'
 export {
   calendarMonthOf,
   defaultCalendarMonth,

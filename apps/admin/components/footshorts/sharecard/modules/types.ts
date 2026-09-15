@@ -74,6 +74,8 @@ export interface FsCardCalendarConfig {
   month: string
   showScores: boolean
   showLegend: boolean
+  /** Opacity of the competition logo watermark behind match days, 0–1. */
+  watermarkAlpha: number
 }
 
 /**

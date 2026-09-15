@@ -3,6 +3,7 @@
 import type { ReactNode, Ref } from 'react'
 import { composerUid, DEFAULT_TRANSFORM, type ComposerHost, type ComposerLayer, type TransformLike } from '@vismay/viz-admin'
 import { OUTPUT_SIZE, RENDER_SCALE, type AspectRatio } from '../types'
+import { DEFAULT_WATERMARK_ALPHA } from '@vismay/footshorts-viz/web'
 import { CardFrame } from './CardFrame'
 import { compKeyOf, type FootshortsComposerCtx } from './ctx'
 
@@ -100,7 +101,15 @@ function defaultConfig(type: string, ctx: FootshortsComposerCtx): Record<string,
       return { type, compKey, teamSlug: '' }
     case 'fscard:calendar':
       // Blank month = the team's next fixture; the author narrows it later.
-      return { type, compKeys: compKey ? [compKey] : [], teamSlug: '', month: '', showScores: true, showLegend: true }
+      return {
+        type,
+        compKeys: compKey ? [compKey] : [],
+        teamSlug: '',
+        month: '',
+        showScores: true,
+        showLegend: true,
+        watermarkAlpha: DEFAULT_WATERMARK_ALPHA,
+      }
     case 'fscard:bracket':
       // Seed an *incomplete* draw so the card renders something on insert —
       // a few locked-in teams, the rest qualification placeholders, empty
