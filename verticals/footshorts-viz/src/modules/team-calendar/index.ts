@@ -11,10 +11,11 @@ import {
  * `fs:team-calendar` — Foreground viz module wrapping TeamCalendar.
  *
  * One team's month as a wall calendar. Every match day tells you the
- * competition (colored short-code chip), whether it's home or away (filled
- * "vs" cell vs dashed "@" cell) and the opponent (crest + code); finished
- * matches add the score, colored W/D/L. Good for "the month ahead" and
- * "a brutal October" beats.
+ * competition (cell tinted in its color, short code watermarked behind),
+ * whether it's home or away (house / plane icon; home days ringed in the team
+ * color) and the opponent (large crest); finished matches add the score as a
+ * W/D/L pill. Every cell is the same fixed height. Good for "the month ahead"
+ * and "a brutal October" beats.
  *
  * `fixtures` can be the team's whole season — the component keeps only the
  * fixtures inside `month` that involve `teamId` (entity id or slug).
@@ -29,7 +30,7 @@ import {
  *       weekStart: mon              # optional: mon (default) | sun
  *       showScores: true            # optional — finished scores on match days
  *       showLegend: true            # optional — home/away + competition key
- *       teamColor: '#EF0107'        # optional — home-day tint (defaults to the team's brand color)
+ *       teamColor: '#EF0107'        # optional — home-day ring (defaults to the team's brand color)
  *       fixtures:
  *         - id: f1
  *           competition_slug: premier-league
@@ -52,7 +53,7 @@ export interface TeamCalendarConfig extends FsBackgroundConfig {
   weekStart: WeekStart
   showScores: boolean
   showLegend: boolean
-  /** `#RRGGBB` home-day tint override. */
+  /** `#RRGGBB` home-day ring color override. */
   teamColor?: string
 }
 
@@ -124,7 +125,7 @@ function adminForm(): AdminFormField[] {
     },
     { kind: 'boolean', key: 'showScores', label: 'Show finished scores' },
     { kind: 'boolean', key: 'showLegend', label: 'Show legend' },
-    { kind: 'text', key: 'teamColor', label: 'Home-day tint (#RRGGBB; blank = team brand color)' },
+    { kind: 'text', key: 'teamColor', label: 'Home-day ring (#RRGGBB; blank = team brand color)' },
     { kind: 'json', key: 'fixtures', label: 'Fixtures (any order; other months are ignored)' },
     ...fsBackgroundFields(),
   ]
