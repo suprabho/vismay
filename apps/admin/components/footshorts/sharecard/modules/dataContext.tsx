@@ -7,8 +7,12 @@ import type { AspectRatio, NewsItem } from '../types'
 /** Competition metadata used for card headers (name + season), keyed by compKey. */
 export interface CompMeta {
   compKey: string
+  /** competition_slug, e.g. `premier-league`. */
+  slug: string
   name: string
   season: string
+  /** League logo URL (unproxied), or null. */
+  crestUrl: string | null
 }
 
 /**
@@ -96,6 +100,16 @@ export function useFootshortsFixturesMulti(compKeys: string[]): {
     }
     return { fixtures, loaded: keys.every((k) => k in fixturesByComp) }
   }, [keysKey, fixturesByComp])
+}
+
+/** compKey → competition metadata for every key the card references. */
+export function useFootshortsCompMeta(compKeys: string[]): CompMeta[] {
+  const { compMeta } = useFootshortsData()
+  const keysKey = compKeys.join('|')
+  return useMemo(() => {
+    const keys = keysKey ? keysKey.split('|') : []
+    return keys.flatMap((k) => (compMeta[k] ? [compMeta[k]] : []))
+  }, [keysKey, compMeta])
 }
 
 export function useFootshortsEvents(fixtureId: string): FixtureEvent[] {

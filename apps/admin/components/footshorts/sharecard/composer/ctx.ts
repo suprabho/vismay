@@ -5,6 +5,8 @@ import type { CardFrameConfig } from '../types'
 export interface CompetitionOption {
   slug: string
   name: string
+  /** League logo (`entities.crest_url`); null when the entity has none. */
+  crestUrl?: string | null
   season: string
   hasStandings: boolean
   hasFixtures: boolean

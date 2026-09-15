@@ -11,7 +11,7 @@ import {
  * `fs:team-calendar` — Foreground viz module wrapping TeamCalendar.
  *
  * One team's month as a wall calendar. Every match day tells you the
- * competition (cell tinted in its color, short code watermarked behind),
+ * competition (cell tinted in its color, logo or short code watermarked behind),
  * whether it's home or away (house / plane icon; home days ringed in the team
  * color) and the opponent (large crest); finished matches add the score as a
  * W/D/L pill. Every cell is the same fixed height. Good for "the month ahead"
@@ -31,6 +31,8 @@ import {
  *       showScores: true            # optional — finished scores on match days
  *       showLegend: true            # optional — home/away + competition key
  *       teamColor: '#EF0107'        # optional — home-day ring (defaults to the team's brand color)
+ *       competitionLogos:           # optional — slug → logo URL, watermarked on that competition's days
+ *         premier-league: https://…/premier-league.png
  *       fixtures:
  *         - id: f1
  *           competition_slug: premier-league
@@ -55,6 +57,8 @@ export interface TeamCalendarConfig extends FsBackgroundConfig {
   showLegend: boolean
   /** `#RRGGBB` home-day ring color override. */
   teamColor?: string
+  /** Competition slug → logo URL, watermarked behind that competition's match days. */
+  competitionLogos?: Record<string, string>
 }
 
 function isObj(x: unknown): x is Record<string, unknown> {
@@ -79,6 +83,17 @@ function parseBool(raw: unknown, field: string, fallback: boolean, label: string
   return raw
 }
 
+/** `{ slug: url }` — keeps only non-empty string pairs; undefined when empty. */
+function parseCompetitionLogos(raw: unknown, label: string): Record<string, string> | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (!isObj(raw)) throw new Error(`${label}: fs:team-calendar 'competitionLogos' must be a map of slug → url`)
+  const out: Record<string, string> = {}
+  for (const [slug, url] of Object.entries(raw)) {
+    if (typeof url === 'string' && url.length > 0 && slug.length > 0) out[slug] = url
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamCalendarConfig {
   if (!isObj(raw)) throw new Error(`${ctx.label}: fs:team-calendar layer must be an object`)
   if (typeof raw.teamId !== 'string' || raw.teamId.length === 0) {
@@ -98,6 +113,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamCa
     typeof raw.teamColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(raw.teamColor)
       ? raw.teamColor
       : undefined
+  const competitionLogos = parseCompetitionLogos(raw.competitionLogos, ctx.label)
   return {
     type: 'fs:team-calendar',
     fixtures: raw.fixtures as unknown as FixtureRow[],
@@ -108,6 +124,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamCa
     showLegend: parseBool(raw.showLegend, 'showLegend', true, ctx.label),
     ...(label ? { label } : {}),
     ...(teamColor ? { teamColor } : {}),
+    ...(competitionLogos ? { competitionLogos } : {}),
     ...parseFsBackground(raw),
   }
 }
@@ -126,6 +143,7 @@ function adminForm(): AdminFormField[] {
     { kind: 'boolean', key: 'showScores', label: 'Show finished scores' },
     { kind: 'boolean', key: 'showLegend', label: 'Show legend' },
     { kind: 'text', key: 'teamColor', label: 'Home-day ring (#RRGGBB; blank = team brand color)' },
+    { kind: 'json', key: 'competitionLogos', label: 'Competition logos (slug → URL, watermarked on match days)' },
     { kind: 'json', key: 'fixtures', label: 'Fixtures (any order; other months are ignored)' },
     ...fsBackgroundFields(),
   ]
@@ -140,7 +158,7 @@ const teamCalendarModule: VizModule<TeamCalendarConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (config) =>
-    `fs:team-calendar:${config.teamId}:${config.month}:${config.weekStart}:${config.showScores ? 1 : 0}${config.showLegend ? 1 : 0}:${config.teamColor ?? ''}:${config.fixtures.map((f) => f.id).join('|')}:${config.backgroundImage ?? ''}`,
+    `fs:team-calendar:${config.teamId}:${config.month}:${config.weekStart}:${config.showScores ? 1 : 0}${config.showLegend ? 1 : 0}:${config.teamColor ?? ''}:${Object.entries(config.competitionLogos ?? {}).map(([k, v]) => `${k}=${v}`).join(',')}:${config.fixtures.map((f) => f.id).join('|')}:${config.backgroundImage ?? ''}`,
 }
 
 export default teamCalendarModule

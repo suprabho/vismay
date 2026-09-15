@@ -167,7 +167,13 @@ export function useFootshortsCardData({
     const m: Record<string, CompMeta> = {}
     for (const c of competitions) {
       const key = compKeyOf(c)
-      m[key] = { compKey: key, name: c.name, season: c.season }
+      m[key] = {
+        compKey: key,
+        slug: c.slug,
+        name: c.name,
+        season: c.season,
+        crestUrl: c.crestUrl ?? null,
+      }
     }
     return m
   }, [competitions])

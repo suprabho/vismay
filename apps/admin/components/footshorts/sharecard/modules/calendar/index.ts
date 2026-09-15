@@ -3,8 +3,8 @@ import { isCalendarMonth } from '@vismay/footshorts-viz/web'
 import type { FsCardCalendarConfig } from '../types'
 
 /**
- * `fscard:calendar` — one team's month as a wall calendar (competition chip,
- * home/away fill, opponent crest per match day). Unlike the other picks-based
+ * `fscard:calendar` — one team's month as a wall calendar (competition tint +
+ * logo watermark, home/away icon, opponent crest and score per match day). Unlike the other picks-based
  * layers it spans SEVERAL competitions: a club's month mixes league, cup and
  * European nights, so the author ticks every competition the team plays in and
  * the module merges those fixture lists before filtering to the team + month.

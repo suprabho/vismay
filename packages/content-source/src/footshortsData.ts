@@ -37,6 +37,8 @@ export interface CompetitionOption {
   slug: string
   /** Display name from the league entity, e.g. `UEFA Champions League`. */
   name: string
+  /** The league entity's logo (`crest_url`), for competition watermarks. */
+  crestUrl: string | null
   season: string
   hasStandings: boolean
   hasFixtures: boolean
@@ -400,11 +402,17 @@ export async function listFootshortsCompetitions(): Promise<CompetitionOption[]>
   const [standRes, fixRes, leagueRes] = await Promise.all([
     supabase.from('standings').select('competition_slug, season'),
     supabase.from('fixtures').select('competition_slug, season'),
-    supabase.from('entities').select('slug, name').eq('type', 'league'),
+    supabase.from('entities').select('slug, name, crest_url').eq('type', 'league'),
   ])
   const names = new Map<string, string>()
-  for (const l of (leagueRes.data ?? []) as Array<{ slug: string; name: string }>) {
+  const crests = new Map<string, string>()
+  for (const l of (leagueRes.data ?? []) as Array<{
+    slug: string
+    name: string
+    crest_url: string | null
+  }>) {
     names.set(l.slug, l.name)
+    if (l.crest_url) crests.set(l.slug, l.crest_url)
   }
   const acc = new Map<string, CompetitionOption>()
   const note = (slug: string, season: string, which: 'standings' | 'fixtures') => {
@@ -412,7 +420,14 @@ export async function listFootshortsCompetitions(): Promise<CompetitionOption[]>
     const key = `${slug}::${season}`
     const existing =
       acc.get(key) ??
-      { slug, season, name: names.get(slug) ?? slug, hasStandings: false, hasFixtures: false }
+      {
+        slug,
+        season,
+        name: names.get(slug) ?? slug,
+        crestUrl: crests.get(slug) ?? null,
+        hasStandings: false,
+        hasFixtures: false,
+      }
     if (which === 'standings') existing.hasStandings = true
     else existing.hasFixtures = true
     acc.set(key, existing)

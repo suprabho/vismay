@@ -25,8 +25,10 @@ import {
  * day carries the three things a schedule glance needs —
  *
  *   - competition  → the cell is tinted with the competition's brand color and
- *                    carries its short code ("PL", "LAL", "UCL") as a faint
- *                    watermark behind the crest;
+ *                    carries its logo (when `competitionLogos` has one for the
+ *                    slug — the league entity's `crest_url`) or, failing that,
+ *                    its short code ("PL", "LAL", "UCL") as a faint watermark
+ *                    behind the crest;
  *   - home / away  → a house icon (home) or a plane icon (away) in the cell's
  *                    top-right corner; home days also get a ring in the team's
  *                    brand color;
@@ -119,6 +121,7 @@ const CELL = {
   crest: 'clamp(12px, 44cqw, 42px)',
   score: 'clamp(7px, 14cqw, 13px)',
   watermark: 'clamp(16px, 64cqw, 60px)',
+  watermarkLogo: 'clamp(20px, 86cqw, 84px)',
 } as const
 
 function CompetitionChip({ slug, size }: { slug: string; size: string }) {
@@ -192,16 +195,66 @@ function StatusPill({ tf, showScores }: { tf: TeamFixture; showScores: boolean }
   return null
 }
 
+/** Faint competition mark behind the cell content: the logo image when one is
+ *  known, else the short code in the competition color. Clipped by the cell. */
+function CompetitionWatermark({ slug, logoUrl }: { slug: string; logoUrl?: string }) {
+  const compColor = getCompetitionPalette(slug)
+  const base: CSSProperties = {
+    position: 'absolute',
+    left: '50%',
+    top: '54%',
+    transform: 'translate(-50%, -50%)',
+    pointerEvents: 'none',
+    userSelect: 'none',
+  }
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt=""
+        aria-hidden
+        style={{
+          ...base,
+          width: CELL.watermarkLogo,
+          height: CELL.watermarkLogo,
+          objectFit: 'contain',
+          opacity: 0.22,
+        }}
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      style={{
+        ...base,
+        fontSize: CELL.watermark,
+        lineHeight: 1,
+        fontWeight: 900,
+        letterSpacing: '-0.04em',
+        whiteSpace: 'nowrap',
+        color: compColor ?? 'currentColor',
+        opacity: compColor ? 0.16 : 0.08,
+      }}
+    >
+      {getCompetitionShortCode(slug)}
+    </span>
+  )
+}
+
 function DayCell({
   day,
   matches,
   teamColor,
   showScores,
+  competitionLogos,
 }: {
   day: number | null
   matches: TeamFixture[]
   teamColor?: string
   showScores: boolean
+  competitionLogos?: Record<string, string>
 }) {
   const base: CSSProperties = {
     position: 'relative',
@@ -257,28 +310,10 @@ function DayCell({
       }}
       title={`${home ? 'Home vs' : 'Away at'} ${opponentName} · ${getCompetitionDisplayName(fixture.competition_slug)}`}
     >
-      {/* Competition watermark — the short code, huge and faint, behind
-          everything; clipped by the cell's overflow. */}
-      <span
-        aria-hidden
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '54%',
-          transform: 'translate(-50%, -50%)',
-          fontSize: CELL.watermark,
-          lineHeight: 1,
-          fontWeight: 900,
-          letterSpacing: '-0.04em',
-          whiteSpace: 'nowrap',
-          color: compColor ?? 'currentColor',
-          opacity: compColor ? 0.16 : 0.08,
-          pointerEvents: 'none',
-          userSelect: 'none',
-        }}
-      >
-        {getCompetitionShortCode(fixture.competition_slug)}
-      </span>
+      <CompetitionWatermark
+        slug={fixture.competition_slug}
+        logoUrl={competitionLogos?.[fixture.competition_slug]}
+      />
 
       {/* Row 1: day number (left) · venue icon (right). */}
       <div
@@ -353,6 +388,10 @@ type Props = {
   showLegend?: boolean
   /** Override the home-day ring color (`#RRGGBB`). Defaults to the team's brand color. */
   teamColor?: string
+  /** Competition slug → logo URL (the league entity's `crest_url`). A match
+   *  day whose competition has a logo here shows it as the cell watermark
+   *  instead of the short code. */
+  competitionLogos?: Record<string, string>
 }
 
 export function TeamCalendar({
@@ -364,6 +403,7 @@ export function TeamCalendar({
   showScores = true,
   showLegend = true,
   teamColor,
+  competitionLogos,
 }: Props) {
   const rows = monthGrid(month, weekStart)
   if (rows.length === 0) return null
@@ -441,6 +481,7 @@ export function TeamCalendar({
               matches={cell ? (byDay.get(cell.day) ?? []) : []}
               teamColor={tint}
               showScores={showScores}
+              competitionLogos={competitionLogos}
             />
           )),
         )}
