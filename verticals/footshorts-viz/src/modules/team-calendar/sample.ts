@@ -55,6 +55,7 @@ export const sample: TeamCalendarConfig = {
   weekStart: 'mon',
   showScores: true,
   showLegend: true,
+  watermarkAlpha: 0.22,
   fixtures: [
     // A September fixture — ignored by the October grid, proves the filter.
     fixture('ars-sep', '2026-09-27T15:30:00Z', 'premier-league', team('tottenham', 'Tottenham Hotspur'), true, [2, 0]),

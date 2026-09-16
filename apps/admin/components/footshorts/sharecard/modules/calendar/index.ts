@@ -1,10 +1,10 @@
 import type { AdminFormField, VizModule } from '@vismay/viz-engine'
-import { isCalendarMonth } from '@vismay/footshorts-viz/web'
+import { DEFAULT_WATERMARK_ALPHA, isCalendarMonth } from '@vismay/footshorts-viz/web'
 import type { FsCardCalendarConfig } from '../types'
 
 /**
- * `fscard:calendar` — one team's month as a wall calendar (competition chip,
- * home/away fill, opponent crest per match day). Unlike the other picks-based
+ * `fscard:calendar` — one team's month as a wall calendar (competition tint +
+ * logo watermark, home/away icon, opponent crest and score per match day). Unlike the other picks-based
  * layers it spans SEVERAL competitions: a club's month mixes league, cup and
  * European nights, so the author ticks every competition the team plays in and
  * the module merges those fixture lists before filtering to the team + month.
@@ -28,6 +28,10 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): FsCard
   if (month && !isCalendarMonth(month)) {
     throw new Error(`${ctx.label}: fscard:calendar 'month' must be YYYY-MM (got ${month})`)
   }
+  const watermarkAlpha =
+    typeof r.watermarkAlpha === 'number' && Number.isFinite(r.watermarkAlpha)
+      ? Math.min(1, Math.max(0, r.watermarkAlpha))
+      : DEFAULT_WATERMARK_ALPHA
   return {
     type: 'fscard:calendar',
     compKeys,
@@ -35,6 +39,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): FsCard
     month,
     showScores: r.showScores !== false,
     showLegend: r.showLegend !== false,
+    watermarkAlpha,
   }
 }
 
@@ -64,6 +69,14 @@ function adminForm(): AdminFormField[] {
     },
     { kind: 'boolean', key: 'showScores', label: 'Show finished scores' },
     { kind: 'boolean', key: 'showLegend', label: 'Show legend' },
+    {
+      kind: 'number',
+      key: 'watermarkAlpha',
+      label: 'Competition logo opacity (0–1)',
+      min: 0,
+      max: 1,
+      step: 0.02,
+    },
   ]
 }
 
@@ -76,7 +89,7 @@ const calendarCardModule: VizModule<FsCardCalendarConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (c) =>
-    `fscard:calendar:${c.compKeys.join('+')}:${c.teamSlug}:${c.month}:${c.showScores ? 1 : 0}${c.showLegend ? 1 : 0}`,
+    `fscard:calendar:${c.compKeys.join('+')}:${c.teamSlug}:${c.month}:${c.showScores ? 1 : 0}${c.showLegend ? 1 : 0}:${c.watermarkAlpha}`,
 }
 
 export default calendarCardModule
