@@ -1,0 +1,448 @@
+import type {
+  StageConfig,
+  StageEasing,
+  StageEntity,
+  StageKeyframe,
+  StageKeyframeAt,
+  StageTransform,
+} from '@vismay/viz-engine'
+import {
+  type AuthoredKeyframeIndex,
+  type TimelineColumn,
+  beatIndexForSelector,
+  selectorForBeat,
+} from './timelineShape'
+
+/**
+ * Pure mutation helpers for the E2 stage-timeline editor — every function is
+ * `(stage, …) → new StageConfig` with structural sharing elsewhere, matching
+ * the freeform video editor's `patchClip` model (projectToComposerState.ts).
+ * validateStage's per-beat rules are enforced here by construction (atomic
+ * mode switches, collision checks) so the UI can never author an invalid
+ * keyframe.
+ */
+
+/** Write-back identity of one keyframe: entity id + index into `keyframes[]`. */
+export interface KeyframeAddress {
+  entityId: string
+  kfIndex: number
+}
+
+/** Engine Tier-1 defaults — mirrors `resolveStage.ts`'s `withDefaults`. */
+export const TRANSFORM_DEFAULTS = {
+  x: 0,
+  y: 0,
+  scale: 1,
+  opacity: 1,
+  rotation: 0,
+  zBand: 'mid' as const,
+  zIndex: 0,
+}
+
+/** Flat editing view of a StageTransform (position unpacked). */
+export interface FlatTransform {
+  x: number
+  y: number
+  scale: number
+  opacity: number
+  rotation: number
+  zBand: 'behind' | 'mid' | 'front'
+  zIndex: number
+}
+
+export type TransformPatch = Partial<FlatTransform>
+
+export function getKeyframe(stage: StageConfig, addr: KeyframeAddress): StageKeyframe | undefined {
+  return stage.entities.find((e) => e.id === addr.entityId)?.keyframes[addr.kfIndex]
+}
+
+/** The defaults-applied flat view the transform controls render. */
+export function flattenTransform(t: StageTransform | undefined): FlatTransform {
+  return {
+    x: t?.position?.x ?? TRANSFORM_DEFAULTS.x,
+    y: t?.position?.y ?? TRANSFORM_DEFAULTS.y,
+    scale: t?.scale ?? TRANSFORM_DEFAULTS.scale,
+    opacity: t?.opacity ?? TRANSFORM_DEFAULTS.opacity,
+    rotation: t?.rotation ?? TRANSFORM_DEFAULTS.rotation,
+    zBand: t?.zBand ?? TRANSFORM_DEFAULTS.zBand,
+    zIndex: t?.zIndex ?? TRANSFORM_DEFAULTS.zIndex,
+  }
+}
+
+function replaceKeyframe(
+  stage: StageConfig,
+  addr: KeyframeAddress,
+  next: StageKeyframe
+): StageConfig {
+  return {
+    ...stage,
+    entities: stage.entities.map((e) =>
+      e.id === addr.entityId
+        ? { ...e, keyframes: e.keyframes.map((kf, i) => (i === addr.kfIndex ? next : kf)) }
+        : e
+    ),
+  }
+}
+
+/**
+ * Apply a transform patch, pruning fields back out of the written YAML when
+ * they are BOTH absent in the baseline (as-loaded) keyframe AND equal to the
+ * engine default — so edits never bloat the config, while fields the author
+ * explicitly wrote (even at default value, e.g. `rotation: 0`) survive.
+ * `position` is `{x, y}`-atomic in the schema, so it prunes only when the
+ * baseline lacked it and both axes are at default.
+ */
+export function patchTransform(
+  stage: StageConfig,
+  addr: KeyframeAddress,
+  patch: TransformPatch,
+  baselineKf: StageKeyframe | undefined
+): StageConfig {
+  const kf = getKeyframe(stage, addr)
+  if (!kf) return stage
+  const flat = { ...flattenTransform(kf.transform), ...patch }
+  flat.opacity = Math.max(0, Math.min(1, flat.opacity))
+
+  const base = baselineKf?.transform
+  const next: StageTransform = {}
+  const keepPosition =
+    base?.position !== undefined || flat.x !== TRANSFORM_DEFAULTS.x || flat.y !== TRANSFORM_DEFAULTS.y
+  if (keepPosition) next.position = { x: flat.x, y: flat.y }
+  if (base?.scale !== undefined || flat.scale !== TRANSFORM_DEFAULTS.scale) next.scale = flat.scale
+  if (base?.opacity !== undefined || flat.opacity !== TRANSFORM_DEFAULTS.opacity)
+    next.opacity = flat.opacity
+  if (base?.rotation !== undefined || flat.rotation !== TRANSFORM_DEFAULTS.rotation)
+    next.rotation = flat.rotation
+  if (base?.zBand !== undefined || flat.zBand !== TRANSFORM_DEFAULTS.zBand) next.zBand = flat.zBand
+  if (base?.zIndex !== undefined || flat.zIndex !== TRANSFORM_DEFAULTS.zIndex)
+    next.zIndex = flat.zIndex
+
+  // Reserved Tier-2/3 fields the editor doesn't touch ride through untouched.
+  const { position3d, quaternion, rotation3d, camera } = kf.transform
+  if (position3d) next.position3d = position3d
+  if (quaternion) next.quaternion = quaternion
+  if (rotation3d) next.rotation3d = rotation3d
+  if (camera) next.camera = camera
+
+  return replaceKeyframe(stage, addr, { ...kf, transform: next })
+}
+
+/**
+ * Set the keyframe's beat-local `t` (clamped 0..1). Atomically strips
+ * `delayMs`/`durationMs` (mutually exclusive with `t`) and normalizes a
+ * bare-number `at` into selector form. Returns `null` when the new `t`
+ * collides with a sibling keyframe's `t` on the same beat (validateStage's
+ * no-duplicate-t rule) — the caller keeps the old value.
+ */
+export function setKeyframeT(
+  stage: StageConfig,
+  addr: KeyframeAddress,
+  t: number,
+  columns: TimelineColumn[]
+): StageConfig | null {
+  const kf = getKeyframe(stage, addr)
+  if (!kf) return stage
+  const clamped = Math.max(0, Math.min(1, t))
+  const beat = beatIndexForSelector(columns, kf.at)
+  const entity = stage.entities.find((e) => e.id === addr.entityId)
+  const collision = entity?.keyframes.some(
+    (sibling, i) =>
+      i !== addr.kfIndex &&
+      beatIndexForSelector(columns, sibling.at) === beat &&
+      typeof sibling.at === 'object' &&
+      sibling.at.t === clamped
+  )
+  if (collision) return null
+  const at: StageKeyframeAt =
+    typeof kf.at === 'object' ? { ...kf.at, t: clamped } : selectorForBeat(columns, beat, clamped)
+  const next: StageKeyframe = { ...kf, at }
+  delete next.delayMs
+  delete next.durationMs
+  return replaceKeyframe(stage, addr, next)
+}
+
+/**
+ * Switch the keyframe to ms-mode: strips `at.t`, sets clamped
+ * `delayMs`/`durationMs`. Callers gate on `canUseMsTiming` (ms timing is only
+ * valid on a beat's sole keyframe), so no collision check is needed here.
+ */
+export function setKeyframeTiming(
+  stage: StageConfig,
+  addr: KeyframeAddress,
+  timing: { delayMs: number; durationMs: number }
+): StageConfig {
+  const kf = getKeyframe(stage, addr)
+  if (!kf) return stage
+  let at = kf.at
+  if (typeof at === 'object' && at.t !== undefined) {
+    at = { ...at }
+    delete at.t
+  }
+  return replaceKeyframe(stage, addr, {
+    ...kf,
+    at,
+    delayMs: Math.max(0, timing.delayMs),
+    durationMs: Math.max(0, timing.durationMs),
+  })
+}
+
+/**
+ * Switch back to t-mode: strips `delayMs`/`durationMs`; `seedT` optionally
+ * sets an explicit `at.t` (omit for the legacy settled-pose semantics).
+ */
+export function clearKeyframeTiming(
+  stage: StageConfig,
+  addr: KeyframeAddress,
+  seedT?: number
+): StageConfig {
+  const kf = getKeyframe(stage, addr)
+  if (!kf) return stage
+  const next: StageKeyframe = { ...kf }
+  delete next.delayMs
+  delete next.durationMs
+  if (seedT !== undefined && typeof next.at === 'object') {
+    next.at = { ...next.at, t: Math.max(0, Math.min(1, seedT)) }
+  }
+  return replaceKeyframe(stage, addr, next)
+}
+
+/** Named easings only — the UI never calls this for `{cubicBezier}` keyframes. */
+export function setKeyframeEasing(
+  stage: StageConfig,
+  addr: KeyframeAddress,
+  easing: StageEasing | undefined
+): StageConfig {
+  const kf = getKeyframe(stage, addr)
+  if (!kf) return stage
+  const next: StageKeyframe = { ...kf }
+  if (easing === undefined) delete next.easing
+  else next.easing = easing
+  return replaceKeyframe(stage, addr, next)
+}
+
+/**
+ * The keyframe an on-canvas gesture writes (W2): the entity's keyframes on
+ * `beat`; none → null (drag disabled), one → it, several → nearest effective
+ * `t` to the playhead (a t-less keyframe among several is the beat's start
+ * pose, effective t=0; a sole keyframe needs no rule).
+ */
+export function keyframeAddressForBeat(
+  index: AuthoredKeyframeIndex,
+  entityId: string,
+  beat: number,
+  playheadT: number
+): KeyframeAddress | null {
+  const kfs = index[entityId]?.[beat]
+  if (!kfs || kfs.length === 0) return null
+  if (kfs.length === 1) return { entityId, kfIndex: kfs[0].kfIndex }
+  let best = kfs[0]
+  let bestD = Infinity
+  for (const a of kfs) {
+    const t = (typeof a.kf.at === 'object' ? a.kf.at.t : undefined) ?? 0
+    const d = Math.abs(t - playheadT)
+    if (d < bestD) {
+      bestD = d
+      best = a
+    }
+  }
+  return { entityId, kfIndex: best.kfIndex }
+}
+
+/** The beat-local t a keyframe's pose renders at (for playhead snapping):
+ *  explicit `at.t`, else 1 when sole on its beat (settled), else 0 (start). */
+export function effectiveT(kf: StageKeyframe, soleOnBeat: boolean): number {
+  const t = typeof kf.at === 'object' ? kf.at.t : undefined
+  return t ?? (soleOnBeat ? 1 : 0)
+}
+
+/** validateStage's rule precomputed for the UI: ms timing only on a beat's sole keyframe. */
+export function canUseMsTiming(
+  index: AuthoredKeyframeIndex,
+  entityId: string,
+  beat: number
+): boolean {
+  return (index[entityId]?.[beat]?.length ?? 0) === 1
+}
+
+/**
+ * Drag-drop legality. E2 moves a beat's WHOLE keyframe group, so the rule
+ * collapses to: target ≠ source and the target beat holds no authored
+ * keyframes for this entity — a previously-valid group stays valid on an
+ * empty beat (one t-less max, no duplicate t, delay/duration-on-sole all
+ * hold by construction).
+ */
+export function canDropKeyframes(
+  index: AuthoredKeyframeIndex,
+  entityId: string,
+  fromBeat: number,
+  toBeat: number
+): boolean {
+  if (toBeat === fromBeat) return false
+  return (index[entityId]?.[toBeat]?.length ?? 0) === 0
+}
+
+/* ── W3: entity / keyframe CRUD (all pure; the splice's order invariant —
+ *    additions append, removals filter, nothing reorders — is enforced
+ *    here by construction) ─────────────────────────────────────────────── */
+
+/**
+ * Append a new entity with one seeded keyframe at `beat` (validateStage
+ * requires a non-empty keyframes array) and a centred transform.
+ */
+export function addEntity(
+  stage: StageConfig | null,
+  opts: {
+    id: string
+    role: 'subject' | 'object'
+    assetRef: string
+    beat: number
+    columns: TimelineColumn[]
+  }
+): StageConfig {
+  const entity: StageEntity = {
+    id: opts.id,
+    role: opts.role,
+    content: { type: 'image', src: opts.assetRef },
+    keyframes: [
+      { at: selectorForBeat(opts.columns, opts.beat), transform: { position: { x: 0, y: 0 } } },
+    ],
+  }
+  return { ...(stage ?? {}), entities: [...(stage?.entities ?? []), entity] }
+}
+
+export function removeEntity(stage: StageConfig, entityId: string): StageConfig {
+  return { ...stage, entities: stage.entities.filter((e) => e.id !== entityId) }
+}
+
+/**
+ * Insert a keyframe on `beat`, seeded from `seed` (callers pass the nearest
+ * authored keyframe's transform; default = centred). Inserted beat-sorted
+ * (after the last keyframe whose resolved beat precedes the target) so the
+ * authored array stays readable. Returns `null` when the beat already holds
+ * a t-less keyframe for this entity — the new keyframe is t-less too, and
+ * validateStage allows at most one per beat.
+ */
+export function addKeyframe(
+  stage: StageConfig,
+  entityId: string,
+  beat: number,
+  columns: TimelineColumn[],
+  seed?: StageTransform
+): StageConfig | null {
+  const entity = stage.entities.find((e) => e.id === entityId)
+  if (!entity) return stage
+  const collision = entity.keyframes.some(
+    (kf) =>
+      beatIndexForSelector(columns, kf.at) === beat &&
+      (typeof kf.at !== 'object' || kf.at.t === undefined)
+  )
+  if (collision) return null
+  const next: StageKeyframe = {
+    at: selectorForBeat(columns, beat),
+    transform: seed ? structuredClone(seed) : { position: { x: 0, y: 0 } },
+  }
+  let insertAt = 0
+  entity.keyframes.forEach((kf, i) => {
+    const b = beatIndexForSelector(columns, kf.at)
+    if (b >= 0 && b <= beat) insertAt = i + 1
+  })
+  const keyframes = [...entity.keyframes]
+  keyframes.splice(insertAt, 0, next)
+  return {
+    ...stage,
+    entities: stage.entities.map((e) => (e.id === entityId ? { ...e, keyframes } : e)),
+  }
+}
+
+/**
+ * Delete a keyframe. Returns `null` when it is the entity's LAST keyframe —
+ * validateStage requires a non-empty array; deleting the entity is the path.
+ */
+export function removeKeyframe(stage: StageConfig, addr: KeyframeAddress): StageConfig | null {
+  const entity = stage.entities.find((e) => e.id === addr.entityId)
+  if (!entity || !entity.keyframes[addr.kfIndex]) return stage
+  if (entity.keyframes.length <= 1) return null
+  return {
+    ...stage,
+    entities: stage.entities.map((e) =>
+      e.id === addr.entityId
+        ? { ...e, keyframes: e.keyframes.filter((_, i) => i !== addr.kfIndex) }
+        : e
+    ),
+  }
+}
+
+/** Entity-level content edit (src/size/alt) — the splice's whole-entity-replace case. */
+export function setEntityContent(
+  stage: StageConfig,
+  entityId: string,
+  patch: { src?: string; size?: number; alt?: string }
+): StageConfig {
+  return {
+    ...stage,
+    entities: stage.entities.map((e) =>
+      e.id === entityId ? { ...e, content: { ...e.content, ...patch } } : e
+    ),
+  }
+}
+
+/** Slugified basename as the suggested entity id, deduped with -2, -3, … */
+export function suggestEntityId(filename: string, existing: Set<string>): string {
+  const base =
+    filename
+      .replace(/\.[^.]+$/, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'entity'
+  if (!existing.has(base)) return base
+  for (let n = 2; ; n++) {
+    const candidate = `${base}-${n}`
+    if (!existing.has(candidate)) return candidate
+  }
+}
+
+/**
+ * Baseline keyframe lookup by entity id + `at` identity (JSON-equal), NOT by
+ * array index — CRUD breaks index alignment between baseline and edited.
+ * `undefined` for keyframes that didn't exist at load (or whose `at` was
+ * rewritten by a move): `patchTransform` then prunes against pure engine
+ * defaults, which is exactly right for a new keyframe.
+ */
+export function findBaselineKf(
+  baseline: StageConfig | null,
+  entityId: string,
+  at: StageKeyframeAt | number
+): StageKeyframe | undefined {
+  const key = JSON.stringify(at)
+  return baseline?.entities
+    .find((e) => e.id === entityId)
+    ?.keyframes.find((kf) => JSON.stringify(kf.at) === key)
+}
+
+/**
+ * Move every keyframe on `fromBeat` to `toBeat`: each keyframe's `at` is
+ * rewritten via `selectorForBeat` (preserving its beat-local `t`); ms-mode
+ * timing rides along untouched. Bare-number `at`s normalize to selector form.
+ */
+export function moveBeatKeyframes(
+  stage: StageConfig,
+  columns: TimelineColumn[],
+  entityId: string,
+  fromBeat: number,
+  toBeat: number
+): StageConfig {
+  return {
+    ...stage,
+    entities: stage.entities.map((e) => {
+      if (e.id !== entityId) return e
+      return {
+        ...e,
+        keyframes: e.keyframes.map((kf) => {
+          if (beatIndexForSelector(columns, kf.at) !== fromBeat) return kf
+          const t = typeof kf.at === 'object' ? kf.at.t : undefined
+          return { ...kf, at: selectorForBeat(columns, toBeat, t) }
+        }),
+      }
+    }),
+  }
+}
