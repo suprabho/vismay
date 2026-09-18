@@ -10,7 +10,8 @@
     "./schemas": "./src/schemas.ts",
     "./editorial": "./src/editorial.ts",
     "./analytics": "./src/analytics.ts",
-    "./media": "./src/media.ts"
+    "./media": "./src/media.ts",
+    "./espnCups": "./src/espnCups.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
