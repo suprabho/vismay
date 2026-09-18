@@ -12,6 +12,10 @@ export interface CompetitionOption {
   season: string
   hasStandings: boolean
   hasFixtures: boolean
+  /** `espn` = a private ESPN cup import (admin_espn_cup_fixtures) rather than
+   *  the football-data `fixtures` table. The data manager passes it through to
+   *  the data routes; the season label is "2025/26" for these. */
+  source?: 'espn'
 }
 
 /** `compKey` is `"<slug>::<season>"`. */

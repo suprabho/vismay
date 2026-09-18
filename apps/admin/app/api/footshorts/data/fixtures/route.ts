@@ -2,12 +2,15 @@ import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { fetchFixtures } from '@vismay/content-source/footshortsData'
 import type { CompetitionPhase } from '@vismay/content-source/footshortsBlocks'
+import { listEspnCupFixtureRows } from '@/lib/espnCups'
 
 /**
  * Fixtures for `?competition=<slug>&season=<season>` — DB-first with the same
  * guarded live fallback. Optional `&phase=knockout` / `&stage=QUARTER_FINALS`
  * narrow the slice (the picker uses `phase=knockout` to feed a clean bracket and
- * the full list to pick individual match cards).
+ * the full list to pick individual match cards). `&source=espn` serves the
+ * private ESPN cup imports instead (admin_espn_cup_fixtures, season label
+ * "2025/26") — admin-only data the studio can build cards from.
  */
 
 export const runtime = 'nodejs'
@@ -28,8 +31,11 @@ export async function GET(req: Request) {
     ? (phaseParam as CompetitionPhase)
     : undefined
   const stage = url.searchParams.get('stage')?.trim() || undefined
+  const source = url.searchParams.get('source')?.trim()
   try {
-    const rows = await fetchFixtures({ competitionSlug: competition, season, phase, stage })
+    const rows = source === 'espn'
+      ? await listEspnCupFixtureRows(competition, season)
+      : await fetchFixtures({ competitionSlug: competition, season, phase, stage })
     return NextResponse.json({ ok: true, rows })
   } catch (e) {
     return NextResponse.json(

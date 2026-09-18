@@ -104,14 +104,18 @@ export function useFootshortsCardData({
     for (const key of compKeys) {
       const comp = compByKey.get(key)
       if (!comp) continue
-      const qs = `competition=${encodeURIComponent(comp.slug)}&season=${encodeURIComponent(comp.season)}`
+      const qs =
+        `competition=${encodeURIComponent(comp.slug)}&season=${encodeURIComponent(comp.season)}` +
+        (comp.source ? `&source=${comp.source}` : '')
       if (!fetchedFixtures.current.has(key)) {
         fetchedFixtures.current.add(key)
         void fetchRows<FixtureRow>(`/api/footshorts/data/fixtures?${qs}`).then((rows) => {
           if (alive) setFixturesByComp((m) => ({ ...m, [key]: rows }))
         })
       }
-      if (!fetchedStandings.current.has(key)) {
+      // ESPN cup imports are knockout-only — no standings to fetch (readers
+      // default a missing key to []).
+      if (comp.source !== 'espn' && !fetchedStandings.current.has(key)) {
         fetchedStandings.current.add(key)
         void fetchRows<StandingRow>(`/api/footshorts/data/standings?${qs}`).then((rows) => {
           if (alive) setStandingsByComp((m) => ({ ...m, [key]: rows }))
