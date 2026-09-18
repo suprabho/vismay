@@ -164,3 +164,28 @@ test('slimmed audit payload drops player media and per-play blobs', () => {
   const text = JSON.stringify(slim);
   assert.ok(!text.includes('jerseyImages') && !text.includes('"plays"') && !text.includes('participants":[{}]'));
 });
+
+test('team logo prefers the default variant, then any non-dark one, over array order', () => {
+  const withLogos = (logos: unknown[]) => {
+    const s = summary();
+    const competitors = (s.header.competitions[0] as { competitors: { team: Record<string, unknown> }[] }).competitors;
+    competitors[1]!.team = { ...competitors[1]!.team, logos };
+    return normalizeEspnMatch(s, ctx);
+  };
+  // Dark listed first (as ESPN does for some cups): the default wins.
+  assert.equal(withLogos([
+    { href: 'https://a.espncdn.com/i/teamlogos/soccer/500-dark/384.png', rel: ['full', 'dark'] },
+    { href: 'https://a.espncdn.com/i/teamlogos/soccer/500/384.png', rel: ['full', 'default'] },
+  ]).home.logo_url, 'https://a.espncdn.com/i/teamlogos/soccer/500/384.png');
+  // No default tagged: the first non-dark one.
+  assert.equal(withLogos([
+    { href: 'https://a.espncdn.com/i/teamlogos/soccer/500-dark/384.png', rel: ['full', 'dark'] },
+    { href: 'https://a.espncdn.com/i/teamlogos/soccer/500/384.png', rel: ['full', 'scoreboard'] },
+  ]).home.logo_url, 'https://a.espncdn.com/i/teamlogos/soccer/500/384.png');
+  // Only a dark variant exists: still better than nothing.
+  assert.equal(withLogos([
+    { href: 'https://a.espncdn.com/i/teamlogos/soccer/500-dark/384.png', rel: ['full', 'dark'] },
+  ]).home.logo_url, 'https://a.espncdn.com/i/teamlogos/soccer/500-dark/384.png');
+  // No logos at all: the flat `logo` field, then the CDN by id.
+  assert.equal(withLogos([]).home.logo_url, 'https://a.espncdn.com/i/teamlogos/soccer/500/384.png');
+});

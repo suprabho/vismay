@@ -86,6 +86,7 @@
     "playwright": "^1.0.0"
   },
   "dependencies": {
+    "@footshorts/shared": "workspace:*",
     "gray-matter": "^4.0.3",
     "yaml": "^2.8.3"
   },

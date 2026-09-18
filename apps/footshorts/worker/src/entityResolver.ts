@@ -8,7 +8,7 @@
  * Strategy (cheap → expensive):
  *   1. Exact name match (case-insensitive)
  *   2. Slug match on normalized form
- *   3. Alias lookup — the hardcoded ALIASES map below ("Man Utd" → Manchester
+ *   3. Alias lookup — the shared ENTITY_ALIASES map ("Man Utd" → Manchester
  *      United, "Real" → Real Madrid), then the `entity_aliases` DB table
  *      (editor-taught via the admin "resolve identities" UI, e.g. Power
  *      rankings — no code change/redeploy needed for those)
@@ -21,15 +21,12 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { GeminiSummary } from '@footshorts/shared/schemas';
+import { ENTITY_ALIASES as ALIASES, canonicalTeamKey, normalizeEntityKey as normalize } from '@footshorts/shared/entityKeys';
 
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // strip accents
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+// The slug rule + alias table live in @footshorts/shared/entityKeys so the
+// admin's ESPN cup fixtures and the story hydrator resolve labels the same
+// way this resolver does. Re-exported for the theanalyst match discovery.
+export { canonicalTeamKey };
 
 // In-memory caches — refreshed on each worker run
 let entityCache: Map<string, string> | null = null;
@@ -54,8 +51,8 @@ async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, st
   return cache;
 }
 
-// Editor-taught aliases (`entity_aliases` table) — same shape/key as ALIASES
-// below but writable at runtime from the admin, without a worker redeploy.
+// Editor-taught aliases (`entity_aliases` table) — same shape/key as ENTITY_ALIASES
+// but writable at runtime from the admin, without a worker redeploy.
 // See supabase/footshorts/migrations/20260825000000_entity_aliases.sql.
 async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, string>> {
   if (aliasCache) return aliasCache;
@@ -73,69 +70,6 @@ async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, str
   aliasCache = cache;
   return cache;
 }
-
-// Common aliases — extend as you find misses in the failure logs.
-// Slugs on the right must match canonical entity slugs produced by seed.ts commonName().
-const ALIASES: Record<string, string> = {
-  // teams — English
-  'man-utd': 'manchester-united',
-  'man-united': 'manchester-united',
-  'man-city': 'manchester-city',
-  'spurs': 'tottenham-hotspur',
-  'tottenham': 'tottenham-hotspur',
-  'wolves': 'wolverhampton-wanderers',
-  'brighton': 'brighton-hove-albion',
-  // teams — Spanish
-  'barca': 'barcelona',
-  'real': 'real-madrid',
-  'atleti': 'club-atletico-de-madrid',
-  'atletico': 'club-atletico-de-madrid',
-  'atletico-madrid': 'club-atletico-de-madrid',
-  'betis': 'real-betis-balompie',
-  // teams — German
-  'bayern': 'bayern-munchen',
-  'bayern-munich': 'bayern-munchen',
-  // teams — Italian
-  'juve': 'juventus',
-  'inter': 'internazionale-milano',
-  'inter-milan': 'internazionale-milano',
-  'verona': 'hellas-verona',
-  // official forms with glued acronyms, in case Gemini echoes them verbatim
-  'acf-fiorentina': 'fiorentina',
-  'atalanta-bc': 'atalanta',
-  'genoa-cfc': 'genoa',
-  // teams — French
-  'psg': 'paris-saint-germain',
-  'paris-sg': 'paris-saint-germain',   // theanalyst.com's spelling
-  'lyon': 'olympique-lyonnais',
-  'marseille': 'olympique-de-marseille',
-  // teams — theanalyst.com's Championship short forms (verified live 2026-09-09;
-  // these have no token in common with the official name, so per-word
-  // teamKeyVariants can't bridge them)
-  'qpr': 'queens-park-rangers',
-  'sheff-utd': 'sheffield-united',
-  'sheff-wed': 'sheffield-wednesday',
-  'bristol-c': 'bristol-city',
-  'west-brom': 'west-bromwich-albion',
-  'nottm-forest': 'nottingham-forest',
-  // teams — long official names → common names
-  'sporting': 'sporting-clube-de-portugal',   // theanalyst.com's "Sporting"; "sporting" alone is a noise token in teamKeyVariants
-  'newcastle': 'newcastle-united',
-  'real-betis': 'real-betis-balompie',
-  // leagues — renames Gemini uses vs official seed names
-  'epl': 'premier-league',
-  'ucl': 'champions-league',
-  'uel': 'europa-league',
-  'la-liga': 'primera-division',
-  'laliga': 'primera-division',
-  'euros': 'european-championship',
-  'euro': 'european-championship',
-  'world-cup': 'fifa-world-cup',     // seed stores "FIFA World Cup"; Gemini says "World Cup"
-  'brasileirao': 'campeonato-brasileiro-serie-a',
-  'serie-a': 'serie-a',
-  'ligue-1': 'ligue-1',
-  'bundesliga': 'bundesliga',
-};
 
 async function resolveOne(
   cache: Map<string, string>,
@@ -204,18 +138,6 @@ export async function resolveTeamName(
 export function clearEntityCache() {
   entityCache = null;
   aliasCache = null;
-}
-
-// Normalization + alias mapping exposed for callers that compare team labels
-// from two providers directly (e.g. theanalyst match discovery matching
-// scraped team names against fixtures) — same rules as resolveOne, minus the
-// entity-cache lookup, so both sides of a comparison collapse to one key.
-// Our own entity names carry the official "FC"/"AFC" club suffix
-// (football-data.org convention, e.g. "Sunderland AFC", "AFC Bournemouth"),
-// which the alias table above doesn't strip — so it's stripped here first.
-export function canonicalTeamKey(name: string): string {
-  const slug = normalize(name).replace(/^a?fc-/, '').replace(/-a?fc$/, '');
-  return ALIASES[slug] ?? slug;
 }
 
 /**

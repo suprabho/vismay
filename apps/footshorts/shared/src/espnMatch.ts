@@ -195,9 +195,23 @@ function sideOf(team: JsonObject, home: EspnTeamSummary, away: EspnTeamSummary):
   return null;
 }
 
+/** ESPN sends several logo variants per team, tagged by `rel` (["full",
+ * "default"], ["full", "dark"], ["full", "scoreboard"], …) in no stable order
+ * across competitions. Prefer the default light-surface mark, then anything
+ * that isn't a dark variant, and only then whatever came first — never index
+ * [0] blindly, or a cup match can show a different crest than the league. */
+function teamLogo(team: JsonObject): string | null {
+  const logos = list(team.logos).map(object);
+  const rel = (logo: JsonObject) => list(logo.rel).filter((r): r is string => typeof r === 'string');
+  const pick = logos.find(l => rel(l).includes('default'))
+    ?? logos.find(l => !rel(l).includes('dark'))
+    ?? logos[0];
+  return pick ? text(pick.href) : null;
+}
+
 function teamSummary(competitor: JsonObject): EspnTeamSummary {
   const team = object(competitor.team);
-  const logo = text(object(list(team.logos)[0]).href) ?? text(team.logo);
+  const logo = teamLogo(team) ?? text(team.logo);
   const id = text(team.id) ?? text(competitor.id);
   const color = text(team.color);
   return {
