@@ -11,8 +11,8 @@ export type { FixtureRow, FixtureTeamRef, FixtureStatus };
 const FIXTURE_COLS = `
   id, competition_slug, season, matchday, stage, kickoff_at, status,
   home_score, away_score, home_team_name, away_team_name,
-  home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
-  away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
+  home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url, primary_color),
+  away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url, primary_color)
 `;
 
 export type FixtureKind = 'past' | 'upcoming' | 'all';

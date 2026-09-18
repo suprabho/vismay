@@ -1,33 +1,36 @@
 /**
  * Server-side enrichment of footshorts story configs.
  *
- * Walks every section's foreground for `fs:match-card` entries, collects the
- * unique team slugs they reference, runs a single Supabase `entities` lookup,
- * and injects `crest_url` + `primary_color` into each card as the
- * `homeCrestUrl` / `awayCrestUrl` / `homeColor` / `awayColor` fields the
- * match-card layouts already understand.
+ * Walks every section's foreground for `fs:match-card` and `fs:match-tile`
+ * layers, resolves the teams they name against the Supabase `entities` table
+ * (alias-aware: `Spurs`, `Tottenham`, `Tottenham Hotspur FC` all find
+ * `tottenham-hotspur`), and injects `crest_url` + `primary_color`:
+ *
+ *   - `fs:match-card` gets the `homeCrestUrl` / `awayCrestUrl` / `homeColor` /
+ *     `awayColor` fields the match-card layouts already understand.
+ *   - `fs:match-tile` carries whole `FixtureRow`s; each `home` / `away` ref
+ *     gets its `crest_url` / `primary_color` filled where the YAML left null.
  *
  * Precedence at render time:
- *   1. YAML-explicit override (already in the config) — untouched.
- *   2. Supabase data (injected here).
+ *   1. YAML-explicit value (already in the config) — untouched.
+ *   2. Supabase data (injected here) — what the Asset Studio edits.
  *   3. Bundled palette in `@vismay/footshorts-viz/src/data/teams.ts`.
  *
- * This is a no-op when Supabase env vars are missing or the network fetch
- * fails — the story still renders, just with monogram placeholders. Same
- * when the story isn't a footshorts story or carries no `fs:match-card`.
+ * This is a no-op when Supabase env vars are missing or the lookup fails —
+ * the story still renders, just from the bundled palette / monogram. Same
+ * when the story isn't a footshorts story or carries no match layers.
  */
 
 import type { StoryConfig } from '@vismay/viz-engine'
 import { createServiceClient } from './supabase'
+import { resolveTeamsByLabel, type TeamBrandRow } from './footshortsData'
 
 const FS_MATCH_CARD = 'fs:match-card'
+const FS_MATCH_TILE = 'fs:match-tile'
 
-interface TeamRow {
-  slug: string
-  name: string
-  crest_url: string | null
-  primary_color: string | null
-}
+/** Resolves free-text team labels to entity rows, keyed by label. The default
+ *  hits Supabase; tests inject a stub. */
+export type TeamResolver = (labels: string[]) => Promise<Map<string, TeamBrandRow>>
 
 interface MatchCardRaw extends Record<string, unknown> {
   type: 'fs:match-card'
@@ -39,13 +42,16 @@ interface MatchCardRaw extends Record<string, unknown> {
   awayColor?: unknown
 }
 
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+/** A `FixtureTeamRef` as it sits in stored YAML/JSON — every field untrusted. */
+interface TeamRefRaw extends Record<string, unknown> {
+  slug?: unknown
+  name?: unknown
+  crest_url?: unknown
+  primary_color?: unknown
+}
+
+function isObj(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null
 }
 
 function asString(v: unknown): string | undefined {
@@ -55,93 +61,119 @@ function asString(v: unknown): string | undefined {
 /** Walk the config and yield every `fs:match-card` raw object we find. */
 function collectMatchCards(config: StoryConfig): MatchCardRaw[] {
   const cards: MatchCardRaw[] = []
-  for (const section of config.sections) {
-    const fg = (section as { foreground?: unknown[] }).foreground
-    if (!Array.isArray(fg)) continue
-    for (const layer of fg) {
-      if (layer && typeof layer === 'object' && (layer as { type?: unknown }).type === FS_MATCH_CARD) {
-        cards.push(layer as MatchCardRaw)
-      }
-    }
+  for (const layer of foregroundLayers(config)) {
+    if (layer.type === FS_MATCH_CARD) cards.push(layer as MatchCardRaw)
   }
   return cards
 }
 
-/** Returns the distinct set of team slugs referenced by `fs:match-card`s
- * whose YAML didn't already supply both the crest and color override. */
-function collectMissingSlugs(cards: MatchCardRaw[]): string[] {
-  const slugs = new Set<string>()
+/** Every `home` / `away` team ref inside `fs:match-tile` layers (single
+ *  `fixture` or grid `fixtures`), in place so hydration mutates the config. */
+function collectTileTeamRefs(config: StoryConfig): TeamRefRaw[] {
+  const refs: TeamRefRaw[] = []
+  for (const layer of foregroundLayers(config)) {
+    if (layer.type !== FS_MATCH_TILE) continue
+    const fixtures = Array.isArray(layer.fixtures) ? layer.fixtures : [layer.fixture]
+    for (const fixture of fixtures) {
+      if (!isObj(fixture)) continue
+      for (const side of ['home', 'away'] as const) {
+        const ref = fixture[side]
+        if (isObj(ref)) refs.push(ref as TeamRefRaw)
+      }
+    }
+  }
+  return refs
+}
+
+function* foregroundLayers(config: StoryConfig): Generator<Record<string, unknown>> {
+  for (const section of config.sections) {
+    const fg = (section as { foreground?: unknown[] }).foreground
+    if (!Array.isArray(fg)) continue
+    for (const layer of fg) if (isObj(layer)) yield layer
+  }
+}
+
+/** The label a tile ref is looked up by — its slug, else its display name. */
+function tileRefLabels(ref: TeamRefRaw): string[] {
+  return [asString(ref.slug), asString(ref.name)].filter((l): l is string => !!l)
+}
+
+/** Returns the distinct team labels whose card/tile still lacks a crest or a
+ *  color, so the lookup only fetches what can actually be injected. */
+function collectMissingLabels(cards: MatchCardRaw[], refs: TeamRefRaw[]): string[] {
+  const labels = new Set<string>()
   for (const card of cards) {
     const home = asString(card.home)
     const away = asString(card.away)
-    if (home && (!asString(card.homeCrestUrl) || !asString(card.homeColor))) {
-      slugs.add(slugify(home))
-    }
-    if (away && (!asString(card.awayCrestUrl) || !asString(card.awayColor))) {
-      slugs.add(slugify(away))
-    }
+    if (home && (!asString(card.homeCrestUrl) || !asString(card.homeColor))) labels.add(home)
+    if (away && (!asString(card.awayCrestUrl) || !asString(card.awayColor))) labels.add(away)
   }
-  return Array.from(slugs)
+  for (const ref of refs) {
+    if (asString(ref.crest_url) && asString(ref.primary_color)) continue
+    for (const l of tileRefLabels(ref)) labels.add(l)
+  }
+  return Array.from(labels)
 }
 
 /** Inject `homeCrestUrl` / `homeColor` / `awayCrestUrl` / `awayColor` onto
- * each card whenever Supabase has data for that slug and the YAML didn't
+ * each card whenever Supabase has data for that team and the YAML didn't
  * already set the override. YAML values are never overwritten. */
-function applyHydration(cards: MatchCardRaw[], teamsBySlug: Map<string, TeamRow>): void {
+function applyCardHydration(cards: MatchCardRaw[], teams: Map<string, TeamBrandRow>): void {
   for (const card of cards) {
     const home = asString(card.home)
-    if (home) {
-      const row = teamsBySlug.get(slugify(home))
-      if (row) {
-        if (!asString(card.homeCrestUrl) && row.crest_url) card.homeCrestUrl = row.crest_url
-        if (!asString(card.homeColor) && row.primary_color) card.homeColor = row.primary_color
-      }
+    const homeRow = home ? teams.get(home) : undefined
+    if (homeRow) {
+      if (!asString(card.homeCrestUrl) && homeRow.crest_url) card.homeCrestUrl = homeRow.crest_url
+      if (!asString(card.homeColor) && homeRow.primary_color) card.homeColor = homeRow.primary_color
     }
     const away = asString(card.away)
-    if (away) {
-      const row = teamsBySlug.get(slugify(away))
-      if (row) {
-        if (!asString(card.awayCrestUrl) && row.crest_url) card.awayCrestUrl = row.crest_url
-        if (!asString(card.awayColor) && row.primary_color) card.awayColor = row.primary_color
-      }
+    const awayRow = away ? teams.get(away) : undefined
+    if (awayRow) {
+      if (!asString(card.awayCrestUrl) && awayRow.crest_url) card.awayCrestUrl = awayRow.crest_url
+      if (!asString(card.awayColor) && awayRow.primary_color) card.awayColor = awayRow.primary_color
     }
   }
 }
+
+/** Fill a tile ref's `crest_url` / `primary_color` where the YAML left them
+ *  null. Slug is tried before name so an authored slug stays authoritative. */
+function applyTileHydration(refs: TeamRefRaw[], teams: Map<string, TeamBrandRow>): void {
+  for (const ref of refs) {
+    const row = tileRefLabels(ref).map((l) => teams.get(l)).find(Boolean)
+    if (!row) continue
+    if (!asString(ref.crest_url) && row.crest_url) ref.crest_url = row.crest_url
+    if (!asString(ref.primary_color) && row.primary_color) ref.primary_color = row.primary_color
+  }
+}
+
+const supabaseResolver: TeamResolver = (labels) => resolveTeamsByLabel(createServiceClient(), labels)
 
 /**
  * Enrich a footshorts story's config in place with team crests + brand colors
  * from the Supabase `entities` table. Safe to call on any config — if it
- * doesn't contain `fs:match-card` layers, or if Supabase isn't configured,
- * the function returns the input unchanged.
+ * doesn't contain match layers, or if Supabase isn't configured, the function
+ * returns the input unchanged.
  */
-export async function hydrateFootshortsConfig(config: StoryConfig): Promise<StoryConfig> {
+export async function hydrateFootshortsConfig(
+  config: StoryConfig,
+  resolve: TeamResolver = supabaseResolver,
+): Promise<StoryConfig> {
   const cards = collectMatchCards(config)
-  if (cards.length === 0) return config
+  const refs = collectTileTeamRefs(config)
+  if (cards.length === 0 && refs.length === 0) return config
 
-  const slugs = collectMissingSlugs(cards)
-  if (slugs.length === 0) return config
+  const labels = collectMissingLabels(cards, refs)
+  if (labels.length === 0) return config
 
-  let supabase
+  let teams: Map<string, TeamBrandRow>
   try {
-    supabase = createServiceClient()
+    teams = await resolve(labels)
   } catch {
-    // Env vars missing — fall back to the bundled palette at render time.
+    // Env vars missing or the lookup failed — fall back to the bundled palette at render time.
     return config
   }
 
-  const { data, error } = await supabase
-    .from('entities')
-    .select('slug, name, crest_url, primary_color')
-    .eq('type', 'team')
-    .in('slug', slugs)
-
-  if (error || !data) return config
-
-  const teamsBySlug = new Map<string, TeamRow>()
-  for (const row of data as TeamRow[]) {
-    teamsBySlug.set(row.slug, row)
-  }
-
-  applyHydration(cards, teamsBySlug)
+  applyCardHydration(cards, teams)
+  applyTileHydration(refs, teams)
   return config
 }

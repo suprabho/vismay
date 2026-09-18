@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     '@vismay/viz-engine',
     '@vismay/story-reader',
     '@vismay/content-source',
+    '@footshorts/shared',
     '@vismay/travel-viz',
     '@vismay/admin-core',
   ],

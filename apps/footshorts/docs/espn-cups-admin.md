@@ -83,7 +83,9 @@ The Share cards studio lists each imported cup season as its own competition,
 labelled `<Cup> · 2025/26 · ESPN` (the `2025/26` season label keeps it apart
 from any football-data `fa-cup` season `2025`). Its fixtures come from
 `admin_espn_cup_fixtures` via `/api/footshorts/data/fixtures?…&source=espn`
-(crests from ESPN's team-logo CDN, no entity ids), and the Match timeline
+(team names are resolved against `entities` so a card carries the crest and
+brand colour set in the Asset Studio, with ESPN's team-logo CDN as the crest
+fallback for clubs we have no entity for; ids stay ESPN's), and the Match timeline
 layer's events come from the extracted detail via
 `/api/footshorts/data/events?fixtureId=<espn event id>` (numeric ids route to
 the private table; uuids stay on `fixture_events`). The layer's **Extract

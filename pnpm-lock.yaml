@@ -1303,6 +1303,9 @@ importers:
 
   packages/content-source:
     dependencies:
+      '@footshorts/shared':
+        specifier: workspace:*
+        version: link:../../apps/footshorts/shared
       '@supabase/supabase-js':
         specifier: ^2.0.0
         version: 2.105.4

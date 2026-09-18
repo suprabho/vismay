@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     '@vismay/viz-engine',
     '@vismay/kidzovo-viz',
     '@vismay/content-source',
+    '@footshorts/shared',
   ],
 }
 

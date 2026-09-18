@@ -12,7 +12,8 @@
     "./analytics": "./src/analytics.ts",
     "./media": "./src/media.ts",
     "./espnCups": "./src/espnCups.ts",
-    "./espnMatch": "./src/espnMatch.ts"
+    "./espnMatch": "./src/espnMatch.ts",
+    "./entityKeys": "./src/entityKeys.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

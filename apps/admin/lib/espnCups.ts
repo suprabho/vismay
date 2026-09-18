@@ -1,4 +1,5 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { resolveTeamsByLabel, type TeamBrandRow } from '@vismay/content-source/footshortsData'
 import type { FixtureRow, FixtureStatus, FixtureTeamRef } from '@vismay/footshorts-viz/types'
 import { ESPN_CUPS, ESPN_CUP_TABLE, cupSeasonLabel, validCupSeason, type CupFixture, type CupStatus, type EspnCup } from '@footshorts/shared/espnCups'
 import { ESPN_MATCH_DETAIL_TABLE, extractEspnMatch, type EspnMatchDetail, type EspnMatchEvent } from '@footshorts/shared/espnMatch'
@@ -156,19 +157,45 @@ function slugify(name: string): string {
   return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
 }
 
-function espnTeamRef(espnId: string | null, name: string): FixtureTeamRef {
+/** A team ref for a cup fixture. ESPN gives us only an id and a display name,
+ * so the crest + brand colour come from our own `entities` row when the name
+ * resolves to one (the values the Asset Studio edits — a cup card then matches
+ * the league card for the same club), with ESPN's team-logo CDN as the crest
+ * fallback. The id stays ESPN's: nothing downstream keys cup teams by entity. */
+function espnTeamRef(espnId: string | null, name: string, entity?: TeamBrandRow): FixtureTeamRef {
   return {
     id: espnId ? `espn:${espnId}` : `espn:${slugify(name)}`,
-    slug: slugify(name),
+    slug: entity?.slug ?? slugify(name),
     name,
-    crest_url: espnId ? `https://a.espncdn.com/i/teamlogos/soccer/500/${espnId}.png` : null,
-    primary_color: null,
+    crest_url: entity?.crest_url ?? (espnId ? `https://a.espncdn.com/i/teamlogos/soccer/500/${espnId}.png` : null),
+    primary_color: entity?.primary_color ?? null,
+  }
+}
+
+/** Resolve every team name in the list to an entity, keyed by ESPN's name.
+ * Best-effort: a lookup failure logs and leaves the ESPN-only refs, so the
+ * fixtures list never breaks over branding. */
+async function resolveCupTeams(rows: CupFixture[]): Promise<Map<string, TeamBrandRow>> {
+  const labels = new Set<string>()
+  for (const r of rows) {
+    labels.add(r.home_team_name)
+    labels.add(r.away_team_name)
+  }
+  try {
+    return await resolveTeamsByLabel(createServiceClient(), Array.from(labels))
+  } catch (error) {
+    console.warn('[espnCups] team lookup failed, falling back to ESPN crests:', error instanceof Error ? error.message : error)
+    return new Map()
   }
 }
 
 /** A stored cup fixture in the studio's FixtureRow shape. The id is the ESPN
  * event id, which the events route recognises (numeric, not a uuid). */
-export function cupFixtureToFixtureRow(f: CupFixture, cup: EspnCup): FixtureRow {
+export function cupFixtureToFixtureRow(
+  f: CupFixture,
+  cup: EspnCup,
+  teams: ReadonlyMap<string, TeamBrandRow> = new Map(),
+): FixtureRow {
   return {
     id: f.espn_event_id,
     competition_slug: cup.slug,
@@ -182,8 +209,8 @@ export function cupFixtureToFixtureRow(f: CupFixture, cup: EspnCup): FixtureRow 
     away_score: f.away_score,
     home_team_name: f.home_team_name,
     away_team_name: f.away_team_name,
-    home: espnTeamRef(f.home_espn_id, f.home_team_name),
-    away: espnTeamRef(f.away_espn_id, f.away_team_name),
+    home: espnTeamRef(f.home_espn_id, f.home_team_name, teams.get(f.home_team_name)),
+    away: espnTeamRef(f.away_espn_id, f.away_team_name, teams.get(f.away_team_name)),
   }
 }
 
@@ -192,7 +219,8 @@ export async function listEspnCupFixtureRows(competitionSlug: string, seasonLabe
   const season = parseEspnSeasonLabel(seasonLabel)
   if (!cup || season == null) return []
   const rows = await listEspnCups(season, cup.slug)
-  return rows.map(r => cupFixtureToFixtureRow(r, cup))
+  const teams = await resolveCupTeams(rows)
+  return rows.map(r => cupFixtureToFixtureRow(r, cup, teams))
 }
 
 export function isEspnEventId(id: string): boolean {

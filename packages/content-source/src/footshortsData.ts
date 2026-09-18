@@ -21,6 +21,7 @@
  */
 
 import { createServiceClient } from './supabase'
+import { normalizeEntityKey, teamLookupSlugs } from '@footshorts/shared/entityKeys'
 import type {
   StandingRowInput,
   FixtureRowInput,
@@ -690,6 +691,96 @@ export async function fetchFootshortsNews(q: NewsQuery = {}): Promise<Footshorts
     ? items.filter((it) => it.entities.some((e) => e.slug === q.entitySlug))
     : items
   return filtered.slice(0, limit)
+}
+
+// ── team resolution by label ─────────────────────────────────────────────────
+
+/** The brand fields a resolved team carries into a card: what the Asset
+ *  Studio edits (`crest_url`, `primary_color`) plus identity. */
+export interface TeamBrandRow {
+  id: string
+  slug: string
+  name: string
+  crest_url: string | null
+  primary_color: string | null
+}
+
+const TEAM_BRAND_COLS = 'id, slug, name, crest_url, primary_color'
+
+/**
+ * Resolve free-text team labels ("Spurs", "Tottenham Hotspur", "Tottenham
+ * Hotspur FC", an entity slug) to `entities` rows, keyed by the input label.
+ * Used wherever a fixture arrives without entity ids — ESPN cup imports, YAML
+ * authored cards — so the card still picks up the crest + brand colour set in
+ * the Asset Studio instead of a bundled fallback.
+ *
+ * Order: the literal slug, the club-affix-stripped slug and the shared alias
+ * table (`teamLookupSlugs`), then the editor-taught `entity_aliases` table for
+ * anything still unresolved. Labels that match nothing are absent from the
+ * result. Throws on a query error — callers fall back to what they had.
+ * SERVER-ONLY (service-role client).
+ */
+export async function resolveTeamsByLabel(
+  supabase: Supabase,
+  labels: string[],
+): Promise<Map<string, TeamBrandRow>> {
+  const out = new Map<string, TeamBrandRow>()
+  const wanted = Array.from(new Set(labels.map((l) => l.trim()).filter(Boolean)))
+  if (wanted.length === 0) return out
+
+  const candidates = new Map<string, string[]>()
+  const slugs = new Set<string>()
+  for (const label of wanted) {
+    const keys = teamLookupSlugs(label)
+    candidates.set(label, keys)
+    for (const k of keys) slugs.add(k)
+  }
+  const { data, error } = await supabase
+    .from('entities')
+    .select(TEAM_BRAND_COLS)
+    .eq('type', 'team')
+    .in('slug', Array.from(slugs))
+  if (error) throw error
+  const bySlug = new Map<string, TeamBrandRow>()
+  for (const row of (data ?? []) as TeamBrandRow[]) bySlug.set(row.slug, row)
+
+  // First candidate that exists wins, so a literal slug beats an alias.
+  const unresolved: string[] = []
+  for (const label of wanted) {
+    const hit = (candidates.get(label) ?? []).map((k) => bySlug.get(k)).find(Boolean)
+    if (hit) out.set(label, hit)
+    else unresolved.push(label)
+  }
+  if (unresolved.length === 0) return out
+
+  // Editor-taught aliases (admin "resolve identities"), keyed the same way.
+  const labelsByAlias = new Map<string, string[]>()
+  for (const label of unresolved) {
+    const key = normalizeEntityKey(label)
+    labelsByAlias.set(key, [...(labelsByAlias.get(key) ?? []), label])
+  }
+  const { data: aliases, error: aliasError } = await supabase
+    .from('entity_aliases')
+    .select('alias_slug, entity_id')
+    .eq('entity_type', 'team')
+    .in('alias_slug', Array.from(labelsByAlias.keys()))
+  if (aliasError) throw aliasError
+  const aliasRows = (aliases ?? []) as { alias_slug: string; entity_id: string }[]
+  if (aliasRows.length === 0) return out
+
+  const { data: rows, error: rowError } = await supabase
+    .from('entities')
+    .select(TEAM_BRAND_COLS)
+    .in('id', Array.from(new Set(aliasRows.map((a) => a.entity_id))))
+  if (rowError) throw rowError
+  const byId = new Map<string, TeamBrandRow>()
+  for (const row of (rows ?? []) as TeamBrandRow[]) byId.set(row.id, row)
+  for (const a of aliasRows) {
+    const row = byId.get(a.entity_id)
+    if (!row) continue
+    for (const label of labelsByAlias.get(a.alias_slug) ?? []) out.set(label, row)
+  }
+  return out
 }
 
 // ── entity badge search (crest / logo overlays) ───────────────────────────────
