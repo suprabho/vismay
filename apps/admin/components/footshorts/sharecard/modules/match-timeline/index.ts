@@ -37,12 +37,13 @@ function adminForm(): AdminFormField[] {
       ],
     },
     // No config value results from this — it dispatches a one-off Opta
-    // extraction for the picked fixture, it doesn't edit the layer. See
+    // extraction (or, for ESPN cup imports, an ESPN match-detail extraction)
+    // for the picked fixture, it doesn't edit the layer. See
     // ExtractGoalsPicker (never calls onChange).
     {
       kind: 'picker',
       key: 'extractGoals',
-      label: 'Opta goals',
+      label: 'Extract events',
       pickerId: 'footshorts:extract-goals',
       dependsOn: ['compKey', 'fixtureId'],
     },

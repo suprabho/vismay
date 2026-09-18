@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { fetchFixtureEvents } from '@vismay/content-source/footshortsData'
+import { isEspnEventId, listEspnFixtureEvents } from '@/lib/espnCups'
 
 /**
  * Match events (goals/cards/subs + minute) for `?fixtureId=<uuid>`, read from the
  * `fixture_events` table. Used by the Share Card studio's match-timeline card to
  * bake a fixture's events into the card config. Mirrors the sibling data routes'
- * auth gating + `{ ok, rows }` shape.
+ * auth gating + `{ ok, rows }` shape. A numeric id (not a uuid) is an ESPN cup
+ * fixture: its rows come from the private extracted match detail instead.
  */
 
 export const runtime = 'nodejs'
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'missing "fixtureId"' }, { status: 400 })
   }
   try {
-    const rows = await fetchFixtureEvents(fixtureId)
+    const rows = isEspnEventId(fixtureId) ? await listEspnFixtureEvents(fixtureId) : await fetchFixtureEvents(fixtureId)
     return NextResponse.json({ ok: true, rows })
   } catch (e) {
     return NextResponse.json(

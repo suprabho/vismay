@@ -20,6 +20,8 @@ export async function GET(req: Request) {
   if (!competition || !season) {
     return NextResponse.json({ error: 'missing "competition" or "season"' }, { status: 400 })
   }
+  // ESPN cup imports (`source=espn`) are knockout-only: no table to serve.
+  if (url.searchParams.get('source')?.trim() === 'espn') return NextResponse.json({ ok: true, rows: [] })
   try {
     const rows = await fetchStandings(competition, season)
     return NextResponse.json({ ok: true, rows })

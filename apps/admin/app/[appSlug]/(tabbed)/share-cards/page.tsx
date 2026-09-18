@@ -1,6 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { listFootshortsCompetitions } from '@vismay/content-source/footshortsData'
+import { listEspnCupCompetitions } from '@/lib/espnCups'
+import type { CompetitionOption } from '@/components/footshorts/sharecard/composer/ctx'
 import { ShareCardCreator } from '@/components/footshorts/sharecard/ShareCardCreator'
 import { ShareCardCreator as VizmayaShareCardCreator } from '@/components/vizmaya/sharecard/ShareCardCreator'
 
@@ -46,11 +48,18 @@ export default async function ShareCardsPage({ params }: Props) {
   // Degrade to an empty picker rather than 500-ing the tab if the football
   // tables are unreachable (e.g. missing Supabase creds locally). The client
   // already renders a "No ingested data" state.
-  let competitions: Awaited<ReturnType<typeof listFootshortsCompetitions>> = []
+  let competitions: CompetitionOption[] = []
   try {
     competitions = await listFootshortsCompetitions()
   } catch (e) {
     console.error('share-cards: failed to load competitions', e)
+  }
+  // Private ESPN cup imports (Cup fixtures tab) join the picker as their own
+  // (cup, "2025/26") entries — admin-only data, never a consumer table.
+  try {
+    competitions = [...competitions, ...(await listEspnCupCompetitions())]
+  } catch (e) {
+    console.error('share-cards: failed to load ESPN cup competitions', e)
   }
 
   return (

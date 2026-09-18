@@ -110,6 +110,7 @@ function CompetitionPicker({ value, onChange, ctx }: PickerEditorProps) {
         return (
           <option key={key} value={key}>
             {comp.name} · {comp.season}
+            {comp.source === 'espn' ? ' · ESPN' : ''}
           </option>
         )
       })}
@@ -676,16 +677,29 @@ function IconFieldPicker({ value, onChange }: PickerEditorProps) {
  *  other GitHub Actions dispatch button in this app (Power Rankings' "Run
  *  scrape", the matchtime panel's "Sync now"): no polling, no config value
  *  results from this action, so `onChange` is never called. */
-function ExtractGoalsPicker({ siblings }: PickerEditorProps) {
+function ExtractGoalsPicker({ siblings, ctx }: PickerEditorProps) {
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err' | 'info'; msg?: string }>({ type: 'idle' })
   const fixtureId = typeof siblings.fixtureId === 'string' ? siblings.fixtureId : ''
   const compKey = typeof siblings.compKey === 'string' ? siblings.compKey : ''
+  // ESPN cup imports extract synchronously from ESPN's match summary (no
+  // worker dispatch); everything else goes through the Opta worker.
+  const isEspn = asCtx(ctx)?.competitions.some((c) => compKeyOf(c) === compKey && c.source === 'espn') ?? false
 
   const run = async () => {
     setBusy(true)
     setStatus({ type: 'idle' })
     try {
+      if (isEspn) {
+        const res = await fetch(`/api/footshorts/cup-fixtures/${encodeURIComponent(fixtureId)}/detail`, { method: 'POST' })
+        const body = (await res.json().catch(() => ({}))) as { detail?: { events?: unknown[] }; error?: string }
+        if (!res.ok || !body.detail) throw new Error(body.error ?? `HTTP ${res.status}`)
+        setStatus({
+          type: 'ok',
+          msg: `Extracted ${body.detail.events?.length ?? 0} events from ESPN. Re-pick the fixture (or reopen this card) to refresh the timeline.`,
+        })
+        return
+      }
       const competitionSlug = compKey.split('::')[0] ?? ''
       const res = await fetch('/api/footshorts/share/extract-goals', {
         method: 'POST',
@@ -717,7 +731,7 @@ function ExtractGoalsPicker({ siblings }: PickerEditorProps) {
         disabled={busy || !fixtureId || !compKey}
         onClick={() => void run()}
       >
-        {busy ? 'Requesting…' : 'Extract goals now'}
+        {busy ? (isEspn ? 'Extracting…' : 'Requesting…') : isEspn ? 'Extract from ESPN now' : 'Extract goals now'}
       </button>
       {!fixtureId ? <p className={hintCls}>Pick a fixture first.</p> : null}
       {status.type !== 'idle' && status.msg ? (
