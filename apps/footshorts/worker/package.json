@@ -39,10 +39,11 @@
     "jev:gate:test": "tsx src/jevEntityGate.test.ts"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.87",
+    "@ai-sdk/provider": "^4.0.17",
     "@footshorts/shared": "workspace:*",
     "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.45.4",
-    "@typesafe-ai/sdk": "^0.6.0",
     "@vismay/eval-entities": "workspace:*",
     "cheerio": "^1.0.0",
     "playwright": "^1.59.1",
