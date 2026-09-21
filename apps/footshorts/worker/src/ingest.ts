@@ -9,12 +9,15 @@
  *   3. Insert row with status='pending'
  *   4. Call Gemini for summary + entities
  *   5. Map Gemini's free-text entity names to canonical entity IDs
- *   6. Update row with summary + link article_entities
+ *   6. Ask Jev, per candidate, whether it's a real subject of the article —
+ *      the probability becomes article_entities.confidence, and passing
+ *      mentions below the threshold are dropped (jevEntityGate.ts)
+ *   7. Update row with summary + link article_entities
  *
- * Both source kinds converge on processCandidateArticle() — steps 2-6 are
+ * Both source kinds converge on processCandidateArticle() — steps 2-7 are
  * identical regardless of how the article text was obtained.
  *
- * Steps 2-6 swallow their own errors so one bad article can't abort the batch;
+ * Steps 2-7 swallow their own errors so one bad article can't abort the batch;
  * runIngestion() therefore ends with a health check (ingestFailureReason) that
  * exits non-zero when a run produced no feed-eligible article at all. Without
  * it a run where every summarization failed still exits 0, and the admin
@@ -28,7 +31,8 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { RSS_SOURCES, RssSource, SCRAPE_SOURCES, ScrapeSource } from './sources';
 import { summarizeAndTag } from './gemini';
-import { resolveEntities } from './entityResolver';
+import { resolveEntitiesDetailed } from './entityResolver';
+import { gateEntityTags } from './jevEntityGate';
 import { listArticleLinks, fetchArticleBody } from './theanalyst/news';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -65,6 +69,9 @@ type IngestStats = {
   /** Dropped by the "is this football?" classifier. */
   hidden: number;
   errors: number;
+  /** Entity tags the Jev precision gate rejected as passing mentions. Zero
+   *  when the gate is disabled — see jevEntityGate.ts. */
+  tagsDropped: number;
   /** Sources whose feed/listing couldn't be fetched at all this run. */
   sourceFailures: number;
 };
@@ -75,10 +82,11 @@ const emptyStats = (): IngestStats => ({
   summarized: 0,
   hidden: 0,
   errors: 0,
+  tagsDropped: 0,
   sourceFailures: 0,
 });
 
-/** One article ready for steps 2-6, whichever source kind produced it. */
+/** One article ready for steps 2-7, whichever source kind produced it. */
 type CandidateArticle = {
   url: string;
   headline: string;
@@ -103,8 +111,9 @@ async function isKnownUrl(urlHash: string): Promise<boolean> {
 }
 
 /**
- * Steps 2-6 for a single article: dedupe → insert pending → summarize + tag →
- * entity-link → status update. Mutates `stats`; `sourceId` is only for logs.
+ * Steps 2-7 for a single article: dedupe → insert pending → summarize + tag →
+ * resolve → gate → entity-link → status update. Mutates `stats`; `sourceId` is
+ * only for logs.
  */
 async function processCandidateArticle(
   sourceId: string,
@@ -174,7 +183,23 @@ async function processCandidateArticle(
       return;
     }
 
-    const entityIds = await resolveEntities(supabase, gemini.entities);
+    const candidates = await resolveEntitiesDetailed(supabase, gemini.entities);
+
+    // Precision gate. Judged against the article text Gemini saw, not the
+    // 60-word summary, so "mentioned in passing" is decided on the real thing.
+    const gated = await gateEntityTags(
+      { headline: candidate.headline, body: candidate.body, publisher: candidate.publisher },
+      candidates,
+    );
+    const keptTags = gated.filter((e) => e.kept);
+    const dropped = gated.filter((e) => !e.kept);
+    if (dropped.length > 0) {
+      stats.tagsDropped += dropped.length;
+      console.log(
+        `[jev-gate] ${candidate.url} dropped ${dropped.length}/${gated.length}: ` +
+          dropped.map((e) => `${e.type}=${e.name}(${e.confidence.toFixed(2)})`).join(', '),
+      );
+    }
 
     // Update article + link entities in a logical transaction
     const { error: updateError } = await supabase
@@ -197,11 +222,12 @@ async function processCandidateArticle(
     }
     stats.summarized++;
 
-    if (entityIds.length > 0) {
+    if (keptTags.length > 0) {
       await supabase.from('article_entities').insert(
-        entityIds.map((entity_id) => ({
+        keptTags.map((e) => ({
           article_id: inserted.id,
-          entity_id,
+          entity_id: e.id,
+          confidence: e.confidence,
         }))
       );
     }
@@ -387,12 +413,13 @@ export async function runIngestion() {
 
   const addTotals = (id: string, stats: IngestStats) => {
     console.log(
-      `[${id}] fetched=${stats.fetched} new=${stats.new} summarized=${stats.summarized} hidden=${stats.hidden} errors=${stats.errors}`
+      `[${id}] fetched=${stats.fetched} new=${stats.new} summarized=${stats.summarized} hidden=${stats.hidden} tagsDropped=${stats.tagsDropped} errors=${stats.errors}`
     );
     totals.fetched += stats.fetched;
     totals.new += stats.new;
     totals.summarized += stats.summarized;
     totals.hidden += stats.hidden;
+    totals.tagsDropped += stats.tagsDropped;
     totals.errors += stats.errors;
     totals.sourceFailures += stats.sourceFailures;
   };
@@ -405,7 +432,7 @@ export async function runIngestion() {
   }
 
   console.log(
-    `[ingest] done: fetched=${totals.fetched} new=${totals.new} summarized=${totals.summarized} hidden=${totals.hidden} errors=${totals.errors} sourceFailures=${totals.sourceFailures}`
+    `[ingest] done: fetched=${totals.fetched} new=${totals.new} summarized=${totals.summarized} hidden=${totals.hidden} tagsDropped=${totals.tagsDropped} errors=${totals.errors} sourceFailures=${totals.sourceFailures}`
   );
 
   const reason = ingestFailureReason(totals, RSS_SOURCES.length + SCRAPE_SOURCES.length);

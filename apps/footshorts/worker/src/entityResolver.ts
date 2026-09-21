@@ -28,8 +28,27 @@ import { ENTITY_ALIASES as ALIASES, canonicalTeamKey, normalizeEntityKey as norm
 // way this resolver does. Re-exported for the theanalyst match discovery.
 export { canonicalTeamKey };
 
+/** A candidate tag: the canonical row a Gemini-extracted name resolved to,
+ *  plus the surface form that produced it. The Jev precision gate
+ *  (jevEntityGate.ts) needs the canonical name to phrase its question, and the
+ *  surface form is what `[entity-miss]` logs and alias fixes are written
+ *  against — keep both rather than making callers re-look-up either. */
+export type ResolvedEntity = {
+  id: string;
+  type: EntityType;
+  /** Canonical `entities.name`, e.g. "Tottenham Hotspur". */
+  name: string;
+  /** The name as extracted from the article, e.g. "Spurs". */
+  sourceName: string;
+};
+
+type EntityType = 'league' | 'team' | 'player';
+
+type EntityMeta = { name: string; type: EntityType };
+
 // In-memory caches — refreshed on each worker run
 let entityCache: Map<string, string> | null = null;
+let entityMetaCache: Map<string, EntityMeta> | null = null;
 let aliasCache: Map<string, string> | null = null;
 
 async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, string>> {
@@ -42,12 +61,16 @@ async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, st
   if (error) throw error;
 
   const cache = new Map<string, string>();
+  const meta = new Map<string, EntityMeta>();
   for (const e of data ?? []) {
     // Index by normalized name AND slug for fast lookup
     cache.set(`${e.type}:${normalize(e.name)}`, e.id);
     cache.set(`${e.type}:${e.slug}`, e.id);
+    // Reverse index, so a resolved id can name itself without a second query.
+    meta.set(e.id, { name: e.name, type: e.type });
   }
   entityCache = cache;
+  entityMetaCache = meta;
   return cache;
 }
 
@@ -99,28 +122,49 @@ async function resolveOne(
   return null;
 }
 
+/**
+ * Resolve Gemini's free-text names to canonical rows, keeping each row's name
+ * and type. Deduped by entity id — two surface forms of the same club ("Spurs"
+ * and "Tottenham") collapse to one tag, the first one wins.
+ */
+export async function resolveEntitiesDetailed(
+  supabase: SupabaseClient,
+  entities: GeminiSummary['entities']
+): Promise<ResolvedEntity[]> {
+  const cache = await loadEntityCache(supabase);
+  const aliases = await loadAliasCache(supabase);
+  // loadEntityCache fills both maps together; the fallback below keeps a
+  // future change to that pairing from costing us a valid tag.
+  const meta = entityMetaCache ?? new Map<string, EntityMeta>();
+  const resolved: ResolvedEntity[] = [];
+  const seen = new Set<string>();
+
+  const byType: [EntityType, string[]][] = [
+    ['league', entities.leagues],
+    ['team', entities.teams],
+    ['player', entities.players],
+  ];
+
+  for (const [type, names] of byType) {
+    for (const sourceName of names) {
+      const id = await resolveOne(cache, aliases, type, sourceName);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      // An id always comes from the cache we just built, so meta is present;
+      // fall back to the extracted name rather than dropping a valid tag.
+      const row = meta.get(id);
+      resolved.push({ id, type, name: row?.name ?? sourceName, sourceName });
+    }
+  }
+
+  return resolved;
+}
+
 export async function resolveEntities(
   supabase: SupabaseClient,
   entities: GeminiSummary['entities']
 ): Promise<string[]> {
-  const cache = await loadEntityCache(supabase);
-  const aliases = await loadAliasCache(supabase);
-  const resolvedIds: string[] = [];
-
-  for (const name of entities.leagues) {
-    const id = await resolveOne(cache, aliases, 'league', name);
-    if (id) resolvedIds.push(id);
-  }
-  for (const name of entities.teams) {
-    const id = await resolveOne(cache, aliases, 'team', name);
-    if (id) resolvedIds.push(id);
-  }
-  for (const name of entities.players) {
-    const id = await resolveOne(cache, aliases, 'player', name);
-    if (id) resolvedIds.push(id);
-  }
-
-  return [...new Set(resolvedIds)];
+  return (await resolveEntitiesDetailed(supabase, entities)).map((e) => e.id);
 }
 
 // Single-entity resolver, exposed so the squad ingest can map each player's
@@ -137,6 +181,7 @@ export async function resolveTeamName(
 
 export function clearEntityCache() {
   entityCache = null;
+  entityMetaCache = null;
   aliasCache = null;
 }
 
