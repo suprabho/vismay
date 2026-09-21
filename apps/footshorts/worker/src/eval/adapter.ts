@@ -4,12 +4,19 @@
  * Pulls summarised articles + their tagged entities from the (article_id,
  * entity_id) join, dereferencing entity_id → (type, name) via the entities
  * table.
+ *
+ * `extractLive` (EVAL_RERUN_EXTRACTION=1) runs the WHOLE current pipeline —
+ * Gemini extraction, the resolver, and the Jev precision gate — so the
+ * precision/recall numbers reflect what ingest would actually write today.
+ * Without the gate here the eval would keep scoring the pre-gate tag set and
+ * a threshold change would look like a no-op.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { EntityEvalAdapter, EvalArticle, TaggedEntity } from '@vismay/eval-entities';
 import { summarizeAndTag } from '../gemini';
-import { resolveEntities } from '../entityResolver';
+import { resolveEntitiesDetailed } from '../entityResolver';
+import { gateEntityTags } from '../jevEntityGate';
 
 const PAGE_SIZE = 500;
 
@@ -114,12 +121,14 @@ export const footshortsAdapter: EntityEvalAdapter = {
     const sb = getSupabase();
     const summary = await summarizeAndTag({ headline, body, publisher });
     if (!summary.is_football_news) return [];
-    const ids = await resolveEntities(sb, summary.entities);
+    const candidates = await resolveEntitiesDetailed(sb, summary.entities);
+    const gated = await gateEntityTags({ headline, body, publisher }, candidates);
     const cache = await getEntityNameCache(sb);
     const tags: TaggedEntity[] = [];
-    for (const id of ids) {
-      const meta = cache.get(id);
-      if (meta) tags.push({ type: meta.type, id, name: meta.name });
+    for (const entity of gated) {
+      if (!entity.kept) continue;
+      const meta = cache.get(entity.id);
+      if (meta) tags.push({ type: meta.type, id: entity.id, name: meta.name });
     }
     return tags;
   },

@@ -167,7 +167,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -524,6 +524,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.105.4
+      '@typesafe-ai/sdk':
+        specifier: ^0.6.0
+        version: 0.6.0
       '@vismay/eval-entities':
         specifier: workspace:*
         version: link:../../../packages/eval-entities
@@ -594,7 +597,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -4892,6 +4895,10 @@ packages:
 
   '@types/zen-observable@0.8.3':
     resolution: {integrity: sha512-fbF6oTd4sGGy0xjHPKAt+eS2CrxJ3+6gQ3FGcBoIJR2TLAyCkCyI8JqZNy+FeON0AhVgNJoUumVoZQjBFUqHkw==}
+
+  '@typesafe-ai/sdk@0.6.0':
+    resolution: {integrity: sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw==}
+    engines: {node: '>=20'}
 
   '@typescript-eslint/eslint-plugin@8.59.3':
     resolution: {integrity: sha512-PwFvSKsXGShKGW6n5bZOhGHEcCZXM8HofLK9fNsEwZXzFRjoY+XT1Vsf1zgyXdwTr0ZYz1/2tkZ0DBTT9jZjhw==}
@@ -13889,6 +13896,8 @@ snapshots:
       '@types/yargs-parser': 21.0.3
 
   '@types/zen-observable@0.8.3': {}
+
+  '@typesafe-ai/sdk@0.6.0': {}
 
   '@typescript-eslint/eslint-plugin@8.59.3(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:

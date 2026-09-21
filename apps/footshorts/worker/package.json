@@ -35,12 +35,14 @@
     "backfill:colors": "tsx --env-file=.env src/backfillColors.ts",
     "backfill:entity-tags": "tsx --env-file=.env src/backfillEntityTags.ts",
     "eval": "tsx --env-file=.env src/eval/run.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "jev:gate:test": "tsx src/jevEntityGate.test.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
     "@footshorts/shared": "workspace:*",
+    "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.45.4",
+    "@typesafe-ai/sdk": "^0.6.0",
     "@vismay/eval-entities": "workspace:*",
     "cheerio": "^1.0.0",
     "playwright": "^1.59.1",
