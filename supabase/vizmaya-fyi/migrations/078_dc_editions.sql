@@ -5,7 +5,7 @@
 -- previous 24 hours of AI, energy and sustainability news into one static
 -- page at /ai-data-centers/daily and /ai-data-centers/daily/[date].
 -- PRD: docs/ai-data-centers-daily-snapshot-prd.md · design:
--- docs/ai-data-centers-daily-snapshot.html
+-- /ai-data-centers/daily/sample
 --
 -- Four changes, all here so the feature ships in one migration:
 --

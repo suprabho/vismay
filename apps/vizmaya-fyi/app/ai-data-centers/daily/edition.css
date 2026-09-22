@@ -1,8 +1,7 @@
 /*
  * AI Data Centers Daily — edition stylesheet.
  *
- * Ported from the design mockup (docs/ai-data-centers-daily-snapshot.html)
- * and scoped under `.dcd`, the edition root, so the tokens and the generic
+ * Scoped under `.dcd`, the edition root, so the tokens and the generic
  * class names (.story, .layer, .panel …) never leak into the rest of the
  * app. Colour tokens are dark-first and mirror app/ai-data-centers/theme.ts;
  * the light theme is selected by prefers-color-scheme or data-theme="light"
