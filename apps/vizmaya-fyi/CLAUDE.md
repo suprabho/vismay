@@ -220,8 +220,10 @@ metric-led key notes, then geography / AI layer / research / AI + energy
 chapters, each with its own bespoke SVG/canvas visualisation and a slide-over
 panel for the underlying stories, a derived Sources chapter and an archive
 rail. PRD: [docs/ai-data-centers-daily-snapshot-prd.md](../../docs/ai-data-centers-daily-snapshot-prd.md);
-design reference: [docs/ai-data-centers-daily-snapshot.html](../../docs/ai-data-centers-daily-snapshot.html)
-(also rendered live at `/ai-data-centers/daily/sample`).
+design reference: **`/ai-data-centers/daily/sample`** — the fixture rendered
+through the real components. There is no separate mockup file: a design change
+is made in the components and reviewed on that route, so the reference can
+never drift from what ships.
 
 - **Schema:** [supabase/vizmaya-fyi/migrations/078_dc_editions.sql](../../supabase/vizmaya-fyi/migrations/078_dc_editions.sql) — snapshot tag columns on `dc_news` (`layer`, `place`, `region`, `theme`, `mood`, `energy`, `facts`, `classifier_version`), the seeded `dc_places` list, `dc_papers`, and `dc_editions` (the row *is* the page: prose + every computed number + the frozen `story_ids` / `paper_ids` / `iea_ids` membership). A trigger rejects updates to a published row; `ai_generations` accepts kind `edition_edit` for the editor audit. `dc_news_recaps` (066) stays read-only for the admin Recaps timeline.
 - **Pipeline (GitHub Actions, all in `Production`):**

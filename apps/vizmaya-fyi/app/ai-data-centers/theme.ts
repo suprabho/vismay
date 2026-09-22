@@ -30,7 +30,7 @@ export type AiDataCentersTheme = {
   mapLabelText: string;
   mapLabelHalo: string;
   mapBuilding: string;
-  /* Edition tokens (docs/ai-data-centers-daily-snapshot.html). */
+  /* Edition tokens; see /ai-data-centers/daily/sample. */
   raised: string;
   dim: string;
   lineStrong: string;

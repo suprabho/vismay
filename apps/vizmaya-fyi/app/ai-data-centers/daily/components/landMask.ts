@@ -2,8 +2,7 @@
  * Dot-matrix land mask for the edition's geography map.
  *
  * Flat [x0, y0, x1, y1, …] array of dot centres in tenths of degrees
- * (lon × 10, lat × 10) on an equirectangular grid — the same mask the design
- * mockup ships (docs/ai-data-centers-daily-snapshot.html). Stored as one
+ * (lon × 10, lat × 10) on an equirectangular grid. Stored as one
  * Int16Array literal so the map draws with no fetch and no GeoJSON library;
  * ~4543 dots, ~40 KB of source, a few KB gzipped.
  */

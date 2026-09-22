@@ -10,7 +10,7 @@ The page is synthesis-first: a headline and subheading for the day, a Doom v Boo
 
 One-line goal: **someone who reads vizmaya for ten minutes each morning knows what happened in AI yesterday, from every angle, and can trace every claim to its source.**
 
-The design is settled in the mockup ([AI Data Centers Daily](https://claude.ai/artifact/NZzr32a55v1RQiTjV63gcW), also saved as `docs/ai-data-centers-daily-snapshot.html` in the vismay repo). This PRD covers what it takes to ship it on the existing vismay stack.
+The design is settled and now lives in the app: **`/ai-data-centers/daily/sample`** renders the fixture through the real components, and is the reference for how an edition should look. (It began as a standalone mockup — [AI Data Centers Daily](https://claude.ai/artifact/NZzr32a55v1RQiTjV63gcW), once `docs/ai-data-centers-daily-snapshot.html` — which was retired once the components caught up, because a reference nothing renders drifts from what ships without anyone noticing.) This PRD covers what it took to ship it on the existing vismay stack.
 
 ## Background
 
