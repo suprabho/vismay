@@ -240,20 +240,46 @@ section.chapter:last-of-type{border-bottom:0}
 
 /* ---------- energy ---------- */
 .energy-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start}
-.energy-viz{display:grid;gap:18px}
-.viz-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.energy-viz{display:grid;gap:18px;min-width:0}
+.eviz{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:16px 18px;display:grid;gap:12px;align-content:start;min-width:0}
+.eviz.hero{background:var(--energy-wash);border-color:var(--line-strong)}
+.eviz-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.eviz-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0}
+.eviz-note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:-2px}
 .hero-num{font-family:var(--serif);font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
 .hero-num small{font-size:20px;color:var(--muted);margin-left:3px}
-#composition{display:block;max-width:100%;font-family:var(--mono)}
-#composition .c1{fill:var(--comp1)}#composition .c2{fill:var(--comp2)}#composition .c3{fill:var(--comp3)}
-#composition .cl{font-size:12px;fill:var(--muted)}
-#composition .cv{font-size:13px;fill:var(--bone);font-weight:500}
-.energy-figs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.fig{padding:16px 18px;border-right:1px solid var(--line);background:var(--energy-wash)}
-.fig:last-child{border-right:0}
-.fig .num{font-family:var(--serif);font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
-.fig .num small{font-size:16px;color:var(--muted);margin-left:2px}
-.fig .lab{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.35}
+.eviz-svg{display:block;max-width:100%;font-family:var(--mono)}
+.eviz-svg .elab{font-size:12px;fill:var(--bone)}
+.eviz-svg .elab.mid{font-size:11px;fill:var(--muted)}
+.eviz-svg .esrc{font-size:10px;fill:var(--dim)}
+.eviz-svg .eval{font-size:12px;fill:var(--bone);font-weight:500}
+.eviz-svg .eg{font-size:10px;fill:var(--dim)}
+.eviz-svg .ed{font-size:11px;fill:var(--dim)}
+.eviz-svg .ed.now{fill:var(--bone)}
+.eviz-svg .eh{font-size:10px;fill:var(--dim);letter-spacing:.08em}
+.eviz-svg .egrid{stroke:var(--line)}
+.eviz-svg .ebar{fill:var(--energy);opacity:.9}
+.eviz-svg .ebar.c2{fill:var(--comp2)}
+.eviz-svg .ebar.c3{fill:var(--comp1)}
+.eviz-svg .ebar.past{fill:var(--accent-lo);opacity:.6}
+.eviz-svg .ebar.now{fill:var(--energy);opacity:1}
+.eviz-svg .ebar.pos{fill:var(--up);opacity:.85}
+.eviz-svg .ebar.neg{fill:var(--down);opacity:.85}
+.eviz-svg .eghost{fill:none;stroke:var(--line-strong);stroke-dasharray:3 3}
+.eviz-svg .ecell{fill:var(--energy);opacity:.85}
+.eviz-svg .ecn{font-size:10px;fill:var(--ink);font-weight:600}
+.eviz-svg .eempty{fill:var(--map-dot)}
+.eviz-svg .edot{fill:var(--energy)}
+.eviz-svg .edot.neg{fill:var(--down)}
+.eviz-svg .edot.flat{fill:var(--accent-lo)}
+.efigs{display:grid;gap:14px}
+.efig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:baseline}
+.efig .num{font-family:var(--serif);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.efig .num small{font-size:15px;color:var(--muted);margin-left:3px}
+.efig .lab{font-size:12.5px;color:var(--muted);line-height:1.35}
+.efig .src{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:8px;white-space:nowrap}
+.efig .rail{grid-column:1/-1;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.efig .rail i{display:block;height:3px;border-radius:2px;background:var(--energy)}
 .energy-side{display:grid;gap:16px}
 .open-card{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:18px 20px;display:grid;gap:6px;text-align:left;transition:border-color .15s,transform .15s,box-shadow .15s}
 .open-card:hover{border-color:var(--energy);transform:translateY(-2px);box-shadow:var(--shadow)}
@@ -352,16 +378,6 @@ body.panel-open{overflow:hidden}
 #quadrant .qleader{stroke:var(--line-strong);stroke-width:1}
 #quadrant .qc{font-size:10.5px;fill:var(--muted)}
 .pmeta .pn{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:var(--ink);font-size:9.5px;margin-right:6px;font-weight:500}
-
-/* weekly bars */
-.week{display:grid;gap:8px;padding-top:6px}
-#weekly{display:block;max-width:100%;font-family:var(--mono)}
-#weekly .wgrid{stroke:var(--line)}
-#weekly .wg{font-size:10px;fill:var(--dim)}
-#weekly .wb{fill:var(--accent-lo);opacity:.7}
-#weekly .wb.today{fill:var(--energy);opacity:1}
-#weekly .wd{font-size:11px;fill:var(--dim)}#weekly .wd.today{fill:var(--bone)}
-#weekly .wv{font-size:12px;fill:var(--bone);font-weight:500}
 
 @media (max-width:980px){
   .glance{grid-template-columns:1fr}
@@ -530,9 +546,8 @@ footer .colo{font-family:var(--mono);font-size:11px;color:var(--dim)}
   .edition-nav .today b{font-size:13px}
   .hero{padding-block:32px 22px}
   .counts{grid-template-columns:repeat(2,auto);gap:12px 28px}
-  .energy-figs{grid-template-columns:1fr}
-  .fig{border-right:0;border-bottom:1px solid var(--line)}
-  .fig:last-child{border-bottom:0}
+  .eviz-row{grid-template-columns:1fr}
+  .efig .src{display:block;margin-left:0}
   .regionbar{position:static;flex-wrap:wrap}
   .regionbar button{flex:1 1 45%;padding:10px 16px}
   .mapbox .legend{display:none}
@@ -729,24 +744,16 @@ footer .colo{font-family:var(--mono);font-size:11px;color:var(--dim)}
       <div>
         <h2>AI + Energy &amp; Sustainability</h2>
       </div>
-      <div class="side">VI · 12 stories · joined with iea_news</div>
+      <div class="side" id="energyCount">VI · 12 stories · joined with iea_news</div>
     </div>
     <div class="energy-grid">
-      <div class="energy-viz">
-        <div class="viz-head"><span class="eyebrow">Power committed in today's disclosed deals</span><span class="hero-num">4.6<small>GW</small></span></div>
-        <svg id="composition" viewBox="0 0 800 92" width="100%" role="img" aria-label="4.6 GW split: 1.2 GW gas plus storage in Abilene, 2.5 GW nuclear uprate in Ohio, 0.9 GW solar plus storage in Abu Dhabi"></svg>
-        <div class="week"><div class="gcard-head"><span class="eyebrow">Power disclosed per edition · last 7</span><span class="eyebrow dim">GW · today highlighted</span></div><svg id="weekly" viewBox="0 0 800 150" width="100%" role="img" aria-label="Power disclosed per daily edition over the last seven editions; today is 4.6 GW, the highest"></svg></div>
-        <div class="energy-figs">
-          <div class="fig"><div class="num">200<small>GW</small></div><div class="lab">ERCOT large-load queue, first time past 200 — 70% data centers</div></div>
-          <div class="fig"><div class="num">2029</div><div class="lab">Earliest delivery quoted for new gas turbines by two OEMs</div></div>
-          <div class="fig"><div class="num">9<small>/14</small></div><div class="lab">Google U.S. sites net-positive on water in the 2026 update</div></div>
-        </div>
-      </div>
+      <!-- charts are chosen at render time from the figures this edition states; see the energy engine below -->
+      <div class="energy-viz" id="energyViz"></div>
       <div class="energy-side">
         <button type="button" class="open-card" data-panel="energy">
           <span class="eyebrow">Today's coverage</span>
-          <span class="big">12 stories</span>
-          <span class="sub">Grid · Generation · Water · Policy · Storage · Outlook</span>
+          <span class="big" id="energyBig">12 stories</span>
+          <span class="sub" id="energyTags">Grid · Generation · Water · Policy · Storage · Outlook</span>
           <span class="go">Open the stories →</span>
         </button>
         <aside class="aside">
@@ -858,16 +865,16 @@ footer .colo{font-family:var(--mono);font-size:11px;color:var(--dim)}
 <script>
 /* ---------- data (sample edition) ---------- */
 const STORIES=[
-  {s:1,th:"power",t:"Microsoft signs 20-year PPA tied to Ohio nuclear uprate, its largest single power deal",o:"Reuters",u:"https://www.reuters.com",h:4,m:12,l:"hyper",p:"Columbus",r:"na",tk:["MSFT"],e:1,tag:"Generation"},
-  {s:1,th:"power",t:"Oracle's Abilene build adds 1.2 GW gas-plus-storage block as OpenAI demand grows",o:"Bloomberg",u:"https://www.bloomberg.com",h:23,m:40,l:"dc",p:"Abilene",r:"na",tk:["ORCL","CRWV"],e:1,tag:"Generation"},
+  {s:1,th:"power",t:"Microsoft signs 20-year PPA tied to Ohio nuclear uprate, its largest single power deal",o:"Reuters",u:"https://www.reuters.com",h:4,m:12,l:"hyper",p:"Columbus",r:"na",tk:["MSFT"],e:1,tag:"Generation",f:[{v:20,u:"yr",k:"term",lab:"PPA term · Ohio nuclear uprate"}]},
+  {s:1,th:"power",t:"Oracle's Abilene build adds 1.2 GW gas-plus-storage block as OpenAI demand grows",o:"Bloomberg",u:"https://www.bloomberg.com",h:23,m:40,l:"dc",p:"Abilene",r:"na",tk:["ORCL","CRWV"],e:1,tag:"Generation",f:[{v:1.2,u:"GW",k:"power",lab:"Gas + storage · Abilene"}]},
   {s:1,th:"capacity",t:"CoreWeave takes another 250 MW in West Texas, its fourth expansion this year",o:"DCD",u:"https://www.datacenterdynamics.com",h:19,m:5,l:"dc",p:"Abilene",r:"na",tk:["CRWV"]},
   {s:1,th:"capacity",t:"Vertiv's liquid-cooling backlog tops $9bn; lead times unchanged",o:"Reuters",u:"https://www.reuters.com",h:14,m:20,l:"dc",p:"Columbus",r:"na",tk:["VRT"]},
   {s:-1,th:"permit",t:"Equinix, Digital Realty warn Irish rule will push capacity to the Nordics",o:"DCD",u:"https://www.datacenterdynamics.com",h:7,m:40,l:"dc",p:"Dublin",r:"eu",tk:["EQIX","DLR"]},
   {s:-1,th:"permit",t:"Northern Virginia's Loudoun board defers two campus rezonings to October",o:"DCD",u:"https://www.datacenterdynamics.com",h:22,m:10,l:"dc",p:"N. Virginia",r:"na",tk:["DLR"]},
-  {s:-1,th:"permit",t:"Amsterdam extends data-centre connection freeze to 2028",o:"Reuters",u:"https://www.reuters.com",h:9,m:30,l:"dc",p:"Amsterdam",r:"eu",tk:[],e:1,tag:"Policy"},
+  {s:-1,th:"permit",t:"Amsterdam extends data-centre connection freeze to 2028",o:"Reuters",u:"https://www.reuters.com",h:9,m:30,l:"dc",p:"Amsterdam",r:"eu",tk:[],e:1,tag:"Policy",f:[{v:2028,u:"",k:"horizon",lab:"Amsterdam connection freeze horizon"}]},
   {s:1,th:"capacity",t:"Alphabet to lease TPU capacity to two frontier labs from Q1",o:"Bloomberg",u:"https://www.bloomberg.com",h:17,m:55,l:"hyper",p:"N. Virginia",r:"na",tk:["GOOGL"]},
   {s:1,th:"permit",t:"Meta's Louisiana Hyperion clears final air-permit hurdle",o:"Financial Times",u:"https://www.ft.com",h:15,m:10,l:"hyper",p:"Louisiana",r:"na",tk:["META"],e:1,tag:"Policy"},
-  {s:-1,th:"power",t:"Amazon pauses two Virginia leases pending grid-upgrade timeline",o:"Bloomberg",u:"https://www.bloomberg.com",h:20,m:45,l:"hyper",p:"N. Virginia",r:"na",tk:["AMZN"],e:1,tag:"Grid"},
+  {s:-1,th:"power",t:"Amazon pauses two Virginia leases pending grid-upgrade timeline",o:"Bloomberg",u:"https://www.bloomberg.com",h:20,m:45,l:"hyper",p:"N. Virginia",r:"na",tk:["AMZN"],e:1,tag:"Grid",f:[{v:2,u:"sites",k:"count",lab:"Leases paused pending grid upgrades"}]},
   {s:1,th:"memory",t:"SK hynix says HBM4 capacity is fully booked through 2027",o:"Nikkei Asia",u:"https://asia.nikkei.com",h:1,m:15,l:"semi",p:"Seoul",r:"ea",tk:["000660.KS"]},
   {s:1,th:"memory",t:"Micron raises guidance as HBM demand outruns Boise fab timeline",o:"The Register",u:"https://www.theregister.com",h:21,m:30,l:"semi",p:"Boise",r:"na",tk:["MU"]},
   {s:1,th:"chips",t:"TSMC's CoWoS-L output doubles as Rubin packaging ramps in Chiayi",o:"Financial Times",u:"https://www.ft.com",h:2,m:50,l:"semi",p:"Hsinchu",r:"ea",tk:["TSM","NVDA"]},
@@ -879,11 +886,11 @@ const STORIES=[
   {s:-1,th:"equip",t:"Applied Materials warns draft China rules would hit 2027 revenue",o:"Reuters",u:"https://www.reuters.com",h:20,m:15,l:"equip",p:"Boise",r:"na",tk:["AMAT","LRCX"]},
   {s:1,th:"equip",t:"Advantest lifts HBM test-capacity plan for FY26",o:"Nikkei Asia",u:"https://asia.nikkei.com",h:3,m:50,l:"equip",p:"Tokyo",r:"ea",tk:["6857.T"]},
   {s:-1,th:"permit",t:"CRU proposes on-site generation requirement for new Irish data centres",o:"Irish Times",u:"https://www.irishtimes.com",h:7,m:5,l:"dc",p:"Dublin",r:"eu",tk:[],e:1,tag:"Policy"},
-  {s:1,th:"capacity",t:"Reliance breaks ground on 1 GW Jamnagar AI campus with captive solar",o:"Economic Times",u:"https://economictimes.indiatimes.com",h:5,m:45,l:"dc",p:"Jamnagar",r:"me",tk:[],e:1,tag:"Storage"},
-  {s:1,th:"power",t:"Abu Dhabi tenders 900 MW solar-plus-storage for AI campus",o:"The National",u:"https://www.thenationalnews.com",h:8,m:0,l:"hyper",p:"Abu Dhabi",r:"me",tk:[],e:1,tag:"Generation"},
-  {s:-1,th:"power",t:"ERCOT large-load queue crosses 200 GW; 70% of requests are data centers",o:"ERCOT",u:"https://www.ercot.com",h:16,m:0,l:"dc",p:"Abilene",r:"na",tk:[],e:1,tag:"Grid"},
-  {s:-1,th:"power",t:"GE Vernova, Siemens Energy quote 2029 delivery for new gas turbines as AI demand fills slots",o:"Reuters",u:"https://www.reuters.com",h:13,m:25,l:"hyper",p:"Columbus",r:"na",tk:[],e:1,tag:"Generation"},
-  {s:1,th:"sustain",t:"Google: water replenishment net-positive at 9 of 14 U.S. sites in 2026 update",o:"Google Sustainability",u:"https://sustainability.google",h:18,m:30,l:"hyper",p:"N. Virginia",r:"na",tk:["GOOGL"],e:1,tag:"Water"},
+  {s:1,th:"capacity",t:"Reliance breaks ground on 1 GW Jamnagar AI campus with captive solar",o:"Economic Times",u:"https://economictimes.indiatimes.com",h:5,m:45,l:"dc",p:"Jamnagar",r:"me",tk:[],e:1,tag:"Storage",f:[{v:1,u:"GW",k:"power",lab:"Captive solar · Jamnagar"}]},
+  {s:1,th:"power",t:"Abu Dhabi tenders 900 MW solar-plus-storage for AI campus",o:"The National",u:"https://www.thenationalnews.com",h:8,m:0,l:"hyper",p:"Abu Dhabi",r:"me",tk:[],e:1,tag:"Generation",f:[{v:900,u:"MW",k:"power",lab:"Solar + storage · Abu Dhabi"}]},
+  {s:-1,th:"power",t:"ERCOT large-load queue crosses 200 GW; 70% of requests are data centers",o:"ERCOT",u:"https://www.ercot.com",h:16,m:0,l:"dc",p:"Abilene",r:"na",tk:[],e:1,tag:"Grid",f:[{v:200,u:"GW",k:"queue",lab:"ERCOT large-load queue, first time past 200"},{v:70,u:"%",k:"share",lab:"Share of that queue that is data centers"}]},
+  {s:-1,th:"power",t:"GE Vernova, Siemens Energy quote 2029 delivery for new gas turbines as AI demand fills slots",o:"Reuters",u:"https://www.reuters.com",h:13,m:25,l:"hyper",p:"Columbus",r:"na",tk:[],e:1,tag:"Generation",f:[{v:2029,u:"",k:"horizon",lab:"Earliest new gas turbine delivery quoted"}]},
+  {s:1,th:"sustain",t:"Google: water replenishment net-positive at 9 of 14 U.S. sites in 2026 update",o:"Google Sustainability",u:"https://sustainability.google",h:18,m:30,l:"hyper",p:"N. Virginia",r:"na",tk:["GOOGL"],e:1,tag:"Water",f:[{v:9,u:"of 14",k:"count",lab:"Google U.S. sites net-positive on water"}]},
   {s:0,th:"sustain",t:"IEA: data centre electricity demand tracking 2026 base case, upside risk from Gulf and India",o:"IEA",u:"https://www.iea.org",h:9,m:0,l:"dc",p:"Abu Dhabi",r:"me",tk:[],e:1,tag:"Outlook · from iea_news"}
 ];
 const LAYERS={
@@ -989,7 +996,7 @@ function openKey(key,trigger){
   if(kind==='theme')return Panel.open(listPanel('At a glance · theme',THEMES[val].name,STORIES.filter(s=>s.th===val),THEMES[val].so),trigger);
   if(kind==='cell'){const [l,r]=val.split('/');return Panel.open(listPanel('At a glance · '+LAYERS[l].name,REGIONS[r],STORIES.filter(s=>s.l===l&&s.r===r),`${LAYERS[l].name} stories tagged ${REGIONS[r]}`),trigger)}
   if(kind==='hour'){const h=+val;return Panel.open(listPanel('At a glance · hour',`${String(h).padStart(2,'0')}:00–${String(h+1).padStart(2,'0')}:00 UTC`,STORIES.filter(s=>s.h===h)),trigger)}
-  if(kind==='energy')return Panel.open(listPanel('AI + Energy & Sustainability','Energy-tagged stories',STORIES.filter(s=>s.e),'12 stories · joined with iea_news from the Energy Profile epic'),trigger);
+  if(kind==='energy')return Panel.open(listPanel('AI + Energy & Sustainability','Energy-tagged stories',STORIES.filter(s=>s.e),STORIES.filter(s=>s.e).length+' stories · joined with iea_news from the Energy Profile epic'),trigger);
   if(kind==='paper'){
     const p=PAPERS[+val];
     const others=PAPERS.map((q,i)=>i===+val?'':`<button type="button" class="paper-jump" data-panel="paper:${i}"><span class="mono">${q.cat}</span>${esc(q.t)}</button>`).join('');
@@ -1109,18 +1116,183 @@ const LAYER_VIZ={
   <div class="orow"><span class="olab">Who published</span>${bar([[labs,'lab','Industry lab'],[mix,'mix','Academic + industry'],[acad,'acad','Academic']])}<span class="mono">${labs} lab · ${mix} mixed · ${acad} academic</span></div>`;
 })();
 
-/* ---------- energy composition bar ---------- */
+/* ---------- energy chapter · charts chosen from the figures that exist ----------
+   No fixed chart slots. Each viz below declares what it needs from the day's
+   stories; the engine keeps the ones this edition can actually fill, ranks them by
+   how much they carry, and prints what it held back and why. An edition where
+   nobody disclosed a power figure gets a different — but equally real — chart
+   rather than an empty axis with a caption apologising for it. */
 (function(){
-  const svg=document.getElementById('composition');if(!svg)return;
-  const parts=[["Gas + storage · Abilene",1.2,"c1"],["Nuclear uprate · Ohio",2.5,"c2"],["Solar + BESS · Abu Dhabi",0.9,"c3"]];
-  const total=parts.reduce((a,p)=>a+p[1],0),W=800,x0=0,barY=8,barH=30,gap=2;
-  let x=x0,out='';
-  parts.forEach(([n,v,c],i)=>{const w=v/total*W-(i<parts.length-1?gap:0);
-    out+=`<rect x="${x}" y="${barY}" width="${w}" height="${barH}" rx="3" class="${c}"><title>${n}: ${v.toFixed(1)} GW</title></rect>`;
-    const last=i===parts.length-1,tx=last?x+w-2:x+2,ta=last?'end':'start';
-    out+=`<text x="${tx}" y="${barY+barH+22}" text-anchor="${ta}" class="cl">${n}</text><text x="${tx}" y="${barY+barH+42}" text-anchor="${ta}" class="cv">${v.toFixed(1)} GW</text>`;
-    x+=w+gap});
-  svg.innerHTML=out;
+  const mount=document.getElementById('energyViz');if(!mount)return;
+
+  /* Power stated in earlier editions. null = that edition disclosed none — a gap
+     in the record, not a zero, and nothing below draws it as one. */
+  const PRIOR=[{d:"Wed 16",gw:0.6},{d:"Thu 17",gw:1.1},{d:"Fri 18",gw:null},{d:"Sat 19",gw:2.3},{d:"Sun 20",gw:0.4},{d:"Mon 21",gw:null}];
+  const REGION={na:"North America",eu:"Europe",ea:"East Asia",me:"Middle East · India"};
+  const REGION_SHORT={na:"N. America",eu:"Europe",ea:"E. Asia",me:"ME · India"};
+
+  const stories=STORIES.filter(s=>s.e);
+  const tagOf=s=>String(s.tag||"Other").split(" · ")[0];
+  const facts=[];stories.forEach(s=>(s.f||[]).forEach(f=>facts.push(Object.assign({},f,{s}))));
+  const asGW=f=>f.u==="GW"?f.v:f.u==="MW"?f.v/1000:null;
+  const power=facts.filter(f=>f.k==="power"&&asGW(f)!=null).map(f=>Object.assign({},f,{gw:asGW(f)})).sort((a,b)=>b.gw-a.gw);
+  const powerGW=power.reduce((a,f)=>a+f.gw,0);
+  const silent=stories.filter(s=>/Generation|Grid|Storage/.test(tagOf(s))&&!(s.f||[]).some(f=>f.k==="power"));
+  const others=facts.filter(f=>f.k!=="power");
+
+  const n1=v=>Number.isInteger(v)?String(v):v.toFixed(1);
+  const clip=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
+  const PL={story:"stories"};
+  const plural=(n,w)=>n+" "+(n===1?w:PL[w]||w+"s");
+  const svg=(o,W,H,label)=>`<svg viewBox="0 0 ${W} ${H}" width="100%" class="eviz-svg" role="img" aria-label="${esc(label)}">${o}</svg>`;
+
+  const V={};
+
+  /* Needs: at least one deal that put a number on its own capacity. */
+  V.ledger={
+    title:"Power committed in deals that state a figure",
+    reason:"no deal disclosed a capacity figure today",
+    weight:()=>power.length?140+power.length*4:0,
+    hero:()=>({v:n1(powerGW),u:"GW"}),
+    render(W){
+      const L=Math.round(W*.33),rh=40,BW=W-L-Math.round(W*.12),max=power[0].gw,H=power.length*rh+36,cut=W>600?34:20;
+      let o="";
+      power.forEach((f,i)=>{const y=i*rh,w=Math.max(4,f.gw/max*BW);
+        o+=`<text x="0" y="${y+16}" class="elab">${esc(clip(f.lab,cut))}</text>`
+          +`<text x="0" y="${y+31}" class="esrc">${esc(f.s.o)} · ${hm(f.s)}</text>`
+          +`<rect x="${L}" y="${y+8}" width="${w}" height="16" rx="3" class="ebar c${i%3+1}"><title>${esc(f.lab)}: ${n1(f.gw)} GW</title></rect>`
+          +`<text x="${L+w+10}" y="${y+21}" class="eval">${n1(f.gw)} GW</text>`});
+      const y=power.length*rh+8;
+      o+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" class="egrid"/><text x="0" y="${y+20}" class="esrc">`
+        +(silent.length?`${silent.length} further grid or generation ${silent.length===1?"story states":"stories state"} no capacity figure — left off this bar`
+                       :`Every power story today carries a figure`)+`</text>`;
+      return svg(o,W,H,"Power committed per disclosed deal");
+    }
+  };
+
+  /* Needs: three editions in the window that actually disclosed something. */
+  const series=PRIOR.concat([{d:"Today",gw:power.length?powerGW:null,now:1}]);
+  const told=series.filter(s=>s.gw!=null);
+  V.history={
+    title:"Power disclosed per edition · last "+series.length,
+    reason:()=>`only ${told.length} of the last ${series.length} editions put a number on it`,
+    weight:()=>told.length>=3?110:0,
+    sub:()=>`${told.length} of ${series.length} editions disclosed`,
+    render(W){
+      const H=170,P={l:W>600?54:44,r:10,t:26,b:34},max=Math.max(...told.map(s=>s.gw))*1.18,bw=(W-P.l-P.r)/series.length;
+      const y0=H-P.b,Y=v=>y0-v/max*(H-P.t-P.b),step=max>4?2:max>2?1:.5;
+      let o=`<line x1="${P.l}" y1="${y0}" x2="${W-P.r}" y2="${y0}" class="egrid"/>`;
+      for(let g=step;g<max;g+=step)o+=`<line x1="${P.l}" y1="${Y(g)}" x2="${W-P.r}" y2="${Y(g)}" class="egrid"/><text x="${P.l-8}" y="${Y(g)+3}" text-anchor="end" class="eg">${n1(g)} GW</text>`;
+      series.forEach((s,i)=>{const x=P.l+i*bw+bw*.22,w=bw*.56;
+        if(s.gw==null)o+=`<rect x="${x}" y="${y0-28}" width="${w}" height="28" rx="3" class="eghost"><title>${s.d}: no figure disclosed</title></rect><text x="${x+w/2}" y="${y0-11}" text-anchor="middle" class="eg">none</text>`;
+        else o+=`<rect x="${x}" y="${Y(s.gw)}" width="${w}" height="${y0-Y(s.gw)}" rx="3" class="ebar ${s.now?"now":"past"}"><title>${s.d}: ${n1(s.gw)} GW</title></rect><text x="${x+w/2}" y="${Y(s.gw)-6}" text-anchor="middle" class="eval">${n1(s.gw)}</text>`;
+        o+=`<text x="${x+w/2}" y="${H-12}" text-anchor="middle" class="ed ${s.now?"now":""}">${s.d}</text>`});
+      return svg(o,W,H,"Power disclosed per edition; editions that disclosed nothing are drawn as gaps, not zeroes");
+    }
+  };
+
+  /* Needs: any stated figure at all, in whatever unit the story used. Rails only
+     compare figures that share a unit — a percentage never sits on a GW scale. */
+  const RANK={queue:5,share:4,horizon:3,count:2,term:1};
+  V.figures={
+    title:"Other figures on the record today",
+    reason:"no story stated a figure of any kind",
+    weight:()=>others.length?90+others.length*3:0,
+    hero(){const t=others.slice().sort((a,b)=>(RANK[b.k]||0)-(RANK[a.k]||0))[0];return{v:n1(t.v),u:t.u||""}},
+    render(W){
+      const rows=others.slice().sort((a,b)=>(RANK[b.k]||0)-(RANK[a.k]||0)).slice(0,5);
+      const RAILABLE=/^(GW|MW|%)$/;
+      const peers=u=>RAILABLE.test(u)?rows.filter(r=>r.u===u):[];
+      return `<div class="efigs">`+rows.map(f=>{
+        const p=peers(f.u),max=Math.max.apply(null,p.map(r=>r.v));
+        return `<div class="efig"><span class="num">${n1(f.v)}${f.u?`<small>${esc(f.u)}</small>`:""}</span>`
+          +`<span class="lab">${esc(f.lab)}<span class="src">${esc(f.s.o)}</span></span>`
+          +(p.length>1?`<span class="rail"><i style="width:${Math.max(6,f.v/max*100).toFixed(1)}%"></i></span>`:"")+`</div>`}).join("")+`</div>`;
+    }
+  };
+
+  /* Needs: nothing but the stories themselves — the floor this section never falls through. */
+  V.matrix={
+    title:"What today covered · topic by region",
+    reason:"no energy stories in this edition",
+    weight:()=>stories.length?60+new Set(stories.map(tagOf)).size*3:0,
+    sub:()=>`${plural(stories.length,"story")} · ${plural(new Set(stories.map(tagOf)).size,"topic")}`,
+    render(W){
+      const tags=[...new Set(stories.map(tagOf))],regs=[...new Set(stories.map(s=>s.r))].filter(r=>REGION[r]);
+      const at=(t,r)=>stories.filter(s=>tagOf(s)===t&&s.r===r);
+      const L=Math.max(84,Math.round(W*.19)),rh=34,H=tags.length*rh+44,cw=(W-L-10)/regs.length;
+      const max=Math.max.apply(null,[1].concat(tags.map(t=>Math.max.apply(null,regs.map(r=>at(t,r).length)))));
+      let o=regs.map((r,j)=>`<text x="${L+j*cw+cw/2}" y="14" text-anchor="middle" class="eh">${esc(cw>150?REGION[r]:REGION_SHORT[r])}</text>`).join("");
+      tags.forEach((t,i)=>{const y=28+i*rh;
+        o+=`<text x="${L-12}" y="${y+rh/2+4}" text-anchor="end" class="elab">${esc(clip(t,L>130?18:11))}</text><line x1="${L}" y1="${y+rh}" x2="${W-10}" y2="${y+rh}" class="egrid"/>`;
+        regs.forEach((r,j)=>{const hit=at(t,r),cx=L+j*cw+cw/2,cy=y+rh/2;
+          o+=hit.length?`<circle cx="${cx}" cy="${cy}" r="${7+hit.length/max*7}" class="ecell"><title>${esc(t)} · ${esc(REGION[r])} — ${esc(hit.map(s=>s.t).join(" / "))}</title></circle><text x="${cx}" y="${cy+3.5}" text-anchor="middle" class="ecn">${hit.length}</text>`
+                       :`<circle cx="${cx}" cy="${cy}" r="2" class="eempty"/>`})});
+      return svg(o,W,H,"Energy topics covered, by region");
+    }
+  };
+
+  /* Needs: timestamps, which every story has. */
+  V.clock={
+    title:"When the energy stories landed",
+    reason:"today's stories carry no timestamps",
+    weight:()=>stories.length?50:0,
+    render(W){
+      const P={l:26,r:26},X=s=>P.l+(s.h+s.m/60)/24*(W-P.l-P.r),lanes=[],placed=[];
+      stories.slice().sort((a,b)=>(a.h*60+a.m)-(b.h*60+b.m)).forEach(s=>{const x=X(s);let lane=0;
+        while(placed.some(p=>p.lane===lane&&Math.abs(p.x-x)<18))lane++;placed.push({lane,x,s});lanes.push(lane)});
+      const top=Math.max.apply(null,lanes.concat([0])),H=top*18+64,base=H-30;
+      let o=`<line x1="${P.l}" y1="${base}" x2="${W-P.r}" y2="${base}" class="egrid"/>`;
+      [0,6,12,18,24].forEach(h=>{const px=P.l+h/24*(W-P.l-P.r),an=h===0?"start":h===24?"end":"middle";
+        o+=`<line x1="${px}" y1="${base}" x2="${px}" y2="${base+5}" class="egrid"/><text x="${px}" y="${base+19}" text-anchor="${an}" class="eg">${String(h).padStart(2,"0")}:00</text>`});
+      placed.forEach(({lane,x,s})=>{const cy=base-14-lane*18;
+        o+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${cy}" class="egrid"/><circle cx="${x}" cy="${cy}" r="6" class="edot ${s.s<0?"neg":s.s>0?"":"flat"}"><title>${hm(s)} · ${esc(tagOf(s))} — ${esc(s.t)}</title></circle>`});
+      return svg(o,W,H,"Clock of when today's energy stories were published");
+    }
+  };
+
+  /* Needs: the day to actually cut both ways. */
+  V.balance={
+    title:"Pressure and relief by topic",
+    reason:"every energy story today leans the same way",
+    weight:()=>stories.some(s=>s.s<0)&&stories.some(s=>s.s>0)?45:0,
+    render(W){
+      const tags=[...new Set(stories.map(tagOf))].map(t=>({t,up:stories.filter(s=>tagOf(s)===t&&s.s>0).length,dn:stories.filter(s=>tagOf(s)===t&&s.s<0).length}))
+        .filter(r=>r.up||r.dn).sort((a,b)=>(b.up+b.dn)-(a.up+a.dn));
+      const C=W/2,off=W>600?70:52,rh=30,H=tags.length*rh+40,max=Math.max.apply(null,tags.map(r=>Math.max(r.up,r.dn))),u=(C-off-48)/max;
+      let o=`<text x="${C-14}" y="12" text-anchor="end" class="eh">Pressure</text><text x="${C+14}" y="12" text-anchor="start" class="eh">Relief</text>`;
+      tags.forEach((r,i)=>{const y=24+i*rh;
+        o+=`<text x="${C}" y="${y+rh/2+4}" text-anchor="middle" class="elab mid">${esc(clip(r.t,W>600?16:11))}</text>`;
+        if(r.dn)o+=`<rect x="${C-off-r.dn*u}" y="${y+7}" width="${r.dn*u}" height="16" rx="3" class="ebar neg"><title>${r.t}: ${plural(r.dn,"story")} adding pressure</title></rect><text x="${C-off-6-r.dn*u}" y="${y+20}" text-anchor="end" class="eval">${r.dn}</text>`;
+        if(r.up)o+=`<rect x="${C+off}" y="${y+7}" width="${r.up*u}" height="16" rx="3" class="ebar pos"><title>${r.t}: ${plural(r.up,"story")} easing it</title></rect><text x="${C+off+6+r.up*u}" y="${y+20}" class="eval">${r.up}</text>`});
+      o+=`<line x1="${C}" y1="18" x2="${C}" y2="${H-14}" class="egrid"/>`;
+      return svg(o,W,H,"Energy stories that add grid pressure versus stories that ease it, by topic");
+    }
+  };
+
+  /* ---- pick, rank, mount ---- */
+  const scored=[V.ledger,V.history,V.figures,V.matrix,V.clock,V.balance].map(v=>({v,w:v.weight()}));
+  const live=scored.filter(s=>s.w>0).sort((a,b)=>b.w-a.w).map(s=>s.v);
+  const held=scored.filter(s=>s.w<=0).map(s=>s.v);
+  const why=v=>typeof v.reason==="function"?v.reason():v.reason;
+  const card=(v,hero,W)=>{const h=hero&&v.hero?v.hero():null;
+    return `<section class="eviz${hero?" hero":""}"><div class="eviz-head"><span class="eyebrow">${esc(v.title)}</span>`
+      +(h?`<span class="hero-num">${h.v}${h.u?`<small>${esc(h.u)}</small>`:""}</span>`:v.sub?`<span class="eyebrow dim">${esc(v.sub())}</span>`:"")
+      +`</div>${v.render(W||(hero?800:430))}</section>`};
+
+  const shown=live.slice(0,5),spare=live.slice(5),rest=shown.slice(1);
+  let html=shown.length?card(shown[0],true):"";
+  for(let i=0;i<rest.length;i+=2){const pair=rest.slice(i,i+2);
+    html+=pair.length>1?`<div class="eviz-row">${pair.map(v=>card(v,false)).join("")}</div>`:card(pair[0],false,800);}
+  html+=`<p class="eviz-note">${plural(shown.length,"chart")} built from ${plural(facts.length,"stated figure")} across ${plural(stories.length,"story")}.`
+    +(spare.length?` Also had the data for ${spare.map(v=>v.title.toLowerCase()).join(", ")}.`:"")
+    +(held.length?` Held back: ${held.map(v=>`${v.title.toLowerCase()} (${why(v)})`).join("; ")}.`:"")+`</p>`;
+  mount.innerHTML=html;
+
+  const set=(id,txt)=>{const el=document.getElementById(id);if(el)el.textContent=txt};
+  set("energyCount",`VI · ${plural(stories.length,"story")} · joined with iea_news`);
+  set("energyBig",plural(stories.length,"story"));
+  set("energyTags",[...new Set(stories.map(tagOf))].join(" · "));
 })();
 
 /* ---------- doom v boom meter ---------- */
@@ -1287,19 +1459,6 @@ const LAYER_VIZ={
     render(Math.random);
     setTimeout(()=>btn.classList.remove('spin'),500);
   });
-})();
-
-/* ---------- weekly power disclosed ---------- */
-(function(){
-  const svg=document.getElementById('weekly');if(!svg)return;
-  const days=[["Tue 16",0.6],["Wed 17",1.1],["Thu 18",0],["Fri 19",2.3],["Sat 20",0.4],["Sun 21",0.2],["Mon 22",4.6]];
-  const W=800,H=150,P={l:48,r:8,t:26,b:26},max=5,bw=(W-P.l-P.r)/days.length;
-  let o=`<line x1="${P.l}" y1="${H-P.b}" x2="${W-P.r}" y2="${H-P.b}" class="wgrid"/>`;
-  [1,2,3,4].forEach(g=>{const y=H-P.b-g/max*(H-P.t-P.b);o+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" class="wgrid"/><text x="${P.l-8}" y="${y+3}" text-anchor="end" class="wg">${g} GW</text>`});
-  days.forEach(([d,v],i)=>{const x=P.l+i*bw+bw*0.2,w=bw*0.6,h=v/max*(H-P.t-P.b),y=H-P.b-h,today=i===days.length-1;
-    o+=`<rect x="${x}" y="${v?y:H-P.b-2}" width="${w}" height="${v?h:2}" rx="3" class="wb ${today?'today':''}"><title>${d}: ${v.toFixed(1)} GW</title></rect><text x="${x+w/2}" y="${H-8}" text-anchor="middle" class="wd ${today?'today':''}">${d}</text>`;
-    if(today||v>=2)o+=`<text x="${x+w/2}" y="${y-6}" text-anchor="middle" class="wv">${v.toFixed(1)}</text>`});
-  svg.innerHTML=o;
 })();
 
 /* ---------- dot-matrix world map ---------- */
