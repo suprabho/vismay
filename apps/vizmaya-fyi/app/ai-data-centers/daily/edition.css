@@ -19,9 +19,9 @@
   --up:#5eead4; --down:#f0a0a0; --energy:#c8e66b; --energy-wash:rgba(200,230,107,.08);
   --map-dot:#333f49; --map-dot-hi:#46545f; --comp1:#d4705f; --comp2:#14a3ba; --comp3:#96b532;
   --shadow:0 20px 60px rgba(0,0,0,.45);
-  --serif:"Newsreader",Georgia,"Times New Roman",serif;
-  --sans:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --serif:"Prata",Georgia,"Times New Roman",serif;
+  --sans:"Public Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --gutter:clamp(16px,4vw,48px);
   --measure:66ch;
   color-scheme:dark;}

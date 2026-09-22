@@ -1,43 +1,42 @@
 import type { CSSProperties } from 'react'
-import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from 'next/font/google'
+import { Prata, Public_Sans, Space_Mono } from 'next/font/google'
 import './edition.css'
 
-// The edition's type: Newsreader for display, IBM Plex Sans / Mono for body
-// and data. Loaded once for every route under /ai-data-centers/daily and
+// The edition's type: Prata for display, Public Sans for body, Space Mono
+// for data. Loaded once for every route under /ai-data-centers/daily and
 // handed to the stylesheet as the --serif / --sans / --mono variables.
-const newsreader = Newsreader({
+const prata = Prata({
   subsets: ['latin'],
-  weight: 'variable',
-  style: ['normal', 'italic'],
-  axes: ['opsz'],
-  variable: '--font-newsreader',
+  weight: '400',
+  style: ['normal'],
+  variable: '--font-prata',
   display: 'swap',
 })
 
-const plexSans = IBM_Plex_Sans({
+const publicSans = Public_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
-  variable: '--font-plex-sans',
+  variable: '--font-public-sans',
   display: 'swap',
 })
 
-const plexMono = IBM_Plex_Mono({
+const spaceMono = Space_Mono({
   subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-plex-mono',
+  weight: ['400', '700'],
+  variable: '--font-space-mono',
   display: 'swap',
 })
 
 const fontVars = {
-  '--serif': `var(--font-newsreader), Georgia, "Times New Roman", serif`,
-  '--sans': `var(--font-plex-sans), "Helvetica Neue", Arial, sans-serif`,
-  '--mono': `var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace`,
+  '--serif': `var(--font-prata), Georgia, "Times New Roman", serif`,
+  '--sans': `var(--font-public-sans), "Helvetica Neue", Arial, sans-serif`,
+  '--mono': `var(--font-space-mono), ui-monospace, SFMono-Regular, Menlo, monospace`,
 } as CSSProperties
 
 export default function DailyLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`dcd ${newsreader.variable} ${plexSans.variable} ${plexMono.variable}`}
+      className={`dcd ${prata.variable} ${publicSans.variable} ${spaceMono.variable}`}
       style={fontVars}
       data-edition-root=""
     >
