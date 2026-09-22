@@ -197,7 +197,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
               VI · {e.energy.storyCount} stories · joined with iea_news
             </div>
           </div>
-          <EnergyChapter energy={e.energy} />
+          <EnergyChapter energy={e.energy} stories={e.stories} ieaStories={e.ieaStories} />
         </section>
 
         <section className="chapter wrap" id="sources">

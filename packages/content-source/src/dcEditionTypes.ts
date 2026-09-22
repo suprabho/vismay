@@ -276,8 +276,12 @@ export interface EditionResearch {
 export interface EditionEnergy {
   hero: { value: number; unit: string; label: string } | null
   composition: { label: string; gw: number; storyId: number | null }[]
-  /** Last 7 editions incl. this one: power disclosed per edition. */
-  perEdition: { date: string; label: string; gw: number }[]
+  /**
+   * Last 7 editions incl. this one: power disclosed per edition. `null` = that
+   * edition disclosed no capacity figure at all — a gap in the record, which
+   * the chart draws as a gap rather than as a zero.
+   */
+  perEdition: { date: string; label: string; gw: number | null }[]
   figures: { value: string; unit: string | null; label: string; storyId: number | null }[]
   storyCount: number
   links: { label: string; href: string }[]
