@@ -90,7 +90,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
           </div>
           <nav className="edition-nav" aria-label="Edition">
             {step('prev')}
-            <a className="today" href="#previous" title="Open the edition archive">
+            <a className="today" href="#previous" title={`24 hours · ${windowLabel(e.windowStart, e.windowEnd)} — open the edition archive`}>
               <b>{formatEditionDate(e.date)}</b>
               <small>
                 {e.number != null ? `Edition ${e.number} · ` : ''}
@@ -106,10 +106,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
                 {e.moodScore == null ? 'Doom v Boom' : `${word} ${formatSigned(e.moodScore)}`}
               </span>
             </a>
-            <a className="pill" href="#previous">
-              <span className="dot" />
-              <span className="txt">Snapshot, not live</span>
-            </a>
             <ShareButton url={canonical} />
           </div>
         </div>
@@ -120,14 +116,14 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <div className="wrap">
           <div className="hero">
             <div>
-              <div className="meta eyebrow">
-                <span>24 hours · {windowLabel(e.windowStart, e.windowEnd)}</span>
-                <span>
-                  {counts.stories} stories · {counts.papers} papers · {counts.tickers} tickers
-                </span>
-                {sample && <span className="sample-note">Sample edition — illustrative content</span>}
-                {!sample && e.model === 'deterministic' && <span className="sample-note">Assembled without the prose model</span>}
-              </div>
+              {/* The window and the counts are in every chapter's side rail and
+                  in the masthead date — the hero says them a third time, so it
+                  now carries only a status flag, when there is one. */}
+              {(sample || e.model === 'deterministic') && (
+                <div className="meta eyebrow">
+                  <span className="sample-note">{sample ? 'Sample edition — illustrative content' : 'Assembled without the prose model'}</span>
+                </div>
+              )}
               <h1>{e.headline}</h1>
               <p className="deck">
                 <Deck text={e.sub} />
@@ -140,10 +136,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap" id="glance">
           <div className="chapter-head">
-            <div>
-              <h2>Doom v Boom</h2>
-              <p className="lede">The day&rsquo;s mood in one reading, scored story by story. Open either side to see what pushed the needle.</p>
-            </div>
+            <h2>Doom v Boom</h2>
             <div className="side">
               I · {e.moodCounts.boom + e.moodCounts.doom} stories scored · {e.moodSeries.length}-edition trend
             </div>
@@ -155,10 +148,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap" id="notes">
           <div className="chapter-head">
-            <div>
-              <h2>Key notes</h2>
-              <p className="lede">Six things to carry out of the day, each anchored on the number that matters. Every note links to the reporting it rests on.</p>
-            </div>
+            <h2>Key notes</h2>
             <div className="side">II · Key notes</div>
           </div>
           <KeyNotes notes={e.notes} />
@@ -167,10 +157,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter geo-section" id="geo">
           <div className="wrap">
             <div className="chapter-head">
-              <div>
-                <h2>By geography</h2>
-                <p className="lede">Every story carries a geo tag from the classifier. Pins are sized by story count — hover for the place, click to read its stories.</p>
-              </div>
+              <h2>By geography</h2>
               <div className="side">
                 III · {counts.stories} stories · {counts.places} places
               </div>
@@ -183,10 +170,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap" id="layers">
           <div className="chapter-head">
-            <div>
-              <h2>By AI layer</h2>
-              <p className="lede">The four buckets the stock registry uses. Each tile carries its own headline, one picture of what moved in that layer today, and the notes behind it; open a tile to read the stories.</p>
-            </div>
+            <h2>By AI layer</h2>
             <div className="side">IV · 4 layers · {counts.tickers} tickers</div>
           </div>
           <div className="layers" id="layers-grid">
@@ -198,10 +182,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap" id="papers">
           <div className="chapter-head">
-            <div>
-              <h2>New research</h2>
-              <p className="lede">The day in AI research, on its own terms: which fields moved, how big the reported gains were and at what compute, and how much of it was released. Open a paper for the result, the scale and why it matters.</p>
-            </div>
+            <h2>New research</h2>
             <div className="side">
               V · {counts.papers} papers · {new Set(e.papers.map((p) => p.area).filter(Boolean)).size} fields · arXiv
             </div>
@@ -211,10 +192,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap energy" id="energy">
           <div className="chapter-head">
-            <div>
-              <h2>AI + Energy &amp; Sustainability</h2>
-              <p className="lede">Where this epic meets the Energy Profile epic. Figures come only from what the day&rsquo;s stories state on the record.</p>
-            </div>
+            <h2>AI + Energy &amp; Sustainability</h2>
             <div className="side">
               VI · {e.energy.storyCount} stories · joined with iea_news
             </div>
@@ -224,10 +202,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap" id="sources">
           <div className="chapter-head">
-            <div>
-              <h2>Sources</h2>
-              <p className="lede">Every link in this edition, grouped by outlet. Nothing here is edited after the freeze; corrections run in the next edition.</p>
-            </div>
+            <h2>Sources</h2>
             <div className="side">
               VII · {counts.links} links · {counts.outlets} outlets
             </div>
@@ -237,10 +212,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
 
         <section className="chapter wrap" id="previous">
           <div className="chapter-head">
-            <div>
-              <h2>Previous editions</h2>
-              <p className="lede">One snapshot a day, kept forever. Each is the edition as it was frozen — the live feed keeps moving underneath, the snapshots don&rsquo;t.</p>
-            </div>
+            <h2>Previous editions</h2>
             <div className="side">Edition archive</div>
           </div>
           <PreviousEditions current={e} previous={previous} />
