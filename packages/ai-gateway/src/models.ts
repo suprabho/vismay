@@ -80,6 +80,12 @@ export const MODELS = {
     seedream45: 'bytedance/seedream-4.5',
     /** Seedream 5.0 Lite — latest Seedream line, lite tier ($0.04/image). */
     seedreamLite: 'bytedance/seedream-5.0-lite',
+    /**
+     * Meta Muse Image 1.0 — Meta's dedicated image model, sibling of the
+     * `text.muse` (Muse Spark) line. True `image` type on the gateway, so it
+     * takes the experimental_generateImage path and honours `aspectRatio`.
+     */
+    muse: 'meta/muse-image-1.0',
     /* ── The models below IGNORE `aspectRatio` (they take a `size` param generateImage
      *    doesn't send) — output comes back at the provider's default size. Prefer
      *    Imagen/Seedream/default when the layer's aspect ratio matters. ── */
@@ -97,6 +103,13 @@ export const MODELS = {
     fluxSchnell: 'prodia/flux-fast-schnell',
     /** xAI Grok Imagine ($0.02/image). */
     grokImage: 'xai/grok-imagine-image',
+    /**
+     * OpenAI GPT Image 2.5 (Sunburst). Dedicated image model — strong prompt
+     * adherence and legible in-image text. Takes `size`, not `aspectRatio`.
+     */
+    gptImage: 'openai/gpt-image-2.5-sunburst',
+    /** GPT Image 2.5 (Flare) — the sibling variant of the same line. */
+    gptImageFlare: 'openai/gpt-image-2.5-flare',
   },
 } as const
 
