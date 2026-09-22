@@ -2,10 +2,15 @@ name: Scrape AI Data Centers news
 
 # Daily pull of Google News' RSS search across four AI-infrastructure queries
 # (AI data centers, semiconductors, microprocessors, AI infra). Each new
-# article is classified by Claude Haiku — relevance gate, topic tags, and
-# tracked tickers from dc_stocks — and upserted into dc_news. Idempotent on
-# source_url (off-topic items persist with relevant=false so they aren't
-# re-classified), so re-runs and manual dispatches are safe.
+# article is classified by Claude Haiku — relevance gate, topic tags,
+# tracked tickers from dc_stocks, plus the daily-snapshot tags (layer, place,
+# theme, mood, energy, facts; migration 078) — and upserted into dc_news.
+# Idempotent on source_url (off-topic items persist with relevant=false so
+# they aren't re-classified), so re-runs and manual dispatches are safe.
+#
+# Dispatch with backfill_days set to re-tag relevant rows that predate the
+# snapshot tags (no feed fetch) — run once after migration 078 so the
+# edition's mood sparkline and field baselines have history.
 #
 # Google News rather than per-publisher scraping for the same reason as
 # scrape-energy-profile-news.yml: one free, machine-friendly feed with broad
@@ -23,6 +28,11 @@ on:
     # the 06:15 energy-profile scrape so the two never share a Gemini window.
     - cron: '45 6 * * *'
   workflow_dispatch:
+    inputs:
+      backfill_days:
+        description: 'Re-tag untagged relevant rows from the last N days instead of scraping'
+        required: false
+        default: ''
 
 concurrency:
   group: scrape-ai-data-centers-news
@@ -57,4 +67,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: pnpm ai-data-centers:scrape-news
+        run: >
+          pnpm ai-data-centers:scrape-news
+          ${{ github.event.inputs.backfill_days != '' && format('-- --backfill-days {0}', github.event.inputs.backfill_days) || '' }}

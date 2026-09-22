@@ -216,3 +216,37 @@ export function buildEpicJsonLd(opts: {
   if (dateModified ?? datePublished) article.dateModified = dateModified ?? datePublished
   return [collection, article]
 }
+
+/**
+ * NewsArticle for a daily snapshot edition (/ai-data-centers/daily/[date]).
+ * The edition is machine-composed and editor-reviewed, so the author is the
+ * studio; the OG image is the per-date opengraph-image route.
+ */
+export function buildEditionJsonLd(opts: {
+  date: string
+  number: number | null
+  headline: string
+  sub: string
+  publishedAt: string | null
+  keywords?: string[]
+}) {
+  const url = `${SITE_URL}/ai-data-centers/daily/${opts.date}`
+  const published = opts.publishedAt ?? `${opts.date}T09:00:00Z`
+  const node: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: clampHeadline(opts.headline),
+    description: opts.sub,
+    image: [`${url}/opengraph-image`],
+    datePublished: published,
+    dateModified: published,
+    author: [{ '@type': 'Organization', name: 'vizmaya' }],
+    publisher: { '@id': ORG_ID },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    url,
+    isPartOf: { '@type': 'CollectionPage', '@id': `${SITE_URL}/ai-data-centers#collection` },
+  }
+  if (opts.number != null) node.position = opts.number
+  if (opts.keywords?.length) node.keywords = opts.keywords.join(', ')
+  return node
+}

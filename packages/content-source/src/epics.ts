@@ -808,8 +808,9 @@ export async function getDataCenterProfile(slug: string): Promise<DcFacilityProf
 // AI Data Centers news + markets — backs /api/ai-data-centers/news, /stocks
 // and /recap. Tables dc_news / dc_stocks / dc_stock_prices (migration 065)
 // plus dc_news_recaps (migration 066), filled daily by
-// scripts/ai-data-centers/scrape-news.ts, import-stock-prices.ts and
-// generate-news-recap.ts.
+// scripts/ai-data-centers/scrape-news.ts and import-stock-prices.ts. The
+// recap worker was replaced by the edition composer (compose-edition.ts,
+// migration 078); dc_news_recaps stays read-only for the admin timeline.
 
 export interface DcNewsItem {
   id: number
@@ -823,25 +824,26 @@ export interface DcNewsItem {
   topics: string[]
   /** dc_stocks tickers named in the story. */
   tickers: string[]
+  /* Snapshot tags (migration 078) — null until the classifier has run on the row. */
+  /** AI layer: dc | hyper | semi | equip. */
+  layer: string | null
+  /** dc_places.slug the story is about. */
+  place: string | null
+  /** na | ea | eu | me | other. */
+  region: string | null
+  /** power | permit | memory | capacity | equip | chips | sustain. */
+  theme: string | null
+  /** -1 doom · 0 neutral · 1 boom. */
+  mood: number | null
+  /** True when the story carries a power, grid, water or carbon claim. */
+  energy: boolean
 }
 
-export async function getDcNews(opts?: {
-  limit?: number
-  topic?: string
-  ticker?: string
-}): Promise<DcNewsItem[]> {
-  const sb = createServiceClient()
-  let query = sb
-    .from('dc_news')
-    .select('id, source_url, title, summary, source, published_at, topics, tickers')
-    .eq('relevant', true)
-    .order('published_at', { ascending: false })
-    .limit(opts?.limit ?? 30)
-  if (opts?.topic) query = query.contains('topics', [opts.topic])
-  if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
-  const { data, error } = await query
-  if (error) throw new Error(`getDcNews: ${error.message}`)
-  return (data ?? []).map((r: any) => ({
+const DC_NEWS_BASE_COLUMNS = 'id, source_url, title, summary, source, published_at, topics, tickers'
+const DC_NEWS_TAG_COLUMNS = 'layer, place, region, theme, mood, energy'
+
+function mapDcNewsItemRow(r: any): DcNewsItem {
+  return {
     id: r.id as number,
     url: r.source_url as string,
     title: r.title as string,
@@ -850,7 +852,39 @@ export async function getDcNews(opts?: {
     publishedAt: r.published_at as string,
     topics: (r.topics as string[]) ?? [],
     tickers: (r.tickers as string[]) ?? [],
-  }))
+    layer: (r.layer as string | null) ?? null,
+    place: (r.place as string | null) ?? null,
+    region: (r.region as string | null) ?? null,
+    theme: (r.theme as string | null) ?? null,
+    mood: r.mood == null ? null : Number(r.mood),
+    energy: Boolean(r.energy),
+  }
+}
+
+export async function getDcNews(opts?: {
+  limit?: number
+  topic?: string
+  ticker?: string
+}): Promise<DcNewsItem[]> {
+  const sb = createServiceClient()
+  const run = (cols: string) => {
+    let query = sb
+      .from('dc_news')
+      .select(cols)
+      .eq('relevant', true)
+      .order('published_at', { ascending: false })
+      .limit(opts?.limit ?? 30)
+    if (opts?.topic) query = query.contains('topics', [opts.topic])
+    if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
+    return query
+  }
+  // The snapshot tag columns arrive with migration 078 — read without them
+  // when the code is deployed ahead of the migration, same as the epic
+  // pillar columns.
+  let { data, error } = await run(`${DC_NEWS_BASE_COLUMNS}, ${DC_NEWS_TAG_COLUMNS}`)
+  if (error && isMissingColumnError(error)) ({ data, error } = await run(DC_NEWS_BASE_COLUMNS))
+  if (error) throw new Error(`getDcNews: ${error.message}`)
+  return (data ?? []).map(mapDcNewsItemRow)
 }
 
 export interface DcNewsRecap {
@@ -890,9 +924,9 @@ function mapDcNewsRecapRow(r: any): DcNewsRecap {
 }
 
 /**
- * Newest recap snapshots first. Rows are written daily (plus any manual
- * dispatches) by scripts/ai-data-centers/generate-news-recap.ts —
- * table dc_news_recaps, migration 066.
+ * Newest recap snapshots first. Rows were written daily by the retired
+ * recap worker (replaced by scripts/ai-data-centers/compose-edition.ts) —
+ * table dc_news_recaps, migration 066. Read-only history for the admin tab.
  */
 export async function listDcNewsRecaps(limit = 14): Promise<DcNewsRecap[]> {
   const sb = createServiceClient()
@@ -943,33 +977,31 @@ export async function listDcNewsForAdmin(opts?: {
   relevance?: 'all' | 'relevant' | 'rejected'
 }): Promise<DcNewsAdminItem[]> {
   const sb = createServiceClient()
-  let query = sb
-    .from('dc_news')
-    .select('id, source_url, title, summary, source, published_at, relevant, topics, tickers, fetched_at')
-    .order('published_at', { ascending: false })
-    .limit(opts?.limit ?? 50)
-  const relevance = opts?.relevance ?? 'relevant'
-  if (relevance === 'relevant') query = query.eq('relevant', true)
-  if (relevance === 'rejected') query = query.eq('relevant', false)
-  if (opts?.topic) query = query.contains('topics', [opts.topic])
-  if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
-  if (opts?.q) {
-    // Escape LIKE wildcards so a literal "%" in the search box doesn't match everything.
-    const escaped = opts.q.replace(/[\\%_]/g, '\\$&')
-    query = query.ilike('title', `%${escaped}%`)
+  const run = (cols: string) => {
+    let query = sb
+      .from('dc_news')
+      .select(cols)
+      .order('published_at', { ascending: false })
+      .limit(opts?.limit ?? 50)
+    const relevance = opts?.relevance ?? 'relevant'
+    if (relevance === 'relevant') query = query.eq('relevant', true)
+    if (relevance === 'rejected') query = query.eq('relevant', false)
+    if (opts?.topic) query = query.contains('topics', [opts.topic])
+    if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
+    if (opts?.q) {
+      // Escape LIKE wildcards so a literal "%" in the search box doesn't match everything.
+      const escaped = opts.q.replace(/[\\%_]/g, '\\$&')
+      query = query.ilike('title', `%${escaped}%`)
+    }
+    return query
   }
-  const { data, error } = await query
+  const adminBase = `${DC_NEWS_BASE_COLUMNS}, relevant, fetched_at`
+  let { data, error } = await run(`${adminBase}, ${DC_NEWS_TAG_COLUMNS}`)
+  if (error && isMissingColumnError(error)) ({ data, error } = await run(adminBase))
   if (error) throw new Error(`listDcNewsForAdmin: ${error.message}`)
   return (data ?? []).map((r: any) => ({
-    id: r.id as number,
-    url: r.source_url as string,
-    title: r.title as string,
-    summary: (r.summary as string | null) ?? null,
-    source: (r.source as string | null) ?? null,
-    publishedAt: r.published_at as string,
+    ...mapDcNewsItemRow(r),
     relevant: r.relevant as boolean,
-    topics: (r.topics as string[]) ?? [],
-    tickers: (r.tickers as string[]) ?? [],
     fetchedAt: r.fetched_at as string,
   }))
 }
@@ -1324,6 +1356,15 @@ export async function upsertDcStockPrices(rows: DcStockPriceRow[]): Promise<numb
   }
   return rows.length
 }
+
+// ---------------------------------------------------------------------------
+// AI Data Centers daily snapshot — editions, papers, places (migration 078).
+// The readers live in ./dcEditions.ts (server) and the shared types and
+// vocabularies in ./dcEditionTypes.ts; both re-export here so apps keep one
+// import surface for the epic.
+
+export * from './dcEditionTypes'
+export * from './dcEditions'
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Searching for Umami (`searching-for-umami` epic, `umami` app).

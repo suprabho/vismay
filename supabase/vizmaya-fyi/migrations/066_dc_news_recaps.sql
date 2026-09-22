@@ -8,7 +8,10 @@
 -- timeline instead of clobbering the day.
 --
 -- Worker: apps/vizmaya-fyi/scripts/ai-data-centers/generate-news-recap.ts
--- Cron:   .github/workflows/generate-dc-news-recap.yml (daily, after the
+--         (retired by migration 078 — the edition composer,
+--         compose-edition.ts, writes dc_editions instead; this table stays
+--         as read-only history for the admin Recaps timeline)
+-- Cron:   was .github/workflows/generate-dc-news-recap.yml (daily, after the
 --         06:45 UTC dc_news scrape)
 -- Reader: getLatestDcNewsRecap / listDcNewsRecaps in
 --         packages/content-source/src/epics.ts → /api/ai-data-centers/recap
