@@ -681,11 +681,15 @@ export async function assembleEditionNumbers(input: {
     arr.push(story)
     byDay.set(day, arr)
   }
-  const published = new Map<string, { score: number | null; gw: number }>()
+  const published = new Map<string, { score: number | null; gw: number | null }>()
   for (const r of (publishedR.data ?? []) as { edition_date: string; mood_score: unknown; energy: { hero?: { value?: number } | null } | null }[]) {
+    // No hero figure means that edition disclosed no power at all. Keep it as
+    // null so the history chart can draw the gap; 0 would read as "disclosed,
+    // and it was nothing".
+    const hero = r.energy?.hero?.value
     published.set(r.edition_date, {
       score: r.mood_score == null ? null : Number(r.mood_score),
-      gw: Number(r.energy?.hero?.value ?? 0) || 0,
+      gw: hero == null ? null : Number(hero) || null,
     })
   }
   const moodSeries: EditionMoodPoint[] = []
@@ -696,10 +700,11 @@ export async function assembleEditionNumbers(input: {
     const dayStories = byDay.get(d) ?? []
     moodSeries.push({ date: d, score: pub ? pub.score : scoreMood(dayStories).score })
     if (i <= 6) {
+      const committed = pub ? null : powerCommitted(dayStories, placeMap, stockMap)
       powerHistory.push({
         date: d,
         label: formatEditionDayLabel(d),
-        gw: pub ? pub.gw : powerCommitted(dayStories, placeMap, stockMap).total,
+        gw: pub ? pub.gw : committed && committed.parts.length > 0 ? committed.total : null,
       })
     }
   }

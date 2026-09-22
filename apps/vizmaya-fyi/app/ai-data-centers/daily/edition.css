@@ -19,9 +19,9 @@
   --up:#5eead4; --down:#f0a0a0; --energy:#c8e66b; --energy-wash:rgba(200,230,107,.08);
   --map-dot:#333f49; --map-dot-hi:#46545f; --comp1:#d4705f; --comp2:#14a3ba; --comp3:#96b532;
   --shadow:0 20px 60px rgba(0,0,0,.45);
-  --serif:"Newsreader",Georgia,"Times New Roman",serif;
-  --sans:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --serif:"Prata",Georgia,"Times New Roman",serif;
+  --sans:"Public Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --gutter:clamp(16px,4vw,48px);
   --measure:66ch;
   color-scheme:dark;}
@@ -226,24 +226,52 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .paper-jump{display:grid;grid-template-columns:56px 1fr;gap:10px;text-align:left;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px;line-height:1.35;width:100%}
 .dcd .paper-jump .mono{color:var(--dim);font-size:10.5px;padding-top:3px}
 .dcd .paper-jump:hover{color:var(--accent-hi)}
-/* ---------- energy ---------- */
+/* ---------- energy ----------
+ * The chapter has no fixed chart slots: it mounts whichever cards this
+ * edition's stated figures can fill (see EnergyChapter.tsx), so the styles
+ * below are per-card, not per-chart. */
 .dcd .energy-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start}
-.dcd .energy-viz{display:grid;gap:18px}
-.dcd .viz-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.dcd .energy-viz{display:grid;gap:18px;min-width:0}
+.dcd .eviz{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:16px 18px;display:grid;gap:12px;align-content:start;min-width:0}
+.dcd .eviz.hero{background:var(--energy-wash);border-color:var(--line-strong)}
+.dcd .eviz-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.dcd .eviz-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0}
+.dcd .eviz-note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:-2px}
 .dcd .hero-num{font-family:var(--serif);font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
 .dcd .hero-num small{font-size:20px;color:var(--muted);margin-left:3px}
-.dcd #composition{display:block;max-width:100%;font-family:var(--mono)}
-.dcd #composition .c1{fill:var(--comp1)}
-.dcd #composition .c2{fill:var(--comp2)}
-.dcd #composition .c3{fill:var(--comp3)}
-.dcd #composition .cl{font-size:12px;fill:var(--muted)}
-.dcd #composition .cv{font-size:13px;fill:var(--bone);font-weight:500}
-.dcd .energy-figs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.dcd .fig{padding:16px 18px;border-right:1px solid var(--line);background:var(--energy-wash)}
-.dcd .fig:last-child{border-right:0}
-.dcd .fig .num{font-family:var(--serif);font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
-.dcd .fig .num small{font-size:16px;color:var(--muted);margin-left:2px}
-.dcd .fig .lab{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.35}
+.dcd .eviz-svg{display:block;max-width:100%;font-family:var(--mono)}
+.dcd .eviz-svg .elab{font-size:12px;fill:var(--bone)}
+.dcd .eviz-svg .elab.mid{font-size:11px;fill:var(--muted)}
+.dcd .eviz-svg .esrc{font-size:10px;fill:var(--dim)}
+.dcd .eviz-svg .eval{font-size:12px;fill:var(--bone);font-weight:500}
+.dcd .eviz-svg .eg{font-size:10px;fill:var(--dim)}
+.dcd .eviz-svg .ed{font-size:11px;fill:var(--dim)}
+.dcd .eviz-svg .ed.now{fill:var(--bone)}
+.dcd .eviz-svg .eh{font-size:10px;fill:var(--dim);letter-spacing:.08em}
+.dcd .eviz-svg .egrid{stroke:var(--line)}
+.dcd .eviz-svg .ebar{fill:var(--energy);opacity:.9}
+.dcd .eviz-svg .ebar.c2{fill:var(--comp2)}
+.dcd .eviz-svg .ebar.c3{fill:var(--comp1)}
+.dcd .eviz-svg .ebar.past{fill:var(--accent-lo);opacity:.6}
+.dcd .eviz-svg .ebar.now{fill:var(--energy);opacity:1}
+.dcd .eviz-svg .ebar.pos{fill:var(--up);opacity:.85}
+.dcd .eviz-svg .ebar.neg{fill:var(--down);opacity:.85}
+/* An edition that disclosed nothing draws as a dashed ghost, never as a zero bar. */
+.dcd .eviz-svg .eghost{fill:none;stroke:var(--line-strong);stroke-dasharray:3 3}
+.dcd .eviz-svg .ecell{fill:var(--energy);opacity:.85}
+.dcd .eviz-svg .ecn{font-size:10px;fill:var(--ink);font-weight:600}
+.dcd .eviz-svg .eempty{fill:var(--map-dot)}
+.dcd .eviz-svg .edot{fill:var(--energy)}
+.dcd .eviz-svg .edot.neg{fill:var(--down)}
+.dcd .eviz-svg .edot.flat{fill:var(--accent-lo)}
+.dcd .efigs{display:grid;gap:14px}
+.dcd .efig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:baseline}
+.dcd .efig .num{font-family:var(--serif);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.dcd .efig .num small{font-size:15px;color:var(--muted);margin-left:3px}
+.dcd .efig .lab{font-size:12.5px;color:var(--muted);line-height:1.35}
+.dcd .efig .src{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:8px;white-space:nowrap}
+.dcd .efig .rail{grid-column:1/-1;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.dcd .efig .rail i{display:block;height:3px;border-radius:2px;background:var(--energy)}
 .dcd .energy-side{display:grid;gap:16px}
 .dcd .open-card{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:18px 20px;display:grid;gap:6px;text-align:left;transition:border-color .15s,transform .15s,box-shadow .15s}
 .dcd .open-card:hover{border-color:var(--energy);transform:translateY(-2px);box-shadow:var(--shadow)}
@@ -337,19 +365,13 @@ body.dcd-panel-open{overflow:hidden}
 .dcd #quadrant .qdot.en{fill:var(--energy)}
 .dcd #quadrant .qn{font-size:10px;fill:var(--ink);font-weight:500}
 .dcd #quadrant .qt{font-size:12.5px;fill:var(--bone);font-family:var(--sans)}
+.dcd .gcard-head .title-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dcd .pill.regen .ico{display:inline-block;font-size:12px;transition:transform .5s ease}
+.dcd .pill.regen.spin .ico{transform:rotate(360deg)}
+.dcd #quadrant .qleader{stroke:var(--line-strong)}
 .dcd #quadrant .qt .qc{font-family:var(--mono);font-size:10.5px}
 .dcd #quadrant .qc{font-size:10.5px;fill:var(--muted)}
 .dcd .pmeta .pn{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:var(--ink);font-size:9.5px;margin-right:6px;font-weight:500}
-/* weekly bars */
-.dcd .week{display:grid;gap:8px;padding-top:6px}
-.dcd #weekly{display:block;max-width:100%;font-family:var(--mono)}
-.dcd #weekly .wgrid{stroke:var(--line)}
-.dcd #weekly .wg{font-size:10px;fill:var(--dim)}
-.dcd #weekly .wb{fill:var(--accent-lo);opacity:.7}
-.dcd #weekly .wb.today{fill:var(--energy);opacity:1}
-.dcd #weekly .wd{font-size:11px;fill:var(--dim)}
-.dcd #weekly .wd.today{fill:var(--bone)}
-.dcd #weekly .wv{font-size:12px;fill:var(--bone);font-weight:500}
 @media (max-width:980px){
   .dcd .glance{grid-template-columns:1fr}
   .dcd .signals{grid-template-columns:1fr 1fr}
@@ -537,9 +559,8 @@ body.dcd-panel-open{overflow:hidden}
   .dcd .edition-nav .today b{font-size:13px}
   .dcd .hero{padding-block:32px 22px}
   .dcd .counts{grid-template-columns:repeat(2,auto);gap:12px 28px}
-  .dcd .energy-figs{grid-template-columns:1fr}
-  .dcd .fig{border-right:0;border-bottom:1px solid var(--line)}
-  .dcd .fig:last-child{border-bottom:0}
+  .dcd .eviz-row{grid-template-columns:1fr}
+  .dcd .efig .src{display:block;margin-left:0}
   .dcd .regionbar{position:static;flex-wrap:wrap}
   .dcd .regionbar button{flex:1 1 45%;padding:10px 16px}
   .dcd .mapbox .legend{display:none}

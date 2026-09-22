@@ -495,13 +495,7 @@ export function powerCommitted(
   const parts: EditionEnergy['composition'] = []
   for (const s of stories) {
     if (!s.energy) continue
-    // Power committed = deals and procurement the story reports as done
-    // (a PPA, a generation block, a tender). Queue reports, pauses and
-    // turbine-delivery warnings carry GW figures too, but nobody committed
-    // them — they belong in the figure tiles, not the composition.
-    const action = s.facts?.action
-    const counts = action === 'power-deal' || (s.theme === 'power' && (action === 'add' || action === 'capacity'))
-    if (!counts) continue
+    if (!isCommittedPower(s)) continue
     const power = largestPowerFigure(s)
     if (!power) continue
     const what = power.fig.label?.trim() || 'Power'
@@ -513,14 +507,26 @@ export function powerCommitted(
   return { total: Math.round(kept.reduce((a, p) => a + p.gw, 0) * 100) / 100, parts: kept }
 }
 
+/**
+ * Did this story report power that somebody actually committed — a PPA, a
+ * generation block, a tender that was let? Queue reports, pauses and
+ * turbine-delivery warnings carry GW figures too, but nobody committed them,
+ * so they never belong on a bar of committed capacity. The energy chapter and
+ * the composition share this test so the two can't drift apart.
+ */
+export function isCommittedPower(s: DcEditionStory): boolean {
+  const action = s.facts?.action
+  return action === 'power-deal' || (s.theme === 'power' && (action === 'add' || action === 'capacity'))
+}
+
 export function buildEnergy(
   stories: DcEditionStory[],
   ieaStories: DcEditionStory[],
   opts: {
     places: Map<string, DcPlace>
     stocks: Map<string, StockName>
-    /** Previous editions' disclosed power, oldest first (this edition is appended). */
-    history: { date: string; label: string; gw: number }[]
+    /** Previous editions' disclosed power, oldest first (this edition is appended); null = disclosed none. */
+    history: { date: string; label: string; gw: number | null }[]
     editionDate: string
   },
 ): EditionEnergy {
@@ -577,7 +583,10 @@ export function buildEnergy(
     .map(([code, v]) => ({ label: `Energy Profile → ${v.name}`, href: `/energy-profile?country=${code}` }))
 
   const label = formatEditionDayLabel(opts.editionDate)
-  const perEdition = [...opts.history.slice(-6), { date: opts.editionDate, label, gw: total }]
+  // An edition where nobody put a number on the record contributes a gap, not
+  // a zero: `null` here is what keeps the history chart from drawing silence
+  // as "0 GW disclosed".
+  const perEdition = [...opts.history.slice(-6), { date: opts.editionDate, label, gw: parts.length > 0 ? total : null }]
 
   return {
     hero: parts.length > 0 ? { value: total, unit: 'GW', label: "Power committed in today's disclosed deals" } : null,
@@ -587,6 +596,24 @@ export function buildEnergy(
     storyCount: energyStories.length + ieaStories.length,
     links,
   }
+}
+
+/**
+ * What a stated figure *is*, from the unit the story used. The energy chapter
+ * groups by this: power figures can share a bar, a percentage and a year
+ * cannot sit on the same scale.
+ */
+export type DcFigureKind = 'power' | 'energy' | 'share' | 'money' | 'horizon' | 'term' | 'count'
+
+export function figureKind(unit: string): DcFigureKind {
+  const u = unit.trim().toLowerCase()
+  if (u === 'gw' || u === 'mw') return 'power'
+  if (u === 'gwh' || u === 'mwh' || u === 'twh') return 'energy'
+  if (u === '%') return 'share'
+  if (/bn|billion|mn|million|\$|€|£/.test(u)) return 'money'
+  if (isYearUnit(u)) return 'horizon'
+  if (u === 'years' || u === 'months' || u === 'days') return 'term'
+  return 'count'
 }
 
 /** How much a stated figure says on its own: power and dates first, bare counts last. */

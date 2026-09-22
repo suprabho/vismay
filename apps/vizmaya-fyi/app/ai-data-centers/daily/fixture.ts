@@ -191,13 +191,15 @@ const TAPE: EditionTapeTick[] = buildTape(
 )
 
 const HIST = [0.05, -0.12, -0.2, 0.08, 0.15, 0.3, 0.22, -0.05, 0.1, 0.18, 0.25, 0.12, -0.08, -0.15, 0.02, 0.2, 0.28, 0.14, 0.05, 0.1, 0.32, 0.18, 0.06, -0.1, 0.04, 0.16, 0.24, 0.2, 0.11]
-const POWER_HISTORY = [
+// null = that edition disclosed no capacity figure at all. Two of the last six
+// did, which is what the history chart is for: the gap is the finding.
+const POWER_HISTORY: { date: string; label: string; gw: number | null }[] = [
   { date: '2026-09-16', label: 'Wed 16', gw: 0.6 },
   { date: '2026-09-17', label: 'Thu 17', gw: 1.1 },
-  { date: '2026-09-18', label: 'Fri 18', gw: 0 },
+  { date: '2026-09-18', label: 'Fri 18', gw: null },
   { date: '2026-09-19', label: 'Sat 19', gw: 2.3 },
   { date: '2026-09-20', label: 'Sun 20', gw: 0.4 },
-  { date: '2026-09-21', label: 'Mon 21', gw: 0.2 },
+  { date: '2026-09-21', label: 'Mon 21', gw: null },
 ]
 
 const TEXT: EditionText = {
