@@ -103,6 +103,36 @@ default). A staleness warning appears when the newest recap is older than 36h.
   [components/vizmaya/pipeline/shared.tsx](components/vizmaya/pipeline/shared.tsx),
   used by both tabs.
 
+
+## Editions tab (/vizmaya/editions)
+
+The review desk for the AI Data Centers **daily snapshot** — the frozen
+edition composed at 08:15 UTC and published at 09:00 UTC (PRD:
+[docs/ai-data-centers-daily-snapshot-prd.md](../../docs/ai-data-centers-daily-snapshot-prd.md)).
+Review is a window, not a gate: the draft goes public whether or not anyone
+looked. Published editions are immutable (DB trigger); corrections run in the
+next edition.
+
+- **Page:** [app/vizmaya/(tabbed)/editions/](<app/vizmaya/(tabbed)/editions/>) —
+  draft banner (window, composer model, generated time, countdown to
+  auto-publish; Publish now / Recompose / Recompose-clear-edits / Hold 30 min
+  once), the signed draft preview iframe (`/ai-data-centers/daily/preview` on
+  vizmaya.fyi, `signOutputUrl` with `ADMIN_SESSION_SECRET`), editable prose
+  (headline, deck, six key notes with sources picked from the window's
+  stories, per-layer headline / sub / notes, research headline / sub),
+  membership checkboxes (dropping re-derives every number), a diff of the
+  current text against the previous composer run, and the read-only archive.
+- **API (`isAuthed()`-gated):** `GET/PUT /api/vizmaya/editions/draft`,
+  `POST …/draft/publish` (freezes + pings the public revalidate hook),
+  `POST …/draft/recompose` (dispatches `compose-dc-edition.yml` via the
+  GITHUB_DISPATCH_* env; 503 when unset), `POST …/draft/hold`,
+  `PUT …/draft/membership`, `GET /api/vizmaya/editions` (archive). Server
+  helpers in [lib/editionsAdmin.ts](lib/editionsAdmin.ts); readers/writers
+  in `packages/content-source/src/dcEditions.ts`.
+- **Audit:** every save and membership change writes an `ai_generations`
+  row (kind `edition_edit`, model `editor`, prompt = the patch), and
+  `reviewed_by` carries the admin email (Supabase-auth mode).
+
 ## Story themes (saved presets)
 
 The theme editor (`components/vizmaya/ThemeEditor.tsx`, used by the classic

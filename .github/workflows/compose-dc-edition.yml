@@ -1,0 +1,77 @@
+name: Compose AI Data Centers daily edition
+
+# Replaces the markdown recap worker (generate-dc-news-recap.yml). At 08:15
+# UTC the composer freezes the window (08:15 → 08:15 UTC) and writes ONE
+# structured draft row into dc_editions: Gemini writes the prose (headline,
+# deck, six key notes, per-layer briefs, research headline), everything
+# numeric is assembled deterministically from the tagged dc_news rows, the
+# kept dc_papers, dc_stock_prices and iea_news. Without GEMINI_API_KEY — or
+# when generation fails — the edition degrades to a deterministic one
+# (model = 'deterministic'), so the cron never goes dark.
+#
+# The draft then sits in the admin Editions tab until publish-dc-edition.yml
+# freezes it at 09:00 UTC (review is a window, not a gate). Re-running for
+# the same date appends a composer run and keeps editor edits unless
+# clear_edits is set.
+#
+# Required repo secrets (in the `Production` environment so secrets.X resolves):
+#   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY  — read dc_news / dc_papers / dc_stock_prices / iea_news, write dc_editions
+#   GEMINI_API_KEY             — prose layer (shared with render-audio); optional
+#   ADMIN_SESSION_SECRET       — signs the revalidate ping if a stale draft gets published on the way in
+
+on:
+  schedule:
+    # 08:15 UTC daily — after the 06:45 news scrape and the 07:00 papers
+    # ingest have settled; the :15 offset avoids the top-of-hour Actions
+    # queue spike and staggers off the other vizmaya crons.
+    - cron: '15 8 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Edition date (YYYY-MM-DD, UTC). Default: the current window'
+        required: false
+        default: ''
+      clear_edits:
+        description: 'Drop editor edits on the existing draft'
+        type: boolean
+        default: false
+
+concurrency:
+  group: compose-dc-edition
+  cancel-in-progress: false
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Compose edition draft
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
+        run: >
+          pnpm ai-data-centers:compose-edition --
+          ${{ github.event.inputs.date != '' && format('--date {0}', github.event.inputs.date) || '' }}
+          ${{ github.event.inputs.clear_edits == 'true' && '--clear-edits' || '' }}

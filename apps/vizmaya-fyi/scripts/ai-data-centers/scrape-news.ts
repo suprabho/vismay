@@ -1,19 +1,29 @@
 /**
  * AI Data Centers news scraper — consumes Google News' RSS search across four
  * queries (AI data centers, semiconductors, microprocessors, AI infra), has
- * Claude Haiku classify each new article (relevance gate + topic tags +
- * tracked tickers from dc_stocks), and upserts into dc_news.
+ * Claude Haiku classify each new article, and upserts into dc_news.
+ *
+ * The classifier is one structured-output call per article that returns:
+ *   * the relevance gate + topic tags + tracked tickers (migration 065), and
+ *   * the daily-snapshot tags (migration 078): the AI layer, a place from the
+ *     seeded dc_places list (+ its region), a theme, a mood (-1/0/1), an
+ *     energy flag and `facts` — the action, the figures and the horizon the
+ *     story states, which the edition's per-layer visualisations read.
  *
  * Google News RSS for the same reason as scrape-energy-profile-news.ts:
  * a free, machine-friendly feed with broad outlet coverage (Reuters,
  * Bloomberg, trade press) that works from any IP — no per-publisher scraping.
  *
  * Run locally:  pnpm ai-data-centers:scrape-news
+ *               pnpm ai-data-centers:scrape-news -- --backfill-days 30
+ *                 (re-tags relevant rows that predate the snapshot tags, no
+ *                  feed fetch — run once so the mood sparkline and field
+ *                  baselines have history)
  * Run in CI:    .github/workflows/scrape-ai-data-centers-news.yml (daily cron)
  *
  * Required env:
- *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — read dc_stocks, write dc_news
- *   ANTHROPIC_API_KEY                                    — topic/ticker tagging
+ *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — read dc_stocks / dc_places, write dc_news
+ *   ANTHROPIC_API_KEY                                    — classification
  *
  * Idempotency: source_url is the natural key (unique in migration 065).
  * Classifier rejects are stored with relevant=false — the queries here are
@@ -24,14 +34,26 @@
  * Throughput: the four queries surface ~200-250 never-seen articles per day,
  * so classification runs through a bounded worker pool, and a soft deadline
  * stops the loop cleanly before the workflow's 30-minute kill — leftovers are
- * re-seen as new on the next run. (The sequential Gemma version needed 40-60
- * min/day and was hard-killed at 30 for weeks.)
+ * re-seen as new on the next run.
  */
 
 import Anthropic from '@anthropic-ai/sdk'
 import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
+import {
+  DC_LAYER_KEYS,
+  DC_REGION_KEYS,
+  DC_STORY_ACTIONS,
+  DC_THEME_KEYS,
+  STOCK_CATEGORY_TO_LAYER,
+  type DcLayerKey,
+  type DcMood,
+  type DcRegionKey,
+  type DcStoryAction,
+  type DcStoryFacts,
+  type DcThemeKey,
+} from '@vismay/content-source/dcEditionTypes'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
@@ -48,15 +70,20 @@ const FEED_QUERIES = [
 
 const TOPIC_VOCABULARY = ['ai', 'data-centers', 'semiconductors', 'microprocessors'] as const
 
-// Haiku is the right tier for a yes/no + tags call: ~1-2s/item vs the 8-15s
-// Gemma took, and structured outputs make the JSON shape a guarantee rather
-// than a regex scrape.
+// Haiku is the right tier for a yes/no + tags call: ~1-2s/item, and
+// structured outputs make the JSON shape a guarantee rather than a regex
+// scrape. Bump CLASSIFIER_VERSION whenever the prompt or schema changes — it
+// is stored on every row so the mood series can be recomputed per version.
 const CLASSIFIER_MODEL = 'claude-haiku-4-5'
+const CLASSIFIER_VERSION = 'v2-snapshot-2026-09'
 const CONCURRENCY = 4
 // Stop pulling new items past this, well under the workflow's 30-minute
 // timeout, so the job always exits green with a summary instead of being
 // hard-killed mid-loop.
 const DEADLINE_MS = 25 * 60_000
+const MAX_FIGURES = 6
+
+const nullable = (schema: Record<string, unknown>) => ({ anyOf: [schema, { type: 'null' }] })
 
 const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
   type: 'object',
@@ -64,8 +91,44 @@ const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
     relevant: { type: 'boolean' },
     topics: { type: 'array', items: { type: 'string' } },
     tickers: { type: 'array', items: { type: 'string' } },
+    layer: nullable({ type: 'string', enum: DC_LAYER_KEYS }),
+    place: nullable({ type: 'string' }),
+    region: nullable({ type: 'string', enum: DC_REGION_KEYS }),
+    theme: nullable({ type: 'string', enum: DC_THEME_KEYS }),
+    mood: { type: 'integer', enum: [-1, 0, 1] },
+    energy: { type: 'boolean' },
+    facts: {
+      type: 'object',
+      properties: {
+        action: nullable({ type: 'string', enum: DC_STORY_ACTIONS }),
+        figures: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              value: { type: 'number' },
+              unit: { type: 'string' },
+              label: { type: 'string' },
+            },
+            required: ['value', 'unit', 'label'],
+            additionalProperties: false,
+          },
+        },
+        horizon: nullable({
+          type: 'object',
+          properties: {
+            from: nullable({ type: 'string' }),
+            to: nullable({ type: 'string' }),
+          },
+          required: ['from', 'to'],
+          additionalProperties: false,
+        }),
+      },
+      required: ['action', 'figures', 'horizon'],
+      additionalProperties: false,
+    },
   },
-  required: ['relevant', 'topics', 'tickers'],
+  required: ['relevant', 'topics', 'tickers', 'layer', 'place', 'region', 'theme', 'mood', 'energy', 'facts'],
   additionalProperties: false,
 }
 
@@ -118,11 +181,31 @@ async function fetchFeed(query: string): Promise<NewsItem[]> {
 interface TrackedStock {
   ticker: string
   name: string
+  category: string
 }
 
-function classifierSystem(stocks: TrackedStock[]): string {
-  const tickerList = stocks.map((s) => `${s.ticker} — ${s.name}`).join('\n')
-  return `You classify news headlines for a dashboard tracking the AI infrastructure build-out: AI data centers, microprocessors, and the semiconductor industry.
+interface PlaceRow {
+  slug: string
+  name: string
+  region: DcRegionKey
+  aliases: string[]
+}
+
+/** Everything the classifier needs to validate the model's answer. */
+interface ClassifierContext {
+  validTickers: Set<string>
+  stockCategory: Map<string, string>
+  placeBySlug: Map<string, PlaceRow>
+  /** lower-cased slug / name / alias → slug */
+  placeLookup: Map<string, string>
+}
+
+function classifierSystem(stocks: TrackedStock[], places: PlaceRow[]): string {
+  const tickerList = stocks.map((s) => `${s.ticker} — ${s.name} (${s.category})`).join('\n')
+  const placeList = places
+    .map((p) => `${p.slug} — ${p.name} [${p.region}]${p.aliases.length ? ` (${p.aliases.join(', ')})` : ''}`)
+    .join('\n')
+  return `You classify news headlines for a dashboard tracking the AI infrastructure build-out: AI data centers, microprocessors, and the semiconductor industry. Each story also feeds a frozen daily edition, so you extract a small set of tags and the facts the story states.
 
 Topic vocabulary (use ONLY these tags):
 - "ai"               — AI models, AI compute demand, AI industry moves
@@ -130,71 +213,203 @@ Topic vocabulary (use ONLY these tags):
 - "semiconductors"   — chip industry, foundries, memory, equipment, supply chain
 - "microprocessors"  — CPUs/GPUs/accelerators as products or architectures
 
-Tracked companies (ticker — name):
+Tracked companies (ticker — name (category)):
 ${tickerList}
 
+Layer (which part of the AI stack the story is mainly about):
+- "dc"    — data-center sites, colocation, cooling, capacity leases, operators
+- "hyper" — hyperscalers and AI labs: capex, power procurement, model-capacity deals
+- "semi"  — accelerators, memory/HBM, foundry, packaging
+- "equip" — lithography, deposition, etch, test tools, and chip export rules
+
+Places (pick the slug the story is mainly about, or null when no listed place fits — never invent one):
+${placeList}
+
+Region (of the place, or of the story when no place fits): "na" North America · "ea" East Asia · "eu" Europe · "me" India & Middle East · "other" · null.
+
+Theme (one): "power" (deals, grid queues, turbines, PPAs) · "permit" (freezes, rules, rezonings, policy) · "memory" (HBM/DRAM allocation) · "capacity" (MW added, leased, paused; new sites) · "equip" (tools, export rules) · "chips" (accelerators, foundry, packaging, nodes) · "sustain" (water, carbon, energy outlooks).
+
+Mood — the day's Doom v Boom is scored story by story:
+- 1  boom: expansion, demand, deals, capacity added, guidance raised, qualification won
+- -1 doom: freezes, pauses, warnings, delays, grid strain, export-rule hits, lawsuits
+- 0  neutral: analysis, explainers, mixed or purely descriptive news
+
+Energy: true when the story carries a power, grid, water, carbon or electricity-demand claim.
+
+Facts (only what the headline/summary literally state — never estimate):
+- action: what happened — "add" (capacity/site added or broke ground) · "pause" · "freeze" · "power-deal" (PPA, generation, storage procurement) · "capacity" (leases, expansions without MW) · "permit" · "disclosure" (reports, water/carbon updates) · "pull-forward" (orders moved earlier) · "risk" (revenue/schedule warning) · "other" · null
+- figures: every number the text states with its unit and a 2–6 word label, e.g. {"value": 1200, "unit": "MW", "label": "gas-plus-storage block"}, {"value": 20, "unit": "years", "label": "PPA term"}, {"value": 9, "unit": "bn USD", "label": "cooling backlog"}, {"value": 2029, "unit": "year", "label": "turbine delivery"}. Use "MW"/"GW" for power, "GWh" for storage, "%" for percentages, "year" for a year given as a figure. Empty array when none.
+- horizon: a stated time window as strings like "2027", "2027-Q1", "2027-06", "FY27" — {"from": null, "to": "2027"} for "booked through 2027", {"from": "2028", "to": "2027"} for orders pulled from 2028 into 2027. null when the story states no window.
+
 Rules:
-- relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false with empty arrays.
+- relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false, empty arrays, layer/place/region/theme null, mood 0, energy false, facts {"action": null, "figures": [], "horizon": null}.
 - topics: every vocabulary tag that clearly applies (usually 1–2).
 - tickers: ONLY companies explicitly named in the headline or summary, or the unmistakable primary subject. Use the exact ticker strings from the list. Empty array if none.
+- place: ONLY a slug from the list above.
 
 Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"]}`
+{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output"}], "horizon": null}}`
 }
 
 interface Classification {
   relevant: boolean
   topics: string[]
   tickers: string[]
+  layer: DcLayerKey | null
+  place: string | null
+  region: DcRegionKey | null
+  theme: DcThemeKey | null
+  mood: DcMood
+  energy: boolean
+  facts: DcStoryFacts
+}
+
+const REJECTED: Classification = {
+  relevant: false,
+  topics: [],
+  tickers: [],
+  layer: null,
+  place: null,
+  region: null,
+  theme: null,
+  mood: 0,
+  energy: false,
+  facts: { action: null, figures: [], horizon: null },
+}
+
+const clip = (s: unknown, max: number): string => (typeof s === 'string' ? s.trim().slice(0, max) : '')
+
+function normaliseHorizonPart(v: unknown): string | null {
+  const s = clip(v, 16)
+  return s || null
+}
+
+/** Validate + normalise the model's JSON against the vocabularies and the seeded lists. */
+function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Classification {
+  const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
+    .filter((t): t is string => typeof t === 'string')
+    .map((t) => t.toLowerCase().trim())
+    .filter((t) => (TOPIC_VOCABULARY as readonly string[]).includes(t))
+  const tickers = (Array.isArray(parsed.tickers) ? parsed.tickers : [])
+    .filter((t): t is string => typeof t === 'string')
+    .map((t) => t.toUpperCase().trim())
+    .filter((t) => ctx.validTickers.has(t))
+  // A "relevant" verdict with no recognised topic is noise — gate on both.
+  const relevant = parsed.relevant === true && topics.length > 0
+  if (!relevant) return REJECTED
+
+  let layer = typeof parsed.layer === 'string' && (DC_LAYER_KEYS as string[]).includes(parsed.layer) ? (parsed.layer as DcLayerKey) : null
+  if (!layer) {
+    // Fall back to the first named company's registry category — the stock
+    // categories are the layer taxonomy.
+    for (const t of tickers) {
+      const cat = ctx.stockCategory.get(t)
+      if (cat && STOCK_CATEGORY_TO_LAYER[cat]) {
+        layer = STOCK_CATEGORY_TO_LAYER[cat]
+        break
+      }
+    }
+  }
+  if (!layer) {
+    layer = topics.includes('data-centers') ? 'dc' : topics.includes('semiconductors') || topics.includes('microprocessors') ? 'semi' : 'hyper'
+  }
+
+  const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
+  const place = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
+  const region: DcRegionKey | null = place
+    ? ctx.placeBySlug.get(place)!.region
+    : typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region)
+      ? (parsed.region as DcRegionKey)
+      : null
+  const theme = typeof parsed.theme === 'string' && (DC_THEME_KEYS as string[]).includes(parsed.theme) ? (parsed.theme as DcThemeKey) : null
+  const moodNum = Number(parsed.mood)
+  const mood: DcMood = moodNum === 1 ? 1 : moodNum === -1 ? -1 : 0
+  const energy = parsed.energy === true || theme === 'sustain'
+
+  const f = parsed.facts && typeof parsed.facts === 'object' ? (parsed.facts as Record<string, unknown>) : {}
+  const action =
+    typeof f.action === 'string' && (DC_STORY_ACTIONS as string[]).includes(f.action) ? (f.action as DcStoryAction) : null
+  const figures = (Array.isArray(f.figures) ? f.figures : [])
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+    .map((x) => ({ value: Number(x.value), unit: clip(x.unit, 12), label: clip(x.label, 80) }))
+    .filter((x) => Number.isFinite(x.value))
+    .slice(0, MAX_FIGURES)
+  const h = f.horizon && typeof f.horizon === 'object' ? (f.horizon as Record<string, unknown>) : null
+  const horizon = h ? { from: normaliseHorizonPart(h.from), to: normaliseHorizonPart(h.to) } : null
+
+  return {
+    relevant,
+    topics,
+    tickers,
+    layer,
+    place,
+    region,
+    theme,
+    mood,
+    energy,
+    facts: { action, figures, horizon: horizon && (horizon.from || horizon.to) ? horizon : null },
+  }
+}
+
+function parseJsonText(text: string): Record<string, unknown> | null {
+  let t = text.trim()
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) t = fence[1].trim()
+  try {
+    const parsed = JSON.parse(t)
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+// Structured outputs guarantee the shape on a normal finish. Should the API
+// ever reject the schema itself (a 400 naming the schema / output_config),
+// the run drops to plain JSON mode for the rest of the process — the prompt
+// already spells the shape out, and normalise() re-validates everything.
+let useSchema = true
+
+function isSchemaRejection(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return /schema|output_config|output_format/i.test(msg) && /400|invalid/i.test(msg)
 }
 
 async function classify(
   anthropic: Anthropic,
   system: string,
   item: NewsItem,
-  validTickers: Set<string>
+  ctx: ClassifierContext
 ): Promise<Classification> {
   const userText = `Headline: ${item.title}\n\n${
     item.summary ? `Summary: ${item.summary}` : '(no summary available)'
-  }`
-
-  const response = await anthropic.messages.create({
-    model: CLASSIFIER_MODEL,
-    max_tokens: 256,
-    system,
-    messages: [{ role: 'user', content: userText }],
-    output_config: { format: { type: 'json_schema', schema: CLASSIFICATION_SCHEMA } },
-  })
+  }\n\nOutlet: ${item.source ?? 'unknown'} · Published: ${item.publishedAt}`
 
   let text = ''
-  for (const block of response.content) {
-    if (block.type === 'text') {
-      text = block.text
-      break
-    }
-  }
-  // output_config guarantees schema-valid JSON on a normal finish; a refusal
-  // or max_tokens cut can still yield unparseable text — treat as off-topic.
   try {
-    const parsed = JSON.parse(text) as {
-      relevant?: unknown
-      topics?: unknown
-      tickers?: unknown
+    const response = await anthropic.messages.create({
+      model: CLASSIFIER_MODEL,
+      max_tokens: 700,
+      system,
+      messages: [{ role: 'user', content: userText }],
+      ...(useSchema ? { output_config: { format: { type: 'json_schema', schema: CLASSIFICATION_SCHEMA } } } : {}),
+    })
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        text = block.text
+        break
+      }
     }
-    const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
-      .filter((t): t is string => typeof t === 'string')
-      .map((t) => t.toLowerCase().trim())
-      .filter((t) => (TOPIC_VOCABULARY as readonly string[]).includes(t))
-    const tickers = (Array.isArray(parsed.tickers) ? parsed.tickers : [])
-      .filter((t): t is string => typeof t === 'string')
-      .map((t) => t.toUpperCase().trim())
-      .filter((t) => validTickers.has(t))
-    // A "relevant" verdict with no recognised topic is noise — gate on both.
-    const relevant = parsed.relevant === true && topics.length > 0
-    return { relevant, topics: relevant ? topics : [], tickers: relevant ? tickers : [] }
-  } catch {
-    return { relevant: false, topics: [], tickers: [] }
+  } catch (err) {
+    if (useSchema && isSchemaRejection(err)) {
+      console.warn(`  ! structured output schema rejected — falling back to plain JSON for this run`)
+      useSchema = false
+      return classify(anthropic, system, item, ctx)
+    }
+    throw err
   }
+  // A refusal or max_tokens cut can still yield unparseable text — treat as off-topic.
+  const parsed = parseJsonText(text)
+  return parsed ? normalise(parsed, ctx) : REJECTED
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -211,7 +426,145 @@ async function pool<T>(items: T[], limit: number, worker: (item: T) => Promise<v
   await Promise.all(runners)
 }
 
+function tagColumns(cls: Classification) {
+  return {
+    layer: cls.layer,
+    place: cls.place,
+    region: cls.region,
+    theme: cls.theme,
+    mood: cls.mood,
+    energy: cls.energy,
+    facts: cls.facts,
+    classifier_version: CLASSIFIER_VERSION,
+  }
+}
+
+function describe(cls: Classification): string {
+  const bits = [cls.layer, cls.place, cls.theme, cls.mood === 1 ? 'boom' : cls.mood === -1 ? 'doom' : 'neutral']
+  if (cls.energy) bits.push('energy')
+  if (cls.facts.figures.length) bits.push(`${cls.facts.figures.length} fig`)
+  return bits.filter(Boolean).join(' · ')
+}
+
+interface Args {
+  backfillDays: number | null
+}
+
+function parseArgs(argv: string[]): Args {
+  const args: Args = { backfillDays: null }
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]
+    if (a === '--') continue
+    if (a === '--backfill-days') {
+      const n = Number(argv[++i])
+      if (!Number.isFinite(n) || n <= 0) throw new Error(`Invalid --backfill-days value: ${argv[i]}`)
+      args.backfillDays = n
+    } else throw new Error(`Unknown flag: ${a}`)
+  }
+  return args
+}
+
+type Sb = ReturnType<typeof createServiceClient>
+
+async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierContext }> {
+  // The classifier's ticker list comes from dc_stocks so the migration seed
+  // stays the single source of truth — adding a company needs no code change.
+  const { data: stockRows, error: stocksErr } = await sb
+    .from('dc_stocks')
+    .select('ticker, name, category')
+    .eq('is_active', true)
+    .order('ticker')
+  if (stocksErr) throw new Error(`dc_stocks read failed: ${stocksErr.message}`)
+  const stocks = (stockRows ?? []) as TrackedStock[]
+  if (stocks.length === 0) {
+    throw new Error('dc_stocks is empty — apply migration 065 before scraping')
+  }
+  // Same for places (migration 078): the model picks from this list or null.
+  const { data: placeRows, error: placesErr } = await sb
+    .from('dc_places')
+    .select('slug, name, region, aliases')
+    .eq('is_active', true)
+    .order('slug')
+  if (placesErr) throw new Error(`dc_places read failed: ${placesErr.message} — apply migration 078`)
+  const places = (placeRows ?? []) as PlaceRow[]
+
+  const placeLookup = new Map<string, string>()
+  for (const p of places) {
+    placeLookup.set(p.slug.toLowerCase(), p.slug)
+    placeLookup.set(p.name.toLowerCase(), p.slug)
+    for (const a of p.aliases ?? []) placeLookup.set(a.toLowerCase(), p.slug)
+  }
+  return {
+    system: classifierSystem(stocks, places),
+    ctx: {
+      validTickers: new Set(stocks.map((s) => s.ticker)),
+      stockCategory: new Map(stocks.map((s) => [s.ticker, s.category])),
+      placeBySlug: new Map(places.map((p) => [p.slug, p])),
+      placeLookup,
+    },
+  }
+}
+
+/**
+ * One-off: re-tag relevant rows written before the snapshot tags existed
+ * (layer is null). Relevance, topics and tickers are left as they are — this
+ * only fills the new columns.
+ */
+async function backfill(sb: Sb, anthropic: Anthropic, system: string, ctx: ClassifierContext, days: number, startedAt: number) {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString()
+  const { data, error } = await sb
+    .from('dc_news')
+    .select('id, source_url, title, summary, source, published_at')
+    .eq('relevant', true)
+    .is('layer', null)
+    .gte('published_at', since)
+    .order('published_at', { ascending: false })
+    .limit(3000)
+  if (error) throw new Error(`backfill read failed: ${error.message}`)
+  const rows = (data ?? []) as { id: number; source_url: string; title: string; summary: string | null; source: string | null; published_at: string }[]
+  console.log(`[backfill] ${rows.length} untagged relevant rows in the last ${days} days`)
+
+  let tagged = 0
+  let skipped = 0
+  let failed = 0
+  await pool(rows, CONCURRENCY, async (row) => {
+    if (Date.now() - startedAt > DEADLINE_MS) {
+      skipped++
+      return
+    }
+    const item: NewsItem = { url: row.source_url, title: row.title, summary: row.summary, publishedAt: row.published_at, source: row.source }
+    try {
+      let cls: Classification
+      try {
+        cls = await classify(anthropic, system, item, ctx)
+      } catch {
+        await sleep(5000)
+        cls = await classify(anthropic, system, item, ctx)
+      }
+      // A row the v2 gate would now reject keeps relevant=true (it's already
+      // in the feed) but is tagged neutral with no layer facts.
+      const cols = cls.relevant ? tagColumns(cls) : { ...tagColumns(REJECTED), layer: 'dc', classifier_version: CLASSIFIER_VERSION }
+      const { error: updErr } = await sb.from('dc_news').update(cols).eq('id', row.id)
+      if (updErr) {
+        failed++
+        console.error(`  ✗ #${row.id}: ${updErr.message}`)
+        return
+      }
+      tagged++
+      console.log(`  ✓ #${row.id} ${row.title}  →  ${describe(cls)}`)
+      await sleep(300)
+    } catch (err) {
+      failed++
+      console.error(`  ✗ #${row.id}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  })
+  if (skipped > 0) console.log(`\n[backfill] deadline reached — ${skipped} rows left for the next run`)
+  console.log(`\n[backfill] done: ${tagged} tagged, ${failed} failed`)
+  if (failed > 0 && tagged === 0) throw new Error('every backfill classification failed — check ANTHROPIC_API_KEY')
+}
+
 async function main() {
+  const args = parseArgs(process.argv.slice(2))
   const sb = createServiceClient()
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set')
@@ -221,20 +574,12 @@ async function main() {
   const anthropic = new Anthropic({ apiKey, timeout: 60_000, maxRetries: 2 })
   const startedAt = Date.now()
 
-  // The classifier's ticker list comes from dc_stocks so the migration seed
-  // stays the single source of truth — adding a company needs no code change.
-  const { data: stockRows, error: stocksErr } = await sb
-    .from('dc_stocks')
-    .select('ticker, name')
-    .eq('is_active', true)
-    .order('ticker')
-  if (stocksErr) throw new Error(`dc_stocks read failed: ${stocksErr.message}`)
-  const stocks = (stockRows ?? []) as TrackedStock[]
-  if (stocks.length === 0) {
-    throw new Error('dc_stocks is empty — apply migration 065 before scraping')
+  const { system, ctx } = await loadContext(sb)
+
+  if (args.backfillDays != null) {
+    await backfill(sb, anthropic, system, ctx, args.backfillDays, startedAt)
+    return
   }
-  const validTickers = new Set(stocks.map((s) => s.ticker))
-  const system = classifierSystem(stocks)
 
   const byUrl = new Map<string, NewsItem>()
   let feedFailures = 0
@@ -309,12 +654,12 @@ async function main() {
     try {
       let cls: Classification
       try {
-        cls = await classify(anthropic, system, item, validTickers)
+        cls = await classify(anthropic, system, item, ctx)
       } catch {
         // One retry after a pause, on top of the SDK's own backoff — the
         // first run can push a few hundred items through in one go.
         await sleep(5000)
-        cls = await classify(anthropic, system, item, validTickers)
+        cls = await classify(anthropic, system, item, ctx)
       }
       const { error: insertErr } = await sb.from('dc_news').upsert(
         {
@@ -326,6 +671,7 @@ async function main() {
           relevant: cls.relevant,
           topics: cls.topics,
           tickers: cls.tickers,
+          ...tagColumns(cls),
           fetched_at: new Date().toISOString(),
         },
         { onConflict: 'source_url' }
@@ -339,7 +685,7 @@ async function main() {
         console.log(
           `  ✓ [${item.source ?? '?'}] ${item.title}  →  [${cls.topics.join(', ')}]${
             cls.tickers.length > 0 ? ` (${cls.tickers.join(', ')})` : ''
-          }`
+          } · ${describe(cls)}`
         )
       } else {
         rejected++

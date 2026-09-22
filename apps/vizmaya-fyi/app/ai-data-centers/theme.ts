@@ -1,7 +1,14 @@
-// Palette for the AI Data Centers epic landing. Same shape and override
-// mechanics as app/energy-profile/theme.ts — the epic row's `theme` jsonb
-// wins over these defaults — but tuned cooler (steel/cyan) to read as
-// infrastructure rather than energy.
+// Palette for the AI Data Centers epic landing and the daily snapshot
+// editions. Same shape and override mechanics as app/energy-profile/theme.ts
+// — the epic row's `theme` jsonb wins over these defaults — but tuned cooler
+// (steel/cyan) to read as infrastructure rather than energy.
+//
+// The edition page (app/ai-data-centers/daily) extends the explorer's tokens
+// with the ones the design mockup fixes: `raised`, `dim`, `lineStrong`,
+// `accentInk`, `up`/`down`, a lime `energy` accent reserved for the energy
+// chapter, the three composition hues and the map dot colours. A light
+// theme derived from the same tokens sits alongside for
+// prefers-color-scheme: light / data-theme="light".
 
 import type { MapPalette } from "@vismay/viz-engine";
 
@@ -23,6 +30,19 @@ export type AiDataCentersTheme = {
   mapLabelText: string;
   mapLabelHalo: string;
   mapBuilding: string;
+  /* Edition tokens (docs/ai-data-centers-daily-snapshot.html). */
+  raised: string;
+  dim: string;
+  lineStrong: string;
+  accentInk: string;
+  up: string;
+  down: string;
+  energy: string;
+  comp1: string;
+  comp2: string;
+  comp3: string;
+  mapDot: string;
+  mapDotHi: string;
 };
 
 export const AI_DATA_CENTERS_THEME_DEFAULTS: AiDataCentersTheme = {
@@ -43,6 +63,46 @@ export const AI_DATA_CENTERS_THEME_DEFAULTS: AiDataCentersTheme = {
   mapLabelText: "#dbe7f0",
   mapLabelHalo: "#0a0c0f",
   mapBuilding: "#161b22",
+  raised: "#1c232c",
+  dim: "#5f6b76",
+  lineStrong: "#2f3941",
+  accentInk: "#06282e",
+  up: "#5eead4",
+  down: "#f0a0a0",
+  energy: "#c8e66b",
+  comp1: "#d4705f",
+  comp2: "#14a3ba",
+  comp3: "#96b532",
+  mapDot: "#333f49",
+  mapDotHi: "#46545f",
+};
+
+/** Light theme for the edition page — the same tokens, re-stepped for a paper surface. */
+export const AI_DATA_CENTERS_THEME_LIGHT: AiDataCentersTheme = {
+  ...AI_DATA_CENTERS_THEME_DEFAULTS,
+  ink: "#eef2f5",
+  surface: "#f4f7f9",
+  elevated: "#ffffff",
+  bone: "#0f171d",
+  muted: "#54626e",
+  line: "#d6dee4",
+  accent: "#0891b2",
+  accentMid: "#0f766e",
+  accentHi: "#155e75",
+  accentLo: "#5b7c8a",
+  accentEdge: "#0e7490",
+  raised: "#ffffff",
+  dim: "#7b8792",
+  lineStrong: "#bfcad3",
+  accentInk: "#e0f7fb",
+  up: "#0f766e",
+  down: "#b42318",
+  energy: "#5f7a00",
+  comp1: "#c2410c",
+  comp2: "#0891b2",
+  comp3: "#5f7a00",
+  mapDot: "#c9d3da",
+  mapDotHi: "#aab8c2",
 };
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -56,6 +116,47 @@ export function resolveAiDataCentersTheme(override: unknown): AiDataCentersTheme
   }
   return out;
 }
+
+/**
+ * The epic-row keys the editor overrode (hex only), so the edition page can
+ * emit just those as CSS variables over the stylesheet defaults.
+ */
+export function aiDataCentersThemeOverrides(override: unknown): Partial<AiDataCentersTheme> {
+  const out: Partial<AiDataCentersTheme> = {};
+  if (!override || typeof override !== "object") return out;
+  for (const key of Object.keys(AI_DATA_CENTERS_THEME_DEFAULTS) as (keyof AiDataCentersTheme)[]) {
+    const v = (override as Record<string, unknown>)[key];
+    if (typeof v === "string" && HEX.test(v)) out[key] = v;
+  }
+  return out;
+}
+
+/** Theme key → the CSS custom property the edition stylesheet reads. */
+export const EDITION_CSS_VARS: Partial<Record<keyof AiDataCentersTheme, string>> = {
+  ink: "--ink",
+  surface: "--surface",
+  elevated: "--elevated",
+  raised: "--raised",
+  bone: "--bone",
+  muted: "--muted",
+  dim: "--dim",
+  line: "--line",
+  lineStrong: "--line-strong",
+  accent: "--accent",
+  accentMid: "--accent-mid",
+  accentHi: "--accent-hi",
+  accentLo: "--accent-lo",
+  accentEdge: "--accent-edge",
+  accentInk: "--accent-ink",
+  up: "--up",
+  down: "--down",
+  energy: "--energy",
+  mapDot: "--map-dot",
+  mapDotHi: "--map-dot-hi",
+  comp1: "--comp1",
+  comp2: "--comp2",
+  comp3: "--comp3",
+};
 
 export const AI_DATA_CENTERS_MAP_STYLE_DEFAULT = "mapbox://styles/mapbox/dark-v11";
 

@@ -11,8 +11,10 @@
  *
  * Current adapters:
  *   * ai-data-centers — dc_news / dc_news_recaps / dc_stocks (migrations
- *     065–066): scraped news behind a Gemma relevance gate, daily recap
- *     snapshots, and a related-stock price feed. Tags are dc_stocks tickers.
+ *     065–066) plus the daily-snapshot tags (078): scraped news behind a
+ *     Haiku relevance gate, the recap-snapshot timeline (superseded for the
+ *     public by dc_editions), and a related-stock price feed. Tags are
+ *     dc_stocks tickers.
  *   * energy-profile  — iea_news (migration 015): scraped energy news, no
  *     relevance gate or recap worker. Tags are ISO country codes.
  */
@@ -53,6 +55,19 @@ export interface PipelineNewsItem {
   topics: string[]
   /** Secondary tag group — see PipelineEpicMeta.tagLabel. */
   tags: string[]
+  /**
+   * Snapshot tags (ai-data-centers only, migration 078): the layer / place /
+   * theme / mood the daily edition is built from. Null for other epics and
+   * for rows the tagging classifier hasn't seen.
+   */
+  snapshot?: {
+    layer: string | null
+    place: string | null
+    region: string | null
+    theme: string | null
+    mood: number | null
+    energy: boolean
+  }
 }
 
 export interface PipelineRecap {
@@ -199,6 +214,14 @@ async function dcNews(opts: Omit<PipelineNewsQuery, 'epic'>): Promise<PipelineNe
     relevant: r.relevant,
     topics: r.topics,
     tags: r.tickers,
+    snapshot: {
+      layer: r.layer,
+      place: r.place,
+      region: r.region,
+      theme: r.theme,
+      mood: r.mood,
+      energy: r.energy,
+    },
   }))
 }
 
@@ -328,7 +351,7 @@ const ADAPTERS: EpicPipelineAdapter[] = [
       epicSlug: DC_SLUG,
       epicName: 'AI Data Centers',
       appSlug: 'vizmaya-fyi',
-      flow: 'Google News scrape 06:45 → Gemma relevance gate → recap worker 08:15 · stock feed 22:45 UTC',
+      flow: 'Google News scrape 06:45 → Haiku gate + snapshot tags → papers 07:00 → edition composer 08:15 → publish 09:00 · stock feed 22:45 UTC',
       tagLabel: 'tickers',
       hasRelevanceGate: true,
       hasRecaps: true,

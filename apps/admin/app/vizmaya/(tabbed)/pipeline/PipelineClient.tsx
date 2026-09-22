@@ -316,6 +316,7 @@ export default function PipelineClient({ initialEpic }: { initialEpic: string })
                     {t}
                   </Badge>
                 ))}
+                {n.snapshot && <SnapshotTags tags={n.snapshot} />}
               </div>
               {n.summary && (
                 <p className="text-sm text-neutral-400 mt-1 line-clamp-2">{n.summary}</p>
@@ -331,6 +332,42 @@ export default function PipelineClient({ initialEpic }: { initialEpic: string })
         </ul>
       </section>
     </div>
+  )
+}
+
+// The daily-snapshot tags the edition composer reads (layer / place / theme /
+// mood / energy). Rendered after the ticker badges; a row the tagging
+// classifier hasn't seen yet shows "untagged" so backfill gaps are visible.
+function SnapshotTags({ tags }: { tags: NonNullable<PipelineNewsItem['snapshot']> }) {
+  const mood = tags.mood === 1 ? 'boom' : tags.mood === -1 ? 'doom' : tags.mood === 0 ? 'neutral' : null
+  if (!tags.layer && !tags.place && !tags.theme && mood == null) {
+    return <span className="text-[10px] font-mono text-neutral-600">untagged</span>
+  }
+  return (
+    <>
+      {tags.layer && <Badge>layer:{tags.layer}</Badge>}
+      {tags.place && <Badge>{tags.place}{tags.region ? ` · ${tags.region}` : ''}</Badge>}
+      {tags.theme && <Badge>{tags.theme}</Badge>}
+      {mood && (
+        <span
+          className={
+            'text-[10px] font-mono px-1.5 py-0.5 rounded border ' +
+            (mood === 'boom'
+              ? 'text-teal-300 border-teal-300/20 bg-teal-300/5'
+              : mood === 'doom'
+                ? 'text-rose-300 border-rose-300/20 bg-rose-300/5'
+                : 'text-neutral-400 border-white/10 bg-white/[0.03]')
+          }
+        >
+          {mood}
+        </span>
+      )}
+      {tags.energy && (
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border text-lime-300 border-lime-300/20 bg-lime-300/5">
+          energy
+        </span>
+      )}
+    </>
   )
 }
 
