@@ -76,6 +76,7 @@ const IMAGE_MODELS = [
   'image.seedream',
   'image.seedream45',
   'image.seedreamLite',
+  'image.muse',
   'image.recraft',
   'image.recraftUtility',
   'image.recraftV4',
@@ -83,6 +84,8 @@ const IMAGE_MODELS = [
   'image.fluxPro',
   'image.fluxSchnell',
   'image.grokImage',
+  'image.gptImage',
+  'image.gptImageFlare',
 ] as const
 
 /** Friendly labels for the model dropdown. Falls back to the alias tail. */
@@ -111,6 +114,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'image.seedream': 'Seedream · cheap',
   'image.seedream45': 'Seedream 4.5',
   'image.seedreamLite': 'Seedream 5.0 Lite',
+  'image.muse': 'Muse Image 1.0',
   'image.recraft': 'Recraft v4.1',
   'image.recraftUtility': 'Recraft v4.1 Utility',
   'image.recraftV4': 'Recraft v4',
@@ -118,6 +122,8 @@ export const MODEL_LABELS: Record<string, string> = {
   'image.fluxPro': 'Flux Pro 1.1',
   'image.fluxSchnell': 'Flux Schnell · cheapest',
   'image.grokImage': 'Grok Imagine',
+  'image.gptImage': 'GPT Image 2.5 · Sunburst',
+  'image.gptImageFlare': 'GPT Image 2.5 · Flare',
 }
 
 export function modelLabel(alias: string): string {

@@ -128,12 +128,22 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 | `image.imagen` | `google/imagen-4.0-generate-001` |
 | `image.imagenFast` | `google/imagen-4.0-fast-generate-001` |
 | `image.imagenUltra` | `google/imagen-4.0-ultra-generate-001` |
+| `image.seedream` / `image.seedream45` / `image.seedreamLite` | `bytedance/seedream-*` (cheap) |
+| `image.muse` | `meta/muse-image-1.0` |
+| `image.recraft*` | `recraft/recraft-v*` (design/brand styles) |
+| `image.fluxPro` / `image.fluxSchnell` | `bfl/flux-pro-1.1` / `prodia/flux-fast-schnell` |
+| `image.grokImage` | `xai/grok-imagine-image` |
+| `image.gptImage` | `openai/gpt-image-2.5-sunburst` |
+| `image.gptImageFlare` | `openai/gpt-image-2.5-flare` |
 
 `generateImage` auto-detects whether a model id is a dedicated image model or
 a multimodal LLM (Gemini nano-banana, Gemini Flash Image) and picks the
 correct call path under the hood. For LLM-path models the aspect ratio is
 forwarded as a prompt hint rather than a hard parameter — treat it as
-guidance, not a guarantee.
+guidance, not a guarantee. The Recraft and GPT-Image families take a `size`
+param rather than `aspectRatio`, so they ignore it entirely and return the
+provider's default size — reach for Imagen/Seedream/`image.default` when a
+layer's aspect ratio matters.
 
 Adding a model = adding a row here. Call sites use aliases, so swaps don't
 touch product code.
