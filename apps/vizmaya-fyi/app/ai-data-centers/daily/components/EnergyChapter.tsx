@@ -31,6 +31,8 @@ interface EnergyFact {
   label: string
   kind: DcFigureKind
   story: DcEditionStory
+  /** Every outlet that put this figure on the record, in the order they landed. */
+  sources: string[]
 }
 
 interface Viz {
@@ -57,8 +59,30 @@ const REGION_SHORT: Record<DcRegionKey, string> = {
 
 /** How much a figure says once it is off the committed-power bar. */
 const RANK: Record<DcFigureKind, number> = { power: 5, energy: 4, share: 4, money: 3, horizon: 3, count: 2, term: 1 }
-/** Only these units can share a comparison rail — a percentage never sits on a GW scale. */
-const RAILABLE = /^(GW|MW|%)$/i
+
+/**
+ * A figure's size on one scale for its dimension, or null when it has no
+ * comparable scale (a year, a bare count). 20 GW and 640 MW are the same kind
+ * of quantity written in different units: comparing the numerals would rank
+ * 640 above 20 and leave the larger figure without a rail, so both convert to
+ * a base unit first. Units outside a dimension never meet — a percentage still
+ * never sits on a power scale.
+ */
+function magnitudeOf(f: { value: number; unit: string; kind: DcFigureKind }): number | null {
+  const u = f.unit.trim().toLowerCase()
+  switch (f.kind) {
+    case 'power':
+      return u === 'gw' ? f.value * 1000 : u === 'kw' ? f.value / 1000 : f.value // base: MW
+    case 'energy':
+      return u === 'twh' ? f.value * 1e6 : u === 'gwh' ? f.value * 1000 : f.value // base: MWh
+    case 'share':
+      return f.value
+    case 'money':
+      return /bn|billion/.test(u) ? f.value * 1000 : /mn|million/.test(u) ? f.value : null // base: millions
+    default:
+      return null
+  }
+}
 
 const n1 = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
@@ -90,7 +114,7 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
   const facts: EnergyFact[] = []
   for (const story of energyStories) {
     for (const f of story.facts?.figures ?? []) {
-      facts.push({ value: f.value, unit: f.unit, label: f.label || story.title, kind: figureKind(f.unit), story })
+      facts.push({ value: f.value, unit: f.unit, label: f.label || story.title, kind: figureKind(f.unit), story, sources: [story.source ?? 'Unattributed'] })
     }
   }
 
@@ -103,21 +127,30 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
     .map((f) => ({ ...f, gw: asGw(f) as number }))
     .sort((a, b) => b.gw - a.gw)
   const committedTotal = committed.reduce((a, f) => a + f.gw, 0)
-  const others = facts.filter((f) => !committed.some((c) => c.story.id === f.story.id && c.label === f.label && c.value === f.value))
+  // One row per fact, not per outlet. Two wires reporting the same 640 MW —
+  // "AI data center capacity" and "AI data centre capacity" — are one figure on
+  // the record, and printing it twice reads as two separate disclosures.
+  const others = dedupe(facts.filter((f) => !committed.some((c) => c.story.id === f.story.id && c.label === f.label && c.value === f.value)))
   const silent = energyStories.filter(
     (s) => (s.theme === 'power' || s.theme === 'capacity') && !(s.facts?.figures ?? []).some((f) => figureKind(f.unit) === 'power'),
   )
 
-  const series = energy.perEdition
+  // Editions composed before this chapter existed stored 0 where they meant
+  // "nobody disclosed anything"; the composer now writes null. Both are gaps —
+  // a disclosure is never 0 GW — and treating the 0s as real readings made the
+  // chart claim full disclosure while dividing every bar height by a zero max,
+  // which drew nothing at all.
+  const series = energy.perEdition.map((s) => ({ ...s, gw: s.gw ? s.gw : null }))
   const told = series.filter((s) => s.gw != null)
   const topics = [...new Set(energyStories.map(topicOf))]
-  const regions = [...new Set(energyStories.map((s) => s.region).filter((r): r is DcRegionKey => r != null))]
+  const placed = energyStories.filter((s) => s.region != null)
+  const regions = [...new Set(placed.map((s) => s.region as DcRegionKey))]
 
   const vizzes: Viz[] = [
     {
       key: 'ledger',
       title: 'Power committed in deals that state a figure',
-      reason: 'no deal disclosed a capacity figure today',
+      reason: 'no deal in this edition states the capacity it commits',
       weight: committed.length ? 140 + committed.length * 4 : 0,
       hero: { value: n1(committedTotal), unit: 'GW' },
       render: (W) => {
@@ -229,13 +262,17 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
       weight: others.length ? 90 + others.length * 3 : 0,
       hero: others.length ? heroOf(others) : undefined,
       render: () => {
-        const rows = [...others].sort((a, b) => RANK[b.kind] - RANK[a.kind] || b.value - a.value).slice(0, 5)
-        const peers = (unit: string) => (RAILABLE.test(unit) ? rows.filter((r) => r.unit === unit) : [])
+        const rows = [...others].sort(byTelling).slice(0, 5)
+        // Peers are figures of the same dimension, compared on one scale — so a
+        // 20 GW target is the full rail and a 640 MW site reads as the sliver
+        // of it that it is, rather than the larger figure having no rail at all.
+        const peers = (f: EnergyFact) => (magnitudeOf(f) == null ? [] : rows.filter((r) => r.kind === f.kind && magnitudeOf(r) != null))
         return (
           <div className="efigs">
             {rows.map((f, i) => {
-              const p = peers(f.unit)
-              const max = Math.max(...p.map((r) => r.value))
+              const p = peers(f)
+              const max = Math.max(...p.map((r) => magnitudeOf(r) as number))
+              const mine = magnitudeOf(f)
               return (
                 <div className="efig" key={`${f.story.id}-${i}`}>
                   <span className="num">
@@ -244,11 +281,11 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
                   </span>
                   <span className="lab">
                     {clip(f.label, 72)}
-                    <span className="src">{f.story.source ?? ''}</span>
+                    <span className="src">{f.sources.join(' · ')}</span>
                   </span>
-                  {p.length > 1 && (
+                  {p.length > 1 && mine != null && max > 0 && (
                     <span className="rail">
-                      <i style={{ width: `${Math.max(6, (f.value / max) * 100).toFixed(1)}%` }} />
+                      <i style={{ width: `${Math.max(2, (mine / max) * 100).toFixed(1)}%` }} />
                     </span>
                   )}
                 </div>
@@ -261,11 +298,13 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
     {
       key: 'matrix',
       title: 'What today covered · topic by region',
-      reason: 'no energy stories in this edition',
-      weight: energyStories.length ? 60 + topics.length * 3 : 0,
-      sub: `${plural(energyStories.length, 'story')} · ${plural(topics.length, 'topic')}`,
+      reason: 'no energy story in this edition carries a region',
+      weight: placed.length ? 60 + topics.length * 3 : 0,
+      sub: placed.length === energyStories.length
+        ? `${plural(placed.length, 'story')} · ${plural(topics.length, 'topic')}`
+        : `${placed.length} of ${energyStories.length} stories carry a region`,
       render: (W) => {
-        const at = (t: string, r: DcRegionKey) => energyStories.filter((s) => topicOf(s) === t && s.region === r)
+        const at = (t: string, r: DcRegionKey) => placed.filter((s) => topicOf(s) === t && s.region === r)
         const L = Math.max(96, Math.round(W * 0.22))
         const rh = 34
         const H = topics.length * rh + 44
@@ -423,10 +462,22 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
     },
   ]
 
+  // Two outlets stating the same number is one figure on the record, which is
+  // what the count should say — the card shows one row for it.
+  const distinctFigures = dedupe(facts).length
   const live = vizzes.filter((v) => v.weight > 0).sort((a, b) => b.weight - a.weight)
   const held = vizzes.filter((v) => v.weight <= 0)
-  const shown = live.slice(0, 5)
-  const spare = live.slice(5)
+  // Three of the six chart the stories rather than the figures — where they
+  // landed in the day, how they split by region, which way they lean. They are
+  // the floor this section never falls through, not filler to reach five
+  // cards: mounting all of them alongside the figures gave four charts of the
+  // same 21 story tags and buried the one card carrying numbers. So they come
+  // up only when the figures can't carry the chapter, one at a time.
+  const carriesFigures = (v: Viz) => v.key === 'ledger' || v.key === 'history' || v.key === 'figures'
+  const figureCharts = live.filter(carriesFigures)
+  const coverage = live.filter((v) => !carriesFigures(v))
+  const shown = [...figureCharts, ...coverage.slice(0, figureCharts.length >= 2 ? 0 : 1)]
+  const spare = live.filter((v) => !shown.includes(v))
   const rest = shown.slice(1)
   const pairs: Viz[][] = []
   for (let i = 0; i < rest.length; i += 2) pairs.push(rest.slice(i, i + 2))
@@ -449,7 +500,7 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
               ),
             )}
             <p className="eviz-note">
-              {plural(shown.length, 'chart')} built from {plural(facts.length, 'stated figure')} across {plural(energyStories.length, 'story')}.
+              {plural(shown.length, 'chart')} built from {plural(distinctFigures, 'stated figure')} across {plural(energyStories.length, 'story')}.
               {spare.length > 0 && ` Also had the data for ${spare.map((v) => v.title.toLowerCase()).join(', ')}.`}
               {held.length > 0 && ` Held back: ${held.map((v) => `${v.title.toLowerCase()} (${v.reason})`).join('; ')}.`}
             </p>
@@ -482,9 +533,44 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
   )
 }
 
-/** The figure that leads the "other figures" card: the highest-ranked kind, biggest first. */
+/** Most telling first: the highest-ranked kind, then the largest on a shared scale. */
+function byTelling(a: EnergyFact, b: EnergyFact): number {
+  if (RANK[b.kind] !== RANK[a.kind]) return RANK[b.kind] - RANK[a.kind]
+  const ma = magnitudeOf(a)
+  const mb = magnitudeOf(b)
+  if (ma != null && mb != null) return mb - ma
+  return b.value - a.value
+}
+
+/**
+ * Collapse the same figure reported by several outlets into one row, keeping
+ * each outlet's name. Same dimension, same size on that dimension's scale and
+ * the same label once spelling is normalised ("data center" / "data centre")
+ * is one figure — a deliberate pair of different facts that happen to share a
+ * number and a description doesn't exist in practice.
+ */
+function dedupe(facts: EnergyFact[]): EnergyFact[] {
+  const out: EnergyFact[] = []
+  const seen = new Map<string, EnergyFact>()
+  for (const f of facts) {
+    const size = magnitudeOf(f)
+    const label = f.label.toLowerCase().replace(/centre/g, 'center').replace(/[^a-z0-9]/g, '')
+    const key = `${f.kind}|${size ?? `${f.value}${f.unit}`}|${label}`
+    const hit = seen.get(key)
+    if (hit) {
+      for (const src of f.sources) if (!hit.sources.includes(src)) hit.sources.push(src)
+      continue
+    }
+    const copy = { ...f, sources: [...f.sources] }
+    seen.set(key, copy)
+    out.push(copy)
+  }
+  return out
+}
+
+/** The figure that leads the "other figures" card. */
 function heroOf(others: EnergyFact[]): { value: string; unit: string } {
-  const top = [...others].sort((a, b) => RANK[b.kind] - RANK[a.kind] || b.value - a.value)[0]
+  const top = [...others].sort(byTelling)[0]
   return { value: n1(top.value), unit: top.unit || '' }
 }
 
