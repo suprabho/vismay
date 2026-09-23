@@ -15,6 +15,7 @@ import { resolve } from 'node:path'
 import { config as loadEnv } from 'dotenv'
 import { chartPlannerModel, planEditionCharts } from './editionCharts'
 import { SAMPLE_EDITION } from '../../app/ai-data-centers/daily/fixture'
+import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
@@ -24,14 +25,22 @@ async function main() {
   const mi = argv.indexOf('--model')
   const model = mi >= 0 ? argv[mi + 1] : chartPlannerModel()
   const sample = SAMPLE_EDITION
-  console.log(`[sample-charts] ${sample.stories.length} stories · ${sample.ieaStories.length} iea · model ${model}`)
+  // The fixture has no close series or facility register of its own; with a
+  // Supabase env present the real ones are used so the sample shows every
+  // form the record charts can take. Without env the tape's bars stand in.
+  const [market, facilities] = await Promise.all([
+    getDcStockMarket(30).catch(() => undefined),
+    listDataCenters().catch(() => undefined),
+  ])
+  console.log(`[sample-charts] ${sample.stories.length} stories · ${sample.ieaStories.length} iea · model ${model} · market ${market?.length ?? 'none'} · facilities ${facilities?.length ?? 'none'}`)
   const { charts, skips, modelUsed } = await planEditionCharts({
     stories: sample.stories,
     ieaStories: sample.ieaStories,
     papers: sample.papers,
     tape: sample.tape,
+    market,
     perEdition: sample.energy.perEdition,
-    facilities: [],
+    facilities: facilities ?? [],
     model,
     log: (l) => console.log(l),
   })

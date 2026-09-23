@@ -267,6 +267,7 @@ export async function planEditionCharts(input: {
   /** The standing datasets rung 4 draws from; any of them may be missing. */
   papers?: DcPaper[]
   tape?: RecordInputs['tape']
+  market?: RecordInputs['market']
   perEdition?: RecordInputs['perEdition']
   facilities?: RecordInputs['facilities']
   fieldBaseline?: RecordInputs['fieldBaseline']
@@ -274,7 +275,7 @@ export async function planEditionCharts(input: {
   const log = input.log ?? (() => {})
   const sections = plannerInput(input.stories, input.ieaStories)
   const all = [...input.stories, ...input.ieaStories]
-  const record: RecordInputs = { tape: input.tape, facilities: input.facilities, perEdition: input.perEdition, papers: input.papers, fieldBaseline: input.fieldBaseline }
+  const record: RecordInputs = { tape: input.tape, market: input.market, facilities: input.facilities, perEdition: input.perEdition, papers: input.papers, fieldBaseline: input.fieldBaseline }
   const skips: EditionChartSkip[] = []
   const charts: EditionCharts = {}
   const generatedAt = new Date().toISOString()
@@ -512,17 +513,42 @@ function tuneForEdition(option: Opt, spec: EditionChartSpec, size: { width: numb
       axis.axisLabel = { ...label, fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, hideOverlap: true }
       if (axis.nameLocation === 'middle') axis.nameGap = axis === x ? 26 : 40
       axis.nameTextStyle = { fontSize: 10, color: T.dim, fontFamily: CHART_FONT_SENTINEL }
+      // A value axis that starts at zero flattens an indexed line (100 → 104
+      // becomes a hairline over a 0–120 axis) and squashes a scatter into a
+      // corner; let it fit the data with nice ticks. flint pins scatter axes
+      // to the exact data extremes, which prints "37.068" as a tick — drop
+      // those and let ECharts round. Bars keep their zero baseline.
+      if (axis.type === 'value') {
+        axis.scale = true
+        delete axis.min
+        delete axis.max
+      }
     }
   }
-  option.grid = { left: 8, right: 20, top: legend ? 34 : 24, bottom: 8, containLabel: true }
+  const isScatter = /scatter/i.test(spec.chartType)
+  const isLollipop = /lollipop/i.test(spec.chartType)
+  if (isScatter) delete option.legend
+  const series = Array.isArray(option.series) ? option.series : option.series ? [option.series] : []
+  const isSlope = /slope/i.test(spec.chartType)
+  const multiLine = /line chart|slope/i.test(spec.chartType) && series.length > 1
+  // Multi-series lines and slopes name every line at its end, so a legend
+  // only repeats them — and a six-entry legend wraps into the plot.
+  if (multiLine) delete option.legend
+  // A slope's category axis is two named points; "Point" as an axis title says nothing.
+  if (isSlope && x) x.name = undefined
+  option.grid = { left: 8, right: multiLine ? 104 : 20, top: option.legend && !isScatter ? 34 : 20, bottom: 8, containLabel: true }
 
   // Bars: a slimmer, rounded mark with the value at its end so the reader
   // never has to trace a gridline.
-  const series = Array.isArray(option.series) ? option.series : option.series ? [option.series] : []
   for (const s of series) {
     const sr = obj(s)
     if (!sr) continue
-    if (sr.type === 'bar') {
+    if (sr.type === 'bar' && isLollipop) {
+      // The stem: flint's 1.5px bar. No rounding, no label — the head carries
+      // the value.
+      sr.barWidth = 1.5
+      sr.label = { show: false }
+    } else if (sr.type === 'bar') {
       sr.barMaxWidth = 18
       sr.itemStyle = { ...(obj(sr.itemStyle) ?? {}), borderRadius: 2 }
       if (barLike && !obj(sr.label)?.show) sr.label = { show: true, position: 'right', fontSize: 10, color: T.bone, fontFamily: CHART_FONT_SENTINEL }
@@ -533,13 +559,38 @@ function tuneForEdition(option: Opt, spec: EditionChartSpec, size: { width: numb
       }
     }
     if (sr.type === 'line') {
-      sr.symbolSize = 7
+      // Multi-series lines (indexed closes, slopes) label their ends only —
+      // a value on every point of five lines is noise.
+      const multi = series.length > 1
+      sr.symbolSize = multi ? 5 : 7
       sr.lineStyle = { ...(obj(sr.lineStyle) ?? {}), width: 2 }
-      if (!obj(sr.label)?.show) sr.label = { show: true, position: 'top', fontSize: 10, color: T.bone, fontFamily: CHART_FONT_SENTINEL }
+      if (!multi && !obj(sr.label)?.show) sr.label = { show: true, position: 'top', fontSize: 10, color: T.bone, fontFamily: CHART_FONT_SENTINEL }
+      if (multi) sr.endLabel = { show: true, fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, formatter: '{a}' }
     }
-    if (sr.type === 'scatter') {
+    if (sr.type === 'scatter' && isLollipop) {
+      // The head. flint emits its points as [category, value]; after the
+      // horizontal swap above the category lives on the y axis, so the pairs
+      // flip too — without this the heads land off the plot and the chart
+      // reads as bare stems. The value label rides on the head.
+      if (barLike && Array.isArray(sr.data)) sr.data = sr.data.map((d) => (Array.isArray(d) && d.length === 2 ? [d[1], d[0]] : d))
       sr.symbolSize = 10
-      if (!obj(sr.label)?.show) sr.label = { show: true, position: 'right', fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, formatter: '{b}' }
+      sr.itemStyle = { ...(obj(sr.itemStyle) ?? {}), borderWidth: 0 }
+      sr.label = {
+        show: true,
+        position: 'right',
+        distance: 8,
+        fontSize: 10,
+        color: T.bone,
+        fontFamily: CHART_FONT_SENTINEL,
+        formatter: (p: { value: unknown }) => String(Array.isArray(p.value) ? (barLike ? p.value[0] : p.value[1]) : p.value),
+      }
+    } else if (sr.type === 'scatter') {
+      // One series per point (the `color` channel carries the name), so the
+      // series name is the label and the legend would only repeat it. Labels
+      // that would overlap a neighbour's are hidden rather than stacked.
+      sr.symbolSize = 11
+      sr.label = { show: true, position: 'right', fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, formatter: '{a}' }
+      sr.labelLayout = { hideOverlap: true }
     }
   }
 }

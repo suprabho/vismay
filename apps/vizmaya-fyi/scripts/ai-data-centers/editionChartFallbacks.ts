@@ -15,7 +15,7 @@
  * or null when even the record is too thin — three rows is still the floor.
  */
 
-import type { DcFacility } from '@vismay/content-source/epics'
+import type { DcFacility, DcStockSeries } from '@vismay/content-source/epics'
 import type { DcPaper, EditionChartSection, EditionEnergy, EditionSource, EditionTapeTick } from '@vismay/content-source/dcEditionTypes'
 import { DC_PAPER_AREAS, DC_PAPER_AREA_KEYS, type DcPaperArea } from '@vismay/content-source/dcEditionTypes'
 import { MIN_CHART_ROWS, type ValidatedChartPlan } from '@vismay/content-source/dcEditionCharts'
@@ -24,6 +24,8 @@ import { shortTitle } from '@vismay/content-source/dcEditionAssembly'
 /** What rung 4 can draw from. Everything optional: a missing dataset just skips its builders. */
 export interface RecordInputs {
   tape?: EditionTapeTick[]
+  /** Per-ticker close series over the trailing window (getDcStockMarket); lines and slopes need it, the tape alone only gives bars. */
+  market?: DcStockSeries[]
   facilities?: DcFacility[]
   perEdition?: EditionEnergy['perEdition']
   papers?: DcPaper[]
@@ -84,6 +86,119 @@ export function tapeMoves(section: EditionChartSection, tape: EditionTapeTick[] 
       encodings: { x: 'Company', y: ['Change (%)'] },
     },
     sources: [SOURCES.stocks],
+    storyIds: [],
+  }
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+/** '2026-09-15' → '15 Sep' */
+const sessionLabel = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1] ?? ''}`
+
+/** The layer's tracked companies with at least `min` closes in the window, largest move first. */
+function layerSeries(section: EditionChartSection, market: DcStockSeries[] | undefined, min = 4): DcStockSeries[] {
+  const category = LAYER_CATEGORY[section]
+  if (!category || !market) return []
+  return market
+    .filter((s) => s.category === category && s.points.length >= min && s.changePct != null)
+    .sort((a, b) => Math.abs(b.changePct as number) - Math.abs(a.changePct as number))
+}
+
+/**
+ * Indexed closes over the last trading days for the layer's five biggest
+ * movers — the same window as the tape, but as the path each company took
+ * rather than the endpoint. Every series starts at 100 on the first day so
+ * home-currency prices share one axis.
+ */
+export function indexedCloses(section: EditionChartSection, market: DcStockSeries[] | undefined, days = 10): ValidatedChartPlan | null {
+  const series = layerSeries(section, market, 4).slice(0, 5)
+  if (series.length < MIN_CHART_ROWS) return null
+  const rows: Array<[string, string, number]> = []
+  for (const s of series) {
+    const pts = s.points.slice(-days)
+    const base = pts[0]?.[1]
+    if (!base) continue
+    for (const [date, close] of pts) rows.push([sessionLabel(date), shortTitle(s.name, 18), r2((close / base) * 100)])
+  }
+  if (new Set(rows.map((r) => r[1])).size < MIN_CHART_ROWS) return null
+  const span = series[0].points.slice(-days)
+  return {
+    section,
+    title: `${capitalise(LAYER_WORD[section] ?? 'stocks')}, indexed over the last ${span.length} sessions`,
+    caption: `Closing prices on each company's home exchange, indexed to 100 at the first session shown, for the ${series.length} ${LAYER_WORD[section]} that moved most over the window.`,
+    spec: {
+      chartType: 'Line Chart',
+      // Sessions are a category axis on purpose: flint's Date axis expects
+      // a parseable date and draws nothing for a bare "09-15".
+      columns: [
+        { name: 'Session', semanticType: 'Category' },
+        { name: 'Company', semanticType: 'Category' },
+        { name: 'Index (first session = 100)', semanticType: 'Quantity' },
+      ],
+      rows,
+      encodings: { x: 'Session', y: ['Index (first session = 100)'], color: 'Company' },
+    },
+    sources: [SOURCES.stocks],
+    storyIds: [],
+  }
+}
+
+/** Window open → window close for each of the layer's companies, indexed — who pulled away and who fell back. */
+export function slopeMoves(section: EditionChartSection, market: DcStockSeries[] | undefined): ValidatedChartPlan | null {
+  const series = layerSeries(section, market, 2).slice(0, 6)
+  if (series.length < MIN_CHART_ROWS) return null
+  const rows: Array<[string, string, number]> = []
+  for (const s of series) {
+    const first = s.points[0][1]
+    const last = s.points[s.points.length - 1][1]
+    if (!first) continue
+    rows.push(['Window open', shortTitle(s.name, 18), 100])
+    rows.push(['Window close', shortTitle(s.name, 18), r2((last / first) * 100)])
+  }
+  const up = series.filter((s) => (s.changePct ?? 0) > 0).length
+  return {
+    section,
+    title: `${capitalise(LAYER_WORD[section] ?? 'stocks')} from window open to close`,
+    caption: `${up} of ${series.length} tracked ${LAYER_WORD[section]} closed the window above where they opened it; each line is one company's close, indexed to 100 at the open.`,
+    spec: {
+      chartType: 'Slope Chart',
+      columns: [
+        { name: 'Point', semanticType: 'Category' },
+        { name: 'Company', semanticType: 'Category' },
+        { name: 'Index (open = 100)', semanticType: 'Quantity' },
+      ],
+      rows,
+      encodings: { x: 'Point', y: ['Index (open = 100)'], color: 'Company' },
+    },
+    sources: [SOURCES.stocks],
+    storyIds: [],
+  }
+}
+
+/** Frontier sites placed by stated power against stated capital cost — how much money a megawatt of frontier AI takes. */
+export function facilityPowerVsCapex(section: EditionChartSection, facilities: DcFacility[] | undefined): ValidatedChartPlan | null {
+  if (!facilities) return null
+  const rows = facilities
+    .filter((f) => f.powerMw != null && f.powerMw > 0 && f.capexUsdBn != null && f.capexUsdBn > 0)
+    .sort((a, b) => (b.powerMw ?? 0) - (a.powerMw ?? 0))
+    .slice(0, 8)
+    .map((f) => [shortTitle(f.name, 22), Math.round(f.powerMw as number), r2(f.capexUsdBn as number)] as [string, number, number])
+  if (rows.length < MIN_CHART_ROWS) return null
+  return {
+    section,
+    title: 'Frontier AI sites: power against capital cost',
+    caption: `Each point is a site in Epoch AI's frontier register with both a stated power capacity and a stated capital cost — the further above the trend, the more each megawatt cost to build.`,
+    spec: {
+      chartType: 'Scatter Plot',
+      columns: [
+        { name: 'Site', semanticType: 'Name' },
+        { name: 'Power (MW)', semanticType: 'Quantity' },
+        { name: 'Capital cost (USD bn)', semanticType: 'Amount' },
+      ],
+      rows,
+      encodings: { x: 'Power (MW)', y: ['Capital cost (USD bn)'], color: 'Site' },
+    },
+    sources: [SOURCES.epoch],
     storyIds: [],
   }
 }
@@ -270,15 +385,32 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 export function recordChart(section: EditionChartSection, record: RecordInputs, exclude: Set<string> = new Set()): RecordChart | null {
   const ladder: Array<[string, () => ValidatedChartPlan | null]> = (() => {
     switch (section) {
+      // The three stock layers each get a different reading of the same
+      // window — the path (line), the endpoints (diverging bar), the change
+      // (slope) — so the page never shows one chart three times; each keeps
+      // the others as fallbacks when its data is short.
       case 'dc':
         return [
+          ['facility-power-vs-capex', () => facilityPowerVsCapex(section, record.facilities)],
           ['facility-power', () => facilityPower(section, record.facilities)],
           ['tape:data-centers', () => tapeMoves(section, record.tape)],
         ]
       case 'hyper':
+        return [
+          ['line:hyperscalers', () => indexedCloses(section, record.market)],
+          ['tape:hyperscalers', () => tapeMoves(section, record.tape)],
+        ]
       case 'semi':
+        return [
+          ['tape:semiconductors', () => tapeMoves(section, record.tape)],
+          ['slope:semiconductors', () => slopeMoves(section, record.market)],
+        ]
       case 'equip':
-        return [[`tape:${LAYER_CATEGORY[section]}`, () => tapeMoves(section, record.tape)]]
+        return [
+          ['slope:semi-equipment', () => slopeMoves(section, record.market)],
+          ['line:semi-equipment', () => indexedCloses(section, record.market)],
+          ['tape:semi-equipment', () => tapeMoves(section, record.tape)],
+        ]
       case 'energy':
         return [
           ['power-per-edition', () => powerPerEdition(section, record.perEdition)],
