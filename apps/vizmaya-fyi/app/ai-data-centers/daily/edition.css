@@ -168,7 +168,8 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .chapter-head h2{font-family:var(--serif);font-size:clamp(26px,3vw,36px);line-height:1.05;letter-spacing:-.01em}
 .dcd .chapter-head .lede{color:var(--muted);max-width:60ch;margin-top:8px}
 /* source chips (backlinks) */
-.dcd .src{display:inline-flex;align-items:center;gap:4px;vertical-align:baseline;margin-left:4px;padding:1px 7px 1px 6px;border:1px solid var(--line-strong);border-radius:999px;font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--accent-mid);white-space:nowrap;transition:background .15s,border-color .15s}
+.dcd .src{display:inline-flex;align-items:center;gap:4px;vertical-align:baseline;max-width:100%;margin-left:4px;padding:1px 7px 1px 6px;border:1px solid var(--line-strong);border-radius:999px;font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--accent-mid);white-space:nowrap;transition:background .15s,border-color .15s}
+.dcd .src > span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .dcd .src::after{content:"↗";font-size:10px;color:var(--dim)}
 .dcd .src:hover{background:var(--accent-wash);border-color:var(--accent-lo)}
 .dcd .src.paper{color:var(--accent-hi)}
@@ -309,14 +310,24 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .eviz-svg .edot{fill:var(--energy)}
 .dcd .eviz-svg .edot.neg{fill:var(--down)}
 .dcd .eviz-svg .edot.flat{fill:var(--accent-lo)}
-.dcd .efigs{display:grid;gap:14px}
+.dcd .efigs{display:grid;gap:14px;container:efigs / inline-size}
 .dcd .efig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:baseline}
 .dcd .efig .num{font-family:var(--serif);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
 .dcd .efig .num small{font-size:15px;color:var(--muted);margin-left:3px}
 .dcd .efig .lab{font-size:12.5px;color:var(--muted);line-height:1.35}
-.dcd .efig .src{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:8px;white-space:nowrap}
+.dcd .efig .srcs{display:inline-flex;flex-wrap:wrap;gap:6px;max-width:100%;margin-left:8px;vertical-align:baseline}
+.dcd .efig .srcs .src{margin-left:0}
 .dcd .efig .rail{grid-column:1/-1;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
 .dcd .efig .rail i{display:block;height:3px;border-radius:2px;background:var(--energy)}
+/* On a narrow card (a phone, or one of a pair) the number column squeezed
+   each label into whatever width its own number left, so no two rows started
+   at the same edge. Stack the number over its label instead, with the chips
+   on a row of their own at their natural width. */
+@container efigs (max-width:360px){
+  .dcd .efig{grid-template-columns:minmax(0,1fr);row-gap:6px}
+  .dcd .efig + .efig{padding-top:14px;border-top:1px solid var(--line)}
+  .dcd .efig .srcs{display:flex;margin:6px 0 0}
+}
 .dcd .energy-side{display:grid;gap:16px}
 .dcd .open-card{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:18px 20px;display:grid;gap:6px;text-align:left;transition:border-color .15s,transform .15s,box-shadow .15s}
 .dcd .open-card:hover{border-color:var(--energy);transform:translateY(-2px);box-shadow:var(--shadow)}
@@ -612,7 +623,6 @@ body.dcd-panel-open{overflow:hidden}
   .dcd .hero{padding-block:32px 22px}
   .dcd .counts{grid-template-columns:repeat(2,auto);gap:12px 28px}
   .dcd .eviz-row{grid-template-columns:1fr}
-  .dcd .efig .src{display:block;margin-left:0}
   .dcd .regionbar{position:static;flex-wrap:wrap}
   .dcd .regionbar button{flex:1 1 45%;padding:10px 16px}
   .dcd .mapbox .legend{display:none}
