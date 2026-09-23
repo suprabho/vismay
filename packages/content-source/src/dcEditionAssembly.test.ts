@@ -42,6 +42,13 @@ const site = (id: number, subject: string, mw: number, source = `Outlet ${id}`) 
   assert.equal(viz?.addedMw, 2840)
 }
 
+// 1b. Undisclosed rows never carry the ledger: three "MW undisclosed" adds plus one figure is no viz.
+{
+  const undisclosed = (id: number, place: string) => story(id, { place, facts: { action: 'add', figures: [], horizon: null } })
+  const placesMap = new Map([['a', { slug: 'a', name: 'Alpha', region: 'na', lat: 0, lng: 0, aliases: [] }], ['b', { slug: 'b', name: 'Beta', region: 'na', lat: 0, lng: 0, aliases: [] }], ['c', { slug: 'c', name: 'Gamma', region: 'na', lat: 0, lng: 0, aliases: [] }]])
+  assert.equal(buildCapacityViz([undisclosed(1, 'a'), undisclosed(2, 'b'), undisclosed(3, 'c'), site(4, 'Abilene', 1200)], placesMap as any, stocks), null)
+}
+
 // 2. The hyperscaler matrix needs two kinds of move, not one column of dots.
 {
   const cap = (id: number, t: string) => story(id, { layer: 'hyper', tickers: [t], facts: { action: 'capacity', figures: [], horizon: null } })

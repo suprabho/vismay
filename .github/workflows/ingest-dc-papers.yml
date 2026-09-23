@@ -8,10 +8,10 @@ name: Ingest AI Data Centers papers
 # Upserts into dc_papers on arxiv_id (rejects persist with relevant=false),
 # so re-runs and manual dispatches are safe.
 #
-# Runs at 07:00 UTC, between the 06:45 news scrape and the 08:15 edition
-# composer, which reads the window's kept papers. The composer tolerates a
-# failed or empty run — the edition ships with an empty research chapter
-# and a notice, never misses.
+# Runs as the second job of dc-morning-edition.yml, after the news scrape
+# and before the edition composer, which reads the window's kept papers.
+# The composer tolerates a failed or empty run — the edition ships with an
+# empty research chapter and a notice, never misses.
 #
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
@@ -19,8 +19,12 @@ name: Ingest AI Data Centers papers
 #   ANTHROPIC_API_KEY          — Claude Haiku paper gate
 
 on:
-  schedule:
-    - cron: '0 7 * * *'
+  workflow_call:
+    inputs:
+      hours:
+        type: string
+        required: false
+        default: '36'
   workflow_dispatch:
     inputs:
       hours:
@@ -61,4 +65,4 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: pnpm ai-data-centers:ingest-papers -- --hours ${{ github.event.inputs.hours || '36' }}
+        run: pnpm ai-data-centers:ingest-papers -- --hours ${{ inputs.hours || '36' }}

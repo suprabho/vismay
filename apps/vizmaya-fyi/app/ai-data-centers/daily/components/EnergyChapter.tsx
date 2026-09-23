@@ -150,6 +150,14 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
   const topics = [...new Set(energyStories.map(topicOf))]
   const placed = energyStories.filter((s) => s.region != null)
   const regions = [...new Set(placed.map((s) => s.region as DcRegionKey))]
+  // The coverage charts (topic × region, the clock, pressure v relief) draw
+  // story tags, not figures. On a thin day they are a grid of four dots
+  // under a footnote admitting "built from 0 stated figures" — so they need
+  // a day with enough stories to have a shape, and at least one figure on
+  // the record, before they earn a card.
+  const COVERAGE_MIN_STORIES = 6
+  const coverageOk = energyStories.length >= COVERAGE_MIN_STORIES && facts.length > 0
+  const coverageReason = facts.length === 0 ? 'no energy story states a figure' : `only ${plural(energyStories.length, 'energy story')} — coverage charts need ${COVERAGE_MIN_STORIES}`
 
   const vizzes: Viz[] = [
     ...(planned
@@ -326,8 +334,8 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
     {
       key: 'matrix',
       title: 'What today covered · topic by region',
-      reason: placed.length ? 'today’s energy stories fall in one topic or one region — a grid needs two of each' : 'no energy story in this edition carries a region',
-      weight: placed.length >= MIN_VIZ_ROWS && topics.length >= 2 && regions.length >= 2 ? 60 + topics.length * 3 : 0,
+      reason: !coverageOk ? coverageReason : placed.length ? 'today’s energy stories fall in one topic or one region — a grid needs two of each' : 'no energy story in this edition carries a region',
+      weight: coverageOk && placed.length >= MIN_VIZ_ROWS && topics.length >= 2 && regions.length >= 2 ? 60 + topics.length * 3 : 0,
       sub: placed.length === energyStories.length
         ? `${plural(placed.length, 'story')} · ${plural(topics.length, 'topic')}`
         : `${placed.length} of ${energyStories.length} stories carry a region`,
@@ -380,8 +388,8 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
     {
       key: 'clock',
       title: 'When the energy stories landed',
-      reason: energyStories.length ? `only ${plural(energyStories.length, 'story')} — a clock needs ${MIN_VIZ_ROWS}` : 'today’s stories carry no timestamps',
-      weight: energyStories.length >= MIN_VIZ_ROWS ? 50 : 0,
+      reason: !coverageOk ? coverageReason : 'today’s stories carry no timestamps',
+      weight: coverageOk ? 50 : 0,
       render: (W) => {
         const P = { l: 26, r: 26 }
         const X = (s: DcEditionStory) => P.l + (storyMinutes(s) / 1440) * (W - P.l - P.r)
@@ -428,7 +436,7 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
       key: 'balance',
       title: 'Pressure and relief by topic',
       reason: 'every energy story today leans the same way',
-      weight: energyStories.length >= MIN_VIZ_ROWS && energyStories.some((s) => (s.mood ?? 0) < 0) && energyStories.some((s) => (s.mood ?? 0) > 0) ? 45 : 0,
+      weight: coverageOk && energyStories.some((s) => (s.mood ?? 0) < 0) && energyStories.some((s) => (s.mood ?? 0) > 0) ? 45 : 0,
       render: (W) => {
         const rows = topics
           .map((t) => ({
@@ -535,7 +543,13 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
             </p>
           </>
         ) : (
-          <p className="eviz-note">No energy stories in this edition — nothing to chart.</p>
+          <p className="eviz-note">
+            {energyStories.length === 0
+              ? 'No energy stories in this edition — nothing to chart.'
+              : `${plural(energyStories.length, 'energy story')} on the record, ${facts.length === 0 ? 'none states a figure' : `${plural(distinctFigures, 'stated figure')} but no honest comparison among them`} — nothing to chart. ${
+                  held.length ? `Held back: ${held.map((v) => `${v.title.toLowerCase()} (${v.reason})`).join('; ')}.` : ''
+                }`}
+          </p>
         )}
       </div>
       <div className="energy-side">
