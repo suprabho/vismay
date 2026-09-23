@@ -18,8 +18,8 @@ function avg(values: number[]): number | null {
 /**
  * Chapter I — the day's mood in one reading, scored story by story:
  * reading = (boom − doom) / (boom + doom). Server-rendered SVG: the meter
- * with 7- and 30-day ghost ticks, the 30-edition sparkline, and the top three
- * drivers per side. Both sides open the panel (`mood:boom` / `mood:doom`).
+ * with 7- and 30-day ghost ticks, and the top three drivers per side. Both
+ * sides open the panel (`mood:boom` / `mood:doom`).
  */
 export default function DoomBoomMeter({ score, counts, series, stories }: Props) {
   const hist = series.map((p) => p.score).filter((v): v is number => v != null)
@@ -29,7 +29,6 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
   const word = moodWord(score)
   const boom = moodDrivers(stories, 'boom')
   const doom = moodDrivers(stories, 'doom')
-  const higher = score == null ? 0 : hist.filter((v) => v > score).length
 
   const W = 1000
   const H = 120
@@ -37,15 +36,6 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
   const R = 60
   const ty = 52
   const cx = (v: number) => L + ((v + 1) / 2) * (W - L - R)
-
-  const sw = 1000
-  const sh = 60
-  const sx = (i: number) => (hist.length > 1 ? (i / (hist.length - 1)) * (sw - 4) + 2 : sw / 2)
-  const sy = (v: number) => sh / 2 - v * (sh / 2 - 6)
-  const path = hist.map((v, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join(' ')
-  const area = hist.length
-    ? `M${sx(0)} ${sh / 2} ${hist.map((v, i) => `L${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join(' ')} L${sx(hist.length - 1)} ${sh / 2} Z`
-    : ''
 
   const why =
     score == null
@@ -163,24 +153,6 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
           <span className="db-drivers">{drivers(doom, 'doom')}</span>
           <span className="go">Open the doom side →</span>
         </button>
-        <div className="db-trend">
-          <span className="eyebrow">Last {hist.length || 0} editions</span>
-          {hist.length > 1 ? (
-            <svg viewBox={`0 0 ${sw} ${sh}`} width="100%" className="dbspark" preserveAspectRatio="none" role="img" aria-label={`Doom v Boom reading over the last ${hist.length} editions`}>
-              <line x1={0} y1={sh / 2} x2={sw} y2={sh / 2} className="zero" />
-              <path d={area} className="area" />
-              <path d={path} className="line" />
-              {score != null && <circle cx={sx(hist.length - 1)} cy={sy(score)} r={4} className="end" />}
-            </svg>
-          ) : (
-            <span className="db-trendnote mono">The trend fills in as editions accumulate.</span>
-          )}
-          {hist.length > 1 && score != null && (
-            <span className="db-trendnote mono">
-              above the line = boom · today is the {higher === 0 ? 'highest' : `${ordinal(higher + 1)}-highest`} reading in {hist.length} editions
-            </span>
-          )}
-        </div>
         <button type="button" className="db-side boom" data-panel="mood:boom">
           <span className="db-n">
             {counts.boom}
@@ -192,10 +164,4 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
       </div>
     </div>
   )
-}
-
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`
 }
