@@ -9,8 +9,12 @@
 // chapter, the three composition hues and the map dot colours. The Doom v
 // Boom reading has its own red/green pair (`doom`/`boom` for marks, `doomInk`/
 // `boomInk` for text) so the header ring and Chapter I never borrow the
-// market tape's up/down. A light theme derived from the same tokens sits
-// alongside for prefers-color-scheme: light / data-theme="light".
+// market tape's up/down. Each AI layer has its own accent (`layerDc` …
+// `layerEquip`) for its Chapter IV tile: cyan, indigo, amber and purple,
+// chosen clear of the reserved hues above (red, green, teal, lime and the
+// composition terracotta) and checked for colour-blind separation. A light
+// theme derived from the same tokens sits alongside for
+// prefers-color-scheme: light / data-theme="light".
 
 import type { MapPalette } from "@vismay/viz-engine";
 
@@ -49,6 +53,10 @@ export type AiDataCentersTheme = {
   comp3: string;
   mapDot: string;
   mapDotHi: string;
+  layerDc: string;
+  layerHyper: string;
+  layerSemi: string;
+  layerEquip: string;
 };
 
 export const AI_DATA_CENTERS_THEME_DEFAULTS: AiDataCentersTheme = {
@@ -85,6 +93,10 @@ export const AI_DATA_CENTERS_THEME_DEFAULTS: AiDataCentersTheme = {
   comp3: "#96b532",
   mapDot: "#333f49",
   mapDotHi: "#46545f",
+  layerDc: "#22d3ee",
+  layerHyper: "#6366f1",
+  layerSemi: "#fbbf24",
+  layerEquip: "#c084fc",
 };
 
 /** Light theme for the edition page — the same tokens, re-stepped for a paper surface. */
@@ -117,6 +129,10 @@ export const AI_DATA_CENTERS_THEME_LIGHT: AiDataCentersTheme = {
   comp3: "#5f7a00",
   mapDot: "#c9d3da",
   mapDotHi: "#aab8c2",
+  layerDc: "#0891b2",
+  layerHyper: "#4338ca",
+  layerSemi: "#c98510",
+  layerEquip: "#a855f7",
 };
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -174,6 +190,10 @@ export const EDITION_CSS_VARS: Partial<Record<keyof AiDataCentersTheme, string>>
   comp1: "--comp1",
   comp2: "--comp2",
   comp3: "--comp3",
+  layerDc: "--layer-dc",
+  layerHyper: "--layer-hyper",
+  layerSemi: "--layer-semi",
+  layerEquip: "--layer-equip",
 };
 
 export const AI_DATA_CENTERS_MAP_STYLE_DEFAULT = "mapbox://styles/mapbox/dark-v11";

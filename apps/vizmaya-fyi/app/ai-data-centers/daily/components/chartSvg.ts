@@ -8,6 +8,11 @@
  *
  * `fill="var(--x)"` is not a valid presentation attribute, so the colour moves
  * into a `style` attribute (merged with any the element already carries).
+ *
+ * The companion series (accent-mid, accent-hi) map to --chart-mid/--chart-hi,
+ * which edition.css pins to the page's accent steps: a layer tile re-points
+ * --accent at its own hue, and its chart's other series must stay distinct
+ * hues rather than become tints of it.
  */
 
 import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../theme'
@@ -17,8 +22,8 @@ import { CHART_FONT_SENTINEL } from './chartConstants'
 const HEX_TO_VAR: Record<string, string> = {
   [T.energy]: '--energy',
   [T.accent]: '--accent',
-  [T.accentMid]: '--accent-mid',
-  [T.accentHi]: '--accent-hi',
+  [T.accentMid]: '--chart-mid',
+  [T.accentHi]: '--chart-hi',
   [T.comp1]: '--comp1',
   [T.comp2]: '--comp2',
   [T.comp3]: '--comp3',

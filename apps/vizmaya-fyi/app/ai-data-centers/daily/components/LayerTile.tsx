@@ -1,3 +1,5 @@
+import type { Icon } from '@phosphor-icons/react'
+import { CloudIcon, CpuIcon, FactoryIcon, HardDrivesIcon } from '@phosphor-icons/react/dist/ssr'
 import type { DcLayerKey, EditionChart, EditionLayer } from '@vismay/content-source/dcEditionTypes'
 import { DC_LAYERS } from '@vismay/content-source/dcEditionTypes'
 import SourceChip from './SourceChip'
@@ -14,9 +16,19 @@ const VIZ_TITLES: Record<DcLayerKey, string> = {
   equip: 'Orders moving in time · what each toolmaker said',
 }
 
+/** Each layer's mark, top right of its tile. Rendered on the server (the SSR entry), so no icon code ships. */
+const LAYER_ICONS: Record<DcLayerKey, Icon> = {
+  dc: HardDrivesIcon,
+  hyper: CloudIcon,
+  semi: CpuIcon,
+  equip: FactoryIcon,
+}
+
 /**
- * Chapter IV — one tile per AI layer: headline + sub, one visualisation,
- * three sourced notes, and the story count. The visualisation is the chart
+ * Chapter IV — one tile per AI layer, in the layer's own accent
+ * (`data-layer` → `--layer-*` in edition.css): a quiet mono head (the layer,
+ * its story count and remit) with the layer's icon, headline + sub, one
+ * visualisation and three sourced notes. The visualisation is the chart
  * the composer planned for the layer when it planned one (a comparison it
  * chose from the stated figures, rendered at compose time); otherwise the
  * layer's deterministic template drawn from the same facts. The whole tile
@@ -24,18 +36,23 @@ const VIZ_TITLES: Record<DcLayerKey, string> = {
  */
 export default function LayerTile({ layerKey, layer, chart }: { layerKey: DcLayerKey; layer: EditionLayer; chart?: EditionChart | null }) {
   const meta = DC_LAYERS[layerKey]
+  const LayerIcon = LAYER_ICONS[layerKey]
   const viz = layer.viz
   const planned = chart?.svg ? chart : null
+  const stories = layer.count === 1 ? 'story' : 'stories'
   return (
-    <div className="layer" role="button" tabIndex={0} data-panel={`layer:${layerKey}`}>
+    <div className="layer" role="button" tabIndex={0} data-panel={`layer:${layerKey}`} data-layer={layerKey}>
       <span className="layer-head">
         <span className="lh">
-          <b>{meta.name}</b>
+          <span className="lk">
+            {meta.name}
+            <i> · </i>
+            <b>{layer.count}</b> {stories}
+          </span>
           <small>{meta.desc}</small>
         </span>
-        <span className="lcount">
-          {layer.count}
-          <small>stories</small>
+        <span className="licon" aria-hidden="true">
+          <LayerIcon size={22} weight="duotone" />
         </span>
       </span>
       <span className="lhead">
@@ -75,7 +92,7 @@ export default function LayerTile({ layerKey, layer, chart }: { layerKey: DcLaye
           ))}
         </span>
       )}
-      <span className="go">Open {layer.count} stories →</span>
+      <span className="go">Open {layer.count} {stories} →</span>
     </div>
   )
 }
