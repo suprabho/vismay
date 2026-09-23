@@ -90,7 +90,10 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
           <nav className="edition-nav" aria-label="Edition">
             {step('prev')}
             <a className="today" href="#previous" title={`24 hours · ${windowLabel(e.windowStart, e.windowEnd)} — open the edition archive`}>
-              <b>{formatEditionDate(e.date)}</b>
+              <b>
+                <span className="d-full">{formatEditionDate(e.date, { year: false })}</span>
+                <span className="d-short">{formatEditionDate(e.date, { weekday: false, year: false })}</span>
+              </b>
               <small>
                 {e.number != null ? `Edition ${e.number} · ` : ''}
                 {publishedLabel}
@@ -102,7 +105,14 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
             <a className={`pill mood ${tone}`} id="moodchip" href="#glance" title="Doom v Boom — today's reading">
               <span className="dot" />
               <span className="txt">
-                {e.moodScore == null ? 'Doom v Boom' : `${word} ${formatSigned(e.moodScore)}`}
+                {e.moodScore == null ? (
+                  'Doom v Boom'
+                ) : (
+                  <>
+                    <span className="mfull">{`${word} ${formatSigned(e.moodScore)}`}</span>
+                    <span className="mshort">{formatSigned(e.moodScore)}</span>
+                  </>
+                )}
               </span>
             </a>
             <ShareButton url={canonical} />
