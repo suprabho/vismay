@@ -5,10 +5,13 @@ import type { DcDraftEdition } from '@vismay/content-source/dcEditions'
 import {
   DC_LAYERS,
   DC_LAYER_KEYS,
+  EDITION_CHART_SECTIONS,
   formatSigned,
   moodWord,
   type DcEditionSummary,
   type DcLayerKey,
+  type EditionChart,
+  type EditionChartSection,
   type EditionSource,
   type EditionText,
 } from '@vismay/content-source/dcEditionTypes'
@@ -58,6 +61,34 @@ function textOf(d: DcDraftEdition): EditionText {
 }
 
 const input = 'w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-neutral-100 focus:outline-none focus:border-white/30'
+
+/** "chart: Bar Chart · 5 rows" or "template · <why the composer planned none>". */
+function chartStatus(d: DcDraftEdition, section: EditionChartSection): string {
+  const c = d.charts[section]
+  if (c) return `chart ${c.spec.chartType} · ${c.spec.rows.length} rows · ${c.model}`
+  const skip = d.chartSkips.find((s) => s.section === section)
+  const template = section === 'energy' ? 'engine vizzes' : `viz ${d.layers[section].viz?.kind ?? 'none'}`
+  return `template (${template})${skip ? ` — ${skip.reason}` : ''}`
+}
+
+/**
+ * The planned chart as the composer rendered it (dark palette baked in — the
+ * public page re-themes it; the admin is dark, so it reads as published).
+ */
+function ChartPreview({ chart }: { chart: EditionChart | undefined }) {
+  if (!chart?.svg) return null
+  return (
+    <figure className="m-0 grid gap-1">
+      <div className="text-xs text-neutral-300">{chart.title}</div>
+      <div className="rounded-lg bg-[#161b22] p-2 [&_svg]:w-full [&_svg]:h-auto" dangerouslySetInnerHTML={{ __html: chart.svg }} />
+      <figcaption className="text-xs text-neutral-500">
+        {chart.caption} · {chart.sources.map((s) => s.name).join(', ')}
+      </figcaption>
+    </figure>
+  )
+}
+// EDITION_CHART_SECTIONS is imported for parity with the composer's section order.
+void EDITION_CHART_SECTIONS
 const btn = 'text-sm px-3 py-1.5 rounded-lg border border-white/10 text-neutral-200 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed'
 const btnPrimary = 'text-sm px-3 py-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed'
 
@@ -144,6 +175,11 @@ export default function EditionsClient() {
       setNotice(`Published — ${(b.publicUrl as string) ?? ''}${(b.revalidate as { ok?: boolean } | undefined)?.ok ? '' : ' (revalidate ping did not confirm; /daily refreshes within 15 minutes)'}`),
     )
   const hold = () => act('hold', () => fetch('/api/vizmaya/editions/draft/hold', { method: 'POST' }), () => setNotice('Held — auto-publish moved by 30 minutes.'))
+  const regenerateCharts = () =>
+    confirm('Re-plan the section charts? Prose, numbers and your edits stay; only the charts are replaced.') &&
+    act('charts', () => fetch('/api/vizmaya/editions/draft/recompose', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chartsOnly: true }) }), () =>
+      setNotice('Chart planner dispatched — the workflow takes a minute or two; refresh to see the new charts.'),
+    )
   const recompose = (clearEdits: boolean) =>
     confirm(clearEdits ? 'Recompose and DROP your edits?' : 'Recompose? Your edits are kept; the new run is appended for diffing.') &&
     act('recompose', () => fetch('/api/vizmaya/editions/draft/recompose', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ clearEdits }) }), () =>
@@ -268,6 +304,9 @@ export default function EditionsClient() {
               <button type="button" className={btn} disabled={busy !== null || !data.recomposeConfigured} onClick={() => recompose(true)}>
                 Recompose, clear edits
               </button>
+              <button type="button" className={btn} disabled={busy !== null || !data.recomposeConfigured} onClick={regenerateCharts} title="Re-plan only the section charts on this draft">
+                {busy === 'charts' ? 'dispatching…' : 'Regenerate charts'}
+              </button>
               <button type="button" className={btn} disabled={busy !== null || draft.holdCount >= 1} onClick={hold} title={draft.holdCount >= 1 ? 'Already held once' : 'Extend the window by 30 minutes, once'}>
                 Hold 30 min{draft.holdCount >= 1 ? ' (used)' : ''}
               </button>
@@ -341,13 +380,20 @@ export default function EditionsClient() {
               ))}
             </div>
 
+            <h3 className="text-sm font-medium pt-2">Energy chart</h3>
+            <div className="border border-white/10 rounded-xl p-3 space-y-2">
+              <div className="text-xs text-neutral-500">{chartStatus(draft, 'energy')}</div>
+              <ChartPreview chart={draft.charts.energy} />
+            </div>
+
             <h3 className="text-sm font-medium pt-2">Layers</h3>
             <div className="grid gap-3 lg:grid-cols-2">
               {DC_LAYER_KEYS.map((k) => (
                 <div key={k} className="border border-white/10 rounded-xl p-3 space-y-2">
                   <div className="text-xs text-neutral-500">
-                    {DC_LAYERS[k].name} · {draft.layers[k].count} stories · viz {draft.layers[k].viz?.kind ?? 'none'}
+                    {DC_LAYERS[k].name} · {draft.layers[k].count} stories · {chartStatus(draft, k)}
                   </div>
+                  <ChartPreview chart={draft.charts[k]} />
                   <input className={input} placeholder="headline" value={patch.layers[k].headline} onChange={(e) => updateLayer(k, { headline: e.target.value })} />
                   <textarea className={input} rows={2} placeholder="sub" value={patch.layers[k].sub} onChange={(e) => updateLayer(k, { sub: e.target.value })} />
                   {patch.layers[k].notes.map((n, i) => (

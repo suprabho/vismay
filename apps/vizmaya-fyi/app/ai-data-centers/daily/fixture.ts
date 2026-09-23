@@ -40,6 +40,10 @@ import {
   type EditionText,
 } from '@vismay/content-source/dcEditionTypes'
 
+// Planned charts for the sample: filled by scripts/ai-data-centers/sample-charts.ts
+// (see sampleCharts.ts); empty until that file is generated.
+import { SAMPLE_CHARTS, SAMPLE_CHART_SKIPS } from './sampleCharts'
+
 export const SAMPLE_DATE = '2026-09-22'
 
 const PLACES: DcPlace[] = [
@@ -287,6 +291,8 @@ function build(): DcEditionWithContent {
     headline: TEXT.headline,
     sub: TEXT.sub,
     counts,
+    charts: SAMPLE_CHARTS,
+    chartSkips: SAMPLE_CHART_SKIPS,
     moodScore: mood.score,
     publishedAt: `${SAMPLE_DATE}T09:00:00Z`,
     windowStart: '2026-09-21T08:15:00Z',

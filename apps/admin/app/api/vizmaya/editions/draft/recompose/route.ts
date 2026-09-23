@@ -8,8 +8,10 @@ export const dynamic = 'force-dynamic'
 
 // Re-run the composer on the same window via the compose-dc-edition
 // workflow. The run appends to composer_runs and keeps editor edits unless
-// `clearEdits` is set. The workflow takes a minute or two; the tab polls the
-// draft for the new generated_at.
+// `clearEdits` is set. With `chartsOnly` the workflow re-plans only the
+// section charts on the existing draft (prose, numbers and edits untouched).
+// The workflow takes a minute or two; the tab polls the draft for the new
+// generated_at / charts.
 export async function POST(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   if (!isRecomposeConfigured()) {
@@ -18,12 +20,14 @@ export async function POST(req: Request) {
       { status: 503 },
     )
   }
-  const body = (await req.json().catch(() => ({}))) as { clearEdits?: unknown }
+  const body = (await req.json().catch(() => ({}))) as { clearEdits?: unknown; chartsOnly?: unknown }
   try {
     const draft = await getDraftEdition()
     const date = draft?.date ?? editionDateFor(new Date())
-    await dispatchRecompose({ date, clearEdits: body.clearEdits === true })
-    return NextResponse.json({ ok: true, date, dispatched: true }, { status: 202 })
+    const chartsOnly = body.chartsOnly === true
+    if (chartsOnly && !draft) return NextResponse.json({ error: 'no draft to re-plan charts for' }, { status: 409 })
+    await dispatchRecompose({ date, clearEdits: !chartsOnly && body.clearEdits === true, chartsOnly })
+    return NextResponse.json({ ok: true, date, dispatched: true, chartsOnly }, { status: 202 })
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'dispatch failed' }, { status: 500 })
   }

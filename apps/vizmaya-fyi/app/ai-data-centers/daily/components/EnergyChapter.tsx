@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import type { DcEditionStory, DcRegionKey, EditionEnergy } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionStory, DcRegionKey, EditionChart, EditionEnergy } from '@vismay/content-source/dcEditionTypes'
 import { DC_REGIONS, DC_THEMES } from '@vismay/content-source/dcEditionTypes'
-import { figureKind, isCommittedPower, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
+import { figureKind, figureMagnitude, isCommittedPower, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
 import { hm, storyMinutes } from './editionUtils'
+import PlannedChart from './PlannedChart'
 
 /**
  * Chapter VI — where this epic meets the Energy Profile epic.
@@ -16,6 +17,10 @@ import { hm, storyMinutes } from './editionUtils'
  *
  * Everything here is derived from the stories' own `facts.figures`, so a
  * number can only appear on a chart if a headline put it on the record.
+ *
+ * When the composer planned a chart for this chapter — a comparison it chose
+ * from the same figures, grounded row by row and rendered at compose time —
+ * that chart leads and the engine's own vizzes follow it.
  */
 
 interface Props {
@@ -23,11 +28,15 @@ interface Props {
   /** The edition's stories; the energy-tagged ones are what this chapter reads. */
   stories: DcEditionStory[]
   ieaStories: DcEditionStory[]
+  /** The composer's planned chart for this chapter, when it planned one. */
+  chart?: EditionChart | null
 }
 
 interface EnergyFact {
   value: number
   unit: string
+  /** Base-unit size from the classifier (v3), when it carried one. */
+  base: number | null
   label: string
   kind: DcFigureKind
   story: DcEditionStory
@@ -60,29 +69,8 @@ const REGION_SHORT: Record<DcRegionKey, string> = {
 /** How much a figure says once it is off the committed-power bar. */
 const RANK: Record<DcFigureKind, number> = { power: 5, energy: 4, share: 4, money: 3, horizon: 3, count: 2, term: 1 }
 
-/**
- * A figure's size on one scale for its dimension, or null when it has no
- * comparable scale (a year, a bare count). 20 GW and 640 MW are the same kind
- * of quantity written in different units: comparing the numerals would rank
- * 640 above 20 and leave the larger figure without a rail, so both convert to
- * a base unit first. Units outside a dimension never meet — a percentage still
- * never sits on a power scale.
- */
-function magnitudeOf(f: { value: number; unit: string; kind: DcFigureKind }): number | null {
-  const u = f.unit.trim().toLowerCase()
-  switch (f.kind) {
-    case 'power':
-      return u === 'gw' ? f.value * 1000 : u === 'kw' ? f.value / 1000 : f.value // base: MW
-    case 'energy':
-      return u === 'twh' ? f.value * 1e6 : u === 'gwh' ? f.value * 1000 : f.value // base: MWh
-    case 'share':
-      return f.value
-    case 'money':
-      return /bn|billion/.test(u) ? f.value * 1000 : /mn|million/.test(u) ? f.value : null // base: millions
-    default:
-      return null
-  }
-}
+/** A figure's size on its dimension's scale (shared with the composer and the scraper). */
+const magnitudeOf = (f: { value: number; unit: string; base?: number | null }): number | null => figureMagnitude(f)
 
 const n1 = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
@@ -108,13 +96,14 @@ function Svg({ w, h, label, children }: { w: number; h: number; label: string; c
   )
 }
 
-export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
+export default function EnergyChapter({ energy, stories, ieaStories, chart }: Props) {
   const energyStories = [...stories.filter((s) => s.energy), ...ieaStories]
+  const planned = chart?.svg ? chart : null
 
   const facts: EnergyFact[] = []
   for (const story of energyStories) {
     for (const f of story.facts?.figures ?? []) {
-      facts.push({ value: f.value, unit: f.unit, label: f.label || story.title, kind: figureKind(f.unit), story, sources: [story.source ?? 'Unattributed'] })
+      facts.push({ value: f.value, unit: f.unit, base: f.base ?? null, label: f.label || story.title, kind: figureKind(f.unit), story, sources: [story.source ?? 'Unattributed'] })
     }
   }
 
@@ -147,6 +136,20 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
   const regions = [...new Set(placed.map((s) => s.region as DcRegionKey))]
 
   const vizzes: Viz[] = [
+    ...(planned
+      ? [
+          {
+            key: 'planned',
+            title: planned.title,
+            reason: '',
+            // Leads whenever it exists: it is the one comparison the composer
+            // chose from the record, not a template the tags happened to fill.
+            weight: 1000,
+            sub: `${planned.spec.rows.length} rows · ${planned.sources.length} source${planned.sources.length === 1 ? '' : 's'}`,
+            render: () => <PlannedChart chart={planned} />,
+          } satisfies Viz,
+        ]
+      : []),
     {
       key: 'ledger',
       title: 'Power committed in deals that state a figure',
@@ -473,7 +476,7 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
   // cards: mounting all of them alongside the figures gave four charts of the
   // same 21 story tags and buried the one card carrying numbers. So they come
   // up only when the figures can't carry the chapter, one at a time.
-  const carriesFigures = (v: Viz) => v.key === 'ledger' || v.key === 'history' || v.key === 'figures'
+  const carriesFigures = (v: Viz) => v.key === 'planned' || v.key === 'ledger' || v.key === 'history' || v.key === 'figures'
   const figureCharts = live.filter(carriesFigures)
   const coverage = live.filter((v) => !carriesFigures(v))
   const shown = [...figureCharts, ...coverage.slice(0, figureCharts.length >= 2 ? 0 : 1)]
@@ -500,7 +503,8 @@ export default function EnergyChapter({ energy, stories, ieaStories }: Props) {
               ),
             )}
             <p className="eviz-note">
-              {plural(shown.length, 'chart')} built from {plural(distinctFigures, 'stated figure')} across {plural(energyStories.length, 'story')}.
+              {plural(shown.length, 'chart')} built from {plural(distinctFigures, 'stated figure')} across {plural(energyStories.length, 'story')}
+              {planned ? ', the first planned by the composer from the record' : ''}.
               {spare.length > 0 && ` Also had the data for ${spare.map((v) => v.title.toLowerCase()).join(', ')}.`}
               {held.length > 0 && ` Held back: ${held.map((v) => `${v.title.toLowerCase()} (${v.reason})`).join('; ')}.`}
             </p>

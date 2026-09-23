@@ -167,7 +167,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -600,7 +600,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -1018,6 +1018,9 @@ importers:
 
   apps/vizmaya-fyi:
     dependencies:
+      '@ai-sdk/gateway':
+        specifier: ^4.0.87
+        version: 4.0.87(zod@3.25.76)
       '@amplitude/analytics-browser':
         specifier: ^2.44.1
         version: 2.45.7
@@ -1087,6 +1090,9 @@ importers:
       '@vismay/admin-core':
         specifier: workspace:*
         version: link:../../packages/admin-core
+      '@vismay/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../../packages/content-source
@@ -1198,6 +1204,9 @@ importers:
       yaml:
         specifier: ^2.8.3
         version: 2.9.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
       '@google/genai':
         specifier: ^1.50.1

@@ -2,12 +2,14 @@ name: Compose AI Data Centers daily edition
 
 # Replaces the markdown recap worker (generate-dc-news-recap.yml). At 08:15
 # UTC the composer freezes the window (08:15 → 08:15 UTC) and writes ONE
-# structured draft row into dc_editions: Gemini writes the prose (headline,
-# deck, six key notes, per-layer briefs, research headline), everything
-# numeric is assembled deterministically from the tagged dc_news rows, the
-# kept dc_papers, dc_stock_prices and iea_news. Without GEMINI_API_KEY — or
+# structured draft row into dc_editions: Claude Opus (through the Vercel AI
+# Gateway) writes the prose (headline, deck, six key notes, per-layer briefs,
+# research headline) and plans one chart per section from the stated
+# figures (flint spec → ECharts SVG, grounded row by row); everything numeric
+# is assembled deterministically from the tagged dc_news rows, the kept
+# dc_papers, dc_stock_prices and iea_news. Without AI_GATEWAY_API_KEY — or
 # when generation fails — the edition degrades to a deterministic one
-# (model = 'deterministic'), so the cron never goes dark.
+# (model = 'deterministic', template charts), so the cron never goes dark.
 #
 # The draft then sits in the admin Editions tab until publish-dc-edition.yml
 # freezes it at 09:00 UTC (review is a window, not a gate). Re-running for
@@ -17,7 +19,7 @@ name: Compose AI Data Centers daily edition
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — read dc_news / dc_papers / dc_stock_prices / iea_news, write dc_editions
-#   GEMINI_API_KEY             — prose layer (shared with render-audio); optional
+#   AI_GATEWAY_API_KEY         — prose layer + chart planner (shared gateway key); optional
 #   ADMIN_SESSION_SECRET       — signs the revalidate ping if a stale draft gets published on the way in
 
 on:
@@ -34,6 +36,10 @@ on:
         default: ''
       clear_edits:
         description: 'Drop editor edits on the existing draft'
+        type: boolean
+        default: false
+      charts_only:
+        description: 'Re-plan only the charts on the existing draft (prose, numbers and edits untouched)'
         type: boolean
         default: false
 
@@ -69,9 +75,11 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          COMPOSER_MODEL: ${{ vars.DC_COMPOSER_MODEL }}
           ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
         run: >
           pnpm ai-data-centers:compose-edition --
           ${{ github.event.inputs.date != '' && format('--date {0}', github.event.inputs.date) || '' }}
           ${{ github.event.inputs.clear_edits == 'true' && '--clear-edits' || '' }}
+          ${{ github.event.inputs.charts_only == 'true' && '--charts-only' || '' }}

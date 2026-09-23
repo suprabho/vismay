@@ -1,0 +1,380 @@
+/**
+ * Composer-planned charts — the model + renderer half.
+ *
+ * For each section of the edition (energy + the four AI layers) the planner
+ * shows the model the figures the section's stories state — with the v3 tags
+ * (subject, scope, status, base unit) that decide which of them may share a
+ * scale — and asks for ONE comparison worth drawing, as a compact flint spec:
+ * columns with semantic types, rows, channel encodings, one story index per
+ * row. Or a skip with a reason. The same vocabulary the story composer uses
+ * (`@vismay/story-pipeline` chartVocab), compiled through the same
+ * `buildEChartsOption`, so a chart here is built the way a story chart is.
+ *
+ * Every plan then passes the grounding test in
+ * `@vismay/content-source/dcEditionCharts` (each numeric cell must be a figure
+ * the row's story states; ≥ 3 rows), is compiled to an ECharts option, themed
+ * to the edition's palette, and rendered to an SVG string with ECharts' SSR
+ * renderer. The page inlines the SVG and swaps the palette hexes for CSS
+ * variables, so the chart follows the light / dark theme and ships no client
+ * chart code — the row stays the page.
+ *
+ * Anything that fails (a refused plan, a compile error, a render error) is a
+ * skip with a reason; the section falls back to its deterministic template.
+ */
+
+import * as echarts from 'echarts'
+import { z } from 'zod'
+import { generateText, MODELS } from '@vismay/ai-gateway'
+import { buildEChartsOption, type ChartSpec, type ChartType } from '@vismay/story-pipeline'
+import { CHART_TYPES, RELATIONSHIP_CHART_TYPES, SEMANTIC_TYPE_HINTS } from '@vismay/story-pipeline/chartVocab'
+import {
+  EDITION_CHART_SECTIONS,
+  type DcEditionStory,
+  type EditionChart,
+  type EditionChartSection,
+  type EditionChartSkip,
+  type EditionChartSpec,
+  type EditionCharts,
+} from '@vismay/content-source/dcEditionTypes'
+import {
+  MAX_CHART_ROWS,
+  MAX_RANGE_RATIO,
+  MIN_CHART_ROWS,
+  plannerInput,
+  sectionStories,
+  validateChartPlan,
+  type PlannerSectionInput,
+} from '@vismay/content-source/dcEditionCharts'
+import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../app/ai-data-centers/theme'
+
+/** Tabular templates only — the relationship ones take edge rows the figures never form. */
+const PLANNABLE_CHART_TYPES = CHART_TYPES.filter((t) => !(RELATIONSHIP_CHART_TYPES as readonly string[]).includes(t))
+
+/** Rendered size per section: the energy hero card is wide, the layer tiles are half-width. */
+export const CHART_SIZES: Record<EditionChartSection, { width: number; height: number }> = {
+  energy: { width: 800, height: 340 },
+  dc: { width: 480, height: 260 },
+  hyper: { width: 480, height: 260 },
+  semi: { width: 480, height: 260 },
+  equip: { width: 480, height: 260 },
+}
+
+// ---------------------------------------------------------------------------
+// The plan
+
+const PLANNER_SYSTEM = `You are the chart editor of "AI Data Centers Daily", a frozen morning edition for operators, investors, analysts and policy people. For each section of today's edition you decide whether the figures its stories put on the record add up to ONE comparison worth drawing — and if so, you specify that chart exactly.
+
+You receive, per section, the section's stories (idx, outlet, headline, theme, action, horizon) and every FIGURE they state, each with: idx (the story it comes from), value + unit as written, base (the same figure in the dimension's base unit: MW, MWh, USD millions, or the bare number for a share), kind (power / energy / money / share / horizon / term / count), label, subject (the entity it belongs to), scope (site / company / market / policy) and status (committed / target / forecast / queued / stated).
+
+A chart is worth drawing when at least ${MIN_CHART_ROWS} figures compare honestly on one scale. Honest means:
+- same kind (never a percentage on a power axis; never money against MW);
+- compatible status — committed with committed, target with target, forecast with forecast. A target and a built site never share a bar. If you must show a target beside commitments, say so in the caption and put status in a category column so they are visibly different;
+- compatible scope — a global or national total never sits beside one site's figure as if they were peers, unless the chart is explicitly "one site against the market" and the caption says so;
+- one row per subject — two outlets reporting the same figure for the same subject are one row (cite one of them); the same subject stated twice with different numbers is one row with the larger, cited once;
+- every numeric cell is a figure's value or base EXACTLY as listed (you may use base units so all rows share a unit — then name the unit in the column name, e.g. "Capacity (MW)"); never compute, sum, average, convert by hand or estimate anything;
+- one readable scale — the largest value in a measure column may be at most ${MAX_RANGE_RATIO}× the smallest. A 200 GW queue beside 900 MW deals makes every bar but one a sliver; leave the outlier out (or skip) rather than explain it in the caption.
+
+Prefer the comparison that carries the day's story: what was committed, where the money went, who is booked out to when. Bars and lollipops for magnitudes across subjects, dot or scatter for year horizons, grouped bars when a status or region split is the point. Row labels are subjects, never outlets. Keep it to ${MAX_CHART_ROWS} rows.
+
+Chart types: ${PLANNABLE_CHART_TYPES.join(', ')}.
+Semantic types: ${SEMANTIC_TYPE_HINTS}.
+Encodings map channels to column names: x, y (an array of measure columns), color (category split), size, angle/value (pie / funnel measure), group. A bar chart of capacity by subject is {"x": "Subject", "y": ["Capacity (MW)"]}.
+
+For each section return either a chart or a skip with a plain reason ("only two committed power figures", "figures are all different kinds", "one story"). Skipping is the right answer more often than not — a chart with two bars or mixed scales is worse than no chart. Titles are ≤ 9 words naming the comparison ("Power committed today, by site"); the caption is one sentence that reads the chart for the reader and carries any caveat.`
+
+const chartPlanSchema = z.object({
+  sections: z.array(
+    z.object({
+      section: z.enum(['energy', 'dc', 'hyper', 'semi', 'equip']),
+      skip: z.string().nullable().describe('Why no chart is drawn for this section; null when `chart` is set.'),
+      chart: z
+        .object({
+          title: z.string(),
+          caption: z.string(),
+          chartType: z.string(),
+          columns: z.array(z.object({ name: z.string(), semanticType: z.string() })),
+          rows: z.array(z.array(z.union([z.string(), z.number()]))),
+          rowSourceIdxs: z.array(z.number().int()).describe('One story idx per row — the story whose figure the row quotes.'),
+          encodings: z.object({
+            x: z.string().optional(),
+            y: z.array(z.string()).optional(),
+            color: z.string().optional(),
+            size: z.string().optional(),
+            angle: z.string().optional(),
+            value: z.string().optional(),
+            group: z.string().optional(),
+            detail: z.string().optional(),
+          }),
+          xLabel: z.string().optional(),
+          yLabel: z.string().optional(),
+        })
+        .nullable(),
+    }),
+  ),
+})
+
+export interface PlanChartsResult {
+  charts: EditionCharts
+  skips: EditionChartSkip[]
+  modelUsed: string | null
+}
+
+/**
+ * Plan, validate, compile and render the edition's charts. Never throws: a
+ * model failure yields five skips and the page draws its templates.
+ */
+export async function planEditionCharts(input: {
+  stories: DcEditionStory[]
+  ieaStories: DcEditionStory[]
+  model: string
+  log?: (line: string) => void
+}): Promise<PlanChartsResult> {
+  const log = input.log ?? (() => {})
+  const sections = plannerInput(input.stories, input.ieaStories)
+  const all = [...input.stories, ...input.ieaStories]
+  const skips: EditionChartSkip[] = []
+  const charts: EditionCharts = {}
+
+  const askable = sections.filter((s) => s.figures.length >= MIN_CHART_ROWS)
+  for (const s of sections) {
+    if (s.figures.length < MIN_CHART_ROWS) {
+      skips.push({ section: s.section, reason: s.figures.length === 0 ? 'no story states a figure' : `only ${s.figures.length} stated figure${s.figures.length === 1 ? '' : 's'}` })
+    }
+  }
+  if (askable.length === 0) return { charts, skips, modelUsed: null }
+
+  let planned: z.infer<typeof chartPlanSchema> | null = null
+  let modelUsed: string | null = null
+  try {
+    const res = await generateText({
+      model: input.model,
+      system: PLANNER_SYSTEM,
+      prompt: `Plan the charts for these sections:\n${JSON.stringify(askable.map(compactSection), null, 1)}`,
+      schema: chartPlanSchema,
+      temperature: 0.2,
+      maxOutputTokens: 6000,
+      metadata: { 'x-vismay-feature': 'dc-edition-charts' },
+    })
+    planned = res.result
+    modelUsed = res.modelUsed
+  } catch (err) {
+    const reason = `chart planner failed: ${err instanceof Error ? err.message : String(err)}`
+    log(`[charts] ${reason}`)
+    for (const s of askable) skips.push({ section: s.section, reason })
+    return { charts, skips, modelUsed: null }
+  }
+
+  const generatedAt = new Date().toISOString()
+  for (const s of askable) {
+    const out = planned.sections.find((p) => p.section === s.section)
+    if (!out) {
+      skips.push({ section: s.section, reason: 'planner returned nothing for this section' })
+      continue
+    }
+    if (!out.chart) {
+      skips.push({ section: s.section, reason: out.skip?.trim() || 'planner skipped it' })
+      continue
+    }
+    if (!(PLANNABLE_CHART_TYPES as string[]).includes(out.chart.chartType)) {
+      skips.push({ section: s.section, reason: `unknown chart type "${out.chart.chartType}"` })
+      continue
+    }
+    const allowed = new Set(sectionStories(s.section, input.stories, input.ieaStories).map((x) => x.id))
+    const verdict = validateChartPlan(out.chart, s.section, all, allowed)
+    if (!verdict.ok) {
+      skips.push({ section: s.section, reason: verdict.reason })
+      log(`[charts] ${s.section}: refused — ${verdict.reason}`)
+      continue
+    }
+    const size = CHART_SIZES[s.section]
+    const svg = renderChartSvg(verdict.plan.spec, s.section, size)
+    if (!svg.ok) {
+      skips.push({ section: s.section, reason: svg.reason })
+      log(`[charts] ${s.section}: render failed — ${svg.reason}`)
+      continue
+    }
+    charts[s.section] = { ...verdict.plan, svg: svg.svg, ...size, model: modelUsed ?? input.model, generatedAt }
+    log(`[charts] ${s.section}: ${out.chart.chartType} · ${verdict.plan.spec.rows.length} rows · "${verdict.plan.title}"`)
+  }
+  return { charts, skips, modelUsed }
+}
+
+/** The section as the model sees it — figures first, stories as the citation key. */
+function compactSection(s: PlannerSectionInput) {
+  return {
+    section: s.section,
+    name: s.name,
+    stories: s.stories,
+    figures: s.figures.map((f) => ({
+      idx: f.idx,
+      value: f.value,
+      unit: f.unit,
+      base: f.base,
+      kind: f.kind,
+      label: f.label,
+      subject: f.subject,
+      scope: f.scope,
+      status: f.status,
+    })),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Compile + render
+
+/**
+ * The renderer's `$token` colours → the edition's dark-theme hexes. The page
+ * maps these exact hexes back to CSS variables (chartSvg.ts), so the two
+ * tables must agree: change one, change the other.
+ */
+const TOKEN_HEX: Record<EditionChartSection, Record<string, string>> = {
+  energy: { $accent: T.energy, $teal: T.comp2, $accent2: T.comp1, $amber: T.comp3, $positive: T.accentHi, $muted: T.muted, $line: T.line },
+  dc: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
+  hyper: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
+  semi: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
+  equip: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
+}
+
+import { CHART_FONT_SENTINEL } from '../../app/ai-data-centers/daily/components/chartConstants'
+
+function resolveTokens(value: unknown, table: Record<string, string>): unknown {
+  if (typeof value === 'string') return value.startsWith('$') ? (table[value] ?? T.muted) : value
+  if (Array.isArray(value)) return value.map((v) => resolveTokens(v, table))
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = resolveTokens(v, table)
+    return out
+  }
+  return value
+}
+
+/** Compile the spec through flint and render it server-side. */
+export function renderChartSvg(
+  spec: EditionChartSpec,
+  section: EditionChartSection,
+  size: { width: number; height: number },
+): { ok: true; svg: string } | { ok: false; reason: string } {
+  let option: Record<string, unknown>
+  try {
+    const full: ChartSpec = {
+      id: `edition-${section}`,
+      chartType: spec.chartType as ChartType,
+      columns: spec.columns,
+      rows: spec.rows,
+      encodings: spec.encodings as ChartSpec['encodings'],
+      ...(spec.xLabel ? { xLabel: spec.xLabel } : {}),
+      ...(spec.yLabel ? { yLabel: spec.yLabel } : {}),
+    }
+    option = resolveTokens(buildEChartsOption(full), TOKEN_HEX[section]) as Record<string, unknown>
+  } catch (err) {
+    return { ok: false, reason: `flint could not assemble the spec: ${err instanceof Error ? err.message : String(err)}` }
+  }
+  tuneForEdition(option, spec)
+  let chart: echarts.ECharts | null = null
+  try {
+    chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width: size.width, height: size.height })
+    chart.setOption(option as echarts.EChartsOption)
+    const raw = chart.renderToSVGString()
+    const svg = sanitizeSvg(raw, section)
+    if (!svg.includes('<path') && !svg.includes('<circle') && !svg.includes('<rect')) return { ok: false, reason: 'render produced an empty chart' }
+    return { ok: true, svg }
+  } catch (err) {
+    return { ok: false, reason: `echarts could not render: ${err instanceof Error ? err.message : String(err)}` }
+  } finally {
+    chart?.dispose()
+  }
+}
+
+type Opt = Record<string, unknown>
+const obj = (v: unknown): Opt | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Opt) : null)
+
+/**
+ * flint frames a chart for an interactive story canvas: tooltip, a legend
+ * title drawn as a `graphic`, a right-hand vertical legend, category labels
+ * rotated 90° under a deep name gap. The edition card is a static SVG a
+ * third that size, so: nothing interactive, the legend across the top,
+ * subject labels on the left of horizontal bars (a magnitude-by-subject
+ * chart reads down a list, not across rotated text), the edition's mono
+ * face everywhere, and a grid that keeps every label inside the box.
+ */
+function tuneForEdition(option: Opt, spec: EditionChartSpec): void {
+  delete option.title
+  delete option.tooltip
+  delete option.toolbox
+  delete option.dataZoom
+  delete option.graphic
+  option.animation = false
+  option.backgroundColor = 'transparent'
+  option.textStyle = { fontFamily: CHART_FONT_SENTINEL, fontSize: 11, color: T.muted }
+
+  const legend = obj(option.legend)
+  if (legend) {
+    delete legend.right
+    delete legend.orient
+    Object.assign(legend, { top: 0, left: 0, itemWidth: 10, itemHeight: 10, itemGap: 14, textStyle: { color: T.muted, fontSize: 11, fontFamily: CHART_FONT_SENTINEL } })
+  }
+
+  const x = obj(option.xAxis)
+  const y = obj(option.yAxis)
+  const barLike = /bar chart|lollipop/i.test(spec.chartType)
+  if (barLike && x?.type === 'category' && y?.type === 'value') {
+    // Horizontal bars: category on the left, value along the bottom, first
+    // row at the top, labels clipped at a width instead of rotated.
+    delete x.nameLocation
+    delete x.nameGap
+    const cat: Opt = { ...x, inverse: true, axisLabel: { fontSize: 11, color: T.muted, width: 150, overflow: 'truncate', fontFamily: CHART_FONT_SENTINEL }, axisTick: { show: false }, name: undefined }
+    const val: Opt = { ...y, nameLocation: 'end', nameGap: 8, nameTextStyle: { fontSize: 10, color: T.dim, fontFamily: CHART_FONT_SENTINEL, align: 'right' }, axisLabel: { fontSize: 10, color: T.dim, fontFamily: CHART_FONT_SENTINEL }, axisLine: { show: false }, splitLine: { lineStyle: { color: T.line } } }
+    option.xAxis = val
+    option.yAxis = cat
+  } else {
+    for (const axis of [x, y]) {
+      if (!axis) continue
+      const label = obj(axis.axisLabel) ?? {}
+      delete label.rotate
+      axis.axisLabel = { ...label, fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, hideOverlap: true }
+      if (axis.nameLocation === 'middle') axis.nameGap = axis === x ? 26 : 40
+      axis.nameTextStyle = { fontSize: 10, color: T.dim, fontFamily: CHART_FONT_SENTINEL }
+    }
+  }
+  option.grid = { left: 8, right: 20, top: legend ? 34 : 24, bottom: 8, containLabel: true }
+
+  // Bars: a slimmer, rounded mark with the value at its end so the reader
+  // never has to trace a gridline.
+  const series = Array.isArray(option.series) ? option.series : option.series ? [option.series] : []
+  for (const s of series) {
+    const sr = obj(s)
+    if (!sr) continue
+    if (sr.type === 'bar') {
+      sr.barMaxWidth = 18
+      sr.itemStyle = { ...(obj(sr.itemStyle) ?? {}), borderRadius: 2 }
+      if (barLike && !obj(sr.label)?.show) sr.label = { show: true, position: 'right', fontSize: 10, color: T.bone, fontFamily: CHART_FONT_SENTINEL }
+    }
+    if (sr.type === 'line' || sr.type === 'scatter') sr.symbolSize = sr.type === 'line' ? 6 : 9
+  }
+}
+
+/**
+ * Strip what a static inline SVG doesn't need and namespace what could
+ * collide when five charts share one document: ECharts' `zr0-` ids/classes
+ * and its hover `<style>` block, the `ecmeta_*` attributes, the fixed
+ * width/height (the viewBox scales it).
+ */
+export function sanitizeSvg(raw: string, section: EditionChartSection): string {
+  return raw
+    .replace(/<style\s*>[\s\S]*?<\/style>/g, '')
+    .replace(/\s+ecmeta_[a-z_]+="[^"]*"/g, '')
+    .replace(/\s+pointer-events="[^"]*"/g, '')
+    .replace(/zr\d+-/g, `ec-${section}-`)
+    .replace(/^<svg width="\d+" height="\d+"/, '<svg width="100%"')
+    .replace(/<rect width="\d+" height="\d+" x="0" y="0" fill="none"><\/rect>\n?/, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
+/** The default planner model: opus via the gateway (`text.opus`); COMPOSER_CHART_MODEL overrides (a `text.*` alias or a gateway id). */
+export function chartPlannerModel(): string {
+  return process.env.COMPOSER_CHART_MODEL || process.env.COMPOSER_MODEL || 'text.opus'
+}
+
+export { MODELS, EDITION_CHART_SECTIONS }
+export type { EditionChart }

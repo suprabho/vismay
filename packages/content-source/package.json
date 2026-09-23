@@ -22,6 +22,7 @@
     "./dcEditions": "./src/dcEditions.ts",
     "./dcEditionTypes": "./src/dcEditionTypes.ts",
     "./dcEditionAssembly": "./src/dcEditionAssembly.ts",
+    "./dcEditionCharts": "./src/dcEditionCharts.ts",
     "./pipelines": "./src/pipelines.ts",
     "./frontmatter": "./src/frontmatter.ts",
     "./getFontImports": "./src/getFontImports.ts",

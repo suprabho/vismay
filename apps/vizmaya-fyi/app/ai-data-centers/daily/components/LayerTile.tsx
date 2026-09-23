@@ -1,6 +1,7 @@
-import type { DcLayerKey, EditionLayer } from '@vismay/content-source/dcEditionTypes'
+import type { DcLayerKey, EditionChart, EditionLayer } from '@vismay/content-source/dcEditionTypes'
 import { DC_LAYERS } from '@vismay/content-source/dcEditionTypes'
 import SourceChip from './SourceChip'
+import PlannedChart from './PlannedChart'
 import CapacityLedger from './layerViz/CapacityLedger'
 import ActionMatrix from './layerViz/ActionMatrix'
 import HorizonTimeline from './layerViz/HorizonTimeline'
@@ -14,13 +15,17 @@ const VIZ_TITLES: Record<DcLayerKey, string> = {
 }
 
 /**
- * Chapter IV — one tile per AI layer: headline + sub, one bespoke
- * visualisation drawn from what the day's stories state, three sourced
- * notes, and the story count. The whole tile opens the layer's stories.
+ * Chapter IV — one tile per AI layer: headline + sub, one visualisation,
+ * three sourced notes, and the story count. The visualisation is the chart
+ * the composer planned for the layer when it planned one (a comparison it
+ * chose from the stated figures, rendered at compose time); otherwise the
+ * layer's deterministic template drawn from the same facts. The whole tile
+ * opens the layer's stories.
  */
-export default function LayerTile({ layerKey, layer }: { layerKey: DcLayerKey; layer: EditionLayer }) {
+export default function LayerTile({ layerKey, layer, chart }: { layerKey: DcLayerKey; layer: EditionLayer; chart?: EditionChart | null }) {
   const meta = DC_LAYERS[layerKey]
   const viz = layer.viz
+  const planned = chart?.svg ? chart : null
   return (
     <div className="layer" role="button" tabIndex={0} data-panel={`layer:${layerKey}`}>
       <span className="layer-head">
@@ -38,8 +43,10 @@ export default function LayerTile({ layerKey, layer }: { layerKey: DcLayerKey; l
         {layer.sub && <span className="lsub">{layer.sub}</span>}
       </span>
       <span className="lviz-wrap">
-        <span className="eyebrow">{VIZ_TITLES[layerKey]}</span>
-        {viz ? (
+        <span className="eyebrow">{planned ? planned.title : VIZ_TITLES[layerKey]}</span>
+        {planned ? (
+          <PlannedChart chart={planned} sources={false} />
+        ) : viz ? (
           viz.kind === 'capacity' ? (
             <CapacityLedger viz={viz} id={layerKey} />
           ) : viz.kind === 'matrix' ? (

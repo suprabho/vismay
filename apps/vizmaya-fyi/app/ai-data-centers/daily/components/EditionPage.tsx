@@ -175,7 +175,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
           </div>
           <div className="layers" id="layers-grid">
             {DC_LAYER_KEYS.map((k) => (
-              <LayerTile key={k} layerKey={k} layer={e.layers[k]} />
+              <LayerTile key={k} layerKey={k} layer={e.layers[k]} chart={e.charts[k]} />
             ))}
           </div>
         </section>
@@ -197,7 +197,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
               VI · {e.energy.storyCount} stories · joined with iea_news
             </div>
           </div>
-          <EnergyChapter energy={e.energy} stories={e.stories} ieaStories={e.ieaStories} />
+          <EnergyChapter energy={e.energy} stories={e.stories} ieaStories={e.ieaStories} chart={e.charts.energy} />
         </section>
 
         <section className="chapter wrap" id="sources">

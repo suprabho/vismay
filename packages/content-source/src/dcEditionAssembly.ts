@@ -607,13 +607,41 @@ export type DcFigureKind = 'power' | 'energy' | 'share' | 'money' | 'horizon' | 
 
 export function figureKind(unit: string): DcFigureKind {
   const u = unit.trim().toLowerCase()
-  if (u === 'gw' || u === 'mw') return 'power'
+  if (u === 'gw' || u === 'mw' || u === 'kw') return 'power'
   if (u === 'gwh' || u === 'mwh' || u === 'twh') return 'energy'
   if (u === '%') return 'share'
   if (/bn|billion|mn|million|\$|€|£/.test(u)) return 'money'
   if (isYearUnit(u)) return 'horizon'
   if (u === 'years' || u === 'months' || u === 'days') return 'term'
   return 'count'
+}
+
+/**
+ * A figure's size in its dimension's base unit — MW for power, MWh for
+ * energy, millions for money, the bare number for a share — or null when the
+ * dimension has no scale (a year, a count, a term). 20 GW and 640 MW are the
+ * same kind of quantity written in different units: comparing the numerals
+ * would rank 640 above 20, so both convert first. Units outside a dimension
+ * never meet — a percentage still never sits on a power scale.
+ *
+ * Written to `dc_news.facts.figures[].base` at ingest (classifier v3) and
+ * recomputed here for rows tagged before that.
+ */
+export function figureMagnitude(f: { value: number; unit: string; base?: number | null }): number | null {
+  if (typeof f.base === 'number' && Number.isFinite(f.base)) return f.base
+  const u = f.unit.trim().toLowerCase()
+  switch (figureKind(u)) {
+    case 'power':
+      return u === 'gw' ? f.value * 1000 : u === 'kw' ? f.value / 1000 : f.value
+    case 'energy':
+      return u === 'twh' ? f.value * 1e6 : u === 'gwh' ? f.value * 1000 : f.value
+    case 'share':
+      return f.value
+    case 'money':
+      return /bn|billion/.test(u) ? f.value * 1000 : /mn|million/.test(u) ? f.value : null
+    default:
+      return null
+  }
 }
 
 /** How much a stated figure says on its own: power and dates first, bare counts last. */

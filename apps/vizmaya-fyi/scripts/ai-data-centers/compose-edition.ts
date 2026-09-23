@@ -7,17 +7,26 @@
  * and any data-centre stories from iea_news, and writes ONE structured draft
  * row into dc_editions — the row the public page renders.
  *
- * Hybrid, like the recap worker before it: Gemini writes the prose layer
- * (headline, deck, six key notes, per-layer headline / sub / notes, research
- * headline / sub) in JSON mode. Everything numeric — mood score and counts,
- * geo pins and region bars, the four per-layer visualisations, the energy
- * figures and composition, the field baselines, the tape — is assembled
+ * Hybrid, like the recap worker before it: a model (Claude Opus through the
+ * Vercel AI Gateway by default) writes the prose layer (headline, deck, six
+ * key notes, per-layer headline / sub / notes, research headline / sub) as
+ * typed JSON. Everything numeric — mood score and counts, geo pins and
+ * region bars, the four per-layer visualisations, the energy figures and
+ * composition, the field baselines, the tape — is assembled
  * deterministically from the tagged rows (packages/content-source/src/
  * dcEditionAssembly.ts), never by the model, and every note's lead number is
  * checked against the stories it cites. On any model failure the composer
  * falls back to a deterministic edition (headline from the top theme's lead
  * story, notes from the largest stated figures) and marks
  * model = 'deterministic', so the cron never goes dark.
+ *
+ * A second model pass plans one chart per section (energy + the four AI
+ * layers) from the figures the stories state — a flint spec, grounded row
+ * by row against the cited story, compiled and rendered to SVG here
+ * (editionCharts.ts) and stored on the row. A section whose plan is refused
+ * keeps its deterministic template. --charts-only re-plans the charts on the
+ * existing draft and leaves prose, numbers and edits alone (the admin's
+ * "Regenerate charts").
  *
  * Editor edits on an existing draft survive a recompose unless
  * --clear-edits is passed; every run is appended to composer_runs so the
@@ -27,30 +36,38 @@
  *               pnpm ai-data-centers:compose-edition -- --date 2026-09-22
  *               pnpm ai-data-centers:compose-edition -- --dry-run --out edition.json
  *               pnpm ai-data-centers:compose-edition -- --clear-edits
+ *               pnpm ai-data-centers:compose-edition -- --charts-only
+ *               pnpm ai-data-centers:compose-edition -- --no-charts
  * Run in CI:    .github/workflows/compose-dc-edition.yml (08:15 UTC daily)
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — read dc_news / dc_papers /
  *     dc_places / dc_stocks / dc_stock_prices / iea_news, write dc_editions
- *   GEMINI_API_KEY — optional; enables the prose layer
- *   GEMINI_MODEL   — optional override (default gemini-2.5-flash)
+ *   AI_GATEWAY_API_KEY   — optional; enables the prose layer and the chart planner
+ *   COMPOSER_MODEL       — optional override: a `text.*` alias or a gateway id (default text.opus)
+ *   COMPOSER_CHART_MODEL — optional override for the chart planner only (default = COMPOSER_MODEL)
  *   ADMIN_SESSION_SECRET — optional; signs the revalidate ping when a stale
  *     draft gets published on the way in
  */
 
 import { writeFileSync } from 'node:fs'
-import { GoogleGenAI } from '@google/genai'
+import { z } from 'zod'
 import { config as loadEnv } from 'dotenv'
+import { generateText as gatewayGenerateText } from '@vismay/ai-gateway'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import {
   assembleEditionNumbers,
+  getDraftEdition,
   listDcNewsTagged,
   listDcPapersInWindow,
   listDcPlaces,
   listIeaNewsForEditionWindow,
   publishStaleDrafts,
+  saveDraftCharts,
   upsertDraftEdition,
 } from '@vismay/content-source/dcEditions'
+import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts } from '@vismay/content-source/dcEditionTypes'
+import { chartPlannerModel, planEditionCharts } from './editionCharts'
 import {
   DC_LAYERS,
   DC_LAYER_KEYS,
@@ -77,7 +94,8 @@ import { pingEditionRevalidate } from './revalidate'
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
+/** A `text.*` alias from @vismay/ai-gateway MODELS or a raw gateway id; opus is the editorial default. */
+const COMPOSER_MODEL = process.env.COMPOSER_MODEL || 'text.opus'
 /** Ceiling on stories handed to the model — a busy day lands well under it. */
 const MAX_STORIES = 150
 /** Papers per edition: the gate's top scorers, newest first among ties. */
@@ -89,11 +107,15 @@ interface Args {
   date: string
   dryRun: boolean
   clearEdits: boolean
+  /** Re-plan the charts on the existing draft; prose, numbers and edits untouched. */
+  chartsOnly: boolean
+  /** Skip the chart planner (templates only). */
+  noCharts: boolean
   out: string | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { date: editionDateFor(new Date()), dryRun: false, clearEdits: false, out: null }
+  const args: Args = { date: editionDateFor(new Date()), dryRun: false, clearEdits: false, chartsOnly: false, noCharts: false, out: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--') continue
@@ -103,14 +125,17 @@ function parseArgs(argv: string[]): Args {
       args.date = d
     } else if (a === '--dry-run') args.dryRun = true
     else if (a === '--clear-edits') args.clearEdits = true
+    else if (a === '--charts-only') args.chartsOnly = true
+    else if (a === '--no-charts') args.noCharts = true
     else if (a === '--out') args.out = argv[++i] ?? 'edition.json'
     else throw new Error(`Unknown flag: ${a}`)
   }
+  if (args.chartsOnly && args.noCharts) throw new Error('--charts-only and --no-charts contradict each other')
   return args
 }
 
 // ---------------------------------------------------------------------------
-// Gemini prose layer
+// Prose layer (opus through the AI gateway)
 
 const COMPOSER_SYSTEM = `You are the editor of "AI Data Centers Daily", a frozen morning edition for operators, investors, analysts and policy people who need to know what happened in AI infrastructure yesterday, from every angle, with every claim traceable to a source.
 
@@ -118,7 +143,7 @@ You receive the window's stories (each with an idx, outlet, layer, place, theme,
 
 Write in a plain, specific, newsroom register: no hype, no opinion, no adjectives that are not in the reporting. British or American spelling is fine; be consistent. Never invent facts, numbers, quotes, names or events. Every number you write must appear in the stories you cite for that sentence.
 
-Respond ONLY with valid JSON in this exact shape, no markdown fences:
+Respond with JSON in this exact shape:
 {
   "headline": "The 24-hour headline: one sentence, ≤ 18 words, naming the day's biggest development and, if there is one, the tension beneath it.",
   "sub": "The deck: 2–3 sentences that carry the secondary threads. Mark one clause to emphasise with *asterisks*.",
@@ -150,6 +175,30 @@ Rules:
 - sourceIdxs must be idx values from the input, nothing else.
 - Use the FACTS fields (figures, horizon, action) as the numbers; do not compute new ones.
 - research: write from the papers list only; if it is empty say so plainly.`
+
+const modelNoteSchema = z.object({
+  metric: z.string().nullable().optional(),
+  unit: z.string().nullable().optional(),
+  label: z.string().optional(),
+  text: z.string(),
+  sourceIdxs: z.array(z.number().int()),
+  energy: z.boolean().optional(),
+})
+
+const modelLayerSchema = z.object({
+  headline: z.string(),
+  sub: z.string(),
+  notes: z.array(z.object({ text: z.string(), sourceIdxs: z.array(z.number().int()) })),
+})
+
+/** The prose layer, typed: the gateway constrains the model to this at the provider level. */
+const proseSchema = z.object({
+  headline: z.string(),
+  sub: z.string(),
+  notes: z.array(modelNoteSchema),
+  layers: z.object({ dc: modelLayerSchema, hyper: modelLayerSchema, semi: modelLayerSchema, equip: modelLayerSchema }),
+  research: z.object({ headline: z.string(), sub: z.string() }),
+})
 
 interface ModelNote {
   metric?: unknown
@@ -225,20 +274,6 @@ function buildComposerInput(input: {
       released: p.weightsReleased ? 'weights + code' : p.codeReleased ? 'code only' : 'nothing yet',
       why: p.why,
     })),
-  }
-}
-
-function parseModelJson(raw: string): ModelOutput | null {
-  let text = raw.trim()
-  // JSON mode usually returns clean JSON, but occasionally wraps it in
-  // ```json fences (same tolerance as the recap worker).
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fence) text = fence[1].trim()
-  try {
-    const parsed = JSON.parse(text)
-    return parsed && typeof parsed === 'object' ? (parsed as ModelOutput) : null
-  } catch {
-    return null
   }
 }
 
@@ -318,36 +353,74 @@ function validateModelText(out: ModelOutput, stories: DcEditionStory[], fallback
   }
 }
 
-async function generateText(input: unknown, stories: DcEditionStory[], fallback: EditionText): Promise<EditionText | null> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    console.warn('[compose] GEMINI_API_KEY not set — deterministic edition')
+function gatewayConfigured(): boolean {
+  return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN)
+}
+
+async function generateText(
+  input: unknown,
+  stories: DcEditionStory[],
+  fallback: EditionText,
+): Promise<{ text: EditionText; model: string } | null> {
+  if (!gatewayConfigured()) {
+    console.warn('[compose] AI_GATEWAY_API_KEY not set — deterministic edition')
     return null
   }
-  const genai = new GoogleGenAI({ apiKey })
   try {
-    const res = await genai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${COMPOSER_SYSTEM}\n\nWrite the edition for this window:\n${JSON.stringify(input, null, 1)}` }],
-        },
-      ],
-      config: { responseMimeType: 'application/json', temperature: 0.35 },
+    const res = await gatewayGenerateText({
+      model: COMPOSER_MODEL,
+      system: COMPOSER_SYSTEM,
+      prompt: `Write the edition for this window:\n${JSON.stringify(input, null, 1)}`,
+      schema: proseSchema,
+      temperature: 0.35,
+      maxOutputTokens: 8000,
+      metadata: { 'x-vismay-feature': 'dc-edition-prose' },
     })
-    const parsed = parseModelJson(res.text ?? '')
-    if (!parsed) {
-      console.warn('[compose] model output was not JSON — deterministic edition')
+    const text = validateModelText(res.result as ModelOutput, stories, fallback)
+    if (!text) {
+      console.warn('[compose] model output missing headline/sub — deterministic edition')
       return null
     }
-    const text = validateModelText(parsed, stories, fallback)
-    if (!text) console.warn('[compose] model output missing headline/sub — deterministic edition')
-    return text
+    return { text, model: res.modelUsed || COMPOSER_MODEL }
   } catch (err) {
     console.warn(`[compose] prose generation failed (${err instanceof Error ? err.message : String(err)}) — deterministic edition`)
     return null
   }
+}
+
+/** One line per section for the log and the dry run. */
+function describeCharts(charts: EditionCharts, skips: EditionChartSkip[]): string {
+  return EDITION_CHART_SECTIONS.map((k) => {
+    const c = charts[k]
+    if (c) return `${k}: ${c.spec.chartType} · ${c.spec.rows.length} rows · "${c.title}"`
+    const skip = skips.find((s) => s.section === k)
+    return `${k}: template (${skip?.reason ?? 'no plan'})`
+  }).join('\n  ')
+}
+
+/**
+ * --charts-only: re-plan the charts on the current draft from the stories it
+ * already carries. Prose, numbers, membership and editor edits stay as they
+ * are; only the charts column is rewritten.
+ */
+async function rePlanCharts(args: Args): Promise<void> {
+  const draft = await getDraftEdition()
+  if (!draft) throw new Error('no draft edition to re-plan charts for')
+  if (draft.date !== args.date) console.warn(`[compose] draft is for ${draft.date}, not ${args.date} — re-planning the draft`)
+  console.log(`[compose] re-planning charts for ${draft.date} from ${draft.stories.length} stories + ${draft.ieaStories.length} iea items`)
+  const { charts, skips, modelUsed } = await planEditionCharts({
+    stories: draft.stories,
+    ieaStories: draft.ieaStories,
+    model: chartPlannerModel(),
+    log: (l) => console.log(l),
+  })
+  console.log(`  ${describeCharts(charts, skips)}`)
+  if (args.dryRun) {
+    if (args.out) writeFileSync(args.out, JSON.stringify({ charts, skips }, null, 2), 'utf8')
+    return
+  }
+  await saveDraftCharts({ editionDate: draft.date, charts, chartSkips: skips })
+  console.log(`[compose] charts written · model=${modelUsed ?? 'none'} · ${Object.keys(charts).length} planned, ${skips.length} on templates`)
 }
 
 // ---------------------------------------------------------------------------
@@ -373,6 +446,11 @@ async function main() {
   const { start, end } = editionWindow(args.date)
   const windowLabel = `${start.toISOString().slice(0, 16).replace('T', ' ')} → ${end.toISOString().slice(0, 16).replace('T', ' ')} UTC`
   console.log(`[compose] edition ${args.date} · window ${windowLabel}${args.dryRun ? ' (dry)' : ''}`)
+
+  if (args.chartsOnly) {
+    await rePlanCharts(args)
+    return
+  }
 
   if (!args.dryRun) {
     // One draft at a time: a draft that never got its 09:00 publish (a job
@@ -413,9 +491,20 @@ async function main() {
 
   const modelInput = buildComposerInput({ editionDate: args.date, windowLabel, stories, ieaStories, papers, places: placeMap, numbers })
   const modelText = stories.length > 0 ? await generateText(modelInput, stories, fallback) : null
-  const text = modelText ?? fallback
-  const model = modelText ? GEMINI_MODEL : 'deterministic'
-  const classifierVersion = stories.find((s) => s.layer)?.facts ? 'v2-snapshot-2026-09' : null
+  const text = modelText?.text ?? fallback
+  const model = modelText?.model ?? 'deterministic'
+  // v3 rows carry per-figure status tags; v2 rows only the layer tags.
+  const classifierVersion = stories.some((s) => s.facts?.figures.some((f) => f.status))
+    ? 'v3-figures-2026-09'
+    : stories.find((s) => s.layer)?.facts
+      ? 'v2-snapshot-2026-09'
+      : null
+
+  const chartsRun = args.noCharts || stories.length === 0
+    ? { charts: {} as EditionCharts, skips: EDITION_CHART_SECTIONS.map((section) => ({ section, reason: args.noCharts ? 'chart planner skipped (--no-charts)' : 'no stories' })), modelUsed: null }
+    : gatewayConfigured()
+      ? await planEditionCharts({ stories, ieaStories, model: chartPlannerModel(), log: (l) => console.log(l) })
+      : { charts: {} as EditionCharts, skips: EDITION_CHART_SECTIONS.map((section) => ({ section, reason: 'AI_GATEWAY_API_KEY not set' })), modelUsed: null }
 
   const payload = {
     editionDate: args.date,
@@ -428,6 +517,8 @@ async function main() {
     classifierVersion,
     generatedAt: new Date().toISOString(),
     clearEdits: args.clearEdits,
+    charts: chartsRun.charts,
+    chartSkips: chartsRun.skips,
   }
 
   if (args.out) {
@@ -441,13 +532,14 @@ async function main() {
     for (const k of DC_LAYER_KEYS) console.log(`\n${DC_LAYERS[k].name}: ${text.layers[k].headline} — ${text.layers[k].sub} [${numbers.layerCounts[k]} stories, viz=${numbers.layerViz[k]?.kind ?? 'none'}]`)
     console.log(`\nresearch: ${text.research.headline} — ${text.research.sub}`)
     console.log(`\nmood ${numbers.moodScore} ${JSON.stringify(numbers.moodCounts)} · places ${numbers.geo.places.length} · power ${numbers.energy.hero?.value ?? 0} GW · tape ${numbers.tape.length}`)
+    console.log(`\ncharts (${chartsRun.modelUsed ?? 'no model'}):\n  ${describeCharts(chartsRun.charts, chartsRun.skips)}`)
     return
   }
 
   const draft = await upsertDraftEdition(payload)
   const { layerCounts } = numbers
   console.log(
-    `[compose] draft ${draft.date} written · model=${model} · ${draft.counts.stories} stories (dc ${layerCounts.dc} · hyper ${layerCounts.hyper} · semi ${layerCounts.semi} · equip ${layerCounts.equip}) · ${draft.counts.papers} papers · mood ${draft.moodScore ?? '—'} · auto-publish ${draft.autoPublishAt}`,
+    `[compose] draft ${draft.date} written · model=${model} · ${draft.counts.stories} stories (dc ${layerCounts.dc} · hyper ${layerCounts.hyper} · semi ${layerCounts.semi} · equip ${layerCounts.equip}) · ${draft.counts.papers} papers · mood ${draft.moodScore ?? '—'} · charts ${Object.keys(chartsRun.charts).length}/${EDITION_CHART_SECTIONS.length} · auto-publish ${draft.autoPublishAt}`,
   )
 }
 

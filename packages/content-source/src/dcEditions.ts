@@ -17,7 +17,11 @@
 
 import { createHash } from 'node:crypto'
 import { createServiceClient } from './supabase'
+import { normaliseCharts, normaliseChartSkips, pruneChartsForMembership } from './dcEditionCharts'
 import {
+  DC_FIGURE_SCOPES,
+  DC_FIGURE_STATUSES,
+  EDITION_CHART_SECTIONS,
   DC_LAYER_KEYS,
   EDITION_HOLD_MINUTES,
   editionDateFor,
@@ -41,8 +45,13 @@ import {
   type DcPaperArea,
   type DcPlace,
   type DcRegionKey,
+  type DcFigureScope,
+  type DcFigureStatus,
   type DcStoryFacts,
+  type DcStoryFigure,
   type DcThemeKey,
+  type EditionChartSkip,
+  type EditionCharts,
   type EditionComposerRun,
   type EditionCounts,
   type EditionEnergy,
@@ -88,7 +97,7 @@ const PAPER_COLUMNS =
 const EDITION_SUMMARY_COLUMNS = 'id, number, edition_date, status, headline, sub, counts, mood_score, published_at'
 const EDITION_COLUMNS =
   `${EDITION_SUMMARY_COLUMNS}, window_start, window_end, notes, mood_counts, mood_series, layers, research, ` +
-  'energy, geo, tape, story_ids, paper_ids, iea_ids, model, classifier_version, composer_runs, edited_fields, ' +
+  'energy, geo, tape, charts, chart_skips, story_ids, paper_ids, iea_ids, model, classifier_version, composer_runs, edited_fields, ' +
   'auto_publish_at, hold_count, generated_at, reviewed_by'
 
 function normaliseFacts(raw: unknown): DcStoryFacts | null {
@@ -97,11 +106,20 @@ function normaliseFacts(raw: unknown): DcStoryFacts | null {
   const figures = Array.isArray(r.figures)
     ? r.figures
         .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
-        .map((f) => ({
-          value: Number(f.value),
-          unit: typeof f.unit === 'string' ? f.unit : '',
-          label: typeof f.label === 'string' ? f.label : '',
-        }))
+        .map((f) => {
+          const fig: DcStoryFigure = {
+            value: Number(f.value),
+            unit: typeof f.unit === 'string' ? f.unit : '',
+            label: typeof f.label === 'string' ? f.label : '',
+          }
+          // v3 tags — optional so v2 rows keep their shape.
+          if (typeof f.subject === 'string' && f.subject) fig.subject = f.subject
+          if (typeof f.scope === 'string' && (DC_FIGURE_SCOPES as string[]).includes(f.scope)) fig.scope = f.scope as DcFigureScope
+          if (typeof f.status === 'string' && (DC_FIGURE_STATUSES as string[]).includes(f.status)) fig.status = f.status as DcFigureStatus
+          if (typeof f.base === 'number' && Number.isFinite(f.base)) fig.base = f.base
+          if (typeof f.confidence === 'number' && Number.isFinite(f.confidence)) fig.confidence = f.confidence
+          return fig
+        })
         .filter((f) => Number.isFinite(f.value))
     : []
   const h = r.horizon && typeof r.horizon === 'object' ? (r.horizon as Record<string, unknown>) : null
@@ -219,6 +237,8 @@ function mapEditionRow(r: any): DcEdition {
     energy: { ...emptyEnergy(), ...((r.energy as Partial<EditionEnergy>) ?? {}) },
     geo: { ...emptyGeo(), ...((r.geo as Partial<EditionGeo>) ?? {}) },
     tape: Array.isArray(r.tape) ? (r.tape as EditionTapeTick[]) : [],
+    charts: normaliseCharts(r.charts),
+    chartSkips: normaliseChartSkips(r.chart_skips),
     storyIds: ((r.story_ids as unknown[]) ?? []).map(Number),
     paperIds: (r.paper_ids as string[]) ?? [],
     ieaIds: ((r.iea_ids as unknown[]) ?? []).map(Number),
@@ -748,6 +768,9 @@ export interface DraftUpsert {
   generatedAt: string
   /** When true, editor edits on an existing draft are dropped. */
   clearEdits?: boolean
+  /** Composer-planned charts; omitted = keep whatever the existing draft carries. */
+  charts?: EditionCharts
+  chartSkips?: EditionChartSkip[]
 }
 
 function layersColumn(text: EditionText, numbers: EditionNumbers): Record<DcLayerKey, EditionLayer> {
@@ -832,6 +855,8 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
     energy: n.energy,
     geo: n.geo,
     tape: n.tape,
+    charts: input.charts ?? existing?.charts ?? {},
+    chart_skips: input.chartSkips ?? existing?.chartSkips ?? [],
     counts: n.counts,
     story_ids: input.storyIds,
     paper_ids: input.paperIds,
@@ -850,6 +875,23 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
   const { data, error } = await q
   if (error) throw new Error(`upsertDraftEdition write: ${error.message}`)
   return mapEditionRow(data)
+}
+
+/**
+ * Replace the draft's planned charts only — the composer's `--charts-only`
+ * path (and the admin's "Regenerate charts"). Prose, numbers, membership and
+ * editor edits are untouched. A published row is never written.
+ */
+export async function saveDraftCharts(input: { editionDate: string; charts: EditionCharts; chartSkips: EditionChartSkip[] }): Promise<void> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_editions')
+    .update({ charts: input.charts, chart_skips: input.chartSkips })
+    .eq('edition_date', input.editionDate)
+    .eq('status', 'draft')
+    .select('id')
+  if (error) throw new Error(`saveDraftCharts: ${error.message}`)
+  if (!data?.length) throw new Error(`saveDraftCharts: no draft for ${input.editionDate} (published editions are frozen)`)
 }
 
 // ---------------------------------------------------------------------------
@@ -1009,12 +1051,21 @@ export async function setDraftMembership(input: { storyIds?: number[]; paperIds?
 
   const layers = { ...draft.layers }
   for (const k of DC_LAYER_KEYS) layers[k] = { ...draft.layers[k], count: numbers.layerCounts[k], viz: numbers.layerViz[k] }
+  // A chart that quoted a dropped story goes with it; its section falls back to the template.
+  const charts = pruneChartsForMembership(draft.charts, storyIds, draft.ieaIds)
+  const dropped = EDITION_CHART_SECTIONS.filter((k) => draft.charts[k] && !charts[k])
+  const chartSkips = [
+    ...draft.chartSkips.filter((k) => !dropped.includes(k.section)),
+    ...dropped.map((section) => ({ section, reason: 'a story the chart quoted was removed from the edition' })),
+  ]
   const sb = createServiceClient()
   const { error } = await sb
     .from('dc_editions')
     .update({
       story_ids: storyIds,
       paper_ids: paperIds,
+      charts,
+      chart_skips: chartSkips,
       mood_score: numbers.moodScore,
       mood_counts: numbers.moodCounts,
       mood_series: numbers.moodSeries,
