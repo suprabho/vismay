@@ -59,7 +59,7 @@ html:has(.dcd){scroll-behavior:smooth}
   html:has(.dcd){scroll-behavior:auto}
 }
 /* ---------- masthead ---------- */
-.dcd .mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.dcd .mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .dcd .mast-row{display:flex;align-items:center;gap:16px;min-height:56px;padding-inline:var(--gutter);max-width:1280px;margin-inline:auto}
 .dcd .brand{display:flex;align-items:center;gap:10px;white-space:nowrap;flex-shrink:0}
 .dcd .brand .wordmark{display:inline-flex;align-items:center}
