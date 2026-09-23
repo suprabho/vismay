@@ -197,7 +197,17 @@ export const EVENT_MATCH = {
    * data center" still count as a mention.
    */
   disjointActors: -0.5,
-  /** The same power / energy / money figure about the same thing: "$1M fine" from three wires. */
+  /**
+   * Both name organisations (v4 actors) and one name is shared ("JPMorgan
+   * Chase" / "JPMorgan"): rewording of one development scores 0.25–0.45 on the
+   * text alone, and the shared company is what separates it from lookalikes.
+   */
+  sharedActor: 0.15,
+  /**
+   * The same power / energy / money figure — "$1M fine" from three wires. From
+   * the classifier's figures (same subject or label), or the same canonical
+   * figure in both headlines/event lines ("$189M" and "$189 million").
+   */
   sharedFigure: 0.12,
   samePlace: 0.05,
   differentPlace: -0.3,
@@ -325,6 +335,27 @@ function sharesFigure(a: DcEditionStory, b: DcEditionStory): boolean {
   return false
 }
 
+/** A canonical money / power / energy token from eventTokens ("usd:189", "mw:2000") — not percentages, which templated market headlines share. */
+const FIGURE_TOKEN = /^(usd|eur|gbp|mw|mwh):/
+
+function sharesFigureToken(a: EventDoc, b: EventDoc): boolean {
+  for (const t of a.tokens.keys()) if (FIGURE_TOKEN.test(t) && b.tokens.has(t)) return true
+  return false
+}
+
+// Words in organisation names that don't identify one: "LG Electronics" and
+// "Tata Electronics", "3 E Network Group Limited" and "Adani Group".
+const ACTOR_GENERIC = new Set([
+  'group', 'limited', 'ltd', 'inc', 'corp', 'corporation', 'co', 'llc', 'plc', 'sa', 'ag', 'nv', 'se', 'holding',
+  'electronic', 'system', 'solution', 'service', 'energy', 'power', 'capital', 'partner', 'global', 'international',
+  'industry', 'semiconductor', 'microelectronic', 'cloud', 'department', 'state', 'government', 'us', 'university',
+])
+
+/** Do the two stories' own actor lists share an organisation name? */
+function sharesActor(a: EventDoc, b: EventDoc): boolean {
+  return a.actors.some((toks) => [...toks].some((t) => !ACTOR_GENERIC.has(t) && b.actors.some((bt) => bt.has(t))))
+}
+
 interface EventDoc {
   story: DcEditionStory
   tokens: Map<string, number>
@@ -372,8 +403,11 @@ function pairMargin(a: EventDoc, b: EventDoc): number {
   const sa = a.story
   const sb = b.story
   if (sa.tickers.length > 0 && sb.tickers.length > 0 && !sa.tickers.some((t) => sb.tickers.includes(t))) sim += EVENT_MATCH.disjointTickers
-  if (a.actors.length > 0 && b.actors.length > 0 && !mentionsActorOf(a, b) && !mentionsActorOf(b, a)) sim += EVENT_MATCH.disjointActors
-  if (sharesFigure(sa, sb)) sim += EVENT_MATCH.sharedFigure
+  if (a.actors.length > 0 && b.actors.length > 0) {
+    if (sharesActor(a, b)) sim += EVENT_MATCH.sharedActor
+    else if (!mentionsActorOf(a, b) && !mentionsActorOf(b, a)) sim += EVENT_MATCH.disjointActors
+  }
+  if (sharesFigure(sa, sb) || sharesFigureToken(a, b)) sim += EVENT_MATCH.sharedFigure
   if (sa.place && sb.place) sim += sa.place === sb.place ? EVENT_MATCH.samePlace : EVENT_MATCH.differentPlace
   if (a.outlet && a.outlet === b.outlet) sim += EVENT_MATCH.sameOutlet
   return sim - threshold

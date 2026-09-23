@@ -107,6 +107,41 @@ async function withTaggedColumns<T>(run: (cols: string) => PromiseLike<{ data: T
   return res
 }
 
+/** PostgREST `max_rows` ceiling — a select returns at most this many rows whatever `.limit()` asks for. */
+const DC_NEWS_PAGE_SIZE = 1000
+/** Hard stop on paging (20k rows), so a runaway table can't hang a compose. */
+const DC_NEWS_MAX_PAGES = 20
+
+/**
+ * Every relevant tagged dc_news row in [start, end), paged past max_rows.
+ * 30 days of the feed is ~4k rows; a single `.limit(5000)` silently returned
+ * an arbitrary 1,000 of them, so the clustering IDF and the re-scored history
+ * days saw a quarter of the month.
+ */
+async function listDcNewsTaggedAll(start: string, end: string): Promise<{ data: unknown[]; error: { message: string } | null }> {
+  const sb = createServiceClient()
+  const rows: unknown[] = []
+  for (let page = 0; page < DC_NEWS_MAX_PAGES; page++) {
+    const { data, error } = await withTaggedColumns((cols) =>
+      sb
+        .from('dc_news')
+        .select(cols)
+        .eq('relevant', true)
+        .gte('published_at', start)
+        .lt('published_at', end)
+        // Stable order so pages neither skip nor repeat rows.
+        .order('published_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(rows.length, rows.length + DC_NEWS_PAGE_SIZE - 1),
+    )
+    if (error) return { data: rows, error }
+    const batch = (data ?? []) as unknown[]
+    if (batch.length === 0) break
+    rows.push(...batch)
+  }
+  return { data: rows, error: null }
+}
+
 const PAPER_COLUMNS =
   'arxiv_id, title, abstract, authors, affiliations, kind, category, area, bench, baseline, result, ' +
   'unit, compute_bucket, scale, weights_released, code_released, why, tags, importance, relevant, published_at'
@@ -683,15 +718,7 @@ export async function assembleEditionNumbers(input: {
       console.warn(`[editions] tape unavailable (${err instanceof Error ? err.message : err})`)
       return [] as EditionTapeTick[]
     }),
-    withTaggedColumns((cols) =>
-      sb
-        .from('dc_news')
-        .select(cols)
-        .eq('relevant', true)
-        .gte('published_at', historyStart.toISOString())
-        .lt('published_at', start.toISOString())
-        .limit(5000),
-    ),
+    listDcNewsTaggedAll(historyStart.toISOString(), start.toISOString()),
     sb
       .from('dc_editions')
       .select('edition_date, mood_score, mood_counts, energy')
