@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { DcEditionStory, DcPaper, DcPaperArea, EditionGeo } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionStory, DcPaper, DcPaperArea, EditionGeo, EditionMoodEvent } from '@vismay/content-source/dcEditionTypes'
 import {
   DC_COMPUTE_BUCKETS,
   DC_LAYERS,
@@ -13,7 +13,7 @@ import {
   type DcRegionKey,
   type DcThemeKey,
 } from '@vismay/content-source/dcEditionTypes'
-import { arxivUrl, domainOf, paperGainDetail, timeHm } from '@vismay/content-source/dcEditionAssembly'
+import { arxivUrl, domainOf, paperGainDetail, resolveMoodEvents, timeHm, type ResolvedMoodEvent } from '@vismay/content-source/dcEditionAssembly'
 import { PANEL_EVENT, storyMinutes } from './editionUtils'
 
 export interface PanelData {
@@ -24,6 +24,12 @@ export interface PanelData {
   layers: Record<DcLayerKey, { headline: string; sub: string }>
   fieldBaseline: Record<DcPaperArea, number>
   energyCount: number
+  /**
+   * The Doom v Boom events (boom and doom only — neutral ones never reach a
+   * mood panel). Absent on editions composed before events-v1, whose mood
+   * panels list stories one by one.
+   */
+  moodEvents?: EditionMoodEvent[]
 }
 
 interface Spec {
@@ -190,7 +196,10 @@ export default function StoryPanel({ data }: { data: PanelData }) {
 // ---------------------------------------------------------------------------
 // Panel content
 
-function StoryRow({ s }: { s: DcEditionStory }) {
+const gradeText = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+
+/** `event` + `also`: one Doom v Boom event — the lead report, the other outlets' reports linked under it. */
+function StoryRow({ s, event, also = [] }: { s: DcEditionStory; event?: EditionMoodEvent; also?: DcEditionStory[] }) {
   return (
     <div className="story">
       <div className="t">
@@ -210,10 +219,43 @@ function StoryRow({ s }: { s: DcEditionStory }) {
             {t}
           </span>
         ))}
+        {event && (
+          <span className="chip" title="Relevance × impact × coverage sets this event's pull on the reading">
+            Impact {gradeText(event.i)} · {event.outlets} outlet{event.outlets === 1 ? '' : 's'}
+          </span>
+        )}
         <span className="src-mini">{domainOf(s.url)} ↗</span>
       </div>
+      {also.length > 0 && (
+        <div className="also">
+          <span>Also:</span>
+          {also.map((o) => (
+            <a key={`${o.kind}-${o.id}`} href={o.url} target="_blank" rel="noopener">
+              {o.source ?? domainOf(o.url)}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   )
+}
+
+/** The doom or boom side as events, heaviest first: one row per development, however many outlets ran it. */
+function moodEventPanel(eyebrow: string, title: string, events: ResolvedMoodEvent[], what: string): Spec {
+  const reports = events.reduce((n, e) => n + 1 + e.others.length, 0)
+  return {
+    eyebrow,
+    title,
+    sub: `${events.length} event${events.length === 1 ? '' : 's'}${reports > events.length ? ` from ${reports} reports` : ''}, heaviest first — ${what}, each counted once and weighted by relevance × impact`,
+    body: (
+      <>
+        {events.length === 0 && <p className="notice">No stories match this view.</p>}
+        {events.map(({ event, lead, others }) => (
+          <StoryRow s={lead} event={event} also={others} key={`ev-${event.lead}`} />
+        ))}
+      </>
+    ),
+  }
 }
 
 function listPanel(eyebrow: string, title: string, stories: DcEditionStory[], sub?: string): Spec {
@@ -275,6 +317,14 @@ function buildSpec(key: string, data: PanelData): Spec | null {
     }
     case 'mood': {
       const v = val === 'boom' ? 1 : -1
+      if (data.moodEvents) {
+        return moodEventPanel(
+          `Doom v Boom · ${v > 0 ? 'boom side' : 'doom side'}`,
+          v > 0 ? 'What pushed the needle toward Boom' : 'What pushed the needle toward Doom',
+          resolveMoodEvents(data.moodEvents, stories, v > 0 ? 'boom' : 'doom'),
+          v > 0 ? 'expansion, demand, deals and capacity' : 'freezes, pauses, warnings and grid strain',
+        )
+      }
       return listPanel(
         `Doom v Boom · ${v > 0 ? 'boom side' : 'doom side'}`,
         v > 0 ? 'What pushed the needle toward Boom' : 'What pushed the needle toward Doom',

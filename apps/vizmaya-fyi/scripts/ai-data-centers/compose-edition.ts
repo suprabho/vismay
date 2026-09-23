@@ -66,7 +66,7 @@ import {
   saveDraftCharts,
   upsertDraftEdition,
 } from '@vismay/content-source/dcEditions'
-import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts } from '@vismay/content-source/dcEditionTypes'
+import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts, type EditionMoodEvent } from '@vismay/content-source/dcEditionTypes'
 import { chartPlannerModel, planEditionCharts } from './editionCharts'
 import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 import {
@@ -74,6 +74,7 @@ import {
   DC_LAYER_KEYS,
   DC_PAPER_AREAS,
   DC_REGIONS,
+  DC_CLASSIFIER_VERSION,
   DC_THEMES,
   editionDateFor,
   editionWindow,
@@ -239,7 +240,8 @@ function buildComposerInput(input: {
     window: input.windowLabel,
     computed: {
       moodScore: numbers.moodScore,
-      moodCounts: numbers.moodCounts,
+      // Events per side, not the stored event list — the prose model needs the balance, not 150 ids.
+      moodCounts: { boom: numbers.moodCounts.boom, doom: numbers.moodCounts.doom, neutral: numbers.moodCounts.neutral },
       storiesByLayer: numbers.layerCounts,
       topPlaces: numbers.geo.places.slice(0, 6).map((p) => `${p.name} (${p.count})`),
       powerCommittedGw: numbers.energy.hero?.value ?? 0,
@@ -389,6 +391,31 @@ async function generateText(
   }
 }
 
+/**
+ * The Doom v Boom events for the dry run: every grouped report (so the
+ * EVENT_MATCH constants can be calibrated against a real window) and the
+ * heaviest events per side.
+ */
+function describeMoodEvents(events: EditionMoodEvent[], stories: DcEditionStory[]): string {
+  const byId = new Map(stories.map((s) => [s.id, s]))
+  const line = (e: EditionMoodEvent) => {
+    const mood = e.mood === 1 ? 'boom' : e.mood === -1 ? 'doom' : e.mixed ? 'mixed' : 'neutral'
+    const lead = byId.get(e.lead)
+    return `  [${mood} w${e.w} R${e.r}·I${e.i} ×${e.outlets}] ${lead?.title ?? `#${e.lead}`} (${lead?.source ?? '?'})`
+  }
+  const grouped = events.filter((e) => e.ids.length > 1)
+  const out = [`events: ${events.length} from ${stories.length} stories · ${grouped.length} grouped`]
+  for (const e of grouped) {
+    out.push(line(e))
+    for (const id of e.ids.slice(1)) out.push(`      + ${byId.get(id)?.title ?? `#${id}`} (${byId.get(id)?.source ?? '?'})`)
+  }
+  for (const side of [1, -1] as const) {
+    out.push(`heaviest ${side === 1 ? 'boom' : 'doom'}:`)
+    for (const e of events.filter((x) => x.mood === side).slice(0, 5)) out.push(line(e))
+  }
+  return out.join('\n')
+}
+
 /** One line per section for the log and the dry run. */
 function describeCharts(charts: EditionCharts, skips: EditionChartSkip[]): string {
   return EDITION_CHART_SECTIONS.map((k) => {
@@ -523,8 +550,11 @@ async function main() {
   const modelText = stories.length > 0 ? await generateText(modelInput, stories, fallback) : null
   const text = modelText?.text ?? fallback
   const model = modelText?.model ?? 'deterministic'
-  // v3 rows carry per-figure status tags; v2 rows only the layer tags.
-  const classifierVersion = stories.some((s) => s.facts?.figures.some((f) => f.status))
+  // v4 rows carry the Doom v Boom grades + event line; v3 rows per-figure
+  // status tags; v2 rows only the layer tags.
+  const classifierVersion = stories.some((s) => s.impact != null || !!s.event)
+    ? DC_CLASSIFIER_VERSION
+    : stories.some((s) => s.facts?.figures.some((f) => f.status))
     ? 'v3-figures-2026-09'
     : stories.find((s) => s.layer)?.facts
       ? 'v2-snapshot-2026-09'
@@ -571,7 +601,9 @@ async function main() {
     text.notes.forEach((n, i) => console.log(`note ${i + 1}: [${n.metric ?? '—'}${n.unit ? ` ${n.unit}` : ''}] ${n.label} — ${n.text} (${n.sources.map((s) => s.name).join(', ')})`))
     for (const k of DC_LAYER_KEYS) console.log(`\n${DC_LAYERS[k].name}: ${text.layers[k].headline} — ${text.layers[k].sub} [${numbers.layerCounts[k]} stories, viz=${numbers.layerViz[k]?.kind ?? 'none'}]`)
     console.log(`\nresearch: ${text.research.headline} — ${text.research.sub}`)
-    console.log(`\nmood ${numbers.moodScore} ${JSON.stringify(numbers.moodCounts)} · places ${numbers.geo.places.length} · power ${numbers.energy.hero?.value ?? 0} GW · tape ${numbers.tape.length}`)
+    const { events = [], ...moodTotals } = numbers.moodCounts
+    console.log(`\nmood ${numbers.moodScore} ${JSON.stringify(moodTotals)} · places ${numbers.geo.places.length} · power ${numbers.energy.hero?.value ?? 0} GW · tape ${numbers.tape.length}`)
+    console.log(`\n${describeMoodEvents(events, stories)}`)
     console.log(`\ncharts (${chartsRun.modelUsed ?? 'no model'}):\n  ${describeCharts(chartsRun.charts, chartsRun.skips)}`)
     return
   }

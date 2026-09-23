@@ -16,7 +16,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { createServiceClient } from './supabase'
+import { createServiceClient, isMissingColumnError } from './supabase'
 import { normaliseCharts, normaliseChartSkips, pruneChartsForMembership } from './dcEditionCharts'
 import {
   DC_FIGURE_SCOPES,
@@ -24,6 +24,7 @@ import {
   EDITION_CHART_SECTIONS,
   DC_LAYER_KEYS,
   EDITION_HOLD_MINUTES,
+  MOOD_METHOD,
   editionDateFor,
   editionPublishAt,
   editionWindow,
@@ -72,12 +73,13 @@ import {
   buildEnergy,
   buildGeo,
   buildLayerViz,
+  buildIdf,
   buildTape,
   decimalYear,
   fieldBaseline,
   flattenText,
   powerCommitted,
-  scoreMood,
+  scoreMoodEvents,
   type StockName,
 } from './dcEditionAssembly'
 
@@ -86,9 +88,24 @@ type Sb = ReturnType<typeof createServiceClient>
 // ---------------------------------------------------------------------------
 // Column lists + row mappers
 
-export const DC_NEWS_TAGGED_COLUMNS =
+/** The tag columns before classifier v4 — reads fall back to these until migration 080 is applied. */
+const DC_NEWS_TAGGED_COLUMNS_V3 =
   'id, source_url, title, summary, source, published_at, topics, tickers, ' +
   'layer, place, region, theme, mood, energy, facts'
+
+/** v4 adds the Doom v Boom grades and the event line + actors the clustering reads (migration 080). */
+export const DC_NEWS_TAGGED_COLUMNS = `${DC_NEWS_TAGGED_COLUMNS_V3}, relevance, impact, event, actors`
+
+/**
+ * Run a dc_news read with the v4 columns, retrying with the v3 list when the
+ * code is deployed ahead of migration 080: the edition then scores ungraded
+ * events (weight as 3/3) instead of failing to render.
+ */
+async function withTaggedColumns<T>(run: (cols: string) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>) {
+  let res = await run(DC_NEWS_TAGGED_COLUMNS)
+  if (res.error && isMissingColumnError(res.error)) res = await run(DC_NEWS_TAGGED_COLUMNS_V3)
+  return res
+}
 
 const PAPER_COLUMNS =
   'arxiv_id, title, abstract, authors, affiliations, kind, category, area, bench, baseline, result, ' +
@@ -152,6 +169,10 @@ export function mapDcStoryRow(r: any, kind: 'news' | 'iea' = 'news'): DcEditionS
     energy: kind === 'iea' ? true : Boolean(r.energy),
     facts: normaliseFacts(r.facts),
     kind,
+    relevance: r.relevance == null ? null : Number(r.relevance),
+    impact: r.impact == null ? null : Number(r.impact),
+    event: typeof r.event === 'string' && r.event.trim() ? r.event.trim() : null,
+    actors: Array.isArray(r.actors) ? (r.actors as unknown[]).filter((a): a is string => typeof a === 'string' && !!a.trim()) : [],
   }
 }
 
@@ -281,14 +302,16 @@ export async function listDcNewsTagged(opts: {
   limit?: number
 }): Promise<DcEditionStory[]> {
   const sb = createServiceClient()
-  const { data, error } = await sb
-    .from('dc_news')
-    .select(DC_NEWS_TAGGED_COLUMNS)
-    .eq('relevant', true)
-    .gte('published_at', opts.start)
-    .lt('published_at', opts.end)
-    .order('published_at', { ascending: false })
-    .limit(opts.limit ?? 200)
+  const { data, error } = await withTaggedColumns((cols) =>
+    sb
+      .from('dc_news')
+      .select(cols)
+      .eq('relevant', true)
+      .gte('published_at', opts.start)
+      .lt('published_at', opts.end)
+      .order('published_at', { ascending: false })
+      .limit(opts.limit ?? 200),
+  )
   if (error) throw new Error(`listDcNewsTagged: ${error.message}`)
   return (data ?? []).map((r) => mapDcStoryRow(r))
 }
@@ -298,10 +321,7 @@ export async function listDcNewsByIds(ids: number[]): Promise<DcEditionStory[]> 
   const sb = createServiceClient()
   const out: DcEditionStory[] = []
   for (let i = 0; i < ids.length; i += 200) {
-    const { data, error } = await sb
-      .from('dc_news')
-      .select(DC_NEWS_TAGGED_COLUMNS)
-      .in('id', ids.slice(i, i + 200))
+    const { data, error } = await withTaggedColumns((cols) => sb.from('dc_news').select(cols).in('id', ids.slice(i, i + 200)))
     if (error) throw new Error(`listDcNewsByIds: ${error.message}`)
     out.push(...(data ?? []).map((r) => mapDcStoryRow(r)))
   }
@@ -663,16 +683,18 @@ export async function assembleEditionNumbers(input: {
       console.warn(`[editions] tape unavailable (${err instanceof Error ? err.message : err})`)
       return [] as EditionTapeTick[]
     }),
-    sb
-      .from('dc_news')
-      .select(DC_NEWS_TAGGED_COLUMNS)
-      .eq('relevant', true)
-      .gte('published_at', historyStart.toISOString())
-      .lt('published_at', start.toISOString())
-      .limit(5000),
+    withTaggedColumns((cols) =>
+      sb
+        .from('dc_news')
+        .select(cols)
+        .eq('relevant', true)
+        .gte('published_at', historyStart.toISOString())
+        .lt('published_at', start.toISOString())
+        .limit(5000),
+    ),
     sb
       .from('dc_editions')
-      .select('edition_date, mood_score, energy')
+      .select('edition_date, mood_score, mood_counts, energy')
       .eq('status', 'published')
       .gte('edition_date', historyStart.toISOString().slice(0, 10))
       .lt('edition_date', editionDate),
@@ -694,21 +716,27 @@ export async function assembleEditionNumbers(input: {
   // Daily history: a published edition's frozen reading wins; otherwise the
   // tagged feed bucketed by edition window.
   const byDay = new Map<string, DcEditionStory[]>()
+  const historyStories: DcEditionStory[] = []
   for (const r of historyRowsR.data ?? []) {
     const story = mapDcStoryRow(r)
+    historyStories.push(story)
     const day = editionDateFor(new Date(story.publishedAt))
     const arr = byDay.get(day) ?? []
     arr.push(story)
     byDay.set(day, arr)
   }
-  const published = new Map<string, { score: number | null; gw: number | null }>()
-  for (const r of (publishedR.data ?? []) as { edition_date: string; mood_score: unknown; energy: { hero?: { value?: number } | null } | null }[]) {
+  // The clustering's IDF: 30 days of the feed plus the window, so a quiet day
+  // still knows which words are common in this beat.
+  const idf = buildIdf([...historyStories, ...stories])
+  const published = new Map<string, { score: number | null; sameMethod: boolean; gw: number | null }>()
+  for (const r of (publishedR.data ?? []) as { edition_date: string; mood_score: unknown; mood_counts: { method?: string } | null; energy: { hero?: { value?: number } | null } | null }[]) {
     // No hero figure means that edition disclosed no power at all. Keep it as
     // null so the history chart can draw the gap; 0 would read as "disclosed,
     // and it was nothing".
     const hero = r.energy?.hero?.value
     published.set(r.edition_date, {
       score: r.mood_score == null ? null : Number(r.mood_score),
+      sameMethod: r.mood_counts?.method === MOOD_METHOD,
       gw: hero == null ? null : Number(hero) || null,
     })
   }
@@ -718,7 +746,10 @@ export async function assembleEditionNumbers(input: {
     const d = new Date(end.getTime() - i * 86_400_000).toISOString().slice(0, 10)
     const pub = published.get(d)
     const dayStories = byDay.get(d) ?? []
-    moodSeries.push({ date: d, score: pub ? pub.score : scoreMood(dayStories).score })
+    // A frozen reading counts only when it was measured the same way (events,
+    // weighted); older editions counted stories, so their day is re-read from
+    // the feed and the 7- and 30-day ticks compare like with like.
+    moodSeries.push({ date: d, score: pub?.sameMethod ? pub.score : scoreMoodEvents(dayStories, { idf }).score })
     if (i <= 6) {
       const committed = pub ? null : powerCommitted(dayStories, placeMap, stockMap)
       powerHistory.push({
@@ -728,7 +759,7 @@ export async function assembleEditionNumbers(input: {
       })
     }
   }
-  const mood = scoreMood(stories)
+  const mood = scoreMoodEvents(stories, { idf })
   moodSeries.push({ date: editionDate, score: mood.score })
 
   const today = decimalYear(editionDate)

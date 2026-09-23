@@ -212,6 +212,9 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .story .by{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-family:var(--mono);font-size:11px;color:var(--dim)}
 .dcd .story .by .outlet{color:var(--muted)}
 .dcd .story .when{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:3px}
+.dcd .story .also{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 10px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.dcd .story .also a{color:var(--muted)}
+.dcd .story .also a:hover{color:var(--accent-hi)}
 .dcd .src-mini{color:var(--accent-lo)}
 .dcd .chips{display:flex;flex-wrap:wrap;gap:5px}
 .dcd .chip{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:4px;background:var(--elevated);color:var(--muted);border:1px solid var(--line)}
@@ -515,6 +518,9 @@ body.dcd-panel-open{overflow:hidden}
 .dcd .drv span{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
 .dcd .drv.doom:hover{border-left-color:var(--doom)}
 .dcd .drv.boom:hover{border-left-color:var(--boom)}
+.dcd .drv .drv-more{font-style:normal;color:var(--muted)}
+.dcd .db-share{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:-4px}
+.dcd .db-note{color:var(--dim)}
 .dcd .pill.mood .dot{background:var(--line-strong);box-shadow:none}
 .dcd .pill.mood.boom .dot{background:var(--boom);box-shadow:0 0 0 3px color-mix(in srgb,var(--boom) 18%,transparent)}
 .dcd .pill.mood.doom .dot{background:var(--doom);box-shadow:0 0 0 3px color-mix(in srgb,var(--doom) 18%,transparent)}

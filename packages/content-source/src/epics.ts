@@ -8,7 +8,7 @@
  * Schema: supabase/vizmaya-fyi/migrations/015_epics_iea.sql
  */
 
-import { createBrowserClient, createServiceClient } from './supabase'
+import { createBrowserClient, createServiceClient, isMissingColumnError } from './supabase'
 
 export interface Epic {
   slug: string
@@ -31,13 +31,9 @@ const EPIC_BASE_COLUMNS = 'slug, name, description, landing_component, theme, ap
 const EPIC_PILLAR_COLUMNS = 'explainer, takeaways, keywords, date_published, date_modified'
 const EPIC_COLUMNS = `${EPIC_BASE_COLUMNS}, ${EPIC_PILLAR_COLUMNS}`
 
-// Postgres "undefined column" (42703). Lets epic reads degrade gracefully when
+// isMissingColumnError (./supabase) lets epic reads degrade gracefully when
 // the code is deployed ahead of migration 058 — the pillar fields just read as
 // empty rather than 500-ing the existing epic landings.
-function isMissingColumnError(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false
-  return error.code === '42703' || /column .* does not exist/i.test(error.message ?? '')
-}
 
 function mapEpicRow(data: any): Epic {
   return {

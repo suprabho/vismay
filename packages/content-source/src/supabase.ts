@@ -29,3 +29,13 @@ export function createServiceClient() {
 
   return createClient(url, serviceKey)
 }
+
+/**
+ * Postgres "undefined column" (42703). Lets a read degrade gracefully when
+ * the code is deployed ahead of the migration that adds the column — retry
+ * with the older column list instead of 500-ing the page.
+ */
+export function isMissingColumnError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return error.code === '42703' || /column .* does not exist/i.test(error.message ?? '')
+}

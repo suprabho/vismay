@@ -1,6 +1,6 @@
 import type { DcEditionStory, EditionMoodCounts, EditionMoodPoint } from '@vismay/content-source/dcEditionTypes'
 import { formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
-import { moodDrivers } from '@vismay/content-source/dcEditionAssembly'
+import { eventDrivers, moodDrivers } from '@vismay/content-source/dcEditionAssembly'
 import { hm } from './editionUtils'
 
 interface Props {
@@ -15,11 +15,24 @@ function avg(values: number[]): number | null {
   return values.reduce((a, b) => a + b, 0) / values.length
 }
 
+interface Driver {
+  key: number
+  url: string
+  title: string
+  source: string | null
+  publishedAt: string
+  /** Other outlets' reports of the same event. */
+  also: string[]
+}
+
 /**
- * Chapter I — the day's mood in one reading, scored story by story:
- * reading = (boom − doom) / (boom + doom). Server-rendered SVG: the meter
- * with 7- and 30-day ghost ticks, and the top three drivers per side. Both
- * sides open the panel (`mood:boom` / `mood:doom`).
+ * Chapter I — the day's mood in one reading. Reports of one development are
+ * grouped into an event and counted once, each event weighted by relevance ×
+ * impact × coverage: reading = (W_boom − W_doom) / (W_boom + W_doom).
+ * Server-rendered SVG: the meter with 7- and 30-day ghost ticks, then per
+ * side the event count, its share of the weight and the three heaviest
+ * events. Both sides open the panel (`mood:boom` / `mood:doom`). Editions
+ * composed before events-v1 carry no events and read story by story.
  */
 export default function DoomBoomMeter({ score, counts, series, stories }: Props) {
   const hist = series.map((p) => p.score).filter((v): v is number => v != null)
@@ -27,8 +40,28 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
   const d30 = avg(hist)
   const tone = moodTone(score)
   const word = moodWord(score)
-  const boom = moodDrivers(stories, 'boom')
-  const doom = moodDrivers(stories, 'doom')
+  const events = counts.method === 'events-v1' ? counts.events : undefined
+  const pick = (side: 'boom' | 'doom'): Driver[] =>
+    events
+      ? eventDrivers(events, stories, side).map(({ lead, others }) => ({
+          key: lead.id,
+          url: lead.url,
+          title: lead.title,
+          source: lead.source,
+          publishedAt: lead.publishedAt,
+          also: others.map((o) => o.source ?? '—'),
+        }))
+      : moodDrivers(stories, side).map((s) => ({ key: s.id, url: s.url, title: s.title, source: s.source, publishedAt: s.publishedAt, also: [] }))
+  const boom = pick('boom')
+  const doom = pick('doom')
+  const weight = events ? counts.weight : undefined
+  const totalWeight = weight ? weight.boom + weight.doom : 0
+  const share = (side: 'boom' | 'doom') => {
+    if (!weight || totalWeight <= 0) return null
+    const reports = counts.stories?.[side] ?? 0
+    const pct = Math.round((weight[side] / totalWeight) * 100)
+    return `${pct}% of the weight${reports > counts[side] ? ` · from ${reports} reports` : ''}`
+  }
 
   const W = 1000
   const H = 120
@@ -37,15 +70,26 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
   const ty = 52
   const cx = (v: number) => L + ((v + 1) / 2) * (W - L - R)
 
-  const drivers = (list: DcEditionStory[], cls: 'boom' | 'doom') =>
-    list.map((s) => (
-      <a key={s.id} href={s.url} target="_blank" rel="noopener" className={`drv ${cls}`} data-panel-ignore="">
-        <b>{s.title}</b>
+  const drivers = (list: Driver[], cls: 'boom' | 'doom') =>
+    list.map((d) => (
+      <a
+        key={d.key}
+        href={d.url}
+        target="_blank"
+        rel="noopener"
+        className={`drv ${cls}`}
+        data-panel-ignore=""
+        title={d.also.length ? `Also reported by ${d.also.join(', ')}` : undefined}
+      >
+        <b>{d.title}</b>
         <span>
-          {s.source ?? '—'} · {hm(s.publishedAt)}
+          {d.source ?? '—'}
+          {d.also.length > 0 && <em className="drv-more"> +{d.also.length}</em>} · {hm(d.publishedAt)}
         </span>
       </a>
     ))
+  const boomShareText = share('boom')
+  const doomShareText = share('doom')
 
   return (
     <div className="gcard wide db" id="doomboom">
@@ -67,6 +111,7 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
             <i className="mid" />
             Neutral, excluded
           </span>
+          {events && <span className="db-note">Each event counts once, weighted by relevance × impact</span>}
         </div>
       </div>
 
@@ -135,6 +180,7 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
             {counts.doom}
             <small>doom stories</small>
           </span>
+          {doomShareText && <span className="db-share">{doomShareText}</span>}
           <span className="db-drivers">{drivers(doom, 'doom')}</span>
           <span className="go">Open the doom side →</span>
         </button>
@@ -143,6 +189,7 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
             {counts.boom}
             <small>boom stories</small>
           </span>
+          {boomShareText && <span className="db-share">{boomShareText}</span>}
           <span className="db-drivers">{drivers(boom, 'boom')}</span>
           <span className="go">Open the boom side →</span>
         </button>
