@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { DcEditionNeighbours, DcEditionSummary, DcEditionWithContent, DcLayerKey } from '@vismay/content-source/dcEditionTypes'
 import { DC_LAYER_KEYS, formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
-import { buildCounts, deriveSources } from '@vismay/content-source/dcEditionAssembly'
+import { deriveSources } from '@vismay/content-source/dcEditionAssembly'
 import { AI_DATA_CENTERS_THEME_DEFAULTS, aiDataCentersLogoPalette, type AiDataCentersTheme } from '../../theme'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import EditionThemeStyle from './EditionThemeStyle'
@@ -40,7 +40,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
   const tone = moodTone(e.moodScore)
   const word = moodWord(e.moodScore).split(',')[0].replace('-leaning', '')
   const groups = deriveSources(e.stories, e.ieaStories, e.papers)
-  const counts = e.counts.stories || e.counts.papers ? e.counts : buildCounts({ stories: e.stories, ieaStories: e.ieaStories, papers: e.papers, tape: e.tape, geo: e.geo })
   const stamp = `Snapshot · ${formatEditionDate(e.date, { weekday: false })} · 08:15 UTC`
   const canonical = `${siteUrl}${editionHref(e.date)}`
   const publishedLabel = e.status === 'published' ? 'frozen 08:15 UTC' : 'draft · not yet frozen'
@@ -126,9 +125,9 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <div className="wrap">
           <div className="hero">
             <div>
-              {/* The window and the counts are in every chapter's side rail and
-                  in the masthead date — the hero says them a third time, so it
-                  now carries only a status flag, when there is one. */}
+              {/* The window is in the masthead date and each chapter shows its
+                  own counts, so the hero carries only a status flag, when
+                  there is one. */}
               {(sample || e.model === 'deterministic') && (
                 <div className="meta eyebrow">
                   <span className="sample-note">{sample ? 'Sample edition — illustrative content' : 'Assembled without the prose model'}</span>
@@ -148,9 +147,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="glance">
           <div className="chapter-head">
             <h2>Doom v Boom</h2>
-            <div className="side">
-              I · {e.moodCounts.boom + e.moodCounts.doom} stories scored · {e.moodSeries.length}-edition trend
-            </div>
           </div>
           <div className="glance">
             <DoomBoomMeter score={e.moodScore} counts={e.moodCounts} series={e.moodSeries} stories={e.stories} />
@@ -160,7 +156,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="notes">
           <div className="chapter-head">
             <h2>Key notes</h2>
-            <div className="side">II · Key notes</div>
           </div>
           <KeyNotes notes={e.notes} />
         </section>
@@ -169,9 +164,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
           <div className="wrap">
             <div className="chapter-head">
               <h2>By geography</h2>
-              <div className="side">
-                III · {counts.stories} stories · {counts.places} places
-              </div>
             </div>
           </div>
           <div className="bleed">
@@ -182,7 +174,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="layers">
           <div className="chapter-head">
             <h2>By AI layer</h2>
-            <div className="side">IV · 4 layers · {counts.tickers} tickers</div>
           </div>
           <div className="layers" id="layers-grid">
             {DC_LAYER_KEYS.map((k) => (
@@ -194,9 +185,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="papers">
           <div className="chapter-head">
             <h2>New research</h2>
-            <div className="side">
-              V · {counts.papers} papers · {new Set(e.papers.map((p) => p.area).filter(Boolean)).size} fields · arXiv
-            </div>
           </div>
           <ResearchChapter research={e.research} papers={e.papers} chart={e.charts.research} />
         </section>
@@ -204,9 +192,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap energy" id="energy">
           <div className="chapter-head">
             <h2>AI + Energy &amp; Sustainability</h2>
-            <div className="side">
-              VI · {e.energy.storyCount} stories · joined with iea_news
-            </div>
           </div>
           <EnergyChapter energy={e.energy} stories={e.stories} ieaStories={e.ieaStories} chart={e.charts.energy} />
         </section>
@@ -214,9 +199,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="sources">
           <div className="chapter-head">
             <h2>Sources</h2>
-            <div className="side">
-              VII · {counts.links} links · {counts.outlets} outlets
-            </div>
           </div>
           <Sources groups={groups} />
         </section>
@@ -224,7 +206,6 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="previous">
           <div className="chapter-head">
             <h2>Previous editions</h2>
-            <div className="side">Edition archive</div>
           </div>
           <PreviousEditions current={e} previous={previous} />
         </section>
