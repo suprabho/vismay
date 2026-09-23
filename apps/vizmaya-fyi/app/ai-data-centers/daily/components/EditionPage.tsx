@@ -8,6 +8,7 @@ import ChapterNav from './ChapterNav'
 import ShareButton from './ShareButton'
 import TickerTape from './TickerTape'
 import DoomBoomMeter from './DoomBoomMeter'
+import BoomScore from './BoomScore'
 import KeyNotes from './KeyNotes'
 import GeoMap from './GeoMap'
 import LayerTile from './LayerTile'
@@ -31,8 +32,8 @@ interface Props {
 /**
  * The edition page: masthead, hero, tape, seven chapters, archive rail and
  * footer, rendered from one frozen edition row. Server component — the only
- * client code is the chapter scroll-spy, the share button, the canvas map and
- * the slide-over panel.
+ * client code is the chapter scroll-spy, the share button, the Boom Score
+ * ring, the canvas map and the slide-over panel.
  */
 export default function EditionPage({ edition: e, neighbours, previous, themeOverrides, siteUrl, sample = false }: Props) {
   const tone = moodTone(e.moodScore)
@@ -129,6 +130,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
                 <Deck text={e.sub} />
               </p>
             </div>
+            <BoomScore score={e.moodScore} counts={e.moodCounts} />
           </div>
         </div>
 

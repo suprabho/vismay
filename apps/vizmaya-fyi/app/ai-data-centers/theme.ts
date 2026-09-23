@@ -6,9 +6,11 @@
 // The edition page (app/ai-data-centers/daily) extends the explorer's tokens
 // with the ones the design mockup fixes: `raised`, `dim`, `lineStrong`,
 // `accentInk`, `up`/`down`, a lime `energy` accent reserved for the energy
-// chapter, the three composition hues and the map dot colours. A light
-// theme derived from the same tokens sits alongside for
-// prefers-color-scheme: light / data-theme="light".
+// chapter, the three composition hues and the map dot colours. The Doom v
+// Boom reading has its own red/green pair (`doom`/`boom` for marks, `doomInk`/
+// `boomInk` for text) so the header ring and Chapter I never borrow the
+// market tape's up/down. A light theme derived from the same tokens sits
+// alongside for prefers-color-scheme: light / data-theme="light".
 
 import type { MapPalette } from "@vismay/viz-engine";
 
@@ -37,6 +39,10 @@ export type AiDataCentersTheme = {
   accentInk: string;
   up: string;
   down: string;
+  doom: string;
+  boom: string;
+  doomInk: string;
+  boomInk: string;
   energy: string;
   comp1: string;
   comp2: string;
@@ -69,6 +75,10 @@ export const AI_DATA_CENTERS_THEME_DEFAULTS: AiDataCentersTheme = {
   accentInk: "#06282e",
   up: "#5eead4",
   down: "#f0a0a0",
+  doom: "#f87171",
+  boom: "#4ade80",
+  doomInk: "#f87171",
+  boomInk: "#4ade80",
   energy: "#c8e66b",
   comp1: "#d4705f",
   comp2: "#14a3ba",
@@ -97,6 +107,10 @@ export const AI_DATA_CENTERS_THEME_LIGHT: AiDataCentersTheme = {
   accentInk: "#e0f7fb",
   up: "#0f766e",
   down: "#b42318",
+  doom: "#dc2626",
+  boom: "#16a34a",
+  doomInk: "#b91c1c",
+  boomInk: "#15803d",
   energy: "#5f7a00",
   comp1: "#c2410c",
   comp2: "#0891b2",
@@ -150,6 +164,10 @@ export const EDITION_CSS_VARS: Partial<Record<keyof AiDataCentersTheme, string>>
   accentInk: "--accent-ink",
   up: "--up",
   down: "--down",
+  doom: "--doom",
+  boom: "--boom",
+  doomInk: "--doom-ink",
+  boomInk: "--boom-ink",
   energy: "--energy",
   mapDot: "--map-dot",
   mapDotHi: "--map-dot-hi",
