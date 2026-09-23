@@ -57,7 +57,7 @@ export default function LayerTile({ layerKey, layer, chart }: { layerKey: DcLaye
             <OrderTimeline viz={viz} id={layerKey} />
           )
         ) : (
-          <span className="lviz-empty">No stated figures, actions or horizons in this layer today.</span>
+          <span className="lviz-empty">Fewer than three comparable figures, actions or horizons in this layer today — see the notes.</span>
         )}
       </span>
       {layer.notes.length > 0 && (
