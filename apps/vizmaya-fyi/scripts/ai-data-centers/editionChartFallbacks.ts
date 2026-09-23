@@ -54,6 +54,12 @@ const LAYER_WORD: Partial<Record<EditionChartSection, string>> = {
 const r1 = (v: number) => Math.round(v * 10) / 10
 
 /** Stock moves over the window for the layer's tracked companies, largest move first. */
+/** A record chart with the builder that made it, so two sections never draw the same one. */
+export interface RecordChart {
+  key: string
+  plan: ValidatedChartPlan
+}
+
 export function tapeMoves(section: EditionChartSection, tape: EditionTapeTick[] | undefined): ValidatedChartPlan | null {
   const category = LAYER_CATEGORY[section]
   if (!category || !tape) return null
@@ -96,13 +102,47 @@ export function facilityPower(section: EditionChartSection, facilities: DcFacili
     title: 'Largest frontier AI sites, by stated power',
     caption: `Power capacity as Epoch AI records it for the ${rows.length} largest sites in its frontier data-center register — the scale today's announcements land against.`,
     spec: {
-      chartType: 'Bar Chart',
+      chartType: 'Lollipop Chart',
       columns: [
         { name: 'Site', semanticType: 'Name' },
         { name: 'Power (MW)', semanticType: 'Quantity' },
       ],
       rows,
       encodings: { x: 'Site', y: ['Power (MW)'] },
+    },
+    sources: [SOURCES.epoch],
+    storyIds: [],
+  }
+}
+
+/** Frontier AI power by country, summed over Epoch's register — the energy chapter's view of the same dataset. */
+export function facilityPowerByCountry(section: EditionChartSection, facilities: DcFacility[] | undefined): ValidatedChartPlan | null {
+  if (!facilities) return null
+  const byCountry = new Map<string, { mw: number; sites: number }>()
+  for (const f of facilities) {
+    if (f.powerMw == null || f.powerMw <= 0 || !f.country) continue
+    const cur = byCountry.get(f.country) ?? { mw: 0, sites: 0 }
+    cur.mw += f.powerMw
+    cur.sites += 1
+    byCountry.set(f.country, cur)
+  }
+  const rows = [...byCountry.entries()]
+    .sort((a, b) => b[1].mw - a[1].mw)
+    .slice(0, 8)
+    .map(([country, v]) => [`${country} (${v.sites} site${v.sites === 1 ? '' : 's'})`, Math.round(v.mw)] as [string, number])
+  if (rows.length < MIN_CHART_ROWS) return null
+  return {
+    section,
+    title: 'Frontier AI power on the record, by country',
+    caption: `Stated power capacity summed across the frontier sites Epoch AI records in each country — where the grid load of the build-out actually sits.`,
+    spec: {
+      chartType: 'Bar Chart',
+      columns: [
+        { name: 'Country', semanticType: 'Country' },
+        { name: 'Power (MW)', semanticType: 'Quantity' },
+      ],
+      rows,
+      encodings: { x: 'Country', y: ['Power (MW)'] },
     },
     sources: [SOURCES.epoch],
     storyIds: [],
@@ -120,9 +160,9 @@ export function powerPerEdition(section: EditionChartSection, perEdition: Editio
     title: 'Power committed per edition',
     caption: `Capacity committed in deals that stated a figure, per edition that disclosed any; ${perEdition.length - told.length} of the last ${perEdition.length} editions disclosed none and are left out rather than drawn as zero.`,
     spec: {
-      chartType: 'Bar Chart',
+      chartType: 'Line Chart',
       columns: [
-        { name: 'Edition', semanticType: 'Date' },
+        { name: 'Edition', semanticType: 'Category' },
         { name: 'Committed (GW)', semanticType: 'Quantity' },
       ],
       rows,
@@ -158,7 +198,7 @@ export function paperGains(section: EditionChartSection, papers: DcPaper[] | und
     title: `Reported gains today, ${unit === 'pts' ? 'in points' : unit === '×' ? 'as multiples' : 'in percent'}`,
     caption: `${rows.length} of ${papers.length} kept papers report their headline result as a ${unitWord}; papers reporting in other units are not put on this axis.`,
     spec: {
-      chartType: 'Bar Chart',
+      chartType: 'Lollipop Chart',
       columns: [
         { name: 'Paper', semanticType: 'Name' },
         { name: unit === 'pts' ? 'Gain (pts)' : unit === '×' ? 'Speed-up (×)' : 'Gain (%)', semanticType: 'Quantity' },
@@ -227,17 +267,35 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
  * per-edition series before the register, research from gains before
  * field counts.
  */
-export function recordChart(section: EditionChartSection, record: RecordInputs): ValidatedChartPlan | null {
-  switch (section) {
-    case 'dc':
-      return facilityPower(section, record.facilities) ?? tapeMoves(section, record.tape)
-    case 'hyper':
-    case 'semi':
-    case 'equip':
-      return tapeMoves(section, record.tape)
-    case 'energy':
-      return powerPerEdition(section, record.perEdition) ?? facilityPower(section, record.facilities)
-    case 'research':
-      return paperGains(section, record.papers) ?? papersByField(section, record.papers, record.fieldBaseline)
+export function recordChart(section: EditionChartSection, record: RecordInputs, exclude: Set<string> = new Set()): RecordChart | null {
+  const ladder: Array<[string, () => ValidatedChartPlan | null]> = (() => {
+    switch (section) {
+      case 'dc':
+        return [
+          ['facility-power', () => facilityPower(section, record.facilities)],
+          ['tape:data-centers', () => tapeMoves(section, record.tape)],
+        ]
+      case 'hyper':
+      case 'semi':
+      case 'equip':
+        return [[`tape:${LAYER_CATEGORY[section]}`, () => tapeMoves(section, record.tape)]]
+      case 'energy':
+        return [
+          ['power-per-edition', () => powerPerEdition(section, record.perEdition)],
+          ['facility-power-by-country', () => facilityPowerByCountry(section, record.facilities)],
+          ['facility-power', () => facilityPower(section, record.facilities)],
+        ]
+      case 'research':
+        return [
+          ['paper-gains', () => paperGains(section, record.papers)],
+          ['papers-by-field', () => papersByField(section, record.papers, record.fieldBaseline)],
+        ]
+    }
+  })()
+  for (const [key, build] of ladder) {
+    if (exclude.has(key)) continue
+    const plan = build()
+    if (plan) return { key, plan }
   }
+  return null
 }
