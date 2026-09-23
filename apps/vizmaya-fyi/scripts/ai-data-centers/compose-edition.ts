@@ -68,7 +68,7 @@ import {
 } from '@vismay/content-source/dcEditions'
 import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts } from '@vismay/content-source/dcEditionTypes'
 import { chartPlannerModel, planEditionCharts } from './editionCharts'
-import { listDataCenters } from '@vismay/content-source/epics'
+import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 import {
   DC_LAYERS,
   DC_LAYER_KEYS,
@@ -409,6 +409,16 @@ async function facilitiesForCharts() {
   }
 }
 
+/** The tracked stocks' close series over the trailing month, for the line and slope charts; unavailable → bars from the tape. */
+async function marketForCharts() {
+  try {
+    return await getDcStockMarket(30)
+  } catch (err) {
+    console.warn(`[charts] dc_stock_prices unavailable (${err instanceof Error ? err.message : err}) — bars from the tape only`)
+    return undefined
+  }
+}
+
 /**
  * --charts-only: re-plan the charts on the current draft from the stories it
  * already carries. Prose, numbers, membership and editor edits stay as they
@@ -424,6 +434,7 @@ async function rePlanCharts(args: Args): Promise<void> {
     ieaStories: draft.ieaStories,
     papers: draft.papers,
     tape: draft.tape,
+    market: await marketForCharts(),
     perEdition: draft.energy.perEdition,
     fieldBaseline: draft.research.fieldBaseline,
     facilities: await facilitiesForCharts(),
@@ -526,6 +537,7 @@ async function main() {
         ieaStories,
         papers,
         tape: numbers.tape,
+        market: await marketForCharts(),
         perEdition: numbers.energy.perEdition,
         fieldBaseline: numbers.fieldBaseline,
         facilities: await facilitiesForCharts(),

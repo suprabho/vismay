@@ -11,13 +11,13 @@ import type { EditionChartSkip, EditionCharts } from '@vismay/content-source/dcE
 export const SAMPLE_CHARTS: EditionCharts = {
   "energy": {
     "section": "energy",
-    "title": "Power committed today, by site",
-    "caption": "Site- and campus-level power figures on the record today, in MW; the 200 GW ERCOT queue is a market-wide total left out to keep one readable scale.",
+    "title": "Site power committed today, by project",
+    "caption": "Four project-level power figures on one MW scale; the 200 GW ERCOT queue is a market total and is left out to keep the bars readable.",
     "spec": {
       "chartType": "Bar Chart",
       "columns": [
         {
-          "name": "Deal",
+          "name": "Project",
           "semanticType": "Name"
         },
         {
@@ -27,24 +27,24 @@ export const SAMPLE_CHARTS: EditionCharts = {
       ],
       "rows": [
         [
-          "Microsoft nuclear uprate PPA (Ohio)",
+          "Microsoft Ohio nuclear PPA",
           2500
         ],
         [
-          "Oracle gas-plus-storage block (Abilene)",
+          "Oracle Abilene gas+storage",
           1200
         ],
         [
-          "Reliance Jamnagar AI campus",
+          "Reliance Jamnagar campus",
           1000
         ],
         [
-          "Abu Dhabi solar-plus-storage tender",
+          "Abu Dhabi solar+storage tender",
           900
         ]
       ],
       "encodings": {
-        "x": "Deal",
+        "x": "Project",
         "y": [
           "Power (MW)"
         ]
@@ -74,123 +74,375 @@ export const SAMPLE_CHARTS: EditionCharts = {
       22,
       23
     ],
-    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 800 340\">\n<path d=\"M268.5 24L268.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M370.5 24L370.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M473.5 24L473.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M575.5 24L575.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M677.5 24L677.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M780.5 24L780.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M268.5 24L268.5 317.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-energy-cls-0\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(788 317.8)\" fill=\"#5f6b76\">Power (MW)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(260.34 60.725)\" fill=\"#8b98a5\">Microsoft nuclear uprate PPA (Ohio)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(260.34 134.175)\" fill=\"#8b98a5\">Oracle gas-plus-storage block (Abi...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(260.34 207.625)\" fill=\"#8b98a5\">Reliance Jamnagar AI campus</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(260.34 281.075)\" fill=\"#8b98a5\">Abu Dhabi solar-plus-storage tender</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(268.34 325.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(370.672 325.8)\" fill=\"#5f6b76\">500</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(473.004 325.8)\" fill=\"#5f6b76\">1,000</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(575.336 325.8)\" fill=\"#5f6b76\">1,500</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(677.668 325.8)\" fill=\"#5f6b76\">2,000</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(780 325.8)\" fill=\"#5f6b76\">2,500</text>\n<path d=\"M270.3 51.7L778 51.7A2 2 0 0 1 780 53.7L780 67.7A2 2 0 0 1 778 69.7L270.3 69.7A2 2 0 0 1 268.3 67.7L268.3 53.7A2 2 0 0 1 270.3 51.7\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<path d=\"M270.3 125.2L511.9 125.2A2 2 0 0 1 513.9 127.2L513.9 141.2A2 2 0 0 1 511.9 143.2L270.3 143.2A2 2 0 0 1 268.3 141.2L268.3 127.2A2 2 0 0 1 270.3 125.2\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<path d=\"M270.3 198.6L471 198.6A2 2 0 0 1 473 200.6L473 214.6A2 2 0 0 1 471 216.6L270.3 216.6A2 2 0 0 1 268.3 214.6L268.3 200.6A2 2 0 0 1 270.3 198.6\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<path d=\"M270.3 272.1L450.5 272.1A2 2 0 0 1 452.5 274.1L452.5 288.1A2 2 0 0 1 450.5 290.1L270.3 290.1A2 2 0 0 1 268.3 288.1L268.3 274.1A2 2 0 0 1 270.3 272.1\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(785 60.725)\" fill=\"#dbe7f0\">2500</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(518.9368 134.175)\" fill=\"#dbe7f0\">1200</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(478.004 207.625)\" fill=\"#dbe7f0\">1000</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(457.5376 281.075)\" fill=\"#dbe7f0\">900</text>\n</svg>",
+    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 800 340\">\n<path d=\"M220.5 20L220.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M332.5 20L332.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M444.5 20L444.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M556.5 20L556.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M668.5 20L668.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M780.5 20L780.5 317.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-energy-cls-0\"></path>\n<path d=\"M220.5 20L220.5 317.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-energy-cls-0\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(788 317.8)\" fill=\"#5f6b76\">Power (MW)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(212.6 57.225)\" fill=\"#8b98a5\">Microsoft Ohio nuclear PPA</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(212.6 131.675)\" fill=\"#8b98a5\">Oracle Abilene gas+storage</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(212.6 206.125)\" fill=\"#8b98a5\">Reliance Jamnagar campus</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(212.6 280.575)\" fill=\"#8b98a5\">Abu Dhabi solar+storage tender</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(220.6 325.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(332.48 325.8)\" fill=\"#5f6b76\">500</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(444.36 325.8)\" fill=\"#5f6b76\">1,000</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(556.24 325.8)\" fill=\"#5f6b76\">1,500</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(668.12 325.8)\" fill=\"#5f6b76\">2,000</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(780 325.8)\" fill=\"#5f6b76\">2,500</text>\n<path d=\"M222.6 48.2L778 48.2A2 2 0 0 1 780 50.2L780 64.2A2 2 0 0 1 778 66.2L222.6 66.2A2 2 0 0 1 220.6 64.2L220.6 50.2A2 2 0 0 1 222.6 48.2\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<path d=\"M222.6 122.7L487.1 122.7A2 2 0 0 1 489.1 124.7L489.1 138.7A2 2 0 0 1 487.1 140.7L222.6 140.7A2 2 0 0 1 220.6 138.7L220.6 124.7A2 2 0 0 1 222.6 122.7\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<path d=\"M222.6 197.1L442.4 197.1A2 2 0 0 1 444.4 199.1L444.4 213.1A2 2 0 0 1 442.4 215.1L222.6 215.1A2 2 0 0 1 220.6 213.1L220.6 199.1A2 2 0 0 1 222.6 197.1\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<path d=\"M222.6 271.6L420 271.6A2 2 0 0 1 422 273.6L422 287.6A2 2 0 0 1 420 289.6L222.6 289.6A2 2 0 0 1 220.6 287.6L220.6 273.6A2 2 0 0 1 222.6 271.6\" fill=\"#c8e66b\" class=\"ec-energy-cls-1\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(785 57.225)\" fill=\"#dbe7f0\">2500</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(494.112 131.675)\" fill=\"#dbe7f0\">1200</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(449.36 206.125)\" fill=\"#dbe7f0\">1000</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(426.984 280.575)\" fill=\"#dbe7f0\">900</text>\n</svg>",
     "width": 800,
     "height": 340,
     "rung": 1,
     "model": "anthropic/claude-opus-4.8",
-    "generatedAt": "2026-09-23T09:41:28.183Z"
+    "generatedAt": "2026-09-23T10:41:29.608Z"
   },
   "dc": {
     "section": "dc",
-    "title": "Data-center operators this window, by move",
-    "caption": "5 of 7 tracked data-center operators rose over the window; the change is close to close on each company's home exchange, in its own currency.",
+    "title": "Frontier AI sites: power against capital cost",
+    "caption": "Each point is a site in Epoch AI's frontier register with both a stated power capacity and a stated capital cost — the further above the trend, the more each megawatt cost to build.",
     "spec": {
-      "chartType": "Bar Chart",
+      "chartType": "Scatter Plot",
       "columns": [
         {
-          "name": "Company",
+          "name": "Site",
           "semanticType": "Name"
         },
         {
-          "name": "Change (%)",
-          "semanticType": "PercentageChange"
+          "name": "Power (MW)",
+          "semanticType": "Quantity"
+        },
+        {
+          "name": "Capital cost (USD bn)",
+          "semanticType": "Amount"
         }
       ],
       "rows": [
         [
-          "CoreWeave",
-          7.9
+          "Colossus 2",
+          946,
+          35.84
         ],
         [
-          "Vertiv",
-          2.2
+          "Anthropic-Amazon New…",
+          910,
+          34.47
         ],
         [
-          "Super Micro Computer",
-          1.6
+          "Microsoft Fairwater…",
+          636,
+          24.09
         ],
         [
-          "Equinix",
-          -1.1
+          "Meta Prometheus",
+          562,
+          21.29
         ],
         [
-          "Digital Realty",
-          -0.8
+          "OpenAI Stargate…",
+          421,
+          15.95
         ],
         [
-          "SoftBank Group",
-          0.7
+          "Microsoft Fairwater…",
+          369,
+          13.98
         ],
         [
-          "Hon Hai (Foxconn)",
-          0.3
+          "Google Pryor (North)",
+          368,
+          13.94
+        ],
+        [
+          "Colossus 1",
+          340,
+          12.88
         ]
       ],
       "encodings": {
-        "x": "Company",
+        "x": "Power (MW)",
         "y": [
-          "Change (%)"
-        ]
+          "Capital cost (USD bn)"
+        ],
+        "color": "Site"
       }
     },
     "sources": [
       {
-        "name": "Tracked stocks · home-exchange closes",
-        "url": "https://www.vizmaya.fyi/ai-data-centers"
+        "name": "Epoch AI · Frontier Data Centers Hub",
+        "url": "https://epoch.ai/data/ai-data-centers"
       }
     ],
     "storyIds": [],
-    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M152.5 24L152.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M214.5 24L214.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M275.5 24L275.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M337.5 24L337.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M398.5 24L398.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M460.5 24L460.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M214.5 24L214.5 237.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-dc-cls-2\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(468 237.8)\" fill=\"#5f6b76\">Change (%)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(144.4 39.2714)\" fill=\"#8b98a5\">CoreWeave</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(144.4 69.8143)\" fill=\"#8b98a5\">Vertiv</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(144.4 100.3571)\" fill=\"#8b98a5\">Super Micro Computer</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(144.4 130.9)\" fill=\"#8b98a5\">Equinix</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(144.4 161.4429)\" fill=\"#8b98a5\">Digital Realty</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(144.4 191.9857)\" fill=\"#8b98a5\">SoftBank Group</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(144.4 222.5286)\" fill=\"#8b98a5\">Hon Hai (Foxconn)</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(152.4 245.8)\" fill=\"#5f6b76\">-2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(213.92 245.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(275.44 245.8)\" fill=\"#5f6b76\">2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(336.96 245.8)\" fill=\"#5f6b76\">4</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(398.48 245.8)\" fill=\"#5f6b76\">6</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(460 245.8)\" fill=\"#5f6b76\">8</text>\n<path d=\"M215.9 30.3L454.9 30.3A2 2 0 0 1 456.9 32.3L456.9 46.3A2 2 0 0 1 454.9 48.3L215.9 48.3A2 2 0 0 1 213.9 46.3L213.9 32.3A2 2 0 0 1 215.9 30.3\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<path d=\"M215.9 60.8L279.6 60.8A2 2 0 0 1 281.6 62.8L281.6 76.8A2 2 0 0 1 279.6 78.8L215.9 78.8A2 2 0 0 1 213.9 76.8L213.9 62.8A2 2 0 0 1 215.9 60.8\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<path d=\"M215.9 91.4L261.1 91.4A2 2 0 0 1 263.1 93.4L263.1 107.4A2 2 0 0 1 261.1 109.4L215.9 109.4A2 2 0 0 1 213.9 107.4L213.9 93.4A2 2 0 0 1 215.9 91.4\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<path d=\"M182.1 121.9L211.9 121.9A2 2 0 0 1 213.9 123.9L213.9 137.9A2 2 0 0 1 211.9 139.9L182.1 139.9A2 2 0 0 1 180.1 137.9L180.1 123.9A2 2 0 0 1 182.1 121.9\" fill=\"#f0a0a0\" class=\"ec-dc-cls-4\"></path>\n<path d=\"M191.3 152.4L211.9 152.4A2 2 0 0 1 213.9 154.4L213.9 168.4A2 2 0 0 1 211.9 170.4L191.3 170.4A2 2 0 0 1 189.3 168.4L189.3 154.4A2 2 0 0 1 191.3 152.4\" fill=\"#f0a0a0\" class=\"ec-dc-cls-4\"></path>\n<path d=\"M215.9 183L233.5 183A2 2 0 0 1 235.5 185L235.5 199A2 2 0 0 1 233.5 201L215.9 201A2 2 0 0 1 213.9 199L213.9 185A2 2 0 0 1 215.9 183\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<path d=\"M215.9 213.5L221.1 213.5A2 2 0 0 1 223.1 215.5L223.1 229.5A2 2 0 0 1 221.1 231.5L215.9 231.5A2 2 0 0 1 213.9 229.5L213.9 215.5A2 2 0 0 1 215.9 213.5\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(461.924 39.2714)\" fill=\"#dbe7f0\">7.9</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(286.592 69.8143)\" fill=\"#dbe7f0\">2.2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(268.136 100.3571)\" fill=\"#dbe7f0\">1.6</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(175.084 130.9)\" fill=\"#dbe7f0\">-1.1</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(184.312 161.4429)\" fill=\"#dbe7f0\">-0.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(240.452 191.9857)\" fill=\"#dbe7f0\">0.7</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(228.148 222.5286)\" fill=\"#dbe7f0\">0.3</text>\n</svg>",
+    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M28.4 238.5L460 238.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 201.5L460 201.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 165.5L460 165.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 129.5L460 129.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 92.5L460 92.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 56.5L460 56.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 20.5L460 20.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.5 20L28.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M90.5 20L90.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M151.5 20L151.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M213.5 20L213.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M275.5 20L275.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M336.5 20L336.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M398.5 20L398.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M460.5 20L460.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"-3.1\" transform=\"matrix(0,-1,1,0,-11.6,128.9)\" fill=\"#5f6b76\">Capital cost (USD bn)</text>\n<path d=\"M28.5 237.8L28.5 20\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-dc-cls-2\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(244.2 263.8)\" fill=\"#5f6b76\">Power (MW)</text>\n<path d=\"M28.4 238.5L460 238.5\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 238.5L23.4 238.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 201.5L23.4 201.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 165.5L23.4 165.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 129.5L23.4 129.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 92.5L23.4 92.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 56.5L23.4 56.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.4 20.5L23.4 20.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M28.5 237.8L28.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M90.5 237.8L90.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M151.5 237.8L151.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M213.5 237.8L213.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M275.5 237.8L275.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M336.5 237.8L336.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M398.5 237.8L398.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<path d=\"M460.5 237.8L460.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-dc-cls-2\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 237.8)\" fill=\"#8b98a5\">10</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 201.5)\" fill=\"#8b98a5\">15</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 165.2)\" fill=\"#8b98a5\">20</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 128.9)\" fill=\"#8b98a5\">25</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 92.6)\" fill=\"#8b98a5\">30</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 56.3)\" fill=\"#8b98a5\">35</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(20.4 20)\" fill=\"#8b98a5\">40</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(28.4 245.8)\" fill=\"#8b98a5\">300</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(90.0571 245.8)\" fill=\"#8b98a5\">400</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(151.7143 245.8)\" fill=\"#8b98a5\">500</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(213.3714 245.8)\" fill=\"#8b98a5\">600</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(275.0286 245.8)\" fill=\"#8b98a5\">700</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(336.6857 245.8)\" fill=\"#8b98a5\">800</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(398.3429 245.8)\" fill=\"#8b98a5\">900</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(460 245.8)\" fill=\"#8b98a5\">1,000</text>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,426.7051,50.2016)\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,404.5086,60.1478)\" fill=\"#5eead4\" class=\"ec-dc-cls-4\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,235.568,135.5066)\" fill=\"#14a3ba\" class=\"ec-dc-cls-5\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,70.9434,208.9052)\" fill=\"#14a3ba\" class=\"ec-dc-cls-5\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,189.9417,155.8346)\" fill=\"#d4705f\" class=\"ec-dc-cls-6\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,103.0051,194.603)\" fill=\"#a5f3fc\" class=\"ec-dc-cls-7\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,70.3269,209.1956)\" fill=\"#8b98a5\" class=\"ec-dc-cls-8\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5.5,0,0,5.5,53.0629,216.8912)\" fill=\"#22d3ee\" class=\"ec-dc-cls-3\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(437.2051 50.2016)\" fill=\"#8b98a5\">Colossus 2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(415.0086 60.1478)\" fill=\"#8b98a5\">Anthropic-Amazon New…</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(246.068 135.5066)\" fill=\"#8b98a5\">Microsoft Fairwater…</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(81.4434 208.9052)\" fill=\"#8b98a5\">Microsoft Fairwater…</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(200.4417 155.8346)\" fill=\"#8b98a5\">Meta Prometheus</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(113.5051 194.603)\" fill=\"#8b98a5\">OpenAI Stargate…</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(63.5629 216.8912)\" fill=\"#8b98a5\">Colossus 1</text>\n</svg>",
     "width": 480,
     "height": 260,
     "rung": 4,
     "model": "record",
-    "generatedAt": "2026-09-23T09:41:28.183Z"
+    "generatedAt": "2026-09-23T10:41:29.608Z"
   },
   "hyper": {
     "section": "hyper",
-    "title": "Hyperscalers this window, by move",
-    "caption": "4 of 5 tracked hyperscalers rose over the window; the change is close to close on each company's home exchange, in its own currency.",
+    "title": "Hyperscalers, indexed over the last 10 sessions",
+    "caption": "Closing prices on each company's home exchange, indexed to 100 at the first session shown, for the 5 hyperscalers that moved most over the window.",
     "spec": {
-      "chartType": "Bar Chart",
+      "chartType": "Line Chart",
       "columns": [
         {
-          "name": "Company",
-          "semanticType": "Name"
+          "name": "Session",
+          "semanticType": "Category"
         },
         {
-          "name": "Change (%)",
-          "semanticType": "PercentageChange"
+          "name": "Company",
+          "semanticType": "Category"
+        },
+        {
+          "name": "Index (first session = 100)",
+          "semanticType": "Quantity"
         }
       ],
       "rows": [
         [
-          "Oracle",
-          3.2
-        ],
-        [
-          "Alphabet",
-          0.9
-        ],
-        [
+          "8 Sep",
           "Meta Platforms",
-          0.6
+          100
         ],
         [
+          "9 Sep",
+          "Meta Platforms",
+          106.55
+        ],
+        [
+          "10 Sep",
+          "Meta Platforms",
+          105.04
+        ],
+        [
+          "11 Sep",
+          "Meta Platforms",
+          105.63
+        ],
+        [
+          "14 Sep",
+          "Meta Platforms",
+          108.5
+        ],
+        [
+          "15 Sep",
+          "Meta Platforms",
+          109.25
+        ],
+        [
+          "16 Sep",
+          "Meta Platforms",
+          109.75
+        ],
+        [
+          "17 Sep",
+          "Meta Platforms",
+          111.22
+        ],
+        [
+          "18 Sep",
+          "Meta Platforms",
+          108.52
+        ],
+        [
+          "21 Sep",
+          "Meta Platforms",
+          120.83
+        ],
+        [
+          "8 Sep",
+          "Oracle",
+          100
+        ],
+        [
+          "9 Sep",
+          "Oracle",
+          99.45
+        ],
+        [
+          "10 Sep",
+          "Oracle",
+          94.11
+        ],
+        [
+          "11 Sep",
+          "Oracle",
+          92.47
+        ],
+        [
+          "14 Sep",
+          "Oracle",
+          89.09
+        ],
+        [
+          "15 Sep",
+          "Oracle",
+          86.36
+        ],
+        [
+          "16 Sep",
+          "Oracle",
+          88.09
+        ],
+        [
+          "17 Sep",
+          "Oracle",
+          92.66
+        ],
+        [
+          "18 Sep",
+          "Oracle",
+          90.83
+        ],
+        [
+          "21 Sep",
+          "Oracle",
+          91.41
+        ],
+        [
+          "8 Sep",
           "Microsoft",
-          0.4
+          100
         ],
         [
+          "9 Sep",
+          "Microsoft",
+          99.53
+        ],
+        [
+          "10 Sep",
+          "Microsoft",
+          99.69
+        ],
+        [
+          "11 Sep",
+          "Microsoft",
+          100.34
+        ],
+        [
+          "14 Sep",
+          "Microsoft",
+          102.32
+        ],
+        [
+          "15 Sep",
+          "Microsoft",
+          100.64
+        ],
+        [
+          "16 Sep",
+          "Microsoft",
+          99.26
+        ],
+        [
+          "17 Sep",
+          "Microsoft",
+          100.77
+        ],
+        [
+          "18 Sep",
+          "Microsoft",
+          99.97
+        ],
+        [
+          "21 Sep",
+          "Microsoft",
+          101.55
+        ],
+        [
+          "8 Sep",
+          "Alphabet",
+          100
+        ],
+        [
+          "9 Sep",
+          "Alphabet",
+          97.72
+        ],
+        [
+          "10 Sep",
+          "Alphabet",
+          98.3
+        ],
+        [
+          "11 Sep",
+          "Alphabet",
+          100.04
+        ],
+        [
+          "14 Sep",
+          "Alphabet",
+          103.26
+        ],
+        [
+          "15 Sep",
+          "Alphabet",
+          101.96
+        ],
+        [
+          "16 Sep",
+          "Alphabet",
+          101.33
+        ],
+        [
+          "17 Sep",
+          "Alphabet",
+          102.65
+        ],
+        [
+          "18 Sep",
+          "Alphabet",
+          103.3
+        ],
+        [
+          "21 Sep",
+          "Alphabet",
+          104.91
+        ],
+        [
+          "8 Sep",
           "Amazon",
-          -0.3
+          100
+        ],
+        [
+          "9 Sep",
+          "Amazon",
+          98.22
+        ],
+        [
+          "10 Sep",
+          "Amazon",
+          98.02
+        ],
+        [
+          "11 Sep",
+          "Amazon",
+          99.93
+        ],
+        [
+          "14 Sep",
+          "Amazon",
+          98.67
+        ],
+        [
+          "15 Sep",
+          "Amazon",
+          96.67
+        ],
+        [
+          "16 Sep",
+          "Amazon",
+          95.72
+        ],
+        [
+          "17 Sep",
+          "Amazon",
+          97.75
+        ],
+        [
+          "18 Sep",
+          "Amazon",
+          98.73
+        ],
+        [
+          "21 Sep",
+          "Amazon",
+          100.58
         ]
       ],
       "encodings": {
-        "x": "Company",
+        "x": "Session",
         "y": [
-          "Change (%)"
-        ]
+          "Index (first session = 100)"
+        ],
+        "color": "Company"
       }
     },
     "sources": [
@@ -200,12 +452,12 @@ export const SAMPLE_CHARTS: EditionCharts = {
       }
     ],
     "storyIds": [],
-    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M111.5 24L111.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M155.5 24L155.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M198.5 24L198.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M242.5 24L242.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M285.5 24L285.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M329.5 24L329.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M373.5 24L373.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M416.5 24L416.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M460.5 24L460.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-5\"></path>\n<path d=\"M155.5 24L155.5 237.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-hyper-cls-5\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(468 237.8)\" fill=\"#5f6b76\">Change (%)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(103.48 45.38)\" fill=\"#8b98a5\">Oracle</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(103.48 88.14)\" fill=\"#8b98a5\">Alphabet</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(103.48 130.9)\" fill=\"#8b98a5\">Meta Platforms</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(103.48 173.66)\" fill=\"#8b98a5\">Microsoft</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(103.48 216.42)\" fill=\"#8b98a5\">Amazon</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(111.48 245.8)\" fill=\"#5f6b76\">-0.5</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(155.045 245.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(198.61 245.8)\" fill=\"#5f6b76\">0.5</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(242.175 245.8)\" fill=\"#5f6b76\">1</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(285.74 245.8)\" fill=\"#5f6b76\">1.5</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(329.305 245.8)\" fill=\"#5f6b76\">2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(372.87 245.8)\" fill=\"#5f6b76\">2.5</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(416.435 245.8)\" fill=\"#5f6b76\">3</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(460 245.8)\" fill=\"#5f6b76\">3.5</text>\n<path d=\"M157 36.4L431.9 36.4A2 2 0 0 1 433.9 38.4L433.9 52.4A2 2 0 0 1 431.9 54.4L157 54.4A2 2 0 0 1 155 52.4L155 38.4A2 2 0 0 1 157 36.4\" fill=\"#22d3ee\" class=\"ec-hyper-cls-6\"></path>\n<path d=\"M157 79.1L231.5 79.1A2 2 0 0 1 233.5 81.1L233.5 95.1A2 2 0 0 1 231.5 97.1L157 97.1A2 2 0 0 1 155 95.1L155 81.1A2 2 0 0 1 157 79.1\" fill=\"#22d3ee\" class=\"ec-hyper-cls-6\"></path>\n<path d=\"M157 121.9L205.3 121.9A2 2 0 0 1 207.3 123.9L207.3 137.9A2 2 0 0 1 205.3 139.9L157 139.9A2 2 0 0 1 155 137.9L155 123.9A2 2 0 0 1 157 121.9\" fill=\"#22d3ee\" class=\"ec-hyper-cls-6\"></path>\n<path d=\"M157 164.7L187.9 164.7A2 2 0 0 1 189.9 166.7L189.9 180.7A2 2 0 0 1 187.9 182.7L157 182.7A2 2 0 0 1 155 180.7L155 166.7A2 2 0 0 1 157 164.7\" fill=\"#22d3ee\" class=\"ec-hyper-cls-6\"></path>\n<path d=\"M130.9 207.4L153 207.4A2 2 0 0 1 155 209.4L155 223.4A2 2 0 0 1 153 225.4L130.9 225.4A2 2 0 0 1 128.9 223.4L128.9 209.4A2 2 0 0 1 130.9 207.4\" fill=\"#f0a0a0\" class=\"ec-hyper-cls-7\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(438.861 45.38)\" fill=\"#dbe7f0\">3.2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(238.462 88.14)\" fill=\"#dbe7f0\">0.9</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(212.323 130.9)\" fill=\"#dbe7f0\">0.6</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(194.897 173.66)\" fill=\"#dbe7f0\">0.4</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(123.906 216.42)\" fill=\"#dbe7f0\">-0.3</text>\n</svg>",
+    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M34.6 238.5L376 238.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 210.5L376 210.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 183.5L376 183.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 156.5L376 156.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 129.5L376 129.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 101.5L376 101.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 74.5L376 74.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 47.5L376 47.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 20.5L376 20.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"-3.1\" transform=\"matrix(0,-1,1,0,-5.4,128.9)\" fill=\"#5f6b76\">Index (first session = 100)</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(205.3 263.8)\" fill=\"#5f6b76\">Session</text>\n<path d=\"M34.6 238.5L376 238.5\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 238.5L29.6 238.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 210.5L29.6 210.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 183.5L29.6 183.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 156.5L29.6 156.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 129.5L29.6 129.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 101.5L29.6 101.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 74.5L29.6 74.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 47.5L29.6 47.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M34.6 20.5L29.6 20.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M51.5 237.8L51.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M120.5 237.8L120.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M188.5 237.8L188.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M256.5 237.8L256.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<path d=\"M325.5 237.8L325.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-hyper-cls-9\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 237.8)\" fill=\"#8b98a5\">85</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 210.575)\" fill=\"#8b98a5\">90</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 183.35)\" fill=\"#8b98a5\">95</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 156.125)\" fill=\"#8b98a5\">100</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 128.9)\" fill=\"#8b98a5\">105</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 101.675)\" fill=\"#8b98a5\">110</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 74.45)\" fill=\"#8b98a5\">115</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 47.225)\" fill=\"#8b98a5\">120</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 20)\" fill=\"#8b98a5\">125</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(51.67 245.8)\" fill=\"#8b98a5\">8 Sep</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(119.95 245.8)\" fill=\"#8b98a5\">10 Sep</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(188.23 245.8)\" fill=\"#8b98a5\">14 Sep</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(256.51 245.8)\" fill=\"#8b98a5\">16 Sep</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(324.79 245.8)\" fill=\"#8b98a5\">18 Sep</text>\n<g clip-path=\"url(#ec-hyper-c0)\">\n<path d=\"M51.7 156.1L85.8 120.5L119.9 128.7L154.1 125.5L188.2 109.8L222.4 105.8L256.5 103L290.6 95L324.8 109.7L358.9 42.7\" fill=\"none\" stroke=\"#22d3ee\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-hyper-cls-11\"></path>\n</g>\n<g clip-path=\"url(#ec-hyper-c1)\">\n<path d=\"M51.7 156.1L85.8 159.1L119.9 188.2L154.1 197.1L188.2 215.5L222.4 230.4L256.5 221L290.6 196.1L324.8 206.1L358.9 202.9\" fill=\"none\" stroke=\"#5eead4\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-hyper-cls-11\"></path>\n</g>\n<g clip-path=\"url(#ec-hyper-c2)\">\n<path d=\"M51.7 156.1L85.8 158.7L119.9 157.8L154.1 154.3L188.2 143.5L222.4 152.6L256.5 160.2L290.6 151.9L324.8 156.3L358.9 147.7\" fill=\"none\" stroke=\"#14a3ba\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-hyper-cls-11\"></path>\n</g>\n<g clip-path=\"url(#ec-hyper-c3)\">\n<path d=\"M51.7 156.1L85.8 168.5L119.9 165.4L154.1 155.9L188.2 138.4L222.4 145.5L256.5 148.9L290.6 141.7L324.8 138.2L358.9 129.4\" fill=\"none\" stroke=\"#d4705f\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-hyper-cls-11\"></path>\n</g>\n<g clip-path=\"url(#ec-hyper-c4)\">\n<path d=\"M51.7 156.1L85.8 165.8L119.9 166.9L154.1 156.5L188.2 163.4L222.4 174.3L256.5 179.4L290.6 168.4L324.8 163L358.9 153\" fill=\"none\" stroke=\"#a5f3fc\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-hyper-cls-11\"></path>\n</g>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(366.93 42.7057)\" fill=\"#8b98a5\">Meta Platforms</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(366.93 202.8976)\" fill=\"#8b98a5\">Oracle</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(366.93 147.6853)\" fill=\"#8b98a5\">Microsoft</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(366.93 129.39)\" fill=\"#8b98a5\">Alphabet</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(366.93 152.9669)\" fill=\"#8b98a5\">Amazon</text>\n<defs >\n<clipPath id=\"ec-hyper-c0\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-hyper-cls-10\"></path>\n</clipPath>\n<clipPath id=\"ec-hyper-c1\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-hyper-cls-10\"></path>\n</clipPath>\n<clipPath id=\"ec-hyper-c2\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-hyper-cls-10\"></path>\n</clipPath>\n<clipPath id=\"ec-hyper-c3\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-hyper-cls-10\"></path>\n</clipPath>\n<clipPath id=\"ec-hyper-c4\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-hyper-cls-10\"></path>\n</clipPath>\n</defs>\n</svg>",
     "width": 480,
     "height": 260,
     "rung": 4,
     "model": "record",
-    "generatedAt": "2026-09-23T09:41:28.183Z"
+    "generatedAt": "2026-09-23T10:41:29.608Z"
   },
   "semi": {
     "section": "semi",
@@ -271,60 +523,101 @@ export const SAMPLE_CHARTS: EditionCharts = {
       }
     ],
     "storyIds": [],
-    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M166.5 24L166.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-8\"></path>\n<path d=\"M225.5 24L225.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-8\"></path>\n<path d=\"M283.5 24L283.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-8\"></path>\n<path d=\"M342.5 24L342.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-8\"></path>\n<path d=\"M401.5 24L401.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-8\"></path>\n<path d=\"M460.5 24L460.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-8\"></path>\n<path d=\"M225.5 24L225.5 237.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-semi-cls-8\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(468 237.8)\" fill=\"#5f6b76\">Change (%)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 37.3625)\" fill=\"#8b98a5\">SK hynix</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 64.0875)\" fill=\"#8b98a5\">Micron Technology</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 90.8125)\" fill=\"#8b98a5\">NVIDIA</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 117.5375)\" fill=\"#8b98a5\">SMIC</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 144.2625)\" fill=\"#8b98a5\">Samsung Electronics</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 170.9875)\" fill=\"#8b98a5\">Intel</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 197.7125)\" fill=\"#8b98a5\">TSMC</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 224.4375)\" fill=\"#8b98a5\">Advanced Micro Devices</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(166.04 245.8)\" fill=\"#5f6b76\">-2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(224.832 245.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(283.624 245.8)\" fill=\"#5f6b76\">2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(342.416 245.8)\" fill=\"#5f6b76\">4</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(401.208 245.8)\" fill=\"#5f6b76\">6</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(460 245.8)\" fill=\"#5f6b76\">8</text>\n<path d=\"M226.8 28.4L422.7 28.4A2 2 0 0 1 424.7 30.4L424.7 44.4A2 2 0 0 1 422.7 46.4L226.8 46.4A2 2 0 0 1 224.8 44.4L224.8 30.4A2 2 0 0 1 226.8 28.4\" fill=\"#22d3ee\" class=\"ec-semi-cls-9\"></path>\n<path d=\"M226.8 55.1L372.8 55.1A2 2 0 0 1 374.8 57.1L374.8 71.1A2 2 0 0 1 372.8 73.1L226.8 73.1A2 2 0 0 1 224.8 71.1L224.8 57.1A2 2 0 0 1 226.8 55.1\" fill=\"#22d3ee\" class=\"ec-semi-cls-9\"></path>\n<path d=\"M226.8 81.8L293.4 81.8A2 2 0 0 1 295.4 83.8L295.4 97.8A2 2 0 0 1 293.4 99.8L226.8 99.8A2 2 0 0 1 224.8 97.8L224.8 83.8A2 2 0 0 1 226.8 81.8\" fill=\"#22d3ee\" class=\"ec-semi-cls-9\"></path>\n<path d=\"M226.8 108.5L278.7 108.5A2 2 0 0 1 280.7 110.5L280.7 124.5A2 2 0 0 1 278.7 126.5L226.8 126.5A2 2 0 0 1 224.8 124.5L224.8 110.5A2 2 0 0 1 226.8 108.5\" fill=\"#22d3ee\" class=\"ec-semi-cls-9\"></path>\n<path d=\"M226.8 135.3L264 135.3A2 2 0 0 1 266 137.3L266 151.3A2 2 0 0 1 264 153.3L226.8 153.3A2 2 0 0 1 224.8 151.3L224.8 137.3A2 2 0 0 1 226.8 135.3\" fill=\"#22d3ee\" class=\"ec-semi-cls-9\"></path>\n<path d=\"M191.6 162L222.8 162A2 2 0 0 1 224.8 164L224.8 178A2 2 0 0 1 222.8 180L191.6 180A2 2 0 0 1 189.6 178L189.6 164A2 2 0 0 1 191.6 162\" fill=\"#f0a0a0\" class=\"ec-semi-cls-10\"></path>\n<path d=\"M226.8 188.7L255.2 188.7A2 2 0 0 1 257.2 190.7L257.2 204.7A2 2 0 0 1 255.2 206.7L226.8 206.7A2 2 0 0 1 224.8 204.7L224.8 190.7A2 2 0 0 1 226.8 188.7\" fill=\"#22d3ee\" class=\"ec-semi-cls-9\"></path>\n<path d=\"M203.3 215.4L222.8 215.4A2 2 0 0 1 224.8 217.4L224.8 231.4A2 2 0 0 1 222.8 233.4L203.3 233.4A2 2 0 0 1 201.3 231.4L201.3 217.4A2 2 0 0 1 203.3 215.4\" fill=\"#f0a0a0\" class=\"ec-semi-cls-10\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(429.7248 37.3625)\" fill=\"#dbe7f0\">6.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(379.7516 64.0875)\" fill=\"#dbe7f0\">5.1</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(300.3824 90.8125)\" fill=\"#dbe7f0\">2.4</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(285.6844 117.5375)\" fill=\"#dbe7f0\">1.9</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(270.9864 144.2625)\" fill=\"#dbe7f0\">1.4</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(184.5568 170.9875)\" fill=\"#dbe7f0\">-1.2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(262.1676 197.7125)\" fill=\"#dbe7f0\">1.1</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(196.3152 224.4375)\" fill=\"#dbe7f0\">-0.8</text>\n</svg>",
+    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M166.5 20L166.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-12\"></path>\n<path d=\"M225.5 20L225.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-12\"></path>\n<path d=\"M283.5 20L283.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-12\"></path>\n<path d=\"M342.5 20L342.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-12\"></path>\n<path d=\"M401.5 20L401.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-12\"></path>\n<path d=\"M460.5 20L460.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-semi-cls-12\"></path>\n<path d=\"M225.5 20L225.5 237.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-semi-cls-12\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(468 237.8)\" fill=\"#5f6b76\">Change (%)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 33.6125)\" fill=\"#8b98a5\">SK hynix</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 60.8375)\" fill=\"#8b98a5\">Micron Technology</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 88.0625)\" fill=\"#8b98a5\">NVIDIA</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 115.2875)\" fill=\"#8b98a5\">SMIC</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 142.5125)\" fill=\"#8b98a5\">Samsung Electronics</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 169.7375)\" fill=\"#8b98a5\">Intel</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(158.04 196.9625)\" fill=\"#8b98a5\">TSMC</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(158.04 224.1875)\" fill=\"#8b98a5\">Advanced Micro Devices</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(166.04 245.8)\" fill=\"#5f6b76\">-2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(224.832 245.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(283.624 245.8)\" fill=\"#5f6b76\">2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(342.416 245.8)\" fill=\"#5f6b76\">4</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(401.208 245.8)\" fill=\"#5f6b76\">6</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(460 245.8)\" fill=\"#5f6b76\">8</text>\n<path d=\"M226.8 24.6L422.7 24.6A2 2 0 0 1 424.7 26.6L424.7 40.6A2 2 0 0 1 422.7 42.6L226.8 42.6A2 2 0 0 1 224.8 40.6L224.8 26.6A2 2 0 0 1 226.8 24.6\" fill=\"#22d3ee\" class=\"ec-semi-cls-13\"></path>\n<path d=\"M226.8 51.8L372.8 51.8A2 2 0 0 1 374.8 53.8L374.8 67.8A2 2 0 0 1 372.8 69.8L226.8 69.8A2 2 0 0 1 224.8 67.8L224.8 53.8A2 2 0 0 1 226.8 51.8\" fill=\"#22d3ee\" class=\"ec-semi-cls-13\"></path>\n<path d=\"M226.8 79.1L293.4 79.1A2 2 0 0 1 295.4 81.1L295.4 95.1A2 2 0 0 1 293.4 97.1L226.8 97.1A2 2 0 0 1 224.8 95.1L224.8 81.1A2 2 0 0 1 226.8 79.1\" fill=\"#22d3ee\" class=\"ec-semi-cls-13\"></path>\n<path d=\"M226.8 106.3L278.7 106.3A2 2 0 0 1 280.7 108.3L280.7 122.3A2 2 0 0 1 278.7 124.3L226.8 124.3A2 2 0 0 1 224.8 122.3L224.8 108.3A2 2 0 0 1 226.8 106.3\" fill=\"#22d3ee\" class=\"ec-semi-cls-13\"></path>\n<path d=\"M226.8 133.5L264 133.5A2 2 0 0 1 266 135.5L266 149.5A2 2 0 0 1 264 151.5L226.8 151.5A2 2 0 0 1 224.8 149.5L224.8 135.5A2 2 0 0 1 226.8 133.5\" fill=\"#22d3ee\" class=\"ec-semi-cls-13\"></path>\n<path d=\"M191.6 160.7L222.8 160.7A2 2 0 0 1 224.8 162.7L224.8 176.7A2 2 0 0 1 222.8 178.7L191.6 178.7A2 2 0 0 1 189.6 176.7L189.6 162.7A2 2 0 0 1 191.6 160.7\" fill=\"#f0a0a0\" class=\"ec-semi-cls-14\"></path>\n<path d=\"M226.8 188L255.2 188A2 2 0 0 1 257.2 190L257.2 204A2 2 0 0 1 255.2 206L226.8 206A2 2 0 0 1 224.8 204L224.8 190A2 2 0 0 1 226.8 188\" fill=\"#22d3ee\" class=\"ec-semi-cls-13\"></path>\n<path d=\"M203.3 215.2L222.8 215.2A2 2 0 0 1 224.8 217.2L224.8 231.2A2 2 0 0 1 222.8 233.2L203.3 233.2A2 2 0 0 1 201.3 231.2L201.3 217.2A2 2 0 0 1 203.3 215.2\" fill=\"#f0a0a0\" class=\"ec-semi-cls-14\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(429.7248 33.6125)\" fill=\"#dbe7f0\">6.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(379.7516 60.8375)\" fill=\"#dbe7f0\">5.1</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(300.3824 88.0625)\" fill=\"#dbe7f0\">2.4</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(285.6844 115.2875)\" fill=\"#dbe7f0\">1.9</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(270.9864 142.5125)\" fill=\"#dbe7f0\">1.4</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(184.5568 169.7375)\" fill=\"#dbe7f0\">-1.2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(262.1676 196.9625)\" fill=\"#dbe7f0\">1.1</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(196.3152 224.1875)\" fill=\"#dbe7f0\">-0.8</text>\n</svg>",
     "width": 480,
     "height": 260,
     "rung": 4,
     "model": "record",
-    "generatedAt": "2026-09-23T09:41:28.183Z"
+    "generatedAt": "2026-09-23T10:41:29.608Z"
   },
   "equip": {
     "section": "equip",
-    "title": "Toolmakers this window, by move",
-    "caption": "4 of 6 tracked toolmakers rose over the window; the change is close to close on each company's home exchange, in its own currency.",
+    "title": "Toolmakers from window open to close",
+    "caption": "1 of 6 tracked toolmakers closed the window above where they opened it; each line is one company's close, indexed to 100 at the open.",
     "spec": {
-      "chartType": "Bar Chart",
+      "chartType": "Slope Chart",
       "columns": [
         {
-          "name": "Company",
-          "semanticType": "Name"
+          "name": "Point",
+          "semanticType": "Category"
         },
         {
-          "name": "Change (%)",
-          "semanticType": "PercentageChange"
+          "name": "Company",
+          "semanticType": "Category"
+        },
+        {
+          "name": "Index (open = 100)",
+          "semanticType": "Quantity"
         }
       ],
       "rows": [
         [
+          "Window open",
           "Advantest",
-          3.1
+          100
         ],
         [
+          "Window close",
+          "Advantest",
+          87.65
+        ],
+        [
+          "Window open",
           "Tokyo Electron",
-          2.7
+          100
         ],
         [
-          "Lam Research",
-          1.8
+          "Window close",
+          "Tokyo Electron",
+          92.42
         ],
         [
+          "Window open",
           "Applied Materials",
-          -1.4
+          100
         ],
         [
+          "Window close",
+          "Applied Materials",
+          95.88
+        ],
+        [
+          "Window open",
+          "Lam Research",
+          100
+        ],
+        [
+          "Window close",
+          "Lam Research",
+          97.46
+        ],
+        [
+          "Window open",
           "ASML",
-          -0.6
+          100
         ],
         [
+          "Window close",
+          "ASML",
+          98.34
+        ],
+        [
+          "Window open",
           "KLA",
-          0.5
+          100
+        ],
+        [
+          "Window close",
+          "KLA",
+          101.32
         ]
       ],
       "encodings": {
-        "x": "Company",
+        "x": "Point",
         "y": [
-          "Change (%)"
-        ]
+          "Index (open = 100)"
+        ],
+        "color": "Company"
       }
     },
     "sources": [
@@ -334,12 +627,12 @@ export const SAMPLE_CHARTS: EditionCharts = {
       }
     ],
     "storyIds": [],
-    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M132.5 24L132.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M186.5 24L186.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M241.5 24L241.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M296.5 24L296.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M350.5 24L350.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M405.5 24L405.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M460.5 24L460.5 237.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-11\"></path>\n<path d=\"M241.5 24L241.5 237.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-equip-cls-11\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(468 237.8)\" fill=\"#5f6b76\">Change (%)</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(123.94 41.8167)\" fill=\"#8b98a5\">Advantest</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(123.94 77.45)\" fill=\"#8b98a5\">Tokyo Electron</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(123.94 113.0833)\" fill=\"#8b98a5\">Lam Research</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(123.94 148.7167)\" fill=\"#8b98a5\">Applied Materials</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(123.94 184.35)\" fill=\"#8b98a5\">ASML</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" transform=\"translate(123.94 219.9833)\" fill=\"#8b98a5\">KLA</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(131.94 245.8)\" fill=\"#5f6b76\">-2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(186.6167 245.8)\" fill=\"#5f6b76\">-1</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(241.2933 245.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(295.97 245.8)\" fill=\"#5f6b76\">1</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(350.6467 245.8)\" fill=\"#5f6b76\">2</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(405.3233 245.8)\" fill=\"#5f6b76\">3</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(460 245.8)\" fill=\"#5f6b76\">4</text>\n<path d=\"M243.3 32.8L408.8 32.8A2 2 0 0 1 410.8 34.8L410.8 48.8A2 2 0 0 1 408.8 50.8L243.3 50.8A2 2 0 0 1 241.3 48.8L241.3 34.8A2 2 0 0 1 243.3 32.8\" fill=\"#22d3ee\" class=\"ec-equip-cls-12\"></path>\n<path d=\"M243.3 68.4L386.9 68.4A2 2 0 0 1 388.9 70.4L388.9 84.4A2 2 0 0 1 386.9 86.4L243.3 86.4A2 2 0 0 1 241.3 84.4L241.3 70.4A2 2 0 0 1 243.3 68.4\" fill=\"#22d3ee\" class=\"ec-equip-cls-12\"></path>\n<path d=\"M243.3 104.1L337.7 104.1A2 2 0 0 1 339.7 106.1L339.7 120.1A2 2 0 0 1 337.7 122.1L243.3 122.1A2 2 0 0 1 241.3 120.1L241.3 106.1A2 2 0 0 1 243.3 104.1\" fill=\"#22d3ee\" class=\"ec-equip-cls-12\"></path>\n<path d=\"M166.7 139.7L239.3 139.7A2 2 0 0 1 241.3 141.7L241.3 155.7A2 2 0 0 1 239.3 157.7L166.7 157.7A2 2 0 0 1 164.7 155.7L164.7 141.7A2 2 0 0 1 166.7 139.7\" fill=\"#f0a0a0\" class=\"ec-equip-cls-13\"></path>\n<path d=\"M210.5 175.4L239.3 175.4A2 2 0 0 1 241.3 177.4L241.3 191.4A2 2 0 0 1 239.3 193.4L210.5 193.4A2 2 0 0 1 208.5 191.4L208.5 177.4A2 2 0 0 1 210.5 175.4\" fill=\"#f0a0a0\" class=\"ec-equip-cls-13\"></path>\n<path d=\"M243.3 211L266.6 211A2 2 0 0 1 268.6 213L268.6 227A2 2 0 0 1 266.6 229L243.3 229A2 2 0 0 1 241.3 227L241.3 213A2 2 0 0 1 243.3 211\" fill=\"#22d3ee\" class=\"ec-equip-cls-12\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(415.791 41.8167)\" fill=\"#dbe7f0\">3.1</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(393.9203 77.45)\" fill=\"#dbe7f0\">2.7</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(344.7113 113.0833)\" fill=\"#dbe7f0\">1.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(159.746 148.7167)\" fill=\"#dbe7f0\">-1.4</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(203.4873 184.35)\" fill=\"#dbe7f0\">-0.6</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(273.6317 219.9833)\" fill=\"#dbe7f0\">0.5</text>\n</svg>",
+    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 480 260\">\n<path d=\"M34.6 238.5L376 238.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 194.5L376 194.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 150.5L376 150.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 107.5L376 107.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 63.5L376 63.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 20.5L376 20.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"-3.1\" transform=\"matrix(0,-1,1,0,-5.4,128.9)\" fill=\"#5f6b76\">Index (open = 100)</text>\n<path d=\"M34.6 238.5L376 238.5\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 238.5L29.6 238.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 194.5L29.6 194.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 150.5L29.6 150.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 107.5L29.6 107.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 63.5L29.6 63.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M34.6 20.5L29.6 20.5\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M120.5 237.8L120.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<path d=\"M290.5 237.8L290.5 242.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-equip-cls-15\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 237.8)\" fill=\"#8b98a5\">87</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 194.24)\" fill=\"#8b98a5\">90</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 150.68)\" fill=\"#8b98a5\">93</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 107.12)\" fill=\"#8b98a5\">96</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 63.56)\" fill=\"#8b98a5\">99</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(26.6 20)\" fill=\"#8b98a5\">102</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(119.95 245.8)\" fill=\"#8b98a5\">Window open</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" y=\"3.1\" transform=\"translate(290.65 245.8)\" fill=\"#8b98a5\">Window close</text>\n<g clip-path=\"url(#ec-equip-c0)\">\n<path d=\"M119.9 49L290.6 228.4\" fill=\"none\" stroke=\"#22d3ee\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-equip-cls-17\"></path>\n</g>\n<g clip-path=\"url(#ec-equip-c1)\">\n<path d=\"M119.9 49L290.6 159.1\" fill=\"none\" stroke=\"#5eead4\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-equip-cls-17\"></path>\n</g>\n<g clip-path=\"url(#ec-equip-c2)\">\n<path d=\"M119.9 49L290.6 108.9\" fill=\"none\" stroke=\"#14a3ba\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-equip-cls-17\"></path>\n</g>\n<g clip-path=\"url(#ec-equip-c3)\">\n<path d=\"M119.9 49L290.6 85.9\" fill=\"none\" stroke=\"#d4705f\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-equip-cls-17\"></path>\n</g>\n<g clip-path=\"url(#ec-equip-c4)\">\n<path d=\"M119.9 49L290.6 73.1\" fill=\"none\" stroke=\"#a5f3fc\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-equip-cls-17\"></path>\n</g>\n<g clip-path=\"url(#ec-equip-c5)\">\n<path d=\"M119.9 49L290.6 29.9\" fill=\"none\" stroke=\"#8b98a5\" stroke-width=\"2\" stroke-linejoin=\"bevel\" class=\"ec-equip-cls-17\"></path>\n</g>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,119.95,49.04)\" fill=\"#22d3ee\" class=\"ec-equip-cls-18\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,290.65,228.362)\" fill=\"#22d3ee\" class=\"ec-equip-cls-18\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,119.95,49.04)\" fill=\"#5eead4\" class=\"ec-equip-cls-19\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,290.65,159.1016)\" fill=\"#5eead4\" class=\"ec-equip-cls-19\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,119.95,49.04)\" fill=\"#14a3ba\" class=\"ec-equip-cls-20\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,290.65,108.8624)\" fill=\"#14a3ba\" class=\"ec-equip-cls-20\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,119.95,49.04)\" fill=\"#d4705f\" class=\"ec-equip-cls-21\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,290.65,85.9208)\" fill=\"#d4705f\" class=\"ec-equip-cls-21\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,119.95,49.04)\" fill=\"#a5f3fc\" class=\"ec-equip-cls-22\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,290.65,73.1432)\" fill=\"#a5f3fc\" class=\"ec-equip-cls-22\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,119.95,49.04)\" fill=\"#8b98a5\" class=\"ec-equip-cls-23\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(2.5,0,0,2.5,290.65,29.8736)\" fill=\"#8b98a5\" class=\"ec-equip-cls-23\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(298.65 228.362)\" fill=\"#8b98a5\">Advantest</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(298.65 159.1016)\" fill=\"#8b98a5\">Tokyo Electron</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(298.65 108.8624)\" fill=\"#8b98a5\">Applied Materials</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(298.65 85.9208)\" fill=\"#8b98a5\">Lam Research</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(298.65 73.1432)\" fill=\"#8b98a5\">ASML</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(298.65 29.8736)\" fill=\"#8b98a5\">KLA</text>\n<defs >\n<clipPath id=\"ec-equip-c0\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-equip-cls-16\"></path>\n</clipPath>\n<clipPath id=\"ec-equip-c1\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-equip-cls-16\"></path>\n</clipPath>\n<clipPath id=\"ec-equip-c2\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-equip-cls-16\"></path>\n</clipPath>\n<clipPath id=\"ec-equip-c3\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-equip-cls-16\"></path>\n</clipPath>\n<clipPath id=\"ec-equip-c4\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-equip-cls-16\"></path>\n</clipPath>\n<clipPath id=\"ec-equip-c5\">\n<path d=\"M33 19l345 0l0 219.8l-345 0Z\" fill=\"#000\" class=\"ec-equip-cls-16\"></path>\n</clipPath>\n</defs>\n</svg>",
     "width": 480,
     "height": 260,
     "rung": 4,
     "model": "record",
-    "generatedAt": "2026-09-23T09:41:28.183Z"
+    "generatedAt": "2026-09-23T10:41:29.608Z"
   },
   "research": {
     "section": "research",
@@ -389,12 +682,12 @@ export const SAMPLE_CHARTS: EditionCharts = {
       }
     ],
     "storyIds": [],
-    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 560 300\">\n<path d=\"M193.5 24L193.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-14\"></path>\n<path d=\"M262.5 24L262.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-14\"></path>\n<path d=\"M332.5 24L332.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-14\"></path>\n<path d=\"M401.5 24L401.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-14\"></path>\n<path d=\"M470.5 24L470.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-14\"></path>\n<path d=\"M540.5 24L540.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-14\"></path>\n<path d=\"M193.5 24L193.5 277.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-research-cls-14\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(548 277.8)\" fill=\"#5f6b76\">Gain (pts)</text>\n<path d=\"M193.5 277.8L193.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-14\"></path>\n<path d=\"M262.5 277.8L262.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-14\"></path>\n<path d=\"M332.5 277.8L332.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-14\"></path>\n<path d=\"M401.5 277.8L401.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-14\"></path>\n<path d=\"M470.5 277.8L470.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-14\"></path>\n<path d=\"M540.5 277.8L540.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-14\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 55.725)\" fill=\"#8b98a5\">Self-Play Curricula for...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 119.175)\" fill=\"#8b98a5\">VidGround-1FPS: Long-Vi...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 182.625)\" fill=\"#8b98a5\">Latent Scratchpads:… · ...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 246.075)\" fill=\"#8b98a5\">Router Distillation:… ·...</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(193.32 285.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(262.656 285.8)\" fill=\"#5f6b76\">3</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(331.992 285.8)\" fill=\"#5f6b76\">6</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(401.328 285.8)\" fill=\"#5f6b76\">9</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(470.664 285.8)\" fill=\"#5f6b76\">12</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(540 285.8)\" fill=\"#5f6b76\">15</text>\n<path d=\"M194.1 55L488.4 55A0.8 0.8 0 0 1 489.2 55.7A0.8 0.8 0 0 1 488.4 56.5L194.1 56.5A0.8 0.8 0 0 1 193.3 55.7A0.8 0.8 0 0 1 194.1 55\" fill=\"#22d3ee\" class=\"ec-research-cls-15\"></path>\n<path d=\"M194.1 118.4L419.1 118.4A0.8 0.8 0 0 1 419.8 119.2A0.8 0.8 0 0 1 419.1 119.9L194.1 119.9A0.8 0.8 0 0 1 193.3 119.2A0.8 0.8 0 0 1 194.1 118.4\" fill=\"#22d3ee\" class=\"ec-research-cls-15\"></path>\n<path d=\"M194.1 181.9L359 181.9A0.8 0.8 0 0 1 359.7 182.6A0.8 0.8 0 0 1 359 183.4L194.1 183.4A0.8 0.8 0 0 1 193.3 182.6A0.8 0.8 0 0 1 194.1 181.9\" fill=\"#22d3ee\" class=\"ec-research-cls-15\"></path>\n<path d=\"M194.1 245.3L287.3 245.3A0.8 0.8 0 0 1 288.1 246.1A0.8 0.8 0 0 1 287.3 246.8L194.1 246.8A0.8 0.8 0 0 1 193.3 246.1A0.8 0.8 0 0 1 194.1 245.3\" fill=\"#22d3ee\" class=\"ec-research-cls-15\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(494.1536 55.725)\" fill=\"#dbe7f0\">12.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(424.8176 119.175)\" fill=\"#dbe7f0\">9.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(364.7264 182.625)\" fill=\"#dbe7f0\">7.2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(293.0792 246.075)\" fill=\"#dbe7f0\">4.1</text>\n</svg>",
+    "svg": "<svg width=\"100%\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\" baseProfile=\"full\" viewBox=\"0 0 560 300\">\n<path d=\"M193.5 20L193.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-24\"></path>\n<path d=\"M262.5 20L262.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-24\"></path>\n<path d=\"M332.5 20L332.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-24\"></path>\n<path d=\"M401.5 20L401.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-24\"></path>\n<path d=\"M470.5 20L470.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-24\"></path>\n<path d=\"M540.5 20L540.5 277.8\" fill=\"none\" stroke=\"#232b33\" class=\"ec-research-cls-24\"></path>\n<path d=\"M193.5 20L193.5 277.8\" fill=\"none\" stroke=\"#232b33\" stroke-linecap=\"round\" class=\"ec-research-cls-24\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:10px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(548 277.8)\" fill=\"#5f6b76\">Gain (pts)</text>\n<path d=\"M193.5 277.8L193.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-24\"></path>\n<path d=\"M262.5 277.8L262.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-24\"></path>\n<path d=\"M332.5 277.8L332.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-24\"></path>\n<path d=\"M401.5 277.8L401.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-24\"></path>\n<path d=\"M470.5 277.8L470.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-24\"></path>\n<path d=\"M540.5 277.8L540.5 282.8\" fill=\"none\" stroke=\"#54555a\" class=\"ec-research-cls-24\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 52.225)\" fill=\"#8b98a5\">Self-Play Curricula for...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 116.675)\" fill=\"#8b98a5\">VidGround-1FPS: Long-Vi...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 181.125)\" fill=\"#8b98a5\">Latent Scratchpads:… · ...</text>\n<text dominant-baseline=\"central\" text-anchor=\"end\" style=\"font-size:11px;font-family:EditionMono;\" xml:space=\"preserve\" transform=\"translate(185.32 245.575)\" fill=\"#8b98a5\">Router Distillation:… ·...</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(193.32 285.8)\" fill=\"#5f6b76\">0</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(262.656 285.8)\" fill=\"#5f6b76\">3</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(331.992 285.8)\" fill=\"#5f6b76\">6</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(401.328 285.8)\" fill=\"#5f6b76\">9</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(470.664 285.8)\" fill=\"#5f6b76\">12</text>\n<text dominant-baseline=\"central\" text-anchor=\"middle\" style=\"font-size:10px;font-family:EditionMono;\" y=\"3.1\" transform=\"translate(540 285.8)\" fill=\"#5f6b76\">15</text>\n<path d=\"M193.3 51.5l295.8 0l0 1.5l-295.8 0Z\" fill=\"#22d3ee\" class=\"ec-research-cls-25\"></path>\n<path d=\"M193.3 115.9l226.5 0l0 1.5l-226.5 0Z\" fill=\"#22d3ee\" class=\"ec-research-cls-25\"></path>\n<path d=\"M193.3 180.4l166.4 0l0 1.5l-166.4 0Z\" fill=\"#22d3ee\" class=\"ec-research-cls-25\"></path>\n<path d=\"M193.3 244.8l94.8 0l0 1.5l-94.8 0Z\" fill=\"#22d3ee\" class=\"ec-research-cls-25\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5,0,0,5,489.1536,52.225)\" fill=\"#5eead4\" fill-opacity=\"0.8\" stroke=\"#fff\" stroke-width=\"0\" stroke-opacity=\"0.8\" class=\"ec-research-cls-26\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5,0,0,5,419.8176,116.675)\" fill=\"#5eead4\" fill-opacity=\"0.8\" stroke=\"#fff\" stroke-width=\"0\" stroke-opacity=\"0.8\" class=\"ec-research-cls-26\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5,0,0,5,359.7264,181.125)\" fill=\"#5eead4\" fill-opacity=\"0.8\" stroke=\"#fff\" stroke-width=\"0\" stroke-opacity=\"0.8\" class=\"ec-research-cls-26\"></path>\n<path d=\"M1 0A1 1 0 1 1 1 -0.1A1 1 0 0 1 1 0\" transform=\"matrix(5,0,0,5,288.0792,245.575)\" fill=\"#5eead4\" fill-opacity=\"0.8\" stroke=\"#fff\" stroke-width=\"0\" stroke-opacity=\"0.8\" class=\"ec-research-cls-26\"></path>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(502.1536 52.225)\" fill=\"#dbe7f0\" fill-opacity=\"0.8\">12.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(432.8176 116.675)\" fill=\"#dbe7f0\" fill-opacity=\"0.8\">9.8</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(372.7264 181.125)\" fill=\"#dbe7f0\" fill-opacity=\"0.8\">7.2</text>\n<text dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-size:10px;font-family:EditionMono;\" transform=\"translate(301.0792 245.575)\" fill=\"#dbe7f0\" fill-opacity=\"0.8\">4.1</text>\n</svg>",
     "width": 560,
     "height": 300,
     "rung": 4,
     "model": "record",
-    "generatedAt": "2026-09-23T09:41:28.183Z"
+    "generatedAt": "2026-09-23T10:41:29.608Z"
   }
 }
 
@@ -405,11 +698,11 @@ export const SAMPLE_CHART_SKIPS: EditionChartSkip[] = [
   },
   {
     "section": "hyper",
-    "reason": "rung 4 (Only two power figures (2.5 GW nuclear PPA and 900 MW solar tender), and they differ in scope and status; the rest are counts and horizons of unlike kinds. Fewer than three honest, comparable figures on any one scale.)"
+    "reason": "rung 4 (Only two power figures (2.5 GW nuclear PPA and 900 MW solar-plus-storage tender); the rest are counts and horizons of different kinds, so fewer than three figures compare honestly on one scale.)"
   },
   {
     "section": "semi",
-    "reason": "rung 4 (Only three figures and they are different kinds (two counts, one share) with no subjects — nothing compares on one honest scale.)"
+    "reason": "rung 4 (Only three figures and they are different kinds (two counts, one share) with no subjects to compare on one scale.)"
   },
   {
     "section": "equip",
