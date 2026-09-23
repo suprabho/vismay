@@ -251,6 +251,24 @@ function companyOf(story: DcEditionStory, stocks: Map<string, StockName>): strin
   return null
 }
 
+/**
+ * A template visualisation with fewer rows is a sentence, not a chart: two
+ * bars invite a comparison the reader makes from the numbers alone, and a
+ * two-dot timeline is the kind of card this page used to draw. Below this
+ * the layer tile prints its notes and no viz. Same floor as the planned
+ * charts (MIN_CHART_ROWS in dcEditionCharts).
+ */
+export const MIN_VIZ_ROWS = 3
+
+/** A stable key for "the same thing": the v3 subject when the figure carries one, else a normalised label. */
+export function subjectKey(text: string | null | undefined): string {
+  return (text ?? '')
+    .toLowerCase()
+    .replace(/centre/g, 'center')
+    .replace(/\b(inc|corp|co|ltd|plc|llc)\b\.?/g, '')
+    .replace(/[^a-z0-9]/g, '')
+}
+
 function largestPowerFigure(story: DcEditionStory): { fig: DcStoryFigure; mw: number } | null {
   let best: { fig: DcStoryFigure; mw: number } | null = null
   for (const fig of story.facts?.figures ?? []) {
@@ -272,6 +290,7 @@ export function buildCapacityViz(
   stocks: Map<string, StockName>,
 ): CapacityViz | null {
   const rows: CapacityViz['rows'] = []
+  const seen = new Set<string>()
   for (const s of stories) {
     const action = s.facts?.action
     if (action !== 'add' && action !== 'pause' && action !== 'freeze') continue
@@ -282,9 +301,14 @@ export function buildCapacityViz(
     const label = [where ?? who ?? s.source ?? 'Site', who && where ? `${what} (${who})` : what]
       .filter(Boolean)
       .join(' · ')
+    // Two outlets on the same site are one row: the v3 subject when the
+    // figure carries one, else the place / company the row is labelled by.
+    const key = `${subjectKey(power?.fig.subject ?? where ?? who ?? s.source)}|${action}|${action === 'add' ? power?.mw ?? '' : ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
     rows.push({ label: shortTitle(label, 30), mw: action === 'add' ? power?.mw ?? null : null, action, storyId: s.id })
   }
-  if (rows.length === 0) return null
+  if (rows.length < MIN_VIZ_ROWS) return null
   const order = { add: 0, pause: 1, freeze: 2 }
   rows.sort((a, b) => order[a.action] - order[b.action] || (b.mw ?? -1) - (a.mw ?? -1))
   const kept = rows.slice(0, 6)
@@ -332,13 +356,16 @@ export function buildMatrixViz(stories: DcEditionStory[], stocks: Map<string, St
       perCompany.set(stock.name, (perCompany.get(stock.name) ?? 0) + 1)
     }
   }
-  if (cells.length === 0) return null
+  // A matrix with one column is a list with extra ink: it needs two kinds of
+  // move to have a shape, and enough cells to be worth a grid.
+  const distinctActions = new Set(cells.map((c) => c.action))
+  if (cells.length < MIN_VIZ_ROWS || distinctActions.size < 2) return null
   const companies = [...perCompany].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 6).map(([n]) => n)
   const keptCompanies = new Set(companies)
   return {
     kind: 'matrix',
     companies,
-    actions: [...MATRIX_ACTIONS],
+    actions: MATRIX_ACTIONS.filter((a) => distinctActions.has(a)),
     cells: cells.filter((c) => keptCompanies.has(c.company)),
   }
 }
@@ -373,9 +400,9 @@ export function buildHorizonViz(
       rows.push({ label, desc: shortTitle(desc, 34), from: today, to: today, style: 'mark', storyId: s.id })
     }
   }
-  if (rows.length === 0) return null
   rows.sort((a, b) => (a.style === 'mark' ? 1 : 0) - (b.style === 'mark' ? 1 : 0) || b.to - a.to)
-  const kept = rows.slice(0, 5)
+  const kept = onePerLabel(rows).slice(0, 5)
+  if (kept.length < MIN_VIZ_ROWS) return null
   const maxTo = Math.max(today + 1.5, ...kept.map((r) => r.to))
   return { kind: 'horizon', t0: today - 0.25, t1: maxTo + 0.25, today, rows: kept }
 }
@@ -415,12 +442,27 @@ export function buildOrdersViz(
       rows.push({ label, desc, from: today, to: today, style: action === 'risk' ? 'risk' : 'mark', storyId: s.id })
     }
   }
-  if (rows.length === 0) return null
   const styleOrder = { 'pull-forward': 0, window: 1, risk: 2, mark: 3 }
   rows.sort((a, b) => styleOrder[a.style] - styleOrder[b.style])
-  const kept = rows.slice(0, 5)
+  const kept = onePerLabel(rows).slice(0, 5)
+  if (kept.length < MIN_VIZ_ROWS) return null
   const maxT = Math.max(today + 1.5, ...kept.map((r) => Math.max(r.from, r.to)))
   return { kind: 'orders', t0: today - 0.25, t1: maxT + 0.3, today, rows: kept }
+}
+
+/**
+ * One row per supplier / toolmaker: the rows arrive sorted strongest-first
+ * (a stated window before a bare mark), so the first row for a label is the
+ * one that says most, and a second outlet on the same company adds nothing.
+ */
+function onePerLabel<R extends { label: string }>(rows: R[]): R[] {
+  const seen = new Set<string>()
+  return rows.filter((r) => {
+    const k = subjectKey(r.label)
+    if (seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
 }
 
 export function buildLayerViz(
@@ -610,7 +652,7 @@ export function figureKind(unit: string): DcFigureKind {
   if (u === 'gw' || u === 'mw' || u === 'kw') return 'power'
   if (u === 'gwh' || u === 'mwh' || u === 'twh') return 'energy'
   if (u === '%') return 'share'
-  if (/bn|billion|mn|million|\$|€|£/.test(u)) return 'money'
+  if (/\btn\b|trillion|\bbn\b|billion|\bmn\b|million|\$|€|£/.test(u)) return 'money'
   if (isYearUnit(u)) return 'horizon'
   if (u === 'years' || u === 'months' || u === 'days') return 'term'
   return 'count'
@@ -638,7 +680,7 @@ export function figureMagnitude(f: { value: number; unit: string; base?: number 
     case 'share':
       return f.value
     case 'money':
-      return /bn|billion/.test(u) ? f.value * 1000 : /mn|million/.test(u) ? f.value : null
+      return /\btn\b|trillion/.test(u) ? f.value * 1e6 : /\bbn\b|billion/.test(u) ? f.value * 1000 : /\bmn\b|million/.test(u) ? f.value : null
     default:
       return null
   }

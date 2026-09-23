@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DcPaper } from '@vismay/content-source/dcEditionTypes'
 import { DC_COMPUTE_BUCKETS } from '@vismay/content-source/dcEditionTypes'
 import { paperGainNorm, paperGainText, shortTitle } from '@vismay/content-source/dcEditionAssembly'
@@ -20,10 +20,13 @@ import { paperGainNorm, paperGainText, shortTitle } from '@vismay/content-source
  * shuffled, so a click can escape a bad local arrangement without changing any
  * of the underlying data.
  *
- * Label widths are estimated, never measured: canvas measureText() only exists
- * in the browser, and the first paint has to be identical on the server and
- * the client or React replaces the whole plot on hydration. PAD below absorbs
- * the drift between the estimate and the rendered glyphs.
+ * Label widths are estimated for the FIRST paint — canvas measureText() only
+ * exists in the browser, and the first paint has to be identical on the server
+ * and the client or React replaces the whole plot on hydration. Once mounted
+ * and the fonts have loaded, the rendered labels are measured with
+ * getComputedTextLength() and, where the estimate was off, the layout is
+ * re-placed with the real widths: the estimate keeps hydration clean, the
+ * measurement keeps neighbours from touching. PAD absorbs what is left.
  */
 
 const W = 900
@@ -202,6 +205,9 @@ export default function QuadrantPlot({ papers }: { papers: DcPaper[] }) {
   const [seed, setSeed] = useState(0)
   const [spinning, setSpinning] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  /** Rendered label widths by arXiv id, once measured in the browser. */
+  const [measured, setMeasured] = useState<Record<string, number> | null>(null)
 
   const points = useMemo<Point[]>(
     () =>
@@ -216,12 +222,41 @@ export default function QuadrantPlot({ papers }: { papers: DcPaper[] }) {
           open: paper.weightsReleased || paper.codeReleased,
           name,
           gain,
-          w: sansWidth(`${name} `, 12.5) + monoWidth(`· ${gain}`, 10.5),
+          w: measured?.[paper.arxivId] ?? sansWidth(`${name} `, 12.5) + monoWidth(`· ${gain}`, 10.5),
         }
       }),
-    [papers],
+    [papers, measured],
   )
   const labels = useMemo(() => placeLabels(points, seed), [points, seed])
+
+  // After mount (and the web fonts), measure what the browser actually laid
+  // out. Only widths that differ from the estimate by more than a pixel
+  // trigger a re-layout, and the effect keys on the papers, not the widths,
+  // so it runs once per edition rather than chasing its own state.
+  useEffect(() => {
+    let cancelled = false
+    const measure = () => {
+      if (cancelled || !svgRef.current) return
+      const next: Record<string, number> = {}
+      let changed = false
+      for (const el of svgRef.current.querySelectorAll<SVGTextElement>('text.qt[data-id]')) {
+        const id = el.dataset.id!
+        const w = el.getComputedTextLength()
+        if (!Number.isFinite(w) || w <= 0) continue
+        next[id] = w
+        const est = points.find((p) => p.paper.arxivId === id)?.w
+        if (est == null || Math.abs(est - w) > 1) changed = true
+      }
+      if (changed) setMeasured(next)
+    }
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+    if (fonts?.ready) fonts.ready.then(measure, measure)
+    else measure()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [papers])
 
   const regenerate = () => {
     setSeed((s) => s + 1)
@@ -253,7 +288,7 @@ export default function QuadrantPlot({ papers }: { papers: DcPaper[] }) {
           </button>
         )}
       </div>
-      <svg id="quadrant" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Papers placed by reported gain over baseline and the estimated compute of the headline experiment">
+      <svg ref={svgRef} id="quadrant" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Papers placed by reported gain over baseline and the estimated compute of the headline experiment">
         <rect x={P.l} y={P.t} width={W - P.l - P.r} height={H - P.t - P.b} className="qbg" />
         {DC_COMPUTE_BUCKETS.map((c, i) => (
           <g key={c}>
@@ -288,7 +323,7 @@ export default function QuadrantPlot({ papers }: { papers: DcPaper[] }) {
                 {pt.i + 1}
               </text>
               {leader && <line x1={pt.cx} y1={pt.cy} x2={label.x} y2={label.y - 4} className="qleader" />}
-              <text x={label.x} y={label.y} textAnchor={label.anchor} className="qt">
+              <text x={label.x} y={label.y} textAnchor={label.anchor} className="qt" data-id={pt.paper.arxivId}>
                 {pt.name} <tspan className="qc">· {pt.gain}</tspan>
               </text>
               <title>{pt.paper.title}</title>
