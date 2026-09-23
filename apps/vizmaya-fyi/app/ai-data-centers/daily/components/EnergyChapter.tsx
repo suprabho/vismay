@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import type { DcEditionStory, DcRegionKey, EditionChart, EditionEnergy } from '@vismay/content-source/dcEditionTypes'
 import { DC_REGIONS, DC_THEMES } from '@vismay/content-source/dcEditionTypes'
-import { figureKind, figureMagnitude, isCommittedPower, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
+import { MIN_VIZ_ROWS, figureKind, figureMagnitude, isCommittedPower, subjectKey, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
+import { MAX_RANGE_RATIO } from '@vismay/content-source/dcEditionCharts'
 import { hm, storyMinutes } from './editionUtils'
 import PlannedChart from './PlannedChart'
 
@@ -38,6 +39,10 @@ interface EnergyFact {
   /** Base-unit size from the classifier (v3), when it carried one. */
   base: number | null
   label: string
+  /** v3 tags; null on rows classified before them. */
+  subject: string | null
+  scope: string | null
+  status: string | null
   kind: DcFigureKind
   story: DcEditionStory
   /** Every outlet that put this figure on the record, in the order they landed. */
@@ -103,7 +108,18 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
   const facts: EnergyFact[] = []
   for (const story of energyStories) {
     for (const f of story.facts?.figures ?? []) {
-      facts.push({ value: f.value, unit: f.unit, base: f.base ?? null, label: f.label || story.title, kind: figureKind(f.unit), story, sources: [story.source ?? 'Unattributed'] })
+      facts.push({
+        value: f.value,
+        unit: f.unit,
+        base: f.base ?? null,
+        label: f.label || story.title,
+        subject: f.subject ?? null,
+        scope: f.scope ?? null,
+        status: f.status ?? null,
+        kind: figureKind(f.unit),
+        story,
+        sources: [story.source ?? 'Unattributed'],
+      })
     }
   }
 
@@ -153,8 +169,10 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
     {
       key: 'ledger',
       title: 'Power committed in deals that state a figure',
-      reason: 'no deal in this edition states the capacity it commits',
-      weight: committed.length ? 140 + committed.length * 4 : 0,
+      reason: committed.length
+        ? `only ${committed.length} deal${committed.length === 1 ? '' : 's'} state${committed.length === 1 ? 's' : ''} committed capacity — a bar needs ${MIN_VIZ_ROWS}`
+        : 'no deal in this edition states the capacity it commits',
+      weight: committed.length >= MIN_VIZ_ROWS ? 140 + committed.length * 4 : 0,
       hero: { value: n1(committedTotal), unit: 'GW' },
       render: (W) => {
         const L = Math.round(W * 0.33)
@@ -261,15 +279,22 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
     {
       key: 'figures',
       title: 'Other figures on the record today',
-      reason: 'no story stated a figure of any kind',
-      weight: others.length ? 90 + others.length * 3 : 0,
+      reason: others.length ? `only ${others.length} other figure${others.length === 1 ? '' : 's'} on the record — the card needs ${MIN_VIZ_ROWS}` : 'no story stated a figure of any kind',
+      weight: others.length >= MIN_VIZ_ROWS ? 90 + others.length * 3 : 0,
       hero: others.length ? heroOf(others) : undefined,
       render: () => {
         const rows = [...others].sort(byTelling).slice(0, 5)
-        // Peers are figures of the same dimension, compared on one scale — so a
-        // 20 GW target is the full rail and a 640 MW site reads as the sliver
-        // of it that it is, rather than the larger figure having no rail at all.
-        const peers = (f: EnergyFact) => (magnitudeOf(f) == null ? [] : rows.filter((r) => r.kind === f.kind && magnitudeOf(r) != null))
+        // A rail compares a figure with its honest peers only: same dimension,
+        // and — where the classifier tagged them — the same status and scope,
+        // within one readable range. A 20 GW market target and a 640 MW site
+        // are both power, but the rail that drew one as 3% of the other said
+        // nothing true; untagged figures get no rail rather than a wrong one.
+        const peers = (f: EnergyFact) => {
+          if (magnitudeOf(f) == null || !f.status || !f.scope) return []
+          const p = rows.filter((r) => r.kind === f.kind && r.status === f.status && r.scope === f.scope && magnitudeOf(r) != null)
+          const sizes = p.map((r) => magnitudeOf(r) as number).filter((v) => v > 0)
+          return sizes.length && Math.max(...sizes) / Math.min(...sizes) <= MAX_RANGE_RATIO ? p : []
+        }
         return (
           <div className="efigs">
             {rows.map((f, i) => {
@@ -301,8 +326,8 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
     {
       key: 'matrix',
       title: 'What today covered · topic by region',
-      reason: 'no energy story in this edition carries a region',
-      weight: placed.length ? 60 + topics.length * 3 : 0,
+      reason: placed.length ? 'today’s energy stories fall in one topic or one region — a grid needs two of each' : 'no energy story in this edition carries a region',
+      weight: placed.length >= MIN_VIZ_ROWS && topics.length >= 2 && regions.length >= 2 ? 60 + topics.length * 3 : 0,
       sub: placed.length === energyStories.length
         ? `${plural(placed.length, 'story')} · ${plural(topics.length, 'topic')}`
         : `${placed.length} of ${energyStories.length} stories carry a region`,
@@ -355,8 +380,8 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
     {
       key: 'clock',
       title: 'When the energy stories landed',
-      reason: 'today’s stories carry no timestamps',
-      weight: energyStories.length ? 50 : 0,
+      reason: energyStories.length ? `only ${plural(energyStories.length, 'story')} — a clock needs ${MIN_VIZ_ROWS}` : 'today’s stories carry no timestamps',
+      weight: energyStories.length >= MIN_VIZ_ROWS ? 50 : 0,
       render: (W) => {
         const P = { l: 26, r: 26 }
         const X = (s: DcEditionStory) => P.l + (storyMinutes(s) / 1440) * (W - P.l - P.r)
@@ -403,7 +428,7 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
       key: 'balance',
       title: 'Pressure and relief by topic',
       reason: 'every energy story today leans the same way',
-      weight: energyStories.some((s) => (s.mood ?? 0) < 0) && energyStories.some((s) => (s.mood ?? 0) > 0) ? 45 : 0,
+      weight: energyStories.length >= MIN_VIZ_ROWS && energyStories.some((s) => (s.mood ?? 0) < 0) && energyStories.some((s) => (s.mood ?? 0) > 0) ? 45 : 0,
       render: (W) => {
         const rows = topics
           .map((t) => ({
@@ -548,18 +573,21 @@ function byTelling(a: EnergyFact, b: EnergyFact): number {
 
 /**
  * Collapse the same figure reported by several outlets into one row, keeping
- * each outlet's name. Same dimension, same size on that dimension's scale and
- * the same label once spelling is normalised ("data center" / "data centre")
- * is one figure — a deliberate pair of different facts that happen to share a
- * number and a description doesn't exist in practice.
+ * each outlet's name. Where the classifier tagged a subject, the same subject
+ * measured in the same dimension is one figure — "BDx West Java" at 640 MW
+ * from two wires, or the same site quoted as 640 MW and 0.64 GW — and the
+ * row keeps whichever statement ranks highest. Untagged rows fall back to
+ * the older test: same dimension, same size, same label once spelling is
+ * normalised ("data center" / "data centre").
  */
 function dedupe(facts: EnergyFact[]): EnergyFact[] {
   const out: EnergyFact[] = []
   const seen = new Map<string, EnergyFact>()
-  for (const f of facts) {
+  for (const f of [...facts].sort(byTelling)) {
     const size = magnitudeOf(f)
-    const label = f.label.toLowerCase().replace(/centre/g, 'center').replace(/[^a-z0-9]/g, '')
-    const key = `${f.kind}|${size ?? `${f.value}${f.unit}`}|${label}`
+    const key = f.subject
+      ? `${f.kind}|${subjectKey(f.subject)}|${f.status ?? ''}`
+      : `${f.kind}|${size ?? `${f.value}${f.unit}`}|${subjectKey(f.label)}`
     const hit = seen.get(key)
     if (hit) {
       for (const src of f.sources) if (!hit.sources.includes(src)) hit.sources.push(src)
