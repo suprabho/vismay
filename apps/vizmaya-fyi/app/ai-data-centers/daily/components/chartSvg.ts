@@ -26,6 +26,7 @@ const HEX_TO_VAR: Record<string, string> = {
   [T.line]: '--line',
   [T.dim]: '--dim',
   [T.bone]: '--bone',
+  [T.down]: '--down',
   '#6e7079': '--muted',
   '#e0e6f1': '--line',
   '#dbdee4': '--line',
