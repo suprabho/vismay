@@ -8,10 +8,12 @@ import {
   EDITION_CHART_SECTIONS,
   formatSigned,
   moodWord,
+  type DcEditionStory,
   type DcEditionSummary,
   type DcLayerKey,
   type EditionChart,
   type EditionChartSection,
+  type EditionMoodEvent,
   type EditionSource,
   type EditionText,
 } from '@vismay/content-source/dcEditionTypes'
@@ -215,6 +217,26 @@ export default function EditionsClient() {
       out.push({ name: `${s.source ?? 'source'} — ${s.title.slice(0, 70)}`, url: s.url })
     }
     return out
+  }, [draft])
+
+  // Membership grouped by Doom v Boom event, heaviest first: each event's lead,
+  // then the other outlets' reports of it; candidates outside the edition last.
+  const storyRows = useMemo(() => {
+    if (!draft) return []
+    const byId = new Map(draft.candidateStories.map((s) => [s.id, s]))
+    const rows: { s: DcEditionStory; event?: EditionMoodEvent; dupOf?: number }[] = []
+    const seen = new Set<number>()
+    const events = draft.moodCounts.method === 'events-v1' ? (draft.moodCounts.events ?? []) : []
+    for (const ev of events) {
+      for (const id of ev.ids) {
+        const s = byId.get(id)
+        if (!s || seen.has(id)) continue
+        seen.add(id)
+        rows.push(id === ev.lead ? { s, event: ev } : { s, dupOf: ev.lead })
+      }
+    }
+    for (const s of draft.candidateStories) if (!seen.has(s.id)) rows.push({ s })
+    return rows
   }, [draft])
 
   const diffRows = useMemo(() => {
@@ -434,8 +456,8 @@ export default function EditionsClient() {
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <ul className="divide-y divide-white/5 border border-white/10 rounded-xl max-h-[420px] overflow-y-auto">
-                {draft.candidateStories.map((s) => (
-                  <li key={s.id} className="px-3 py-2 flex items-start gap-2 text-sm">
+                {storyRows.map(({ s, event, dupOf }) => (
+                  <li key={s.id} className={`px-3 py-2 flex items-start gap-2 text-sm${dupOf ? ' pl-8 bg-white/[0.015]' : ''}`}>
                     <input
                       type="checkbox"
                       className="mt-1"
@@ -453,8 +475,20 @@ export default function EditionsClient() {
                       </a>
                       <span className="block text-xs text-neutral-500 mt-0.5">
                         {s.source ?? '—'} · {s.layer ?? 'untagged'} · {s.place ?? '—'} · {s.theme ?? '—'} · {s.mood === 1 ? 'boom' : s.mood === -1 ? 'doom' : 'neutral'}
-                        {s.energy ? ' · energy' : ''}
+                        {s.energy ? ' · energy' : ''} · R{s.relevance ?? '–'}·I{s.impact ?? '–'}
                       </span>
+                      {(event || dupOf) && (
+                        <span className="flex flex-wrap gap-1 mt-1">
+                          {dupOf && <Badge>dup of #{dupOf}</Badge>}
+                          {event && event.ids.length > 1 && <Badge tone="accent">{event.ids.length} reports · {event.outlets} outlets</Badge>}
+                          {event && (
+                            <Badge>
+                              event w{event.w} · R{event.r}·I{event.i}
+                            </Badge>
+                          )}
+                          {event?.mixed && <Badge tone="epic">mixed: boom + doom reports</Badge>}
+                        </span>
+                      )}
                     </span>
                   </li>
                 ))}

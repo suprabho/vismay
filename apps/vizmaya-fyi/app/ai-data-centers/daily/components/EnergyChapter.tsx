@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import type { DcEditionStory, DcRegionKey, EditionChart, EditionEnergy, EditionSource } from '@vismay/content-source/dcEditionTypes'
 import { DC_REGIONS, DC_THEMES } from '@vismay/content-source/dcEditionTypes'
-import { MIN_VIZ_ROWS, figureKind, figureMagnitude, isCommittedPower, storySource, subjectKey, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
+import { MIN_VIZ_ROWS, figureKind, figureMagnitude, isCommittedPower, labelsOverlap, storySource, subjectKey, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
 import { MAX_RANGE_RATIO } from '@vismay/content-source/dcEditionCharts'
 import { hm, storyMinutes } from './editionUtils'
 import PlannedChart from './PlannedChart'
@@ -625,17 +625,6 @@ function dedupe(facts: EnergyFact[]): EnergyFact[] {
     out.push(copy)
   }
   return out
-}
-
-const STOP = new Set(['the', 'a', 'an', 'of', 'in', 'for', 'and', 'to', 'on', 'at', 'by', 'ai', 'data', 'center', 'centre', 'centers', 'centres', 'usd', 'us'])
-const words = (s: string) => new Set(s.toLowerCase().replace(/centre/g, 'center').split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w)))
-/** Two figure labels describe the same thing when they share a meaningful word. */
-function labelsOverlap(a: string, b: string): boolean {
-  const wa = words(a)
-  const wb = words(b)
-  if (wa.size === 0 || wb.size === 0) return false
-  for (const w of wa) if (wb.has(w)) return true
-  return false
 }
 
 /** The figure that leads the "other figures" card. */

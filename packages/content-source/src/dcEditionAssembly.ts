@@ -20,9 +20,11 @@ import {
   DC_THEMES,
   emptyFieldBaseline,
   formatEditionDayLabel,
+  MOOD_METHOD,
   type CapacityViz,
   type DcEditionStory,
   type DcLayerKey,
+  type DcMood,
   type DcPaper,
   type DcPaperArea,
   type DcPlace,
@@ -36,6 +38,7 @@ import {
   type EditionLayerNote,
   type EditionLayerViz,
   type EditionMoodCounts,
+  type EditionMoodEvent,
   type EditionNote,
   type EditionSource,
   type EditionTapeTick,
@@ -166,21 +169,432 @@ export function decimalYear(date: string | Date): number {
 }
 
 // ---------------------------------------------------------------------------
-// Mood
+// Mood — Doom v Boom, scored per event
+//
+// Google News gives one row per outlet, so one development reported three
+// times used to be three votes. The reading now groups the window's stories
+// into events first (clusterEvents), gives each event one mood and one weight
+// (relevance × impact × coverage), and reads the balance of weight:
+// (W_boom − W_doom) / (W_boom + W_doom), neutral excluded. With no duplicates
+// and equal weights that is exactly the old story count.
 
-export function scoreMood(stories: DcEditionStory[]): { score: number | null; counts: EditionMoodCounts } {
-  const counts: EditionMoodCounts = { boom: 0, doom: 0, neutral: 0 }
-  for (const s of stories) {
-    if (s.mood === 1) counts.boom += 1
-    else if (s.mood === -1) counts.doom += 1
-    else counts.neutral += 1
-  }
-  const scored = counts.boom + counts.doom
-  const score = scored === 0 ? null : Math.round(((counts.boom - counts.doom) / scored) * 1000) / 1000
-  return { score, counts }
+/**
+ * Clustering constants — starting values, calibrated on the compose
+ * --dry-run cluster printout. Precision first: a missed merge only gives back
+ * the old behaviour, a wrong merge silently deletes a vote.
+ */
+export const EVENT_MATCH = {
+  /** Merge when the average pair similarity clears this and both stories carry a v4 event line… */
+  threshold: 0.5,
+  /** …or this when either is title-only (pre-v4). */
+  thresholdTitleOnly: 0.55,
+  /** Both name tracked companies, none shared: "Nvidia shares rise 3%" vs "AMD shares rise 3%". */
+  disjointTickers: -0.5,
+  /**
+   * Both name organisations (v4 actors) and neither story mentions any word of
+   * the other's: "Crusoe signs 1 GW PPA" vs "Lambda signs 1 GW PPA" — private
+   * firms carry no tickers. Fuzzy on purpose, so "NJ DEP" and "N.J.'s largest
+   * data center" still count as a mention.
+   */
+  disjointActors: -0.5,
+  /**
+   * Both name organisations (v4 actors) and one name is shared ("JPMorgan
+   * Chase" / "JPMorgan"): rewording of one development scores 0.25–0.45 on the
+   * text alone, and the shared company is what separates it from lookalikes.
+   */
+  sharedActor: 0.15,
+  /**
+   * The same power / energy / money figure — "$1M fine" from three wires. From
+   * the classifier's figures (same subject or label), or the same canonical
+   * figure in both headlines/event lines ("$189M" and "$189 million").
+   */
+  sharedFigure: 0.12,
+  samePlace: 0.05,
+  differentPlace: -0.3,
+  /** One outlet rarely files the same development twice in a window. */
+  sameOutlet: -0.1,
+} as const
+
+/** Event weight constants: relevance 0.6–1.0, each impact grade ×1.58 (grade 5 ≈ 6.3×), coverage capped at 1.75×. */
+export const MOOD_WEIGHTS = {
+  /** Ungraded (pre-v4) stories weigh as this grade on both scales. */
+  defaultGrade: 3,
+  relevanceBase: 0.5,
+  relevanceStep: 0.1,
+  impactStep: 10 ** 0.2,
+  coverageStep: 0.25,
+  coverageCap: 1.75,
+} as const
+
+// Words that say nothing about which development a headline reports: grammar,
+// headline filler, and this feed's own vocabulary ("AI data center" is in
+// half the titles).
+const EVENT_STOP = new Set([
+  'a', 'an', 'the', 'of', 'in', 'on', 'at', 'to', 'for', 'from', 'by', 'with', 'and', 'or', 'as', 'over', 'into', 'onto',
+  'after', 'amid', 'about', 'than', 'this', 'that', 'these', 'those', 'its', 'it', 'is', 'are', 'was', 'were', 'be', 'been',
+  'has', 'have', 'had', 'will', 'would', 'could', 'may', 'can', 'says', 'say', 'said', 'new', 'more', 'most', 'up', 'out',
+  'how', 'why', 'what', 'who', 'report', 'per', 'via', 'vs', 'amp', 'nbsp',
+  'ai', 'artificial', 'intelligence', 'data', 'datacenter', 'center', 'hyperscale', 'chip', 'chipmaker', 'semiconductor',
+  'infrastructure', 'tech', 'technology', 'company',
+])
+
+const MONEY_SCALE: Record<string, number> = {
+  trillion: 1e6, tn: 1e6, t: 1e6,
+  billion: 1e3, bn: 1e3, b: 1e3,
+  million: 1, mn: 1, m: 1, mln: 1,
+  thousand: 1e-3, k: 1e-3,
+}
+const POWER_SCALE: Record<string, number> = { gigawatt: 1000, gw: 1000, megawatt: 1, mw: 1, kilowatt: 0.001, kw: 0.001 }
+const ENERGY_SCALE: Record<string, number> = { twh: 1e6, gwh: 1000, mwh: 1 }
+
+const num = (raw: string): number => Number(raw.replace(/,/g, ''))
+const numToken = (v: number): string => String(Number(v.toPrecision(4)))
+
+function stem(t: string): string {
+  if (t.includes(':') || /\d/.test(t) || t.length <= 3) return t
+  if (t.endsWith('ies') && t.length > 4) return `${t.slice(0, -3)}y`
+  if (t.endsWith('s') && !/(ss|us|is)$/.test(t)) return t.slice(0, -1)
+  return t
 }
 
-/** Top drivers per side: stories with the most stated facts first, then the latest. */
+/**
+ * The tokens that identify a development in a line of text. Money, power and
+ * energy become canonical tokens so "$1 million" and "$1M" match (usd:1, in
+ * millions) and "2 GW" matches "2,000 MW" (mw:2000); "N.J.'s" reads as "nj".
+ */
+export function eventTokens(text: string | null | undefined): Set<string> {
+  let t = (text ?? '')
+    .toLowerCase()
+    .replace(/[’‘`]/g, "'")
+    .replace(/centre/g, 'center')
+    // Initialisms: n.j. → nj, u.s. → us.
+    .replace(/\b([a-z])\.([a-z])\.(?:([a-z])\.)?/g, (_m, a: string, b: string, c?: string) => `${a}${b}${c ?? ''}`)
+    .replace(/'s\b/g, '')
+  t = t.replace(
+    /(?:\bus)?([$€£])\s?(\d[\d,]*(?:\.\d+)?)\s*-?\s*(trillion|billion|million|thousand|tn|bn|mln|mn|[tbmk])?\b/g,
+    (_m, cur: string, n: string, scale?: string) => ` ${cur === '$' ? 'usd' : cur === '€' ? 'eur' : 'gbp'}:${numToken((num(n) * (scale ? MONEY_SCALE[scale] : 1e-6)))} `,
+  )
+  t = t.replace(
+    /(\d[\d,]*(?:\.\d+)?)\s*(trillion|billion|million|tn|bn|mn)\s+(?:us\s+)?(dollars|usd|euros|eur|pounds|gbp)\b/g,
+    (_m, n: string, scale: string, cur: string) => ` ${/^(dollars|usd)$/.test(cur) ? 'usd' : /^(euros|eur)$/.test(cur) ? 'eur' : 'gbp'}:${numToken(num(n) * MONEY_SCALE[scale])} `,
+  )
+  t = t.replace(/(\d[\d,]*(?:\.\d+)?)\s*-?\s*(gigawatts?|megawatts?|kilowatts?|gw|mw|kw)\b/g, (_m, n: string, u: string) => ` mw:${numToken(num(n) * POWER_SCALE[u.replace(/s$/, '')])} `)
+  t = t.replace(/(\d[\d,]*(?:\.\d+)?)\s*-?\s*(twh|gwh|mwh)\b/g, (_m, n: string, u: string) => ` mwh:${numToken(num(n) * ENERGY_SCALE[u])} `)
+  t = t.replace(/(\d[\d,]*(?:\.\d+)?)\s*(%|percent\b)/g, (_m, n: string) => ` pct:${numToken(num(n))} `)
+  const out = new Set<string>()
+  for (const raw of t.split(/[^a-z0-9:.]+/)) {
+    const tok = stem(raw.replace(/^[.:]+|[.:]+$/g, ''))
+    if (tok.length < 2 || EVENT_STOP.has(tok)) continue
+    out.add(tok)
+  }
+  return out
+}
+
+/** Title plus the v4 event line — never the summary (Google News fills it with the title's HTML and the outlet). */
+function storyEventText(s: Pick<DcEditionStory, 'title' | 'event'>): string {
+  return s.event ? `${s.title} \n ${s.event}` : s.title
+}
+
+/** Document frequencies over a corpus of stories, for weighting rare tokens ("vineland") over common ones ("fine"). */
+export interface EventIdf {
+  n: number
+  df: Map<string, number>
+}
+
+/**
+ * IDF over the given stories. The composer passes 30 days of the feed plus
+ * the window, so a quiet day's 15 titles still know "shares" is common and
+ * "vineland" is not.
+ */
+export function buildIdf(stories: Pick<DcEditionStory, 'title' | 'event'>[]): EventIdf {
+  const df = new Map<string, number>()
+  for (const s of stories) for (const t of eventTokens(storyEventText(s))) df.set(t, (df.get(t) ?? 0) + 1)
+  return { n: stories.length, df }
+}
+
+const idfWeight = (idf: EventIdf, t: string): number => Math.log(1 + idf.n / (1 + (idf.df.get(t) ?? 0)))
+
+const outletKey = (s: DcEditionStory): string => (s.source?.trim() || domainOf(s.url)).toLowerCase()
+const exactTitleKey = (title: string): string => title.toLowerCase().replace(/[^a-z0-9]/g, '')
+const SCALED_KINDS = new Set(['power', 'energy', 'money'])
+
+function sharesFigure(a: DcEditionStory, b: DcEditionStory): boolean {
+  for (const fa of a.facts?.figures ?? []) {
+    const ka = figureKind(fa.unit)
+    if (!SCALED_KINDS.has(ka)) continue
+    const ma = figureMagnitude(fa)
+    if (ma == null) continue
+    for (const fb of b.facts?.figures ?? []) {
+      if (figureKind(fb.unit) !== ka) continue
+      const mb = figureMagnitude(fb)
+      if (mb == null || Math.abs(ma - mb) > 0.01 * Math.max(Math.abs(ma), Math.abs(mb))) continue
+      const sameSubject = !!fa.subject && !!fb.subject && subjectKey(fa.subject) === subjectKey(fb.subject)
+      if (sameSubject || labelsOverlap(fa.label, fb.label)) return true
+    }
+  }
+  return false
+}
+
+/** A canonical money / power / energy token from eventTokens ("usd:189", "mw:2000") — not percentages, which templated market headlines share. */
+const FIGURE_TOKEN = /^(usd|eur|gbp|mw|mwh):/
+
+function sharesFigureToken(a: EventDoc, b: EventDoc): boolean {
+  for (const t of a.tokens.keys()) if (FIGURE_TOKEN.test(t) && b.tokens.has(t)) return true
+  return false
+}
+
+// Words in organisation names that don't identify one: "LG Electronics" and
+// "Tata Electronics", "3 E Network Group Limited" and "Adani Group".
+const ACTOR_GENERIC = new Set([
+  'group', 'limited', 'ltd', 'inc', 'corp', 'corporation', 'co', 'llc', 'plc', 'sa', 'ag', 'nv', 'se', 'holding',
+  'electronic', 'system', 'solution', 'service', 'energy', 'power', 'capital', 'partner', 'global', 'international',
+  'industry', 'semiconductor', 'microelectronic', 'cloud', 'department', 'state', 'government', 'us', 'university',
+])
+
+/** Do the two stories' own actor lists share an organisation name? */
+function sharesActor(a: EventDoc, b: EventDoc): boolean {
+  return a.actors.some((toks) => [...toks].some((t) => !ACTOR_GENERIC.has(t) && b.actors.some((bt) => bt.has(t))))
+}
+
+interface EventDoc {
+  story: DcEditionStory
+  tokens: Map<string, number>
+  norm: number
+  titleKey: string
+  outlet: string
+  hasEvent: boolean
+  /** Each v4 actor as its tokens ("NJ DEP" → nj, dep). */
+  actors: Set<string>[]
+}
+
+function eventDoc(s: DcEditionStory, idf: EventIdf): EventDoc {
+  const tokens = new Map<string, number>()
+  let sq = 0
+  for (const t of eventTokens(storyEventText(s))) {
+    const w = idfWeight(idf, t)
+    tokens.set(t, w)
+    sq += w * w
+  }
+  return {
+    story: s,
+    tokens,
+    norm: Math.sqrt(sq),
+    titleKey: exactTitleKey(s.title),
+    outlet: outletKey(s),
+    hasEvent: !!s.event?.trim(),
+    actors: (s.actors ?? []).map((a) => eventTokens(a)).filter((t) => t.size > 0),
+  }
+}
+
+/** Does `b` mention any of `a`'s actors — in its text or its own actor names? */
+function mentionsActorOf(a: EventDoc, b: EventDoc): boolean {
+  return a.actors.some((toks) => [...toks].some((t) => b.tokens.has(t) || b.actors.some((bt) => bt.has(t))))
+}
+
+/** How far a pair clears its merge threshold: ≥ 0 reads as one development. */
+function pairMargin(a: EventDoc, b: EventDoc): number {
+  const threshold = a.hasEvent && b.hasEvent ? EVENT_MATCH.threshold : EVENT_MATCH.thresholdTitleOnly
+  // Syndicated copy: the same headline word for word is the same story.
+  if (a.titleKey.length >= 20 && a.titleKey === b.titleKey) return 1 - threshold
+  let dot = 0
+  const [small, big] = a.tokens.size <= b.tokens.size ? [a.tokens, b.tokens] : [b.tokens, a.tokens]
+  for (const [t, w] of small) if (big.has(t)) dot += w * w
+  let sim = a.norm > 0 && b.norm > 0 ? dot / (a.norm * b.norm) : 0
+  const sa = a.story
+  const sb = b.story
+  if (sa.tickers.length > 0 && sb.tickers.length > 0 && !sa.tickers.some((t) => sb.tickers.includes(t))) sim += EVENT_MATCH.disjointTickers
+  if (a.actors.length > 0 && b.actors.length > 0) {
+    if (sharesActor(a, b)) sim += EVENT_MATCH.sharedActor
+    else if (!mentionsActorOf(a, b) && !mentionsActorOf(b, a)) sim += EVENT_MATCH.disjointActors
+  }
+  if (sharesFigure(sa, sb) || sharesFigureToken(a, b)) sim += EVENT_MATCH.sharedFigure
+  if (sa.place && sb.place) sim += sa.place === sb.place ? EVENT_MATCH.samePlace : EVENT_MATCH.differentPlace
+  if (a.outlet && a.outlet === b.outlet) sim += EVENT_MATCH.sameOutlet
+  return sim - threshold
+}
+
+/**
+ * Group stories that report the same development. Average-link agglomerative
+ * clustering over the pair margins: two groups merge while their average pair
+ * clears the threshold, so a chain A~B~C never pulls in an A that looks
+ * nothing like C. Input order doesn't matter (stories are taken by id, ties
+ * go to the lowest ids). Never by URL — outlet home pages and Google News
+ * redirects both make URLs useless as an identity here.
+ */
+export function clusterEvents(stories: DcEditionStory[], opts: { idf?: EventIdf } = {}): DcEditionStory[][] {
+  const sorted = [...stories].sort((a, b) => a.id - b.id)
+  const n = sorted.length
+  if (n === 0) return []
+  const idf = opts.idf ?? buildIdf(sorted)
+  const docs = sorted.map((s) => eventDoc(s, idf))
+  // sum[i][j] = summed pair margin between groups i and j.
+  const sum: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0))
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const m = pairMargin(docs[i], docs[j])
+      sum[i][j] = m
+      sum[j][i] = m
+    }
+  }
+  const members: number[][] = sorted.map((_, i) => [i])
+  const alive = new Array<boolean>(n).fill(true)
+  for (;;) {
+    let best = -Infinity
+    let bi = -1
+    let bj = -1
+    for (let i = 0; i < n; i++) {
+      if (!alive[i]) continue
+      for (let j = i + 1; j < n; j++) {
+        if (!alive[j]) continue
+        const avg = sum[i][j] / (members[i].length * members[j].length)
+        if (avg > best + 1e-12) {
+          best = avg
+          bi = i
+          bj = j
+        }
+      }
+    }
+    if (bi < 0 || best < 0) break
+    members[bi].push(...members[bj])
+    alive[bj] = false
+    for (let k = 0; k < n; k++) {
+      if (!alive[k] || k === bi) continue
+      sum[bi][k] += sum[bj][k]
+      sum[k][bi] = sum[bi][k]
+    }
+  }
+  const groups: DcEditionStory[][] = []
+  for (let i = 0; i < n; i++) if (alive[i]) groups.push(members[i].map((k) => sorted[k]).sort((a, b) => leadOrder(a, b)))
+  return groups
+}
+
+/** The lead is the member that states most (figures, then named companies), then the first report. */
+function leadOrder(a: DcEditionStory, b: DcEditionStory): number {
+  const fa = (a.facts?.figures.length ?? 0) * 2 + a.tickers.length
+  const fb = (b.facts?.figures.length ?? 0) * 2 + b.tickers.length
+  if (fb !== fa) return fb - fa
+  const ta = Date.parse(a.publishedAt)
+  const tb = Date.parse(b.publishedAt)
+  if (ta !== tb) return ta - tb
+  return a.id - b.id
+}
+
+function median(values: number[]): number {
+  const v = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(v.length / 2)
+  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2
+}
+
+function gradeOf(members: DcEditionStory[], key: 'relevance' | 'impact'): number {
+  const graded = members.map((s) => s[key]).filter((g): g is number => typeof g === 'number' && Number.isFinite(g))
+  return graded.length ? median(graded) : MOOD_WEIGHTS.defaultGrade
+}
+
+const round3 = (v: number): number => Math.round(v * 1000) / 1000
+
+/** One event's pull on the reading: relevance × impact × coverage. */
+export function eventWeight(relevance: number, impact: number, outlets: number): number {
+  const rel = MOOD_WEIGHTS.relevanceBase + MOOD_WEIGHTS.relevanceStep * relevance
+  const imp = MOOD_WEIGHTS.impactStep ** (impact - 1)
+  const coverage = Math.min(MOOD_WEIGHTS.coverageCap, 1 + MOOD_WEIGHTS.coverageStep * Math.log2(Math.max(1, outlets)))
+  return round3(rel * imp * coverage)
+}
+
+/** Summarise one group of stories as an event: majority mood, median grades, weight. */
+export function toMoodEvent(members: DcEditionStory[]): EditionMoodEvent {
+  const net = members.reduce((acc, s) => acc + (s.mood ?? 0), 0)
+  const mood: DcMood = net > 0 ? 1 : net < 0 ? -1 : 0
+  const r = gradeOf(members, 'relevance')
+  const i = gradeOf(members, 'impact')
+  const outlets = new Set(members.map(outletKey)).size
+  const ev: EditionMoodEvent = { lead: members[0].id, ids: members.map((s) => s.id), mood, w: eventWeight(r, i, outlets), r, i, outlets }
+  if (mood === 0 && members.some((s) => s.mood === 1) && members.some((s) => s.mood === -1)) ev.mixed = true
+  return ev
+}
+
+/**
+ * The Doom v Boom reading: cluster, one mood + weight per event, then the
+ * balance of weight. `counts` is what `dc_editions.mood_counts` stores —
+ * event counts per side, the raw report counts, the side weights and every
+ * event (heaviest first), so the page's drivers and panel are frozen with
+ * the score.
+ */
+export function scoreMoodEvents(
+  stories: DcEditionStory[],
+  opts: { idf?: EventIdf } = {},
+): { score: number | null; counts: EditionMoodCounts; events: EditionMoodEvent[] } {
+  const events = clusterEvents(stories, opts)
+    .map(toMoodEvent)
+    .sort((a, b) => b.w - a.w || a.lead - b.lead)
+  const counts: EditionMoodCounts = {
+    boom: 0,
+    doom: 0,
+    neutral: 0,
+    method: MOOD_METHOD,
+    stories: { boom: 0, doom: 0, neutral: 0 },
+    weight: { boom: 0, doom: 0 },
+    events,
+  }
+  for (const s of stories) {
+    if (s.mood === 1) counts.stories!.boom += 1
+    else if (s.mood === -1) counts.stories!.doom += 1
+    else counts.stories!.neutral += 1
+  }
+  let wb = 0
+  let wd = 0
+  for (const e of events) {
+    if (e.mood === 1) {
+      counts.boom += 1
+      wb += e.w
+    } else if (e.mood === -1) {
+      counts.doom += 1
+      wd += e.w
+    } else counts.neutral += 1
+  }
+  counts.weight = { boom: round3(wb), doom: round3(wd) }
+  const score = wb + wd === 0 ? null : round3((wb - wd) / (wb + wd))
+  return { score, counts, events }
+}
+
+/** An event with its stories resolved: the lead the page shows, the other reports as "also". */
+export interface ResolvedMoodEvent {
+  event: EditionMoodEvent
+  lead: DcEditionStory
+  others: DcEditionStory[]
+}
+
+/**
+ * Resolve stored events against the edition's stories, heaviest first. A
+ * member missing from `stories` (deleted from the feed) is skipped; an event
+ * with none left is dropped.
+ */
+export function resolveMoodEvents(
+  events: EditionMoodEvent[],
+  stories: DcEditionStory[],
+  side?: 'boom' | 'doom',
+): ResolvedMoodEvent[] {
+  const byId = new Map(stories.map((s) => [s.id, s]))
+  const want = side === 'boom' ? 1 : side === 'doom' ? -1 : null
+  const out: ResolvedMoodEvent[] = []
+  for (const event of [...events].sort((a, b) => b.w - a.w || a.lead - b.lead)) {
+    if (want != null && event.mood !== want) continue
+    const found = event.ids.map((id) => byId.get(id)).filter((s): s is DcEditionStory => !!s)
+    if (found.length === 0) continue
+    const lead = byId.get(event.lead) ?? found[0]
+    out.push({ event, lead, others: found.filter((s) => s.id !== lead.id) })
+  }
+  return out
+}
+
+/** Top events per side, for the meter's driver list. */
+export function eventDrivers(events: EditionMoodEvent[], stories: DcEditionStory[], side: 'boom' | 'doom', n = 3): ResolvedMoodEvent[] {
+  return resolveMoodEvents(events, stories, side).slice(0, n)
+}
+
+/**
+ * Top drivers per side for editions composed before events-v1 (no stored
+ * events): stories with the most stated facts first, then the latest.
+ */
 export function moodDrivers(stories: DcEditionStory[], side: 'boom' | 'doom', n = 3): DcEditionStory[] {
   const want = side === 'boom' ? 1 : -1
   return stories
@@ -259,6 +673,18 @@ function companyOf(story: DcEditionStory, stocks: Map<string, StockName>): strin
  * charts (MIN_CHART_ROWS in dcEditionCharts).
  */
 export const MIN_VIZ_ROWS = 3
+
+const LABEL_STOP = new Set(['the', 'a', 'an', 'of', 'in', 'for', 'and', 'to', 'on', 'at', 'by', 'ai', 'data', 'center', 'centre', 'centers', 'centres', 'usd', 'us'])
+const labelWords = (s: string) => new Set(s.toLowerCase().replace(/centre/g, 'center').split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !LABEL_STOP.has(w)))
+
+/** Two figure labels describe the same thing when they share a meaningful word ("fine" / "pollution fine"). */
+export function labelsOverlap(a: string, b: string): boolean {
+  const wa = labelWords(a)
+  const wb = labelWords(b)
+  if (wa.size === 0 || wb.size === 0) return false
+  for (const w of wa) if (wb.has(w)) return true
+  return false
+}
 
 /** A stable key for "the same thing": the v3 subject when the figure carries one, else a normalised label. */
 export function subjectKey(text: string | null | undefined): string {

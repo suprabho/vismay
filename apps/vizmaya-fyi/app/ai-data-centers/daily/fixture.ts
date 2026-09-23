@@ -18,7 +18,7 @@ import {
   buildLayerViz,
   buildTape,
   decimalYear,
-  scoreMood,
+  scoreMoodEvents,
   type StockName,
 } from '@vismay/content-source/dcEditionAssembly'
 import {
@@ -77,37 +77,49 @@ const STOCKS: StockName[] = [
 ].map(([ticker, name, category]) => ({ ticker, name, category }))
 
 // [mood, theme, title, outlet, url, HH:MM, layer, place, region, tickers, energy, facts]
-type Row = [DcMood, DcThemeKey, string, string, string, string, DcLayerKey, string, DcRegionKey, string[], boolean, DcStoryFacts | null]
+/** Classifier v4 tags: relevance and impact 1–5, and the event line + actors the Doom v Boom clustering reads. */
+interface V4 {
+  r: number
+  i: number
+  event?: string
+  actors?: string[]
+}
+type Row = [DcMood, DcThemeKey, string, string, string, string, DcLayerKey, string, DcRegionKey, string[], boolean, DcStoryFacts | null, V4]
+
+const g = (r: number, i: number, event?: string, actors?: string[]): V4 => ({ r, i, event, actors })
 
 const f = (action: DcStoryFacts['action'], figures: DcStoryFacts['figures'] = [], horizon: DcStoryFacts['horizon'] = null): DcStoryFacts => ({ action, figures, horizon })
 
 const ROWS: Row[] = [
-  [1, 'power', 'Microsoft signs 20-year PPA tied to Ohio nuclear uprate, its largest single power deal', 'Reuters', 'https://www.reuters.com', '04:12', 'hyper', 'columbus', 'na', ['MSFT'], true, f('power-deal', [{ value: 2.5, unit: 'GW', label: 'nuclear uprate PPA' }, { value: 20, unit: 'years', label: 'PPA term' }])],
-  [1, 'power', "Oracle's Abilene build adds 1.2 GW gas-plus-storage block as OpenAI demand grows", 'Bloomberg', 'https://www.bloomberg.com', '23:40', 'dc', 'abilene', 'na', ['ORCL', 'CRWV'], true, f('add', [{ value: 1200, unit: 'MW', label: 'gas-plus-storage block' }])],
-  [1, 'capacity', 'CoreWeave takes another 250 MW in West Texas, its fourth expansion this year', 'DCD', 'https://www.datacenterdynamics.com', '19:05', 'dc', 'abilene', 'na', ['CRWV'], false, f('add', [{ value: 250, unit: 'MW', label: 'West Texas expansion' }])],
-  [1, 'capacity', "Vertiv's liquid-cooling backlog tops $9bn; lead times unchanged", 'Reuters', 'https://www.reuters.com', '14:20', 'dc', 'columbus', 'na', ['VRT'], false, f('disclosure', [{ value: 9, unit: 'bn USD', label: 'liquid-cooling backlog' }])],
-  [-1, 'permit', 'Equinix, Digital Realty warn Irish rule will push capacity to the Nordics', 'DCD', 'https://www.datacenterdynamics.com', '07:40', 'dc', 'dublin', 'eu', ['EQIX', 'DLR'], false, f('risk')],
-  [-1, 'permit', "Northern Virginia's Loudoun board defers two campus rezonings to October", 'DCD', 'https://www.datacenterdynamics.com', '22:10', 'dc', 'n-virginia', 'na', ['DLR'], false, f('permit', [{ value: 2, unit: '', label: 'campus rezonings deferred' }], { from: null, to: '2026-10' })],
-  [-1, 'permit', 'Amsterdam extends data-centre connection freeze to 2028', 'Reuters', 'https://www.reuters.com', '09:30', 'dc', 'amsterdam', 'eu', [], true, f('freeze', [], { from: null, to: '2028' })],
-  [1, 'capacity', 'Alphabet to lease TPU capacity to two frontier labs from Q1', 'Bloomberg', 'https://www.bloomberg.com', '17:55', 'hyper', 'n-virginia', 'na', ['GOOGL'], false, f('capacity', [{ value: 2, unit: '', label: 'frontier labs' }], { from: '2027-Q1', to: null })],
-  [1, 'permit', "Meta's Louisiana Hyperion clears final air-permit hurdle", 'Financial Times', 'https://www.ft.com', '15:10', 'hyper', 'louisiana', 'na', ['META'], true, f('permit')],
-  [-1, 'power', 'Amazon pauses two Virginia leases pending grid-upgrade timeline', 'Bloomberg', 'https://www.bloomberg.com', '20:45', 'hyper', 'n-virginia', 'na', ['AMZN'], true, f('pause', [{ value: 2, unit: '', label: 'leases paused' }])],
-  [1, 'memory', 'SK hynix says HBM4 capacity is fully booked through 2027', 'Nikkei Asia', 'https://asia.nikkei.com', '01:15', 'semi', 'seoul', 'ea', ['000660.KS'], false, f('capacity', [], { from: null, to: '2027' })],
-  [1, 'memory', 'Micron raises guidance as HBM demand outruns Boise fab timeline', 'The Register', 'https://www.theregister.com', '21:30', 'semi', 'boise', 'na', ['MU'], false, f('disclosure', [], { from: null, to: 'FY27' })],
-  [1, 'chips', "TSMC's CoWoS-L output doubles as Rubin packaging ramps in Chiayi", 'Financial Times', 'https://www.ft.com', '02:50', 'semi', 'hsinchu', 'ea', ['2330.TW', 'NVDA'], false, f('capacity', [{ value: 2, unit: '×', label: 'CoWoS-L output' }])],
-  [0, 'memory', 'Memory, not wafers, now gates the Rubin ramp — an allocation model', 'SemiAnalysis', 'https://semianalysis.com', '12:00', 'semi', 'hsinchu', 'ea', ['NVDA', 'MU'], false, f('other')],
-  [1, 'memory', 'Samsung wins HBM4 qualification at a second accelerator vendor', 'Nikkei Asia', 'https://asia.nikkei.com', '00:40', 'semi', 'seoul', 'ea', ['005930.KS'], false, f('capacity', [{ value: 2, unit: '', label: 'accelerator vendors qualified' }], { from: '2027-Q1', to: '2027-Q4' })],
-  [1, 'chips', 'SMIC guides 5nm-class output up 40% on domestic accelerator demand', 'Reuters', 'https://www.reuters.com', '05:05', 'semi', 'shanghai', 'ea', ['0981.HK'], false, f('capacity', [{ value: 40, unit: '%', label: '5nm-class output guidance' }])],
-  [1, 'equip', 'ASML sees logic customers pulling High-NA orders into 2027', 'Financial Times', 'https://www.ft.com', '06:30', 'equip', 'veldhoven', 'eu', ['ASML.AS'], false, f('pull-forward', [], { from: '2028', to: '2027' })],
-  [1, 'equip', 'Tokyo Electron flags HBM stacking tools as fastest-growing line', 'Nikkei Asia', 'https://asia.nikkei.com', '03:20', 'equip', 'tokyo', 'ea', ['8035.T'], false, f('disclosure', [], { from: null, to: '2027-Q3' })],
-  [-1, 'equip', 'Applied Materials warns draft China rules would hit 2027 revenue', 'Reuters', 'https://www.reuters.com', '20:15', 'equip', 'boise', 'na', ['AMAT', 'LRCX'], false, f('risk', [], { from: '2027', to: '2027-Q4' })],
-  [1, 'equip', 'Advantest lifts HBM test-capacity plan for FY26', 'Nikkei Asia', 'https://asia.nikkei.com', '03:50', 'equip', 'tokyo', 'ea', ['6857.T'], false, f('disclosure', [], { from: null, to: '2027-Q1' })],
-  [-1, 'permit', 'CRU proposes on-site generation requirement for new Irish data centres', 'Irish Times', 'https://www.irishtimes.com', '07:05', 'dc', 'dublin', 'eu', [], true, f('permit')],
-  [1, 'capacity', 'Reliance breaks ground on 1 GW Jamnagar AI campus with captive solar', 'Economic Times', 'https://economictimes.indiatimes.com', '05:45', 'dc', 'jamnagar', 'me', [], true, f('add', [{ value: 1, unit: 'GW', label: 'Jamnagar AI campus' }, { value: 2, unit: 'GWh', label: 'captive battery' }])],
-  [1, 'power', 'Abu Dhabi tenders 900 MW solar-plus-storage for AI campus', 'The National', 'https://www.thenationalnews.com', '08:00', 'hyper', 'abu-dhabi', 'me', [], true, f('power-deal', [{ value: 900, unit: 'MW', label: 'solar-plus-storage tender' }])],
-  [-1, 'power', 'ERCOT large-load queue crosses 200 GW; 70% of requests are data centers', 'ERCOT', 'https://www.ercot.com', '16:00', 'dc', 'abilene', 'na', [], true, f('disclosure', [{ value: 200, unit: 'GW', label: 'ERCOT large-load queue, first time past 200' }, { value: 70, unit: '%', label: 'data-center share of requests' }])],
-  [-1, 'power', 'GE Vernova, Siemens Energy quote 2029 delivery for new gas turbines as AI demand fills slots', 'Reuters', 'https://www.reuters.com', '13:25', 'hyper', 'columbus', 'na', [], true, f('risk', [{ value: 2029, unit: 'year', label: 'Earliest delivery quoted for new gas turbines by two OEMs' }])],
-  [1, 'sustain', 'Google: water replenishment net-positive at 9 of 14 U.S. sites in 2026 update', 'Google Sustainability', 'https://sustainability.google', '18:30', 'hyper', 'n-virginia', 'na', ['GOOGL'], true, f('disclosure', [{ value: 9, unit: '/14', label: 'Google U.S. sites net-positive on water in the 2026 update' }])],
+  [1, 'power', 'Microsoft signs 20-year PPA tied to Ohio nuclear uprate, its largest single power deal', 'Reuters', 'https://www.reuters.com', '04:12', 'hyper', 'columbus', 'na', ['MSFT'], true, f('power-deal', [{ value: 2.5, unit: 'GW', label: 'nuclear uprate PPA' }, { value: 20, unit: 'years', label: 'PPA term' }]), g(5, 4)],
+  [1, 'power', "Oracle's Abilene build adds 1.2 GW gas-plus-storage block as OpenAI demand grows", 'Bloomberg', 'https://www.bloomberg.com', '23:40', 'dc', 'abilene', 'na', ['ORCL', 'CRWV'], true, f('add', [{ value: 1200, unit: 'MW', label: 'gas-plus-storage block' }]), g(5, 4)],
+  [1, 'capacity', 'CoreWeave takes another 250 MW in West Texas, its fourth expansion this year', 'DCD', 'https://www.datacenterdynamics.com', '19:05', 'dc', 'abilene', 'na', ['CRWV'], false, f('add', [{ value: 250, unit: 'MW', label: 'West Texas expansion' }]), g(5, 3)],
+  [1, 'capacity', "Vertiv's liquid-cooling backlog tops $9bn; lead times unchanged", 'Reuters', 'https://www.reuters.com', '14:20', 'dc', 'columbus', 'na', ['VRT'], false, f('disclosure', [{ value: 9, unit: 'bn USD', label: 'liquid-cooling backlog' }]), g(4, 3)],
+  [-1, 'permit', 'Equinix, Digital Realty warn Irish rule will push capacity to the Nordics', 'DCD', 'https://www.datacenterdynamics.com', '07:40', 'dc', 'dublin', 'eu', ['EQIX', 'DLR'], false, f('risk'), g(5, 3)],
+  [-1, 'permit', "Northern Virginia's Loudoun board defers two campus rezonings to October", 'DCD', 'https://www.datacenterdynamics.com', '22:10', 'dc', 'n-virginia', 'na', ['DLR'], false, f('permit', [{ value: 2, unit: '', label: 'campus rezonings deferred' }], { from: null, to: '2026-10' }), g(5, 2)],
+  [-1, 'permit', 'Amsterdam extends data-centre connection freeze to 2028', 'Reuters', 'https://www.reuters.com', '09:30', 'dc', 'amsterdam', 'eu', [], true, f('freeze', [], { from: null, to: '2028' }), g(5, 3)],
+  [1, 'capacity', 'Alphabet to lease TPU capacity to two frontier labs from Q1', 'Bloomberg', 'https://www.bloomberg.com', '17:55', 'hyper', 'n-virginia', 'na', ['GOOGL'], false, f('capacity', [{ value: 2, unit: '', label: 'frontier labs' }], { from: '2027-Q1', to: null }), g(5, 3)],
+  [1, 'permit', "Meta's Louisiana Hyperion clears final air-permit hurdle", 'Financial Times', 'https://www.ft.com', '15:10', 'hyper', 'louisiana', 'na', ['META'], true, f('permit'), g(5, 3)],
+  [-1, 'power', 'Amazon pauses two Virginia leases pending grid-upgrade timeline', 'Bloomberg', 'https://www.bloomberg.com', '20:45', 'hyper', 'n-virginia', 'na', ['AMZN'], true, f('pause', [{ value: 2, unit: '', label: 'leases paused' }]), g(5, 3, 'Amazon pauses two Northern Virginia data center leases pending grid upgrades', ['Amazon'])],
+  [1, 'memory', 'SK hynix says HBM4 capacity is fully booked through 2027', 'Nikkei Asia', 'https://asia.nikkei.com', '01:15', 'semi', 'seoul', 'ea', ['000660.KS'], false, f('capacity', [], { from: null, to: '2027' }), g(5, 4)],
+  [1, 'memory', 'Micron raises guidance as HBM demand outruns Boise fab timeline', 'The Register', 'https://www.theregister.com', '21:30', 'semi', 'boise', 'na', ['MU'], false, f('disclosure', [], { from: null, to: 'FY27' }), g(4, 4)],
+  [1, 'chips', "TSMC's CoWoS-L output doubles as Rubin packaging ramps in Chiayi", 'Financial Times', 'https://www.ft.com', '02:50', 'semi', 'hsinchu', 'ea', ['2330.TW', 'NVDA'], false, f('capacity', [{ value: 2, unit: '×', label: 'CoWoS-L output' }]), g(5, 4)],
+  [0, 'memory', 'Memory, not wafers, now gates the Rubin ramp — an allocation model', 'SemiAnalysis', 'https://semianalysis.com', '12:00', 'semi', 'hsinchu', 'ea', ['NVDA', 'MU'], false, f('other'), g(4, 2)],
+  [1, 'memory', 'Samsung wins HBM4 qualification at a second accelerator vendor', 'Nikkei Asia', 'https://asia.nikkei.com', '00:40', 'semi', 'seoul', 'ea', ['005930.KS'], false, f('capacity', [{ value: 2, unit: '', label: 'accelerator vendors qualified' }], { from: '2027-Q1', to: '2027-Q4' }), g(5, 3)],
+  [1, 'chips', 'SMIC guides 5nm-class output up 40% on domestic accelerator demand', 'Reuters', 'https://www.reuters.com', '05:05', 'semi', 'shanghai', 'ea', ['0981.HK'], false, f('capacity', [{ value: 40, unit: '%', label: '5nm-class output guidance' }]), g(4, 3)],
+  [1, 'equip', 'ASML sees logic customers pulling High-NA orders into 2027', 'Financial Times', 'https://www.ft.com', '06:30', 'equip', 'veldhoven', 'eu', ['ASML.AS'], false, f('pull-forward', [], { from: '2028', to: '2027' }), g(5, 3)],
+  [1, 'equip', 'Tokyo Electron flags HBM stacking tools as fastest-growing line', 'Nikkei Asia', 'https://asia.nikkei.com', '03:20', 'equip', 'tokyo', 'ea', ['8035.T'], false, f('disclosure', [], { from: null, to: '2027-Q3' }), g(4, 2)],
+  [-1, 'equip', 'Applied Materials warns draft China rules would hit 2027 revenue', 'Reuters', 'https://www.reuters.com', '20:15', 'equip', 'boise', 'na', ['AMAT', 'LRCX'], false, f('risk', [], { from: '2027', to: '2027-Q4' }), g(4, 3)],
+  [1, 'equip', 'Advantest lifts HBM test-capacity plan for FY26', 'Nikkei Asia', 'https://asia.nikkei.com', '03:50', 'equip', 'tokyo', 'ea', ['6857.T'], false, f('disclosure', [], { from: null, to: '2027-Q1' }), g(4, 2)],
+  [-1, 'permit', 'CRU proposes on-site generation requirement for new Irish data centres', 'Irish Times', 'https://www.irishtimes.com', '07:05', 'dc', 'dublin', 'eu', [], true, f('permit'), g(5, 3)],
+  [1, 'capacity', 'Reliance breaks ground on 1 GW Jamnagar AI campus with captive solar', 'Economic Times', 'https://economictimes.indiatimes.com', '05:45', 'dc', 'jamnagar', 'me', [], true, f('add', [{ value: 1, unit: 'GW', label: 'Jamnagar AI campus' }, { value: 2, unit: 'GWh', label: 'captive battery' }]), g(5, 4)],
+  [1, 'power', 'Abu Dhabi tenders 900 MW solar-plus-storage for AI campus', 'The National', 'https://www.thenationalnews.com', '08:00', 'hyper', 'abu-dhabi', 'me', [], true, f('power-deal', [{ value: 900, unit: 'MW', label: 'solar-plus-storage tender' }]), g(4, 3)],
+  [-1, 'power', 'ERCOT large-load queue crosses 200 GW; 70% of requests are data centers', 'ERCOT', 'https://www.ercot.com', '16:00', 'dc', 'abilene', 'na', [], true, f('disclosure', [{ value: 200, unit: 'GW', label: 'ERCOT large-load queue, first time past 200' }, { value: 70, unit: '%', label: 'data-center share of requests' }]), g(5, 4)],
+  [-1, 'power', 'GE Vernova, Siemens Energy quote 2029 delivery for new gas turbines as AI demand fills slots', 'Reuters', 'https://www.reuters.com', '13:25', 'hyper', 'columbus', 'na', [], true, f('risk', [{ value: 2029, unit: 'year', label: 'Earliest delivery quoted for new gas turbines by two OEMs' }]), g(5, 3)],
+  [1, 'sustain', 'Google: water replenishment net-positive at 9 of 14 U.S. sites in 2026 update', 'Google Sustainability', 'https://sustainability.google', '18:30', 'hyper', 'n-virginia', 'na', ['GOOGL'], true, f('disclosure', [{ value: 9, unit: '/14', label: 'Google U.S. sites net-positive on water in the 2026 update' }]), g(3, 1)],
+  // The same Amazon lease pause from two more outlets, worded their own way: the Doom v Boom reading groups all three into one event ("Bloomberg +2").
+  [-1, 'power', 'Amazon halts two Northern Virginia data center leases as grid upgrades slip', 'Reuters', 'https://www.reuters.com', '21:05', 'hyper', 'n-virginia', 'na', ['AMZN'], true, f('pause', [{ value: 2, unit: '', label: 'leases paused' }]), g(5, 3, 'Amazon pauses two Northern Virginia data center leases over grid upgrade delays', ['Amazon'])],
+  [-1, 'power', 'AWS puts Virginia data center leases on hold, citing Dominion grid timeline', 'CNBC', 'https://www.cnbc.com', '22:40', 'hyper', 'n-virginia', 'na', ['AMZN'], true, f('pause'), g(5, 3, 'Amazon Web Services pauses Virginia data center leases pending Dominion grid upgrades', ['Amazon Web Services', 'Dominion Energy'])],
 ]
 
 function at(hhmm: string): string {
@@ -134,6 +146,10 @@ const STORIES: DcEditionStory[] = ROWS.map((r, i) => ({
   energy: r[10],
   facts: r[11],
   kind: 'news',
+  relevance: r[12].r,
+  impact: r[12].i,
+  event: r[12].event ?? null,
+  actors: r[12].actors ?? [],
 }))
 
 const IEA_STORIES: DcEditionStory[] = [
@@ -265,7 +281,7 @@ function build(): DcEditionWithContent {
   const placeMap = new Map(PLACES.map((p) => [p.slug, p]))
   const stockMap = new Map(STOCKS.map((s) => [s.ticker, s]))
   const today = decimalYear(SAMPLE_DATE)
-  const mood = scoreMood(STORIES)
+  const mood = scoreMoodEvents(STORIES)
   const geo = buildGeo(STORIES, PLACES)
   const energy = buildEnergy(STORIES, IEA_STORIES, { places: placeMap, stocks: stockMap, history: POWER_HISTORY, editionDate: SAMPLE_DATE })
   const layers = {} as Record<DcLayerKey, EditionLayer>

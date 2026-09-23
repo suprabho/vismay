@@ -86,6 +86,13 @@ export const DC_PAPER_KINDS: Record<DcPaperKind, string> = {
 /** compute_bucket 0–3 → estimated FLOP of the headline experiment. */
 export const DC_COMPUTE_BUCKETS = ['<10²² FLOP', '10²²–10²³', '10²⁴', '>10²⁵'] as const
 
+/**
+ * The news classifier's prompt + schema version, stored on every dc_news row.
+ * Shared so the composer can name the version an edition was built from.
+ * v4 adds relevance, impact, the canonical event line and actors.
+ */
+export const DC_CLASSIFIER_VERSION = 'v4-events-2026-09'
+
 /** Stock category → layer key (dc_stocks.category is the layer taxonomy). */
 export const STOCK_CATEGORY_TO_LAYER: Record<string, DcLayerKey> = {
   'data-centers': 'dc',
@@ -180,6 +187,23 @@ export interface DcEditionStory {
   facts: DcStoryFacts | null
   /** 'news' = dc_news, 'iea' = iea_news joined in for the energy chapter. */
   kind: 'news' | 'iea'
+  /**
+   * 1–5: how central the story is to the AI build-out. With `impact` it sets
+   * the story's pull on the Doom v Boom reading. Absent on rows classified
+   * before v4 (they weigh as a 3).
+   */
+  relevance?: number | null
+  /** 1–5: how much the event moves the build-out, whichever way. Absent before v4. */
+  impact?: number | null
+  /**
+   * The underlying development in one canonical line ("NJ DEP fines Vineland
+   * AI data center $1M") — the same line another outlet's story on it gets,
+   * so the Doom v Boom clustering can tell one event from three reports.
+   * Absent before v4.
+   */
+  event?: string | null
+  /** Up to three canonical organisation names the story is about. Absent before v4. */
+  actors?: string[]
 }
 
 export interface DcPlace {
@@ -368,10 +392,44 @@ export interface EditionMoodPoint {
   score: number | null
 }
 
+/**
+ * One event on the Doom v Boom reading: every story that reports the same
+ * development, counted once. Keys are short because an edition carries one
+ * per event in `mood_counts`.
+ */
+export interface EditionMoodEvent {
+  /** The story the page shows for the event. */
+  lead: number
+  /** Every story reporting it, lead first. */
+  ids: number[]
+  mood: DcMood
+  /** relevance × impact × coverage — the event's pull on the reading. */
+  w: number
+  /** Median relevance / impact over the graded members (3 when none is graded). */
+  r: number
+  i: number
+  /** Distinct outlets that reported it. */
+  outlets: number
+  /** The members split boom and doom evenly, so the event scored neutral. */
+  mixed?: boolean
+}
+
+/** How `mood_counts` was computed; editions before events-v1 counted raw stories. */
+export type EditionMoodMethod = 'events-v1'
+export const MOOD_METHOD: EditionMoodMethod = 'events-v1'
+
 export interface EditionMoodCounts {
+  /** Events per side (events-v1); raw stories on editions composed before it. */
   boom: number
   doom: number
   neutral: number
+  method?: EditionMoodMethod
+  /** Raw reports per side, before duplicates were grouped. */
+  stories?: { boom: number; doom: number; neutral: number }
+  /** Summed event weight per side — the reading is (boom − doom) / (boom + doom) over these. */
+  weight?: { boom: number; doom: number }
+  /** Every event in the edition, heaviest first. */
+  events?: EditionMoodEvent[]
 }
 
 /**

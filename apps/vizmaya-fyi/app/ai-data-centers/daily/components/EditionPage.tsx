@@ -53,6 +53,8 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
     layers: Object.fromEntries(DC_LAYER_KEYS.map((k) => [k, { headline: e.layers[k].headline, sub: e.layers[k].sub }])) as Record<DcLayerKey, { headline: string; sub: string }>,
     fieldBaseline: e.research.fieldBaseline,
     energyCount: e.energy.storyCount,
+    // Only the sides a mood panel opens on; the client needn't carry the neutral events.
+    moodEvents: e.moodCounts.method === 'events-v1' ? (e.moodCounts.events ?? []).filter((ev) => ev.mood !== 0) : undefined,
   }
 
   const step = (dir: 'prev' | 'next') => {

@@ -76,7 +76,7 @@ An edition is one page with a masthead, a hero, a ticker tape, seven chapters an
 | Chapter nav | Sticky scroll-spy over the seven chapters | static | — |
 | Hero | Eyebrow (window, counts), 24-hour headline, subheading | `dc_editions.headline`, `.sub`, counts | — |
 | Ticker tape | Day's close vs prior close for all active tickers, sorted by move | `dc_stock_prices` | — |
-| I · Doom v Boom | Reading = (boom − doom) / (boom + doom); needle, 7- and 30-day ghost ticks, top 3 drivers per side, 30-edition sparkline | `dc_news.mood`, `dc_editions.mood_score` | Doom side, boom side |
+| I · Doom v Boom | Reports of one development grouped into an event and counted once; each event weighted by relevance × impact × coverage; reading = (W_boom − W_doom) / (W_boom + W_doom). Needle, 7- and 30-day ghost ticks, per side the event count, its share of the weight and the top 3 events | `dc_news.mood`, `.relevance`, `.impact`, `.event`, `.actors`; `dc_editions.mood_score`, `.mood_counts.events` | Doom side, boom side (one row per event) |
 | II · Key notes | Six notes, each led by the number that matters, with source chips | `dc_editions.notes[]` (metric, label, text, sources\[\]) | — |
 | III · By geography | Full-bleed dot-matrix world map (canvas), pins sized by story count, hover tooltip, proportional region bar with layer micro-bars | `dc_news.place`, `.region`, `dc_places` | Place, region |
 | IV · By AI layer | Four tiles: layer headline + sub, one bespoke viz per layer, three sourced notes, count | `dc_editions.layers[]`, per-layer viz data | Layer |
@@ -125,7 +125,7 @@ Three new tables and six new columns on `dc_news`, all in one migration (`078_dc
 | `status` | text | `draft` · `published`; only one draft at a time |
 | `headline`, `sub` | text | 24-hour headline and deck |
 | `notes` | jsonb | 6 × `{metric, unit, label, text, sources:[{name, url}], energy}` |
-| `mood_score`, `mood_counts` | numeric, jsonb | reading and `{boom, doom, neutral}` |
+| `mood_score`, `mood_counts` | numeric, jsonb | reading and `{boom, doom, neutral}` — event counts since `method: 'events-v1'`, which also carries the raw report counts, the side weights and every event `{lead, ids, mood, w, r, i, outlets}` |
 | `layers` | jsonb | per layer `{headline, sub, notes:[{text, sources}], viz}` |
 | `research` | jsonb | `{headline, sub, paper_ids[], field_baseline}` |
 | `energy` | jsonb | `{hero:{value, unit, label}, composition:[{label, gw}], figures:[{value, unit, label}]}` |
@@ -248,7 +248,7 @@ Dependencies: phase 2 needs phase 1's tags; phase 3 can start on the mockup whil
 
 - [ ] **Scope of the feed.** The current four Google News queries are data-center-centric. The research chapter widens to all of AI; should the news feed widen too (models, labs, policy), or does "AI Data Centers Daily" stay the frame?
 - [ ] **Edition cadence on weekends.** Sundays have a fifth of the volume. Publish a thinner edition, skip, or roll Saturday and Sunday into Monday's window?
-- [ ] **Mood scoring ownership.** Per-story mood from the classifier is cheap but crude; an editor override on the edition-level reading may be wanted. Decide whether the number is machine-only.
+- [x] **Mood scoring.** A story count was crude twice over: one development reported by three outlets was three votes, and a $1M local fine weighed as much as a hyperscaler cancelling gigawatts. Since classifier v4 / migration 080 the composer groups reports into events (deterministic clustering over the title and the classifier's canonical `event` line, tickers and `actors` keeping templated headlines apart) and weighs each event by relevance (0.6–1.0) × impact (grade 1 → 1×, grade 5 ≈ 6.3×; a plan or forecast grades one step below the same thing done) × coverage (damped, capped at 1.75×). The number stays machine-only; the editor's lever is still membership, and the admin shows the grouping.
 - [ ] **Place list.** The seeded `dc_places` list needs an owner and a rule for adding places (a story naming a new site should not silently drop its pin).
 - [ ] **Naming.** "Edition", "snapshot" and "daily" are used interchangeably in the design; pick one for the URL and the UI.
 

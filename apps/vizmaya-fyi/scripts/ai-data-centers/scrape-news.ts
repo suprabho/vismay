@@ -16,6 +16,10 @@
  *     Jev (typesafe-ai/jev via the AI gateway) then judges each figure as a
  *     typed yes/no and figures below the threshold are dropped
  *     (jevFigureGate.ts; fails open without AI_GATEWAY_API_KEY).
+ *   * (classifier v4, migration 080) what the Doom v Boom reading weighs each
+ *     story by: `relevance` and `impact` (1–5, anchored rubrics), plus the
+ *     canonical `event` line and `actors` the composer groups reports of one
+ *     development by, so three outlets on one fine are one vote, not three.
  *
  * Google News RSS for the same reason as scrape-energy-profile-news.ts:
  * a free, machine-friendly feed with broad outlet coverage (Reuters,
@@ -55,6 +59,7 @@ import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import {
+  DC_CLASSIFIER_VERSION,
   DC_FIGURE_SCOPES,
   DC_FIGURE_STATUSES,
   DC_LAYER_KEYS,
@@ -72,7 +77,7 @@ import {
   type DcStoryFigure,
   type DcThemeKey,
 } from '@vismay/content-source/dcEditionTypes'
-import { figureMagnitude } from '@vismay/content-source/dcEditionAssembly'
+import { figureMagnitude, MOOD_WEIGHTS } from '@vismay/content-source/dcEditionAssembly'
 import { gateFigures } from './jevFigureGate'
 
 loadEnv({ path: '.env.local' })
@@ -92,10 +97,13 @@ const TOPIC_VOCABULARY = ['ai', 'data-centers', 'semiconductors', 'microprocesso
 
 // Haiku is the right tier for a yes/no + tags call: ~1-2s/item, and
 // structured outputs make the JSON shape a guarantee rather than a regex
-// scrape. Bump CLASSIFIER_VERSION whenever the prompt or schema changes — it
-// is stored on every row so the mood series can be recomputed per version.
+// scrape. Bump DC_CLASSIFIER_VERSION (dcEditionTypes.ts, shared with the
+// composer) whenever the prompt or schema changes — it is stored on every row
+// so the mood series can be recomputed per version, and --retag-days finds
+// the rows an older version tagged.
 const CLASSIFIER_MODEL = 'claude-haiku-4-5'
-const CLASSIFIER_VERSION = 'v3-figures-2026-09'
+const CLASSIFIER_VERSION = DC_CLASSIFIER_VERSION
+const MAX_ACTORS = 3
 const CONCURRENCY = 4
 // Stop pulling new items past this, well under the workflow's 30-minute
 // timeout, so the job always exits green with a summary instead of being
@@ -116,6 +124,10 @@ const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
     region: nullable({ type: 'string', enum: DC_REGION_KEYS }),
     theme: nullable({ type: 'string', enum: DC_THEME_KEYS }),
     mood: { type: 'integer', enum: [-1, 0, 1] },
+    relevance: { type: 'integer', enum: [1, 2, 3, 4, 5] },
+    impact: { type: 'integer', enum: [1, 2, 3, 4, 5] },
+    event: nullable({ type: 'string' }),
+    actors: { type: 'array', items: { type: 'string' } },
     energy: { type: 'boolean' },
     facts: {
       type: 'object',
@@ -151,7 +163,7 @@ const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
       additionalProperties: false,
     },
   },
-  required: ['relevant', 'topics', 'tickers', 'layer', 'place', 'region', 'theme', 'mood', 'energy', 'facts'],
+  required: ['relevant', 'topics', 'tickers', 'layer', 'place', 'region', 'theme', 'mood', 'relevance', 'impact', 'event', 'actors', 'energy', 'facts'],
   additionalProperties: false,
 }
 
@@ -257,6 +269,25 @@ Mood — the day's Doom v Boom is scored story by story:
 - -1 doom: freezes, pauses, warnings, delays, grid strain, export-rule hits, lawsuits
 - 0  neutral: analysis, explainers, mixed or purely descriptive news
 
+Relevance (1–5) — how central the story is to the AI infrastructure build-out:
+- 5  directly about AI compute capacity, data-center sites or power, or the AI chip supply chain
+- 4  a tracked company's AI / data-center / semiconductor business, or policy aimed at it
+- 3  adjacent: broader semiconductor, cloud or energy news with a clear AI-infrastructure angle
+- 2  mostly about something else, with an AI-infrastructure mention
+- 1  tangential
+
+Impact (1–5) — how much the event moves the AI build-out. Rate the SIZE, not the direction: a 2 GW cancellation and a 2 GW commitment get the same number.
+- 1  local or minor: a fine under $10M, one zoning or permit hearing, a small operator's update, an explainer
+- 2  one site or a mid-size company: under 100 MW, under $500M
+- 3  notable: 100 MW–1 GW, $0.5–5B, a hyperscaler's site-level deal, a state-level rule
+- 4  major: over 1 GW, over $5B, a company-level capex or guidance change by a hyperscaler or leading chipmaker, a national rule or export control
+- 5  industry-shifting: over $25B, multi-GW commitments or cancellations, sector-wide export bans, guidance that resets the market
+A plan, target, forecast, warning or rumour rates one step below the same thing signed, built or done.
+
+Event — the underlying development in one line of at most 14 words: "<who> <did what> <to what>[, <where>]", with canonical names and the key figure, e.g. "NJ DEP fines Vineland AI data center $1M over gas generators". Write the line another outlet's story on the same development would get: no adjectives, no outlet framing. For analysis or reaction pieces, name the development they are about. null only when the story reports no development.
+
+Actors — up to 3 organisations the development is about (the company, operator, agency or lab acting or acted on), as canonical names: "Microsoft", "New Jersey DEP", "TSMC". Empty array when none is named.
+
 Energy: true when the story carries a power, grid, water, carbon or electricity-demand claim.
 
 Facts (only what the headline/summary literally state — never estimate):
@@ -271,13 +302,13 @@ Facts (only what the headline/summary literally state — never estimate):
 - horizon: a stated time window as strings like "2027", "2027-Q1", "2027-06", "FY27" — {"from": null, "to": "2027"} for "booked through 2027", {"from": "2028", "to": "2027"} for orders pulled from 2028 into 2027. null when the story states no window.
 
 Rules:
-- relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false, empty arrays, layer/place/region/theme null, mood 0, energy false, facts {"action": null, "figures": [], "horizon": null}.
+- relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false, empty arrays, layer/place/region/theme null, mood 0, relevance 1, impact 1, event null, energy false, facts {"action": null, "figures": [], "horizon": null}.
 - topics: every vocabulary tag that clearly applies (usually 1–2).
 - tickers: ONLY companies explicitly named in the headline or summary, or the unmistakable primary subject. Use the exact ticker strings from the list. Empty array if none.
 - place: ONLY a slug from the list above.
 
 Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output", "subject": "TSMC", "scope": "company", "status": "target"}], "horizon": null}}`
+{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "relevance": 5, "impact": 3, "event": "TSMC doubles CoWoS-L packaging output for Nvidia", "actors": ["TSMC", "Nvidia"], "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output", "subject": "TSMC", "scope": "company", "status": "target"}], "horizon": null}}`
 }
 
 interface Classification {
@@ -289,6 +320,10 @@ interface Classification {
   region: DcRegionKey | null
   theme: DcThemeKey | null
   mood: DcMood
+  relevance: number
+  impact: number
+  event: string | null
+  actors: string[]
   energy: boolean
   facts: DcStoryFacts
 }
@@ -302,11 +337,21 @@ const REJECTED: Classification = {
   region: null,
   theme: null,
   mood: 0,
+  relevance: 1,
+  impact: 1,
+  event: null,
+  actors: [],
   energy: false,
   facts: { action: null, figures: [], horizon: null },
 }
 
 const clip = (s: unknown, max: number): string => (typeof s === 'string' ? s.trim().slice(0, max) : '')
+
+/** A 1–5 grade; a missing one (plain-JSON fallback) weighs as the middle. */
+function grade(v: unknown): number {
+  const n = v == null || v === '' ? NaN : Math.round(Number(v))
+  return Number.isFinite(n) ? Math.min(5, Math.max(1, n)) : MOOD_WEIGHTS.defaultGrade
+}
 
 function normaliseHorizonPart(v: unknown): string | null {
   const s = clip(v, 16)
@@ -354,6 +399,13 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Cla
   const moodNum = Number(parsed.mood)
   const mood: DcMood = moodNum === 1 ? 1 : moodNum === -1 ? -1 : 0
   const energy = parsed.energy === true || theme === 'sustain'
+  const actors = [
+    ...new Set(
+      (Array.isArray(parsed.actors) ? parsed.actors : [])
+        .map((a) => clip(a, 60))
+        .filter(Boolean),
+    ),
+  ].slice(0, MAX_ACTORS)
 
   const f = parsed.facts && typeof parsed.facts === 'object' ? (parsed.facts as Record<string, unknown>) : {}
   const action =
@@ -382,6 +434,10 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Cla
     region,
     theme,
     mood,
+    relevance: grade(parsed.relevance),
+    impact: grade(parsed.impact),
+    event: clip(parsed.event, 140) || null,
+    actors,
     energy,
     facts: { action, figures, horizon: horizon && (horizon.from || horizon.to) ? horizon : null },
   }
@@ -424,7 +480,7 @@ async function classify(
   try {
     const response = await anthropic.messages.create({
       model: CLASSIFIER_MODEL,
-      max_tokens: 700,
+      max_tokens: 900,
       system,
       messages: [{ role: 'user', content: userText }],
       ...(useSchema ? { output_config: { format: { type: 'json_schema', schema: CLASSIFICATION_SCHEMA } } } : {}),
@@ -476,6 +532,10 @@ function tagColumns(cls: Classification) {
     region: cls.region,
     theme: cls.theme,
     mood: cls.mood,
+    relevance: cls.relevance,
+    impact: cls.impact,
+    event: cls.event,
+    actors: cls.actors,
     energy: cls.energy,
     facts: cls.facts,
     classifier_version: CLASSIFIER_VERSION,
@@ -483,12 +543,13 @@ function tagColumns(cls: Classification) {
 }
 
 function describe(cls: Classification): string {
-  const bits = [cls.layer, cls.place, cls.theme, cls.mood === 1 ? 'boom' : cls.mood === -1 ? 'doom' : 'neutral']
+  const bits = [cls.layer, cls.place, cls.theme, cls.mood === 1 ? 'boom' : cls.mood === -1 ? 'doom' : 'neutral', `R${cls.relevance}·I${cls.impact}`]
   if (cls.energy) bits.push('energy')
   if (cls.facts.figures.length) {
     const tagged = cls.facts.figures.filter((f) => f.status).length
     bits.push(`${cls.facts.figures.length} fig${tagged ? ` (${tagged} tagged)` : ''}`)
   }
+  if (cls.event) bits.push(`“${cls.event}”`)
   return bits.filter(Boolean).join(' · ')
 }
 
