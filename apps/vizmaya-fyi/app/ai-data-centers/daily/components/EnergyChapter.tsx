@@ -646,7 +646,7 @@ function heroOf(others: EnergyFact[]): { value: string; unit: string } {
 
 function Card({ viz, hero = false, w }: { viz: Viz; hero?: boolean; w: number }) {
   return (
-    <section className={`eviz${hero ? ' hero' : ''}`}>
+    <section className={`eviz${hero ? ' lead' : ''}`}>
       <div className="eviz-head">
         <span className="eyebrow">{viz.title}</span>
         {hero && viz.hero ? (
