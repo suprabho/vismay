@@ -65,9 +65,9 @@ const input = 'w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-1
 /** "chart: Bar Chart · 5 rows" or "template · <why the composer planned none>". */
 function chartStatus(d: DcDraftEdition, section: EditionChartSection): string {
   const c = d.charts[section]
-  if (c) return `chart ${c.spec.chartType} · ${c.spec.rows.length} rows · ${c.model}`
+  if (c) return `chart ${c.spec.chartType} · ${c.spec.rows.length} rows · rung ${c.rung ?? 1} · ${c.model}`
   const skip = d.chartSkips.find((s) => s.section === section)
-  const template = section === 'energy' ? 'engine vizzes' : `viz ${d.layers[section].viz?.kind ?? 'none'}`
+  const template = section === 'energy' ? 'engine vizzes' : section === 'research' ? 'scatter' : `viz ${d.layers[section].viz?.kind ?? 'none'}`
   return `template (${template})${skip ? ` — ${skip.reason}` : ''}`
 }
 
@@ -384,6 +384,12 @@ export default function EditionsClient() {
             <div className="border border-white/10 rounded-xl p-3 space-y-2">
               <div className="text-xs text-neutral-500">{chartStatus(draft, 'energy')}</div>
               <ChartPreview chart={draft.charts.energy} />
+            </div>
+
+            <h3 className="text-sm font-medium pt-2">Research chart</h3>
+            <div className="border border-white/10 rounded-xl p-3 space-y-2">
+              <div className="text-xs text-neutral-500">{chartStatus(draft, 'research')}</div>
+              <ChartPreview chart={draft.charts.research} />
             </div>
 
             <h3 className="text-sm font-medium pt-2">Layers</h3>

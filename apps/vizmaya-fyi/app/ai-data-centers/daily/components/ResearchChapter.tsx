@@ -1,14 +1,18 @@
-import type { DcPaper, EditionResearch } from '@vismay/content-source/dcEditionTypes'
+import type { DcPaper, EditionChart, EditionResearch } from '@vismay/content-source/dcEditionTypes'
 import { DC_PAPER_AREAS, DC_PAPER_AREA_KEYS } from '@vismay/content-source/dcEditionTypes'
 import { paperGainText } from '@vismay/content-source/dcEditionAssembly'
 import QuadrantPlot from './QuadrantPlot'
+import PlannedChart from './PlannedChart'
 
 /**
  * Chapter V — the day in AI research on its own terms: which fields moved
  * (today vs the 30-edition average), how open it was, results at scale, and
  * result-led paper cards. Every paper opens the panel; every card links to arXiv.
  */
-export default function ResearchChapter({ research, papers }: { research: EditionResearch; papers: DcPaper[] }) {
+export default function ResearchChapter({ research, papers, chart }: { research: EditionResearch; papers: DcPaper[]; chart?: EditionChart | null }) {
+  // The composer's chart for the chapter leads in the results card; the
+  // scatter stays for editions composed before charts existed.
+  const planned = chart?.svg ? chart : null
   const areaCount = (k: string) => papers.filter((p) => p.area === k).length
   const max = Math.max(4, ...DC_PAPER_AREA_KEYS.map((k) => Math.max(areaCount(k), research.fieldBaseline[k] ?? 0)))
   const w = papers.filter((p) => p.weightsReleased).length
@@ -73,7 +77,16 @@ export default function ResearchChapter({ research, papers }: { research: Editio
           </div>
         </div>
         <div className="gcard">
-          <QuadrantPlot papers={papers} />
+          {planned ? (
+            <>
+              <div className="gcard-head">
+                <span className="eyebrow">{planned.title}</span>
+              </div>
+              <PlannedChart chart={planned} sources={false} />
+            </>
+          ) : (
+            <QuadrantPlot papers={papers} />
+          )}
         </div>
       </div>
       )}

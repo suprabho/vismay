@@ -32,13 +32,16 @@ import { paperGainNorm, paperGainText, shortTitle } from '@vismay/content-source
 const W = 900
 const H = 400
 const P = { l: 64, r: 30, t: 30, b: 54 }
-const YM = 25
 const LINE_H = 15
 const HALO_R = 18
 const PAD = 5
+/** Points closer than this in gain share a bucket cell and get dodged sideways. */
+const DODGE_GAIN = 1.5
+const DODGE_PX = 18
 
 const X = (c: number) => P.l + ((c + 0.5) / DC_COMPUTE_BUCKETS.length) * (W - P.l - P.r)
-const Y = (v: number) => H - P.b - (v / YM) * (H - P.t - P.b)
+/** Axis ceiling: 25 or the largest gain rounded up to the next 5, so nothing is clamped. */
+const yMax = (gains: number[]) => Math.max(25, Math.ceil(Math.max(0, ...gains) / 5) * 5)
 
 const NARROW = /[ijltIJ.,:;'!|()[\]{}/\\-]/
 const WIDE = /[mwMW@%]/
@@ -209,24 +212,35 @@ export default function QuadrantPlot({ papers }: { papers: DcPaper[] }) {
   /** Rendered label widths by arXiv id, once measured in the browser. */
   const [measured, setMeasured] = useState<Record<string, number> | null>(null)
 
-  const points = useMemo<Point[]>(
-    () =>
-      papers.map((paper, i) => {
-        const name = shortTitle(paper.title, 28)
-        const gain = `${paperGainText(paper)}${paper.bench ? ` ${shortTitle(paper.bench, 18)}` : ''}`
-        return {
-          paper,
-          i,
-          cx: X(paper.computeBucket ?? 0),
-          cy: Y(Math.min(YM, paperGainNorm(paper))),
-          open: paper.weightsReleased || paper.codeReleased,
-          name,
-          gain,
-          w: measured?.[paper.arxivId] ?? sansWidth(`${name} `, 12.5) + monoWidth(`· ${gain}`, 10.5),
-        }
-      }),
-    [papers, measured],
-  )
+  const YM = useMemo(() => yMax(papers.map(paperGainNorm)), [papers])
+  const Y = (v: number) => H - P.b - (v / YM) * (H - P.t - P.b)
+  const points = useMemo<Point[]>(() => {
+    // Papers in the same compute bucket with near-identical gains would sit
+    // on one point and their labels could never separate; spread them
+    // sideways within the bucket instead.
+    const cells = new Map<string, number[]>()
+    papers.forEach((paper, i) => {
+      const key = `${paper.computeBucket ?? 0}|${Math.round(paperGainNorm(paper) / DODGE_GAIN)}`
+      cells.set(key, [...(cells.get(key) ?? []), i])
+    })
+    const dodge = new Map<number, number>()
+    for (const idxs of cells.values()) idxs.forEach((i, k) => dodge.set(i, (k - (idxs.length - 1) / 2) * DODGE_PX))
+    return papers.map((paper, i) => {
+      const name = shortTitle(paper.title, 28)
+      const gain = `${paperGainText(paper)}${paper.bench ? ` ${shortTitle(paper.bench, 18)}` : ''}`
+      return {
+        paper,
+        i,
+        cx: X(paper.computeBucket ?? 0) + (dodge.get(i) ?? 0),
+        cy: Y(paperGainNorm(paper)),
+        open: paper.weightsReleased || paper.codeReleased,
+        name,
+        gain,
+        w: measured?.[paper.arxivId] ?? sansWidth(`${name} `, 12.5) + monoWidth(`· ${gain}`, 10.5),
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [papers, measured, YM])
   const labels = useMemo(() => placeLabels(points, seed), [points, seed])
 
   // After mount (and the web fonts), measure what the browser actually laid
@@ -298,7 +312,7 @@ export default function QuadrantPlot({ papers }: { papers: DcPaper[] }) {
             </text>
           </g>
         ))}
-        {[0, 5, 10, 15, 20, 25].map((v) => (
+        {Array.from({ length: YM / 5 + 1 }, (_, k) => k * 5).map((v) => (
           <g key={v}>
             <text x={P.l - 8} y={Y(v) + 4} textAnchor="end" className="qc">
               {v}

@@ -733,7 +733,11 @@ export function paperGainDetail(p: Pick<DcPaper, 'unit' | 'baseline' | 'result'>
   return formatFigureValue(result, null)
 }
 
-/** One normalised "gain" scale for the results-at-scale scatter (0–25). */
+/**
+ * One normalised "gain" scale for the results-at-scale scatter. Not clamped:
+ * a ceiling pinned every large result to one point and stacked their labels;
+ * the plot sizes its axis to the largest gain instead.
+ */
 export function paperGainNorm(p: Pick<DcPaper, 'unit' | 'baseline' | 'result'>): number {
   const { unit, baseline, result } = p
   if (result == null) return 0
@@ -743,7 +747,7 @@ export function paperGainNorm(p: Pick<DcPaper, 'unit' | 'baseline' | 'result'>):
   else if (unit === '%') v = Math.abs(result) * 0.6
   else if (baseline != null && baseline !== 0) v = (Math.abs(result - baseline) / Math.abs(baseline)) * 25
   else v = Math.abs(result)
-  return Math.max(0, Math.min(25, v))
+  return Math.max(0, v)
 }
 
 // ---------------------------------------------------------------------------

@@ -383,8 +383,25 @@ export interface EditionMoodCounts {
  * the deterministic templates (`EditionLayerViz`, the energy chapter's own
  * vizzes).
  */
-export type EditionChartSection = 'energy' | DcLayerKey
-export const EDITION_CHART_SECTIONS: EditionChartSection[] = ['energy', 'dc', 'hyper', 'semi', 'equip']
+export type EditionChartSection = 'energy' | DcLayerKey | 'research'
+export const EDITION_CHART_SECTIONS: EditionChartSection[] = ['energy', 'dc', 'hyper', 'semi', 'equip', 'research']
+
+/**
+ * How far down the ladder the chart came from. Every section descends until
+ * something draws, so a chart is guaranteed; the rung says what the reader
+ * is looking at.
+ *   1 — today's stated figures against each other
+ *   2 — today's figure against the trailing record of the same kind
+ *   3 — today's subject against a standing dataset (facilities, prices, papers)
+ *   4 — the record alone, computed in code: always available, no model
+ */
+export type EditionChartRung = 1 | 2 | 3 | 4
+export const EDITION_CHART_RUNG_LABELS: Record<EditionChartRung, string> = {
+  1: "today's figures",
+  2: 'today against the record',
+  3: 'today in context',
+  4: 'from the record',
+}
 
 export interface EditionChartColumn {
   name: string
@@ -417,6 +434,8 @@ export interface EditionChart {
   svg: string | null
   width: number
   height: number
+  /** Which rung of the ladder drew it; absent on charts stored before rungs existed (treat as 1). */
+  rung?: EditionChartRung
   model: string
   generatedAt: string
 }
