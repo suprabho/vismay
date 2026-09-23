@@ -1,0 +1,61 @@
+name: AI Data Centers morning edition
+
+# The one daily run behind /ai-data-centers/daily: news scrape → arXiv
+# papers → edition composer, as sequential jobs of ONE workflow. They used to
+# be three crons (06:45 / 07:00 / 08:15) and GitHub's best-effort scheduler
+# drifted them apart by hours — one morning the composer wrote the edition
+# from a window the scrape had not yet filled (31 stories, no papers). A
+# chain cannot drift: compose runs when the feeds are in, however late the
+# scheduler starts the chain.
+#
+# Starts at the window close (08:15 UTC) so the composer sees the whole
+# 08:15 → 08:15 window. Scrape takes up to 25 min and papers a few, so the
+# draft lands ~08:45–09:00; publish-dc-edition.yml freezes it at 09:00 or
+# 09:30, whichever comes after. Each job is the existing workflow, reused
+# (workflow_call), so the admin's direct dispatches keep working unchanged.
+#
+# Secrets: the three callees each run in the `Production` environment and
+# read the same secrets they always did; `secrets: inherit` passes them on.
+
+on:
+  schedule:
+    # 08:15 UTC daily — the edition window's close.
+    - cron: '15 8 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Edition date to compose (YYYY-MM-DD, UTC). Default: the current window'
+        required: false
+        default: ''
+      skip_feeds:
+        description: 'Skip the scrape and papers jobs and only compose'
+        type: boolean
+        default: false
+
+concurrency:
+  group: dc-morning-edition
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    if: ${{ !(inputs.skip_feeds == true || inputs.skip_feeds == 'true') }}
+    uses: ./.github/workflows/scrape-ai-data-centers-news.yml
+    secrets: inherit
+
+  papers:
+    # Runs after the scrape whatever its outcome — an RSS outage must not
+    # cost the research chapter — but never after a cancellation.
+    needs: scrape
+    if: ${{ !cancelled() && !(inputs.skip_feeds == true || inputs.skip_feeds == 'true') }}
+    uses: ./.github/workflows/ingest-dc-papers.yml
+    secrets: inherit
+
+  compose:
+    # Always composes once the feeds have had their turn (or were skipped):
+    # the composer tolerates a failed feed and the edition must never miss.
+    needs: [scrape, papers]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/compose-dc-edition.yml
+    with:
+      date: ${{ inputs.date || '' }}
+    secrets: inherit

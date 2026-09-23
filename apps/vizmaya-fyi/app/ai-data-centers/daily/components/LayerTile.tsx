@@ -43,7 +43,7 @@ export default function LayerTile({ layerKey, layer, chart }: { layerKey: DcLaye
         {layer.sub && <span className="lsub">{layer.sub}</span>}
       </span>
       <span className="lviz-wrap">
-        <span className="eyebrow">{planned ? planned.title : VIZ_TITLES[layerKey]}</span>
+        {(planned || viz) && <span className="eyebrow">{planned ? planned.title : VIZ_TITLES[layerKey]}</span>}
         {planned ? (
           <PlannedChart chart={planned} sources={false} />
         ) : viz ? (

@@ -25,6 +25,8 @@ export default function ResearchChapter({ research, papers }: { research: Editio
         {research.sub && <p className="rsub">{research.sub}</p>}
       </div>
       {research.notice && n === 0 && <p className="notice">{research.notice}</p>}
+      {/* No papers means no field bars of zeros and no empty scatter: the notice is the chapter. */}
+      {n > 0 && (
       <div className="rgrid">
         <div className="gcard">
           <div className="gcard-head">
@@ -74,6 +76,7 @@ export default function ResearchChapter({ research, papers }: { research: Editio
           <QuadrantPlot papers={papers} />
         </div>
       </div>
+      )}
       {n > 0 && (
         <>
           <div className="eyebrow dim" style={{ margin: '22px 0 10px' }}>

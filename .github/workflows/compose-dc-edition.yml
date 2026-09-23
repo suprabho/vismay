@@ -22,12 +22,25 @@ name: Compose AI Data Centers daily edition
 #   AI_GATEWAY_API_KEY         — prose layer + chart planner (shared gateway key); optional
 #   ADMIN_SESSION_SECRET       — signs the revalidate ping if a stale draft gets published on the way in
 
+# No schedule of its own: the daily run is the last job of
+# dc-morning-edition.yml (scrape → papers → compose), so it always sees the
+# window the scrape just filled. Dispatch this file directly to recompose
+# (the admin's Recompose / Regenerate charts buttons do).
 on:
-  schedule:
-    # 08:15 UTC daily — after the 06:45 news scrape and the 07:00 papers
-    # ingest have settled; the :15 offset avoids the top-of-hour Actions
-    # queue spike and staggers off the other vizmaya crons.
-    - cron: '15 8 * * *'
+  workflow_call:
+    inputs:
+      date:
+        type: string
+        required: false
+        default: ''
+      clear_edits:
+        type: boolean
+        required: false
+        default: false
+      charts_only:
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
     inputs:
       date:
@@ -80,6 +93,6 @@ jobs:
           ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
         run: >
           pnpm ai-data-centers:compose-edition --
-          ${{ github.event.inputs.date != '' && format('--date {0}', github.event.inputs.date) || '' }}
-          ${{ github.event.inputs.clear_edits == 'true' && '--clear-edits' || '' }}
-          ${{ github.event.inputs.charts_only == 'true' && '--charts-only' || '' }}
+          ${{ inputs.date != '' && format('--date {0}', inputs.date) || '' }}
+          ${{ (inputs.clear_edits == true || inputs.clear_edits == 'true') && '--clear-edits' || '' }}
+          ${{ (inputs.charts_only == true || inputs.charts_only == 'true') && '--charts-only' || '' }}

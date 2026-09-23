@@ -22,12 +22,21 @@ name: Scrape AI Data Centers news
 #   ANTHROPIC_API_KEY          — Claude Haiku classification
 #   AI_GATEWAY_API_KEY         — Jev figure gate (typesafe-ai/jev); optional, fails open
 
+# No schedule of its own: the daily run is the first job of
+# dc-morning-edition.yml, which chains scrape → papers → compose so the
+# composer can never fire on a window the scrape hasn't filled (three
+# separate crons drifted hours apart on GitHub's best-effort scheduler).
 on:
-  schedule:
-    # 06:45 UTC daily — picks up overnight news before US/EU work hours; the
-    # :45 offset avoids the top-of-hour Actions queue spike and staggers off
-    # the 06:15 energy-profile scrape so the two never share a Gemini window.
-    - cron: '45 6 * * *'
+  workflow_call:
+    inputs:
+      backfill_days:
+        type: string
+        required: false
+        default: ''
+      retag_days:
+        type: string
+        required: false
+        default: ''
   workflow_dispatch:
     inputs:
       backfill_days:
@@ -75,5 +84,5 @@ jobs:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: >
           pnpm ai-data-centers:scrape-news
-          ${{ github.event.inputs.backfill_days != '' && format('-- --backfill-days {0}', github.event.inputs.backfill_days) || '' }}
-          ${{ github.event.inputs.retag_days != '' && format('-- --retag-days {0}', github.event.inputs.retag_days) || '' }}
+          ${{ inputs.backfill_days != '' && format('-- --backfill-days {0}', inputs.backfill_days) || '' }}
+          ${{ inputs.retag_days != '' && format('-- --retag-days {0}', inputs.retag_days) || '' }}

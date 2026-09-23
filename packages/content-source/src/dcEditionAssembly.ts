@@ -308,7 +308,10 @@ export function buildCapacityViz(
     seen.add(key)
     rows.push({ label: shortTitle(label, 30), mw: action === 'add' ? power?.mw ?? null : null, action, storyId: s.id })
   }
-  if (rows.length < MIN_VIZ_ROWS) return null
+  // Five hatched "MW undisclosed" bars over "Added, as stated: 0 MW" is a
+  // chart of nothing. The floor counts rows that state a figure; undisclosed
+  // and paused rows trail as context but never carry the card.
+  if (rows.filter((r) => r.mw != null).length < MIN_VIZ_ROWS) return null
   const order = { add: 0, pause: 1, freeze: 2 }
   rows.sort((a, b) => order[a.action] - order[b.action] || (b.mw ?? -1) - (a.mw ?? -1))
   const kept = rows.slice(0, 6)
