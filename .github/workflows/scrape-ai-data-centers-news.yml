@@ -20,6 +20,7 @@ name: Scrape AI Data Centers news
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_news writes
 #   ANTHROPIC_API_KEY          — Claude Haiku classification
+#   AI_GATEWAY_API_KEY         — Jev figure gate (typesafe-ai/jev); optional, fails open
 
 on:
   schedule:
@@ -31,6 +32,10 @@ on:
     inputs:
       backfill_days:
         description: 'Re-tag untagged relevant rows from the last N days instead of scraping'
+        required: false
+        default: ''
+      retag_days:
+        description: 'Re-tag rows classified by an older classifier version from the last N days instead of scraping (run once after a classifier change)'
         required: false
         default: ''
 
@@ -67,6 +72,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: >
           pnpm ai-data-centers:scrape-news
           ${{ github.event.inputs.backfill_days != '' && format('-- --backfill-days {0}', github.event.inputs.backfill_days) || '' }}
+          ${{ github.event.inputs.retag_days != '' && format('-- --retag-days {0}', github.event.inputs.retag_days) || '' }}

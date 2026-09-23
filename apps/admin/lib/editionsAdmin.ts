@@ -60,8 +60,12 @@ export function isRecomposeConfigured(): boolean {
   return isWorkerDispatchConfigured()
 }
 
-export async function dispatchRecompose(input: { date: string; clearEdits: boolean }): Promise<void> {
-  await dispatchWorker(COMPOSE_WORKER, { date: input.date, clear_edits: input.clearEdits ? 'true' : 'false' })
+export async function dispatchRecompose(input: { date: string; clearEdits: boolean; chartsOnly?: boolean }): Promise<void> {
+  await dispatchWorker(COMPOSE_WORKER, {
+    date: input.date,
+    clear_edits: input.clearEdits ? 'true' : 'false',
+    charts_only: input.chartsOnly ? 'true' : 'false',
+  })
 }
 
 /** Last run of the composer workflow, best-effort (null when dispatch isn't configured). */

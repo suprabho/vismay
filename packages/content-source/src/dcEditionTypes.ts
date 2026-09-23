@@ -103,11 +103,46 @@ export const EDITION_HOLD_MINUTES = 30
 // ---------------------------------------------------------------------------
 // Story-level facts (dc_news.facts)
 
+/** What a stated figure describes — the thing the number is a measure of. */
+export type DcFigureScope = 'site' | 'company' | 'market' | 'policy'
+/**
+ * How firm a stated figure is. Only `committed` figures (signed, built,
+ * spent, let) may share a scale with each other; a target and a site never
+ * meet on one rail even when both are in MW.
+ */
+export type DcFigureStatus = 'committed' | 'target' | 'forecast' | 'queued' | 'stated'
+
+export const DC_FIGURE_SCOPES: DcFigureScope[] = ['site', 'company', 'market', 'policy']
+export const DC_FIGURE_STATUSES: DcFigureStatus[] = ['committed', 'target', 'forecast', 'queued', 'stated']
+
 export interface DcStoryFigure {
   value: number
   /** 'MW' | 'GW' | 'GWh' | '$bn' | '%' | 'year' | '' … as the story states it. */
   unit: string
   label: string
+  /**
+   * The canonical entity the figure belongs to — a company, a site, a
+   * country, a market ("Amazon", "West Java campus", "South Korea", "global
+   * data center capacity"). Rows that share a subject on a chart are the same
+   * thing measured twice, so the composer can dedupe on it. Absent on rows
+   * classified before v3.
+   */
+  subject?: string | null
+  scope?: DcFigureScope | null
+  status?: DcFigureStatus | null
+  /**
+   * The figure in its dimension's base unit (MW for power, MWh for energy,
+   * USD millions for money, the bare number for shares), so two figures of one
+   * dimension compare without re-parsing the unit. null when the unit has no
+   * scale (a year, a count). Absent on rows classified before v3.
+   */
+  base?: number | null
+  /**
+   * Jev's probability (0–1) that the figure is a quantity the story literally
+   * states, with these tags. Figures below the gate's threshold are dropped at
+   * ingest; the survivors keep their score. Absent when the gate was off.
+   */
+  confidence?: number | null
 }
 
 export interface DcStoryHorizon {
@@ -339,6 +374,62 @@ export interface EditionMoodCounts {
   neutral: number
 }
 
+/**
+ * A chart the composer PLANNED for one section of the edition, compiled
+ * through flint (`@vismay/story-pipeline` buildEChartsOption) and rendered to
+ * an SVG string server-side at compose time. The page inlines the SVG; the
+ * spec stays alongside so an editor can see exactly what was compared and
+ * the admin can re-plan it. Sections without a planned chart fall back to
+ * the deterministic templates (`EditionLayerViz`, the energy chapter's own
+ * vizzes).
+ */
+export type EditionChartSection = 'energy' | DcLayerKey
+export const EDITION_CHART_SECTIONS: EditionChartSection[] = ['energy', 'dc', 'hyper', 'semi', 'equip']
+
+export interface EditionChartColumn {
+  name: string
+  /** flint semantic type — Category, Name, Quantity, Amount, Percentage, Year … */
+  semanticType: string
+}
+
+export interface EditionChartSpec {
+  chartType: string
+  columns: EditionChartColumn[]
+  /** One value per column, in `columns` order. */
+  rows: Array<Array<string | number>>
+  /** flint channel → column name(s). */
+  encodings: Record<string, string | string[]>
+  xLabel?: string
+  yLabel?: string
+}
+
+export interface EditionChart {
+  section: EditionChartSection
+  /** The eyebrow over the chart: what is being compared, in ≤ 9 words. */
+  title: string
+  /** One sentence under the chart: the reading, plus any caveat about the comparison. */
+  caption: string
+  spec: EditionChartSpec
+  /** Every story a row was taken from. */
+  sources: EditionSource[]
+  storyIds: number[]
+  /** ECharts SSR output in theme-token colours; null when the render failed (the page then falls back). */
+  svg: string | null
+  width: number
+  height: number
+  model: string
+  generatedAt: string
+}
+
+/** Per-section planned charts; a missing key means "use the template". */
+export type EditionCharts = Partial<Record<EditionChartSection, EditionChart>>
+
+/** Why the composer planned no chart for a section — printed in the admin, never on the page. */
+export interface EditionChartSkip {
+  section: EditionChartSection
+  reason: string
+}
+
 /** The prose layer — what the composer (or an editor) writes. */
 export interface EditionText {
   headline: string
@@ -383,6 +474,10 @@ export interface DcEdition extends DcEditionSummary {
   energy: EditionEnergy
   geo: EditionGeo
   tape: EditionTapeTick[]
+  /** Composer-planned charts (migration 079). Empty on editions composed before it. */
+  charts: EditionCharts
+  /** What the composer held back and why, for the admin. */
+  chartSkips: EditionChartSkip[]
   storyIds: number[]
   paperIds: string[]
   ieaIds: number[]

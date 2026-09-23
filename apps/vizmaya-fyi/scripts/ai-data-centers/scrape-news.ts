@@ -9,6 +9,13 @@
  *     seeded dc_places list (+ its region), a theme, a mood (-1/0/1), an
  *     energy flag and `facts` — the action, the figures and the horizon the
  *     story states, which the edition's per-layer visualisations read.
+ *   * (classifier v3) per figure: the canonical `subject`, a `scope` (site /
+ *     company / market / policy), a `status` (committed / target / forecast /
+ *     queued / stated) and the size in the dimension's base unit — the tags
+ *     that decide which figures may share a scale on the edition's charts.
+ *     Jev (typesafe-ai/jev via the AI gateway) then judges each figure as a
+ *     typed yes/no and figures below the threshold are dropped
+ *     (jevFigureGate.ts; fails open without AI_GATEWAY_API_KEY).
  *
  * Google News RSS for the same reason as scrape-energy-profile-news.ts:
  * a free, machine-friendly feed with broad outlet coverage (Reuters,
@@ -19,11 +26,17 @@
  *                 (re-tags relevant rows that predate the snapshot tags, no
  *                  feed fetch — run once so the mood sparkline and field
  *                  baselines have history)
+ *               pnpm ai-data-centers:scrape-news -- --retag-days 2
+ *                 (re-tags relevant rows classified by an older classifier
+ *                  version, no feed fetch — run once after a classifier
+ *                  change so the current edition window carries the new
+ *                  figure tags)
  * Run in CI:    .github/workflows/scrape-ai-data-centers-news.yml (daily cron)
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — read dc_stocks / dc_places, write dc_news
  *   ANTHROPIC_API_KEY                                    — classification
+ *   AI_GATEWAY_API_KEY                                   — optional; enables the Jev figure gate
  *
  * Idempotency: source_url is the natural key (unique in migration 065).
  * Classifier rejects are stored with relevant=false — the queries here are
@@ -42,18 +55,25 @@ import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import {
+  DC_FIGURE_SCOPES,
+  DC_FIGURE_STATUSES,
   DC_LAYER_KEYS,
   DC_REGION_KEYS,
   DC_STORY_ACTIONS,
   DC_THEME_KEYS,
   STOCK_CATEGORY_TO_LAYER,
+  type DcFigureScope,
+  type DcFigureStatus,
   type DcLayerKey,
   type DcMood,
   type DcRegionKey,
   type DcStoryAction,
   type DcStoryFacts,
+  type DcStoryFigure,
   type DcThemeKey,
 } from '@vismay/content-source/dcEditionTypes'
+import { figureMagnitude } from '@vismay/content-source/dcEditionAssembly'
+import { gateFigures } from './jevFigureGate'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
@@ -75,7 +95,7 @@ const TOPIC_VOCABULARY = ['ai', 'data-centers', 'semiconductors', 'microprocesso
 // scrape. Bump CLASSIFIER_VERSION whenever the prompt or schema changes — it
 // is stored on every row so the mood series can be recomputed per version.
 const CLASSIFIER_MODEL = 'claude-haiku-4-5'
-const CLASSIFIER_VERSION = 'v2-snapshot-2026-09'
+const CLASSIFIER_VERSION = 'v3-figures-2026-09'
 const CONCURRENCY = 4
 // Stop pulling new items past this, well under the workflow's 30-minute
 // timeout, so the job always exits green with a summary instead of being
@@ -109,8 +129,11 @@ const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
               value: { type: 'number' },
               unit: { type: 'string' },
               label: { type: 'string' },
+              subject: nullable({ type: 'string' }),
+              scope: nullable({ type: 'string', enum: DC_FIGURE_SCOPES }),
+              status: nullable({ type: 'string', enum: DC_FIGURE_STATUSES }),
             },
-            required: ['value', 'unit', 'label'],
+            required: ['value', 'unit', 'label', 'subject', 'scope', 'status'],
             additionalProperties: false,
           },
         },
@@ -238,7 +261,13 @@ Energy: true when the story carries a power, grid, water, carbon or electricity-
 
 Facts (only what the headline/summary literally state — never estimate):
 - action: what happened — "add" (capacity/site added or broke ground) · "pause" · "freeze" · "power-deal" (PPA, generation, storage procurement) · "capacity" (leases, expansions without MW) · "permit" · "disclosure" (reports, water/carbon updates) · "pull-forward" (orders moved earlier) · "risk" (revenue/schedule warning) · "other" · null
-- figures: every number the text states with its unit and a 2–6 word label, e.g. {"value": 1200, "unit": "MW", "label": "gas-plus-storage block"}, {"value": 20, "unit": "years", "label": "PPA term"}, {"value": 9, "unit": "bn USD", "label": "cooling backlog"}, {"value": 2029, "unit": "year", "label": "turbine delivery"}. Use "MW"/"GW" for power, "GWh" for storage, "%" for percentages, "year" for a year given as a figure. Empty array when none.
+- figures: every number the text states, each with:
+  - value + unit: use "MW"/"GW" for power, "GWh" for storage, "%" for percentages, "bn USD"/"mn USD" for money (convert other currencies' labels but keep the stated number and note the currency in the label), "year" for a year given as a figure, "years"/"months" for terms.
+  - label: 2–6 words naming WHAT the number measures — "AI data center capacity", "cooling capacity", "investment 2026" — never a slogan or the story's angle.
+  - subject: the canonical entity the figure belongs to, as the text names it — a company ("Amazon"), a site ("West Java campus"), a country ("South Korea"), a market ("global data center capacity"). null only when the text gives no owner.
+  - scope: what the number describes — "site" (one facility or campus) · "company" (an operator or vendor as a whole) · "market" (an industry, country, region or global total) · "policy" (a rule, programme or public budget).
+  - status: how firm it is — "committed" (signed, built, spent, let, contracted) · "target" (an announced goal) · "forecast" (a projection or analyst estimate) · "queued" (a pipeline, application or grid queue, not yet granted) · "stated" (none of these — a rate, a share, a date).
+  e.g. {"value": 640, "unit": "MW", "label": "AI data center capacity", "subject": "BDx West Java campus", "scope": "site", "status": "committed"}, {"value": 20, "unit": "GW", "label": "data center capacity target", "subject": "global data center capacity", "scope": "market", "status": "target"}, {"value": 3, "unit": "bn USD", "label": "investment 2026", "subject": "KKR South Korea", "scope": "company", "status": "committed"}, {"value": 2029, "unit": "year", "label": "turbine delivery", "subject": "GE Vernova", "scope": "company", "status": "stated"}. Empty array when none.
 - horizon: a stated time window as strings like "2027", "2027-Q1", "2027-06", "FY27" — {"from": null, "to": "2027"} for "booked through 2027", {"from": "2028", "to": "2027"} for orders pulled from 2028 into 2027. null when the story states no window.
 
 Rules:
@@ -248,7 +277,7 @@ Rules:
 - place: ONLY a slug from the list above.
 
 Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output"}], "horizon": null}}`
+{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output", "subject": "TSMC", "scope": "company", "status": "target"}], "horizon": null}}`
 }
 
 interface Classification {
@@ -329,9 +358,16 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Cla
   const f = parsed.facts && typeof parsed.facts === 'object' ? (parsed.facts as Record<string, unknown>) : {}
   const action =
     typeof f.action === 'string' && (DC_STORY_ACTIONS as string[]).includes(f.action) ? (f.action as DcStoryAction) : null
-  const figures = (Array.isArray(f.figures) ? f.figures : [])
+  const figures: DcStoryFigure[] = (Array.isArray(f.figures) ? f.figures : [])
     .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
-    .map((x) => ({ value: Number(x.value), unit: clip(x.unit, 12), label: clip(x.label, 80) }))
+    .map((x) => {
+      const fig: DcStoryFigure = { value: Number(x.value), unit: clip(x.unit, 12), label: clip(x.label, 80) }
+      fig.subject = clip(x.subject, 60) || null
+      fig.scope = typeof x.scope === 'string' && (DC_FIGURE_SCOPES as string[]).includes(x.scope) ? (x.scope as DcFigureScope) : null
+      fig.status = typeof x.status === 'string' && (DC_FIGURE_STATUSES as string[]).includes(x.status) ? (x.status as DcFigureStatus) : null
+      fig.base = Number.isFinite(fig.value) ? figureMagnitude(fig) : null
+      return fig
+    })
     .filter((x) => Number.isFinite(x.value))
     .slice(0, MAX_FIGURES)
   const h = f.horizon && typeof f.horizon === 'object' ? (f.horizon as Record<string, unknown>) : null
@@ -409,7 +445,14 @@ async function classify(
   }
   // A refusal or max_tokens cut can still yield unparseable text — treat as off-topic.
   const parsed = parseJsonText(text)
-  return parsed ? normalise(parsed, ctx) : REJECTED
+  const cls = parsed ? normalise(parsed, ctx) : REJECTED
+  if (!cls.relevant || cls.facts.figures.length === 0) return cls
+  // Jev judges each extracted figure as a typed yes/no: literally stated, and
+  // tagged right. Drops below the threshold; keeps the score on the rest.
+  const gated = await gateFigures({ headline: item.title, summary: item.summary, outlet: item.source }, cls.facts.figures)
+  const dropped = gated.filter((g) => !g.kept)
+  if (dropped.length) console.log(`    jev dropped ${dropped.length}/${gated.length}: ${dropped.map((g) => `${g.value} ${g.unit} ${g.label} (${g.confidence})`).join(' · ')}`)
+  return { ...cls, facts: { ...cls.facts, figures: gated.filter((g) => g.kept).map(({ kept: _kept, ...f }) => f) } }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -442,24 +485,33 @@ function tagColumns(cls: Classification) {
 function describe(cls: Classification): string {
   const bits = [cls.layer, cls.place, cls.theme, cls.mood === 1 ? 'boom' : cls.mood === -1 ? 'doom' : 'neutral']
   if (cls.energy) bits.push('energy')
-  if (cls.facts.figures.length) bits.push(`${cls.facts.figures.length} fig`)
+  if (cls.facts.figures.length) {
+    const tagged = cls.facts.figures.filter((f) => f.status).length
+    bits.push(`${cls.facts.figures.length} fig${tagged ? ` (${tagged} tagged)` : ''}`)
+  }
   return bits.filter(Boolean).join(' · ')
 }
 
 interface Args {
+  /** Re-tag relevant rows with no snapshot tags (layer null) in the last N days. */
   backfillDays: number | null
+  /** Re-tag relevant rows classified by an older classifier version in the last N days. */
+  retagDays: number | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { backfillDays: null }
+  const args: Args = { backfillDays: null, retagDays: null }
+  const days = (flag: string, raw: string | undefined): number => {
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n <= 0) throw new Error(`Invalid ${flag} value: ${raw}`)
+    return n
+  }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--') continue
-    if (a === '--backfill-days') {
-      const n = Number(argv[++i])
-      if (!Number.isFinite(n) || n <= 0) throw new Error(`Invalid --backfill-days value: ${argv[i]}`)
-      args.backfillDays = n
-    } else throw new Error(`Unknown flag: ${a}`)
+    if (a === '--backfill-days') args.backfillDays = days(a, argv[++i])
+    else if (a === '--retag-days') args.retagDays = days(a, argv[++i])
+    else throw new Error(`Unknown flag: ${a}`)
   }
   return args
 }
@@ -506,23 +558,32 @@ async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierCon
 }
 
 /**
- * One-off: re-tag relevant rows written before the snapshot tags existed
- * (layer is null). Relevance, topics and tickers are left as they are — this
- * only fills the new columns.
+ * One-off re-tagging, no feed fetch. `untagged`: relevant rows written before
+ * the snapshot tags existed (layer is null). `stale`: relevant rows tagged by
+ * an older classifier version — run after a prompt/schema change so the
+ * current window carries the new fields. Relevance, topics and tickers are
+ * left as they are — this only rewrites the tag columns.
  */
-async function backfill(sb: Sb, anthropic: Anthropic, system: string, ctx: ClassifierContext, days: number, startedAt: number) {
+async function backfill(
+  sb: Sb,
+  anthropic: Anthropic,
+  system: string,
+  ctx: ClassifierContext,
+  opts: { days: number; mode: 'untagged' | 'stale' },
+  startedAt: number,
+) {
+  const { days, mode } = opts
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
-  const { data, error } = await sb
+  let q = sb
     .from('dc_news')
     .select('id, source_url, title, summary, source, published_at')
     .eq('relevant', true)
-    .is('layer', null)
     .gte('published_at', since)
-    .order('published_at', { ascending: false })
-    .limit(3000)
+  q = mode === 'untagged' ? q.is('layer', null) : q.or(`classifier_version.is.null,classifier_version.neq.${CLASSIFIER_VERSION}`)
+  const { data, error } = await q.order('published_at', { ascending: false }).limit(3000)
   if (error) throw new Error(`backfill read failed: ${error.message}`)
   const rows = (data ?? []) as { id: number; source_url: string; title: string; summary: string | null; source: string | null; published_at: string }[]
-  console.log(`[backfill] ${rows.length} untagged relevant rows in the last ${days} days`)
+  console.log(`[backfill] ${rows.length} ${mode === 'untagged' ? 'untagged' : `pre-${CLASSIFIER_VERSION}`} relevant rows in the last ${days} days`)
 
   let tagged = 0
   let skipped = 0
@@ -577,7 +638,11 @@ async function main() {
   const { system, ctx } = await loadContext(sb)
 
   if (args.backfillDays != null) {
-    await backfill(sb, anthropic, system, ctx, args.backfillDays, startedAt)
+    await backfill(sb, anthropic, system, ctx, { days: args.backfillDays, mode: 'untagged' }, startedAt)
+    return
+  }
+  if (args.retagDays != null) {
+    await backfill(sb, anthropic, system, ctx, { days: args.retagDays, mode: 'stale' }, startedAt)
     return
   }
 
