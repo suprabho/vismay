@@ -1,4 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "npx turbo-ignore vizmaya-fyi"
+  "ignoreCommand": "npx turbo-ignore vizmaya-fyi",
+  "crons": [
+    {
+      "path": "/api/ai-data-centers/cron/morning",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/ai-data-centers/cron/publish",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/ai-data-centers/cron/publish-late",
+      "schedule": "30 9 * * *"
+    }
+  ]
 }
