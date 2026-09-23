@@ -49,6 +49,23 @@ import {
 import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../app/ai-data-centers/theme'
 import { recordChart, type RecordInputs } from './editionChartFallbacks'
 
+/**
+ * ECharts' server-side renderer has no font metrics: it estimates every
+ * label at a fixed fraction of the font size, which runs well short of the
+ * edition's mono face (0.6em per glyph). A label it thinks fits its width
+ * gets anchored at the axis and drawn wider than the estimate — off the left
+ * edge of the card. Give the renderer the real measure: everything on these
+ * charts is set in the sentinel mono face, so width is glyph count × 0.6em
+ * (with a little more for the sans fallback ECharts uses for its own text).
+ */
+echarts.setPlatformAPI({
+  measureText(text: string, font?: string): { width: number } {
+    const size = Number((font ?? '').match(/(\d+(?:\.\d+)?)px/)?.[1] ?? 12)
+    const mono = (font ?? '').includes(CHART_FONT_SENTINEL)
+    return { width: Array.from(text).length * size * (mono ? 0.62 : 0.56) }
+  },
+})
+
 /** Tabular templates only — the relationship ones take edge rows the figures never form. */
 const PLANNABLE_CHART_TYPES = CHART_TYPES.filter((t) => !(RELATIONSHIP_CHART_TYPES as readonly string[]).includes(t))
 
@@ -84,7 +101,7 @@ A chart is worth drawing when at least ${MIN_CHART_ROWS} figures compare honestl
 - every numeric cell is a figure's value or base EXACTLY as listed (you may use base units so all rows share a unit — then name the unit in the column name, e.g. "Capacity (MW)"); never compute, sum, average, convert by hand or estimate anything;
 - one readable scale — the largest value in a measure column may be at most ${MAX_RANGE_RATIO}× the smallest. A 200 GW queue beside 900 MW deals makes every bar but one a sliver; leave the outlier out (or skip) rather than explain it in the caption.
 
-Prefer the comparison that carries the day's story: what was committed, where the money went, who is booked out to when. Bars and lollipops for magnitudes across subjects, dot or scatter for year horizons, grouped bars when a status or region split is the point. Row labels are subjects, never outlets. Keep it to ${MAX_CHART_ROWS} rows.
+Prefer the comparison that carries the day's story: what was committed, where the money went, who is booked out to when. Choose the form for the comparison, not by habit: a Lollipop Chart for a ranking of subjects, a Bar Chart when the reader compares lengths, a Grouped Bar Chart when a status or region split is the point, a Scatter Plot when two stated measures relate (capacity against money, gain against scale), a Slope Chart or Line Chart when the same subjects are stated at two horizons, a Waterfall Chart when parts add to a stated total. Row labels are subjects, never outlets. Keep it to ${MAX_CHART_ROWS} rows.
 
 Chart types: ${PLANNABLE_CHART_TYPES.join(', ')}.
 Semantic types: ${SEMANTIC_TYPE_HINTS}.
@@ -211,7 +228,10 @@ async function planFromToday(
   const allowed = new Set(sectionStories(s.section, input.stories, input.ieaStories).map((x) => x.id))
   let feedback: { plan: unknown; reason: string } | undefined
   let modelUsed = input.model
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // Three attempts: on the first real edition the model went 547× → 56× →
+  // (would have been) inside the limit; the second retry is what lands it.
+  const ATTEMPTS = 3
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     let answer: SectionPlan
     try {
       const res = await askSection(s, input.model, log, feedback)
@@ -224,9 +244,9 @@ async function planFromToday(
     if (!(PLANNABLE_CHART_TYPES as string[]).includes(answer.chart.chartType)) return { reason: `unknown chart type "${answer.chart.chartType}"` }
     const verdict = validateChartPlan(answer.chart, s.section, all, allowed)
     if (verdict.ok) return { plan: verdict.plan, modelUsed }
-    log(`[charts] ${s.section}: refused — ${verdict.reason}${attempt === 0 ? ' (retrying with the reason)' : ''}`)
+    log(`[charts] ${s.section}: refused — ${verdict.reason}${attempt < ATTEMPTS - 1 ? ' (retrying with the reason)' : ''}`)
     feedback = { plan: answer.chart, reason: verdict.reason }
-    if (attempt === 1) return { reason: `refused twice: ${verdict.reason}` }
+    if (attempt === ATTEMPTS - 1) return { reason: `refused ${ATTEMPTS} times: ${verdict.reason}` }
   }
   return { reason: 'planner produced nothing' }
 }
@@ -270,6 +290,12 @@ export async function planEditionCharts(input: {
     }),
   )
 
+  // Two sections must not show the same comparison. Sections are placed in
+  // page order (the energy hero first); a rung-1 plan that repeats half the
+  // rows or stories of one already placed yields and draws from the record,
+  // and a record chart already drawn for one section is skipped for the next.
+  const usedRecord = new Set<string>()
+  const placed = new Map<EditionChartSection, ValidatedPlan>()
   for (const s of sections) {
     const today = rung1.get(s.section)
     const todayReason =
@@ -286,18 +312,39 @@ export async function planEditionCharts(input: {
     let plan: ValidatedPlan | null = null
     let rung: 1 | 4 = 1
     let model = input.model
+    let dupOf: EditionChartSection | null = null
     if (today && 'plan' in today) {
-      plan = today.plan
-      model = today.modelUsed
-      modelUsed = modelUsed ?? today.modelUsed
-    } else {
-      const fallback = recordChart(s.section, record)
-      if (fallback) {
-        plan = fallback
-        rung = 4
-        model = 'record'
+      const mine = rowKeys(today.plan)
+      for (const [other, theirsPlan] of placed) {
+        const theirs = rowKeys(theirsPlan)
+        const shared = [...mine].filter((k) => theirs.has(k)).length
+        // Row labels are the model's words and differ run to run; the stories
+        // the rows quote do not. Either overlap, at half the smaller chart,
+        // marks the same comparison.
+        const sharedStories = today.plan.storyIds.filter((id) => theirsPlan.storyIds.includes(id)).length
+        const half = (a: number, b: number) => Math.ceil(Math.min(a, b) / 2)
+        if ((shared >= 2 && shared >= half(mine.size, theirs.size)) || (sharedStories >= 2 && sharedStories >= half(today.plan.storyIds.length, theirsPlan.storyIds.length))) {
+          dupOf = other
+          break
+        }
+      }
+      if (!dupOf) {
+        plan = today.plan
+        model = today.modelUsed
+        modelUsed = modelUsed ?? today.modelUsed
+        placed.set(s.section, today.plan)
       }
     }
+    if (!plan) {
+      const fallback = recordChart(s.section, record, usedRecord)
+      if (fallback) {
+        plan = fallback.plan
+        rung = 4
+        model = 'record'
+        usedRecord.add(fallback.key)
+      }
+    }
+    if (dupOf) log(`[charts] ${s.section}: today's plan repeats ${dupOf}'s rows — ${plan ? 'drawing from the record instead' : 'no chart'}`)
     if (!plan) {
       skips.push({ section: s.section, reason: `${todayReason ?? 'no plan'}; nothing in the record to draw either` })
       log(`[charts] ${s.section}: no chart — ${todayReason ?? 'no plan'}`)
@@ -311,10 +358,20 @@ export async function planEditionCharts(input: {
       continue
     }
     charts[s.section] = { ...plan, svg: svg.svg, ...size, rung, model, generatedAt }
-    if (rung === 4 && todayReason) skips.push({ section: s.section, reason: `rung 4 (${todayReason})` })
+    if (rung === 4) skips.push({ section: s.section, reason: `rung 4 (${dupOf ? `today's plan repeated ${dupOf}` : (todayReason ?? 'no plan')})` })
     log(`[charts] ${s.section}: rung ${rung} · ${plan.spec.chartType} · ${plan.spec.rows.length} rows · "${plan.title}"`)
   }
   return { charts, skips, modelUsed }
+}
+
+/** The subjects a plan draws, normalised, for the cross-section duplicate test. */
+function rowKeys(plan: ValidatedPlan): Set<string> {
+  const out = new Set<string>()
+  for (const row of plan.spec.rows) {
+    const label = row.find((c) => typeof c === 'string')
+    if (typeof label === 'string') out.add(label.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24))
+  }
+  return out
 }
 
 /** The section as the model sees it — figures first, stories as the citation key. */
@@ -388,7 +445,7 @@ export function renderChartSvg(
   } catch (err) {
     return { ok: false, reason: `flint could not assemble the spec: ${err instanceof Error ? err.message : String(err)}` }
   }
-  tuneForEdition(option, spec)
+  tuneForEdition(option, spec, size)
   let chart: echarts.ECharts | null = null
   try {
     chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width: size.width, height: size.height })
@@ -416,7 +473,7 @@ const obj = (v: unknown): Opt | null => (v && typeof v === 'object' && !Array.is
  * chart reads down a list, not across rotated text), the edition's mono
  * face everywhere, and a grid that keeps every label inside the box.
  */
-function tuneForEdition(option: Opt, spec: EditionChartSpec): void {
+function tuneForEdition(option: Opt, spec: EditionChartSpec, size: { width: number; height: number }): void {
   delete option.title
   delete option.tooltip
   delete option.toolbox
@@ -441,7 +498,9 @@ function tuneForEdition(option: Opt, spec: EditionChartSpec): void {
     // row at the top, labels clipped at a width instead of rotated.
     delete x.nameLocation
     delete x.nameGap
-    const cat: Opt = { ...x, inverse: true, axisLabel: { fontSize: 11, color: T.muted, width: 150, overflow: 'truncate', fontFamily: CHART_FONT_SENTINEL }, axisTick: { show: false }, name: undefined }
+    // Labels take at most a third of the card; longer ones are truncated by
+    // the renderer using the real mono measure above.
+    const cat: Opt = { ...x, inverse: true, axisLabel: { fontSize: 11, color: T.muted, width: Math.round(size.width * 0.32), overflow: 'truncate', fontFamily: CHART_FONT_SENTINEL }, axisTick: { show: false }, name: undefined }
     const val: Opt = { ...y, nameLocation: 'end', nameGap: 8, nameTextStyle: { fontSize: 10, color: T.dim, fontFamily: CHART_FONT_SENTINEL, align: 'right' }, axisLabel: { fontSize: 10, color: T.dim, fontFamily: CHART_FONT_SENTINEL }, axisLine: { show: false }, splitLine: { lineStyle: { color: T.line } } }
     option.xAxis = val
     option.yAxis = cat
@@ -467,8 +526,21 @@ function tuneForEdition(option: Opt, spec: EditionChartSpec): void {
       sr.barMaxWidth = 18
       sr.itemStyle = { ...(obj(sr.itemStyle) ?? {}), borderRadius: 2 }
       if (barLike && !obj(sr.label)?.show) sr.label = { show: true, position: 'right', fontSize: 10, color: T.bone, fontFamily: CHART_FONT_SENTINEL }
+      // A diverging measure (stock moves, changes) reads by sign: falls in
+      // the down colour, values that point left, label on the outside.
+      if (Array.isArray(sr.data) && sr.data.some((d) => typeof d === 'number' && d < 0)) {
+        sr.data = sr.data.map((d) => (typeof d === 'number' && d < 0 ? { value: d, itemStyle: { color: T.down }, label: { position: 'left' } } : d))
+      }
     }
-    if (sr.type === 'line' || sr.type === 'scatter') sr.symbolSize = sr.type === 'line' ? 6 : 9
+    if (sr.type === 'line') {
+      sr.symbolSize = 7
+      sr.lineStyle = { ...(obj(sr.lineStyle) ?? {}), width: 2 }
+      if (!obj(sr.label)?.show) sr.label = { show: true, position: 'top', fontSize: 10, color: T.bone, fontFamily: CHART_FONT_SENTINEL }
+    }
+    if (sr.type === 'scatter') {
+      sr.symbolSize = 10
+      if (!obj(sr.label)?.show) sr.label = { show: true, position: 'right', fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, formatter: '{b}' }
+    }
   }
 }
 

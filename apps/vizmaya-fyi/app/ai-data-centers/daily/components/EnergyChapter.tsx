@@ -602,7 +602,13 @@ function dedupe(facts: EnergyFact[]): EnergyFact[] {
     const key = f.subject
       ? `${f.kind}|${subjectKey(f.subject)}|${f.status ?? ''}`
       : `${f.kind}|${size ?? `${f.value}${f.unit}`}|${subjectKey(f.label)}`
-    const hit = seen.get(key)
+    // Same kind, same size, same day, and labels that share a word ("fine"
+    // / "pollution fine") is one figure from two wires even when the
+    // classifier named the subject two ways ("Vineland site" / "New
+    // Jersey's largest AI data center").
+    const hit =
+      seen.get(key) ??
+      out.find((o) => o.kind === f.kind && size != null && magnitudeOf(o) === size && (o.status ?? '') === (f.status ?? '') && labelsOverlap(o.label, f.label))
     if (hit) {
       for (const src of f.sources) if (!hit.sources.includes(src)) hit.sources.push(src)
       continue
@@ -612,6 +618,17 @@ function dedupe(facts: EnergyFact[]): EnergyFact[] {
     out.push(copy)
   }
   return out
+}
+
+const STOP = new Set(['the', 'a', 'an', 'of', 'in', 'for', 'and', 'to', 'on', 'at', 'by', 'ai', 'data', 'center', 'centre', 'centers', 'centres', 'usd', 'us'])
+const words = (s: string) => new Set(s.toLowerCase().replace(/centre/g, 'center').split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w)))
+/** Two figure labels describe the same thing when they share a meaningful word. */
+function labelsOverlap(a: string, b: string): boolean {
+  const wa = words(a)
+  const wb = words(b)
+  if (wa.size === 0 || wb.size === 0) return false
+  for (const w of wa) if (wb.has(w)) return true
+  return false
 }
 
 /** The figure that leads the "other figures" card. */
