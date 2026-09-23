@@ -262,7 +262,7 @@ Energy: true when the story carries a power, grid, water, carbon or electricity-
 Facts (only what the headline/summary literally state — never estimate):
 - action: what happened — "add" (capacity/site added or broke ground) · "pause" · "freeze" · "power-deal" (PPA, generation, storage procurement) · "capacity" (leases, expansions without MW) · "permit" · "disclosure" (reports, water/carbon updates) · "pull-forward" (orders moved earlier) · "risk" (revenue/schedule warning) · "other" · null
 - figures: every number the text states, each with:
-  - value + unit: use "MW"/"GW" for power, "GWh" for storage, "%" for percentages, "bn USD"/"mn USD" for money (convert other currencies' labels but keep the stated number and note the currency in the label), "year" for a year given as a figure, "years"/"months" for terms.
+  - value + unit: use "MW"/"GW" for power, "GWh" for storage, "%" for percentages, "tn USD"/"bn USD"/"mn USD" for money (convert other currencies' labels but keep the stated number and note the currency in the label), "year" for a year given as a figure, "years"/"months" for terms.
   - label: 2–6 words naming WHAT the number measures — "AI data center capacity", "cooling capacity", "investment 2026" — never a slogan or the story's angle.
   - subject: the canonical entity the figure belongs to, as the text names it — a company ("Amazon"), a site ("West Java campus"), a country ("South Korea"), a market ("global data center capacity"). null only when the text gives no owner.
   - scope: what the number describes — "site" (one facility or campus) · "company" (an operator or vendor as a whole) · "market" (an industry, country, region or global total) · "policy" (a rule, programme or public budget).

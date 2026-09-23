@@ -82,36 +82,91 @@ Encodings map channels to column names: x, y (an array of measure columns), colo
 
 For each section return either a chart or a skip with a plain reason ("only two committed power figures", "figures are all different kinds", "one story"). Skipping is the right answer more often than not — a chart with two bars or mixed scales is worse than no chart. Titles are ≤ 9 words naming the comparison ("Power committed today, by site"); the caption is one sentence that reads the chart for the reader and carries any caveat.`
 
-const chartPlanSchema = z.object({
-  sections: z.array(
-    z.object({
-      section: z.enum(['energy', 'dc', 'hyper', 'semi', 'equip']),
-      skip: z.string().nullable().describe('Why no chart is drawn for this section; null when `chart` is set.'),
-      chart: z
-        .object({
-          title: z.string(),
-          caption: z.string(),
-          chartType: z.string(),
-          columns: z.array(z.object({ name: z.string(), semanticType: z.string() })),
-          rows: z.array(z.array(z.union([z.string(), z.number()]))),
-          rowSourceIdxs: z.array(z.number().int()).describe('One story idx per row — the story whose figure the row quotes.'),
-          encodings: z.object({
-            x: z.string().optional(),
-            y: z.array(z.string()).optional(),
-            color: z.string().optional(),
-            size: z.string().optional(),
-            angle: z.string().optional(),
-            value: z.string().optional(),
-            group: z.string().optional(),
-            detail: z.string().optional(),
-          }),
-          xLabel: z.string().optional(),
-          yLabel: z.string().optional(),
-        })
-        .nullable(),
-    }),
-  ),
+const chartSchema = z.object({
+  title: z.string(),
+  caption: z.string(),
+  chartType: z.string(),
+  columns: z.array(z.object({ name: z.string(), semanticType: z.string() })),
+  rows: z.array(z.array(z.union([z.string(), z.number()]))),
+  rowSourceIdxs: z.array(z.number().int()).describe('One story idx per row — the story whose figure the row quotes.'),
+  encodings: z.object({
+    x: z.string().optional(),
+    y: z.array(z.string()).optional(),
+    color: z.string().optional(),
+    size: z.string().optional(),
+    angle: z.string().optional(),
+    value: z.string().optional(),
+    group: z.string().optional(),
+    detail: z.string().optional(),
+  }),
+  xLabel: z.string().optional(),
+  yLabel: z.string().optional(),
 })
+
+/** One section's answer: a chart, or a skip with the reason. */
+const sectionPlanSchema = z.object({
+  skip: z.string().nullable().describe('Why no chart is drawn for this section; null when `chart` is set.'),
+  chart: chartSchema.nullable(),
+})
+type SectionPlan = z.infer<typeof sectionPlanSchema>
+
+/**
+ * Lenient reading of a plain-text answer: the JSON object, with or without
+ * fences, with or without prose around it. Used when the provider's
+ * constrained-output path refuses the model's object — which it does now and
+ * then for a nested shape like this one — so a formatting hiccup costs a
+ * retry, not the section.
+ */
+function parseLooseJson(text: string): unknown {
+  let t = text.trim()
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) t = fence[1].trim()
+  const start = t.indexOf('{')
+  const end = t.lastIndexOf('}')
+  if (start < 0 || end <= start) return null
+  try {
+    return JSON.parse(t.slice(start, end + 1))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Ask for one section's plan. First the constrained-output path (the
+ * provider guarantees the shape); if that fails for any reason, once more as
+ * plain text with the same instructions, parsed leniently and checked against
+ * the same zod schema. Throws only when both fail.
+ */
+async function askSection(section: PlannerSectionInput, model: string, log: (l: string) => void): Promise<{ plan: SectionPlan; modelUsed: string }> {
+  const prompt = `Plan the chart for this section (answer for this section only):\n${JSON.stringify(compactSection(section), null, 1)}`
+  try {
+    const res = await generateText({
+      model,
+      system: PLANNER_SYSTEM,
+      prompt,
+      schema: sectionPlanSchema,
+      temperature: 0.2,
+      maxOutputTokens: 4000,
+      metadata: { 'x-vismay-feature': 'dc-edition-charts' },
+    })
+    return { plan: res.result, modelUsed: res.modelUsed }
+  } catch (err) {
+    const e = err as { message?: string; text?: string; finishReason?: string }
+    log(`[charts] ${section.section}: constrained output failed (${e.message ?? err}${e.finishReason ? `, finish=${e.finishReason}` : ''}) — retrying as plain JSON`)
+    if (typeof e.text === 'string') log(`[charts] ${section.section}: raw text (${e.text.length} chars): ${e.text.slice(0, 300)} …`)
+  }
+  const res = await generateText({
+    model,
+    system: `${PLANNER_SYSTEM}\n\nRespond with ONE JSON object and nothing else: {"skip": string | null, "chart": {title, caption, chartType, columns:[{name, semanticType}], rows:[[…]], rowSourceIdxs:[…], encodings:{x?, y?:[…], color?, size?, angle?, value?, group?, detail?}, xLabel?, yLabel?} | null}. Numbers as JSON numbers, not strings.`,
+    prompt,
+    temperature: 0.2,
+    maxOutputTokens: 4000,
+    metadata: { 'x-vismay-feature': 'dc-edition-charts-fallback' },
+  })
+  const parsed = sectionPlanSchema.safeParse(parseLooseJson(res.result))
+  if (!parsed.success) throw new Error(`plain-JSON retry did not match the plan shape: ${parsed.error.issues[0]?.message ?? 'unknown'}`)
+  return { plan: parsed.data, modelUsed: res.modelUsed }
+}
 
 export interface PlanChartsResult {
   charts: EditionCharts
@@ -143,34 +198,29 @@ export async function planEditionCharts(input: {
   }
   if (askable.length === 0) return { charts, skips, modelUsed: null }
 
-  let planned: z.infer<typeof chartPlanSchema> | null = null
-  let modelUsed: string | null = null
-  try {
-    const res = await generateText({
-      model: input.model,
-      system: PLANNER_SYSTEM,
-      prompt: `Plan the charts for these sections:\n${JSON.stringify(askable.map(compactSection), null, 1)}`,
-      schema: chartPlanSchema,
-      temperature: 0.2,
-      maxOutputTokens: 6000,
-      metadata: { 'x-vismay-feature': 'dc-edition-charts' },
-    })
-    planned = res.result
-    modelUsed = res.modelUsed
-  } catch (err) {
-    const reason = `chart planner failed: ${err instanceof Error ? err.message : String(err)}`
-    log(`[charts] ${reason}`)
-    for (const s of askable) skips.push({ section: s.section, reason })
-    return { charts, skips, modelUsed: null }
-  }
+  // One call per section, in parallel: a section's answer is small enough
+  // for the constrained-output path to hold, and one refused object costs
+  // that section alone rather than all five.
+  const answers = await Promise.all(
+    askable.map(async (s) => {
+      try {
+        return { section: s, ...(await askSection(s, input.model, log)) }
+      } catch (err) {
+        return { section: s, plan: null, modelUsed: null, error: err instanceof Error ? err.message : String(err) }
+      }
+    }),
+  )
+  const modelUsed: string | null = answers.find((a) => a.modelUsed)?.modelUsed ?? null
 
   const generatedAt = new Date().toISOString()
-  for (const s of askable) {
-    const out = planned.sections.find((p) => p.section === s.section)
-    if (!out) {
-      skips.push({ section: s.section, reason: 'planner returned nothing for this section' })
+  for (const a of answers) {
+    const s = a.section
+    if (!a.plan) {
+      skips.push({ section: s.section, reason: `chart planner failed: ${a.error ?? 'no answer'}` })
+      log(`[charts] ${s.section}: planner failed — ${a.error}`)
       continue
     }
+    const out = a.plan
     if (!out.chart) {
       skips.push({ section: s.section, reason: out.skip?.trim() || 'planner skipped it' })
       continue

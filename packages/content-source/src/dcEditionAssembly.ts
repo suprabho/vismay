@@ -610,7 +610,7 @@ export function figureKind(unit: string): DcFigureKind {
   if (u === 'gw' || u === 'mw' || u === 'kw') return 'power'
   if (u === 'gwh' || u === 'mwh' || u === 'twh') return 'energy'
   if (u === '%') return 'share'
-  if (/bn|billion|mn|million|\$|€|£/.test(u)) return 'money'
+  if (/\btn\b|trillion|\bbn\b|billion|\bmn\b|million|\$|€|£/.test(u)) return 'money'
   if (isYearUnit(u)) return 'horizon'
   if (u === 'years' || u === 'months' || u === 'days') return 'term'
   return 'count'
@@ -638,7 +638,7 @@ export function figureMagnitude(f: { value: number; unit: string; base?: number 
     case 'share':
       return f.value
     case 'money':
-      return /bn|billion/.test(u) ? f.value * 1000 : /mn|million/.test(u) ? f.value : null
+      return /\btn\b|trillion/.test(u) ? f.value * 1e6 : /\bbn\b|billion/.test(u) ? f.value * 1000 : /\bmn\b|million/.test(u) ? f.value : null
     default:
       return null
   }
