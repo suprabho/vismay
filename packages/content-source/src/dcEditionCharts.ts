@@ -54,6 +54,8 @@ export const MAX_RANGE_RATIO = 50
 /** Sections and the stories each one may draw from. */
 export function sectionStories(section: EditionChartSection, stories: DcEditionStory[], ieaStories: DcEditionStory[]): DcEditionStory[] {
   if (section === 'energy') return [...stories.filter((s) => s.energy), ...ieaStories]
+  // Research charts from dc_papers, not from stories (rungs 3–4 only).
+  if (section === 'research') return []
   return stories.filter((s) => s.layer === section)
 }
 
@@ -63,6 +65,7 @@ export const SECTION_NAMES: Record<EditionChartSection, string> = {
   hyper: DC_LAYERS.hyper.name,
   semi: DC_LAYERS.semi.name,
   equip: DC_LAYERS.equip.name,
+  research: 'New research',
 }
 
 /** One figure as the planner sees it — the story index it may cite plus the tags that decide comparability. */
@@ -346,6 +349,7 @@ export function normaliseCharts(raw: unknown): EditionCharts {
       svg: typeof c.svg === 'string' && c.svg.startsWith('<svg') ? c.svg : null,
       width: Number(c.width) || 0,
       height: Number(c.height) || 0,
+      ...(c.rung === 1 || c.rung === 2 || c.rung === 3 || c.rung === 4 ? { rung: c.rung } : {}),
       model: typeof c.model === 'string' ? c.model : '',
       generatedAt: typeof c.generatedAt === 'string' ? c.generatedAt : '',
     }

@@ -30,6 +30,7 @@ import { CHART_TYPES, RELATIONSHIP_CHART_TYPES, SEMANTIC_TYPE_HINTS } from '@vis
 import {
   EDITION_CHART_SECTIONS,
   type DcEditionStory,
+  type DcPaper,
   type EditionChart,
   type EditionChartSection,
   type EditionChartSkip,
@@ -46,6 +47,7 @@ import {
   type PlannerSectionInput,
 } from '@vismay/content-source/dcEditionCharts'
 import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../app/ai-data-centers/theme'
+import { recordChart, type RecordInputs } from './editionChartFallbacks'
 
 /** Tabular templates only — the relationship ones take edge rows the figures never form. */
 const PLANNABLE_CHART_TYPES = CHART_TYPES.filter((t) => !(RELATIONSHIP_CHART_TYPES as readonly string[]).includes(t))
@@ -57,7 +59,15 @@ export const CHART_SIZES: Record<EditionChartSection, { width: number; height: n
   hyper: { width: 480, height: 260 },
   semi: { width: 480, height: 260 },
   equip: { width: 480, height: 260 },
+  research: { width: 560, height: 300 },
 }
+
+/**
+ * The ladder. Rung 1 is the planner over today's figures. Rungs 2 and 3
+ * (today against the trailing record; today against a dataset) are the
+ * chart agent's, coming next. Rung 4 is the record alone, in code, so every
+ * section that has any record at all gets a chart.
+ */
 
 // ---------------------------------------------------------------------------
 // The plan
@@ -137,8 +147,18 @@ function parseLooseJson(text: string): unknown {
  * plain text with the same instructions, parsed leniently and checked against
  * the same zod schema. Throws only when both fail.
  */
-async function askSection(section: PlannerSectionInput, model: string, log: (l: string) => void): Promise<{ plan: SectionPlan; modelUsed: string }> {
-  const prompt = `Plan the chart for this section (answer for this section only):\n${JSON.stringify(compactSection(section), null, 1)}`
+async function askSection(
+  section: PlannerSectionInput,
+  model: string,
+  log: (l: string) => void,
+  feedback?: { plan: unknown; reason: string },
+): Promise<{ plan: SectionPlan; modelUsed: string }> {
+  const prompt =
+    `Plan the chart for this section (answer for this section only):\n${JSON.stringify(compactSection(section), null, 1)}` +
+    (feedback
+      ? `\n\nYour previous plan was refused by the validator — "${feedback.reason}". It was:\n${JSON.stringify(feedback.plan)}\n` +
+        `Plan again: drop the rows that break the rule (or skip with a reason) rather than explain it in the caption.`
+      : '')
   try {
     const res = await generateText({
       model,
@@ -174,77 +194,125 @@ export interface PlanChartsResult {
   modelUsed: string | null
 }
 
+/** Why rung 1 produced nothing for a section — kept on the skip so the admin can see what the planner said before the record took over. */
+type Rung1Outcome = { reason: string }
+
 /**
- * Plan, validate, compile and render the edition's charts. Never throws: a
- * model failure yields five skips and the page draws its templates.
+ * Rung 1 for one section: ask, validate, and on a refusal ask once more with
+ * the reason (a 547× outlier gets dropped by the model rather than costing
+ * the section). Returns the validated plan or why there is none.
+ */
+async function planFromToday(
+  s: PlannerSectionInput,
+  input: { stories: DcEditionStory[]; ieaStories: DcEditionStory[]; model: string },
+  all: DcEditionStory[],
+  log: (l: string) => void,
+): Promise<{ plan: ValidatedPlan; modelUsed: string } | Rung1Outcome> {
+  const allowed = new Set(sectionStories(s.section, input.stories, input.ieaStories).map((x) => x.id))
+  let feedback: { plan: unknown; reason: string } | undefined
+  let modelUsed = input.model
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let answer: SectionPlan
+    try {
+      const res = await askSection(s, input.model, log, feedback)
+      answer = res.plan
+      modelUsed = res.modelUsed || input.model
+    } catch (err) {
+      return { reason: `chart planner failed: ${err instanceof Error ? err.message : String(err)}` }
+    }
+    if (!answer.chart) return { reason: answer.skip?.trim() || 'planner skipped it' }
+    if (!(PLANNABLE_CHART_TYPES as string[]).includes(answer.chart.chartType)) return { reason: `unknown chart type "${answer.chart.chartType}"` }
+    const verdict = validateChartPlan(answer.chart, s.section, all, allowed)
+    if (verdict.ok) return { plan: verdict.plan, modelUsed }
+    log(`[charts] ${s.section}: refused — ${verdict.reason}${attempt === 0 ? ' (retrying with the reason)' : ''}`)
+    feedback = { plan: answer.chart, reason: verdict.reason }
+    if (attempt === 1) return { reason: `refused twice: ${verdict.reason}` }
+  }
+  return { reason: 'planner produced nothing' }
+}
+
+type ValidatedPlan = ReturnType<typeof validateChartPlan> extends infer V ? (V extends { ok: true; plan: infer P } ? P : never) : never
+
+/**
+ * Plan, validate, compile and render the edition's charts, one per section,
+ * descending the ladder until something draws. Never throws: a section with
+ * no honest comparison today and no record to fall back on is a skip with
+ * the reason, and the page draws its template.
  */
 export async function planEditionCharts(input: {
   stories: DcEditionStory[]
   ieaStories: DcEditionStory[]
   model: string
   log?: (line: string) => void
+  /** The standing datasets rung 4 draws from; any of them may be missing. */
+  papers?: DcPaper[]
+  tape?: RecordInputs['tape']
+  perEdition?: RecordInputs['perEdition']
+  facilities?: RecordInputs['facilities']
+  fieldBaseline?: RecordInputs['fieldBaseline']
 }): Promise<PlanChartsResult> {
   const log = input.log ?? (() => {})
   const sections = plannerInput(input.stories, input.ieaStories)
   const all = [...input.stories, ...input.ieaStories]
+  const record: RecordInputs = { tape: input.tape, facilities: input.facilities, perEdition: input.perEdition, papers: input.papers, fieldBaseline: input.fieldBaseline }
   const skips: EditionChartSkip[] = []
   const charts: EditionCharts = {}
+  const generatedAt = new Date().toISOString()
+  let modelUsed: string | null = null
 
-  const askable = sections.filter((s) => s.figures.length >= MIN_CHART_ROWS)
-  for (const s of sections) {
-    if (s.figures.length < MIN_CHART_ROWS) {
-      skips.push({ section: s.section, reason: s.figures.length === 0 ? 'no story states a figure' : `only ${s.figures.length} stated figure${s.figures.length === 1 ? '' : 's'}` })
-    }
-  }
-  if (askable.length === 0) return { charts, skips, modelUsed: null }
-
-  // One call per section, in parallel: a section's answer is small enough
-  // for the constrained-output path to hold, and one refused object costs
-  // that section alone rather than all five.
-  const answers = await Promise.all(
+  // Rung 1, one call per section in parallel. Research is never asked: its
+  // numbers live in dc_papers, not in stories, and rung 4 charts them.
+  const askable = sections.filter((s) => s.section !== 'research' && s.figures.length >= MIN_CHART_ROWS)
+  const rung1 = new Map<EditionChartSection, Awaited<ReturnType<typeof planFromToday>>>()
+  await Promise.all(
     askable.map(async (s) => {
-      try {
-        return { section: s, ...(await askSection(s, input.model, log)) }
-      } catch (err) {
-        return { section: s, plan: null, modelUsed: null, error: err instanceof Error ? err.message : String(err) }
-      }
+      rung1.set(s.section, await planFromToday(s, input, all, log))
     }),
   )
-  const modelUsed: string | null = answers.find((a) => a.modelUsed)?.modelUsed ?? null
 
-  const generatedAt = new Date().toISOString()
-  for (const a of answers) {
-    const s = a.section
-    if (!a.plan) {
-      skips.push({ section: s.section, reason: `chart planner failed: ${a.error ?? 'no answer'}` })
-      log(`[charts] ${s.section}: planner failed — ${a.error}`)
-      continue
+  for (const s of sections) {
+    const today = rung1.get(s.section)
+    const todayReason =
+      s.section === 'research'
+        ? 'papers are charted from the record'
+        : today && 'reason' in today
+          ? today.reason
+          : s.figures.length === 0
+            ? 'no story states a figure'
+            : s.figures.length < MIN_CHART_ROWS
+              ? `only ${s.figures.length} stated figure${s.figures.length === 1 ? '' : 's'}`
+              : null
+
+    let plan: ValidatedPlan | null = null
+    let rung: 1 | 4 = 1
+    let model = input.model
+    if (today && 'plan' in today) {
+      plan = today.plan
+      model = today.modelUsed
+      modelUsed = modelUsed ?? today.modelUsed
+    } else {
+      const fallback = recordChart(s.section, record)
+      if (fallback) {
+        plan = fallback
+        rung = 4
+        model = 'record'
+      }
     }
-    const out = a.plan
-    if (!out.chart) {
-      skips.push({ section: s.section, reason: out.skip?.trim() || 'planner skipped it' })
-      continue
-    }
-    if (!(PLANNABLE_CHART_TYPES as string[]).includes(out.chart.chartType)) {
-      skips.push({ section: s.section, reason: `unknown chart type "${out.chart.chartType}"` })
-      continue
-    }
-    const allowed = new Set(sectionStories(s.section, input.stories, input.ieaStories).map((x) => x.id))
-    const verdict = validateChartPlan(out.chart, s.section, all, allowed)
-    if (!verdict.ok) {
-      skips.push({ section: s.section, reason: verdict.reason })
-      log(`[charts] ${s.section}: refused — ${verdict.reason}`)
+    if (!plan) {
+      skips.push({ section: s.section, reason: `${todayReason ?? 'no plan'}; nothing in the record to draw either` })
+      log(`[charts] ${s.section}: no chart — ${todayReason ?? 'no plan'}`)
       continue
     }
     const size = CHART_SIZES[s.section]
-    const svg = renderChartSvg(verdict.plan.spec, s.section, size)
+    const svg = renderChartSvg(plan.spec, s.section, size)
     if (!svg.ok) {
-      skips.push({ section: s.section, reason: svg.reason })
+      skips.push({ section: s.section, reason: `${rung === 4 ? 'record chart' : 'planned chart'} failed to render: ${svg.reason}` })
       log(`[charts] ${s.section}: render failed — ${svg.reason}`)
       continue
     }
-    charts[s.section] = { ...verdict.plan, svg: svg.svg, ...size, model: modelUsed ?? input.model, generatedAt }
-    log(`[charts] ${s.section}: ${out.chart.chartType} · ${verdict.plan.spec.rows.length} rows · "${verdict.plan.title}"`)
+    charts[s.section] = { ...plan, svg: svg.svg, ...size, rung, model, generatedAt }
+    if (rung === 4 && todayReason) skips.push({ section: s.section, reason: `rung 4 (${todayReason})` })
+    log(`[charts] ${s.section}: rung ${rung} · ${plan.spec.chartType} · ${plan.spec.rows.length} rows · "${plan.title}"`)
   }
   return { charts, skips, modelUsed }
 }
@@ -283,6 +351,7 @@ const TOKEN_HEX: Record<EditionChartSection, Record<string, string>> = {
   hyper: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
   semi: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
   equip: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
+  research: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
 }
 
 import { CHART_FONT_SENTINEL } from '../../app/ai-data-centers/daily/components/chartConstants'

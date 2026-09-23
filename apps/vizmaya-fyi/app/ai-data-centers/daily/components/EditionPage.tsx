@@ -187,7 +187,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
               V · {counts.papers} papers · {new Set(e.papers.map((p) => p.area).filter(Boolean)).size} fields · arXiv
             </div>
           </div>
-          <ResearchChapter research={e.research} papers={e.papers} />
+          <ResearchChapter research={e.research} papers={e.papers} chart={e.charts.research} />
         </section>
 
         <section className="chapter wrap energy" id="energy">

@@ -68,6 +68,7 @@ import {
 } from '@vismay/content-source/dcEditions'
 import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts } from '@vismay/content-source/dcEditionTypes'
 import { chartPlannerModel, planEditionCharts } from './editionCharts'
+import { listDataCenters } from '@vismay/content-source/epics'
 import {
   DC_LAYERS,
   DC_LAYER_KEYS,
@@ -392,10 +393,20 @@ async function generateText(
 function describeCharts(charts: EditionCharts, skips: EditionChartSkip[]): string {
   return EDITION_CHART_SECTIONS.map((k) => {
     const c = charts[k]
-    if (c) return `${k}: ${c.spec.chartType} · ${c.spec.rows.length} rows · "${c.title}"`
+    if (c) return `${k}: rung ${c.rung ?? 1} · ${c.spec.chartType} · ${c.spec.rows.length} rows · "${c.title}"`
     const skip = skips.find((s) => s.section === k)
     return `${k}: template (${skip?.reason ?? 'no plan'})`
   }).join('\n  ')
+}
+
+/** Epoch's facility register for rung-4 charts; an unavailable table just means no facility chart. */
+async function facilitiesForCharts() {
+  try {
+    return await listDataCenters()
+  } catch (err) {
+    console.warn(`[charts] dc_facilities unavailable (${err instanceof Error ? err.message : err}) — no facility chart`)
+    return []
+  }
 }
 
 /**
@@ -411,6 +422,11 @@ async function rePlanCharts(args: Args): Promise<void> {
   const { charts, skips, modelUsed } = await planEditionCharts({
     stories: draft.stories,
     ieaStories: draft.ieaStories,
+    papers: draft.papers,
+    tape: draft.tape,
+    perEdition: draft.energy.perEdition,
+    fieldBaseline: draft.research.fieldBaseline,
+    facilities: await facilitiesForCharts(),
     model: chartPlannerModel(),
     log: (l) => console.log(l),
   })
@@ -420,7 +436,10 @@ async function rePlanCharts(args: Args): Promise<void> {
     return
   }
   await saveDraftCharts({ editionDate: draft.date, charts, chartSkips: skips })
-  console.log(`[compose] charts written · model=${modelUsed ?? 'none'} · ${Object.keys(charts).length} planned, ${skips.length} on templates`)
+  const rungs = Object.values(charts).map((c) => c.rung ?? 1)
+  console.log(
+    `[compose] charts written · model=${modelUsed ?? 'record only'} · ${rungs.length} charts (${rungs.filter((r) => r === 1).length} from today's figures, ${rungs.filter((r) => r === 4).length} from the record) · ${EDITION_CHART_SECTIONS.length - rungs.length} on templates`,
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -502,9 +521,18 @@ async function main() {
 
   const chartsRun = args.noCharts || stories.length === 0
     ? { charts: {} as EditionCharts, skips: EDITION_CHART_SECTIONS.map((section) => ({ section, reason: args.noCharts ? 'chart planner skipped (--no-charts)' : 'no stories' })), modelUsed: null }
-    : gatewayConfigured()
-      ? await planEditionCharts({ stories, ieaStories, model: chartPlannerModel(), log: (l) => console.log(l) })
-      : { charts: {} as EditionCharts, skips: EDITION_CHART_SECTIONS.map((section) => ({ section, reason: 'AI_GATEWAY_API_KEY not set' })), modelUsed: null }
+    : await planEditionCharts({
+        stories,
+        ieaStories,
+        papers,
+        tape: numbers.tape,
+        perEdition: numbers.energy.perEdition,
+        fieldBaseline: numbers.fieldBaseline,
+        facilities: await facilitiesForCharts(),
+        // Without the gateway rung 1 fails fast per section and rung 4 still draws.
+        model: gatewayConfigured() ? chartPlannerModel() : 'text.opus',
+        log: (l) => console.log(l),
+      })
 
   const payload = {
     editionDate: args.date,

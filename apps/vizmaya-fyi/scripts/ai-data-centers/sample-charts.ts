@@ -25,7 +25,16 @@ async function main() {
   const model = mi >= 0 ? argv[mi + 1] : chartPlannerModel()
   const sample = SAMPLE_EDITION
   console.log(`[sample-charts] ${sample.stories.length} stories · ${sample.ieaStories.length} iea · model ${model}`)
-  const { charts, skips, modelUsed } = await planEditionCharts({ stories: sample.stories, ieaStories: sample.ieaStories, model, log: (l) => console.log(l) })
+  const { charts, skips, modelUsed } = await planEditionCharts({
+    stories: sample.stories,
+    ieaStories: sample.ieaStories,
+    papers: sample.papers,
+    tape: sample.tape,
+    perEdition: sample.energy.perEdition,
+    facilities: [],
+    model,
+    log: (l) => console.log(l),
+  })
   for (const s of skips) console.log(`  ${s.section}: template — ${s.reason}`)
   const out = resolve(__dirname, '../../app/ai-data-centers/daily/sampleCharts.ts')
   const body =
