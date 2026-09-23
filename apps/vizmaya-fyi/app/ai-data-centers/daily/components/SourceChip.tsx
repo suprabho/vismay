@@ -12,7 +12,7 @@ export default function SourceChip({
 }) {
   return (
     <a className={`src${paper ? ' paper' : ''}${energy ? ' energy' : ''}`} href={source.url} target="_blank" rel="noopener">
-      {source.name}
+      <span>{source.name}</span>
     </a>
   )
 }

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import type { DcEditionStory, DcRegionKey, EditionChart, EditionEnergy } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionStory, DcRegionKey, EditionChart, EditionEnergy, EditionSource } from '@vismay/content-source/dcEditionTypes'
 import { DC_REGIONS, DC_THEMES } from '@vismay/content-source/dcEditionTypes'
-import { MIN_VIZ_ROWS, figureKind, figureMagnitude, isCommittedPower, subjectKey, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
+import { MIN_VIZ_ROWS, figureKind, figureMagnitude, isCommittedPower, storySource, subjectKey, type DcFigureKind } from '@vismay/content-source/dcEditionAssembly'
 import { MAX_RANGE_RATIO } from '@vismay/content-source/dcEditionCharts'
 import { hm, storyMinutes } from './editionUtils'
 import PlannedChart from './PlannedChart'
+import SourceChip from './SourceChip'
 
 /**
  * Chapter VI — where this epic meets the Energy Profile epic.
@@ -45,8 +46,8 @@ interface EnergyFact {
   status: string | null
   kind: DcFigureKind
   story: DcEditionStory
-  /** Every outlet that put this figure on the record, in the order they landed. */
-  sources: string[]
+  /** Every outlet that put this figure on the record, in the order they landed, each linking to its story. */
+  sources: EditionSource[]
 }
 
 interface Viz {
@@ -118,7 +119,7 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
         status: f.status ?? null,
         kind: figureKind(f.unit),
         story,
-        sources: [story.source ?? 'Unattributed'],
+        sources: [storySource(story)],
       })
     }
   }
@@ -317,7 +318,11 @@ export default function EnergyChapter({ energy, stories, ieaStories, chart }: Pr
                   </span>
                   <span className="lab">
                     {clip(f.label, 72)}
-                    <span className="src">{f.sources.join(' · ')}</span>
+                    <span className="srcs">
+                      {f.sources.map((s) => (
+                        <SourceChip key={s.url} source={s} />
+                      ))}
+                    </span>
                   </span>
                   {p.length > 1 && mine != null && max > 0 && (
                     <span className="rail">
@@ -610,7 +615,9 @@ function dedupe(facts: EnergyFact[]): EnergyFact[] {
       seen.get(key) ??
       out.find((o) => o.kind === f.kind && size != null && magnitudeOf(o) === size && (o.status ?? '') === (f.status ?? '') && labelsOverlap(o.label, f.label))
     if (hit) {
-      for (const src of f.sources) if (!hit.sources.includes(src)) hit.sources.push(src)
+      // One chip per outlet: a second story from the same wire adds nothing
+      // the first chip doesn't already link to.
+      for (const src of f.sources) if (!hit.sources.some((s) => s.name === src.name || s.url === src.url)) hit.sources.push(src)
       continue
     }
     const copy = { ...f, sources: [...f.sources] }
