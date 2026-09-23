@@ -61,9 +61,8 @@ html:has(.dcd){scroll-behavior:smooth}
 /* ---------- masthead ---------- */
 .dcd .mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .dcd .mast-row{display:flex;align-items:center;gap:16px;min-height:56px;padding-inline:var(--gutter);max-width:1280px;margin-inline:auto}
-.dcd .brand{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
-.dcd .brand .wordmark{font-family:var(--serif);font-size:20px;letter-spacing:-.01em}
-.dcd .brand .epic{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-left:10px;border-left:1px solid var(--line-strong)}
+.dcd .brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.dcd .brand .wordmark{display:inline-flex;align-items:center}
 .dcd .edition-nav{margin-inline:auto;display:flex;align-items:center;gap:4px}
 .dcd .edition-nav .step{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;color:var(--muted);transition:background .15s,color .15s}
 .dcd .edition-nav .step:hover{background:var(--elevated);color:var(--bone)}
@@ -557,7 +556,6 @@ body.dcd-panel-open{overflow:hidden}
   .dcd .sources{columns:2}
 }
 @media (max-width:640px){
-  .dcd .brand .epic{display:none}
   .dcd .edition-nav .dow{display:none}
   .dcd .mast-tools .pill span.txt{display:none}
   .dcd .edition-nav .today small{display:none}

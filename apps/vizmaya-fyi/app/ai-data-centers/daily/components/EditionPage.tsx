@@ -2,7 +2,8 @@ import Link from 'next/link'
 import type { DcEditionNeighbours, DcEditionSummary, DcEditionWithContent, DcLayerKey } from '@vismay/content-source/dcEditionTypes'
 import { DC_LAYER_KEYS, formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { buildCounts, deriveSources } from '@vismay/content-source/dcEditionAssembly'
-import type { AiDataCentersTheme } from '../../theme'
+import { AI_DATA_CENTERS_THEME_DEFAULTS, aiDataCentersLogoPalette, type AiDataCentersTheme } from '../../theme'
+import VizmayaLogo from '@/components/VizmayaLogo'
 import EditionThemeStyle from './EditionThemeStyle'
 import ChapterNav from './ChapterNav'
 import ShareButton from './ShareButton'
@@ -42,6 +43,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
   const stamp = `Snapshot · ${formatEditionDate(e.date, { weekday: false })} · 08:15 UTC`
   const canonical = `${siteUrl}${editionHref(e.date)}`
   const publishedLabel = e.status === 'published' ? 'frozen 08:15 UTC' : 'draft · not yet frozen'
+  const logoPalette = aiDataCentersLogoPalette({ ...AI_DATA_CENTERS_THEME_DEFAULTS, ...themeOverrides })
 
   const panelData: PanelData = {
     stories: e.stories,
@@ -81,11 +83,8 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
       <header className="mast">
         <div className="mast-row">
           <div className="brand">
-            <Link className="wordmark" href="/">
-              vizmaya
-            </Link>
-            <Link className="epic" href="/ai-data-centers">
-              AI Data Centers · Daily snapshot
+            <Link className="wordmark" href="/" aria-label="Vizmaya home">
+              <VizmayaLogo className="h-[24px] w-[100px]" palette={logoPalette} />
             </Link>
           </div>
           <nav className="edition-nav" aria-label="Edition">
