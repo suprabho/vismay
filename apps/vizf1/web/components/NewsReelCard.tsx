@@ -2,6 +2,14 @@
 
 import type { NewsCard } from '@/lib/useNewsFeed'
 
+// Fades the media out across its bottom half so it melts into the card surface
+// the text sits on. Stops follow smoothstep (3t² − 2t³) rather than a straight
+// ramp, so there's no visible band where the fade begins or ends.
+const MEDIA_FADE = `linear-gradient(to bottom, ${Array.from({ length: 11 }, (_, i) => {
+  const t = i / 10
+  return `rgb(0 0 0 / ${(1 - t * t * (3 - 2 * t)).toFixed(3)}) ${50 + i * 5}%`
+}).join(', ')})`
+
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const m = Math.round(diff / 60_000)
@@ -17,28 +25,29 @@ export function NewsReelCard({ card }: { card: NewsCard }) {
       href={card.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative flex h-full w-full flex-col justify-end overflow-hidden rounded-3xl border border-border bg-surface"
+      className="flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl border border-border bg-surface"
     >
-      {card.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={card.imageUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-surface to-bg" aria-hidden />
-      )}
+      {/* Media takes the space the text leaves, capped at 50vh. On short cards
+          (e.g. the 55vh profile carousels) it shrinks rather than clip the text. */}
       <div
-        className="absolute inset-0"
-        aria-hidden
-        style={{
-          background:
-            'linear-gradient(to top, rgba(11,13,18,0.95) 0%, rgba(11,13,18,0.65) 30%, rgba(11,13,18,0.1) 70%, rgba(11,13,18,0.0) 100%)',
-        }}
-      />
-      <div className="relative z-10 p-6 pb-12">
+        className="relative max-h-[50vh] min-h-0 flex-1"
+        style={{ maskImage: MEDIA_FADE, WebkitMaskImage: MEDIA_FADE }}
+      >
+        {card.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={card.imageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-surface to-bg" aria-hidden />
+        )}
+      </div>
+      {/* The negative margin tucks the text into the faded tail of the media
+          when space is tight; with room to spare it just sits at the bottom. */}
+      <div className="relative z-10 -mt-12 shrink-0 p-6 pb-12">
         <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider">
           <span className="rounded-full bg-accent px-2 py-0.5 font-semibold text-accent-text">
             {card.publisher}
