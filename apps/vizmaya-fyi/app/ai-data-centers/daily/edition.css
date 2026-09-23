@@ -18,6 +18,7 @@
   --up:#5eead4; --down:#f0a0a0; --energy:#c8e66b; --energy-wash:rgba(200,230,107,.08);
   --doom:#f87171; --boom:#4ade80; --doom-ink:#f87171; --boom-ink:#4ade80;
   --map-dot:#333f49; --map-dot-hi:#46545f; --comp1:#d4705f; --comp2:#14a3ba; --comp3:#96b532;
+  --layer-dc:#22d3ee; --layer-hyper:#6366f1; --layer-semi:#fbbf24; --layer-equip:#c084fc;
   --shadow:0 20px 60px rgba(0,0,0,.45);
   --serif:"Prata",Georgia,"Times New Roman",serif;
   --sans:"Public Sans","Helvetica Neue",Arial,sans-serif;
@@ -33,6 +34,7 @@
     --up:#0f766e; --down:#b42318; --energy:#5f7a00; --energy-wash:rgba(95,122,0,.08);
     --doom:#dc2626; --boom:#16a34a; --doom-ink:#b91c1c; --boom-ink:#15803d;
     --map-dot:#c9d3da; --map-dot-hi:#aab8c2; --comp1:#c2410c; --comp2:#0891b2; --comp3:#5f7a00;
+    --layer-dc:#0891b2; --layer-hyper:#4338ca; --layer-semi:#c98510; --layer-equip:#a855f7;
     --shadow:0 20px 60px rgba(15,23,29,.12);
     color-scheme:light;}
 }
@@ -43,6 +45,7 @@
   --up:#0f766e; --down:#b42318; --energy:#5f7a00; --energy-wash:rgba(95,122,0,.08);
   --doom:#dc2626; --boom:#16a34a; --doom-ink:#b91c1c; --boom-ink:#15803d;
   --map-dot:#c9d3da; --map-dot-hi:#aab8c2; --comp1:#c2410c; --comp2:#0891b2; --comp3:#5f7a00;
+  --layer-dc:#0891b2; --layer-hyper:#4338ca; --layer-semi:#c98510; --layer-equip:#a855f7;
   --shadow:0 20px 60px rgba(15,23,29,.12);
   color-scheme:light;}
 /* ---------- base ---------- */
@@ -124,10 +127,6 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .boomscore-word{font-family:var(--serif);font-size:24px;line-height:1.1;color:var(--muted)}
 .dcd .boomscore[data-tone="boom"] :is(.boomscore-word,.boomscore-signed){color:var(--boom-ink)}
 .dcd .boomscore[data-tone="doom"] :is(.boomscore-word,.boomscore-signed){color:var(--doom-ink)}
-.dcd .boomscore-counts{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted)}
-.dcd .boomscore-go{margin-top:4px;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;color:var(--accent-mid);transition:color .15s}
-.dcd .boomscore-go:hover{color:var(--accent-hi)}
-.dcd .boomscore-counts span,.dcd .boomscore-go span{white-space:nowrap}
 @media (max-width:980px){
   .dcd .boomscore{flex-direction:row;justify-content:flex-start;gap:20px}
   .dcd .boomscore-ring{width:220px}
@@ -137,7 +136,6 @@ html:has(.dcd){scroll-behavior:smooth}
   .dcd .boomscore{gap:14px}
   .dcd .boomscore-ring{width:172px}
   .dcd .boomscore-word{font-size:22px}
-  .dcd .boomscore-go{padding-block:12px;margin-top:-6px}
 }
 .dcd .window{border-left:1px solid var(--line-strong);padding-left:22px;display:grid;gap:14px}
 .dcd .window .k{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
@@ -224,15 +222,30 @@ html:has(.dcd){scroll-behavior:smooth}
 @media (min-width:760px){
   .dcd .layers{grid-template-columns:1fr 1fr}
 }
+/* One accent per layer (--layer-*). A tile re-points the page's accent family
+   at its own hue, so the icon, the note marks, the source chips, the Open
+   link, the hover border and the lead series of its viz all follow it (the
+   viz's other series keep the page palette; see --chart-mid below). The
+   tints mix toward --bone, so they lighten on dark and darken on light, as
+   the page's own accent steps do. */
+.dcd .layer[data-layer="dc"]{--la:var(--layer-dc)}
+.dcd .layer[data-layer="hyper"]{--la:var(--layer-hyper)}
+.dcd .layer[data-layer="semi"]{--la:var(--layer-semi)}
+.dcd .layer[data-layer="equip"]{--la:var(--layer-equip)}
+.dcd .layer[data-layer]{--accent:var(--la);--accent-mid:color-mix(in oklab,var(--la) 72%,var(--bone));--accent-hi:color-mix(in oklab,var(--la) 45%,var(--bone));--accent-lo:color-mix(in oklab,var(--la) 55%,var(--dim));--accent-wash:color-mix(in srgb,var(--la) 11%,transparent)}
 .dcd .layer{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:20px 22px 18px;display:grid;gap:14px;text-align:left;transition:border-color .15s,transform .15s,box-shadow .15s;position:relative}
 .dcd .layer:hover{border-color:var(--accent-lo);transform:translateY(-2px);box-shadow:var(--shadow)}
 .dcd .layer:hover .go{color:var(--accent-hi)}
+/* head: a quiet mono kicker (layer · count) over the layer's remit, its icon top right */
 .dcd .layer-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
-.dcd .layer-head .lh{display:grid;gap:3px}
-.dcd .layer-head b{font-family:var(--serif);font-size:24px;font-weight:400;line-height:1.05}
-.dcd .layer-head small{font-size:12.5px;color:var(--muted)}
-.dcd .lcount{font-family:var(--serif);font-size:34px;line-height:1;font-variant-numeric:tabular-nums;display:grid;justify-items:end}
-.dcd .lcount small{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-top:4px}
+.dcd .layer-head .lh{display:grid;gap:6px;min-width:0;padding-top:2px}
+.dcd .layer-head .lk{font-family:var(--mono);font-size:11.5px;line-height:1.35;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.dcd .layer-head .lk i{font-style:normal;color:var(--dim)}
+.dcd .layer-head .lk b{font-weight:400;color:var(--bone);font-variant-numeric:tabular-nums}
+.dcd .layer-head small{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--muted)}
+.dcd .licon{flex:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:var(--accent);background:var(--accent-wash);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 28%,transparent);transition:background .15s}
+.dcd .licon svg{display:block}
+.dcd .layer:hover .licon{background:color-mix(in srgb,var(--accent) 18%,transparent)}
 .dcd .moves{display:block;max-width:100%;font-family:var(--mono)}
 .dcd .moves .zero{stroke:var(--line-strong);stroke-width:1}
 .dcd .moves .bu{fill:var(--up)}
@@ -282,7 +295,7 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .energy-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start}
 .dcd .energy-viz{display:grid;gap:18px;min-width:0}
 .dcd .eviz{border:1px solid var(--line);border-radius:10px;background:var(--elevated);padding:16px 18px;display:grid;gap:12px;align-content:start;min-width:0}
-.dcd .eviz.hero{background:var(--energy-wash);border-color:var(--line-strong)}
+.dcd .eviz.lead{background:var(--energy-wash);border-color:var(--line-strong)}
 .dcd .eviz-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
 .dcd .eviz-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0}
 .dcd .eviz-note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:-2px}
@@ -446,6 +459,12 @@ body.dcd-panel-open{overflow:hidden}
 /* per-layer bespoke viz */
 .dcd .lviz-wrap{display:grid;gap:8px;padding:12px 0 4px}
 /* composer-planned charts (flint → ECharts SVG, themed via chartSvg.ts) */
+/* A viz's companion series (a planned chart's 2nd and 5th, the capacity
+   ledger's "later" bars) keep the page's accent steps: declared on the root,
+   --chart-mid/--chart-hi take the page accent's value before a layer tile
+   re-points it, so in a tile only the lead series wears the layer's hue and
+   the rest stay hues apart from it. */
+.dcd{--chart-mid:var(--accent-mid);--chart-hi:var(--accent-hi)}
 .dcd .pchart{margin:0;display:grid;gap:8px;min-width:0}
 .dcd .pchart-svg{width:100%;min-width:0}
 .dcd .pchart-svg svg{display:block;width:100%;height:auto;font-family:var(--mono);overflow:visible}
@@ -460,7 +479,7 @@ body.dcd-panel-open{overflow:hidden}
 .dcd .lviz .vk{font-size:10.5px;fill:var(--dim)}
 .dcd .lviz .vk .hi{fill:var(--bone);font-weight:500}
 .dcd .lviz .vb.add{fill:var(--accent)}
-.dcd .lviz .vb.later{fill:var(--accent-mid);opacity:.85}
+.dcd .lviz .vb.later{fill:var(--chart-mid);opacity:.85}
 .dcd .lviz .vb.neg{fill:var(--down)}
 .dcd .lviz .vb.pause,.dcd .lviz .vb.freeze{fill:var(--raised)}
 .dcd .lviz .hatch{stroke:var(--down);stroke-width:1.2}

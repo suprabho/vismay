@@ -140,7 +140,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
                 <Deck text={e.sub} />
               </p>
             </div>
-            <BoomScore score={e.moodScore} counts={e.moodCounts} />
+            <BoomScore score={e.moodScore} />
           </div>
         </div>
 
