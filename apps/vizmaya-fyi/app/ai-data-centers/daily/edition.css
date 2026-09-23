@@ -189,8 +189,9 @@ html:has(.dcd){scroll-behavior:smooth}
 /* ---------- geo (full bleed) ---------- */
 .dcd .geo-section{padding-bottom:0}
 .dcd .bleed{width:100%}
-.dcd .mapbox{position:relative;background:linear-gradient(180deg,var(--elevated),var(--surface));border-block:1px solid var(--line);overflow-x:auto;overflow-y:hidden}
-.dcd .mapbox canvas{display:block;width:100%;min-width:900px;height:auto}
+.dcd .mapbox{position:relative;background:linear-gradient(180deg,var(--elevated),var(--surface));border-block:1px solid var(--line)}
+.dcd .map-scroll{position:relative;overflow-x:auto;overflow-y:hidden}
+.dcd .map-scroll canvas{display:block;width:100%;min-width:900px;height:auto}
 .dcd .mapbox .legend{position:absolute;left:var(--gutter);top:14px;z-index:2;display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .dcd .mapbox .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:middle}
 .dcd .mapbox .legend i.energy{background:var(--energy)}

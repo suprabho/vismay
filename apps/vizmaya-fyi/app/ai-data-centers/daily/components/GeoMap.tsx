@@ -22,16 +22,15 @@ interface Pin extends EditionGeoPlace {
   x: number
   y: number
   r: number
-  side: 'left' | 'right'
-  dy: number
 }
 
 /**
  * Chapter III — full-bleed dot-matrix world map. The land mask is a flat
  * array shipped with the page (no fetch, no map library); pins are sized by
- * story count and coloured by the energy tag. Hover shows the place, click
- * opens its stories; the region bar below is proportional to story share
- * with per-layer micro-bars, and highlights the region's pins on hover.
+ * story count and coloured by the energy tag. Hover shows the place (the
+ * name/count live in that tooltip, not drawn on the map), click opens its
+ * stories; the region bar below is proportional to story share with
+ * per-layer micro-bars, and highlights the region's pins on hover.
  */
 export default function GeoMap({ places, regions, stamp }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -40,47 +39,7 @@ export default function GeoMap({ places, regions, stamp }: Props) {
   const [hotPin, setHotPin] = useState<string | null>(null)
   const [tip, setTip] = useState<{ left: number; top: number; pin: Pin } | null>(null)
 
-  // Label placement: the busiest pins choose first, each trying right / left
-  // and a few vertical offsets, and take the slot that overlaps the fewest
-  // labels and pins already on the map — so clustered sites (Virginia and
-  // Ohio, the Gulf, the Netherlands) stay legible without hand-placed offsets.
-  const pins = useMemo<Pin[]>(() => {
-    const base = places.map((p) => ({ ...p, x: px(p.lng), y: py(p.lat), r: 5 + Math.min(p.count, 12) * 2.2 }))
-    const CH = 9.2 // px per character at the 15px mono label size
-    const LH = 16
-    type Box = { x1: number; y1: number; x2: number; y2: number }
-    const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1)) * Math.max(0, Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1))
-    const pinBoxes: Box[] = base.map((p) => ({ x1: p.x - p.r * 1.6, y1: p.y - p.r * 1.6, x2: p.x + p.r * 1.6, y2: p.y + p.r * 1.6 }))
-    const labelBoxes: Box[] = []
-    const chosen = new Map<string, { side: 'left' | 'right'; dy: number }>()
-    const candidates: ['left' | 'right', number][] = [
-      ['right', 0], ['left', 0], ['right', 16], ['right', -16], ['left', 16], ['left', -16], ['right', 30], ['left', 30], ['right', -30], ['left', -30],
-    ]
-    const order = [...base].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-    for (const p of order) {
-      const w = `${p.name} ${p.count}`.length * CH
-      let best: { side: 'left' | 'right'; dy: number; box: Box } | null = null
-      let bestScore = Infinity
-      for (const [side, dy] of candidates) {
-        const x1 = side === 'right' ? p.x + p.r + 8 : p.x - p.r - 8 - w
-        const box: Box = { x1, y1: p.y + dy - LH / 2, x2: x1 + w, y2: p.y + dy + LH / 2 }
-        if (box.x1 < 4 || box.x2 > W - 4 || box.y1 < 4 || box.y2 > H - 4) continue
-        let score = 0
-        for (const b of labelBoxes) score += overlap(box, b)
-        for (const [j, b] of pinBoxes.entries()) if (base[j].slug !== p.slug) score += overlap(box, b) * 0.6
-        if (score < bestScore) {
-          bestScore = score
-          best = { side, dy, box }
-        }
-        if (score === 0) break
-      }
-      if (best) {
-        labelBoxes.push(best.box)
-        chosen.set(p.slug, { side: best.side, dy: best.dy })
-      }
-    }
-    return base.map((p) => ({ ...p, ...(chosen.get(p.slug) ?? { side: 'right' as const, dy: 0 }) }))
-  }, [places])
+  const pins = useMemo<Pin[]>(() => places.map((p) => ({ ...p, x: px(p.lng), y: py(p.lat), r: 5 + Math.min(p.count, 12) * 2.2 })), [places])
 
   const draw = useCallback(() => {
     const cv = canvasRef.current
@@ -95,10 +54,8 @@ export default function GeoMap({ places, regions, stamp }: Props) {
     const dot = tok('--map-dot')
     const acc = tok('--accent')
     const en = tok('--energy')
-    const bone = tok('--bone')
     const ink = tok('--ink')
     const dim = tok('--dim')
-    const mono = tok('--mono') || 'monospace'
 
     c.setTransform(dpr, 0, 0, dpr, 0, 0)
     c.clearRect(0, 0, W, H)
@@ -138,11 +95,6 @@ export default function GeoMap({ places, regions, stamp }: Props) {
       c.beginPath()
       c.arc(p.x, p.y, Math.max(1, p.r - 5), 0, Math.PI * 2)
       c.fill()
-      c.font = `${isHot ? '600' : '500'} 15px ${mono}`
-      c.textBaseline = 'middle'
-      c.fillStyle = isHot ? col : bone
-      c.textAlign = p.side === 'left' ? 'right' : 'left'
-      c.fillText(`${p.name} ${p.count}`, p.side === 'left' ? p.x - p.r - 8 : p.x + p.r + 8, p.y + p.dy)
       c.globalAlpha = 1
     }
     c.strokeStyle = dim
@@ -202,41 +154,43 @@ export default function GeoMap({ places, regions, stamp }: Props) {
 
   return (
     <div className="mapbox" id="mapbox" ref={boxRef}>
-      <canvas
-        ref={canvasRef}
-        id="map"
-        width={W}
-        height={H}
-        aria-label="World map with pins where the edition's stories cluster"
-        style={{ cursor: hotPin ? 'pointer' : 'default' }}
-        onMouseMove={(e) => {
-          const p = nearest(e)
-          if ((p?.slug ?? null) !== hotPin) {
-            setHotPin(p?.slug ?? null)
-            setHot(p ? p.region : null)
-          }
-          if (p && boxRef.current) {
-            const bb = boxRef.current.getBoundingClientRect()
-            const x = e.clientX - bb.left
-            const y = e.clientY - bb.top
-            setTip({ left: Math.min(x + 14, bb.width - 180), top: y - 74 > 8 ? y - 74 : y + 18, pin: p })
-          } else setTip(null)
-        }}
-        onMouseLeave={() => {
-          setHot(null)
-          setHotPin(null)
-          setTip(null)
-        }}
-        onClick={(e) => {
-          const p = nearest(e)
-          if (p) openPlace(p.slug)
-        }}
-      />
-      {pins.length === 0 && (
-        <div className="notice" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 90 }}>
-          No story in this window carried a place tag.
-        </div>
-      )}
+      <div className="map-scroll">
+        <canvas
+          ref={canvasRef}
+          id="map"
+          width={W}
+          height={H}
+          aria-label="World map with pins where the edition's stories cluster"
+          style={{ cursor: hotPin ? 'pointer' : 'default' }}
+          onMouseMove={(e) => {
+            const p = nearest(e)
+            if ((p?.slug ?? null) !== hotPin) {
+              setHotPin(p?.slug ?? null)
+              setHot(p ? p.region : null)
+            }
+            if (p && boxRef.current) {
+              const bb = boxRef.current.getBoundingClientRect()
+              const x = e.clientX - bb.left
+              const y = e.clientY - bb.top
+              setTip({ left: Math.min(x + 14, bb.width - 180), top: y - 74 > 8 ? y - 74 : y + 18, pin: p })
+            } else setTip(null)
+          }}
+          onMouseLeave={() => {
+            setHot(null)
+            setHotPin(null)
+            setTip(null)
+          }}
+          onClick={(e) => {
+            const p = nearest(e)
+            if (p) openPlace(p.slug)
+          }}
+        />
+        {pins.length === 0 && (
+          <div className="notice" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 90 }}>
+            No story in this window carried a place tag.
+          </div>
+        )}
+      </div>
       {tip && (
         <div className="maptip" style={{ left: tip.left, top: tip.top }}>
           <b>{tip.pin.name}</b>
