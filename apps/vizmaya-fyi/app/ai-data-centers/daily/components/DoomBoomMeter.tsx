@@ -37,17 +37,6 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
   const ty = 52
   const cx = (v: number) => L + ((v + 1) / 2) * (W - L - R)
 
-  const why =
-    score == null
-      ? 'No story in this window carried a mood score.'
-      : `${counts.boom} boom · ${counts.doom} doom · ${counts.neutral} neutral. ${
-          counts.boom > counts.doom
-            ? 'Expansion, deals and demand outweighed freezes, pauses and warnings'
-            : counts.boom < counts.doom
-              ? 'Freezes, pauses and warnings outweighed expansion, deals and demand'
-              : 'The two sides balanced'
-        }${d30 != null ? ` — ${score > d30 + 0.05 ? 'brighter' : score < d30 - 0.05 ? 'darker' : 'in line with'} ${score > d30 + 0.05 || score < d30 - 0.05 ? 'than ' : ''}the 30-day norm of ${formatSigned(d30)}.` : '.'}`
-
   const drivers = (list: DcEditionStory[], cls: 'boom' | 'doom') =>
     list.map((s) => (
       <a key={s.id} href={s.url} target="_blank" rel="noopener" className={`drv ${cls}`} data-panel-ignore="">
@@ -61,13 +50,9 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
   return (
     <div className="gcard wide db" id="doomboom">
       <div className="db-head">
-        <div>
-          <span className="eyebrow">Doom v Boom · the day&rsquo;s mood, scored per story</span>
-          <div className="db-verdict">
-            <span className={`db-word ${tone === 'mid' ? '' : tone}`}>{word}</span>
-            <span className="db-score mono">{formatSigned(score)}</span>
-          </div>
-          <p className="db-why">{why}</p>
+        <div className="db-verdict">
+          <span className={`db-word ${tone === 'mid' ? '' : tone}`}>{word}</span>
+          <span className="db-score mono">{formatSigned(score)}</span>
         </div>
         <div className="db-legend">
           <span>
