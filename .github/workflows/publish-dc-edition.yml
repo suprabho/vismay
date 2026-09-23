@@ -17,9 +17,10 @@ name: Publish AI Data Centers daily edition
 #   ADMIN_SESSION_SECRET       — signs the revalidate ping (already used by the render workflows)
 
 on:
-  schedule:
-    - cron: '0 9 * * *'
-    - cron: '30 9 * * *'
+  # No `schedule:` — Vercel Cron fires /api/ai-data-centers/cron/publish at
+  # 09:00 and /publish-late at 09:30 UTC (apps/vizmaya-fyi/vercel.json),
+  # which dispatch this file; GitHub's own scheduler skipped both crons on
+  # the first live day.
   workflow_dispatch:
     inputs:
       force:
