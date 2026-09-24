@@ -1,4 +1,15 @@
-import type { ComponentType, CSSProperties, ElementType, HTMLAttributes, ReactNode } from 'react'
+'use client'
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type ElementType,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react'
 import { AuraBackground } from './AuraBackground'
 import {
   cardThemeStyle,
@@ -49,7 +60,17 @@ export function StoryCard({
 }: StoryCardProps) {
   const ct = s.theme ? storyCardTheme(s.theme) : DEFAULT_CARD_THEME
   const coverFirst = background === 'cover'
-  const hasThumb = Boolean(s.thumbnail) && (coverFirst || !s.aura)
+  // A cover that fails to load (missing asset, bad URL) drops out so the aura /
+  // theme background shows instead of a broken-image icon.
+  const [thumbFailed, setThumbFailed] = useState(false)
+  const thumbRef = useRef<HTMLImageElement>(null)
+  useEffect(() => {
+    setThumbFailed(false)
+    // `complete` on mount covers an image whose error fired before hydration.
+    const el = thumbRef.current
+    if (el?.complete && el.naturalWidth === 0) setThumbFailed(true)
+  }, [s.thumbnail])
+  const hasThumb = Boolean(s.thumbnail) && !thumbFailed && (coverFirst || !s.aura)
   const hasAura = Boolean(s.aura) && !hasThumb
   // A cover thumbnail carries its own look; an optional per-story text colour
   // keeps the card's title/READ legible over it without recolouring the body.
@@ -78,7 +99,7 @@ export function StoryCard({
       {hasThumb && s.thumbnail && (
         <div className="bn-thumb" aria-hidden>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={s.thumbnail} alt="" loading="lazy" />
+          <img ref={thumbRef} src={s.thumbnail} alt="" loading="lazy" onError={() => setThumbFailed(true)} />
         </div>
       )}
       <div className="bcard-top">
