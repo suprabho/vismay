@@ -141,6 +141,8 @@ const SAMPLES: Record<string, Record<string, unknown>> = {
   'f1:position-chart': {
     type: 'f1:position-chart',
     raceLabel: '2026 Spanish Grand Prix',
+    lapFrom: 10,
+    lapTo: 20,
     lanes: [],
   },
   'f1:track-3d': {

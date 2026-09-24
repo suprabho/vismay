@@ -30,6 +30,13 @@ export default function PositionChartVizComponent({
           raceLabel={config.raceLabel}
           lanes={config.lanes}
           totalLaps={config.totalLaps}
+          lapWindow={
+            config.lapFrom != null && config.lapTo != null
+              ? { from: config.lapFrom, to: config.lapTo }
+              : undefined
+          }
+          highlight={config.highlight}
+          bands={config.bands}
         />
       </div>
     </div>

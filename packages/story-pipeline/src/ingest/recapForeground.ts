@@ -66,12 +66,19 @@ function collectFsLayers(body: Record<string, unknown>): ForegroundLayer[] {
 
 /**
  * Replace a foreground layer's config in place with a recap directive's config,
- * preserving the engine-level `style` field the model may have set on the layer.
+ * preserving the engine-level `style` field the model may have set on the layer
+ * and — for the per-section graft — the caption/title it wrote for the section.
  */
-function applyConfig(layer: ForegroundLayer, directive: FsDirective): void {
+function applyConfig(layer: ForegroundLayer, directive: FsDirective, keepWording = false): void {
   const style = layer.style
+  const wording: Record<string, unknown> = {}
+  if (keepWording) {
+    for (const k of MODEL_WORDING_KEYS) {
+      if (typeof layer[k] === 'string' && (layer[k] as string).trim()) wording[k] = layer[k]
+    }
+  }
   for (const key of Object.keys(layer)) delete layer[key]
-  Object.assign(layer, directive.config)
+  Object.assign(layer, directive.config, wording)
   if (style !== undefined) layer.style = style
 }
 
@@ -227,19 +234,27 @@ function matchScore(d: FsDirective, sectionText: string): number {
 const NON_IDENTITY_KEYS = new Set(['type', 'style', 'caption', 'title', 'apiBase', 'layout'])
 
 /**
- * How many identity fields the model's own layer shares with a directive
- * (sessionKey, lapFrom/lapTo, driverNumbers, home/away, …). The model is told to
- * copy the reference from the brief, so when it did, this pins the exact
- * directive — text overlap alone can't tell two clips from one session apart.
+ * How well the model's own layer agrees with a directive on identity fields
+ * (sessionKey, lapFrom/lapTo, driverNumbers, home/away, …): +1 per shared value,
+ * −1 per contradicted one. The model is told to copy the reference from the
+ * brief, so when it did, this pins the exact directive — text overlap alone
+ * can't tell two clips (or two lap windows of one chart) from one session apart.
  */
 function configAgreement(layer: ForegroundLayer, d: FsDirective): number {
   let n = 0
   for (const [k, v] of Object.entries(d.config)) {
     if (NON_IDENTITY_KEYS.has(k) || v === undefined || layer[k] === undefined) continue
-    if (JSON.stringify(layer[k]) === JSON.stringify(v)) n++
+    // An empty array the model was told to leave empty (position-chart lanes)
+    // says nothing either way.
+    if (Array.isArray(layer[k]) && (layer[k] as unknown[]).length === 0) continue
+    n += JSON.stringify(layer[k]) === JSON.stringify(v) ? 1 : -1
   }
   return n
 }
+
+/** Wording the model wrote for THIS section — kept over the brief's generic
+ *  moment title, so a clip's caption says what the slide is about. */
+const MODEL_WORDING_KEYS = ['caption', 'title'] as const
 
 /**
  * Fill the `fs:` foreground layers the model placed in ONE section's body with
@@ -272,7 +287,7 @@ export function graftSectionBody(
       continue
     }
     let best = candidates[0]!
-    let bestAgree = -1
+    let bestAgree = -Infinity
     let bestScore = -1
     for (const d of candidates) {
       const a = configAgreement(layer, d)
@@ -283,7 +298,7 @@ export function graftSectionBody(
         best = d
       }
     }
-    applyConfig(layer, best)
+    applyConfig(layer, best, true)
     applied++
   }
   return applied

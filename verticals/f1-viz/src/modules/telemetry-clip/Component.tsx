@@ -74,6 +74,11 @@ export default function TelemetryClipComponent({
   const [error, setError] = useState<string | null>(null)
   const [followCam, setFollowCam] = useState(true)
   const [selectedDriver, setSelectedDriver] = useState<number | null>(config.focalDriverNumber ?? null)
+  // The camera tight-follows ONE car only when the viewer picked it. The
+  // config's focal driver is highlighted but the frame keeps every clip car in
+  // view — a head-to-head that follows one car hides the other and zooms the
+  // markers up to fill the map.
+  const [viewerPicked, setViewerPicked] = useState(false)
   const [camBox, setCamBox] = useState('')
   const currentCam = useRef({ x: 0, y: 0, w: 0, h: 0 })
 
@@ -178,9 +183,8 @@ export default function TelemetryClipComponent({
     let targetH = b.maxY - b.minY + 4000
 
     if (followCam && carPositions.length > 0) {
-      const focus = selectedDriver
-        ? carPositions.filter((p) => p.driverNumber === selectedDriver)
-        : carPositions
+      const tight = viewerPicked && selectedDriver != null
+      const focus = tight ? carPositions.filter((p) => p.driverNumber === selectedDriver) : carPositions
       const use = focus.length > 0 ? focus : carPositions
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
       for (const p of use) {
@@ -189,8 +193,9 @@ export default function TelemetryClipComponent({
         if (p.y < minY) minY = p.y
         if (p.y > maxY) maxY = p.y
       }
-      const padding = selectedDriver ? 1000 : 6000
-      const minSize = selectedDriver ? 3000 : 15000
+      // Enough track around the cars to read the corner they're in.
+      const padding = tight ? 2500 : 6000
+      const minSize = tight ? 9000 : 15000
       if (maxX - minX < minSize) { const cx = (minX + maxX) / 2; minX = cx - minSize / 2; maxX = cx + minSize / 2 }
       if (maxY - minY < minSize) { const cy = (minY + maxY) / 2; minY = cy - minSize / 2; maxY = cy + minSize / 2 }
       targetX = minX - padding
@@ -199,13 +204,43 @@ export default function TelemetryClipComponent({
       targetH = maxY - minY + padding * 2
     }
 
-    const smooth = isCapture ? 1 : selectedDriver ? 0.8 : 0.1
+    const smooth = isCapture ? 1 : viewerPicked ? 0.8 : 0.1
     currentCam.current.x += (targetX - currentCam.current.x) * smooth
     currentCam.current.y += (targetY - currentCam.current.y) * smooth
     currentCam.current.w += (targetW - currentCam.current.w) * smooth
     currentCam.current.h += (targetH - currentCam.current.h) * smooth
     setCamBox(`${currentCam.current.x} ${currentCam.current.y} ${currentCam.current.w} ${currentCam.current.h}`)
-  }, [carPositions, followCam, data, selectedDriver, isCapture])
+  }, [carPositions, followCam, data, selectedDriver, viewerPicked, isCapture])
+
+  // Drawing unit relative to the camera box, so markers, labels and the track
+  // read the same size at every zoom (fixed world units ballooned when the
+  // follow cam zoomed in). ~1/30 of the frame width.
+  const camW = Number(camBox.split(' ')[2]) || 10000
+  const u = camW / 30
+  // Cars running together get their labels stacked instead of overprinted.
+  const labelledCars = (() => {
+    if (!data) return []
+    const placed: Array<{ x: number; y: number }> = []
+    return carPositions.map((pos) => {
+      const driver = data.drivers.find((d) => d.driverNumber === pos.driverNumber)
+      const raw = (driver?.teamColour ?? '').replace(/^#/, '')
+      let dy = 0
+      for (let tries = 0; tries < 4; tries++) {
+        const clash = placed.some(
+          (p) => Math.abs(p.x - pos.x) < u * 2.2 && Math.abs(p.y - (pos.y + dy)) < u * 1.0,
+        )
+        if (!clash) break
+        dy += tries % 2 === 0 ? -u * 1.1 * (tries + 1) : u * 1.1 * (tries + 1)
+      }
+      placed.push({ x: pos.x, y: pos.y + dy })
+      return {
+        pos,
+        color: raw ? `#${raw}` : '#ffffff',
+        label: driver?.abbreviation || String(pos.driverNumber),
+        dy,
+      }
+    })
+  })()
 
   if (loading) {
     return (
@@ -276,7 +311,7 @@ export default function TelemetryClipComponent({
                 d={`M ${data.circuit.outline.x.map((x, i) => `${x},${data.circuit!.outline.y[i]}`).join(' L ')} Z`}
                 fill="none"
                 stroke="var(--color-border)"
-                strokeWidth="800"
+                strokeWidth={Math.min(800, Math.max(150, u * 0.9))}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -284,32 +319,32 @@ export default function TelemetryClipComponent({
                 d={`M ${data.circuit.outline.x.map((x, i) => `${x},${data.circuit!.outline.y[i]}`).join(' L ')} Z`}
                 fill="none"
                 stroke="var(--color-muted)"
-                strokeWidth="60"
-                strokeDasharray="300 300"
+                strokeWidth={Math.min(60, u * 0.07)}
+                strokeDasharray={`${Math.min(300, u * 0.35)} ${Math.min(300, u * 0.35)}`}
               />
               {data.circuit.sectorBoundaries && (
                 <g opacity="0.85">
-                  <circle cx={data.circuit.outline.x[data.circuit.sectorBoundaries.index1]} cy={data.circuit.outline.y[data.circuit.sectorBoundaries.index1]} r="450" fill="#facc15" stroke="#000" strokeWidth="120" />
-                  <circle cx={data.circuit.outline.x[data.circuit.sectorBoundaries.index2]} cy={data.circuit.outline.y[data.circuit.sectorBoundaries.index2]} r="450" fill="#facc15" stroke="#000" strokeWidth="120" />
-                  <circle cx={data.circuit.outline.x[0]} cy={data.circuit.outline.y[0]} r="450" fill="#fff" stroke="#000" strokeWidth="120" />
+                  <circle cx={data.circuit.outline.x[data.circuit.sectorBoundaries.index1]} cy={data.circuit.outline.y[data.circuit.sectorBoundaries.index1]} r={Math.min(450, u * 0.45)} fill="#facc15" stroke="#000" strokeWidth={Math.min(120, u * 0.12)} />
+                  <circle cx={data.circuit.outline.x[data.circuit.sectorBoundaries.index2]} cy={data.circuit.outline.y[data.circuit.sectorBoundaries.index2]} r={Math.min(450, u * 0.45)} fill="#facc15" stroke="#000" strokeWidth={Math.min(120, u * 0.12)} />
+                  <circle cx={data.circuit.outline.x[0]} cy={data.circuit.outline.y[0]} r={Math.min(450, u * 0.45)} fill="#fff" stroke="#000" strokeWidth={Math.min(120, u * 0.12)} />
                 </g>
               )}
-              {carPositions.map((pos) => {
-                const driver = data.drivers.find((d) => d.driverNumber === pos.driverNumber)
-                const raw = (driver?.teamColour ?? '').replace(/^#/, '')
-                const color = raw ? `#${raw}` : '#ffffff'
+              {labelledCars.map(({ pos, color, label, dy }) => {
                 const trailPath =
                   pos.trailX.length > 1 ? `M ${pos.trailX.map((tx, i) => `${tx},${pos.trailY[i]}`).join(' L ')}` : ''
                 return (
                   <g key={pos.driverNumber}>
                     {trailPath && (
-                      <path d={trailPath} fill="none" stroke={color} strokeWidth="350" strokeOpacity="0.7" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d={trailPath} fill="none" stroke={color} strokeWidth={u * 0.35} strokeOpacity="0.7" strokeLinecap="round" strokeLinejoin="round" />
                     )}
-                    <circle cx={pos.x} cy={pos.y} r="600" fill={color} stroke="#fff" strokeWidth="200" />
-                    <circle cx={pos.x} cy={pos.y} r="1000" fill="none" stroke={color} strokeWidth="80" opacity="0.6" />
-                    <rect x={pos.x + 900} y={pos.y - 450} width="1600" height="900" rx="200" fill="#000" opacity="0.8" stroke={color} strokeWidth="80" />
-                    <text x={pos.x + 1700} y={pos.y + 50} fontSize="600" fontFamily="monospace" fontWeight="900" fill="#fff" textAnchor="middle" dominantBaseline="middle">
-                      {driver?.abbreviation || String(pos.driverNumber)}
+                    <circle cx={pos.x} cy={pos.y} r={u * 0.55} fill={color} stroke="#fff" strokeWidth={u * 0.18} />
+                    <circle cx={pos.x} cy={pos.y} r={u * 0.9} fill="none" stroke={color} strokeWidth={u * 0.07} opacity="0.6" />
+                    {dy !== 0 && (
+                      <line x1={pos.x + u * 0.9} y1={pos.y} x2={pos.x + u * 1.1} y2={pos.y + dy} stroke={color} strokeWidth={u * 0.07} />
+                    )}
+                    <rect x={pos.x + u * 1.1} y={pos.y + dy - u * 0.45} width={u * 1.9} height={u * 0.9} rx={u * 0.2} fill="#000" opacity="0.8" stroke={color} strokeWidth={u * 0.07} />
+                    <text x={pos.x + u * 2.05} y={pos.y + dy + u * 0.05} fontSize={u * 0.6} fontFamily="monospace" fontWeight="900" fill="#fff" textAnchor="middle" dominantBaseline="middle">
+                      {label}
                     </text>
                   </g>
                 )
@@ -367,6 +402,7 @@ export default function TelemetryClipComponent({
                 onClick={() => {
                   const selecting = selectedDriver !== driver.driverNumber
                   setSelectedDriver(selecting ? driver.driverNumber : null)
+                  setViewerPicked(selecting)
                   if (selecting) setFollowCam(true)
                 }}
                 className={`relative flex min-h-[120px] flex-col justify-center overflow-hidden p-4 text-left transition-colors ${

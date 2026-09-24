@@ -225,16 +225,20 @@ const track3d: PackLayerType = {
 
 const positionChart: PackLayerType = {
   type: 'f1:position-chart',
-  label: 'a position-by-lap chart — one line per driver across the race (pit cycles, safety cars, overtakes)',
+  label: 'a position-by-lap chart — the running order across the race, or zoomed to one pit cycle / safety-car swing',
   regions: ['chart', 'default'],
   promptDoc:
-    'Use for any beat about HOW THE ORDER CHANGED — a pit cycle, a safety-car/VSC swing, a lead ' +
-    'change, a comeback. ONLY when the sources carry a "Position by lap" f1:position-chart block. ' +
-    'Emit just raceLabel (e.g. "2026 Spanish Grand Prix") and lanes: [] — the app fills the real ' +
-    'per-lap positions from the brief. NEVER write positions or points yourself.',
+    'The visual for any beat about HOW THE ORDER CHANGED — a pit call, a safety-car/VSC swing, a ' +
+    'lead change through the stops, positions gained or lost. ONLY when the sources carry ' +
+    'f1:position-chart blocks: each strategy moment in the telemetry brief has its own ZOOMED block ' +
+    '(its lap window, the moment\'s drivers highlighted), and the whole race has one (lapFrom 1). ' +
+    'Pick the block for THIS section\'s claim and copy its lapFrom and lapTo exactly; emit raceLabel ' +
+    'and lanes: [] — the app fills the per-lap positions. NEVER write positions yourself.',
   schema: z.object({
     type: z.literal('f1:position-chart'),
     raceLabel: z.string().min(1).describe('Race label, e.g. "2026 Spanish Grand Prix".'),
+    lapFrom: z.number().int().describe('First lap of the chosen block, copied exactly (1 = whole race).'),
+    lapTo: z.number().int().describe('Last lap of the chosen block, copied exactly.'),
     lanes: z
       .array(
         z.object({
@@ -263,9 +267,11 @@ export const F1_PACK: DomainPack = {
     'that beat\'s "visual" should FEATURE f1:race-card — name the type explicitly; when they ' +
     'carry a drivers\' championship table, plan f1:driver-standings. When a telemetry brief is ' +
     'in the sources, build the story on its FACT SHEET (result, safety car / VSC, pit stops) and ' +
-    'its ranked key moments: plan f1:position-chart for the beat where the order changed, and ' +
-    'f1:telemetry-clip (prefer the head-to-head clips) or f1:track-3d for moment beats, citing the ' +
-    'moment each clip shows. Use each brief clip at most once. These REPLACE a generic ' +
+    'its ranked key moments. MATCH THE VISUAL TO THE CLAIM: each moment names its visual — a ' +
+    'strategy/order moment (pit call, safety-car swing, positions gained or lost) is shown by its ' +
+    'zoomed f1:position-chart; an on-track moment (stuck behind, battle, fastest lap) by its ' +
+    'f1:telemetry-clip. A telemetry clip shows speed and pedals — it can NEVER show a pit call or a ' +
+    'position change, so never plan one for such a beat. Use each brief block at most once. These REPLACE a generic ' +
     'chart/keyValue for fixture, standings, order and telemetry beats — plan charts only for ' +
     'trends the sources quantify, never as table furniture. f1:race-card identifies the weekend; ' +
     'it cannot list a finishing order.',
@@ -278,9 +284,10 @@ export const F1_PACK: DomainPack = {
     'the visual ("this clip shows…", "the clip cannot…") — state what happened.',
   visualGuidance:
     'Prefer the VizF1 modules where they fit the beat: a race weekend (preview or result) ' +
-    'wants f1:race-card; a championship-table beat wants f1:driver-standings; a beat about the ' +
-    'running order changing wants f1:position-chart; a telemetry moment wants f1:telemetry-clip ' +
-    '(short head-to-head) or f1:track-3d (immersive lap), copying the brief block for THAT moment. ' +
+    'wants f1:race-card; a championship-table beat wants f1:driver-standings; a beat about pit ' +
+    'calls or the running order wants the moment\'s zoomed f1:position-chart; an on-track moment ' +
+    'wants its f1:telemetry-clip (head-to-head) or f1:track-3d (immersive lap) — copy the brief ' +
+    'block for THIS section\'s claim, and write a caption that states that claim. ' +
     'Give telemetry modules the wide chart region. Use core layers (bigStat, chart, quote) ' +
     'otherwise — and at most one quote-led section per story.',
   bylineExample: 'By the VizF1 desk',
