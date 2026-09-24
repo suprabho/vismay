@@ -9,6 +9,7 @@ import {
 import { writeComposeState } from '@vismay/content-source/composeState'
 import { getDefaultStoryTheme } from '@vismay/content-source/storyThemes'
 import { builtinDefaultThemeFor, type Theme } from '@vismay/viz-engine'
+import { VERTICAL_BY_SLUG } from '@vismay/verticals/data'
 import {
   slugify,
   defaultsFor,
@@ -72,7 +73,12 @@ function seedStory(
     format === 'map'
       ? { text: 'Draft', map: { center: [0, 0], zoom: 1 } }
       : { text: 'Draft', foreground: [] as unknown[] }
-  const configObj = { defaults: defaultsFor(format, theme), sections: [section] }
+  const defaults = defaultsFor(format, theme)
+  // A vertical may ship its own deck backdrop (e.g. vizf1's red aura); map
+  // stories keep the basemap the defaults already declare.
+  const verticalBackground = vertical ? VERTICAL_BY_SLUG.get(vertical)?.defaultStoryBackground : undefined
+  if (format === 'deck' && verticalBackground) defaults.storyBackground = { ...verticalBackground }
+  const configObj = { defaults, sections: [section] }
   const configYaml =
     configFormat === 'json'
       ? JSON.stringify(configObj, null, 2) + '\n'

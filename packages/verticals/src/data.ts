@@ -68,6 +68,12 @@ export interface VerticalEntry {
   tailwindSources: string[]
   /** Public consumer routing, when this vertical has a consumer app. */
   publicRoutes?: VerticalPublicRoutes
+  /**
+   * Config `defaults.storyBackground` seeded into this vertical's new DECK
+   * drafts (compose route 0), replacing the flat theme-colour backdrop. Same
+   * shape as the config field, e.g. `{ type: 'aura', slug, fixed: true }`.
+   */
+  defaultStoryBackground?: Record<string, unknown>
 }
 
 /**
@@ -93,6 +99,11 @@ export const VERTICALS: VerticalEntry[] = [
       appSlug: 'vizf1',
       storyPath: (slug) => `/editorial/${slug}`,
       // vizf1 has no epic landing route.
+    },
+    defaultStoryBackground: {
+      type: 'aura',
+      slug: 'dark-red-wave-background-sleek-visuals-for-modern-design',
+      fixed: true,
     },
   },
   {
