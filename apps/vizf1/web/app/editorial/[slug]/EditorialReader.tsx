@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import { VF1MonogramFlat } from '@vizf1/brand/logos'
 import { StoryEmbed } from '@vismay/story-embed/web'
 
 // vizmaya.fyi renders the story (the "general Viz story view"). We embed it via
-// the shared StoryEmbed and overlay VizF1's back-button chrome on top — no
-// scrollytelling re-implementation here.
+// the shared StoryEmbed and overlay VizF1's chrome on top — back button
+// top-left, logo top-right — with no app header, so the story is full-screen.
 export default function EditorialReader({ slug }: { slug: string }) {
   return (
     <StoryEmbed slug={slug}>
@@ -23,6 +24,13 @@ export default function EditorialReader({ slug }: { slug: string }) {
         >
           <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
+      </Link>
+      <Link
+        href="/feed"
+        aria-label="VizF1"
+        className="absolute right-4 top-4 z-20 flex h-10 items-center rounded-full border border-border bg-surface/80 px-4 text-text backdrop-blur transition-colors hover:bg-surface"
+      >
+        <VF1MonogramFlat className="h-5 w-auto" />
       </Link>
     </StoryEmbed>
   )
