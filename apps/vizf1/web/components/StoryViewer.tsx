@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { NewsCard } from '@/lib/useNewsFeed'
+import { StoryPlaceholder } from './StoryPlaceholder'
 
 const SEGMENT_MS = 6000
 const HOLD_TO_PAUSE = true
@@ -176,7 +177,7 @@ export function StoryViewer({ title, segments }: Props) {
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-surface to-bg" aria-hidden />
+          <StoryPlaceholder visual={segment?.visual ?? null} variant="full" />
         )}
         <div
           className="absolute inset-0"
