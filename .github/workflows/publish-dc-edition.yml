@@ -1,6 +1,6 @@
 name: Publish AI Data Centers daily edition
 
-# Freezes the draft edition composed at 08:15 UTC: status → published, the
+# Freezes the draft edition composed from the 06:15 UTC window: status → published, the
 # sequential edition number, published_at, then a signed ping to vizmaya.fyi
 # that re-renders /ai-data-centers/daily and /ai-data-centers/daily/[date].
 # A published row is never updated again; corrections run in the next edition.

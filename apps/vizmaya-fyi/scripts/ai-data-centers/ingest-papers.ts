@@ -13,7 +13,7 @@
  *               pnpm ai-data-centers:ingest-papers -- --hours 48
  *               pnpm ai-data-centers:ingest-papers -- --dry-run
  * Run in CI:    .github/workflows/ingest-dc-papers.yml (daily 07:00 UTC,
- *               before the 08:15 edition composer)
+ *               before the 06:15 edition composer)
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — write dc_papers

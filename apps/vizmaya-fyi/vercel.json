@@ -4,7 +4,7 @@
   "crons": [
     {
       "path": "/api/ai-data-centers/cron/morning",
-      "schedule": "15 8 * * *"
+      "schedule": "15 6 * * *"
     },
     {
       "path": "/api/ai-data-centers/cron/publish",

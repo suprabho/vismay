@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { DcEditionNeighbours, DcEditionSummary, DcEditionWithContent, DcLayerKey } from '@vismay/content-source/dcEditionTypes'
-import { DC_LAYER_KEYS, formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
+import { DC_LAYER_KEYS, formatEditionDate, formatUtcTime, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { deriveSources } from '@vismay/content-source/dcEditionAssembly'
 import { AI_DATA_CENTERS_THEME_DEFAULTS, aiDataCentersLogoPalette, type AiDataCentersTheme } from '../../theme'
 import VizmayaLogo from '@/components/VizmayaLogo'
@@ -40,9 +40,11 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
   const tone = moodTone(e.moodScore)
   const word = moodWord(e.moodScore).split(',')[0].replace('-leaning', '')
   const groups = deriveSources(e.stories, e.ieaStories, e.papers)
-  const stamp = `Snapshot · ${formatEditionDate(e.date, { weekday: false })} · 08:15 UTC`
+  // The freeze time moved (08:15 → 06:15 on 2026-09-24), so label from the row.
+  const frozenAt = `${formatUtcTime(e.windowEnd)} UTC`
+  const stamp = `Snapshot · ${formatEditionDate(e.date, { weekday: false })} · ${frozenAt}`
   const canonical = `${siteUrl}${editionHref(e.date)}`
-  const publishedLabel = e.status === 'published' ? 'frozen 08:15 UTC' : 'draft · not yet frozen'
+  const publishedLabel = e.status === 'published' ? `frozen ${frozenAt}` : 'draft · not yet frozen'
   const logoPalette = aiDataCentersLogoPalette({ ...AI_DATA_CENTERS_THEME_DEFAULTS, ...themeOverrides })
 
   const panelData: PanelData = {
