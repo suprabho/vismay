@@ -41,8 +41,13 @@ const COUNTRY_CODES: Record<string, string> = {
   Vietnam: 'VN',
 }
 
+/** ISO-3166 alpha-2 (uppercase) for a calendar country name, or null. */
+export function countryCode(country: string | null | undefined): string | null {
+  return country ? (COUNTRY_CODES[country] ?? null) : null
+}
+
 export function flagFor(country: string): string {
-  const code = COUNTRY_CODES[country]
+  const code = countryCode(country)
   if (!code) return ''
   // 0x1F1E6 = 'A' regional-indicator. Each ISO letter maps to its symbol.
   return [...code].map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65)).join('')

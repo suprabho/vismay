@@ -1,6 +1,7 @@
 'use client'
 
 import type { NewsCard } from '@/lib/useNewsFeed'
+import { StoryPlaceholder } from './StoryPlaceholder'
 
 // Fades the media out across its bottom half so it melts into the card surface
 // the text sits on. Stops follow smoothstep (3t² − 2t³) rather than a straight
@@ -42,7 +43,7 @@ export function NewsReelCard({ card }: { card: NewsCard }) {
             loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-surface to-bg" aria-hidden />
+          <StoryPlaceholder visual={card.visual} />
         )}
       </div>
       {/* The negative margin tucks the text into the faded tail of the media
