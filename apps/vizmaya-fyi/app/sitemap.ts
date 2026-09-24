@@ -42,14 +42,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // One stable URL per frozen edition, plus the /daily alias for the latest.
   const editionEntries: MetadataRoute.Sitemap = editions.map((e) => ({
-    url: `${BASE_URL}/ai-data-centers/daily/${e.date}`,
+    url: `${BASE_URL}/ai-daily/doom-v-boom/${e.date}`,
     lastModified: e.publishedAt ? new Date(e.publishedAt) : new Date(`${e.date}T09:00:00Z`),
     changeFrequency: 'never',
     priority: 0.7,
   }))
   if (editions.length > 0) {
     editionEntries.unshift({
-      url: `${BASE_URL}/ai-data-centers/daily`,
+      url: `${BASE_URL}/ai-daily/doom-v-boom`,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.85,

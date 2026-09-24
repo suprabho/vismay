@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default async function DraftPreviewPage() {
   const draft = await getDraftEdition().catch((err) => {
-    console.warn(`ai-data-centers/daily/preview: getDraftEdition failed: ${err}`)
+    console.warn(`ai-daily/doom-v-boom/preview: getDraftEdition failed: ${err}`)
     return null
   })
   if (!draft) {
@@ -27,7 +27,7 @@ export default async function DraftPreviewPage() {
           <span className="eyebrow">AI Data Centers · Draft preview</span>
           <h1>No draft edition right now.</h1>
           <p>The composer writes the next draft at 06:15 UTC; the previous one is already published.</p>
-          <Link className="cta" href="/ai-data-centers/daily">
+          <Link className="cta" href="/ai-daily/doom-v-boom">
             Open the latest edition →
           </Link>
         </div>

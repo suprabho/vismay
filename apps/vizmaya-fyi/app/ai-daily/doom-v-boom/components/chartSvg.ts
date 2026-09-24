@@ -15,7 +15,7 @@
  * hues rather than become tints of it.
  */
 
-import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../theme'
+import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../../ai-data-centers/theme'
 import { CHART_FONT_SENTINEL } from './chartConstants'
 
 /** Dark-theme hex → CSS variable. ECharts' own axis defaults are mapped too. */

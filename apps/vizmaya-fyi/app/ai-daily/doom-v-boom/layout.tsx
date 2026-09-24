@@ -3,7 +3,7 @@ import { Prata, Public_Sans, Space_Mono } from 'next/font/google'
 import './edition.css'
 
 // The edition's type: Prata for display, Public Sans for body, Space Mono
-// for data. Loaded once for every route under /ai-data-centers/daily and
+// for data. Loaded once for every route under /ai-daily/doom-v-boom and
 // handed to the stylesheet as the --serif / --sans / --mono variables.
 const prata = Prata({
   subsets: ['latin'],

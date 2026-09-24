@@ -3,7 +3,7 @@
 // — the epic row's `theme` jsonb wins over these defaults — but tuned cooler
 // (steel/cyan) to read as infrastructure rather than energy.
 //
-// The edition page (app/ai-data-centers/daily) extends the explorer's tokens
+// The edition page (app/ai-daily/doom-v-boom) extends the explorer's tokens
 // with the ones the design mockup fixes: `raised`, `dim`, `lineStrong`,
 // `accentInk`, `up`/`down`, a lime `energy` accent reserved for the energy
 // chapter, the three composition hues and the map dot colours. The Doom v
@@ -36,7 +36,7 @@ export type AiDataCentersTheme = {
   mapLabelText: string;
   mapLabelHalo: string;
   mapBuilding: string;
-  /* Edition tokens; see /ai-data-centers/daily/sample. */
+  /* Edition tokens; see /ai-daily/doom-v-boom/sample. */
   raised: string;
   dim: string;
   lineStrong: string;

@@ -2,8 +2,8 @@
  * AI Data Centers daily snapshot — publish (freeze) the draft edition.
  *
  * Sets status = 'published', assigns the sequential edition number and the
- * publish time, then asks vizmaya.fyi to re-render /ai-data-centers/daily
- * and /ai-data-centers/daily/[date]. A published row is never updated again
+ * publish time, then asks vizmaya.fyi to re-render /ai-daily/doom-v-boom
+ * and /ai-daily/doom-v-boom/[date]. A published row is never updated again
  * (a DB trigger enforces it); corrections run in the next edition.
  *
  * The draft goes public at 09:00 UTC whether or not an editor has looked at

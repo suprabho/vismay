@@ -21,7 +21,7 @@ export const CHAPTERS: { id: string; n: string; label: string }[] = [
 ]
 
 export function editionHref(date: string): string {
-  return `/ai-data-centers/daily/${date}`
+  return `/ai-daily/doom-v-boom/${date}`
 }
 
 export const hm = timeHm

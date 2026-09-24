@@ -1,4 +1,4 @@
-import { EDITION_CSS_VARS, type AiDataCentersTheme } from '../../theme'
+import { EDITION_CSS_VARS, type AiDataCentersTheme } from '../../../ai-data-centers/theme'
 
 /**
  * Emits the epic row's theme overrides as CSS custom properties on the

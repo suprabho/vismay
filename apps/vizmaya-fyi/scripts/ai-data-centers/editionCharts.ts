@@ -412,7 +412,7 @@ const TOKEN_HEX: Record<EditionChartSection, Record<string, string>> = {
   research: { $accent: T.accent, $teal: T.accentMid, $accent2: T.comp2, $amber: T.comp1, $positive: T.accentHi, $muted: T.muted, $line: T.line },
 }
 
-import { CHART_FONT_SENTINEL } from '../../app/ai-data-centers/daily/components/chartConstants'
+import { CHART_FONT_SENTINEL } from '../../app/ai-daily/doom-v-boom/components/chartConstants'
 
 function resolveTokens(value: unknown, table: Record<string, string>): unknown {
   if (typeof value === 'string') return value.startsWith('$') ? (table[value] ?? T.muted) : value
