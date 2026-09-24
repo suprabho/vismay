@@ -613,9 +613,15 @@ export function sanitizeSvg(raw: string, section: EditionChartSection): string {
     .trim()
 }
 
-/** The default planner model: opus via the gateway (`text.opus`); COMPOSER_CHART_MODEL overrides (a `text.*` alias or a gateway id). */
+/**
+ * The daily edition's default model: Opus 5.5 by gateway id. Pinned here rather
+ * than via `text.opus` so the DC runs move independently of the shared alias.
+ */
+export const DC_DEFAULT_MODEL = 'anthropic/claude-opus-5.5'
+
+/** The default planner model: DC_DEFAULT_MODEL; COMPOSER_CHART_MODEL overrides (a `text.*` alias or a gateway id). */
 export function chartPlannerModel(): string {
-  return process.env.COMPOSER_CHART_MODEL || process.env.COMPOSER_MODEL || 'text.opus'
+  return process.env.COMPOSER_CHART_MODEL || process.env.COMPOSER_MODEL || DC_DEFAULT_MODEL
 }
 
 export { MODELS, EDITION_CHART_SECTIONS }
