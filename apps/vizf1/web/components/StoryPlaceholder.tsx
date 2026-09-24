@@ -9,23 +9,34 @@ function darken(hex: string, amount: number): string {
   return `rgb(${ch(1)}, ${ch(3)}, ${ch(5)})`
 }
 
-// OpenF1 serves the F1 CDN's 1-column (~93px) crop; the 4-column rendition of
-// the same cut-out is sharp at card size. Fall back to the original on error.
-function largeHeadshot(url: string): string {
-  return url.replace('/transform/1col/', '/transform/4col/')
+// OpenF1 serves the F1 CDN's 1-column (93px) crop. The cut-out fills most of
+// a card that is ~400 CSS px tall (1000+ device px on a 3x phone), so ask for
+// the 12-column rendition (1336px), then 4-column (432px), then the original.
+// The untransformed master isn't a safe step: for some drivers it resolves to
+// the CDN's fallback silhouette with a 200, so onError never fires.
+// URLs look like `…/georus01.png.transform/1col/image.png` (note the dot).
+const ONE_COL = '.transform/1col/'
+
+function headshotCandidates(url: string): string[] {
+  if (!url.includes(ONE_COL)) return [url]
+  return [
+    url.replace(ONE_COL, '.transform/12col/'),
+    url.replace(ONE_COL, '.transform/4col/'),
+    url,
+  ]
 }
 
 function Headshot({ src, name, className }: { src: string; name: string; className: string }) {
-  const [url, setUrl] = useState(() => largeHeadshot(src))
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
+  const [candidates] = useState(() => headshotCandidates(src))
+  const [index, setIndex] = useState(0)
+  if (index >= candidates.length) return null
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={url}
+      src={candidates[index]}
       alt={name}
       className={className}
-      onError={() => (url !== src ? setUrl(src) : setFailed(true))}
+      onError={() => setIndex((i) => i + 1)}
     />
   )
 }
