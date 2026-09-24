@@ -22,6 +22,12 @@ type StoryRow = {
   config_yaml: string | null
 }
 
+// vizf1's deck backdrop (`defaultStoryBackground` in @vismay/verticals/data).
+// Stories composed before it became the default carry no aura of their own,
+// and a deck only has a cover image once its images are generated — so a card
+// with neither still gets the app's red aura rather than a flat theme fill.
+const DEFAULT_AURA = 'dark-red-wave-background-sleek-visuals-for-modern-design'
+
 const str = (v: unknown): string | undefined =>
   typeof v === 'string' && v.trim() ? v.trim() : undefined
 
@@ -124,10 +130,10 @@ export async function loadEditorialStories(limit = 24): Promise<EditorialGrid> {
       topic: str(fm.topic),
       // Cover image first (frontmatter thumbnail, else the config's cover
       // image), then the story's aura (frontmatter, the denormalized column,
-      // or the config's page-level aura background).
+      // or the config's page-level aura background, else vizf1's default).
       thumbnail: str(fm.thumbnail) ?? configCover(cfg),
       thumbnailTextColor: str(fm.thumbnailTextColor),
-      aura: str(fm.aura) ?? str(r.aura) ?? configAura(cfg),
+      aura: str(fm.aura) ?? str(r.aura) ?? configAura(cfg) ?? DEFAULT_AURA,
       theme: theme?.colors && theme?.fonts ? theme : undefined,
     }
   })
