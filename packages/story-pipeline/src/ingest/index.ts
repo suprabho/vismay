@@ -63,6 +63,9 @@ export interface IngestInput {
   texts?: InputText[]
 }
 
+/** URL path extensions that name a file `extractBuffer` can read. */
+const URL_FILE_EXTS = new Set(['.pdf', '.eml', '.html', '.htm', '.csv', '.json', '.md', '.markdown', '.txt'])
+
 /** Map a fetched response's content-type to an extractor extension. */
 function extForContentType(contentType: string | null, url: string): string {
   const ct = (contentType ?? '').toLowerCase()
@@ -71,9 +74,12 @@ function extForContentType(contentType: string | null, url: string): string {
   if (ct.includes('application/json')) return '.json'
   if (ct.includes('text/markdown')) return '.md'
   if (ct.includes('text/plain')) return '.txt'
-  // Fall back to the URL's own extension, then HTML for ordinary web pages.
+  if (ct.includes('text/html') || ct.includes('application/xhtml')) return '.html'
+  // Fall back to the URL's own extension — only a real file extension, since
+  // slugs like formula1.com's `…-spanish-gp.644ZZfPz…` look like one — then
+  // HTML for ordinary web pages.
   const urlExt = path.extname(new URL(url).pathname).toLowerCase()
-  if (urlExt) return urlExt
+  if (URL_FILE_EXTS.has(urlExt)) return urlExt
   return '.html'
 }
 

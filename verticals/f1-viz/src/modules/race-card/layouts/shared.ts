@@ -1,4 +1,4 @@
-import { findGrandPrix, flagUrl as bundledFlagUrl } from '../../../data/grands-prix'
+import { circuitFor, findGrandPrix, flagUrl as bundledFlagUrl } from '../../../data/grands-prix'
 import type { RaceCardConfig } from '../index'
 
 export interface ResolvedRace {
@@ -38,7 +38,7 @@ export function resolveRace(config: RaceCardConfig): ResolvedRace {
   return {
     gpName: entry?.name ?? config.grandPrix,
     country: entry?.country ?? '',
-    circuit: config.circuit ?? entry?.circuit ?? '',
+    circuit: config.circuit ?? (entry ? circuitFor(entry, config.season) : ''),
     accent: config.accent ?? entry?.accent ?? '#E10600',
     flagSrc: flag,
     dateLabel: config.dateLabel ?? formatDate(config.date),

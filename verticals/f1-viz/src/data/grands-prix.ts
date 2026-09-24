@@ -16,6 +16,12 @@ export interface GrandPrixEntry {
   code: string
   /** Circuit name, shown in the kicker line on portrait/horizontal layouts. */
   circuit: string
+  /**
+   * Venue moves, oldest first: from `season` on, the GP runs at `circuit`
+   * (e.g. the Spanish GP left Barcelona for Madrid in 2026). Resolve through
+   * {@link circuitFor}; `circuit` is the venue before the first move.
+   */
+  venues?: ReadonlyArray<{ season: number; circuit: string }>
   /** Accent hex used for the card border, score text, and watermark fill. */
   accent: string
 }
@@ -89,6 +95,9 @@ export const GRANDS_PRIX: Record<string, GrandPrixEntry> = {
     country: 'Spain',
     code: 'es',
     circuit: 'Circuit de Barcelona-Catalunya',
+    // From 2026 the Spanish GP is the Madrid street/hybrid circuit; Catalunya
+    // hosts the separate "Barcelona Grand Prix" (aliased below).
+    venues: [{ season: 2026, circuit: 'Madring' }],
     accent: '#AA151B',
   },
   // Some seasons OpenF1 publishes the Catalunya round as "Barcelona Grand
@@ -217,6 +226,15 @@ export function findGrandPrix(slugOrName: string): GrandPrixEntry | null {
   const direct = GRANDS_PRIX[slugOrName]
   if (direct) return direct
   return GRANDS_PRIX[gpSlug(slugOrName)] ?? null
+}
+
+/** The circuit an entry's GP ran at in `season` (the base circuit when the
+ *  season is unknown or predates every venue move). */
+export function circuitFor(entry: GrandPrixEntry, season?: number): string {
+  let circuit = entry.circuit
+  if (season == null || !entry.venues) return circuit
+  for (const v of entry.venues) if (season >= v.season) circuit = v.circuit
+  return circuit
 }
 
 /** flagcdn.com URL — CC0 / public-domain flags, no API key needed. */

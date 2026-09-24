@@ -222,14 +222,34 @@ function matchScore(d: FsDirective, sectionText: string): number {
   return score
 }
 
+/** Presentation fields the model may word freely — never evidence of which
+ *  directive it meant. */
+const NON_IDENTITY_KEYS = new Set(['type', 'style', 'caption', 'title', 'apiBase', 'layout'])
+
+/**
+ * How many identity fields the model's own layer shares with a directive
+ * (sessionKey, lapFrom/lapTo, driverNumbers, home/away, …). The model is told to
+ * copy the reference from the brief, so when it did, this pins the exact
+ * directive — text overlap alone can't tell two clips from one session apart.
+ */
+function configAgreement(layer: ForegroundLayer, d: FsDirective): number {
+  let n = 0
+  for (const [k, v] of Object.entries(d.config)) {
+    if (NON_IDENTITY_KEYS.has(k) || v === undefined || layer[k] === undefined) continue
+    if (JSON.stringify(layer[k]) === JSON.stringify(v)) n++
+  }
+  return n
+}
+
 /**
  * Fill the `fs:` foreground layers the model placed in ONE section's body with
- * real recap configs, choosing each by content overlap with the section's text
- * (heading + prose). Stateless — suitable for the per-section canvas compose
- * route where sections generate independently. A layer whose type has candidate
- * directives but no text overlap falls back to the first candidate, so real data
- * still flows when there's a single match-card / table. Mutates `body` in place;
- * returns how many layers were filled.
+ * real recap configs. Each layer takes the directive its own (model-emitted)
+ * config agrees with most, then the one with the most content overlap with the
+ * section's text (heading + prose). Stateless — suitable for the per-section
+ * canvas compose route where sections generate independently. A layer whose
+ * type has candidate directives but neither signal falls back to the first
+ * candidate, so real data still flows when there's a single match-card / table.
+ * Mutates `body` in place; returns how many layers were filled.
  */
 export function graftSectionBody(
   body: Record<string, unknown>,
@@ -252,10 +272,13 @@ export function graftSectionBody(
       continue
     }
     let best = candidates[0]!
+    let bestAgree = -1
     let bestScore = -1
     for (const d of candidates) {
+      const a = configAgreement(layer, d)
       const s = matchScore(d, sectionText)
-      if (s > bestScore) {
+      if (a > bestAgree || (a === bestAgree && s > bestScore)) {
+        bestAgree = a
         bestScore = s
         best = d
       }

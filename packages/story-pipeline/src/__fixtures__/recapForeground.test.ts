@@ -9,9 +9,11 @@
  *                    directive whose teams/competition overlap the section text.
  *   4. grid graft   — a GRID match-card keeps its layout and fills each tile from
  *                    a matching single-fixture directive (never collapses to one).
+ *   5. f1 graft     — a layer takes the directive its own reference agrees with
+ *                    (sessionKey / laps / drivers), not the first in the brief.
  */
 import assert from 'node:assert'
-import { extractFsDirectives } from '@vismay/viz-engine/src/lib/recapFences'
+import { extractDirectives, extractFsDirectives } from '@vismay/viz-engine/src/lib/recapFences'
 import {
   graftRecapForeground,
   graftSectionBody,
@@ -135,5 +137,43 @@ assert.equal(grid.cards[1].home, 'Arsenal', 'tile 1 stays Arsenal')
 assert.equal(grid.cards[1].score, '2–1', 'tile 1 got Arsenal–Chelsea score')
 assert.equal(grid.cards[1].competition, 'Premier League · matchday 35', 'tile 1 competition filled')
 console.log('✓ grid graft: layout preserved, each tile filled by its own fixture')
+
+// ── 5. f1 graft honours the model's own reference ────────────────────────────
+// Regression: two clips from ONE session share every keyword, so text overlap
+// scored both 0 and the first brief clip (NOR) landed in a section the model
+// had pointed at ANT's lap window.
+const brief = [
+  '```f1:telemetry-clip',
+  '{ "sessionKey": "2026_spanish_grand_prix_R", "lapFrom": 15, "lapTo": 17, "driverNumbers": [1], "focalDriverNumber": 1, "caption": "NOR pits under the VSC" }',
+  '```',
+  '```f1:telemetry-clip',
+  '{ "sessionKey": "2026_spanish_grand_prix_R", "lapFrom": 13, "lapTo": 15, "driverNumbers": [12, 1], "focalDriverNumber": 12, "caption": "ANT stops, NOR stays out" }',
+  '```',
+].join('\n')
+const f1Directives = extractDirectives(brief, 'f1')
+assert.equal(f1Directives.length, 2, 'two f1 clip directives extracted')
+const f1Body = {
+  foreground: {
+    layout: 'text-left-chart-right',
+    regions: {
+      chart: [
+        {
+          type: 'f1:telemetry-clip',
+          sessionKey: '2026_spanish_grand_prix_R',
+          lapFrom: 13,
+          lapTo: 15,
+          driverNumbers: [12, 1],
+          caption: 'Model-worded caption',
+        },
+      ],
+    },
+  },
+}
+graftSectionBody(f1Body as any, f1Directives, 'Mercedes boxed Antonelli at once.', 'f1')
+const clip = (f1Body.foreground.regions.chart[0] as any)
+assert.equal(clip.lapFrom, 13, 'kept the lap window the model referenced')
+assert.deepEqual(clip.driverNumbers, [12, 1], 'kept the drivers the model referenced')
+assert.equal(clip.caption, 'ANT stops, NOR stays out', 'took the matching directive config')
+console.log('✓ f1 graft: the model-referenced clip wins over document order')
 
 console.log('\nALL RECAP INGESTION CHECKS PASSED')
