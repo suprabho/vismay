@@ -10,6 +10,8 @@ import { sample as driverStandingsSample } from '@vismay/f1-viz/modules/driver-s
 import { sample as positionChartSample } from '@vismay/f1-viz/modules/position-chart/sample'
 import { sample as raceReplaySample } from '@vismay/f1-viz/modules/race-replay/sample'
 import { sample as constructorStandingsSample } from '@vismay/f1-viz/modules/constructor-standings/sample'
+import { sample as driverPodiumSample } from '@vismay/f1-viz/modules/driver-podium/sample'
+import { sample as constructorPodiumSample } from '@vismay/f1-viz/modules/constructor-podium/sample'
 import { sample as qualifyingResultsSample } from '@vismay/f1-viz/modules/qualifying-results/sample'
 import { sample as telemetryClipSample } from '@vismay/f1-viz/modules/telemetry-clip/sample'
 import { sample as track3dSample } from '@vismay/f1-viz/modules/track-3d/sample'
@@ -105,6 +107,8 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'f1:position-chart', category: 'F1', sample: positionChartSample },
   { type: 'f1:race-replay', category: 'F1', sample: raceReplaySample },
   { type: 'f1:constructor-standings', category: 'F1', sample: constructorStandingsSample },
+  { type: 'f1:driver-podium', category: 'F1', sample: driverPodiumSample },
+  { type: 'f1:constructor-podium', category: 'F1', sample: constructorPodiumSample },
   { type: 'f1:qualifying-results', category: 'F1', sample: qualifyingResultsSample },
   { type: 'f1:telemetry-clip', category: 'F1', sample: telemetryClipSample },
   {

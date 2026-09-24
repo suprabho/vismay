@@ -7,7 +7,8 @@
  * use F1) tree-shakes it out of the bundle.
  *
  * Modules: race-row, driver-standings, position-chart, race-card, race-replay,
- * constructor-standings, qualifying-results, plus the telemetry suite ported
+ * constructor-standings, qualifying-results, driver-podium, constructor-podium
+ * (top-three championship cards), plus the telemetry suite ported
  * from the f1_backend donor — telemetry-clip (2D clip player), track-3d (R3F 3D
  * track), and telemetry-chart (ECharts). Each is dynamic-imported so apps that
  * don't use a given module tree-shake it out.
@@ -29,6 +30,8 @@ export async function register(): Promise<void> {
     { default: telemetryClipModule },
     { default: track3dModule },
     { default: telemetryChartModule },
+    { default: driverPodiumModule },
+    { default: constructorPodiumModule },
   ] = await Promise.all([
     import('./modules/race-row'),
     import('./modules/driver-standings'),
@@ -40,6 +43,8 @@ export async function register(): Promise<void> {
     import('./modules/telemetry-clip'),
     import('./modules/track-3d'),
     import('./modules/telemetry-chart'),
+    import('./modules/driver-podium'),
+    import('./modules/constructor-podium'),
   ])
   registerVizModule(raceRowModule)
   registerVizModule(driverStandingsModule)
@@ -51,4 +56,6 @@ export async function register(): Promise<void> {
   registerVizModule(telemetryClipModule)
   registerVizModule(track3dModule)
   registerVizModule(telemetryChartModule)
+  registerVizModule(driverPodiumModule)
+  registerVizModule(constructorPodiumModule)
 }
