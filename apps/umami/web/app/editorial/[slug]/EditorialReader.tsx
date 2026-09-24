@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { StoryEmbed } from '@vismay/story-embed/web'
 
-// vizmaya.fyi renders the story (the shared Viz story view). We embed it via
+// The render service renders the story (the shared Viz story view). We embed it via
 // StoryEmbed and overlay umami's back-button chrome on top — no scrollytelling
 // re-implementation here. Same pattern as footshorts/vizf1.
 export default function EditorialReader({ slug }: { slug: string }) {

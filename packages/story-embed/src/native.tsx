@@ -1,14 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
-import { storyUrl, VIZMAYA_ORIGIN } from './url'
+import { storyUrl, RENDER_ORIGIN, VIZMAYA_ORIGIN } from './url'
 
 export interface StoryEmbedNativeProps {
   /** Story slug (combined with `origin`). Ignored when `url` is provided. */
   slug?: string
   /** Full URL override — e.g. epic readers that build their own path. */
   url?: string
-  /** Render origin. Defaults to vizmaya.fyi. */
+  /** Render origin. Defaults to the render service (render.vismay.xyz). */
   origin?: string
   /** ms before the loading indicator is force-hidden (safety net). */
   timeoutMs?: number
@@ -22,7 +22,7 @@ export interface StoryEmbedNativeProps {
 
 /**
  * Native counterpart of the web StoryEmbed: a chrome-less react-native-webview
- * over the vizmaya story view, with host chrome overlaid via `children`. On web
+ * over the shared story view, with host chrome overlaid via `children`. On web
  * (react-native-web) the WebView renders as an <iframe>.
  *
  * Replicating in a new mobile app: `<StoryEmbed slug={slug}>{backButton}</StoryEmbed>`.
@@ -30,7 +30,7 @@ export interface StoryEmbedNativeProps {
 export function StoryEmbed({
   slug,
   url,
-  origin = VIZMAYA_ORIGIN,
+  origin = RENDER_ORIGIN,
   timeoutMs = 6000,
   spinnerColor = '#888',
   backgroundColor = 'transparent',

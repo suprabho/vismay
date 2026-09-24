@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { VF1MonogramFlat } from '@vizf1/brand/logos'
 import { StoryEmbed } from '@vismay/story-embed/web'
 
-// vizmaya.fyi renders the story (the "general Viz story view"). We embed it via
+// The render service renders the story (the "general Viz story view"). We embed it via
 // the shared StoryEmbed and overlay VizF1's chrome on top — back button
 // top-left, logo top-right — with no app header, so the story is full-screen.
 export default function EditorialReader({ slug }: { slug: string }) {

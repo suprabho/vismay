@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { storyUrl, VIZMAYA_ORIGIN } from './url'
+import { storyUrl, RENDER_ORIGIN } from './url'
 
 export interface StoryEmbedProps {
-  /** Story slug rendered by the vizmaya story view. */
+  /** Story slug rendered by the shared story view. */
   slug: string
-  /** Render origin. Defaults to vizmaya.fyi. */
+  /** Render origin. Defaults to the render service (render.vismay.xyz). */
   origin?: string
   /** Iframe title (accessibility). */
   title?: string
@@ -24,8 +24,8 @@ export interface StoryEmbedProps {
 }
 
 /**
- * Embeds the vizmaya-rendered story view in an <iframe> and lets the host
- * overlay its own chrome via `children`. Styled with inline CSS variables
+ * Embeds the shared story view (served by the render service) in an <iframe>
+ * and lets the host overlay its own chrome via `children`. Styled with inline CSS variables
  * (`--color-bg`, `--color-accent`) rather than Tailwind utilities, so it themes
  * itself from whatever app embeds it and needs no Tailwind `@source` wiring.
  *
@@ -33,7 +33,7 @@ export interface StoryEmbedProps {
  */
 export function StoryEmbed({
   slug,
-  origin = VIZMAYA_ORIGIN,
+  origin = RENDER_ORIGIN,
   title = 'Editorial story',
   timeoutMs = 6000,
   spinnerColor = 'var(--color-accent, #888)',
