@@ -41,6 +41,9 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
+  // In-progress order edits, committed on blur/Enter so typing "12" doesn't
+  // reorder at "1" first.
+  const [orderDrafts, setOrderDrafts] = useState<Record<string, string>>({})
   const latestRequestId = useRef(0)
   const { uploadBusy, uploadResult, setUploadResult, openPicker, fileInput } = useStoryUpload(
     appSlug,
@@ -80,7 +83,7 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
 
   async function updateMeta(
     slug: string,
-    meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>
+    meta: Partial<{ status: string; listed: boolean }>
   ) {
     setUpdating(slug)
     const res = await fetch(`/api/stories/${slug}`, {
@@ -94,6 +97,36 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
       )
     }
     setUpdating(null)
+  }
+
+  /** Move a story to a new order position; the server shifts the others. */
+  async function reorder(slug: string, position: number | null) {
+    setOrderDrafts((d) => {
+      const { [slug]: _, ...rest } = d
+      return rest
+    })
+    const current = stories.find((s) => s.slug === slug)?.displayOrder ?? null
+    if (current === position) return
+    setUpdating(slug)
+    const res = await fetch('/api/stories/reorder', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ slug, position, app: appSlug }),
+    })
+    if (res.ok) {
+      const { orders } = (await res.json()) as { orders: Record<string, number | null> }
+      setStories((prev) =>
+        prev.map((s) => (s.slug in orders ? { ...s, displayOrder: orders[s.slug] } : s))
+      )
+    }
+    setUpdating(null)
+  }
+
+  function commitOrderDraft(slug: string) {
+    const draft = orderDrafts[slug]
+    if (draft === undefined) return
+    const val = draft.trim() === '' ? null : parseInt(draft, 10)
+    reorder(slug, val == null || Number.isNaN(val) ? null : Math.max(0, val))
   }
 
   if (loading) {
@@ -196,15 +229,27 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
                 />
                 <input
                   type="number"
-                  value={s.displayOrder != null ? String(s.displayOrder) : ''}
+                  min={0}
+                  value={
+                    orderDrafts[s.slug] ??
+                    (s.displayOrder != null ? String(s.displayOrder) : '')
+                  }
                   placeholder="#"
                   onChange={(e) => {
-                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10)
-                    updateMeta(s.slug, { displayOrder: val })
+                    const value = e.target.value
+                    setOrderDrafts((d) => ({ ...d, [s.slug]: value }))
+                  }}
+                  onBlur={() => commitOrderDraft(s.slug)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                    if (e.key === 'Escape') {
+                      setOrderDrafts(({ [s.slug]: _, ...rest }) => rest)
+                      e.currentTarget.blur()
+                    }
                   }}
                   disabled={updating === s.slug}
                   className="w-16 text-sm bg-neutral-900 border border-white/20 rounded px-2 py-1 text-white cursor-pointer disabled:opacity-50 placeholder:text-neutral-600"
-                  title="Display order (0-indexed, lower first)"
+                  title="Display order (0-indexed, lower first). Other stories shift to make room."
                 />
               </div>
             </div>
