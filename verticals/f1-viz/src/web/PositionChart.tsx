@@ -156,14 +156,16 @@ export function PositionChart({
     .reverse()
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between">
+    // max-h-full + a shrinkable svg: in a fixed-height host (a deck region on
+    // a landscape phone) the plot scales down to fit instead of overflowing.
+    <div className="flex max-h-full flex-col overflow-hidden rounded-xl border border-border bg-surface p-3">
+      <div className="mb-2 flex shrink-0 items-center justify-between">
         <span className="text-xs uppercase tracking-wider text-muted">{title}</span>
         <span className="truncate text-xs text-text">{raceLabel}</span>
       </div>
       <svg
         viewBox={`0 0 ${VIEW_W} ${viewH}`}
-        className="h-auto w-full"
+        className="h-auto min-h-0 w-full"
         role="img"
         aria-label={`Position by lap chart for ${raceLabel}`}
       >

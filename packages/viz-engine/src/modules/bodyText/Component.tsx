@@ -6,10 +6,12 @@ import { formatInlineMarkdown, getListItems, isListBlock } from '../../lib/inlin
 import { useForegroundContent } from '../../lib/foregroundContent'
 import type { BodyTextColor, BodyTextLayerConfig, BodyTextSize } from './index'
 
+// vh caps only bite on short viewports (landscape phones, < ~420px tall),
+// where rem-sized prose otherwise overruns the snap and paints over the next.
 const SIZE_TO_FONT: Record<BodyTextSize, string> = {
-  small: '0.9rem',
-  normal: '1.15rem',
-  large: '1.4rem',
+  small: 'min(0.9rem, 3.6vh)',
+  normal: 'min(1.15rem, 4.4vh)',
+  large: 'min(1.4rem, 5vh)',
 }
 
 const SIZE_TO_LEADING: Record<BodyTextSize, string> = {

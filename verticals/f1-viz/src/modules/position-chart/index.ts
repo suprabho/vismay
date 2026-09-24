@@ -85,6 +85,9 @@ const positionChartModule: VizModule<PositionChartConfig> = {
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
+  // Portrait decks stack regions in flow; a content-sized chart spanning many
+  // positions runs past its region. A region-sized box lets the svg scale to fit.
+  defaultStyle: { portrait: { size: { height: '40vh' } } },
   stableIdentity: (config) =>
     `f1:position-chart:${config.raceLabel}::${config.lanes.length}::${config.lapFrom ?? ''}-${config.lapTo ?? ''}`,
 }

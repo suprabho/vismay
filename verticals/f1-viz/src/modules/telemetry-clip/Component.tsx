@@ -23,6 +23,11 @@ interface CarPos {
   trailY: number[]
 }
 
+/** Host box below which the clip switches to its compact, fill-the-box layout. */
+const COMPACT_MAX_WIDTH = 560
+const COMPACT_MAX_HEIGHT = 560
+const TIGHT_MAX_HEIGHT = 320
+
 const interp = (arr: number[] | undefined, i: number, ni: number, r: number) => {
   if (!arr) return 0
   const v0 = arr[i] ?? 0
@@ -81,6 +86,27 @@ export default function TelemetryClipComponent({
   const [viewerPicked, setViewerPicked] = useState(false)
   const [camBox, setCamBox] = useState('')
   const currentCam = useRef({ x: 0, y: 0, w: 0, h: 0 })
+  // Compact layout for narrow/short hosts (phone deck regions, landscape
+  // phones): the card fills its box, the map flexes, and the per-driver
+  // dashboard collapses to one row. Measured on the host box rather than a
+  // viewport breakpoint — a deck region is a fraction of the viewport.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [compact, setCompact] = useState(false)
+  // Too short for the driver strip too (landscape phone): the track keeps the room.
+  const [tight, setTight] = useState(false)
+  useEffect(() => {
+    const host = rootRef.current?.parentElement
+    if (!host) return
+    const measure = () => {
+      const { clientWidth: w, clientHeight: h } = host
+      setCompact(w > 0 && (w < COMPACT_MAX_WIDTH || (h > 0 && h < COMPACT_MAX_HEIGHT)))
+      setTight(h > 0 && h < TIGHT_MAX_HEIGHT)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(host)
+    return () => ro.disconnect()
+  }, [loading, error])
 
   useEffect(() => {
     let cancelled = false
@@ -244,7 +270,7 @@ export default function TelemetryClipComponent({
 
   if (loading) {
     return (
-      <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface">
+      <div ref={rootRef} className="flex aspect-video max-h-full w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface">
         <SpinnerIcon size={28} className="animate-spin text-accent" />
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted">Initializing telemetry…</span>
       </div>
@@ -252,7 +278,7 @@ export default function TelemetryClipComponent({
   }
   if (error || !data) {
     return (
-      <div className="flex w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-12 text-center">
+      <div ref={rootRef} className="flex w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-12 text-center">
         <AlertIcon size={28} className="text-accent" />
         <span className="font-mono text-xs text-muted">{error ?? 'Telemetry clip not available'}</span>
       </div>
@@ -269,36 +295,101 @@ export default function TelemetryClipComponent({
   const progress = durationMs > 0 ? Math.min(1, currentTimeMs / durationMs) : 0
   const atEnd = progress >= 1
 
+  // Per-driver readout at the playhead, shared by the full and compact dashboards.
+  const readouts = data.drivers.map((driver) => {
+    const track = data.tracks.find((t) => t.driverNumber === driver.driverNumber)
+    const targetSec = track ? (track.t0Ms + currentTimeMs) / 1000 : currentTimeMs / 1000
+    const tels: TelemetryClipTrace[] = data.telemetry.filter((t) => t.driverNumber === driver.driverNumber)
+    let tel = tels.find(
+      (t) => t.sessionTime?.length && targetSec >= t.sessionTime[0] && targetSec <= t.sessionTime[t.sessionTime.length - 1],
+    )
+    if (!tel && tels.length) {
+      const first = tels[0]
+      tel = first.sessionTime && targetSec < first.sessionTime[0] ? first : tels[tels.length - 1]
+    }
+    const raw = (driver.teamColour ?? '').replace(/^#/, '')
+    const color = raw ? `#${raw}` : '#fff'
+    let fi = 0
+    let ni = 0
+    let r = 0
+    if (tel?.sessionTime) {
+      for (let i = 0; i < tel.sessionTime.length; i++) {
+        if (tel.sessionTime[i] >= targetSec) {
+          fi = Math.max(0, i - 1)
+          ni = i
+          const t0 = tel.sessionTime[fi]
+          const t1 = tel.sessionTime[ni]
+          r = t1 > t0 ? (targetSec - t0) / (t1 - t0) : 0
+          break
+        }
+        if (i === tel.sessionTime.length - 1) {
+          fi = i
+          ni = i
+        }
+      }
+    }
+    const speed = tel ? interp(tel.speed, fi, ni, r) : 0
+    const throttle = tel ? interp(tel.throttle, fi, ni, r) : 0
+    const brake = (tel ? interp(tel.brake, fi, ni, r) : 0) * 100
+    const gear = tel?.nGear?.[fi] ?? 0
+    return { driver, tel, color, speed, throttle, brake, gear }
+  })
+  const pickDriver = (driverNumber: number) => {
+    const selecting = selectedDriver !== driverNumber
+    setSelectedDriver(selecting ? driverNumber : null)
+    setViewerPicked(selecting)
+    if (selecting) setFollowCam(true)
+  }
+
   return (
-    <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-border bg-surface">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border bg-bg px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-          <span className="font-mono text-xs font-semibold uppercase tracking-widest text-text">
+    <div
+      ref={rootRef}
+      className={`flex w-full flex-col overflow-hidden rounded-xl border border-border bg-surface ${
+        compact ? 'h-full max-h-full' : 'my-2'
+      }`}
+    >
+      {/* Header — caption shrinks/wraps so it never runs under the lap badge. */}
+      <div
+        className={`flex shrink-0 items-center justify-between gap-3 border-b border-border bg-bg ${
+          compact ? 'px-3 py-2' : 'px-4 py-3'
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
+          <span
+            className={`min-w-0 font-mono font-semibold uppercase text-text ${
+              compact ? 'line-clamp-2 text-[10px] leading-snug tracking-wider' : 'text-xs tracking-widest'
+            }`}
+          >
             {config.caption ?? 'Live telemetry'}
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           {gapText && (
-            <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-text">
+            <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-text">
               GAP <span className="font-bold">{gapText}</span>
             </span>
           )}
-          <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted">
+          <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted">
             LAPS {config.lapFrom}–{config.lapTo}
           </span>
         </div>
       </div>
 
       {/* Map ⅔ / dashboard ⅓: the track is the story; the readouts support it. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3">
+      <div className={compact ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'grid grid-cols-1 lg:grid-cols-3'}>
         {/* Track map */}
-        <div className="relative flex min-h-[320px] items-center justify-center overflow-hidden border-border bg-bg lg:col-span-2 lg:border-r">
+        <div
+          className={`relative flex items-center justify-center overflow-hidden border-border bg-bg ${
+            compact ? 'min-h-[72px] flex-[1_1_240px]' : 'min-h-[320px] lg:col-span-2 lg:border-r'
+          }`}
+        >
           <button
             type="button"
             onClick={() => setFollowCam((v) => !v)}
-            className={`absolute left-3 top-3 z-10 rounded-full border p-2 transition-colors ${
+            className={`absolute z-10 rounded-full border transition-colors ${
+              compact ? 'left-2 top-2 p-1.5' : 'left-3 top-3 p-2'
+            } ${
               followCam ? 'border-accent bg-accent text-bg' : 'border-border bg-surface text-muted hover:text-text'
             }`}
             title="Toggle follow cam"
@@ -357,123 +448,128 @@ export default function TelemetryClipComponent({
         </div>
 
         {/* Dashboard */}
-        <div className="flex flex-col divide-y divide-border lg:col-span-1">
-          {data.drivers.map((driver) => {
-            const track = data.tracks.find((t) => t.driverNumber === driver.driverNumber)
-            const targetSec = track ? (track.t0Ms + currentTimeMs) / 1000 : currentTimeMs / 1000
-            const tels: TelemetryClipTrace[] = data.telemetry.filter((t) => t.driverNumber === driver.driverNumber)
-            let tel = tels.find(
-              (t) => t.sessionTime?.length && targetSec >= t.sessionTime[0] && targetSec <= t.sessionTime[t.sessionTime.length - 1],
-            )
-            if (!tel && tels.length) {
-              const first = tels[0]
-              tel = first.sessionTime && targetSec < first.sessionTime[0] ? first : tels[tels.length - 1]
-            }
-            const raw = (driver.teamColour ?? '').replace(/^#/, '')
-            const color = raw ? `#${raw}` : '#fff'
-            let fi = 0
-            let ni = 0
-            let r = 0
-            if (tel?.sessionTime) {
-              for (let i = 0; i < tel.sessionTime.length; i++) {
-                if (tel.sessionTime[i] >= targetSec) {
-                  fi = Math.max(0, i - 1)
-                  ni = i
-                  const t0 = tel.sessionTime[fi]
-                  const t1 = tel.sessionTime[ni]
-                  r = t1 > t0 ? (targetSec - t0) / (t1 - t0) : 0
-                  break
-                }
-                if (i === tel.sessionTime.length - 1) {
-                  fi = i
-                  ni = i
-                }
-              }
-            }
-            const speed = tel ? interp(tel.speed, fi, ni, r) : 0
-            const throttle = tel ? interp(tel.throttle, fi, ni, r) : 0
-            const brake = (tel ? interp(tel.brake, fi, ni, r) : 0) * 100
-            const gear = tel?.nGear?.[fi] ?? 0
-            const isSel = selectedDriver === driver.driverNumber
-
-            return (
-              <button
-                type="button"
-                key={driver.driverNumber}
-                onClick={() => {
-                  const selecting = selectedDriver !== driver.driverNumber
-                  setSelectedDriver(selecting ? driver.driverNumber : null)
-                  setViewerPicked(selecting)
-                  if (selecting) setFollowCam(true)
-                }}
-                className={`relative flex min-h-[120px] flex-col justify-center overflow-hidden p-4 text-left transition-colors ${
-                  isSel ? 'bg-text/10' : 'hover:bg-text/5'
-                }`}
-              >
-                <span className="absolute bottom-0 left-0 top-0 w-1.5" style={{ backgroundColor: color }} />
-                <div className="mb-3 flex items-start justify-between gap-2 pl-3">
-                  {/* Team under the code: side by side it collides with the lap badge in the ⅓ column. */}
-                  <div className="flex min-w-0 flex-col">
-                    <span className="font-mono text-2xl font-black tracking-tighter text-text">
+        {compact && tight ? null : compact ? (
+          // One row, a cell per driver: code + gear, speed, pedal bars.
+          <div
+            className="grid shrink-0 divide-x divide-border border-t border-border"
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, readouts.length)}, minmax(0, 1fr))` }}
+          >
+            {readouts.map(({ driver, color, speed, throttle, brake, gear }) => {
+              const isSel = selectedDriver === driver.driverNumber
+              return (
+                <button
+                  type="button"
+                  key={driver.driverNumber}
+                  onClick={() => pickDriver(driver.driverNumber)}
+                  className={`relative flex min-w-0 flex-col gap-1 py-1.5 pl-3 pr-2 text-left transition-colors ${
+                    isSel ? 'bg-text/10' : 'hover:bg-text/5'
+                  }`}
+                >
+                  <span className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: color }} />
+                  <div className="flex items-baseline justify-between gap-1">
+                    <span className="truncate font-mono text-sm font-black tracking-tighter text-text">
                       {driver.abbreviation || `#${driver.driverNumber}`}
                     </span>
-                    <span className="truncate font-mono text-[10px] font-bold uppercase tracking-widest text-muted">{driver.teamName}</span>
-                  </div>
-                  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap font-mono text-[10px] font-bold text-muted">
-                    <GaugeIcon size={12} /> LAP {tel?.lap ?? config.lapFrom}
-                  </span>
-                </div>
-                {/* Stacked for the narrow ⅓ column: speed + gear, then the pedals. */}
-                <div className="grid grid-cols-3 items-end gap-3 pl-3">
-                  <div className="col-span-2 flex flex-col border-r border-border pr-3">
-                    <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Speed</span>
-                    <span className="font-mono text-3xl font-black tabular-nums tracking-tighter text-text">
-                      {Math.round(speed).toString().padStart(3, '0')}
-                      <span className="ml-1 text-[9px] font-bold text-muted">km/h</span>
+                    <span className="shrink-0 font-mono text-[10px] font-bold tabular-nums text-muted">
+                      G{gear === 0 ? 'N' : gear}
                     </span>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Gear</span>
-                    <span className="font-mono text-3xl font-black tabular-nums text-text">{gear === 0 ? 'N' : gear}</span>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-end gap-3 pl-3">
-                  <div className="flex flex-1 flex-col">
-                    <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
-                      <span className="text-muted">Brake</span>
-                      <span className="text-red-500">{Math.round(Math.max(0, brake))}%</span>
+                  <span className="font-mono text-base font-black leading-none tabular-nums tracking-tighter text-text">
+                    {Math.round(speed).toString().padStart(3, '0')}
+                    <span className="ml-0.5 text-[8px] font-bold text-muted">km/h</span>
+                  </span>
+                  <div className="flex gap-1">
+                    <div className="h-1 flex-1 overflow-hidden rounded-sm bg-bg">
+                      <div className="h-full bg-red-600" style={{ width: `${Math.max(0, brake)}%` }} />
                     </div>
-                    <div className="h-4 w-full overflow-hidden rounded-sm border border-border bg-bg">
-                      <div className="h-full bg-red-600" style={{ width: `${Math.max(0, brake)}%`, opacity: brake > 0 ? 1 : 0 }} />
-                    </div>
-                  </div>
-                  <div className="flex flex-1 flex-col">
-                    <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
-                      <span className="text-muted">Throttle</span>
-                      <span className="text-emerald-500">{Math.round(throttle)}%</span>
-                    </div>
-                    <div className="h-4 w-full overflow-hidden rounded-sm border border-border bg-bg">
+                    <div className="h-1 flex-1 overflow-hidden rounded-sm bg-bg">
                       <div className="h-full bg-emerald-500" style={{ width: `${throttle}%` }} />
                     </div>
                   </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border lg:col-span-1">
+            {readouts.map(({ driver, tel, color, speed, throttle, brake, gear }) => {
+              const isSel = selectedDriver === driver.driverNumber
+              return (
+                <button
+                  type="button"
+                  key={driver.driverNumber}
+                  onClick={() => pickDriver(driver.driverNumber)}
+                  className={`relative flex min-h-[120px] flex-col justify-center overflow-hidden p-4 text-left transition-colors ${
+                    isSel ? 'bg-text/10' : 'hover:bg-text/5'
+                  }`}
+                >
+                  <span className="absolute bottom-0 left-0 top-0 w-1.5" style={{ backgroundColor: color }} />
+                  <div className="mb-3 flex items-start justify-between gap-2 pl-3">
+                    {/* Team under the code: side by side it collides with the lap badge in the ⅓ column. */}
+                    <div className="flex min-w-0 flex-col">
+                      <span className="font-mono text-2xl font-black tracking-tighter text-text">
+                        {driver.abbreviation || `#${driver.driverNumber}`}
+                      </span>
+                      <span className="truncate font-mono text-[10px] font-bold uppercase tracking-widest text-muted">{driver.teamName}</span>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap font-mono text-[10px] font-bold text-muted">
+                      <GaugeIcon size={12} /> LAP {tel?.lap ?? config.lapFrom}
+                    </span>
+                  </div>
+                  {/* Stacked for the narrow ⅓ column: speed + gear, then the pedals. */}
+                  <div className="grid grid-cols-3 items-end gap-3 pl-3">
+                    <div className="col-span-2 flex flex-col border-r border-border pr-3">
+                      <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Speed</span>
+                      <span className="font-mono text-3xl font-black tabular-nums tracking-tighter text-text">
+                        {Math.round(speed).toString().padStart(3, '0')}
+                        <span className="ml-1 text-[9px] font-bold text-muted">km/h</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Gear</span>
+                      <span className="font-mono text-3xl font-black tabular-nums text-text">{gear === 0 ? 'N' : gear}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-end gap-3 pl-3">
+                    <div className="flex flex-1 flex-col">
+                      <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
+                        <span className="text-muted">Brake</span>
+                        <span className="text-red-500">{Math.round(Math.max(0, brake))}%</span>
+                      </div>
+                      <div className="h-4 w-full overflow-hidden rounded-sm border border-border bg-bg">
+                        <div className="h-full bg-red-600" style={{ width: `${Math.max(0, brake)}%`, opacity: brake > 0 ? 1 : 0 }} />
+                      </div>
+                    </div>
+                    <div className="flex flex-1 flex-col">
+                      <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
+                        <span className="text-muted">Throttle</span>
+                        <span className="text-emerald-500">{Math.round(throttle)}%</span>
+                      </div>
+                      <div className="h-4 w-full overflow-hidden rounded-sm border border-border bg-bg">
+                        <div className="h-full bg-emerald-500" style={{ width: `${throttle}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-4 border-t border-border bg-bg p-3">
+      <div className={`flex shrink-0 items-center border-t border-border bg-bg ${compact ? 'gap-3 px-3 py-2' : 'gap-4 p-3'}`}>
         <button
           type="button"
           onClick={() => {
             if (atEnd) playback.seek(0)
             playback.toggle()
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-text text-bg transition-colors hover:bg-accent hover:text-bg"
+          className={`flex shrink-0 items-center justify-center rounded-full bg-text text-bg transition-colors hover:bg-accent hover:text-bg ${
+            compact ? 'h-8 w-8' : 'h-10 w-10'
+          }`}
         >
-          {playback.playing ? <PauseIcon size={18} /> : atEnd ? <ResetIcon size={18} /> : <PlayIcon size={18} />}
+          {playback.playing ? <PauseIcon size={compact ? 14 : 18} /> : atEnd ? <ResetIcon size={compact ? 14 : 18} /> : <PlayIcon size={compact ? 14 : 18} />}
         </button>
         <input
           type="range"

@@ -127,8 +127,10 @@ function layerWrapperStyle(
 
   // Portrait stack mode: ignore authored position/`%`-width; the slot becomes a
   // full-width block in normal document flow (the parent is a flex column).
-  // Height comes from an explicit `style.portrait.size.height`, else a per-type
-  // default for visual slots, else auto for text. Layers are click-through so
+  // Height comes from an explicit `style.portrait.size.height`, else the
+  // module's own `defaultStyle.portrait` height (vertical modules that aren't in
+  // STACK_VISUAL_TYPES), else a per-type default for visual slots, else auto
+  // for text. Layers are click-through so
   // vertical swipes reach the snap container (mobile charts have no tooltips).
   if (opts.stack) {
     const css: CSSProperties = {
@@ -138,7 +140,10 @@ function layerWrapperStyle(
       zIndex: s.zIndex ?? index,
       pointerEvents: s.pointerEvents ?? 'none',
     }
-    const h = layer.style?.portrait?.size?.height ?? stackHeightForType(layer.type)
+    const h =
+      layer.style?.portrait?.size?.height ??
+      module?.defaultStyle?.portrait?.size?.height ??
+      stackHeightForType(layer.type)
     if (h) css.height = h
     if (s.opacity != null) css.opacity = s.opacity
     if (s.blendMode) css.mixBlendMode = s.blendMode
