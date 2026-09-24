@@ -37,7 +37,7 @@ export const F1_BRAND = {
    * from the DB at runtime; this map is the seed/source-of-truth.
    *
    * The 2026 marks are single-colour white glyphs bundled with the web app at
-   * apps/vizf1/web/public/constructors/<id>.avif (48×48, transparent). Paths
+   * apps/vizf1/web/public/constructors/<id>.svg (vector, from the F1 CDN). Paths
    * are root-relative so they resolve against whichever origin serves the
    * app; render them on a dark or team-tinted surface, never on white.
    * OpenF1 has spelled some teams more than one way over time (e.g. "Haas"
@@ -47,22 +47,21 @@ export const F1_BRAND = {
    * logo_url is null.
    */
   constructorLogos: {
-    red_bull_racing: '/constructors/red_bull_racing.avif',
-    red_bull: '/constructors/red_bull_racing.avif',
-    ferrari: '/constructors/ferrari.avif',
-    mercedes: '/constructors/mercedes.avif',
-    mclaren: '/constructors/mclaren.avif',
-    aston_martin: '/constructors/aston_martin.avif',
-    williams: '/constructors/williams.avif',
-    haas: '/constructors/haas.avif',
-    haas_f1_team: '/constructors/haas.avif',
-    audi: '/constructors/audi.avif',
-    cadillac: '/constructors/cadillac.avif',
-    alpine: '/constructors/alpine.avif',
-    // Racing Bulls share the bulls emblem with the senior team; the supplied
-    // mark is the same glyph, kept as its own file so it can diverge later.
-    rb: '/constructors/racing_bulls.avif',
-    racing_bulls: '/constructors/racing_bulls.avif',
+    red_bull_racing: '/constructors/red_bull_racing.svg',
+    red_bull: '/constructors/red_bull_racing.svg',
+    ferrari: '/constructors/ferrari.svg',
+    mercedes: '/constructors/mercedes.svg',
+    mclaren: '/constructors/mclaren.svg',
+    aston_martin: '/constructors/aston_martin.svg',
+    williams: '/constructors/williams.svg',
+    haas: '/constructors/haas.svg',
+    haas_f1_team: '/constructors/haas.svg',
+    audi: '/constructors/audi.svg',
+    cadillac: '/constructors/cadillac.svg',
+    alpine: '/constructors/alpine.svg',
+    // Racing Bulls have their own "RB" mark, distinct from the senior team's.
+    rb: '/constructors/racing_bulls.svg',
+    racing_bulls: '/constructors/racing_bulls.svg',
   } as Record<string, string>,
 } as const
 
