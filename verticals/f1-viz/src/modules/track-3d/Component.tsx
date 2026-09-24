@@ -96,6 +96,7 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
         style={{ pointerEvents: interactive ? 'auto' : 'none' }}
       >
         <TrackScene3D
+          carModelUrl={config.carModelUrl}
           circuit={race.circuit}
           drivers={race.session?.drivers ?? []}
           tracks={race.tracks}

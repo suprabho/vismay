@@ -12,6 +12,7 @@ import { CornerMarkers3D } from './CornerMarkers3D'
 import { ChaseCamera } from './ChaseCamera'
 
 interface Props {
+  carModelUrl?: string
   circuit: CircuitGeometry | null
   drivers: RaceDriver[]
   tracks: Map<number, CarPositionTrack>
@@ -40,6 +41,7 @@ function ReadySignal({ onReady }: { onReady?: () => void }) {
 }
 
 export function TrackScene3D({
+  carModelUrl,
   circuit,
   drivers,
   tracks,
@@ -97,6 +99,7 @@ export function TrackScene3D({
         </Bounds>
         <CornerMarkers3D circuit={circuit} projector={projector} chase={chase && focusTrack != null} />
         <CarMarkers
+          modelUrl={carModelUrl}
           drivers={drivers}
           tracks={tracks}
           visibleDrivers={visibleDrivers}

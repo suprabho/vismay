@@ -143,6 +143,7 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
   const track3dConfig = useMemo(
     () => ({
       type: 'f1:track-3d' as const,
+      carModelUrl: '/models/rb22.glb',
       ...(process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase'
         ? { sessionKey: sessionRef }
         : { sessionRef, fallbackRef: 'demo' }),
