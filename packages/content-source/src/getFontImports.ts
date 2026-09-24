@@ -13,6 +13,8 @@ const KNOWN_WEIGHTS: Record<string, number[]> = {
   'Space Mono': [400, 700],
   'Space Grotesk': [400, 500, 600, 700], // footshorts UI sans — same weights the app loads
   'Instrument Serif': [400, 600],
+  'Saira': [400, 500, 600, 700, 800], // vizf1 app sans (Pit Wall typography)
+  'Martian Mono': [400, 500, 600, 700], // vizf1 app mono
 }
 
 const DEFAULT_WEIGHTS = [400, 700]

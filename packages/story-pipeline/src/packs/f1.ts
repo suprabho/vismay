@@ -290,6 +290,14 @@ export const F1_PACK: DomainPack = {
     'block for THIS section\'s claim, and write a caption that states that claim. ' +
     'Give telemetry modules the wide chart region. Use core layers (bigStat, chart, quote) ' +
     'otherwise — and at most one quote-led section per story.',
+  recapFocus:
+    `\n\nEDITORIAL FOCUS — RACE RECAP:\n` +
+    `This is the recap of ONE Grand Prix. Every angle MUST tell the story of that race — who won and ` +
+    `HOW (the start, the strategy calls, safety cars, the decisive pass or stop), the other ` +
+    `standout drives and retirements, and what the result changes in the championship. Build it on ` +
+    `the telemetry brief's fact sheet and ranked moments plus the race report; favour the race's ` +
+    `real turning point over a single-driver profile or an evergreen explainer. Keep every angle ` +
+    `grounded strictly in the sources — never invent results, gaps, penalties or quotes.`,
   bylineExample: 'By the VizF1 desk',
   extraLayerTypes: [raceCard, driverStandings, telemetryClip, track3d, positionChart],
 }

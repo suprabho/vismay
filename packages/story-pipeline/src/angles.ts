@@ -35,7 +35,7 @@ export async function generateAngles(
   } = {},
 ): Promise<AnglesBrief> {
   let prompt = renderSources(sources)
-  if (opts.focus === 'recap') prompt += RECAP_FOCUS_STEER
+  if (opts.focus === 'recap') prompt += opts.pack?.recapFocus ?? RECAP_FOCUS_STEER
   if (opts.refine) {
     prompt +=
       `\n\nPREVIOUS ANGLES:\n${JSON.stringify(opts.refine.previous)}\n\n` +
