@@ -36,6 +36,6 @@ export const config = {
     '/newsletters/:slug',
     // Draft preview of the AI Data Centers daily edition, embedded by the
     // admin Editions tab before the 09:00 UTC freeze.
-    '/ai-data-centers/daily/preview',
+    '/ai-daily/doom-v-boom/preview',
   ],
 }

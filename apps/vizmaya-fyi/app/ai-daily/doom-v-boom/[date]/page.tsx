@@ -37,7 +37,7 @@ export default async function DailyEditionPage({ params }: RouteParams) {
   const { date } = await params
   if (!DATE_RE.test(date)) notFound()
   const edition = await getEdition(date).catch((err) => {
-    console.warn(`ai-data-centers/daily/${date}: getEdition failed: ${err}`)
+    console.warn(`ai-daily/doom-v-boom/${date}: getEdition failed: ${err}`)
     return null
   })
   if (!edition) notFound()
@@ -50,8 +50,8 @@ export default async function DailyEditionPage({ params }: RouteParams) {
           buildBreadcrumbJsonLd([
             { name: 'Home', url: '/' },
             { name: 'AI Data Centers', url: '/ai-data-centers' },
-            { name: 'Daily snapshot', url: '/ai-data-centers/daily' },
-            { name: formatEditionDate(edition.date), url: `/ai-data-centers/daily/${edition.date}` },
+            { name: 'Daily snapshot', url: '/ai-daily/doom-v-boom' },
+            { name: formatEditionDate(edition.date), url: `/ai-daily/doom-v-boom/${edition.date}` },
           ]),
         ]}
       />

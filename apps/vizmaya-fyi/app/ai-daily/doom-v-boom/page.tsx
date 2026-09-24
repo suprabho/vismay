@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: 'AI Data Centers Daily — vizmaya',
       description: 'One frozen edition a day: the previous 24 hours of AI, energy and sustainability news, every claim traceable to its source.',
-      alternates: { canonical: '/ai-data-centers/daily' },
+      alternates: { canonical: '/ai-daily/doom-v-boom' },
     }
   }
   return editionMetadata(e, { alias: true })
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function DailyLatestPage() {
   const edition = await getLatestEdition().catch((err) => {
-    console.warn(`ai-data-centers/daily: getLatestEdition failed: ${err}`)
+    console.warn(`ai-daily/doom-v-boom: getLatestEdition failed: ${err}`)
     return null
   })
   if (!edition) {
@@ -41,7 +41,7 @@ export default async function DailyLatestPage() {
           <Link className="cta" href="/ai-data-centers">
             Open the live explorer →
           </Link>
-          <Link className="cta" href="/ai-data-centers/daily/sample">
+          <Link className="cta" href="/ai-daily/doom-v-boom/sample">
             See a sample edition →
           </Link>
         </div>
@@ -57,7 +57,7 @@ export default async function DailyLatestPage() {
           buildBreadcrumbJsonLd([
             { name: 'Home', url: '/' },
             { name: 'AI Data Centers', url: '/ai-data-centers' },
-            { name: 'Daily snapshot', url: '/ai-data-centers/daily' },
+            { name: 'Daily snapshot', url: '/ai-daily/doom-v-boom' },
           ]),
         ]}
       />

@@ -116,7 +116,7 @@ next edition.
 - **Page:** [app/vizmaya/(tabbed)/editions/](<app/vizmaya/(tabbed)/editions/>) —
   draft banner (window, composer model, generated time, countdown to
   auto-publish; Publish now / Recompose / Recompose-clear-edits / Hold 30 min
-  once), the signed draft preview iframe (`/ai-data-centers/daily/preview` on
+  once), the signed draft preview iframe (`/ai-daily/doom-v-boom/preview` on
   vizmaya.fyi, `signOutputUrl` with `ADMIN_SESSION_SECRET`), editable prose
   (headline, deck, six key notes with sources picked from the window's
   stories, per-layer headline / sub / notes, research headline / sub),

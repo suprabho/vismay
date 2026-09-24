@@ -1,7 +1,7 @@
 /**
  * Sample edition — the design mockup's data (docs/ai-data-centers-daily-
  * snapshot.html) expressed as a real DcEditionWithContent, so the page can
- * be reviewed at /ai-data-centers/daily/sample before the pipeline has
+ * be reviewed at /ai-daily/doom-v-boom/sample before the pipeline has
  * published anything and the per-layer visualisations are exercised on
  * realistic stories. Every number below is illustrative; links go to outlet
  * home pages, not articles.

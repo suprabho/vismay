@@ -13,7 +13,7 @@ export const dynamic = 'force-static'
 export const metadata: Metadata = {
   ...editionMetadata(SAMPLE_EDITION, { noindex: true }),
   title: 'Sample edition — AI Data Centers Daily',
-  alternates: { canonical: '/ai-data-centers/daily' },
+  alternates: { canonical: '/ai-daily/doom-v-boom' },
 }
 
 export default function SampleEditionPage() {

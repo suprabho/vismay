@@ -2,8 +2,8 @@
  * Ask vizmaya.fyi to re-render the edition pages after a publish.
  *
  * Published editions are static; only the on-demand revalidation hook
- * (`/api/ai-data-centers/editions/revalidate`) flushes `/ai-data-centers/daily`
- * and `/ai-data-centers/daily/[date]`. The hook verifies a signed URL made
+ * (`/api/ai-data-centers/editions/revalidate`) flushes `/ai-daily/doom-v-boom`
+ * and `/ai-daily/doom-v-boom/[date]`. The hook verifies a signed URL made
  * with the shared ADMIN_SESSION_SECRET — the same stateless HMAC the admin
  * uses for gated render routes — so the cron needs no extra secret beyond
  * the one the render workflows already carry.

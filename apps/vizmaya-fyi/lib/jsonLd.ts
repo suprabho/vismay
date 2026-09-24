@@ -218,7 +218,7 @@ export function buildEpicJsonLd(opts: {
 }
 
 /**
- * NewsArticle for a daily snapshot edition (/ai-data-centers/daily/[date]).
+ * NewsArticle for a daily snapshot edition (/ai-daily/doom-v-boom/[date]).
  * The edition is machine-composed and editor-reviewed, so the author is the
  * studio; the OG image is the per-date opengraph-image route.
  */
@@ -230,7 +230,7 @@ export function buildEditionJsonLd(opts: {
   publishedAt: string | null
   keywords?: string[]
 }) {
-  const url = `${SITE_URL}/ai-data-centers/daily/${opts.date}`
+  const url = `${SITE_URL}/ai-daily/doom-v-boom/${opts.date}`
   const published = opts.publishedAt ?? `${opts.date}T09:00:00Z`
   const node: Record<string, unknown> = {
     '@context': 'https://schema.org',

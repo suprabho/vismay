@@ -10,7 +10,7 @@ The page is synthesis-first: a headline and subheading for the day, a Doom v Boo
 
 One-line goal: **someone who reads vizmaya for ten minutes each morning knows what happened in AI yesterday, from every angle, and can trace every claim to its source.**
 
-The design is settled and now lives in the app: **`/ai-data-centers/daily/sample`** renders the fixture through the real components, and is the reference for how an edition should look. (It began as a standalone mockup — [AI Data Centers Daily](https://claude.ai/artifact/NZzr32a55v1RQiTjV63gcW), once `docs/ai-data-centers-daily-snapshot.html` — which was retired once the components caught up, because a reference nothing renders drifts from what ships without anyone noticing.) This PRD covers what it took to ship it on the existing vismay stack.
+The design is settled and now lives in the app: **`/ai-daily/doom-v-boom/sample`** renders the fixture through the real components, and is the reference for how an edition should look. (It began as a standalone mockup — [AI Data Centers Daily](https://claude.ai/artifact/NZzr32a55v1RQiTjV63gcW), once `docs/ai-data-centers-daily-snapshot.html` — which was retired once the components caught up, because a reference nothing renders drifts from what ships without anyone noticing.) This PRD covers what it took to ship it on the existing vismay stack.
 
 ## Background
 
@@ -162,7 +162,7 @@ The draft goes public at 09:00 UTC whether or not an editor has looked at it; re
 
 **Composer (replaces generate-news-recap.ts).** One Gemini call in JSON mode over the window's relevant stories, kept papers, stock moves and `iea_news`, returning `headline`, `sub`, `notes[6]`, `layers{}` with headline / sub / notes, and `research{headline, sub}`. Everything numeric (mood score, counts, figures, composition, field baselines, per-layer viz data) is assembled deterministically from the tagged rows, never by the model. On any model failure the composer falls back to a deterministic edition (headline from the top theme, notes from the largest figures) and marks `model = 'deterministic'`, exactly as the recap worker does today.
 
-**Freeze.** `publish-edition` (09:00 UTC, or the admin's Publish button) sets `status = 'published'`, `published_at`, and revalidates `/ai-data-centers/daily` and `/ai-data-centers/daily/[date]`. A published row is never updated; a correction is a note in the next edition.
+**Freeze.** `publish-edition` (09:00 UTC, or the admin's Publish button) sets `status = 'published'`, `published_at`, and revalidates `/ai-daily/doom-v-boom` and `/ai-daily/doom-v-boom/[date]`. A published row is never updated; a correction is a note in the next edition.
 
 ## API and routes
 
@@ -170,8 +170,8 @@ Readers go through `packages/content-source/src/epics.ts`, the same place `getDc
 
 | Route | Returns | Cache |
 | --- | --- | --- |
-| `GET /ai-data-centers/daily` | Latest published edition (page) | static, revalidated on publish |
-| `GET /ai-data-centers/daily/[date]` | That day's edition; 404 if none | static, immutable once published |
+| `GET /ai-daily/doom-v-boom` | Latest published edition (page) | static, revalidated on publish |
+| `GET /ai-daily/doom-v-boom/[date]` | That day's edition; 404 if none | static, immutable once published |
 | `GET /api/ai-data-centers/editions?limit=` | `{ editions: [{number, date, headline, counts, mood_score}] }` for the archive rail and navigator | `s-maxage=3600` |
 | `GET /api/ai-data-centers/editions/[date]` | Full edition row plus the resolved stories and papers in its membership arrays | `s-maxage=86400`, immutable |
 | `GET /api/vizmaya/editions/draft` (admin) | The current draft with the same shape | no cache, `isAuthed()` |
@@ -183,7 +183,7 @@ New readers in `epics.ts`: `getEdition(date)`, `getLatestEdition()`, `listEditio
 
 ## Frontend
 
-The page is a server component tree under `apps/vizmaya-fyi/app/ai-data-centers/daily/` that renders one edition row into static HTML; the only client code is the panel, the canvas map, scroll-spy and hover. No Mapbox, no ECharts and no client fetch on this route, which is what makes editions cheap to cache and simple to export.
+The page is a server component tree under `apps/vizmaya-fyi/app/ai-daily/doom-v-boom/` that renders one edition row into static HTML; the only client code is the panel, the canvas map, scroll-spy and hover. No Mapbox, no ECharts and no client fetch on this route, which is what makes editions cheap to cache and simple to export.
 
 | Component | Role | Client? |
 | --- | --- | --- |
@@ -239,7 +239,7 @@ Four phases, each shippable on its own; the public page ships in phase 3.
 | --- | --- | --- |
 | 1 · Tagging | Migration 078; classifier schema + prompt; `dc_places` seed; 30-day backfill | Pipeline tab shows layer / place / theme / mood on every relevant row |
 | 2 · Editions | `dc_papers` + `ingest-papers.ts`; composer replaces recap worker; draft + publish jobs; readers in `epics.ts` | A published `dc_editions` row every day for 5 consecutive days |
-| 3 · Public page | `/ai-data-centers/daily` and `/[date]`; all components ported from the mockup; OG image, JSON-LD, sitemap | Page live, Lighthouse 90+ on performance and accessibility |
+| 3 · Public page | `/ai-daily/doom-v-boom` and `/[date]`; all components ported from the mockup; OG image, JSON-LD, sitemap | Page live, Lighthouse 90+ on performance and accessibility |
 | 4 · Admin + polish | Editions tab with edit, recompose, publish; archive; audit; light theme QA; PDF / share-card export | Editor can approve a draft without touching the database |
 
 Dependencies: phase 2 needs phase 1's tags; phase 3 can start on the mockup while phase 2 runs, using a fixture edition row. The papers ingest is the one new external dependency (arXiv API); it is reachable from Actions, which is where the job runs.

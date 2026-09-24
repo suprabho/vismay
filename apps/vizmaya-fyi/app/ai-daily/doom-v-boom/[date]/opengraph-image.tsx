@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { getEdition, listEditions } from '@vismay/content-source/dcEditions'
 import { formatEditionDate, formatSigned, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { StoryOgCard } from '@/components/seo/StoryOgCard'
-import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../theme'
+import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../../ai-data-centers/theme'
 
 export const runtime = 'nodejs'
 export const size = { width: 1200, height: 630 }

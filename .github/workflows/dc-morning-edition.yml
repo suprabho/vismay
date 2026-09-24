@@ -1,6 +1,6 @@
 name: AI Data Centers morning edition
 
-# The one daily run behind /ai-data-centers/daily: news scrape → arXiv
+# The one daily run behind /ai-daily/doom-v-boom: news scrape → arXiv
 # papers → edition composer, as sequential jobs of ONE workflow. They used to
 # be three crons (06:45 / 07:00 / 08:15) and GitHub's best-effort scheduler
 # drifted them apart by hours — one morning the composer wrote the edition

@@ -1,7 +1,7 @@
 /**
  * Plan + render the sample edition's charts from the fixture stories and
- * write them into app/ai-data-centers/daily/sampleCharts.ts, so
- * /ai-data-centers/daily/sample shows what the composer produces — the
+ * write them into app/ai-daily/doom-v-boom/sampleCharts.ts, so
+ * /ai-daily/doom-v-boom/sample shows what the composer produces — the
  * design reference for the planned charts, and the local check for the
  * whole path (planner → grounding → flint → ECharts SSR → page theming)
  * without touching the DB.
@@ -14,7 +14,7 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { config as loadEnv } from 'dotenv'
 import { chartPlannerModel, planEditionCharts } from './editionCharts'
-import { SAMPLE_EDITION } from '../../app/ai-data-centers/daily/fixture'
+import { SAMPLE_EDITION } from '../../app/ai-daily/doom-v-boom/fixture'
 import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 
 loadEnv({ path: '.env.local' })
@@ -45,7 +45,7 @@ async function main() {
     log: (l) => console.log(l),
   })
   for (const s of skips) console.log(`  ${s.section}: template — ${s.reason}`)
-  const out = resolve(__dirname, '../../app/ai-data-centers/daily/sampleCharts.ts')
+  const out = resolve(__dirname, '../../app/ai-daily/doom-v-boom/sampleCharts.ts')
   const body =
     `import type { EditionChartSkip, EditionCharts } from '@vismay/content-source/dcEditionTypes'\n\n` +
     `/**\n * The sample edition's planned charts. Generated from the fixture stories by\n * \`pnpm ai-data-centers:sample-charts\` (scripts/ai-data-centers/sample-charts.ts),\n * which runs the real planner + renderer against fixture.ts and writes this\n * file; empty means the sample draws its templates.\n *\n * Model: ${modelUsed ?? 'none'} · ${new Date().toISOString().slice(0, 10)}\n */\n` +

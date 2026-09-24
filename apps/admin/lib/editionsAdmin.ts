@@ -27,13 +27,13 @@ export const PUBLISH_WORKER: WorkerDef = {
 }
 
 export function editionPublicUrl(date: string): string {
-  return `${vizmayaPublicUrl}/ai-data-centers/daily/${date}`
+  return `${vizmayaPublicUrl}/ai-daily/doom-v-boom/${date}`
 }
 
 /** Signed preview of the current draft on vizmaya.fyi (10-minute token). */
 export function draftPreviewUrl(): string | null {
   try {
-    return signOutputUrl({ baseUrl: vizmayaPublicUrl, path: '/ai-data-centers/daily/preview', ttlSeconds: 600 })
+    return signOutputUrl({ baseUrl: vizmayaPublicUrl, path: '/ai-daily/doom-v-boom/preview', ttlSeconds: 600 })
   } catch {
     return null
   }

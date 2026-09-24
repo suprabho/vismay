@@ -3,7 +3,7 @@
  *
  * Tables dc_editions / dc_papers / dc_places plus the tag columns on dc_news
  * (migration 078). Both apps read through here: the public
- * /ai-data-centers/daily routes, the admin Editions tab, and the pipeline
+ * /ai-daily/doom-v-boom routes, the admin Editions tab, and the pipeline
  * scripts (compose-edition.ts, publish-edition.ts, ingest-papers.ts).
  *
  * Invariant: a published row is never updated (a DB trigger enforces it). The

@@ -35,7 +35,7 @@ export interface RecordInputs {
 const SOURCES = {
   stocks: { name: 'Tracked stocks · home-exchange closes', url: 'https://www.vizmaya.fyi/ai-data-centers' } satisfies EditionSource,
   epoch: { name: 'Epoch AI · Frontier Data Centers Hub', url: 'https://epoch.ai/data/ai-data-centers' } satisfies EditionSource,
-  editions: { name: 'AI Data Centers Daily · previous editions', url: 'https://www.vizmaya.fyi/ai-data-centers/daily' } satisfies EditionSource,
+  editions: { name: 'AI Data Centers Daily · previous editions', url: 'https://www.vizmaya.fyi/ai-daily/doom-v-boom' } satisfies EditionSource,
   arxiv: { name: 'arXiv · papers kept for this edition', url: 'https://arxiv.org' } satisfies EditionSource,
 }
 

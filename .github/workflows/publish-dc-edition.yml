@@ -2,7 +2,7 @@ name: Publish AI Data Centers daily edition
 
 # Freezes the draft edition composed from the 06:15 UTC window: status → published, the
 # sequential edition number, published_at, then a signed ping to vizmaya.fyi
-# that re-renders /ai-data-centers/daily and /ai-data-centers/daily/[date].
+# that re-renders /ai-daily/doom-v-boom and /ai-daily/doom-v-boom/[date].
 # A published row is never updated again; corrections run in the next edition.
 #
 # Runs at 09:00 UTC — the draft goes public whether or not an editor has
