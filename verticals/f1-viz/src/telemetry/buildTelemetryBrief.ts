@@ -261,36 +261,111 @@ function pitTableDrivers(s: SessionRow, focusSet: Set<number>, lanes: number[]):
   return set
 }
 
-function positionChartFence(s: SessionRow, drivers: BriefDriver[], a: RaceAnalysis, lanes: number[]): string {
+interface ChartWindow {
+  lapFrom: number
+  lapTo: number
+  highlight: string[]
+}
+
+/**
+ * An f1:position-chart block. Full race by default; with `win`, zoomed to that
+ * lap range with the moment's drivers highlighted — the visual for an ORDER
+ * moment (a pit cycle, a safety-car swing). Only the points the window needs
+ * travel: the last one at/before its start (pins the opening position) and
+ * everything inside it.
+ */
+function positionChartFence(
+  s: SessionRow,
+  drivers: BriefDriver[],
+  a: RaceAnalysis,
+  lanes: number[],
+  win?: ChartWindow,
+): string {
   const gp = s.gp_name || s.circuit_name || s.session_key
+  const bands = a.windows
+    .filter((w) => !win || (w.lapTo >= win.lapFrom && w.lapFrom <= win.lapTo))
+    .map((w) => ({ from: w.lapFrom, to: w.lapTo, label: 'SC / VSC' }))
   return fence('f1:position-chart', {
     raceLabel: `${s.season} ${gp}`,
     totalLaps: a.totalLaps,
+    ...(win
+      ? { lapFrom: win.lapFrom, lapTo: win.lapTo, ...(win.highlight.length ? { highlight: win.highlight } : {}) }
+      : {}),
+    ...(bands.length ? { bands } : {}),
     lanes: lanes.map((dn) => {
       const d = drivers.find((x) => x.driverNumber === dn)
       const name = driverName(drivers, dn)
+      // Only the laps either side of a position change (plus the first and
+      // last). The chart draws straight lines between points, so keeping the
+      // lap BEFORE each change holds a flat stint flat instead of drawing a
+      // slow slide — at a fraction of the every-lap size.
+      let points = (a.byDriver.get(dn) ?? [])
+        .filter((l) => l.position != null)
+        .filter(
+          (l, i, arr) =>
+            i === 0 ||
+            i === arr.length - 1 ||
+            l.position !== arr[i - 1]!.position ||
+            l.position !== arr[i + 1]!.position,
+        )
+        .map((l) => ({ lap: l.lap, position: l.position as number }))
+      if (win) {
+        const before = points.filter((p) => p.lap <= win.lapFrom).at(-1)
+        points = [...(before ? [before] : []), ...points.filter((p) => p.lap > win.lapFrom && p.lap <= win.lapTo)]
+      }
       return {
-        driverId: name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+        driverId: name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
         driverCode: d?.abbreviation ?? null,
         driverName: name,
         color: d?.teamColour ?? '#8e8e99',
-        // Only the laps either side of a position change (plus the first and
-        // last). The chart draws straight lines between points, so keeping the
-        // lap BEFORE each change holds a flat stint flat instead of drawing a
-        // slow slide — at a fraction of the every-lap size.
-        points: (a.byDriver.get(dn) ?? [])
-          .filter((l) => l.position != null)
-          .filter(
-            (l, i, arr) =>
-              i === 0 ||
-              i === arr.length - 1 ||
-              l.position !== arr[i - 1]!.position ||
-              l.position !== arr[i + 1]!.position,
-          )
-          .map((l) => ({ lap: l.lap, position: l.position as number })),
+        points,
       }
     }),
   })
+}
+
+/** Laps either side of an order moment, so the chart shows the before and after. */
+const ORDER_PAD_BEFORE = 3
+const ORDER_PAD_AFTER = 4
+/** Most lines a zoomed chart draws — beyond this the swing gets lost. */
+const ORDER_MAX_LANES = 6
+
+/**
+ * The zoomed chart for an ORDER moment: the window around it, and the cars
+ * that ran at or ahead of the moment's drivers there (the group the swing
+ * reshuffled), with the moment's own drivers highlighted.
+ */
+function orderChart(
+  sig: Signal,
+  a: RaceAnalysis,
+  drivers: BriefDriver[],
+): { lanes: number[]; win: ChartWindow } {
+  const lapFrom = Math.max(1, sig.lapFrom - ORDER_PAD_BEFORE)
+  const lapTo = Math.min(a.totalLaps, sig.lapTo + ORDER_PAD_AFTER)
+  const bestIn = (dn: number) => {
+    let best = Infinity
+    for (let lap = lapFrom; lap <= lapTo; lap++) {
+      const p = positionAt(a, dn, lap)
+      if (p != null && p < best) best = p
+    }
+    return best
+  }
+  const worstFocus = Math.max(
+    ...sig.driverNumbers.map((dn) => {
+      let worst = 0
+      for (let lap = lapFrom; lap <= lapTo; lap++) worst = Math.max(worst, positionAt(a, dn, lap) ?? 0)
+      return worst
+    }),
+  )
+  const group = [...a.byDriver.keys()]
+    .map((dn) => ({ dn, best: bestIn(dn) }))
+    .filter((x) => x.best <= worstFocus || sig.driverNumbers.includes(x.dn))
+    .sort((x, y) => x.best - y.best)
+  const lanes = [...new Set([...sig.driverNumbers, ...group.map((x) => x.dn)])].slice(0, ORDER_MAX_LANES)
+  return {
+    lanes,
+    win: { lapFrom, lapTo, highlight: sig.driverNumbers.map((dn) => abbr(drivers, dn)) },
+  }
 }
 
 export async function buildTelemetryBrief(
@@ -403,23 +478,45 @@ export async function buildTelemetryBrief(
     lines.push('')
   }
 
+  // One beat per event: an ORDER moment whose window overlaps one already
+  // picked (the SC swing, the lead change it caused, the slow stop inside it)
+  // folds its facts into that moment instead of repeating the same chart.
   const perKind = new Map<SignalKind, number>()
-  const clips = signals
-    .filter((sig) => {
-      const n = perKind.get(sig.kind) ?? 0
-      perKind.set(sig.kind, n + 1)
-      return n < MAX_PER_KIND
-    })
-    .slice(0, MAX_CLIPS)
+  const clips: Array<{ sig: Signal; also: string[] }> = []
+  for (const sig of signals) {
+    if (clips.length >= MAX_CLIPS) break
+    if (sig.visual === 'order') {
+      const host = clips.find(
+        (c) => c.sig.visual === 'order' && c.sig.lapFrom <= sig.lapTo + 2 && sig.lapFrom <= c.sig.lapTo + 2,
+      )
+      if (host) {
+        host.also.push(sig.detail)
+        continue
+      }
+    }
+    const n = perKind.get(sig.kind) ?? 0
+    if (n >= MAX_PER_KIND) continue
+    perKind.set(sig.kind, n + 1)
+    clips.push({ sig, also: [] })
+  }
   if (clips.length) {
     lines.push('## Key moments (most story-worthy first)')
     lines.push('')
-    for (const sig of clips) {
+    for (const { sig, also } of clips) {
       lines.push(`### ${sig.title}`)
       lines.push('')
-      lines.push(sig.detail)
+      lines.push([sig.detail, ...also].join(' '))
       lines.push('')
-      lines.push(clipFence(sessionKey, sig))
+      if (sig.visual === 'order' && isRace) {
+        const { lanes: group, win } = orderChart(sig, analysis, drivers)
+        lines.push(
+          `Visual: the running order, laps ${win.lapFrom}–${win.lapTo} (a telemetry clip cannot show a pit call or a position change).`,
+        )
+        lines.push('')
+        lines.push(positionChartFence(s, drivers, analysis, group, win))
+      } else {
+        lines.push(clipFence(sessionKey, sig))
+      }
       lines.push('')
     }
   }
@@ -458,7 +555,11 @@ export async function buildTelemetryBrief(
   if (lanes.length) {
     lines.push('## Position by lap — data')
     lines.push('')
-    lines.push(positionChartFence(s, drivers, analysis, lanes))
+    // An explicit whole-race window, so every chart block is identified by its
+    // lap range and the graft can tell this one from a moment's zoomed chart.
+    lines.push(
+      positionChartFence(s, drivers, analysis, lanes, { lapFrom: 1, lapTo: analysis.totalLaps, highlight: [] }),
+    )
     lines.push('')
   }
 

@@ -56,8 +56,18 @@ export type SignalKind =
   | 'tyre_deg'
   | 'pit_window'
 
+/**
+ * The visual that SHOWS a moment. A telemetry clip (speed, gear, pedals, dots
+ * on a track fragment) shows car-vs-car action; it cannot show a pit call or a
+ * position change — those are `order` moments, drawn as a zoomed position
+ * chart. Pairing strategy prose with a clip is how a slide's text and graph
+ * stopped matching.
+ */
+export type SignalVisual = 'clip' | 'order'
+
 export interface Signal {
   kind: SignalKind
+  visual: SignalVisual
   driverNumbers: number[]
   focalDriverNumber: number
   lapFrom: number
@@ -281,6 +291,7 @@ export function deriveSignals(
     const pair = winner.dn === loser.dn ? [winner.dn] : [winner.dn, loser.dn]
     out.push({
       kind: 'neutralised_pit',
+      visual: 'order',
       driverNumbers: pair,
       focalDriverNumber: leaderChanged ? winner.dn : loser.dn,
       lapFrom: clampLap(a, w.lapFrom - 1),
@@ -308,6 +319,7 @@ export function deriveSignals(
     const viaPit = a.pitLapKeys.has(`${prev}:${lap}`) || a.pitLapKeys.has(`${prev}:${lap - 1}`)
     leadChanges.push({
       kind: 'lead_change',
+      visual: viaPit ? 'order' : 'clip',
       driverNumbers: [cur, prev],
       focalDriverNumber: cur,
       lapFrom: clampLap(a, lap - 1),
@@ -371,6 +383,7 @@ export function deriveSignals(
     const clipTo = t.to
     out.push({
       kind: 'stuck_behind',
+      visual: 'clip',
       driverNumbers: [t.ahead, t.dn],
       focalDriverNumber: t.dn,
       lapFrom: Math.max(t.from, clipTo - 3),
@@ -394,6 +407,7 @@ export function deriveSignals(
   if (fastest) {
     out.push({
       kind: 'fastest_lap',
+      visual: 'clip',
       driverNumbers: [fastest.driver_number],
       focalDriverNumber: fastest.driver_number,
       lapFrom: clampLap(a, fastest.lap - 1),
@@ -418,6 +432,7 @@ export function deriveSignals(
     const delta = worst.lap_time_sec! - med
     drops.push({
       kind: 'pace_drop',
+      visual: 'clip',
       driverNumbers: [dn],
       focalDriverNumber: dn,
       lapFrom: clampLap(a, worst.lap - 1),
@@ -446,6 +461,7 @@ export function deriveSignals(
   if (bestBattle) {
     out.push({
       kind: 'close_battle',
+      visual: 'clip',
       driverNumbers: [bestBattle.b, bestBattle.a],
       focalDriverNumber: bestBattle.a,
       lapFrom: clampLap(a, bestBattle.lap - 1),
@@ -464,6 +480,7 @@ export function deriveSignals(
     const s = degSorted[0]
     out.push({
       kind: 'tyre_deg',
+      visual: 'clip',
       driverNumbers: [s.driverNumber],
       focalDriverNumber: s.driverNumber,
       lapFrom: s.startLap,
@@ -486,6 +503,7 @@ export function deriveSignals(
   for (const slow of slowStops) {
     out.push({
       kind: 'pit_window',
+      visual: 'order',
       driverNumbers: [slow.driverNumber],
       focalDriverNumber: slow.driverNumber,
       lapFrom: clampLap(a, slow.lap - 1),

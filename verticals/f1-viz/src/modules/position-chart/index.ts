@@ -1,5 +1,6 @@
 import type { VizModule } from '@vismay/viz-engine'
 import type { DriverLane } from '../../types'
+import type { LapBand } from '../../web/PositionChart'
 
 /**
  * `f1:position-chart` — Foreground viz module wrapping PositionChart.
@@ -22,6 +23,14 @@ import type { DriverLane } from '../../types'
  *             - { lap: 1, position: 1 }
  *             - { lap: 2, position: 1 }
  *             - { ... }
+ *
+ * Optional zoom for a single beat (a pit cycle, a safety-car swing):
+ *
+ *       lapFrom: 10          # x-axis spans laps 10–20 …
+ *       lapTo: 20            # … and the y-axis fits the positions inside it
+ *       highlight: [NOR, ANT] # driver codes to emphasise; the rest dim
+ *       bands:               # shaded periods behind the lines
+ *         - { from: 14, to: 15, label: 'SC / VSC' }
  */
 
 export interface PositionChartConfig {
@@ -29,6 +38,10 @@ export interface PositionChartConfig {
   raceLabel: string
   lanes: DriverLane[]
   totalLaps?: number
+  lapFrom?: number
+  lapTo?: number
+  highlight?: string[]
+  bands?: LapBand[]
 }
 
 function parseConfig(
@@ -50,6 +63,18 @@ function parseConfig(
     raceLabel: r.raceLabel,
     lanes: r.lanes as unknown as DriverLane[],
     totalLaps: typeof r.totalLaps === 'number' ? r.totalLaps : undefined,
+    lapFrom: typeof r.lapFrom === 'number' ? r.lapFrom : undefined,
+    lapTo: typeof r.lapTo === 'number' ? r.lapTo : undefined,
+    highlight: Array.isArray(r.highlight)
+      ? r.highlight.filter((h): h is string => typeof h === 'string')
+      : undefined,
+    bands: Array.isArray(r.bands)
+      ? (r.bands as unknown[]).filter(
+          (b): b is LapBand =>
+            !!b && typeof b === 'object' &&
+            typeof (b as LapBand).from === 'number' && typeof (b as LapBand).to === 'number',
+        )
+      : undefined,
   }
 }
 
@@ -61,7 +86,7 @@ const positionChartModule: VizModule<PositionChartConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
   stableIdentity: (config) =>
-    `f1:position-chart:${config.raceLabel}::${config.lanes.length}`,
+    `f1:position-chart:${config.raceLabel}::${config.lanes.length}::${config.lapFrom ?? ''}-${config.lapTo ?? ''}`,
 }
 
 export default positionChartModule

@@ -76,6 +76,26 @@ function pinF1ApiBase(body: Record<string, unknown>): void {
   }
 }
 
+// f1 modules that are wide and fixed-aspect: stacked above text in a 46vh row
+// they spill into the text row and the copy overprints the widget. Each stacked
+// deck layout has a side-by-side twin with the SAME region keys, so swapping
+// the layout name is a lossless repair.
+const F1_WIDE_TYPES = new Set(['f1:telemetry-clip', 'f1:track-3d', 'f1:position-chart'])
+const SIDE_BY_SIDE: Record<string, string> = {
+  'chart-top-text-below': 'text-left-chart-right',
+  'stat-top-chart-below': 'stat-left-chart-right',
+}
+
+function unstackF1Layout(body: Record<string, unknown>): void {
+  const fg = body.foreground as { layout?: unknown } | undefined
+  if (!fg || typeof fg !== 'object' || Array.isArray(fg)) return
+  const twin = typeof fg.layout === 'string' ? SIDE_BY_SIDE[fg.layout] : undefined
+  if (!twin) return
+  if (collectForegroundLayers(body, 'f1').some((l) => F1_WIDE_TYPES.has(l.type as string))) {
+    fg.layout = twin
+  }
+}
+
 interface StoredBrief {
   summary?: string
   keyFacts?: string[]
@@ -288,6 +308,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         // vizf1 origin on fetch-backed layers — grafted or model-guessed —
         // so they load telemetry on the vizmaya.fyi render surface too.
         pinF1ApiBase(visualBody)
+        unstackF1Layout(visualBody)
       }
       if (hasSubs) {
         // Per-beat camera dives: center/zoom from the planned geo, tilt + focal

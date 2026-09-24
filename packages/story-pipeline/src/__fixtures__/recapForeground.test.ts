@@ -10,7 +10,10 @@
  *   4. grid graft   — a GRID match-card keeps its layout and fills each tile from
  *                    a matching single-fixture directive (never collapses to one).
  *   5. f1 graft     — a layer takes the directive its own reference agrees with
- *                    (sessionKey / laps / drivers), not the first in the brief.
+ *                    (sessionKey / laps / drivers), not the first in the brief,
+ *                    and keeps the caption the model wrote for its section.
+ *   6. chart window — a position-chart layer takes the block whose lap window
+ *                    the model copied (whole race vs a moment's zoom).
  */
 import assert from 'node:assert'
 import { extractDirectives, extractFsDirectives } from '@vismay/viz-engine/src/lib/recapFences'
@@ -173,7 +176,24 @@ graftSectionBody(f1Body as any, f1Directives, 'Mercedes boxed Antonelli at once.
 const clip = (f1Body.foreground.regions.chart[0] as any)
 assert.equal(clip.lapFrom, 13, 'kept the lap window the model referenced')
 assert.deepEqual(clip.driverNumbers, [12, 1], 'kept the drivers the model referenced')
-assert.equal(clip.caption, 'ANT stops, NOR stays out', 'took the matching directive config')
-console.log('✓ f1 graft: the model-referenced clip wins over document order')
+assert.equal(clip.focalDriverNumber, 12, 'took the matching directive config')
+assert.equal(clip.caption, 'Model-worded caption', "kept the section's own caption")
+console.log('✓ f1 graft: the model-referenced clip wins over document order; caption kept')
+
+// ── 6. position-chart: the lap window the model copied picks the block ───────
+const charts = [
+  '```f1:position-chart',
+  '{ "raceLabel": "2026 Spanish Grand Prix", "lapFrom": 10, "lapTo": 20, "highlight": ["NOR"], "lanes": [{ "driverId": "n", "driverCode": "NOR", "driverName": "N", "color": "#f80", "points": [{ "lap": 10, "position": 1 }] }] }',
+  '```',
+  '```f1:position-chart',
+  '{ "raceLabel": "2026 Spanish Grand Prix", "lapFrom": 1, "lapTo": 57, "lanes": [{ "driverId": "a", "driverCode": "ANT", "driverName": "A", "color": "#0fc", "points": [{ "lap": 1, "position": 3 }] }] }',
+  '```',
+].join('\n')
+const chartDirectives = extractDirectives(charts, 'f1')
+const wholeRace = { foreground: [{ type: 'f1:position-chart', raceLabel: '2026 Spanish Grand Prix', lapFrom: 1, lapTo: 57, lanes: [] }] }
+graftSectionBody(wholeRace as any, chartDirectives, 'How the race unfolded.', 'f1')
+assert.equal((wholeRace.foreground[0] as any).lapTo, 57, 'whole-race window picked, not the first (zoomed) block')
+assert.equal((wholeRace.foreground[0] as any).lanes[0].driverCode, 'ANT', 'whole-race lanes grafted')
+console.log('✓ position-chart graft: the copied lap window selects the block')
 
 console.log('\nALL RECAP INGESTION CHECKS PASSED')
