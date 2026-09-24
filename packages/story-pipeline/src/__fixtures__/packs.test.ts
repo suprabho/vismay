@@ -138,6 +138,11 @@ const SAMPLES: Record<string, Record<string, unknown>> = {
     focalDriverNumber: 1,
     caption: 'Verstappen vs Leclerc — sector 2',
   },
+  'f1:position-chart': {
+    type: 'f1:position-chart',
+    raceLabel: '2026 Spanish Grand Prix',
+    lanes: [],
+  },
   'f1:track-3d': {
     type: 'f1:track-3d',
     sessionKey: '2024_monaco_R',
@@ -249,6 +254,7 @@ const MODULE_PATHS: Record<string, string> = {
   'f1:driver-standings': 'f1-viz/src/modules/driver-standings',
   'f1:telemetry-clip': 'f1-viz/src/modules/telemetry-clip',
   'f1:track-3d': 'f1-viz/src/modules/track-3d',
+  'f1:position-chart': 'f1-viz/src/modules/position-chart',
   'fs:match-card': 'footshorts-viz/src/modules/match-card',
   'fs:standings-table': 'footshorts-viz/src/modules/standings-table',
   'fs:team-form-strip': 'footshorts-viz/src/modules/team-form-strip',
