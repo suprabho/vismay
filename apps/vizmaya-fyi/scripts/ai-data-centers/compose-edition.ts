@@ -44,7 +44,7 @@
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — read dc_news / dc_papers /
  *     dc_places / dc_stocks / dc_stock_prices / iea_news, write dc_editions
  *   AI_GATEWAY_API_KEY   — optional; enables the prose layer and the chart planner
- *   COMPOSER_MODEL       — optional override: a `text.*` alias or a gateway id (default text.opus)
+ *   COMPOSER_MODEL       — optional override: a `text.*` alias or a gateway id (default anthropic/claude-opus-5.5)
  *   COMPOSER_CHART_MODEL — optional override for the chart planner only (default = COMPOSER_MODEL)
  *   ADMIN_SESSION_SECRET — optional; signs the revalidate ping when a stale
  *     draft gets published on the way in
@@ -67,7 +67,7 @@ import {
   upsertDraftEdition,
 } from '@vismay/content-source/dcEditions'
 import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts, type EditionMoodEvent } from '@vismay/content-source/dcEditionTypes'
-import { chartPlannerModel, planEditionCharts } from './editionCharts'
+import { chartPlannerModel, DC_DEFAULT_MODEL, planEditionCharts } from './editionCharts'
 import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 import {
   DC_LAYERS,
@@ -96,8 +96,8 @@ import { pingEditionRevalidate } from './revalidate'
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
 
-/** A `text.*` alias from @vismay/ai-gateway MODELS or a raw gateway id; opus is the editorial default. */
-const COMPOSER_MODEL = process.env.COMPOSER_MODEL || 'text.opus'
+/** A `text.*` alias from @vismay/ai-gateway MODELS or a raw gateway id; Opus 5.5 is the editorial default. */
+const COMPOSER_MODEL = process.env.COMPOSER_MODEL || DC_DEFAULT_MODEL
 /** Ceiling on stories handed to the model — a busy day lands well under it. */
 const MAX_STORIES = 150
 /** Papers per edition: the gate's top scorers, newest first among ties. */
@@ -572,7 +572,7 @@ async function main() {
         fieldBaseline: numbers.fieldBaseline,
         facilities: await facilitiesForCharts(),
         // Without the gateway rung 1 fails fast per section and rung 4 still draws.
-        model: gatewayConfigured() ? chartPlannerModel() : 'text.opus',
+        model: gatewayConfigured() ? chartPlannerModel() : DC_DEFAULT_MODEL,
         log: (l) => console.log(l),
       })
 
