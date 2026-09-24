@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { auraEmbedUrl } from '@vismay/viz-engine'
+import { AuraPoster } from './AuraPoster'
 
 /**
  * Lazy-loaded iframe of the per-story aura visual served from
@@ -14,10 +15,17 @@ import { auraEmbedUrl } from '@vismay/viz-engine'
 export function AuraBackground({
   slug,
   input = 'off',
+  poster,
 }: {
   slug: string
   /** Aura embed `input` mode. `mic` lets the aura react to playing audio. */
   input?: 'off' | 'mic'
+  /**
+   * Paint the scene's static capture still (at this size) beneath the live
+   * iframe, so the card shows the aura cover immediately and keeps it if the
+   * embed never loads.
+   */
+  poster?: { width: number; height: number }
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [show, setShow] = useState(false)
@@ -38,6 +46,7 @@ export function AuraBackground({
   }, [])
   return (
     <div ref={ref} className="bn-aura" aria-hidden>
+      {poster && <AuraPoster slug={slug} width={poster.width} height={poster.height} />}
       {show && (
         <iframe
           title=""
