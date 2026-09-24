@@ -3,8 +3,8 @@ import { storyUrl } from '@vismay/story-embed/url'
 import { EditorialWebView, VIZMAYA_ORIGIN } from '@/components/EditorialWebView'
 import { HIDDEN_STORY_SLUGS } from '@/lib/hiddenContent'
 
-// Editorial story reader: a WebView over vizmaya.fyi's `/story/<slug>` page.
-// `storyUrl` builds the shared chrome-less embed URL (`?embed=1`), so vizmaya's
+// Editorial story reader: a WebView over the render service's `/story/<slug>`
+// page. `storyUrl` builds the shared chrome-less embed URL (`?embed=1`), so the
 // brand logo is suppressed and only Footshorts's own back chevron shows.
 export default function EditorialReader() {
   const { slug } = useLocalSearchParams<{ slug: string }>()

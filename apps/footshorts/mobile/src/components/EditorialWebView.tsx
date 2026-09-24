@@ -4,10 +4,10 @@ import { Stack, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StoryEmbed } from '@vismay/story-embed/native'
 
-// vizmaya.fyi renders the story (the "general Viz story view"). We embed it via
+// The render service renders the story (the "general Viz story view"). We embed it via
 // the shared StoryEmbed and overlay a blurred back chevron. Shared by the
 // editorial reader (`/editorial/[slug]`) and the epic reader
-// (`/editorial/epic/[slug]`); both pass a full vizmaya URL.
+// (`/editorial/epic/[slug]`); both pass a full URL (render service / vizmaya.fyi).
 export { VIZMAYA_ORIGIN } from '@vismay/story-embed/url'
 
 export function EditorialWebView({ url }: { url: string }) {

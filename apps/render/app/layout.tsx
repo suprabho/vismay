@@ -19,7 +19,8 @@ const fraunces = Fraunces({
 })
 
 // Brand-neutral render surface host. No brand metadata / analytics / JSON-LD —
-// these routes are signed, headless render targets, never indexed.
+// these routes are signed, headless render targets (plus the public embed
+// reader at /story/[slug]), never indexed.
 export const metadata: Metadata = {
   title: 'Render',
   robots: { index: false },

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { StoryEmbed } from '@vismay/story-embed/web';
 
-// vizmaya.fyi renders the story (the "general Viz story view"). We embed it via
+// The render service renders the story (the "general Viz story view"). We embed it via
 // the shared StoryEmbed and overlay Footshorts's back-button chrome on top — no
 // scrollytelling re-implementation here.
 export default function EditorialReader({ slug }: { slug: string }) {
