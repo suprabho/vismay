@@ -3,7 +3,7 @@ import 'server-only'
 import { parseFrontmatter } from '@vismay/content-source/frontmatter'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import type { StoryCardData } from '@vismay/ui'
-import type { Theme } from '@vismay/viz-engine'
+import { resolveAssetUrl, type Theme } from '@vismay/viz-engine'
 import { parse as parseYaml } from 'yaml'
 import { supabaseServer } from './supabaseServer'
 
@@ -25,13 +25,74 @@ type StoryRow = {
 const str = (v: unknown): string | undefined =>
   typeof v === 'string' && v.trim() ? v.trim() : undefined
 
-/** `defaults.storyBackground` aura slug from a story config, if it sets one. */
-function configAura(configYaml: string | null): string | undefined {
-  if (!configYaml) return undefined
+type ConfigSection = {
+  id?: string
+  kind?: string
+  foreground?: unknown
+  background?: unknown
+  subsections?: ConfigSection[]
+}
+type StoryConfigLite = {
+  defaults?: { storyBackground?: { type?: string; slug?: string } }
+  sections?: ConfigSection[]
+}
+
+function parseConfig(configYaml: string | null): StoryConfigLite | null {
+  if (!configYaml) return null
   try {
-    const cfg = parseYaml(configYaml) as { defaults?: { storyBackground?: { type?: string; slug?: string } } }
-    const bg = cfg?.defaults?.storyBackground
-    return bg?.type === 'aura' ? str(bg.slug) : undefined
+    // YAML is a superset of JSON, so this reads both config formats.
+    const cfg = parseYaml(configYaml) as StoryConfigLite | null
+    return cfg && typeof cfg === 'object' ? cfg : null
+  } catch {
+    return null
+  }
+}
+
+/** `defaults.storyBackground` aura slug from a story config, if it sets one. */
+function configAura(cfg: StoryConfigLite | null): string | undefined {
+  const bg = cfg?.defaults?.storyBackground
+  return bg?.type === 'aura' ? str(bg.slug) : undefined
+}
+
+/** First `type: image` layer src anywhere in a foreground/background slot. */
+function firstImageSrc(node: unknown): string | undefined {
+  if (Array.isArray(node)) {
+    for (const n of node) {
+      const src = firstImageSrc(n)
+      if (src) return src
+    }
+    return undefined
+  }
+  if (!node || typeof node !== 'object') return undefined
+  const obj = node as Record<string, unknown>
+  if (obj.type === 'image') return str(obj.src)
+  // Regions map (`{ layout, regions: { name: layers | { layers } } }`).
+  if (obj.regions && typeof obj.regions === 'object') {
+    return firstImageSrc(Object.values(obj.regions as Record<string, unknown>))
+  }
+  if ('layers' in obj) return firstImageSrc(obj.layers)
+  return undefined
+}
+
+function sectionImage(section: ConfigSection): string | undefined {
+  return (
+    firstImageSrc(section.foreground) ??
+    firstImageSrc(section.background) ??
+    section.subsections?.map(sectionImage).find(Boolean)
+  )
+}
+
+/**
+ * The story's cover image from its config: the deck `Cover` section's image
+ * (generated stories put the hero there), else the first image in the story.
+ */
+function configCover(cfg: StoryConfigLite | null): string | undefined {
+  const sections = cfg?.sections ?? []
+  const cover = sections.find((s) => s.kind === 'cover' || s.id === 'cover')
+  const src = (cover && sectionImage(cover)) ?? sections.map(sectionImage).find(Boolean)
+  if (!src) return undefined
+  try {
+    return resolveAssetUrl(src)
   } catch {
     return undefined
   }
@@ -52,6 +113,7 @@ export async function loadEditorialStories(limit = 24): Promise<EditorialGrid> {
 
   const stories = (data as StoryRow[]).map((r): StoryCardData => {
     const fm = r.markdown ? parseFrontmatter(r.markdown).data : {}
+    const cfg = parseConfig(r.config_yaml)
     const theme = fm.theme as Theme | undefined
     return {
       slug: r.slug,
@@ -60,11 +122,12 @@ export async function loadEditorialStories(limit = 24): Promise<EditorialGrid> {
       date: str(fm.date) ?? r.published_at ?? new Date().toISOString(),
       byline: str(fm.byline),
       topic: str(fm.topic),
-      // Cover image first, then the story's aura (frontmatter, the
-      // denormalized column, or the config's page-level aura background).
-      thumbnail: str(fm.thumbnail),
+      // Cover image first (frontmatter thumbnail, else the config's cover
+      // image), then the story's aura (frontmatter, the denormalized column,
+      // or the config's page-level aura background).
+      thumbnail: str(fm.thumbnail) ?? configCover(cfg),
       thumbnailTextColor: str(fm.thumbnailTextColor),
-      aura: str(fm.aura) ?? str(r.aura) ?? configAura(r.config_yaml),
+      aura: str(fm.aura) ?? str(r.aura) ?? configAura(cfg),
       theme: theme?.colors && theme?.fonts ? theme : undefined,
     }
   })
