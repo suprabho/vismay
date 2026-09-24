@@ -52,12 +52,16 @@ const SNAKE_SLUG = /^[a-z0-9]+(_[a-z0-9]+)*$/
  *   - f1:track-3d         — immersive 3D track view; same reference-only shape
  *                           (sessionKey [+ focalDriverNumber/chaseCam/title]).
  *
+ *   - f1:position-chart   — position-by-lap chart. The model emits a label and
+ *                           EMPTY lanes; the f1 graft fills the real series from
+ *                           the telemetry brief's `f1:position-chart` block, so
+ *                           positions are never generated (or spelled out as
+ *                           hundreds of tokens of points).
+ *
  * Skipped f1 modules, and why:
  *   - f1:telemetry-chart — needs precomputed series (dataPoints); authored
  *     manually or injected by the worker's telemetry brief via the f1: graft,
  *     never generated from prose.
- *   - f1:position-chart — needs lap-by-lap position series; prose sources never
- *     carry them (telemetry/Ergast ingest required).
  *   - f1:race-replay    — points at real telemetry fixture files
  *     (sessionRef/fixtureUrl); a data asset, not generatable content.
  *   - f1:race-row       — tractable but redundant list furniture: race-card
@@ -219,6 +223,33 @@ const track3d: PackLayerType = {
   }),
 }
 
+const positionChart: PackLayerType = {
+  type: 'f1:position-chart',
+  label: 'a position-by-lap chart — one line per driver across the race (pit cycles, safety cars, overtakes)',
+  regions: ['chart', 'default'],
+  promptDoc:
+    'Use for any beat about HOW THE ORDER CHANGED — a pit cycle, a safety-car/VSC swing, a lead ' +
+    'change, a comeback. ONLY when the sources carry a "Position by lap" f1:position-chart block. ' +
+    'Emit just raceLabel (e.g. "2026 Spanish Grand Prix") and lanes: [] — the app fills the real ' +
+    'per-lap positions from the brief. NEVER write positions or points yourself.',
+  schema: z.object({
+    type: z.literal('f1:position-chart'),
+    raceLabel: z.string().min(1).describe('Race label, e.g. "2026 Spanish Grand Prix".'),
+    lanes: z
+      .array(
+        z.object({
+          driverId: z.string(),
+          driverCode: z.string().nullable(),
+          driverName: z.string(),
+          color: z.string(),
+          points: z.array(z.object({ lap: z.number().int(), position: z.number().int() })),
+        }),
+      )
+      .max(0)
+      .describe('Always an empty array — filled from the telemetry brief.'),
+  }),
+}
+
 export const F1_PACK: DomainPack = {
   id: 'f1',
   name: 'VizF1',
@@ -231,20 +262,27 @@ export const F1_PACK: DomainPack = {
     'PLAN THE VIZF1 MODULES (deck stories): when the sources carry a race result or fixture, ' +
     'that beat\'s "visual" should FEATURE f1:race-card — name the type explicitly; when they ' +
     'carry a drivers\' championship table, plan f1:driver-standings. When a telemetry brief is ' +
-    'in the sources, plan a telemetry beat around f1:telemetry-clip (a 1–4 lap head-to-head) or ' +
-    'f1:track-3d (an immersive lap), citing the sessionKey/laps/drivers the brief names. These ' +
-    'REPLACE a generic chart/keyValue for fixture, standings, and telemetry beats — plan charts ' +
-    'only for trends (points progression, lap-time evolution), never as table furniture. A typical ' +
-    'F1 story features at least one of these modules when the sources support it.',
+    'in the sources, build the story on its FACT SHEET (result, safety car / VSC, pit stops) and ' +
+    'its ranked key moments: plan f1:position-chart for the beat where the order changed, and ' +
+    'f1:telemetry-clip (prefer the head-to-head clips) or f1:track-3d for moment beats, citing the ' +
+    'moment each clip shows. Use each brief clip at most once. These REPLACE a generic ' +
+    'chart/keyValue for fixture, standings, order and telemetry beats — plan charts only for ' +
+    'trends the sources quantify, never as table furniture. f1:race-card identifies the weekend; ' +
+    'it cannot list a finishing order.',
   contentGuidance:
     'VOICE: motorsport desk, not a press release — championship stakes over hype, the ' +
     'engineering reason under every gap, exact figures (laps, tenths, points) from the ' +
-    'sources. Name drivers and teams precisely; never round a lap time.',
+    'sources. Name drivers and teams precisely; never round a lap time. A pit-in/out lap, the ' +
+    'opening lap or a safety-car/VSC lap is slow by design — never call it lost pace. Never ' +
+    'write session keys, car-number-only references or other data identifiers; never narrate ' +
+    'the visual ("this clip shows…", "the clip cannot…") — state what happened.',
   visualGuidance:
     'Prefer the VizF1 modules where they fit the beat: a race weekend (preview or result) ' +
-    'wants f1:race-card; a championship-table beat wants f1:driver-standings; a telemetry beat ' +
-    'wants f1:telemetry-clip (short head-to-head) or f1:track-3d (immersive lap), referencing the ' +
-    'telemetry brief\'s sessionKey/laps/drivers. Use core layers (bigStat, chart, quote) otherwise.',
+    'wants f1:race-card; a championship-table beat wants f1:driver-standings; a beat about the ' +
+    'running order changing wants f1:position-chart; a telemetry moment wants f1:telemetry-clip ' +
+    '(short head-to-head) or f1:track-3d (immersive lap), copying the brief block for THAT moment. ' +
+    'Give telemetry modules the wide chart region. Use core layers (bigStat, chart, quote) ' +
+    'otherwise — and at most one quote-led section per story.',
   bylineExample: 'By the VizF1 desk',
-  extraLayerTypes: [raceCard, driverStandings, telemetryClip, track3d],
+  extraLayerTypes: [raceCard, driverStandings, telemetryClip, track3d, positionChart],
 }
