@@ -291,9 +291,10 @@ export default function TelemetryClipComponent({
         </div>
       </div>
 
+      {/* Map ⅔ / dashboard ⅓: the track is the story; the readouts support it. */}
       <div className="grid grid-cols-1 lg:grid-cols-3">
         {/* Track map */}
-        <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden border-border bg-bg lg:col-span-1 lg:border-r">
+        <div className="relative flex min-h-[320px] items-center justify-center overflow-hidden border-border bg-bg lg:col-span-2 lg:border-r">
           <button
             type="button"
             onClick={() => setFollowCam((v) => !v)}
@@ -356,7 +357,7 @@ export default function TelemetryClipComponent({
         </div>
 
         {/* Dashboard */}
-        <div className="flex flex-col divide-y divide-border lg:col-span-2">
+        <div className="flex flex-col divide-y divide-border lg:col-span-1">
           {data.drivers.map((driver) => {
             const track = data.tracks.find((t) => t.driverNumber === driver.driverNumber)
             const targetSec = track ? (track.t0Ms + currentTimeMs) / 1000 : currentTimeMs / 1000
@@ -410,47 +411,49 @@ export default function TelemetryClipComponent({
                 }`}
               >
                 <span className="absolute bottom-0 left-0 top-0 w-1.5" style={{ backgroundColor: color }} />
-                <div className="mb-3 flex items-center justify-between pl-3">
-                  <div className="flex items-center gap-3">
+                <div className="mb-3 flex items-start justify-between gap-2 pl-3">
+                  {/* Team under the code: side by side it collides with the lap badge in the ⅓ column. */}
+                  <div className="flex min-w-0 flex-col">
                     <span className="font-mono text-2xl font-black tracking-tighter text-text">
                       {driver.abbreviation || `#${driver.driverNumber}`}
                     </span>
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted">{driver.teamName}</span>
+                    <span className="truncate font-mono text-[10px] font-bold uppercase tracking-widest text-muted">{driver.teamName}</span>
                   </div>
-                  <span className="flex items-center gap-1 font-mono text-[10px] font-bold text-muted">
+                  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap font-mono text-[10px] font-bold text-muted">
                     <GaugeIcon size={12} /> LAP {tel?.lap ?? config.lapFrom}
                   </span>
                 </div>
-                <div className="grid grid-cols-12 items-end gap-3 pl-3">
-                  <div className="col-span-4 flex flex-col border-r border-border pr-3">
+                {/* Stacked for the narrow ⅓ column: speed + gear, then the pedals. */}
+                <div className="grid grid-cols-3 items-end gap-3 pl-3">
+                  <div className="col-span-2 flex flex-col border-r border-border pr-3">
                     <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Speed</span>
                     <span className="font-mono text-3xl font-black tabular-nums tracking-tighter text-text">
                       {Math.round(speed).toString().padStart(3, '0')}
                       <span className="ml-1 text-[9px] font-bold text-muted">km/h</span>
                     </span>
                   </div>
-                  <div className="col-span-2 flex flex-col items-center border-r border-border pr-3">
+                  <div className="flex flex-col items-center">
                     <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Gear</span>
                     <span className="font-mono text-3xl font-black tabular-nums text-text">{gear === 0 ? 'N' : gear}</span>
                   </div>
-                  <div className="col-span-6 flex items-end gap-3">
-                    <div className="flex flex-1 flex-col">
-                      <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
-                        <span className="text-muted">Brake</span>
-                        <span className="text-red-500">{Math.round(Math.max(0, brake))}%</span>
-                      </div>
-                      <div className="h-6 w-full overflow-hidden rounded-sm border border-border bg-bg">
-                        <div className="h-full bg-red-600" style={{ width: `${Math.max(0, brake)}%`, opacity: brake > 0 ? 1 : 0 }} />
-                      </div>
+                </div>
+                <div className="mt-3 flex items-end gap-3 pl-3">
+                  <div className="flex flex-1 flex-col">
+                    <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
+                      <span className="text-muted">Brake</span>
+                      <span className="text-red-500">{Math.round(Math.max(0, brake))}%</span>
                     </div>
-                    <div className="flex flex-1 flex-col">
-                      <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
-                        <span className="text-muted">Throttle</span>
-                        <span className="text-emerald-500">{Math.round(throttle)}%</span>
-                      </div>
-                      <div className="h-6 w-full overflow-hidden rounded-sm border border-border bg-bg">
-                        <div className="h-full bg-emerald-500" style={{ width: `${throttle}%` }} />
-                      </div>
+                    <div className="h-4 w-full overflow-hidden rounded-sm border border-border bg-bg">
+                      <div className="h-full bg-red-600" style={{ width: `${Math.max(0, brake)}%`, opacity: brake > 0 ? 1 : 0 }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col">
+                    <div className="mb-1 flex justify-between font-mono text-[9px] font-bold uppercase tracking-widest">
+                      <span className="text-muted">Throttle</span>
+                      <span className="text-emerald-500">{Math.round(throttle)}%</span>
+                    </div>
+                    <div className="h-4 w-full overflow-hidden rounded-sm border border-border bg-bg">
+                      <div className="h-full bg-emerald-500" style={{ width: `${throttle}%` }} />
                     </div>
                   </div>
                 </div>

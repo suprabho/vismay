@@ -95,7 +95,7 @@ export function TrackScene3D({
         <Bounds fit clip observe margin={1.15}>
           <TrackRibbon circuit={circuit} projector={projector} sectorColors={sectorColors} />
         </Bounds>
-        <CornerMarkers3D circuit={circuit} projector={projector} />
+        <CornerMarkers3D circuit={circuit} projector={projector} chase={chase && focusTrack != null} />
         <CarMarkers
           drivers={drivers}
           tracks={tracks}
@@ -103,6 +103,7 @@ export function TrackScene3D({
           focusedDriver={focusedDriver}
           projector={projector}
           currentTimeRef={currentTimeRef}
+          chase={chase && focusTrack != null}
         />
         <ChaseCamera
           chase={chase && focusTrack != null}

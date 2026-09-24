@@ -15,6 +15,11 @@ interface Props {
   interactive?: boolean
 }
 
+/** Chase framing in world metres (markers are ~6 m in chase mode). */
+const CHASE_BACK = 55
+const CHASE_UP = 34
+const CHASE_LOOK_AHEAD = 55
+
 const TMP_TARGET = new THREE.Vector3()
 const TMP_CAM = new THREE.Vector3()
 
@@ -45,18 +50,11 @@ export function ChaseCamera({ chase, track, projector, currentTimeRef, interacti
       hx /= len
       hz /= len
     }
-    // Offsets scale with the circuit (world units are metres, and the ribbon
-    // and car markers are sized from projector.radius too). The old fixed
-    // 30-back / 14-up put the camera inside the focused car's marker on a
-    // full-size circuit — the frame filled with the marker and the track edge.
-    // Trail well behind and above, and aim a little ahead of the car so the
-    // corner it's approaching is in view.
-    const r = projector.radius
-    const back = Math.max(60, r * 0.14)
-    const up = Math.max(28, r * 0.07)
-    const lookAhead = Math.max(20, r * 0.06)
-    TMP_CAM.set(wx - hx * back, wy + up, wz - hz * back)
-    TMP_TARGET.set(wx + hx * lookAhead, wy, wz + hz * lookAhead)
+    // A real chase distance for the car-scale markers CarMarkers draws in
+    // chase mode (metres): a few car-lengths back and above, aimed down the
+    // road so the approaching corner is in view.
+    TMP_CAM.set(wx - hx * CHASE_BACK, wy + CHASE_UP, wz - hz * CHASE_BACK)
+    TMP_TARGET.set(wx + hx * CHASE_LOOK_AHEAD, wy, wz + hz * CHASE_LOOK_AHEAD)
     camera.position.lerp(TMP_CAM, 0.08)
     controls.current.target.lerp(TMP_TARGET, 0.12)
     controls.current.update()
