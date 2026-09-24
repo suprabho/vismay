@@ -14,11 +14,14 @@ function darken(hex: string, amount: number): string {
 // the 12-column rendition (1336px), then 4-column (432px), then the original.
 // The untransformed master isn't a safe step: for some drivers it resolves to
 // the CDN's fallback silhouette with a 200, so onError never fires.
+// URLs look like `…/georus01.png.transform/1col/image.png` (note the dot).
+const ONE_COL = '.transform/1col/'
+
 function headshotCandidates(url: string): string[] {
-  if (!url.includes('/transform/1col/')) return [url]
+  if (!url.includes(ONE_COL)) return [url]
   return [
-    url.replace('/transform/1col/', '/transform/12col/'),
-    url.replace('/transform/1col/', '/transform/4col/'),
+    url.replace(ONE_COL, '.transform/12col/'),
+    url.replace(ONE_COL, '.transform/4col/'),
     url,
   ]
 }
