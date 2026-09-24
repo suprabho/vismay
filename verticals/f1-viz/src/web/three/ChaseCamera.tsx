@@ -45,8 +45,18 @@ export function ChaseCamera({ chase, track, projector, currentTimeRef, interacti
       hx /= len
       hz /= len
     }
-    TMP_CAM.set(wx - hx * 30, wy + 14, wz - hz * 30)
-    TMP_TARGET.set(wx, wy + 1.5, wz)
+    // Offsets scale with the circuit (world units are metres, and the ribbon
+    // and car markers are sized from projector.radius too). The old fixed
+    // 30-back / 14-up put the camera inside the focused car's marker on a
+    // full-size circuit — the frame filled with the marker and the track edge.
+    // Trail well behind and above, and aim a little ahead of the car so the
+    // corner it's approaching is in view.
+    const r = projector.radius
+    const back = Math.max(60, r * 0.14)
+    const up = Math.max(28, r * 0.07)
+    const lookAhead = Math.max(20, r * 0.06)
+    TMP_CAM.set(wx - hx * back, wy + up, wz - hz * back)
+    TMP_TARGET.set(wx + hx * lookAhead, wy, wz + hz * lookAhead)
     camera.position.lerp(TMP_CAM, 0.08)
     controls.current.target.lerp(TMP_TARGET, 0.12)
     controls.current.update()

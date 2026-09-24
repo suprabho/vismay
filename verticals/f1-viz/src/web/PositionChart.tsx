@@ -96,6 +96,15 @@ export function PositionChart({
       .map((l) => ({ ...l, points: windowPoints(l.points, win.from, win.to) }))
       .filter((l) => l.points.length > 0)
   }
+  // Teammates share a team colour: draw each team's second (and later) car
+  // dashed so the two lines — and legend entries — stay distinguishable.
+  const seenColours = new Set<string>()
+  const dashedIds = new Set<string>()
+  for (const l of lanes) {
+    const c = l.color.toLowerCase()
+    if (seenColours.has(c)) dashedIds.add(l.driverId)
+    else seenColours.add(c)
+  }
   const emphasised = new Set((highlight ?? []).map((h) => h.toUpperCase()))
   const isHighlighted = (l: DriverLane) =>
     emphasised.size === 0 ||
@@ -252,6 +261,7 @@ export function PositionChart({
               fill="none"
               stroke={lane.color}
               strokeWidth={on && emphasised.size > 0 ? 2.75 : 1.5}
+              strokeDasharray={dashedIds.has(lane.driverId) ? '6 4' : undefined}
               opacity={on ? 1 : 0.28}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -300,7 +310,11 @@ export function PositionChart({
           <div key={lane.driverId} className="flex items-center gap-1.5 text-[11px]">
             <span
               className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: lane.color }}
+              style={
+                dashedIds.has(lane.driverId)
+                  ? { border: `1.5px solid ${lane.color}` }
+                  : { backgroundColor: lane.color }
+              }
             />
             <span className="text-text">{lane.driverCode ?? lane.driverName}</span>
           </div>

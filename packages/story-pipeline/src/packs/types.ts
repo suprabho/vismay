@@ -60,6 +60,10 @@ export interface DomainPack {
    *  when set. All unset on the vizmaya pack. */
   researchGuidance?: string
   angleGuidance?: string
+  /** The "Create recap" steer for the angles stage — what a recap of this
+   *  desk's events must cover. Unset ⇒ the football match-day recap steer
+   *  (the footshorts default the button was built for). */
+  recapFocus?: string
   outlineGuidance?: string
   contentGuidance?: string
   visualGuidance?: string

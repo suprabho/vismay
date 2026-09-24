@@ -251,9 +251,10 @@ export const STORY_THEME_PRESETS: readonly StoryThemePresetSeed[] = [
         amber: '#FACC15',
         red: '#EF4444',
       },
-      // VizF1 has no brand typeface (system sans in the app); Inter in both
-      // text slots keeps headlines sans so stories read like the app.
-      fonts: { serif: 'Inter', sans: 'Inter', mono: 'JetBrains Mono' },
+      // The VizF1 app's "Pit Wall" typography (apps/vizf1/web/app/layout.tsx):
+      // Saira in both text slots keeps headlines sans so stories read like the
+      // app; Martian Mono for data. Keep in sync with migration 081.
+      fonts: { serif: 'Saira', sans: 'Saira', mono: 'Martian Mono' },
     },
   },
 ]

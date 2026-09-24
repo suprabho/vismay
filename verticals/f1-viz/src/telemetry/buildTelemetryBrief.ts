@@ -54,6 +54,7 @@ export interface BriefFocus {
 interface BriefDriver extends DriverRow {
   teamId?: string
   teamColour?: string
+  headshotUrl?: string | null
   firstName?: string
   lastName?: string
 }
@@ -318,6 +319,8 @@ function positionChartFence(
         driverCode: d?.abbreviation ?? null,
         driverName: name,
         color: d?.teamColour ?? '#8e8e99',
+        // End-of-line avatar; the chart falls back to a code monogram without it.
+        headshotUrl: d?.headshotUrl ?? null,
         points,
       }
     }),

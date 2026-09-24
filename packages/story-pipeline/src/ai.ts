@@ -12,9 +12,17 @@ import { DEFAULT_TEXT_MODEL } from './models'
 // this way; the pipeline default (`text.claude`) maps to Sonnet 5 so the
 // output matches the gateway path it replaces. Production (the gateway) is
 // untouched — this is for offline harnesses and quota-bound eval runs.
+// STORY_PIPELINE_ANTHROPIC_MODEL optionally pins the exact model id.
 
-/** Map a pipeline text alias to the Anthropic model id for the direct path. */
+/**
+ * Map a pipeline text alias to the Anthropic model id for the direct path.
+ * STORY_PIPELINE_ANTHROPIC_MODEL pins every direct call to one exact model id
+ * (e.g. `claude-opus-5-5`) regardless of the per-feature alias — for batch runs
+ * on a model the gateway aliases don't expose.
+ */
 function anthropicModelId(alias: string): string {
+  const pinned = process.env.STORY_PIPELINE_ANTHROPIC_MODEL?.trim()
+  if (pinned) return pinned
   if (alias === 'text.fable') return 'claude-fable-5'
   if (alias === 'text.opus') return 'claude-opus-4-8'
   return 'claude-sonnet-5' // text.claude (the default) and any other alias
@@ -36,8 +44,10 @@ function getAnthropic(): Anthropic {
  * That's how Claude reliably satisfies the section body's discriminated unions
  * (the same mechanism the gateway's `generateObject` uses) — and forcing the
  * tool also keeps thinking off, matching the gateway baseline so eval
- * comparisons stay apples-to-apples. The SDK's `zodOutputFormat` is zod-v4-only;
- * our schemas are zod v3, so we convert with zod-to-json-schema (inlining `$ref`s
+ * comparisons stay apples-to-apples. Models that reject forced tool use
+ * (Opus 5.5, Fable 5.1, Mythos 5.1) get `tool_choice: auto` plus an explicit
+ * instruction instead, with thinking on (it can't be disabled there).
+ * The SDK's `zodOutputFormat` is zod-v4-only; our schemas are zod v3, so we convert with zod-to-json-schema (inlining `$ref`s
  * so the tool gets a top-level object schema) and re-validate the reply with zod.
  */
 async function generateStructuredDirect<S extends z.ZodType>(opts: {
@@ -50,23 +60,70 @@ async function generateStructuredDirect<S extends z.ZodType>(opts: {
   const input_schema = zodToJsonSchema(opts.schema, {
     $refStrategy: 'none',
   }) as Anthropic.Tool.InputSchema
-  const message = await getAnthropic().messages.create({
-    model,
-    max_tokens: 16000,
-    system: opts.system,
-    messages: [{ role: 'user', content: opts.prompt }],
-    tools: [{ name: 'emit', description: 'Return the structured result.', input_schema }],
-    tool_choice: { type: 'tool', name: 'emit' },
-  })
-  const block = message.content.find((b) => b.type === 'tool_use')
-  if (!block || block.type !== 'tool_use') {
-    throw new Error(
-      `anthropic-direct (${model}): no tool_use in reply — stop_reason=${message.stop_reason}` +
-        (message.stop_reason === 'max_tokens' ? ' (raise max_tokens)' : ''),
-    )
+  const forced = !NO_FORCED_TOOL_MODELS.has(model)
+  // Models that reject forced tool use get `auto` + an explicit instruction,
+  // and a retry when a reply comes back without the call.
+  const attempts = forced ? 1 : 2
+  let lastStop: string | null = null
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    // Streamed + finalMessage(): the SDK refuses long non-streaming requests at
+    // this max_tokens, and the result is the same Message either way.
+    const message = await getAnthropic().messages.stream({
+      model,
+      // Headroom for the adaptive thinking these models always run, which
+      // shares the output budget with the tool call.
+      max_tokens: forced ? 16000 : 32000,
+      system: forced ? opts.system : `${opts.system}\n\n${EMIT_INSTRUCTION}`,
+      messages: [{ role: 'user', content: opts.prompt }],
+      tools: [{ name: 'emit', description: 'Return the structured result.', input_schema }],
+      tool_choice: forced ? { type: 'tool', name: 'emit' } : { type: 'auto' },
+    }, { timeout: DIRECT_TIMEOUT_MS }).finalMessage()
+    const block = message.content.find((b) => b.type === 'tool_use')
+    if (block && block.type === 'tool_use') {
+      const first = opts.schema.safeParse(block.input)
+      if (first.success) return first.data
+      // Without a forced tool the model occasionally emits a nested object as
+      // a JSON *string*; decode those and validate once more before failing.
+      return opts.schema.parse(decodeStringifiedJson(block.input))
+    }
+    lastStop = message.stop_reason
+    if (message.stop_reason === 'refusal' || message.stop_reason === 'max_tokens') break
   }
-  return opts.schema.parse(block.input)
+  throw new Error(
+    `anthropic-direct (${model}): no tool_use in reply — stop_reason=${lastStop}` +
+      (lastStop === 'max_tokens' ? ' (raise max_tokens)' : ''),
+  )
 }
+
+/** Per-request ceiling: a dropped stream otherwise hangs the caller forever. */
+const DIRECT_TIMEOUT_MS = 8 * 60 * 1000
+
+/** Replace string values that are themselves a JSON object/array with the parsed value. */
+function decodeStringifiedJson(value: unknown): unknown {
+  if (typeof value === 'string') {
+    const t = value.trim()
+    if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+      try {
+        return decodeStringifiedJson(JSON.parse(t))
+      } catch {
+        return value
+      }
+    }
+    return value
+  }
+  if (Array.isArray(value)) return value.map(decodeStringifiedJson)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decodeStringifiedJson(v)]))
+  }
+  return value
+}
+
+/** Models that 400 on a forced `tool_choice` (`any` / `tool`). */
+const NO_FORCED_TOOL_MODELS = new Set(['claude-opus-5-5', 'claude-fable-5-1', 'claude-mythos-5-1'])
+
+const EMIT_INSTRUCTION =
+  'Return your answer by calling the `emit` tool exactly once, with the complete result as its ' +
+  'input. Do not answer in plain text.'
 
 /**
  * Robust structured generation.
