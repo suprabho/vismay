@@ -40,23 +40,31 @@ export function useCarModel(url?: string): THREE.Group | null {
   return loaded && loaded.url === url ? loaded.scene : null
 }
 
-export function cloneCarModel(source: THREE.Group) {
+/**
+ * Default replay car: an RB22 with the livery stripped (textures dropped, all
+ * parts merged into `body` + `tire` materials, decimated to ~73k tris, 2 MB).
+ * Public, CORS-open Supabase Storage object, so every surface (vizf1, catalog,
+ * render service, admin) loads the same file.
+ */
+export const DEFAULT_CAR_MODEL_URL =
+  'https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/vizf1/models/rb22-solid.glb'
+
+const TIRE_COLOR = '#111111'
+
+/**
+ * Per-car instance: shared geometry, fresh materials — the body painted in the
+ * constructor colour, tyres black. Any source material whose name mentions
+ * "tire" is a tyre; everything else is bodywork, so a textured source model
+ * renders livery-free too.
+ */
+export function cloneCarModel(source: THREE.Group, color: string) {
   const scene = source.clone(true)
-  const materials = new Map<THREE.Material, THREE.Material>()
-  const cloneMaterial = (original: THREE.Material) => {
-    let material = materials.get(original)
-    if (!material) {
-      material = original.clone()
-      material.transparent = true
-      materials.set(original, material)
-    }
-    return material
-  }
+  const body = new THREE.MeshStandardMaterial({ color, metalness: 0.2, roughness: 0.45, transparent: true })
+  const tire = new THREE.MeshStandardMaterial({ color: TIRE_COLOR, metalness: 0, roughness: 0.9, transparent: true })
+  const pick = (original: THREE.Material) => (/tire/i.test(original.name) ? tire : body)
   scene.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return
-    object.material = Array.isArray(object.material)
-      ? object.material.map(cloneMaterial)
-      : cloneMaterial(object.material)
+    object.material = Array.isArray(object.material) ? object.material.map(pick) : pick(object.material)
   })
-  return { scene, materials: [...materials.values()] }
+  return { scene, materials: [body, tire] }
 }

@@ -80,7 +80,8 @@ interface MarkerProps {
 const CHASE_CAR_RADIUS = 3
 
 function CarMarker({ model, useModel, driver, track, visible, focused, projector, currentTimeRef, chase }: MarkerProps) {
-  const car = useMemo(() => model ? cloneCarModel(model) : null, [model])
+  const color = driver.teamColour || '#9CA3AF'
+  const car = useMemo(() => (model ? cloneCarModel(model, color) : null), [model, color])
   useEffect(() => () => car?.materials.forEach((m) => m.dispose()), [car])
   const headingRef = useRef<THREE.Group>(null)
   const groupRef = useRef<THREE.Group>(null)
@@ -95,7 +96,6 @@ function CarMarker({ model, useModel, driver, track, visible, focused, projector
   const carRadius = chase ? CHASE_CAR_RADIUS : Math.max(7, projector.radius * 0.013)
   const showLabel = !chase || focused
   const carLift = useModel ? 0.15 : carRadius
-  const color = driver.teamColour || '#9CA3AF'
   const texture = useMemo(
     () => makeLabelTexture(driver.abbreviation || String(driver.driverNumber), color),
     [driver.abbreviation, driver.driverNumber, color],

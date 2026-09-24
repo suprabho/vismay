@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import type { VizRenderProps } from '@vismay/viz-engine'
+import { resolveAssetUrl, type VizRenderProps } from '@vismay/viz-engine'
 import { TrackScene3D } from '../../web/three/TrackScene3D'
+import { DEFAULT_CAR_MODEL_URL } from '../../web/three/carModel'
 import { createFixtureDataSource, createInlineDataSource } from '../../web/replay/dataSource'
 import { useReplayData } from '../../web/replay/useReplayData'
 import { findFrameIndex } from '../../web/replay/trackProjection'
@@ -96,7 +97,7 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
         style={{ pointerEvents: interactive ? 'auto' : 'none' }}
       >
         <TrackScene3D
-          carModelUrl={config.carModelUrl}
+          carModelUrl={config.carModelUrl ? resolveAssetUrl(config.carModelUrl) : DEFAULT_CAR_MODEL_URL}
           circuit={race.circuit}
           drivers={race.session?.drivers ?? []}
           tracks={race.tracks}

@@ -31,7 +31,10 @@ export interface Track3DConfig {
   chaseCam?: boolean
   /** Allow user orbit (OrbitControls). Off by default so scroll passes through. */
   interactive?: boolean
-  /** Optional GLB car asset, served by the embedding app. */
+  /**
+   * GLB car asset (URL or `assets://` ref). Defaults to the livery-free RB22 in
+   * Supabase Storage; each car is painted in its constructor colour.
+   */
   carModelUrl?: string
   autoPlay?: boolean
 }
