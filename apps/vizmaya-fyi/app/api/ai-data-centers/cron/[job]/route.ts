@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
  * so the route can never be fired anonymously.
  *
  * Jobs (the last path segment):
- *   morning       — dc-morning-edition.yml (scrape → papers → compose), 08:15 UTC
+ *   morning       — dc-morning-edition.yml (scrape → papers → compose), 06:15 UTC
  *   publish       — publish-dc-edition.yml, 09:00 UTC
  *   publish-late  — the same publish workflow, 09:30 UTC (the post-hold catch-up)
  */
@@ -30,7 +30,7 @@ const JOBS: Record<string, WorkerDef> = {
     workflowFile: 'dc-morning-edition.yml',
     label: 'AI Data Centers morning edition',
     description: 'scrape → papers → compose for the window that just closed',
-    schedule: '08:15 UTC',
+    schedule: '06:15 UTC',
   },
   publish: {
     id: 'publish-dc-edition',

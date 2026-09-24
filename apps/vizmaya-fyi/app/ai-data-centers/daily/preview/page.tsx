@@ -26,7 +26,7 @@ export default async function DraftPreviewPage() {
         <div className="empty">
           <span className="eyebrow">AI Data Centers · Draft preview</span>
           <h1>No draft edition right now.</h1>
-          <p>The composer writes the next draft at 08:15 UTC; the previous one is already published.</p>
+          <p>The composer writes the next draft at 06:15 UTC; the previous one is already published.</p>
           <Link className="cta" href="/ai-data-centers/daily">
             Open the latest edition →
           </Link>

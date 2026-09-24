@@ -351,7 +351,7 @@ const ADAPTERS: EpicPipelineAdapter[] = [
       epicSlug: DC_SLUG,
       epicName: 'AI Data Centers',
       appSlug: 'vizmaya-fyi',
-      flow: 'Google News scrape 06:45 → Haiku gate + snapshot tags → papers 07:00 → edition composer 08:15 → publish 09:00 · stock feed 22:45 UTC',
+      flow: 'Vercel Cron 06:15 → Google News scrape → Haiku gate + snapshot tags → papers → edition composer → publish 09:00 · stock feed 22:45 UTC',
       tagLabel: 'tickers',
       hasRelevanceGate: true,
       hasRecaps: true,

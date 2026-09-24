@@ -257,7 +257,7 @@ export default function EditionsClient() {
         <div>
           <h1 className="text-lg font-semibold">Daily editions</h1>
           <p className="text-sm text-neutral-400 mt-0.5">
-            The AI Data Centers daily snapshot. The composer writes a draft at 08:15 UTC; it goes public at 09:00 UTC whether or not
+            The AI Data Centers daily snapshot. The composer writes a draft at 06:15 UTC; it goes public at 09:00 UTC whether or not
             anyone has looked — review is a window, not a gate. Published editions are immutable.
           </p>
         </div>
@@ -280,7 +280,7 @@ export default function EditionsClient() {
 
       {data && !draft && (
         <section className="px-4 py-6 border-b border-white/5">
-          <p className="text-sm text-neutral-300">No draft right now — the last edition is published and the next composer run is at 08:15 UTC.</p>
+          <p className="text-sm text-neutral-300">No draft right now — the last edition is published and the next composer run is at 06:15 UTC.</p>
           <div className="mt-3 flex gap-2">
             <button type="button" className={btn} disabled={!data.recomposeConfigured || busy !== null} onClick={() => recompose(false)}>
               compose now

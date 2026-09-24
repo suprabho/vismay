@@ -1,7 +1,7 @@
 name: Compose AI Data Centers daily edition
 
-# Replaces the markdown recap worker (generate-dc-news-recap.yml). At 08:15
-# UTC the composer freezes the window (08:15 → 08:15 UTC) and writes ONE
+# Replaces the markdown recap worker (generate-dc-news-recap.yml). At 06:15
+# UTC the composer freezes the window (06:15 → 06:15 UTC) and writes ONE
 # structured draft row into dc_editions: Claude Opus (through the Vercel AI
 # Gateway) writes the prose (headline, deck, six key notes, per-layer briefs,
 # research headline) and plans one chart per section from the stated

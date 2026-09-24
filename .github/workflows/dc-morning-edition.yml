@@ -8,13 +8,13 @@ name: AI Data Centers morning edition
 # chain cannot drift: compose runs when the feeds are in, however late the
 # scheduler starts the chain.
 #
-# Started at the window close (08:15 UTC) so the composer sees the whole
-# 08:15 → 08:15 window — by Vercel Cron, not by a `schedule:` here: GitHub's
+# Started at the window close (06:15 UTC) so the composer sees the whole
+# 06:15 → 06:15 window — by Vercel Cron, not by a `schedule:` here: GitHub's
 # scheduler proved best-effort (the first two days it started this chain
 # hours late or not at all), so apps/vizmaya-fyi/vercel.json fires
 # /api/ai-data-centers/cron/morning to the minute, which dispatches this
 # file. Scrape takes up to 25 min and papers a few, so the draft lands
-# ~08:45–09:00; publish-dc-edition.yml freezes it at 09:00 or 09:30 (also
+# ~06:45–07:00, leaving editors ~2h to review; publish-dc-edition.yml freezes it at 09:00 or 09:30 (also
 # Vercel-triggered). Each job is the existing workflow, reused
 # (workflow_call), so the admin's direct dispatches keep working unchanged.
 #

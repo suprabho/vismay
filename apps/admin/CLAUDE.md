@@ -89,7 +89,7 @@ changes.
 
 Companion to the Pipeline tab: the merged snapshot timeline of every epic's
 recap-worker markdown briefs, tagged by epic (today just AI Data Centers —
-`dc_news_recaps`, one row per run: the 08:15 UTC cron plus manual dispatches).
+`dc_news_recaps`, one row per run: the 06:15 UTC cron plus manual dispatches).
 Each row shows the epic badge, the LLM headline (or a `deterministic` badge
 when Gemini was unavailable), window/story-count/model meta, topic + tag
 badges, and the raw markdown behind a `<details>` toggle (newest one open by
@@ -107,7 +107,7 @@ default). A staleness warning appears when the newest recap is older than 36h.
 ## Editions tab (/vizmaya/editions)
 
 The review desk for the AI Data Centers **daily snapshot** — the frozen
-edition composed at 08:15 UTC and published at 09:00 UTC (PRD:
+edition composed at 06:15 UTC and published at 09:00 UTC (PRD:
 [docs/ai-data-centers-daily-snapshot-prd.md](../../docs/ai-data-centers-daily-snapshot-prd.md)).
 Review is a window, not a gate: the draft goes public whether or not anyone
 looked. Published editions are immutable (DB trigger); corrections run in the

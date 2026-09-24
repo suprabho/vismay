@@ -101,8 +101,12 @@ export const STOCK_CATEGORY_TO_LAYER: Record<string, DcLayerKey> = {
   'semi-equipment': 'equip',
 }
 
-/** Edition windows run 08:15 → 08:15 UTC; the draft goes public at 09:00 UTC. */
-export const EDITION_FREEZE_UTC = { hour: 8, minute: 15 } as const
+/**
+ * Edition windows run 06:15 → 06:15 UTC; the draft goes public at 09:00 UTC.
+ * The window closed at 08:15 until 2026-09-24 — past rows keep their stored
+ * window_start / window_end, so read those (not this) when labelling an edition.
+ */
+export const EDITION_FREEZE_UTC = { hour: 6, minute: 15 } as const
 export const EDITION_PUBLISH_UTC = { hour: 9, minute: 0 } as const
 /** Hold extends the review window by this much, once. */
 export const EDITION_HOLD_MINUTES = 30
@@ -616,7 +620,7 @@ export function emptyGeo(): EditionGeo {
   return { places: [], regions: [] }
 }
 
-/** Edition window for a UTC date: 08:15 the day before → 08:15 on the date. */
+/** Edition window for a UTC date: 06:15 the day before → 06:15 on the date. */
 export function editionWindow(editionDate: string): { start: Date; end: Date } {
   const end = new Date(`${editionDate}T00:00:00Z`)
   end.setUTCHours(EDITION_FREEZE_UTC.hour, EDITION_FREEZE_UTC.minute, 0, 0)
@@ -632,7 +636,7 @@ export function editionPublishAt(editionDate: string): Date {
 }
 
 /**
- * The edition date whose window contains `at`: after 08:15 UTC it is today's
+ * The edition date whose window contains `at`: after 06:15 UTC it is today's
  * date; before it, it is still the previous day's window.
  */
 export function editionDateFor(at: Date = new Date()): string {
@@ -658,6 +662,13 @@ export function formatEditionDate(date: string, opts: { weekday?: boolean; year?
   parts.push(`${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`)
   if (opts.year !== false) parts.push(String(d.getUTCFullYear()))
   return parts.join(' ')
+}
+
+/** '06:15' — an ISO instant's UTC clock time, hand-formatted like the above. */
+export function formatUtcTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
 /** 'Mon 22' — the per-edition bar labels. */

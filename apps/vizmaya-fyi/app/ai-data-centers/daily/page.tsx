@@ -35,7 +35,7 @@ export default async function DailyLatestPage() {
           <span className="eyebrow">AI Data Centers · Daily snapshot</span>
           <h1>The first edition is on its way.</h1>
           <p>
-            One frozen edition a day, composed at 08:15 UTC from the previous 24 hours of AI, energy and sustainability news and published at
+            One frozen edition a day, composed at 06:15 UTC from the previous 24 hours of AI, energy and sustainability news and published at
             09:00 UTC. Nothing has been published yet — the live explorer keeps moving in the meantime.
           </p>
           <Link className="cta" href="/ai-data-centers">

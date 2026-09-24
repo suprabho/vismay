@@ -55,7 +55,7 @@ export function fitMono(text: string, px: number, charPx = 6.4): string {
   return `${text.slice(0, max - 1).trimEnd()}…`
 }
 
-/** '21 Sep 08:15 → 22 Sep 08:15 UTC' — hand-formatted so static output never depends on ICU data. */
+/** '21 Sep 06:15 → 22 Sep 06:15 UTC' — hand-formatted so static output never depends on ICU data. */
 export function windowLabel(windowStart: string, windowEnd: string): string {
   const f = (iso: string) => {
     const d = new Date(iso)

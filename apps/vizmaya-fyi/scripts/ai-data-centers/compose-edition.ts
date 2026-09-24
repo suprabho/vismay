@@ -38,7 +38,7 @@
  *               pnpm ai-data-centers:compose-edition -- --clear-edits
  *               pnpm ai-data-centers:compose-edition -- --charts-only
  *               pnpm ai-data-centers:compose-edition -- --no-charts
- * Run in CI:    .github/workflows/compose-dc-edition.yml (08:15 UTC daily)
+ * Run in CI:    .github/workflows/dc-morning-edition.yml (06:15 UTC daily, via Vercel Cron)
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — read dc_news / dc_papers /

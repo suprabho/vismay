@@ -15,7 +15,7 @@ export const COMPOSE_WORKER: WorkerDef = {
   workflowFile: 'compose-dc-edition.yml',
   label: 'Edition composer',
   description: 'Re-runs the daily snapshot composer on the same window; editor edits survive unless cleared.',
-  schedule: 'Daily 08:15 UTC',
+  schedule: 'Daily 06:15 UTC',
 }
 
 export const PUBLISH_WORKER: WorkerDef = {
