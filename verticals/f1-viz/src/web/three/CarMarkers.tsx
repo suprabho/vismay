@@ -14,9 +14,11 @@ interface MarkersProps {
   focusedDriver: number | null
   projector: WorldProjector
   currentTimeRef: React.RefObject<number>
+  /** Chase view: car-scale markers, only the focused car labelled. */
+  chase?: boolean
 }
 
-export function CarMarkers({ drivers, tracks, visibleDrivers, focusedDriver, projector, currentTimeRef }: MarkersProps) {
+export function CarMarkers({ drivers, tracks, visibleDrivers, focusedDriver, projector, currentTimeRef, chase = false }: MarkersProps) {
   return (
     <>
       {drivers.map((d) => (
@@ -28,6 +30,7 @@ export function CarMarkers({ drivers, tracks, visibleDrivers, focusedDriver, pro
           focused={d.driverNumber === focusedDriver}
           projector={projector}
           currentTimeRef={currentTimeRef}
+          chase={chase}
         />
       ))}
     </>
@@ -63,15 +66,24 @@ interface MarkerProps {
   focused: boolean
   projector: WorldProjector
   currentTimeRef: React.RefObject<number>
+  chase: boolean
 }
 
-function CarMarker({ driver, track, visible, focused, projector, currentTimeRef }: MarkerProps) {
+/** Marker radius in chase mode — roughly an F1 car's footprint. */
+const CHASE_CAR_RADIUS = 3
+
+function CarMarker({ driver, track, visible, focused, projector, currentTimeRef, chase }: MarkerProps) {
   const groupRef = useRef<THREE.Group>(null)
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const ringRef = useRef<THREE.Mesh>(null)
   const emaY = useRef<number | null>(null)
 
-  const carRadius = Math.max(7, projector.radius * 0.013)
+  // Overview markers are sized for the whole circuit (~17 m spheres at
+  // Melbourne scale). A chase camera sits a few car-lengths back, where those
+  // balloon into a wall of overlapping spheres and labels — so chase mode
+  // uses car-scale markers (~6 m) and labels only the focused car.
+  const carRadius = chase ? CHASE_CAR_RADIUS : Math.max(7, projector.radius * 0.013)
+  const showLabel = !chase || focused
   const carLift = carRadius
   const color = driver.teamColour || '#9CA3AF'
   const texture = useMemo(
@@ -103,7 +115,7 @@ function CarMarker({ driver, track, visible, focused, projector, currentTimeRef 
       : 0
     emaY.current = emaY.current == null ? targetY : emaY.current + EMA_ALPHA * (targetY - emaY.current)
     g.position.set(wx, emaY.current + carLift, wz)
-    g.scale.setScalar(focused ? 1.6 : 1)
+    g.scale.setScalar(focused ? (chase ? 1.3 : 1.6) : 1)
 
     const inPit = frame.status === 2
     const off = frame.status === 1
@@ -124,9 +136,11 @@ function CarMarker({ driver, track, visible, focused, projector, currentTimeRef 
         <torusGeometry args={[carRadius * 1.7, carRadius * 0.22, 8, 32]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      <sprite position={[0, carRadius * 2.8, 0]} scale={[carRadius * 5, carRadius * 2.5, 1]}>
-        <spriteMaterial map={texture} transparent depthTest={false} depthWrite={false} />
-      </sprite>
+      {showLabel && (
+        <sprite position={[0, carRadius * 2.8, 0]} scale={[carRadius * 5, carRadius * 2.5, 1]}>
+          <spriteMaterial map={texture} transparent depthTest={false} depthWrite={false} />
+        </sprite>
+      )}
     </group>
   )
 }
