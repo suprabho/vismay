@@ -20,6 +20,12 @@ export interface StoryCardProps
   linkComponent?: ElementType
   className?: string
   style?: CSSProperties
+  /**
+   * Background priority. `aura` (default, the vizmaya.fyi home look): live aura,
+   * else the cover thumbnail. `cover`: the story's cover thumbnail wins; without
+   * one the aura's capture still paints first with the live aura over it.
+   */
+  background?: 'aura' | 'cover'
   /** Extra content layered over the card — e.g. admin quick-action overlay. */
   children?: ReactNode
 }
@@ -37,12 +43,14 @@ export function StoryCard({
   linkComponent,
   className = '',
   style,
+  background = 'aura',
   children,
   ...rest
 }: StoryCardProps) {
   const ct = s.theme ? storyCardTheme(s.theme) : DEFAULT_CARD_THEME
-  const hasAura = Boolean(s.aura)
-  const hasThumb = !hasAura && Boolean(s.thumbnail)
+  const coverFirst = background === 'cover'
+  const hasThumb = Boolean(s.thumbnail) && (coverFirst || !s.aura)
+  const hasAura = Boolean(s.aura) && !hasThumb
   // A cover thumbnail carries its own look; an optional per-story text colour
   // keeps the card's title/READ legible over it without recolouring the body.
   const textColor = hasThumb ? s.thumbnailTextColor : undefined
@@ -61,7 +69,12 @@ export function StoryCard({
       {...rootProps}
       {...rest}
     >
-      {hasAura && s.aura && <AuraBackground slug={s.aura} />}
+      {hasAura && s.aura && (
+        <AuraBackground
+          slug={s.aura}
+          poster={coverFirst ? (big ? { width: 960, height: 720 } : { width: 640, height: 640 }) : undefined}
+        />
+      )}
       {hasThumb && s.thumbnail && (
         <div className="bn-thumb" aria-hidden>
           {/* eslint-disable-next-line @next/next/no-img-element */}
