@@ -25,6 +25,21 @@ export interface HomeEpic {
   theme?: Record<string, unknown>
 }
 
+/** One Doom v Boom edition as the home section shows it (shaped on the server). */
+export interface HomeDailyEdition {
+  href: string
+  /** 'Thu 24 Sep' */
+  date: string
+  number: number | null
+  headline: string
+  /** Boom Score 0–100; null when the window had no scored story. */
+  score: number | null
+  /** The signed −1…+1 reading, e.g. '+0.42'. */
+  signed: string
+  /** 'Boom-leaning', 'Balanced', … */
+  word: string
+  tone: 'boom' | 'doom' | 'mid'
+}
 
 /* The studio voice — static brand copy shown in the sticky rail. */
 const STUDIO = {
@@ -100,6 +115,30 @@ const css = `
 .vz .region-sub{font-family:var(--e);font-style:italic;font-size:19px;color:var(--muted)}
 .vz .epics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:var(--gap)}
 .vz .epics-row .bcard{min-height:212px}
+
+/* ── DOOM V BOOM (latest daily editions, above the epics) ── */
+.vz .daily-section{max-width:1240px;margin:0 auto;padding:20px clamp(20px,5vw,56px) 24px;border-top:1px solid var(--line)}
+.vz .daily-lede{font-family:var(--b);font-size:13.5px;line-height:1.7;color:var(--muted);max-width:62ch;margin:-10px 0 24px}
+.vz .daily-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+.vz .dcard{display:flex;flex-direction:column;gap:14px;padding:22px 22px 20px;border:1px solid var(--line2);border-radius:8px;background:rgba(255,255,255,.45);min-height:248px}
+.vz .dcard:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 18px 40px -24px rgba(12,12,16,.35)}
+.vz .dcard-top{display:flex;justify-content:space-between;font-family:var(--m);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted)}
+.vz .dcard-score{display:flex;align-items:flex-end;gap:10px}
+.vz .dcard-num{font-family:var(--d);font-weight:600;font-size:54px;line-height:.9;font-variant-numeric:tabular-nums}
+.vz .dcard-of{display:grid;gap:3px;padding-bottom:4px;font-family:var(--m);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.vz .dcard-word{display:flex;align-items:center;gap:6px;font-family:var(--b);font-size:12.5px;letter-spacing:0;text-transform:none;color:var(--ink)}
+.vz .dcard-dot{width:7px;height:7px;border-radius:999px;background:var(--mood)}
+.vz .dcard-track{position:relative;height:5px;border-radius:999px;background:var(--line2)}
+.vz .dcard-track::before{content:'';position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:rgba(12,12,16,.3)}
+.vz .dcard-mark{position:absolute;top:50%;width:11px;height:11px;border-radius:999px;background:var(--mood);box-shadow:0 0 0 2px var(--cream);transform:translate(-50%,-50%)}
+.vz .dcard-h{font-family:var(--d);font-weight:500;font-size:19px;line-height:1.22;letter-spacing:-.01em;text-wrap:pretty}
+.vz .dcard-a{margin-top:auto;font-family:var(--m);font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.vz .dcard[data-tone="boom"]{--mood:#16a34a}
+.vz .dcard[data-tone="doom"]{--mood:#dc2626}
+.vz .dcard[data-tone="mid"]{--mood:#8a857d}
+.vz .daily-all{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink)}
+.vz .daily-all:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:900px){.vz .daily-row{grid-template-columns:1fr}.vz .dcard{min-height:0}}
 
 /* ── STORY EMBED — sticky scroll-sync ────────────── */
 .vz .story-embed{border-top:1px solid var(--line)}
@@ -192,6 +231,48 @@ function PenroseMark({ size = 20, dark = false }: { size?: number; dark?: boolea
   )
 }
 
+/* The last three Doom v Boom editions: each morning's Boom Score and headline. */
+function DailySection({ editions }: { editions: HomeDailyEdition[] }) {
+  if (!editions.length) return null
+  return (
+    <section id="daily" className="daily-section">
+      <div className="region-head">
+        <div className="kick teal">AI Daily · Doom v Boom</div>
+        <Link className="daily-all" href="/ai-daily/doom-v-boom">Every edition →</Link>
+      </div>
+      <p className="daily-lede">
+        Each morning we read the previous day of AI data-centre, energy and sustainability news and score it:
+        a Boom Score out of 100, where 50 is balanced.
+      </p>
+      <div className="daily-row">
+        {editions.map((e, i) => (
+          <Link key={e.href} className="dcard" href={e.href} data-tone={e.tone}>
+            <div className="dcard-top">
+              <span>{i === 0 ? `Latest · ${e.date}` : e.date}</span>
+              {e.number != null && <span>№ {e.number}</span>}
+            </div>
+            <div className="dcard-score">
+              <span className="dcard-num">{e.score ?? '—'}</span>
+              <span className="dcard-of">
+                <span>Boom Score{e.score != null ? ' / 100' : ''}</span>
+                <span className="dcard-word">
+                  <span className="dcard-dot" aria-hidden />
+                  {e.word} · {e.signed}
+                </span>
+              </span>
+            </div>
+            <div className="dcard-track" aria-hidden>
+              {e.score != null && <span className="dcard-mark" style={{ left: `${e.score}%` }} />}
+            </div>
+            <h3 className="dcard-h">{e.headline}</h3>
+            <span className="dcard-a">Read the edition →</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /* The running epics, as a themed row just below the header. */
 function EpicsSection({ epics }: { epics: HomeEpic[] }) {
   if (!epics.length) return null
@@ -229,10 +310,12 @@ function EpicsSection({ epics }: { epics: HomeEpic[] }) {
 export default function HomeClient({
   stories,
   epics = [],
+  dailyEditions = [],
   fontUrls = [],
 }: {
   stories: HomeStory[]
   epics?: HomeEpic[]
+  dailyEditions?: HomeDailyEdition[]
   fontUrls?: string[]
 }) {
   const [filter, setFilter] = useState('All')
@@ -419,6 +502,7 @@ export default function HomeClient({
         </button>
         <div className="vznav-r">
           <a className="vznav-link" href="#work">Work</a>
+          <Link className="vznav-link" href="/ai-daily">Daily</Link>
           <a className="vznav-link" href="#epics">Epics</a>
           <Link className="vznav-link" href="/stories">Archive</Link>
           <a className="vznav-link" href="#contact">Contact</a>
@@ -472,6 +556,9 @@ export default function HomeClient({
           </div>
         </div>
       </section>
+
+      {/* DOOM V BOOM — the last three daily editions, above the epics */}
+      <DailySection editions={dailyEditions} />
 
       {/* EPICS — running collections, as a row below the header */}
       <EpicsSection epics={epics} />

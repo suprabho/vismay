@@ -6,6 +6,7 @@
 import type { CSSProperties } from 'react'
 import { timeHm } from '@vismay/content-source/dcEditionAssembly'
 import { formatEditionDate, type DcEditionStory, type EditionGeo } from '@vismay/content-source/dcEditionTypes'
+import { boomShare } from './particleRing'
 
 /** Custom DOM event the canvas map and other client bits use to open the panel. */
 export const PANEL_EVENT = 'dcd-panel'
@@ -22,6 +23,14 @@ export const CHAPTERS: { id: string; n: string; label: string }[] = [
 
 export function editionHref(date: string): string {
   return `/ai-daily/doom-v-boom/${date}`
+}
+
+/** The series landing: archive, trend and the link to the latest edition. */
+export const SERIES_HREF = '/ai-daily/doom-v-boom'
+
+/** The Doom v Boom reading (−1…+1) as the 0–100 Boom Score the hero ring shows. */
+export function boomScore(score: number | null): number | null {
+  return score == null ? null : Math.round(boomShare(score) * 100)
 }
 
 export const hm = timeHm

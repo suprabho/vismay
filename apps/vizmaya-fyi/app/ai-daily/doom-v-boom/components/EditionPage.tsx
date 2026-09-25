@@ -18,7 +18,7 @@ import EnergyChapter from './EnergyChapter'
 import Sources from './Sources'
 import PreviousEditions from './PreviousEditions'
 import StoryPanel, { type PanelData } from './StoryPanel'
-import { editionHref, windowLabel } from './editionUtils'
+import { SERIES_HREF, editionHref, windowLabel } from './editionUtils'
 
 interface Props {
   edition: DcEditionWithContent
@@ -210,6 +210,9 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
         <section className="chapter wrap" id="previous">
           <div className="chapter-head">
             <h2>Previous editions</h2>
+            <p className="lede">
+              <Link href={SERIES_HREF}>Every edition, with its Doom v Boom reading →</Link>
+            </p>
           </div>
           <PreviousEditions current={e} previous={previous} />
         </section>

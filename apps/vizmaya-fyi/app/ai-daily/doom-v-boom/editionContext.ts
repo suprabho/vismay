@@ -23,16 +23,16 @@ export async function loadEditionContext(date: string): Promise<EditionContext> 
   return { neighbours, previous, themeOverrides: aiDataCentersThemeOverrides(epic?.theme) }
 }
 
-/** Page metadata for an edition; `alias` marks the /daily route that always points at the latest. */
-export function editionMetadata(e: DcEditionWithContent, opts: { alias?: boolean; noindex?: boolean } = {}): Metadata {
-  const path = opts.alias ? '/ai-daily/doom-v-boom' : `/ai-daily/doom-v-boom/${e.date}`
+/** Page metadata for an edition. */
+export function editionMetadata(e: DcEditionWithContent, opts: { noindex?: boolean } = {}): Metadata {
+  const path = `/ai-daily/doom-v-boom/${e.date}`
   const title = `${e.headline} — AI Data Centers Daily, ${formatEditionDate(e.date, { weekday: false })}`
   const description = e.sub.replace(/\*/g, '')
   const reading = e.moodScore == null ? '' : ` · Doom v Boom ${moodWord(e.moodScore)} ${formatSigned(e.moodScore)}`
   return {
     title,
     description,
-    alternates: { canonical: `/ai-daily/doom-v-boom/${e.date}` },
+    alternates: { canonical: path },
     robots: opts.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
       type: 'article',

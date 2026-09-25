@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 import { getAllStories } from '@vismay/content-source/content'
 import { listEpicsForHome } from '@vismay/content-source/epics'
+import { listEditions } from '@vismay/content-source/dcEditions'
+import { formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
-import HomeClient, { type HomeStory, type HomeEpic } from '@/components/HomeClient'
+import HomeClient, { type HomeStory, type HomeEpic, type HomeDailyEdition } from '@/components/HomeClient'
+import { boomScore, editionHref } from './ai-daily/doom-v-boom/components/editionUtils'
 
 type FontSet = { serif?: string; sans?: string; mono?: string }
 
@@ -16,9 +19,11 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [stories, epics] = await Promise.all([
+  const [stories, epics, editions] = await Promise.all([
     getAllStories('vizmaya-fyi'),
     listEpicsForHome('vizmaya-fyi'),
+    // Best-effort: the home page must not 500 if the editions table is unavailable.
+    listEditions(3).catch(() => []),
   ])
   const homeStories: HomeStory[] = stories.map((s) => ({
     slug: s.slug,
@@ -39,6 +44,17 @@ export default async function HomePage() {
     theme: e.theme,
   }))
 
+  const dailyEditions: HomeDailyEdition[] = editions.map((e) => ({
+    href: editionHref(e.date),
+    date: formatEditionDate(e.date, { year: false }),
+    number: e.number,
+    headline: e.headline,
+    score: boomScore(e.moodScore),
+    signed: formatSigned(e.moodScore),
+    word: moodWord(e.moodScore),
+    tone: moodTone(e.moodScore),
+  }))
+
   // Each story/epic card renders in its own theme's typefaces, so collect every
   // distinct font set and resolve the Google Fonts links to load.
   const fontSets: FontSet[] = []
@@ -51,5 +67,5 @@ export default async function HomePage() {
     new Set(fontSets.map((f) => getFontImportUrl(f)).filter((u): u is string => Boolean(u)))
   )
 
-  return <HomeClient stories={homeStories} epics={homeEpics} fontUrls={fontUrls} />
+  return <HomeClient stories={homeStories} epics={homeEpics} dailyEditions={dailyEditions} fontUrls={fontUrls} />
 }
