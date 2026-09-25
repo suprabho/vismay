@@ -1,14 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRightIcon, ClockIcon, LinkSimpleIcon, SnowflakeIcon } from '@phosphor-icons/react/dist/ssr'
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr'
 import { listEditions } from '@vismay/content-source/dcEditions'
 import type { DcEditionSummary } from '@vismay/content-source/dcEditionTypes'
 import { formatEditionDate, formatSigned } from '@vismay/content-source/dcEditionTypes'
 import JsonLd from '@/components/JsonLd'
 import { buildBreadcrumbJsonLd, buildDailyCollectionJsonLd } from '@/lib/jsonLd'
 import { SERIES_HREF, boomScore, editionHref } from './components/editionUtils'
+import BoomScore from './components/BoomScore'
+import DailyMasthead from './components/DailyMasthead'
+import EditionThemeStyle from './components/EditionThemeStyle'
 import MoodTrend from './components/MoodTrend'
-import { ScoreReadout, ScoreTrack, toneColor } from './components/ScoreMeter'
+import { StaticRing } from './components/ScoreRing'
+import { loadThemeOverrides } from './editionContext'
 
 // The series landing: the latest reading, the trend and the full archive.
 // Static, re-rendered on demand by the publish hook
@@ -29,17 +33,14 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
 }
 
-const HOW = [
-  { Icon: ClockIcon, title: 'Composed at 06:15 UTC', body: 'From the previous 24 hours of AI, energy and sustainability reporting and new research.' },
-  { Icon: SnowflakeIcon, title: 'Frozen at 09:00 UTC', body: 'Each edition is published once and never edited; a correction is a note in the next one.' },
-  { Icon: LinkSimpleIcon, title: 'Every claim sourced', body: 'Each figure and headline links back to the story or paper it came from.' },
-]
-
 export default async function DoomVBoomLanding() {
-  const editions = await listEditions(400).catch((err) => {
-    console.warn(`ai-daily/doom-v-boom: listEditions failed: ${err}`)
-    return [] as DcEditionSummary[]
-  })
+  const [editions, themeOverrides] = await Promise.all([
+    listEditions(400).catch((err) => {
+      console.warn(`ai-daily/doom-v-boom: listEditions failed: ${err}`)
+      return [] as DcEditionSummary[]
+    }),
+    loadThemeOverrides(),
+  ])
   const latest = editions[0]
 
   return (
@@ -59,8 +60,15 @@ export default async function DoomVBoomLanding() {
           ]),
         ]}
       />
+      <EditionThemeStyle overrides={themeOverrides} />
       <main className="wrap pb-6">
-        <Masthead />
+        <DailyMasthead
+          overrides={themeOverrides}
+          crumbs={[
+            { label: 'AI Daily', href: '/ai-daily' },
+            { label: 'Doom v Boom', href: SERIES_HREF },
+          ]}
+        />
 
         {!latest ? (
           <div className="empty">
@@ -85,49 +93,20 @@ export default async function DoomVBoomLanding() {
               <div className="chapter-head">
                 <h2 id="trend-h">The last {Math.min(TREND_DAYS, editions.length)} mornings</h2>
                 <p className="lede">
-                  The Boom Score is the boom share of the day’s weighted developments — 50 is balanced. Hover or focus a bar for the edition;
-                  select it to read it.
+                  Each ring is a morning: its green share is the boom share of the day’s weighted developments, and the number is that share out
+                  of 100 — 50 is balanced. Select a ring to read the edition.
                 </p>
               </div>
               <MoodTrend editions={editions.slice(0, TREND_DAYS)} />
             </section>
 
-            <section className="grid gap-6 border-t border-[var(--line)] py-14 sm:grid-cols-3" aria-label="How an edition is made">
-              {HOW.map(({ Icon, title, body }) => (
-                <div key={title} className="grid content-start gap-2">
-                  <Icon size={22} weight="light" className="text-[var(--accent)]" aria-hidden="true" />
-                  <h3 className="font-[family-name:var(--serif)] text-xl">{title}</h3>
-                  <p className="text-sm text-[var(--muted)]">{body}</p>
-                </div>
-              ))}
-            </section>
+            <Methodology />
 
             <Archive editions={editions} />
           </>
         )}
       </main>
     </>
-  )
-}
-
-function Masthead() {
-  return (
-    <nav className="flex flex-wrap items-center justify-between gap-3 py-6 font-[family-name:var(--mono)] text-[11px] uppercase tracking-[.12em] text-[var(--muted)]">
-      <ol className="flex items-center gap-2">
-        <li>
-          <Link href="/">vizmaya</Link>
-        </li>
-        <li aria-hidden="true">/</li>
-        <li>
-          <Link href="/ai-daily">AI Daily</Link>
-        </li>
-        <li aria-hidden="true">/</li>
-        <li className="text-[var(--bone)]" aria-current="page">
-          Doom v Boom
-        </li>
-      </ol>
-      <Link href="/ai-data-centers">Live explorer →</Link>
-    </nav>
   )
 }
 
@@ -152,6 +131,12 @@ function Hero({ latest, total }: { latest: DcEditionSummary; total: number }) {
           >
             All {total} editions
           </a>
+          <a
+            href="#methodology"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--line-strong)] px-5 py-2.5 font-[family-name:var(--mono)] text-xs hover:bg-[var(--accent-wash)]"
+          >
+            How it’s scored
+          </a>
         </div>
       </div>
 
@@ -163,19 +148,64 @@ function Hero({ latest, total }: { latest: DcEditionSummary; total: number }) {
           <span>Latest · {formatEditionDate(latest.date)}</span>
           {latest.number != null && <span>№ {latest.number}</span>}
         </span>
-        <ScoreReadout score={latest.moodScore} />
-        <ScoreTrack score={latest.moodScore} />
-        <span className="flex justify-between font-[family-name:var(--mono)] text-[10px] uppercase tracking-[.1em] text-[var(--dim)]" aria-hidden="true">
-          <span>Doom</span>
-          <span>Balanced</span>
-          <span>Boom</span>
-        </span>
+        <BoomScore score={latest.moodScore} />
         <span className="font-[family-name:var(--serif)] text-2xl leading-tight">{latest.headline}</span>
         <span className="text-[15px] text-[var(--muted)]">{latest.sub.replace(/\*/g, '')}</span>
         <span className="font-[family-name:var(--mono)] text-[11px] text-[var(--dim)]">
           {latest.counts.stories} stories · {latest.counts.papers} papers
         </span>
       </Link>
+    </section>
+  )
+}
+
+/** How the Boom Score is made — the numbers here mirror dcEditionAssembly's scoring and moodWord's bands. */
+const METHOD = [
+  {
+    title: 'The window',
+    body: 'Each edition covers 24 hours, 06:15 to 06:15 UTC: news about AI, data centres, chips, energy and sustainability, plus new arXiv research. A classifier keeps what is relevant and tags every report with its AI layer, place, the figures it states, and whether it points to boom, doom or neither.',
+  },
+  {
+    title: 'Events, not headlines',
+    body: 'Ten outlets covering one announcement is one development, not ten votes. Reports are grouped into events by what they describe — the same actors, place and figures — and each event takes the majority mood of its reports. An even split counts as neutral. (The earliest editions, before events, counted each report once.)',
+  },
+  {
+    title: 'Weighted by what matters',
+    body: 'Each event is weighted by relevance to the build-out (0.6–1×), by impact graded on its size (about 1× for the smallest to 6× for the largest; a plan or warning grades one step below the same thing done), and by coverage (up to 1.75× for widely reported events).',
+  },
+  {
+    title: 'The score',
+    body: 'The reading is the boom weight minus the doom weight, over their sum — from −1 (all doom) to +1 (all boom), neutral events left out. The Boom Score is that reading as a share out of 100: 50 is balanced, 45–55 reads “Balanced”, 35–65 “leaning”, 20–80 “clearly”, and beyond that “decisively”.',
+  },
+  {
+    title: 'Frozen and sourced',
+    body: 'The edition is composed each morning and published at 09:00 UTC, then never edited; a correction is a note in the next one. Every number is assembled in code from the stories it cites, and every note links back to them.',
+  },
+]
+
+function Methodology() {
+  return (
+    <section id="methodology" className="grid gap-10 border-t border-[var(--line)] py-14 lg:grid-cols-[1fr_2fr] lg:gap-16" aria-labelledby="method-h">
+      <div className="chapter-head lg:sticky lg:top-8 lg:self-start">
+        <h2 id="method-h">Methodology</h2>
+        <p className="lede">How a morning’s news becomes one Boom Score.</p>
+        <p className="mt-6 inline-block rounded-md border border-[var(--line)] bg-[var(--elevated)] px-4 py-3 font-[family-name:var(--mono)] text-[13px] leading-relaxed">
+          reading = (W<sub>boom</sub> − W<sub>doom</sub>) ÷ (W<sub>boom</sub> + W<sub>doom</sub>)
+          <br />
+          Boom Score = (reading + 1) ÷ 2 × 100
+        </p>
+      </div>
+      <ol className="grid gap-8">
+        {METHOD.map((m, i) => (
+          <li key={m.title} className="grid grid-cols-[2.5rem_1fr] gap-x-4 gap-y-2">
+            <span className="font-[family-name:var(--mono)] text-xs text-[var(--accent)]">{String(i + 1).padStart(2, '0')}</span>
+            <div className="grid gap-2">
+              <h3 className="font-[family-name:var(--serif)] text-xl">{m.title}</h3>
+              <p className="max-w-[62ch] text-[15px] text-[var(--muted)]">{m.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
@@ -201,7 +231,7 @@ function Archive({ editions }: { editions: DcEditionSummary[] }) {
                 <li key={e.date} className="border-t border-[var(--line)]">
                   <Link
                     href={editionHref(e.date)}
-                    className="grid grid-cols-[5.5rem_3rem_1fr] items-baseline gap-x-3 sm:gap-x-4 gap-y-1 py-3.5 transition-colors hover:bg-[var(--accent-wash)] sm:grid-cols-[6.5rem_3rem_4.5rem_1fr_auto]"
+                    className="grid grid-cols-[5.5rem_2.75rem_1fr] items-center gap-x-3 gap-y-1 py-3 sm:grid-cols-[6.5rem_3rem_3rem_1fr_auto] sm:gap-x-4 transition-colors hover:bg-[var(--accent-wash)]"
                   >
                     <span className="whitespace-nowrap font-[family-name:var(--mono)] text-xs text-[var(--muted)]">
                       {formatEditionDate(e.date, { year: false })}
@@ -209,10 +239,11 @@ function Archive({ editions }: { editions: DcEditionSummary[] }) {
                     <span className="hidden font-[family-name:var(--mono)] text-xs text-[var(--dim)] sm:inline">
                       {e.number != null ? `№ ${e.number}` : ''}
                     </span>
-                    <span className="flex items-center gap-2 font-[family-name:var(--mono)] text-sm tabular-nums">
-                      <span className="size-2 shrink-0 rounded-full" style={{ background: toneColor(e.moodScore) }} aria-hidden="true" />
-                      <span title={`Boom Score · ${formatSigned(e.moodScore)}`}>{boomScore(e.moodScore) ?? '—'}</span>
-                    </span>
+                    <StaticRing score={e.moodScore} count={56} className="w-11">
+                      <span className="font-[family-name:var(--mono)] text-[11px] tabular-nums" title={`Boom Score · ${formatSigned(e.moodScore)}`}>
+                        {boomScore(e.moodScore) ?? '—'}
+                      </span>
+                    </StaticRing>
                     <span className="font-[family-name:var(--serif)] text-[17px] leading-snug">{e.headline}</span>
                     <span className="col-start-3 font-[family-name:var(--mono)] text-[10.5px] text-[var(--dim)] sm:col-start-auto">
                       {e.counts.stories} stories · {e.counts.papers} papers

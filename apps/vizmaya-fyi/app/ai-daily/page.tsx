@@ -7,7 +7,11 @@ import { formatEditionDate } from '@vismay/content-source/dcEditionTypes'
 import JsonLd from '@/components/JsonLd'
 import { buildBreadcrumbJsonLd, buildDailyCollectionJsonLd } from '@/lib/jsonLd'
 import { SERIES_HREF, boomScore, editionHref } from './doom-v-boom/components/editionUtils'
-import { ScoreReadout, ScoreTrack, toneColor } from './doom-v-boom/components/ScoreMeter'
+import BoomScore from './doom-v-boom/components/BoomScore'
+import DailyMasthead from './doom-v-boom/components/DailyMasthead'
+import EditionThemeStyle from './doom-v-boom/components/EditionThemeStyle'
+import { StaticRing } from './doom-v-boom/components/ScoreRing'
+import { loadThemeOverrides } from './doom-v-boom/editionContext'
 
 // The hub for vizmaya's daily series. Doom v Boom is the first; the page is
 // a list so a second series is one more card. Re-rendered by the publish hook
@@ -27,10 +31,13 @@ export const metadata: Metadata = {
 }
 
 export default async function AiDailyHub() {
-  const editions = await listEditions(14).catch((err) => {
-    console.warn(`ai-daily: listEditions failed: ${err}`)
-    return [] as DcEditionSummary[]
-  })
+  const [editions, themeOverrides] = await Promise.all([
+    listEditions(4).catch((err) => {
+      console.warn(`ai-daily: listEditions failed: ${err}`)
+      return [] as DcEditionSummary[]
+    }),
+    loadThemeOverrides(),
+  ])
   const latest = editions[0]
 
   return (
@@ -49,18 +56,9 @@ export default async function AiDailyHub() {
           ]),
         ]}
       />
+      <EditionThemeStyle overrides={themeOverrides} />
       <main className="wrap pb-16">
-        <nav className="flex items-center justify-between gap-3 py-6 font-[family-name:var(--mono)] text-[11px] uppercase tracking-[.12em] text-[var(--muted)]">
-          <ol className="flex items-center gap-2">
-            <li>
-              <Link href="/">vizmaya</Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li className="text-[var(--bone)]" aria-current="page">
-              AI Daily
-            </li>
-          </ol>
-        </nav>
+        <DailyMasthead overrides={themeOverrides} crumbs={[{ label: 'AI Daily', href: '/ai-daily' }]} />
 
         <header className="grid gap-5 pb-14 pt-6">
           <span className="eyebrow">vizmaya · Daily series</span>
@@ -104,8 +102,7 @@ export default async function AiDailyHub() {
                   <span>Latest · {formatEditionDate(latest.date)}</span>
                   {latest.number != null && <span>№ {latest.number}</span>}
                 </span>
-                <ScoreReadout score={latest.moodScore} />
-                <ScoreTrack score={latest.moodScore} />
+                <BoomScore score={latest.moodScore} />
                 <Link href={editionHref(latest.date)} className="font-[family-name:var(--serif)] text-2xl leading-tight hover:underline">
                   {latest.headline}
                 </Link>
@@ -113,14 +110,13 @@ export default async function AiDailyHub() {
                   <ol className="grid border-t border-[var(--line)] pt-3" aria-label="Recent editions">
                     {editions.slice(1, 4).map((e) => (
                       <li key={e.date}>
-                        <Link href={editionHref(e.date)} className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-3 py-2 hover:underline">
+                        <Link href={editionHref(e.date)} className="grid grid-cols-[4.5rem_2.25rem_1fr] items-center gap-3 py-1.5 hover:underline">
                           <span className="font-[family-name:var(--mono)] text-xs text-[var(--muted)]">
                             {formatEditionDate(e.date, { weekday: false, year: false })}
                           </span>
-                          <span className="flex items-center gap-1.5 font-[family-name:var(--mono)] text-sm tabular-nums">
-                            <span className="size-1.5 rounded-full" style={{ background: toneColor(e.moodScore) }} aria-hidden="true" />
-                            {boomScore(e.moodScore) ?? '—'}
-                          </span>
+                          <StaticRing score={e.moodScore} count={48} className="w-9">
+                            <span className="font-[family-name:var(--mono)] text-[10.5px] tabular-nums">{boomScore(e.moodScore) ?? '—'}</span>
+                          </StaticRing>
                           <span className="truncate text-sm">{e.headline}</span>
                         </Link>
                       </li>

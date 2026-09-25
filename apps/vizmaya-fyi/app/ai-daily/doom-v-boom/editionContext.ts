@@ -23,6 +23,12 @@ export async function loadEditionContext(date: string): Promise<EditionContext> 
   return { neighbours, previous, themeOverrides: aiDataCentersThemeOverrides(epic?.theme) }
 }
 
+/** The epic row's theme override alone, for the series pages that have no edition context. */
+export async function loadThemeOverrides(): Promise<Partial<AiDataCentersTheme>> {
+  const epic = await getEpic('ai-data-centers').catch(() => null)
+  return aiDataCentersThemeOverrides(epic?.theme)
+}
+
 /** Page metadata for an edition. */
 export function editionMetadata(e: DcEditionWithContent, opts: { noindex?: boolean } = {}): Metadata {
   const path = `/ai-daily/doom-v-boom/${e.date}`

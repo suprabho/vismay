@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
+import { LiveRing } from '@/app/ai-daily/doom-v-boom/components/ScoreRing'
 import { trackTopicFiltered } from '@/lib/analytics'
 import {
   StoryBentoGrid,
@@ -32,6 +33,8 @@ export interface HomeDailyEdition {
   date: string
   number: number | null
   headline: string
+  /** The raw −1…+1 reading, for the ring. */
+  moodScore: number | null
   /** Boom Score 0–100; null when the window had no scored story. */
   score: number | null
   /** The signed −1…+1 reading, e.g. '+0.42'. */
@@ -116,26 +119,27 @@ const css = `
 .vz .epics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:var(--gap)}
 .vz .epics-row .bcard{min-height:212px}
 
-/* ── DOOM V BOOM (latest daily editions, above the epics) ── */
+/* ── DOOM V BOOM (latest daily editions, above the epics) ──
+   The cards wear the edition's palette: its CSS variables are set on the
+   section from the epic theme (see app/page.tsx), and the ring reads them. */
 .vz .daily-section{max-width:1240px;margin:0 auto;padding:20px clamp(20px,5vw,56px) 24px;border-top:1px solid var(--line)}
 .vz .daily-lede{font-family:var(--b);font-size:13.5px;line-height:1.7;color:var(--muted);max-width:62ch;margin:-10px 0 24px}
 .vz .daily-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
-.vz .dcard{display:flex;flex-direction:column;gap:14px;padding:22px 22px 20px;border:1px solid var(--line2);border-radius:8px;background:rgba(255,255,255,.45);min-height:248px}
-.vz .dcard:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 18px 40px -24px rgba(12,12,16,.35)}
-.vz .dcard-top{display:flex;justify-content:space-between;font-family:var(--m);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted)}
-.vz .dcard-score{display:flex;align-items:flex-end;gap:10px}
-.vz .dcard-num{font-family:var(--d);font-weight:600;font-size:54px;line-height:.9;font-variant-numeric:tabular-nums}
-.vz .dcard-of{display:grid;gap:3px;padding-bottom:4px;font-family:var(--m);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
-.vz .dcard-word{display:flex;align-items:center;gap:6px;font-family:var(--b);font-size:12.5px;letter-spacing:0;text-transform:none;color:var(--ink)}
-.vz .dcard-dot{width:7px;height:7px;border-radius:999px;background:var(--mood)}
-.vz .dcard-track{position:relative;height:5px;border-radius:999px;background:var(--line2)}
-.vz .dcard-track::before{content:'';position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:rgba(12,12,16,.3)}
-.vz .dcard-mark{position:absolute;top:50%;width:11px;height:11px;border-radius:999px;background:var(--mood);box-shadow:0 0 0 2px var(--cream);transform:translate(-50%,-50%)}
-.vz .dcard-h{font-family:var(--d);font-weight:500;font-size:19px;line-height:1.22;letter-spacing:-.01em;text-wrap:pretty}
-.vz .dcard-a{margin-top:auto;font-family:var(--m);font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
-.vz .dcard[data-tone="boom"]{--mood:#16a34a}
-.vz .dcard[data-tone="doom"]{--mood:#dc2626}
-.vz .dcard[data-tone="mid"]{--mood:#8a857d}
+.vz .dcard{display:flex;flex-direction:column;gap:16px;padding:22px 22px 20px;border-radius:8px;min-height:300px;
+  background:var(--dv-surface);color:var(--dv-bone);border:1px solid var(--dv-line)}
+.vz .dcard:hover{border-color:var(--dv-accent);transform:translateY(-2px);box-shadow:0 22px 44px -22px rgba(12,12,16,.55)}
+.vz .dcard-top{display:flex;justify-content:space-between;font-family:var(--m);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--dv-muted)}
+.vz .dcard-score{display:flex;align-items:center;gap:16px}
+.vz .dcard-ring{width:112px;flex:none}
+.vz .dcard-num{font-family:var(--d);font-weight:500;font-size:30cqi;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dv-bone)}
+.vz .dcard-of{display:grid;gap:5px}
+.vz .dcard-lbl{font-family:var(--m);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dv-muted)}
+.vz .dcard-word{font-family:var(--d);font-size:19px;line-height:1.15;color:var(--dv-muted)}
+.vz .dcard[data-tone="boom"] .dcard-word{color:var(--dv-boom-ink)}
+.vz .dcard[data-tone="doom"] .dcard-word{color:var(--dv-doom-ink)}
+.vz .dcard-signed{font-family:var(--m);font-size:11px;color:var(--dv-dim)}
+.vz .dcard-h{font-family:var(--d);font-weight:500;font-size:19px;line-height:1.24;letter-spacing:-.01em;text-wrap:pretty;color:var(--dv-bone)}
+.vz .dcard-a{margin-top:auto;font-family:var(--m);font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dv-accent)}
 .vz .daily-all{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink)}
 .vz .daily-all:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
 @media(max-width:900px){.vz .daily-row{grid-template-columns:1fr}.vz .dcard{min-height:0}}
@@ -231,9 +235,15 @@ function PenroseMark({ size = 20, dark = false }: { size?: number; dark?: boolea
   )
 }
 
-/* The last three Doom v Boom editions: each morning's Boom Score and headline. */
-function DailySection({ editions }: { editions: HomeDailyEdition[] }) {
+/* The last three Doom v Boom editions: each morning's Boom Score ring and headline. */
+function DailySection({ editions, vars }: { editions: HomeDailyEdition[]; vars: Record<string, string> }) {
   if (!editions.length) return null
+  // The edition tokens under their own names for the ring (--boom, --doom,
+  // --dim …) and --dv-* aliases for this stylesheet, which already owns
+  // --ink / --muted / --line for the cream page.
+  const style: Record<string, string> = {}
+  for (const [k, v] of Object.entries(vars)) style[`--dv-${k.slice(2)}`] = v
+  for (const k of ['--boom', '--doom', '--dim']) if (vars[k]) style[k] = vars[k]
   return (
     <section id="daily" className="daily-section">
       <div className="region-head">
@@ -244,7 +254,7 @@ function DailySection({ editions }: { editions: HomeDailyEdition[] }) {
         Each morning we read the previous day of AI data-centre, energy and sustainability news and score it:
         a Boom Score out of 100, where 50 is balanced.
       </p>
-      <div className="daily-row">
+      <div className="daily-row" data-ring-palette="" style={style as CSSProperties}>
         {editions.map((e, i) => (
           <Link key={e.href} className="dcard" href={e.href} data-tone={e.tone}>
             <div className="dcard-top">
@@ -252,17 +262,14 @@ function DailySection({ editions }: { editions: HomeDailyEdition[] }) {
               {e.number != null && <span>№ {e.number}</span>}
             </div>
             <div className="dcard-score">
-              <span className="dcard-num">{e.score ?? '—'}</span>
+              <LiveRing score={e.moodScore} className="dcard-ring">
+                <span className="dcard-num">{e.score ?? '—'}</span>
+              </LiveRing>
               <span className="dcard-of">
-                <span>Boom Score{e.score != null ? ' / 100' : ''}</span>
-                <span className="dcard-word">
-                  <span className="dcard-dot" aria-hidden />
-                  {e.word} · {e.signed}
-                </span>
+                <span className="dcard-lbl">Boom Score{e.score != null ? ' / 100' : ''}</span>
+                <span className="dcard-word">{e.word}</span>
+                <span className="dcard-signed">{e.signed}</span>
               </span>
-            </div>
-            <div className="dcard-track" aria-hidden>
-              {e.score != null && <span className="dcard-mark" style={{ left: `${e.score}%` }} />}
             </div>
             <h3 className="dcard-h">{e.headline}</h3>
             <span className="dcard-a">Read the edition →</span>
@@ -311,11 +318,13 @@ export default function HomeClient({
   stories,
   epics = [],
   dailyEditions = [],
+  dailyVars = {},
   fontUrls = [],
 }: {
   stories: HomeStory[]
   epics?: HomeEpic[]
   dailyEditions?: HomeDailyEdition[]
+  dailyVars?: Record<string, string>
   fontUrls?: string[]
 }) {
   const [filter, setFilter] = useState('All')
@@ -558,7 +567,7 @@ export default function HomeClient({
       </section>
 
       {/* DOOM V BOOM — the last three daily editions, above the epics */}
-      <DailySection editions={dailyEditions} />
+      <DailySection editions={dailyEditions} vars={dailyVars} />
 
       {/* EPICS — running collections, as a row below the header */}
       <EpicsSection epics={epics} />

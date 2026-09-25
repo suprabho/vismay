@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { getAllStories } from '@vismay/content-source/content'
-import { listEpicsForHome } from '@vismay/content-source/epics'
+import { getEpic, listEpicsForHome } from '@vismay/content-source/epics'
 import { listEditions } from '@vismay/content-source/dcEditions'
 import { formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import HomeClient, { type HomeStory, type HomeEpic, type HomeDailyEdition } from '@/components/HomeClient'
 import { boomScore, editionHref } from './ai-daily/doom-v-boom/components/editionUtils'
+import { EDITION_CSS_VARS, resolveAiDataCentersTheme, type AiDataCentersTheme } from './ai-data-centers/theme'
 
 type FontSet = { serif?: string; sans?: string; mono?: string }
 
@@ -19,11 +20,12 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [stories, epics, editions] = await Promise.all([
+  const [stories, epics, editions, dcEpic] = await Promise.all([
     getAllStories('vizmaya-fyi'),
     listEpicsForHome('vizmaya-fyi'),
     // Best-effort: the home page must not 500 if the editions table is unavailable.
     listEditions(3).catch(() => []),
+    getEpic('ai-data-centers').catch(() => null),
   ])
   const homeStories: HomeStory[] = stories.map((s) => ({
     slug: s.slug,
@@ -49,11 +51,20 @@ export default async function HomePage() {
     date: formatEditionDate(e.date, { year: false }),
     number: e.number,
     headline: e.headline,
+    moodScore: e.moodScore,
     score: boomScore(e.moodScore),
     signed: formatSigned(e.moodScore),
     word: moodWord(e.moodScore),
     tone: moodTone(e.moodScore),
   }))
+
+  // The Doom v Boom cards wear the edition's own palette (the epic's theme
+  // override over the dark defaults), as the CSS variables the ring reads.
+  const dailyTheme = resolveAiDataCentersTheme(dcEpic?.theme)
+  const dailyVars: Record<string, string> = {}
+  for (const [key, cssVar] of Object.entries(EDITION_CSS_VARS)) {
+    if (cssVar) dailyVars[cssVar] = dailyTheme[key as keyof AiDataCentersTheme]
+  }
 
   // Each story/epic card renders in its own theme's typefaces, so collect every
   // distinct font set and resolve the Google Fonts links to load.
@@ -67,5 +78,5 @@ export default async function HomePage() {
     new Set(fontSets.map((f) => getFontImportUrl(f)).filter((u): u is string => Boolean(u)))
   )
 
-  return <HomeClient stories={homeStories} epics={homeEpics} dailyEditions={dailyEditions} fontUrls={fontUrls} />
+  return <HomeClient stories={homeStories} epics={homeEpics} dailyEditions={dailyEditions} dailyVars={dailyVars} fontUrls={fontUrls} />
 }

@@ -24,7 +24,7 @@ const TAU = Math.PI * 2
  * prefers-reduced-motion, and re-reads the colour tokens when the theme
  * changes (the same observers as GeoMap).
  */
-export default function BoomRing({ score, seed }: { score: number | null; seed: number }) {
+export default function BoomRing({ score, seed, className = 'boomscore-canvas' }: { score: number | null; seed: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [live, setLive] = useState(false)
 
@@ -33,7 +33,8 @@ export default function BoomRing({ score, seed }: { score: number | null; seed: 
     const host = canvas?.parentElement
     const ctx = canvas?.getContext('2d')
     if (!canvas || !host || !ctx) return
-    const root = canvas.closest('.dcd') ?? document.documentElement
+    // The edition root, or any host that sets the ring tokens (the home cards).
+    const root = canvas.closest('.dcd, [data-ring-palette]') ?? document.documentElement
     const probe = document.createElement('canvas').getContext('2d')
     const share = score == null ? null : boomShare(score)
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -208,7 +209,7 @@ export default function BoomRing({ score, seed }: { score: number | null; seed: 
     }
   }, [score, seed])
 
-  return <canvas ref={canvasRef} className={live ? 'boomscore-canvas live' : 'boomscore-canvas'} aria-hidden="true" />
+  return <canvas ref={canvasRef} className={live ? `${className} live` : className} aria-hidden="true" />
 }
 
 interface Swatch {
