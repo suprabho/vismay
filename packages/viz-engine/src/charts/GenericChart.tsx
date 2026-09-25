@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
 import { useChartDataOverride } from '../lib/chartDataOverride'
+import { fitChartToWidth } from '../lib/chartFit'
 import StoryEChart from './StoryEChart'
 
 /**
@@ -93,12 +94,24 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
   const [error, setError] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const [cssVars, setCssVars] = useState<Record<string, string>>({})
+  // Rendered width, so generated charts' pixel-pinned legends can re-flow to
+  // the box they actually get (see fitChartToWidth).
+  const [width, setWidth] = useState(0)
 
   // Read the story's CSS variables once the root mounts. They live on
   // ThemeProvider's wrapper div, not on documentElement, so we have to
   // resolve relative to an element inside the theme tree.
   useEffect(() => {
     setCssVars(readThemeVars(rootRef.current))
+  }, [data])
+
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    setWidth(el.clientWidth)
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [data])
 
   useEffect(() => {
@@ -169,7 +182,7 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
     ? (resolved.tooltip as unknown[]).map(mergeTooltip)
     : mergeTooltip(resolved.tooltip)
   const option: EChartsOption = {
-    ...resolved,
+    ...fitChartToWidth(resolved, width, { muted: palette.muted }),
     backgroundColor: themeBg || 'transparent',
     tooltip: mergedTooltip as EChartsOption['tooltip'],
   }
@@ -181,7 +194,8 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
     >
       <StoryEChart
         option={option}
-        style={{ width: '100%', height: '100%', minHeight: mobile ? 280 : 360 }}
+        // vh-capped so a short landscape phone's ~250px region isn't overrun.
+        style={{ width: '100%', height: '100%', minHeight: mobile ? 280 : 'min(360px, 55vh)' }}
         notMerge
         lazyUpdate={false}
       />

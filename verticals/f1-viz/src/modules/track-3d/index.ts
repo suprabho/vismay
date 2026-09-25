@@ -31,6 +31,11 @@ export interface Track3DConfig {
   chaseCam?: boolean
   /** Allow user orbit (OrbitControls). Off by default so scroll passes through. */
   interactive?: boolean
+  /**
+   * GLB car asset (URL or `assets://` ref). Defaults to the livery-free RB22 in
+   * Supabase Storage; each car is painted in its constructor colour.
+   */
+  carModelUrl?: string
   autoPlay?: boolean
 }
 
@@ -51,6 +56,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Track3
   }
   return {
     type: 'f1:track-3d',
+    carModelUrl: typeof r.carModelUrl === 'string' ? r.carModelUrl : undefined,
     title: typeof r.title === 'string' ? r.title : undefined,
     fixture: (r.fixture as ReplayFixture | undefined) ?? undefined,
     sessionKey: typeof r.sessionKey === 'string' ? r.sessionKey : undefined,

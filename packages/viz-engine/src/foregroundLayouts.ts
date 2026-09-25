@@ -65,8 +65,8 @@ const splitThreeSevenTwoRow: ForegroundLayoutDef = {
  * Each deck layout now carries REAL region geometry so the layout NAME does the
  * positioning — `text-left-chart-right` actually places a `text` region on the
  * left and a `chart` region on the right, inside a safe area that:
- *   - clears the fixed top-left Vizmaya logo (top 96px),
- *   - keeps closing copy off the lower edge (bottom 64px),
+ *   - clears the fixed top-left Vizmaya logo (top 96px, less on short viewports),
+ *   - keeps closing copy off the lower edge (bottom 64px, ditto),
  *   - holds a 6vw horizontal gutter so columns don't graze the viewport edge.
  *
  * Back-compat: every deck layout ALSO keeps a full-safe-area `default` region.
@@ -86,7 +86,10 @@ const splitThreeSevenTwoRow: ForegroundLayoutDef = {
  * regions vertically; `default` slots still self-flow full-width via
  * `stackOnPortrait`.
  */
-const SAFE = { top: '96px', bottom: '64px', left: '6vw', right: '6vw' } as const
+// Landscape insets shrink with viewport height so a landscape phone (~360px
+// tall) keeps ~75% of the height for content instead of losing 160px to
+// gutters; desktop heights (≥ 534px) resolve to the full 96/64.
+const SAFE = { top: 'min(96px, 18vh)', bottom: 'min(64px, 12vh)', left: '6vw', right: '6vw' } as const
 const SAFE_P = { top: '96px', bottom: '48px', left: '4vw', right: '4vw' } as const
 
 const DECK_SAFE_AREA: CSSProperties = { position: 'absolute', ...SAFE }

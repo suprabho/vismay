@@ -30,7 +30,8 @@ const JUSTIFY_TO_FLEX: Record<NonNullable<BigStatStyle['justify']>, string> = {
 
 /**
  * Headline size presets. `live` uses `vw`-relative `clamp()` so the number
- * tracks the viewport; `capture` uses flat values because share cards render
+ * tracks the viewport, capped by `vh` so a short landscape phone doesn't get a
+ * desktop-width number overflowing its ~200px-tall region; `capture` uses flat values because share cards render
  * the foreground in a fixed box where `vw` resolves against the full browser
  * viewport and balloons to the cap.
  */
@@ -39,19 +40,19 @@ const NUMBER_SIZE_PRESET: Record<
   { live: { number: string; unit: string }; capture: { number: string; unit: string } }
 > = {
   sm: {
-    live: { number: 'clamp(2.5rem, 7vw, 4.5rem)', unit: 'clamp(1.25rem, 3.5vw, 2rem)' },
+    live: { number: 'min(clamp(2.5rem, 7vw, 4.5rem), 12vh)', unit: 'min(clamp(1.25rem, 3.5vw, 2rem), 6vh)' },
     capture: { number: '3rem', unit: '1.35rem' },
   },
   md: {
-    live: { number: 'clamp(3.5rem, 11vw, 7.5rem)', unit: 'clamp(1.75rem, 5vw, 3rem)' },
+    live: { number: 'min(clamp(3.5rem, 11vw, 7.5rem), 16vh)', unit: 'min(clamp(1.75rem, 5vw, 3rem), 8vh)' },
     capture: { number: '4rem', unit: '1.75rem' },
   },
   lg: {
-    live: { number: 'clamp(4.5rem, 14vw, 9.5rem)', unit: 'clamp(2.25rem, 6vw, 3.75rem)' },
+    live: { number: 'min(clamp(4.5rem, 14vw, 9.5rem), 20vh)', unit: 'min(clamp(2.25rem, 6vw, 3.75rem), 10vh)' },
     capture: { number: '5rem', unit: '2.25rem' },
   },
   xl: {
-    live: { number: 'clamp(5.5rem, 17vw, 12rem)', unit: 'clamp(2.75rem, 7vw, 4.5rem)' },
+    live: { number: 'min(clamp(5.5rem, 17vw, 12rem), 24vh)', unit: 'min(clamp(2.75rem, 7vw, 4.5rem), 12vh)' },
     capture: { number: '6rem', unit: '2.75rem' },
   },
 }

@@ -94,6 +94,10 @@ const telemetryClipModule: VizModule<TelemetryClipConfig> = {
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
+  // Portrait decks stack regions in normal flow, where a content-sized clip
+  // (map + a dashboard row per driver + controls) runs ~1000px and gets
+  // clipped. Give it a region-sized box instead; the component fits itself to it.
+  defaultStyle: { portrait: { size: { height: '40vh' } } },
   stableIdentity: (config) =>
     `f1:telemetry-clip:${config.sessionKey}:${config.lapFrom}-${config.lapTo}:${config.driverNumbers.join('-')}`,
 }

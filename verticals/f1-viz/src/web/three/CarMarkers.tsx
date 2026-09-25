@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useCarModel, cloneCarModel } from './carModel'
 import type { CarPositionTrack, RaceDriver } from '../replay/types'
 import { interpolateFrame } from '../replay/trackProjection'
 import type { WorldProjector } from './track3d'
@@ -8,6 +9,7 @@ import type { WorldProjector } from './track3d'
 const EMA_ALPHA = 0.25 // elevation smoothing — kills 4 Hz GPS-Z steps
 
 interface MarkersProps {
+  modelUrl?: string
   drivers: RaceDriver[]
   tracks: Map<number, CarPositionTrack>
   visibleDrivers: Set<number>
@@ -18,12 +20,15 @@ interface MarkersProps {
   chase?: boolean
 }
 
-export function CarMarkers({ drivers, tracks, visibleDrivers, focusedDriver, projector, currentTimeRef, chase = false }: MarkersProps) {
+export function CarMarkers({ modelUrl, drivers, tracks, visibleDrivers, focusedDriver, projector, currentTimeRef, chase = false }: MarkersProps) {
+  const model = useCarModel(modelUrl)
   return (
     <>
       {drivers.map((d) => (
         <CarMarker
           key={d.driverNumber}
+          model={model}
+          useModel={!!modelUrl}
           driver={d}
           track={tracks.get(d.driverNumber) ?? null}
           visible={visibleDrivers.has(d.driverNumber)}
@@ -60,6 +65,8 @@ function makeLabelTexture(label: string, color: string): THREE.CanvasTexture {
 }
 
 interface MarkerProps {
+  model: THREE.Group | null
+  useModel: boolean
   driver: RaceDriver
   track: CarPositionTrack | null
   visible: boolean
@@ -72,7 +79,11 @@ interface MarkerProps {
 /** Marker radius in chase mode — roughly an F1 car's footprint. */
 const CHASE_CAR_RADIUS = 3
 
-function CarMarker({ driver, track, visible, focused, projector, currentTimeRef, chase }: MarkerProps) {
+function CarMarker({ model, useModel, driver, track, visible, focused, projector, currentTimeRef, chase }: MarkerProps) {
+  const color = driver.teamColour || '#9CA3AF'
+  const car = useMemo(() => (model ? cloneCarModel(model, color) : null), [model, color])
+  useEffect(() => () => car?.materials.forEach((m) => m.dispose()), [car])
+  const headingRef = useRef<THREE.Group>(null)
   const groupRef = useRef<THREE.Group>(null)
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const ringRef = useRef<THREE.Mesh>(null)
@@ -84,8 +95,7 @@ function CarMarker({ driver, track, visible, focused, projector, currentTimeRef,
   // uses car-scale markers (~6 m) and labels only the focused car.
   const carRadius = chase ? CHASE_CAR_RADIUS : Math.max(7, projector.radius * 0.013)
   const showLabel = !chase || focused
-  const carLift = carRadius
-  const color = driver.teamColour || '#9CA3AF'
+  const carLift = useModel ? 0.15 : carRadius
   const texture = useMemo(
     () => makeLabelTexture(driver.abbreviation || String(driver.driverNumber), color),
     [driver.abbreviation, driver.driverNumber, color],
@@ -117,7 +127,21 @@ function CarMarker({ driver, track, visible, focused, projector, currentTimeRef,
     g.position.set(wx, emaY.current + carLift, wz)
     g.scale.setScalar(focused ? (chase ? 1.3 : 1.6) : 1)
 
+    // The supplied RB22 points along +Z. Use a centred telemetry tangent,
+    // including the last sample; keep the heading while stationary.
+    if (headingRef.current) {
+      const before = interpolateFrame(track, Math.max(track.frames.t[0], t - 150))
+      const after = interpolateFrame(track, t + 150)
+      if (before.ok && after.ok) {
+        const [bx, , bz] = projector.toWorld(before.x, before.y)
+        const [ax, , az] = projector.toWorld(after.x, after.y)
+        if (Math.hypot(ax - bx, az - bz) > 0.01) {
+          headingRef.current.rotation.y = Math.atan2(ax - bx, az - bz)
+        }
+      }
+    }
     const inPit = frame.status === 2
+    car?.materials.forEach((m) => { m.opacity = inPit ? 0.4 : 1 })
     const off = frame.status === 1
     if (matRef.current) matRef.current.opacity = inPit ? 0.4 : 1
     if (ringRef.current) {
@@ -128,11 +152,22 @@ function CarMarker({ driver, track, visible, focused, projector, currentTimeRef,
 
   return (
     <group ref={groupRef} visible={false}>
-      <mesh>
-        <sphereGeometry args={[carRadius, 16, 16]} />
-        <meshStandardMaterial ref={matRef} color={color} emissive={color} emissiveIntensity={focused ? 0.6 : 0.45} transparent />
-      </mesh>
-      <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+      {useModel ? (
+        <group ref={headingRef} scale={carRadius * 2}>
+          {car ? <primitive object={car.scene} dispose={null} /> : (
+            <mesh position={[0, 0.1, 0]}>
+              <boxGeometry args={[0.38, 0.2, 1]} />
+              <meshStandardMaterial ref={matRef} color={color} transparent />
+            </mesh>
+          )}
+        </group>
+      ) : (
+        <mesh>
+          <sphereGeometry args={[carRadius, 16, 16]} />
+          <meshStandardMaterial ref={matRef} color={color} emissive={color} emissiveIntensity={focused ? 0.6 : 0.45} transparent />
+        </mesh>
+      )}
+      <mesh ref={ringRef} position={[0, useModel ? carRadius * 0.25 : 0, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
         <torusGeometry args={[carRadius * 1.7, carRadius * 0.22, 8, 32]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>

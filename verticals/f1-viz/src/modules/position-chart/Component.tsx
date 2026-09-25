@@ -25,7 +25,7 @@ export default function PositionChartVizComponent({
         padding: '1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '720px' }}>
+      <div style={{ width: '100%', maxWidth: '720px', maxHeight: '100%', display: 'flex', flexDirection: 'column' }}>
         <PositionChart
           raceLabel={config.raceLabel}
           lanes={config.lanes}
