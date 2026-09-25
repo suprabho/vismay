@@ -19,6 +19,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Build assets (JS/CSS chunks, fonts, media) are fetched by Googlebot
+        // while rendering pages, and Vercel Skew Protection's `?dpl=` suffix
+        // mints fresh URLs every deploy — so they pile up in Search Console's
+        // page-indexing report. noindex keeps them out of the index without
+        // blocking the fetch (don't disallow /_next/ in robots.ts — Google
+        // needs these to render).
+        source: "/_next/static/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex" }],
+      },
+      {
         // /wallet-geo is iframe-embeddable from any origin (epic landing
         // pages are designed to be dropped into partner sites). The default
         // Next.js response has no frame-ancestors CSP, but we set it
