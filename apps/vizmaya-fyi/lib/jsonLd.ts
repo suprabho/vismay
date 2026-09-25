@@ -218,6 +218,37 @@ export function buildEpicJsonLd(opts: {
 }
 
 /**
+ * A daily series landing (/ai-daily/doom-v-boom) or the /ai-daily hub — a
+ * CollectionPage whose ItemList is its editions (or series), newest first.
+ */
+export function buildDailyCollectionJsonLd(opts: {
+  path: string
+  name: string
+  description: string
+  items: { path: string; name: string }[]
+}) {
+  const url = `${SITE_URL}${opts.path}`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${url}#collection`,
+    name: opts.name,
+    description: opts.description,
+    url,
+    isPartOf: { '@id': WEBSITE_ID },
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: opts.items.map((it, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${SITE_URL}${it.path}`,
+        name: it.name,
+      })),
+    },
+  }
+}
+
+/**
  * NewsArticle for a daily snapshot edition (/ai-daily/doom-v-boom/[date]).
  * The edition is machine-composed and editor-reviewed, so the author is the
  * studio; the OG image is the per-date opengraph-image route.
@@ -244,7 +275,7 @@ export function buildEditionJsonLd(opts: {
     publisher: { '@id': ORG_ID },
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     url,
-    isPartOf: { '@type': 'CollectionPage', '@id': `${SITE_URL}/ai-data-centers#collection` },
+    isPartOf: { '@type': 'CollectionPage', '@id': `${SITE_URL}/ai-daily/doom-v-boom#collection` },
   }
   if (opts.number != null) node.position = opts.number
   if (opts.keywords?.length) node.keywords = opts.keywords.join(', ')

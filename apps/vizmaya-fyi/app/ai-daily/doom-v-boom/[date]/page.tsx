@@ -49,8 +49,8 @@ export default async function DailyEditionPage({ params }: RouteParams) {
           buildEditionJsonLd({ date: edition.date, number: edition.number, headline: edition.headline, sub: edition.sub.replace(/\*/g, ''), publishedAt: edition.publishedAt }),
           buildBreadcrumbJsonLd([
             { name: 'Home', url: '/' },
-            { name: 'AI Data Centers', url: '/ai-data-centers' },
-            { name: 'Daily snapshot', url: '/ai-daily/doom-v-boom' },
+            { name: 'AI Daily', url: '/ai-daily' },
+            { name: 'Doom v Boom', url: '/ai-daily/doom-v-boom' },
             { name: formatEditionDate(edition.date), url: `/ai-daily/doom-v-boom/${edition.date}` },
           ]),
         ]}

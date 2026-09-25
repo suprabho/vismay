@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
+import { LiveRing } from '@/app/ai-daily/doom-v-boom/components/ScoreRing'
 import { trackTopicFiltered } from '@/lib/analytics'
 import {
   StoryBentoGrid,
@@ -25,6 +26,23 @@ export interface HomeEpic {
   theme?: Record<string, unknown>
 }
 
+/** One Doom v Boom edition as the home section shows it (shaped on the server). */
+export interface HomeDailyEdition {
+  href: string
+  /** 'Thu 24 Sep' */
+  date: string
+  number: number | null
+  headline: string
+  /** The raw −1…+1 reading, for the ring. */
+  moodScore: number | null
+  /** Boom Score 0–100; null when the window had no scored story. */
+  score: number | null
+  /** The signed −1…+1 reading, e.g. '+0.42'. */
+  signed: string
+  /** 'Boom-leaning', 'Balanced', … */
+  word: string
+  tone: 'boom' | 'doom' | 'mid'
+}
 
 /* The studio voice — static brand copy shown in the sticky rail. */
 const STUDIO = {
@@ -100,6 +118,31 @@ const css = `
 .vz .region-sub{font-family:var(--e);font-style:italic;font-size:19px;color:var(--muted)}
 .vz .epics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:var(--gap)}
 .vz .epics-row .bcard{min-height:212px}
+
+/* ── DOOM V BOOM (latest daily editions, above the epics) ──
+   The cards wear the edition's palette: its CSS variables are set on the
+   section from the epic theme (see app/page.tsx), and the ring reads them. */
+.vz .daily-section{max-width:1240px;margin:0 auto;padding:20px clamp(20px,5vw,56px) 24px;border-top:1px solid var(--line)}
+.vz .daily-lede{font-family:var(--b);font-size:13.5px;line-height:1.7;color:var(--muted);max-width:62ch;margin:-10px 0 24px}
+.vz .daily-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+.vz .dcard{display:flex;flex-direction:column;gap:16px;padding:22px 22px 20px;border-radius:8px;min-height:300px;
+  background:var(--dv-surface);color:var(--dv-bone);border:1px solid var(--dv-line)}
+.vz .dcard:hover{border-color:var(--dv-accent);transform:translateY(-2px);box-shadow:0 22px 44px -22px rgba(12,12,16,.55)}
+.vz .dcard-top{display:flex;justify-content:space-between;font-family:var(--m);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--dv-muted)}
+.vz .dcard-score{display:flex;align-items:center;gap:16px}
+.vz .dcard-ring{width:112px;flex:none}
+.vz .dcard-num{font-family:var(--d);font-weight:500;font-size:30cqi;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--dv-bone)}
+.vz .dcard-of{display:grid;gap:5px}
+.vz .dcard-lbl{font-family:var(--m);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dv-muted)}
+.vz .dcard-word{font-family:var(--d);font-size:19px;line-height:1.15;color:var(--dv-muted)}
+.vz .dcard[data-tone="boom"] .dcard-word{color:var(--dv-boom-ink)}
+.vz .dcard[data-tone="doom"] .dcard-word{color:var(--dv-doom-ink)}
+.vz .dcard-signed{font-family:var(--m);font-size:11px;color:var(--dv-dim)}
+.vz .dcard-h{font-family:var(--d);font-weight:500;font-size:19px;line-height:1.24;letter-spacing:-.01em;text-wrap:pretty;color:var(--dv-bone)}
+.vz .dcard-a{margin-top:auto;font-family:var(--m);font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dv-accent)}
+.vz .daily-all{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink)}
+.vz .daily-all:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:900px){.vz .daily-row{grid-template-columns:1fr}.vz .dcard{min-height:0}}
 
 /* ── STORY EMBED — sticky scroll-sync ────────────── */
 .vz .story-embed{border-top:1px solid var(--line)}
@@ -192,6 +235,51 @@ function PenroseMark({ size = 20, dark = false }: { size?: number; dark?: boolea
   )
 }
 
+/* The last three Doom v Boom editions: each morning's Boom Score ring and headline. */
+function DailySection({ editions, vars }: { editions: HomeDailyEdition[]; vars: Record<string, string> }) {
+  if (!editions.length) return null
+  // The edition tokens under their own names for the ring (--boom, --doom,
+  // --dim …) and --dv-* aliases for this stylesheet, which already owns
+  // --ink / --muted / --line for the cream page.
+  const style: Record<string, string> = {}
+  for (const [k, v] of Object.entries(vars)) style[`--dv-${k.slice(2)}`] = v
+  for (const k of ['--boom', '--doom', '--dim']) if (vars[k]) style[k] = vars[k]
+  return (
+    <section id="daily" className="daily-section">
+      <div className="region-head">
+        <div className="kick teal">AI Daily · Doom v Boom</div>
+        <Link className="daily-all" href="/ai-daily/doom-v-boom">Every edition →</Link>
+      </div>
+      <p className="daily-lede">
+        Each morning we read the previous day of AI data-centre, energy and sustainability news and score it:
+        a Boom Score out of 100, where 50 is balanced.
+      </p>
+      <div className="daily-row" data-ring-palette="" style={style as CSSProperties}>
+        {editions.map((e, i) => (
+          <Link key={e.href} className="dcard" href={e.href} data-tone={e.tone}>
+            <div className="dcard-top">
+              <span>{i === 0 ? `Latest · ${e.date}` : e.date}</span>
+              {e.number != null && <span>№ {e.number}</span>}
+            </div>
+            <div className="dcard-score">
+              <LiveRing score={e.moodScore} className="dcard-ring">
+                <span className="dcard-num">{e.score ?? '—'}</span>
+              </LiveRing>
+              <span className="dcard-of">
+                <span className="dcard-lbl">Boom Score{e.score != null ? ' / 100' : ''}</span>
+                <span className="dcard-word">{e.word}</span>
+                <span className="dcard-signed">{e.signed}</span>
+              </span>
+            </div>
+            <h3 className="dcard-h">{e.headline}</h3>
+            <span className="dcard-a">Read the edition →</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /* The running epics, as a themed row just below the header. */
 function EpicsSection({ epics }: { epics: HomeEpic[] }) {
   if (!epics.length) return null
@@ -229,10 +317,14 @@ function EpicsSection({ epics }: { epics: HomeEpic[] }) {
 export default function HomeClient({
   stories,
   epics = [],
+  dailyEditions = [],
+  dailyVars = {},
   fontUrls = [],
 }: {
   stories: HomeStory[]
   epics?: HomeEpic[]
+  dailyEditions?: HomeDailyEdition[]
+  dailyVars?: Record<string, string>
   fontUrls?: string[]
 }) {
   const [filter, setFilter] = useState('All')
@@ -419,6 +511,7 @@ export default function HomeClient({
         </button>
         <div className="vznav-r">
           <a className="vznav-link" href="#work">Work</a>
+          <Link className="vznav-link" href="/ai-daily">Daily</Link>
           <a className="vznav-link" href="#epics">Epics</a>
           <Link className="vznav-link" href="/stories">Archive</Link>
           <a className="vznav-link" href="#contact">Contact</a>
@@ -472,6 +565,9 @@ export default function HomeClient({
           </div>
         </div>
       </section>
+
+      {/* DOOM V BOOM — the last three daily editions, above the epics */}
+      <DailySection editions={dailyEditions} vars={dailyVars} />
 
       {/* EPICS — running collections, as a row below the header */}
       <EpicsSection epics={epics} />

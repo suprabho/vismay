@@ -40,21 +40,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }))
 
-  // One stable URL per frozen edition, plus the /daily alias for the latest.
-  const editionEntries: MetadataRoute.Sitemap = editions.map((e) => ({
-    url: `${BASE_URL}/ai-daily/doom-v-boom/${e.date}`,
-    lastModified: e.publishedAt ? new Date(e.publishedAt) : new Date(`${e.date}T09:00:00Z`),
-    changeFrequency: 'never',
-    priority: 0.7,
-  }))
-  if (editions.length > 0) {
-    editionEntries.unshift({
-      url: `${BASE_URL}/ai-daily/doom-v-boom`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.85,
-    })
-  }
+  // The AI Daily hub and the Doom v Boom landing, then one stable URL per
+  // frozen edition (the /latest redirect is never listed).
+  const editionEntries: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/ai-daily`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/ai-daily/doom-v-boom`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.85 },
+    ...editions.map((e) => ({
+      url: `${BASE_URL}/ai-daily/doom-v-boom/${e.date}`,
+      lastModified: e.publishedAt ? new Date(e.publishedAt) : new Date(`${e.date}T09:00:00Z`),
+      changeFrequency: 'never' as const,
+      priority: 0.7,
+    })),
+  ]
 
   const authorEntries: MetadataRoute.Sitemap = authors.map((a) => ({
     url: `${BASE_URL}/authors/${a.slug}`,
