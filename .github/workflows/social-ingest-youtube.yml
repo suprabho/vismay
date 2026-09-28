@@ -11,9 +11,11 @@ name: Social ingest — YouTube
 #   YOUTUBE_CHANNEL_ID          — the channel whose comments we ingest
 
 on:
-  schedule:
-    # Every 30 min, offset 7 to dodge top-of-hour queue spikes.
-    - cron: '7,37 * * * *'
+  # PAUSED: scheduled runs disabled. Restore the block below to resume;
+  # manual `workflow_dispatch` runs still work.
+  # schedule:
+  #   # Every 30 min, offset 7 to dodge top-of-hour queue spikes.
+  #   - cron: '7,37 * * * *'
   workflow_dispatch:
 
 concurrency:
