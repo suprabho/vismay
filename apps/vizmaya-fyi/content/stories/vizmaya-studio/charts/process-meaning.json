@@ -1,0 +1,382 @@
+{
+  "steps": [
+    {
+      "title": "Meaning · colour the decks and a question appears",
+      "option": {
+        "animationDuration": 900,
+        "grid": {
+          "left": "4%",
+          "right": "16%",
+          "bottom": "8%",
+          "top": "18%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "name": "sections",
+          "nameLocation": "end",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          },
+          "min": 0,
+          "max": 45,
+          "splitLine": {
+            "show": false
+          },
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "show": true
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "words",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          },
+          "min": 0,
+          "max": 3200,
+          "interval": 800,
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLine": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "show": true
+          }
+        },
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: {c}"
+        },
+        "series": [
+          {
+            "name": "Map stories",
+            "type": "scatter",
+            "symbolSize": 10,
+            "itemStyle": {
+              "color": "$muted",
+              "opacity": 0.45
+            },
+            "data": [
+              {
+                "name": "The Year the Dollar Lost",
+                "value": [
+                  14,
+                  780
+                ]
+              },
+              {
+                "name": "India's Redrawn Map",
+                "value": [
+                  12,
+                  644
+                ]
+              },
+              {
+                "name": "The Growth That Moved East",
+                "value": [
+                  15,
+                  696
+                ]
+              },
+              {
+                "name": "The Shrinking European House",
+                "value": [
+                  18,
+                  834
+                ]
+              },
+              {
+                "name": "Where the Next Billion Are Born",
+                "value": [
+                  15,
+                  636
+                ]
+              },
+              {
+                "name": "The Quiet Inflation",
+                "value": [
+                  39,
+                  1347
+                ]
+              },
+              {
+                "name": "Stargate's Real Constraint",
+                "value": [
+                  15,
+                  705
+                ]
+              },
+              {
+                "name": "The Last Forest Before the Strait",
+                "value": [
+                  11,
+                  592
+                ]
+              },
+              {
+                "name": "What the World Drives, What the World Burns",
+                "value": [
+                  12,
+                  863
+                ]
+              },
+              {
+                "name": "When the Strait Closed",
+                "value": [
+                  15,
+                  838
+                ]
+              },
+              {
+                "name": "The World Is Watching",
+                "value": [
+                  18,
+                  453
+                ]
+              },
+              {
+                "name": "Mapped: The Melodi Era",
+                "value": [
+                  15,
+                  1064
+                ]
+              },
+              {
+                "name": "A Kingdom on the Eve of Reform",
+                "value": [
+                  15,
+                  813
+                ]
+              },
+              {
+                "name": "India 2026: Four Shocks at Once",
+                "value": [
+                  8,
+                  927
+                ]
+              },
+              {
+                "name": "Who Owns America's $39 Trillion Debt?",
+                "value": [
+                  11,
+                  715
+                ]
+              },
+              {
+                "name": "The Sky Closes for the Summer",
+                "value": [
+                  10,
+                  895
+                ]
+              },
+              {
+                "name": "A New Ebola is Moving Through a War",
+                "value": [
+                  11,
+                  1249
+                ]
+              },
+              {
+                "name": "The Army That Isn't There",
+                "value": [
+                  16,
+                  718
+                ]
+              },
+              {
+                "name": "What a Litre Costs in India",
+                "value": [
+                  11,
+                  1004
+                ]
+              },
+              {
+                "name": "The American Cost Divide",
+                "value": [
+                  16,
+                  817
+                ]
+              },
+              {
+                "name": "A Conglomerate's Shadow Across India",
+                "value": [
+                  9,
+                  1456
+                ]
+              },
+              {
+                "name": "US Strikes on Oil Tankers",
+                "value": [
+                  6,
+                  907
+                ]
+              },
+              {
+                "name": "A Two-Week Voyage, Ten Years Long",
+                "value": [
+                  19,
+                  1718
+                ]
+              },
+              {
+                "name": "A Leaky Future",
+                "value": [
+                  17,
+                  1236
+                ]
+              },
+              {
+                "name": "The Ramayana, Mapped",
+                "value": [
+                  42,
+                  939
+                ]
+              },
+              {
+                "name": "Up and down the peninsula",
+                "value": [
+                  18,
+                  985
+                ]
+              },
+              {
+                "name": "The Domestic Stack",
+                "value": [
+                  18,
+                  401
+                ]
+              },
+              {
+                "name": "The Site-Selection Race",
+                "value": [
+                  27,
+                  706
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Decks",
+            "type": "scatter",
+            "symbolSize": 13,
+            "itemStyle": {
+              "color": "$red"
+            },
+            "data": [
+              {
+                "name": "A Rocket Company That Became the Internet",
+                "value": [
+                  14,
+                  2584
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "SpaceX S-1",
+                  "position": "right",
+                  "color": "$red",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              },
+              {
+                "name": "Zepto IPO Filing",
+                "value": [
+                  7,
+                  1011
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "Zepto IPO",
+                  "position": "right",
+                  "color": "$red",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              },
+              {
+                "name": "Adani and the State: Pattern vs. Proof in India's Infrastructure Push",
+                "value": [
+                  8,
+                  3074
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "Adani and the State",
+                  "position": "right",
+                  "color": "$red",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              },
+              {
+                "name": "NSE IPO 2026",
+                "value": [
+                  7,
+                  1342
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "NSE IPO",
+                  "position": "right",
+                  "color": "$red",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              },
+              {
+                "name": "Jio IPO: The Numbers Behind India's Biggest Listing",
+                "value": [
+                  7,
+                  337
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "Jio IPO",
+                  "position": "right",
+                  "color": "$red",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              }
+            ]
+          }
+        ],
+        "graphic": [
+          {
+            "type": "text",
+            "left": "4%",
+            "top": "2%",
+            "style": {
+              "text": "Why do our five company stories read so heavy?",
+              "fill": "$red",
+              "font": "600 13px JetBrains Mono"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&family=JetBrains+Mono:wght@500;600&display=block" rel="stylesheet">
+<style>
+  :root { --ink:#0f0e0c; --muted:#6b665d; --line:#d8d2c5; --green:#2d6a4f; --red:#c4391c; --indigo:#5c4ba0; }
+  html,body{margin:0;background:transparent}
+  #stage{width:1600px;height:900px;position:relative}
+  .col{position:absolute;top:0}
+  .art{position:relative;height:560px}
+  .card{position:absolute;border-radius:10px;overflow:hidden;box-shadow:0 1px 0 rgba(15,14,12,.08),0 22px 44px -20px rgba(15,14,12,.5)}
+  .card img{display:block;width:100%}
+  .back img{filter:brightness(.62) saturate(.8)}
+  .label{position:absolute;top:596px;left:0;right:0;border-top:1.5px solid var(--line);padding-top:20px}
+  .kicker{font:600 26px/1 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase}
+  .title{font:400 42px/1.15 'Fraunces',serif;color:var(--ink);margin-top:14px}
+  .meta{font:500 22px/1 'JetBrains Mono',monospace;letter-spacing:.08em;color:var(--muted);margin-top:14px;text-transform:uppercase}
+  .phone{position:absolute;border-radius:40px;background:var(--ink);padding:11px;box-shadow:0 22px 44px -20px rgba(15,14,12,.55)}
+  .phone img{display:block;width:100%;border-radius:30px}
+  .notch{position:absolute;top:20px;left:50%;transform:translateX(-50%);width:70px;height:18px;border-radius:10px;background:var(--ink)}
+</style></head><body>
+<div id="stage">
+  <div class="col" style="left:0;width:600px">
+    <div class="art">
+      <div class="card back" style="width:520px;left:80px;top:100px"><img src="k1c.jpg"></div>
+      <div class="card back" style="width:520px;left:40px;top:162px"><img src="k2c.jpg"></div>
+      <div class="card" style="width:520px;left:0;top:224px"><img src="k3c.jpg"></div>
+    </div>
+    <div class="label" style="right:40px">
+      <div class="kicker" style="color:var(--green)">01 · Scrollytelling</div>
+      <div class="title">Up and down the peninsula</div>
+      <div class="meta">Many sections, one scroll</div>
+    </div>
+  </div>
+  <div class="col" style="left:660px;width:500px">
+    <div class="art">
+      <div class="card" style="width:500px;left:0;top:313px"><img src="chart.jpg"></div>
+    </div>
+    <div class="label">
+      <div class="kicker" style="color:var(--red)">02 · One chart</div>
+      <div class="title">What a Litre Costs in India</div>
+      <div class="meta">One picture, one headline</div>
+    </div>
+  </div>
+  <div class="col" style="left:1220px;width:380px">
+    <div class="art">
+      <div class="phone" style="width:278px;left:0;top:72px"><img src="reelc.jpg"><div class="notch"></div></div>
+    </div>
+    <div class="label">
+      <div class="kicker" style="color:var(--indigo)">03 · Vertical</div>
+      <div class="title">The Last Forest Before the Strait</div>
+      <div class="meta">9:16, made to be watched</div>
+    </div>
+  </div>
+</div></body></html>

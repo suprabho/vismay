@@ -1,0 +1,409 @@
+{
+  "steps": [
+    {
+      "title": "Form · the answer, drawn to be read in one glance",
+      "option": {
+        "animationDuration": 900,
+        "grid": {
+          "left": "17%",
+          "right": "6%",
+          "bottom": "14%",
+          "top": "24%",
+          "containLabel": false
+        },
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}"
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 400,
+          "interval": 100,
+          "name": "words per section",
+          "nameLocation": "middle",
+          "nameGap": 28,
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": -0.6,
+          "max": 1.6,
+          "show": false
+        },
+        "series": [
+          {
+            "name": "Map stories",
+            "type": "scatter",
+            "symbolSize": 12,
+            "itemStyle": {
+              "color": "$muted",
+              "opacity": 0.55
+            },
+            "data": [
+              {
+                "name": "The Site-Selection Race",
+                "value": [
+                  26,
+                  0.937
+                ]
+              },
+              {
+                "name": "A Conglomerate's Shadow Across India",
+                "value": [
+                  162,
+                  1.011
+                ]
+              },
+              {
+                "name": "The American Cost Divide",
+                "value": [
+                  51,
+                  0.969
+                ]
+              },
+              {
+                "name": "The Year the Dollar Lost",
+                "value": [
+                  56,
+                  1.025
+                ]
+              },
+              {
+                "name": "India's Redrawn Map",
+                "value": [
+                  54,
+                  1.03
+                ]
+              },
+              {
+                "name": "A New Ebola is Moving Through a War",
+                "value": [
+                  114,
+                  0.896
+                ]
+              },
+              {
+                "name": "The Growth That Moved East",
+                "value": [
+                  46,
+                  0.883
+                ]
+              },
+              {
+                "name": "The Last Forest Before the Strait",
+                "value": [
+                  54,
+                  1.081
+                ]
+              },
+              {
+                "name": "The Shrinking European House",
+                "value": [
+                  46,
+                  0.942
+                ]
+              },
+              {
+                "name": "When the Strait Closed",
+                "value": [
+                  56,
+                  0.936
+                ]
+              },
+              {
+                "name": "The Sky Closes for the Summer",
+                "value": [
+                  90,
+                  1.119
+                ]
+              },
+              {
+                "name": "India 2026: Four Shocks at Once",
+                "value": [
+                  116,
+                  0.993
+                ]
+              },
+              {
+                "name": "A Leaky Future",
+                "value": [
+                  73,
+                  1.081
+                ]
+              },
+              {
+                "name": "What a Litre Costs in India",
+                "value": [
+                  91,
+                  0.994
+                ]
+              },
+              {
+                "name": "Mapped: The Melodi Era",
+                "value": [
+                  71,
+                  1.033
+                ]
+              },
+              {
+                "name": "A Kingdom on the Eve of Reform",
+                "value": [
+                  54,
+                  0.916
+                ]
+              },
+              {
+                "name": "Up and down the peninsula",
+                "value": [
+                  55,
+                  1.032
+                ]
+              },
+              {
+                "name": "The Army That Isn't There",
+                "value": [
+                  45,
+                  1.088
+                ]
+              },
+              {
+                "name": "A Two-Week Voyage, Ten Years Long",
+                "value": [
+                  90,
+                  1.006
+                ]
+              },
+              {
+                "name": "Where the Next Billion Are Born",
+                "value": [
+                  42,
+                  1.058
+                ]
+              },
+              {
+                "name": "The Ramayana, Mapped",
+                "value": [
+                  22,
+                  1.041
+                ]
+              },
+              {
+                "name": "The Quiet Inflation",
+                "value": [
+                  35,
+                  0.895
+                ]
+              },
+              {
+                "name": "Stargate's Real Constraint",
+                "value": [
+                  47,
+                  1.062
+                ]
+              },
+              {
+                "name": "The World Is Watching",
+                "value": [
+                  25,
+                  1.022
+                ]
+              },
+              {
+                "name": "The Domestic Stack",
+                "value": [
+                  22,
+                  0.952
+                ]
+              },
+              {
+                "name": "What the World Drives, What the World Burns",
+                "value": [
+                  72,
+                  0.887
+                ]
+              },
+              {
+                "name": "US Strikes on Oil Tankers",
+                "value": [
+                  151,
+                  1.088
+                ]
+              },
+              {
+                "name": "Who Owns America's $39 Trillion Debt?",
+                "value": [
+                  65,
+                  0.993
+                ]
+              }
+            ],
+            "markLine": {
+              "silent": true,
+              "symbol": "none",
+              "lineStyle": {
+                "color": "$muted",
+                "type": "solid",
+                "width": 1.5
+              },
+              "label": {
+                "formatter": "map median · 54",
+                "color": "$muted",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 10
+              },
+              "data": [
+                {
+                  "xAxis": 54
+                }
+              ]
+            }
+          },
+          {
+            "name": "Decks",
+            "type": "scatter",
+            "symbolSize": 15,
+            "itemStyle": {
+              "color": "$accent2"
+            },
+            "data": [
+              {
+                "name": "Adani and the State: Pattern vs. Proof in India's Infrastructure Push",
+                "value": [
+                  384,
+                  0.053
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "Adani and the State",
+                  "position": "left",
+                  "color": "$accent2",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              },
+              {
+                "name": "Jio IPO: The Numbers Behind India's Biggest Listing",
+                "value": [
+                  48,
+                  0.091
+                ],
+                "label": {
+                  "show": true,
+                  "formatter": "Jio IPO",
+                  "position": "bottom",
+                  "color": "$accent2",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10
+                }
+              },
+              {
+                "name": "NSE IPO 2026",
+                "value": [
+                  192,
+                  0.051
+                ]
+              },
+              {
+                "name": "A Rocket Company That Became the Internet",
+                "value": [
+                  185,
+                  0.101
+                ]
+              },
+              {
+                "name": "Zepto IPO Filing",
+                "value": [
+                  144,
+                  -0.025
+                ]
+              }
+            ],
+            "markLine": {
+              "silent": true,
+              "symbol": "none",
+              "lineStyle": {
+                "color": "$accent2",
+                "type": "solid",
+                "width": 1.5
+              },
+              "label": {
+                "formatter": "deck median · 185",
+                "color": "$accent2",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 10
+              },
+              "data": [
+                {
+                  "xAxis": 185
+                }
+              ]
+            }
+          }
+        ],
+        "graphic": [
+          {
+            "type": "text",
+            "left": "4%",
+            "top": "1%",
+            "style": {
+              "text": "Maps show. Decks explain.",
+              "fill": "$accent2",
+              "font": "bold 15px JetBrains Mono"
+            }
+          },
+          {
+            "type": "text",
+            "left": "4%",
+            "top": "8%",
+            "style": {
+              "text": "Our 5 decks, all company stories, carry 3.4× the words per screen of our 28 maps.",
+              "fill": "$muted",
+              "font": "normal 11px JetBrains Mono"
+            }
+          },
+          {
+            "type": "text",
+            "left": "1%",
+            "top": "38%",
+            "style": {
+              "text": "MAP STORIES · 28",
+              "fill": "$muted",
+              "font": "600 10px JetBrains Mono"
+            }
+          },
+          {
+            "type": "text",
+            "left": "1%",
+            "top": "68%",
+            "style": {
+              "text": "DECKS · 5",
+              "fill": "$accent2",
+              "font": "600 10px JetBrains Mono"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

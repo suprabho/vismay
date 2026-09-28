@@ -180,13 +180,25 @@ export default function MapStorySection({
   // means "is the foreground slot occupied", since the text card needs to
   // dodge the foreground card's top-half real estate in landscape. After the
   // viz-registry refactor, sections can fill the slot via `foreground:` too.
-  const hasChart = !!parentConfig.chart || resolveSlotsFlat(parentConfig).foreground.length > 0
   // Region-mode sections render their text through the body region's text
   // module (see ForegroundLayoutSlot). The section's own text card is
   // suppressed to avoid double rendering — only the snap target stays so
   // the IntersectionObserver still drives `activeUnit`.
   const resolvedFg = resolveSlots(parentConfig).foreground
   const usesRegions = resolvedFg.kind === 'regions'
+  // Deck in-flow hero with a FLAT foreground: the layers are art for the
+  // empty left column (e.g. an illustration beside a section title). The
+  // hero card keeps its full-height right column instead of dodging to the
+  // bottom half the way it does beneath a chart. Region foregrounds on a
+  // hero keep today's behaviour (not painted).
+  const heroWithArt =
+    kind === 'hero' &&
+    renderForegroundInline &&
+    resolvedFg.kind === 'flat' &&
+    resolvedFg.layers.length > 0
+  const hasChart =
+    !heroWithArt &&
+    (!!parentConfig.chart || resolveSlotsFlat(parentConfig).foreground.length > 0)
 
   // Deck live-scroll: this section's foreground, rendered in-flow so it scrolls
   // with the page. A flat foreground (deck section with no `layout:`) is wrapped
@@ -383,6 +395,7 @@ export default function MapStorySection({
             data-unit-index={unitIndex}
             className="snap-start snap-always h-svh w-full relative"
           >
+            {heroWithArt && inlineForeground}
             <div className={cardClasses} style={cardStyle}>
               <div className="mx-auto h-full flex flex-col justify-center">
                 {/* Landscape: full hero (only used when heroPart is undefined,
