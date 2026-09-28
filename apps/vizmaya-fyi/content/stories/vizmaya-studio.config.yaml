@@ -242,7 +242,7 @@ sections:
         fit: contain
         style:
           position: { x: left, y: center }
-          size: { width: "33%", height: "84vh" }
+          size: { width: "33%", height: "70vh" }
           portrait: { position: { x: center, y: "22%" }, size: { width: "80%", height: "36vh" } }
 
   # ── 8 · WHAT THE WORLD HIDES — thesis left, three hidden things right ──────
@@ -276,22 +276,32 @@ sections:
   - id: both-fail
     kind: quote
     text: "Both fail the same way"
+    # Two short side-by-side lists (not one tall stack) so nothing can grow
+    # into the verdict below on short frames like the home-page embed.
     foreground:
       - type: keyValue
         items:
           - { key: "Either", value: "It stays buried in jargon", color: muted }
-          - { key: "Or", value: "It gets compressed into a hot take", color: muted }
-        listStyle: { layout: stacked, size: lg, gap: loose, justify: center }
+        listStyle: { layout: stacked, size: lg, valueFontSize: "clamp(1.4rem, 2.4vw, 2.2rem)", keyFontSize: "0.85rem" }
         style:
-          position: { x: center, y: "32%" }
-          size: { width: "30%" }
-          portrait: { size: { width: "84%" } }
+          position: { x: "16%", y: "24%" }
+          size: { width: "32%" }
+          portrait: { position: { x: "0%", y: "8%" }, size: { width: "100%" } }
+      - type: keyValue
+        items:
+          - { key: "Or", value: "It gets compressed into a hot take", color: muted }
+        listStyle: { layout: stacked, size: lg, valueFontSize: "clamp(1.4rem, 2.4vw, 2.2rem)", keyFontSize: "0.85rem" }
+        style:
+          position: { x: "54%", y: "24%" }
+          size: { width: "32%" }
+          portrait: { position: { x: "0%", y: "30%" }, size: { width: "100%" } }
       - type: quote
         text: "Both fail the same way."
         align: center
         style:
-          position: { x: center, y: "68%" }
+          position: { x: center, y: "62%" }
           size: { width: "72%" }
+          portrait: { position: { x: center, y: "64%" }, size: { width: "100%" } }
           revealDelayMs: 400
 
   # ── 10 · WHAT WE MAKE — the thesis next to real work in three formats ──────
@@ -309,14 +319,14 @@ sections:
         heading: "What we make"
         style:
           position: { x: left, y: center }
-          size: { width: "30%" }
+          size: { width: "34%" }
       - type: image
         src: "assets://vizmaya-studio/what-we-make.webp"
         alt: "Three formats from our own work: a stack of scrollytelling slides from Up and down the peninsula, a single bar chart from What a Litre Costs in India, and a 9:16 phone frame from The Last Forest Before the Strait."
         fit: contain
         style:
           position: { x: right, y: center }
-          size: { width: "64%", height: "72vh" }
+          size: { width: "60%", height: "72vh" }
           portrait: { size: { width: "100%", height: "34vh" } }
 
   # ── 11 · STUDIO — title slide; the mark recast as two people + the story ───
