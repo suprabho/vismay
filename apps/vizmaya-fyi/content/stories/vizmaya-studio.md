@@ -3,7 +3,7 @@ title: "We give the invisible its shape"
 subtitle: "Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs."
 byline: "Vismaya · A studio for wonder"
 date: "2026-05-31"
-status: "draft"
+status: "published"
 listed: false
 
 # Deck format — the studio manifesto laid out as snap-aligned slides over a
@@ -31,13 +31,15 @@ theme:
     mono: "JetBrains Mono"
 ---
 
-## Open
+## Cover
 
-The mark, in motion.
+*Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs.*
+
+**Vismaya · A studio for wonder**
 
 ## Process
 
-Three things. In order. Every time.
+*Pattern, then meaning, then form. Below, our own 33 published stories go through all three.*
 
 ## Pattern
 
@@ -57,7 +59,7 @@ Our mark borrows from Roger Penrose's diagram of reality's three mysteries — t
 
 ## Belief
 
-Rigour and beauty are the same demand.
+*A beautiful line is only allowed to pass through measured points.*
 
 ## What the world hides
 
@@ -77,7 +79,7 @@ Sometimes it's a ten-minute scrollytelling piece. Sometimes a single chart with 
 
 ## Studio
 
-A two-person studio.
+*A journalist who designs. A designer who codes.*
 
 ## Shashank A. Pandey
 

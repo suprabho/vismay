@@ -4,14 +4,21 @@
 # deck-format scrollytelling piece. Bone-white editorial: type on paper, no
 # frosted-glass panels, no aura motion.
 #
-# THE PROP: the Vismaya mark (public/vizmaya-logo.riv) is the recurring object.
-#   - opens the deck big and animated (full tri-colour)
-#   - re-colours per "process" beat — green (Pattern) → vermillion (Meaning)
-#     → indigo (Form), the leaps between pattern, mind and form
-#   - anchors the "our mark" slide where the copy explains it
-#   - closes the deck
-#   The persistent top-left logo (mounted by the deck shell) also re-tints per
-#   section via each section's `logoPalette`.
+# SHOW, DON'T TELL: a studio that says "we start with the dataset" has to
+# show one. The Process beats analyse OUR OWN WORK — the 33 listed vizmaya-fyi
+# stories (stories table, 2026-09-29): sections × words per story → the five
+# company decks stand out → "maps show, decks explain" (median 54 vs 185 words
+# per section). Charts in charts/process-*.json; re-derive if the list grows.
+#
+# THE PROP: the Penrose tri-mark (three worlds + the leaps between them),
+# recoloured to the story palette as static SVGs in
+# the story-assets bucket (assets://vizmaya-studio/…; sources + generator in
+# content/stories/vizmaya-studio/images/, generated from
+# public/vizmaya-logo-01.svg geometry). Green = Pattern, vermillion = Meaning,
+# indigo = Form. It fills the left panel of every title slide, recast as the
+# studio on "Studio". The animated wordmark (vizmaya-logo.riv) bookends the
+# deck on the cover and closing. The persistent top-left logo re-tints per
+# section via `logoPalette`.
 
 defaults:
   mapStyle: mapbox://styles/mapbox/light-v11
@@ -54,18 +61,19 @@ defaults:
 
 sections:
 
-  # ── 1 · OPEN — the mark, big and animated ──────────────────────────────────
-  - id: open
-    kind: divider
-    layout: centered
-    text: "Open"
+  # ── 1 · COVER — title + dek on the right, animated wordmark on the left ────
+  - id: cover
+    kind: hero
+    text: "Cover"
+    heading: "We give the invisible its shape."
+    eyebrow: "— Vismaya · a data-storytelling studio"
+    background:
+      type: none
     foreground:
       - type: rive
         src: "/vizmaya-logo.riv"
         autoplay: true
-        layout:
-          fit: contain
-          alignment: center
+        layout: { fit: contain, alignment: center }
         viewModel:
           bindings:
             textColor:    "#0f0e0c"
@@ -75,13 +83,13 @@ sections:
             surfaceColor: "#f5f1ea"
             mutedColor:   "#6b665d"
             lineColor:    "#d8d2c5"
-        capture:
-          mode: currentFrame
+        capture: { mode: currentFrame }
         style:
-          position: { x: center, y: center }
-          size: { width: "54%", height: "60vh" }
+          position: { x: left, y: center }
+          size: { width: "32%", height: "40vh" }
+          portrait: { position: { x: center, y: "22%" }, size: { width: "80%", height: "24vh" } }
 
-  # ── 2 · PROCESS — title slide ───────────────────────────────────────────────
+  # ── 2 · PROCESS — title slide; the three worlds, labelled ──────────────────
   - id: process
     kind: hero
     text: "Process"
@@ -89,8 +97,19 @@ sections:
     eyebrow: "— Process"
     background:
       type: none
+    foreground:
+      - type: image
+        src: "assets://vizmaya-studio/mark-three-worlds.svg"
+        alt: "The Vismaya mark: three circles labelled Pattern (the data), Meaning (the mind) and Form (the design), joined by tapering leaps."
+        fit: contain
+        style:
+          position: { x: left, y: center }
+          size: { width: "32%", height: "62vh" }
+          portrait: { position: { x: center, y: "24%" }, size: { width: "78%", height: "34vh" } }
 
-  # ── 3 · PATTERN (Data) — mark glows green ───────────────────────────────────
+  # ── 3–5 · PATTERN → MEANING → FORM — one dataset, three passes ────────────
+  # Same data (our 33 published stories) in all three charts; only what
+  # we've understood changes. Mark node + logo tint follow the step.
   - id: pattern
     kind: split
     text: "Pattern"
@@ -98,6 +117,14 @@ sections:
     logoPalette:
       accent: "$teal"
     foreground:
+      - type: image
+        src: "assets://vizmaya-studio/mark-pattern.svg"
+        alt: "The mark with the Pattern circle filled in green."
+        fit: contain
+        style:
+          position: { x: right, y: "2%" }
+          size: { width: "6%", height: "9vh" }
+          portrait: { opacity: 0 }
       - type: bodyText
         from: text
         showHeading: true
@@ -106,26 +133,14 @@ sections:
           size: large
         style:
           position: { x: left, y: center }
-          size: { width: "46%" }
-      - type: rive
-        src: "/vizmaya-logo.riv"
-        autoplay: true
-        layout: { fit: contain, alignment: center }
-        viewModel:
-          bindings:
-            textColor:    "#2d6a4f"
-            tealColor:    "#2d6a4f"
-            accentColor:  "#2d6a4f"
-            accent2Color: "#3f8a68"
-            surfaceColor: "#f5f1ea"
-            mutedColor:   "#6f9484"
-            lineColor:    "#cdddd3"
-        capture: { mode: currentFrame }
+          size: { width: "34%" }
+      - type: chart
+        id: process-pattern
         style:
           position: { x: right, y: center }
-          size: { width: "38%", height: "46vh" }
+          size: { width: "54%", height: "62vh" }
+          portrait: { size: { height: "34vh" } }
 
-  # ── 4 · MEANING (Narrative) — mark glows vermillion ─────────────────────────
   - id: meaning
     kind: split
     text: "Meaning"
@@ -133,6 +148,14 @@ sections:
     logoPalette:
       accent: "$red"
     foreground:
+      - type: image
+        src: "assets://vizmaya-studio/mark-meaning.svg"
+        alt: "The mark with the Meaning circle filled in vermillion."
+        fit: contain
+        style:
+          position: { x: right, y: "2%" }
+          size: { width: "6%", height: "9vh" }
+          portrait: { opacity: 0 }
       - type: bodyText
         from: text
         showHeading: true
@@ -141,26 +164,14 @@ sections:
           size: large
         style:
           position: { x: left, y: center }
-          size: { width: "46%" }
-      - type: rive
-        src: "/vizmaya-logo.riv"
-        autoplay: true
-        layout: { fit: contain, alignment: center }
-        viewModel:
-          bindings:
-            textColor:    "#c4391c"
-            tealColor:    "#c4391c"
-            accentColor:  "#c4391c"
-            accent2Color: "#e07a64"
-            surfaceColor: "#f5f1ea"
-            mutedColor:   "#c08a80"
-            lineColor:    "#ecd9d2"
-        capture: { mode: currentFrame }
+          size: { width: "34%" }
+      - type: chart
+        id: process-meaning
         style:
           position: { x: right, y: center }
-          size: { width: "38%", height: "46vh" }
+          size: { width: "54%", height: "62vh" }
+          portrait: { size: { height: "34vh" } }
 
-  # ── 5 · FORM (Design) — mark glows indigo ───────────────────────────────────
   - id: form
     kind: split
     text: "Form"
@@ -168,6 +179,14 @@ sections:
     logoPalette:
       accent: "$accent2"
     foreground:
+      - type: image
+        src: "assets://vizmaya-studio/mark-form.svg"
+        alt: "The mark with the Form circle filled in indigo."
+        fit: contain
+        style:
+          position: { x: right, y: "2%" }
+          size: { width: "6%", height: "9vh" }
+          portrait: { opacity: 0 }
       - type: bodyText
         from: text
         showHeading: true
@@ -176,26 +195,15 @@ sections:
           size: large
         style:
           position: { x: left, y: center }
-          size: { width: "46%" }
-      - type: rive
-        src: "/vizmaya-logo.riv"
-        autoplay: true
-        layout: { fit: contain, alignment: center }
-        viewModel:
-          bindings:
-            textColor:    "#5c4ba0"
-            tealColor:    "#5c4ba0"
-            accentColor:  "#5c4ba0"
-            accent2Color: "#8a7bc8"
-            surfaceColor: "#f5f1ea"
-            mutedColor:   "#9089a8"
-            lineColor:    "#ddd7ec"
-        capture: { mode: currentFrame }
+          size: { width: "34%" }
+      - type: chart
+        id: process-form
         style:
           position: { x: right, y: center }
-          size: { width: "38%", height: "46vh" }
+          size: { width: "54%", height: "62vh" }
+          portrait: { size: { height: "34vh" } }
 
-  # ── 6 · THE MARK — Penrose explanation, full tri-colour mark ────────────────
+  # ── 6 · THE MARK — the Penrose explanation next to the labelled mark ───────
   - id: the-mark
     kind: split
     text: "The mark"
@@ -203,30 +211,22 @@ sections:
     foreground:
       - type: bodyText
         from: text
+        showHeading: true
+        heading: "Our mark"
         textStyle:
           size: large
         style:
           position: { x: left, y: center }
-          size: { width: "48%" }
-      - type: rive
-        src: "/vizmaya-logo.riv"
-        autoplay: true
-        layout: { fit: contain, alignment: center }
-        viewModel:
-          bindings:
-            textColor:    "#0f0e0c"
-            tealColor:    "#2d6a4f"
-            accentColor:  "#c4391c"
-            accent2Color: "#5c4ba0"
-            surfaceColor: "#f5f1ea"
-            mutedColor:   "#6b665d"
-            lineColor:    "#d8d2c5"
-        capture: { mode: currentFrame }
+          size: { width: "44%" }
+      - type: image
+        src: "assets://vizmaya-studio/mark-three-worlds.svg"
+        alt: "The Vismaya mark: Pattern, Meaning and Form as three circles joined by leaps, after Roger Penrose's three-worlds diagram."
+        fit: contain
         style:
           position: { x: right, y: center }
-          size: { width: "40%", height: "56vh" }
+          size: { width: "42%", height: "70vh" }
 
-  # ── 7 · BELIEF — title slide ─────────────────────────────────────────────────
+  # ── 7 · BELIEF — title slide; rigour + beauty drawn as one line ────────────
   - id: belief
     kind: hero
     text: "Belief"
@@ -234,37 +234,66 @@ sections:
     eyebrow: "— What we believe"
     background:
       type: none
+    foreground:
+      - type: image
+        src: "assets://vizmaya-studio/belief-rigour-beauty.svg"
+        alt: "A smooth vermillion curve passing exactly through eleven measured points, one per year from 2015 to 2025."
+        fit: contain
+        style:
+          position: { x: left, y: center }
+          size: { width: "33%", height: "50vh" }
+          portrait: { position: { x: center, y: "24%" }, size: { width: "88%", height: "28vh" } }
 
-  # ── 8 · WHAT THE WORLD HIDES — prose ─────────────────────────────────────────
+  # ── 8 · WHAT THE WORLD HIDES — thesis left, three hidden things right ──────
   - id: world-hides
     kind: bodyText
     text: "What the world hides"
-    paragraphs: [0, 2]
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
+    paragraphs: [0, 1]
     foreground:
       - type: bodyText
         from: text
+        showHeading: true
+        heading: "What the world hides"
         textStyle:
           size: large
         style:
           position: { x: left, y: center }
-          size: { width: "56%" }
+          size: { width: "40%" }
+      - type: keyValue
+        title: "Hiding in plain sight"
+        items:
+          - { key: "The supply chain", value: "6 countries, 1 chokepoint most people can't name", color: teal }
+          - { key: "The policy shift", value: "In an appendix, unread", color: red }
+          - { key: "The slow variable", value: "In the dataset, ignored", color: accent2 }
+        listStyle: { layout: stacked, size: lg, gap: loose }
+        style:
+          position: { x: right, y: center }
+          size: { width: "40%" }
+          revealDelayMs: 250
 
-  # ── 9 · PULL QUOTE ───────────────────────────────────────────────────────────
+  # ── 9 · BOTH FAIL — the two failure modes, then the verdict ────────────────
   - id: both-fail
     kind: quote
     text: "Both fail the same way"
     foreground:
+      - type: keyValue
+        items:
+          - { key: "Either", value: "It stays buried in jargon", color: muted }
+          - { key: "Or", value: "It gets compressed into a hot take", color: muted }
+        listStyle: { layout: stacked, size: lg, gap: loose, justify: center }
+        style:
+          position: { x: center, y: "32%" }
+          size: { width: "30%" }
+          portrait: { size: { width: "84%" } }
       - type: quote
-        text: "Either things stay buried in jargon, or they get compressed into hot takes. Both fail the same way."
+        text: "Both fail the same way."
         align: center
         style:
-          position: { x: center, y: center }
+          position: { x: center, y: "68%" }
           size: { width: "72%" }
+          revealDelayMs: 400
 
-  # ── 10 · WHAT WE MAKE — prose ────────────────────────────────────────────────
+  # ── 10 · WHAT WE MAKE — the thesis next to real work in three formats ──────
   - id: what-we-make
     kind: bodyText
     text: "What we make"
@@ -275,13 +304,21 @@ sections:
     foreground:
       - type: bodyText
         from: text
-        textStyle:
-          size: large
+        showHeading: true
+        heading: "What we make"
         style:
           position: { x: left, y: center }
-          size: { width: "56%" }
+          size: { width: "30%" }
+      - type: image
+        src: "assets://vizmaya-studio/what-we-make.webp"
+        alt: "Three formats from our own work: a stack of scrollytelling slides from Up and down the peninsula, a single bar chart from What a Litre Costs in India, and a 9:16 phone frame from The Last Forest Before the Strait."
+        fit: contain
+        style:
+          position: { x: right, y: center }
+          size: { width: "64%", height: "72vh" }
+          portrait: { size: { width: "100%", height: "34vh" } }
 
-  # ── 11 · STUDIO — title slide ────────────────────────────────────────────────
+  # ── 11 · STUDIO — title slide; the mark recast as two people + the story ───
   - id: studio
     kind: hero
     text: "Studio"
@@ -289,8 +326,17 @@ sections:
     eyebrow: "— Who we are"
     background:
       type: none
+    foreground:
+      - type: image
+        src: "assets://vizmaya-studio/mark-studio.svg"
+        alt: "The mark recast: Shashank (words, data) and Suprabho (design, code) as two circles, the story they make as the third."
+        fit: contain
+        style:
+          position: { x: left, y: center }
+          size: { width: "32%", height: "62vh" }
+          portrait: { position: { x: center, y: "24%" }, size: { width: "78%", height: "34vh" } }
 
-  # ── 12 · SHASHANK ────────────────────────────────────────────────────────────
+  # ── 12 · SHASHANK — bio left, fact sheet right ─────────────────────────────
   - id: shashank
     kind: bodyText
     text: "Shashank A. Pandey"
@@ -301,12 +347,22 @@ sections:
       - type: bodyText
         from: text
         showHeading: true
-        heading: "Shashank A. Pandey · Data storytelling, Visual journalism"
+        heading: "Shashank A. Pandey"
         style:
           position: { x: left, y: center }
-          size: { width: "58%" }
+          size: { width: "50%" }
+      - type: keyValue
+        items:
+          - { key: "Practice", value: "Data storytelling, visual journalism", color: teal }
+          - { key: "Path", value: "Journalist → designer → researcher, self-taught", color: muted }
+          - { key: "Believes", value: "Clarity is an act of generosity", color: red }
+        listStyle: { layout: stacked, gap: loose }
+        style:
+          position: { x: right, y: center }
+          size: { width: "32%" }
+          portrait: { opacity: 0 }
 
-  # ── 13 · SUPRABHO ────────────────────────────────────────────────────────────
+  # ── 13 · SUPRABHO — bio left, fact sheet right ─────────────────────────────
   - id: suprabho
     kind: bodyText
     text: "Suprabho Dhenki"
@@ -317,12 +373,23 @@ sections:
       - type: bodyText
         from: text
         showHeading: true
-        heading: "Suprabho Dhenki · Product design, Creative technology"
+        heading: "Suprabho Dhenki"
         style:
           position: { x: left, y: center }
-          size: { width: "58%" }
+          size: { width: "50%" }
+      - type: keyValue
+        items:
+          - { key: "Practice", value: "Product design, creative technology", color: accent2 }
+          - { key: "Now", value: "Founder, Promad", color: muted }
+          - { key: "Before", value: "Microsoft · 1mg · ClearTax · Merkle Science · Kidzovo", color: muted }
+          - { key: "Research", value: "CHI publication, IIT Guwahati", color: muted }
+        listStyle: { layout: stacked, gap: loose }
+        style:
+          position: { x: right, y: center }
+          size: { width: "32%" }
+          portrait: { opacity: 0 }
 
-  # ── 14 · CLOSING — the mark returns ──────────────────────────────────────────
+  # ── 14 · CLOSING — the mark returns; the line sits clear of it ─────────────
   - id: closing
     kind: closing
     layout: centered
@@ -343,11 +410,12 @@ sections:
             lineColor:    "#d8d2c5"
         capture: { mode: currentFrame }
         style:
-          position: { x: center, y: "42%" }
-          size: { width: "46%", height: "44vh" }
+          position: { x: center, y: "36%" }
+          size: { width: "40%", height: "30vh" }
       - type: quote
         text: "We added the z for viz. That's the job."
         align: center
         style:
-          position: { x: center, y: "74%" }
+          position: { x: center, y: "72%" }
           size: { width: "64%" }
+          revealDelayMs: 300
