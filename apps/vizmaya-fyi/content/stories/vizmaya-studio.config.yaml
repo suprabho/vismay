@@ -227,6 +227,7 @@ sections:
           size: { width: "42%", height: "70vh" }
 
   # ── 7 · BELIEF — title slide; rigour + beauty drawn as one line ────────────
+  # Art: images/make_belief.py over images/portfolio-2026-09-29.json.
   - id: belief
     kind: hero
     text: "Belief"
@@ -236,13 +237,13 @@ sections:
       type: none
     foreground:
       - type: image
-        src: "assets://vizmaya-studio/belief-rigour-beauty.svg"
-        alt: "A smooth vermillion curve passing exactly through eleven measured points, one per year from 2015 to 2025."
+        src: "assets://vizmaya-studio/belief.svg"
+        alt: "Rigour and beauty in one drawing: all 33 of our published stories measured on a drafting grid by words per section, with one smooth vermillion line drawn through every point."
         fit: contain
         style:
           position: { x: left, y: center }
-          size: { width: "33%", height: "50vh" }
-          portrait: { position: { x: center, y: "24%" }, size: { width: "88%", height: "28vh" } }
+          size: { width: "33%", height: "84vh" }
+          portrait: { position: { x: center, y: "22%" }, size: { width: "80%", height: "36vh" } }
 
   # ── 8 · WHAT THE WORLD HIDES — thesis left, three hidden things right ──────
   - id: world-hides

@@ -1,0 +1,401 @@
+[
+ {
+  "slug": "currency-rankings-2026",
+  "title": "The Year the Dollar Lost",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 14,
+  "charts": 3,
+  "maps": 0,
+  "words": 780,
+  "fg": {}
+ },
+ {
+  "slug": "delimitation-2011-census",
+  "title": "India's Redrawn Map",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 12,
+  "charts": 2,
+  "maps": 0,
+  "words": 644,
+  "fg": {}
+ },
+ {
+  "slug": "gdp-growth-2026",
+  "title": "The Growth That Moved East",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 15,
+  "charts": 3,
+  "maps": 0,
+  "words": 696,
+  "fg": {}
+ },
+ {
+  "slug": "housing-trends-europe",
+  "title": "The Shrinking European House",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 18,
+  "charts": 3,
+  "maps": 0,
+  "words": 834,
+  "fg": {}
+ },
+ {
+  "slug": "projected-population-2050",
+  "title": "Where the Next Billion Are Born",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 15,
+  "charts": 2,
+  "maps": 0,
+  "words": 636,
+  "fg": {}
+ },
+ {
+  "slug": "south-korea-gpu-hour",
+  "title": "The Quiet Inflation",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 39,
+  "charts": 6,
+  "maps": 0,
+  "words": 1347,
+  "fg": {}
+ },
+ {
+  "slug": "stargate-real-constraint",
+  "title": "Stargate's Real Constraint",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 15,
+  "charts": 2,
+  "maps": 0,
+  "words": 705,
+  "fg": {}
+ },
+ {
+  "slug": "great-nicobar-project",
+  "title": "The Last Forest Before the Strait",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 11,
+  "charts": 6,
+  "maps": 0,
+  "words": 592,
+  "fg": {}
+ },
+ {
+  "slug": "top-car-brand-2026",
+  "title": "What the World Drives, What the World Burns",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 12,
+  "charts": 3,
+  "maps": 0,
+  "words": 863,
+  "fg": {}
+ },
+ {
+  "slug": "iea-oil-may-2026",
+  "title": "When the Strait Closed",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 15,
+  "charts": 3,
+  "maps": 0,
+  "words": 838,
+  "fg": {}
+ },
+ {
+  "slug": "the-century-trade-story",
+  "title": "The World Is Watching",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 18,
+  "charts": 8,
+  "maps": 0,
+  "words": 453,
+  "fg": {}
+ },
+ {
+  "slug": "india-italy-meloni-era",
+  "title": "Mapped: The Melodi Era",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 15,
+  "charts": 4,
+  "maps": 0,
+  "words": 1064,
+  "fg": {
+   "image": 1
+  }
+ },
+ {
+  "slug": "kashmir-1941-land-reform",
+  "title": "A Kingdom on the Eve of Reform",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 15,
+  "charts": 5,
+  "maps": 0,
+  "words": 813,
+  "fg": {}
+ },
+ {
+  "slug": "india-compounding-crises-2026",
+  "title": "India 2026: Four Shocks at Once",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 8,
+  "charts": 4,
+  "maps": 0,
+  "words": 927,
+  "fg": {}
+ },
+ {
+  "slug": "who-owns-americas-debt",
+  "title": "Who Owns America's $39 Trillion Debt?",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 11,
+  "charts": 3,
+  "maps": 0,
+  "words": 715,
+  "fg": {}
+ },
+ {
+  "slug": "india-aviation-cut-2026",
+  "title": "The Sky Closes for the Summer",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 10,
+  "charts": 4,
+  "maps": 0,
+  "words": 895,
+  "fg": {}
+ },
+ {
+  "slug": "ebola-2026",
+  "title": "A New Ebola is Moving Through a War",
+  "pub": "2026-05-31",
+  "fmt": "map",
+  "secs": 11,
+  "charts": 4,
+  "maps": 0,
+  "words": 1249,
+  "fg": {
+   "image": 1
+  }
+ },
+ {
+  "slug": "largest-armies-2026",
+  "title": "The Army That Isn't There",
+  "pub": "2026-06-01",
+  "fmt": "map",
+  "secs": 16,
+  "charts": 3,
+  "maps": 0,
+  "words": 718,
+  "fg": {}
+ },
+ {
+  "slug": "spacex-ipo-2026",
+  "title": "A Rocket Company That Became the Internet",
+  "pub": "2026-06-06",
+  "fmt": "deck",
+  "secs": 14,
+  "charts": 6,
+  "maps": 0,
+  "words": 2584,
+  "fg": {
+   "image": 3,
+   "table": 1,
+   "bigStat": 5,
+   "bodyText": 10,
+   "chart": 6,
+   "starship:viewer": 1,
+   "keyValue": 1
+  }
+ },
+ {
+  "slug": "india-fuel-prices-2026",
+  "title": "What a Litre Costs in India",
+  "pub": "2026-06-07",
+  "fmt": "map",
+  "secs": 11,
+  "charts": 6,
+  "maps": 0,
+  "words": 1004,
+  "fg": {}
+ },
+ {
+  "slug": "american-cost-divide",
+  "title": "The American Cost Divide",
+  "pub": "2026-06-10",
+  "fmt": "map",
+  "secs": 16,
+  "charts": 4,
+  "maps": 0,
+  "words": 817,
+  "fg": {}
+ },
+ {
+  "slug": "adani-all-over-world",
+  "title": "A Conglomerate's Shadow Across India",
+  "pub": "2026-06-12",
+  "fmt": "map",
+  "secs": 9,
+  "charts": 3,
+  "maps": 0,
+  "words": 1456,
+  "fg": {
+   "chart": 3
+  }
+ },
+ {
+  "slug": "zepto-ipo-filing",
+  "title": "Zepto IPO Filing",
+  "pub": "2026-06-12",
+  "fmt": "deck",
+  "secs": 7,
+  "charts": 5,
+  "maps": 0,
+  "words": 1011,
+  "fg": {
+   "image": 1,
+   "keyValue": 6,
+   "chart": 5,
+   "bodyText": 1
+  }
+ },
+ {
+  "slug": "adani-india-2026",
+  "title": "Adani and the State: Pattern vs. Proof in India's Infrastructure Push",
+  "pub": "2026-06-13",
+  "fmt": "deck",
+  "secs": 8,
+  "charts": 3,
+  "maps": 0,
+  "words": 3074,
+  "fg": {
+   "image": 1,
+   "quote": 4,
+   "keyValue": 6,
+   "chart": 3,
+   "bigStat": 1,
+   "bodyText": 1
+  }
+ },
+ {
+  "slug": "us-strike-on-oil-tanker",
+  "title": "US Strikes on Oil Tankers",
+  "pub": "2026-06-13",
+  "fmt": "map",
+  "secs": 6,
+  "charts": 1,
+  "maps": 0,
+  "words": 907,
+  "fg": {
+   "chart": 1,
+   "bigStat": 1,
+   "text": 1
+  }
+ },
+ {
+  "slug": "nse-ipo-2026",
+  "title": "NSE IPO 2026",
+  "pub": "2026-06-21",
+  "fmt": "deck",
+  "secs": 7,
+  "charts": 4,
+  "maps": 0,
+  "words": 1342,
+  "fg": {
+   "image": 1,
+   "keyValue": 3,
+   "bigStat": 2,
+   "chart": 4,
+   "bodyText": 2
+  }
+ },
+ {
+  "slug": "jio-ipo-2026",
+  "title": "Jio IPO: The Numbers Behind India's Biggest Listing",
+  "pub": "2026-06-26",
+  "fmt": "deck",
+  "secs": 7,
+  "charts": 0,
+  "maps": 0,
+  "words": 337,
+  "fg": {}
+ },
+ {
+  "slug": "odyssey-voyage",
+  "title": "A Two-Week Voyage, Ten Years Long",
+  "pub": "2026-07-20",
+  "fmt": "map",
+  "secs": 19,
+  "charts": 4,
+  "maps": 0,
+  "words": 1718,
+  "fg": {}
+ },
+ {
+  "slug": "india-exam-leaks",
+  "title": "A Leaky Future",
+  "pub": "2026-07-26",
+  "fmt": "map",
+  "secs": 17,
+  "charts": 9,
+  "maps": 0,
+  "words": 1236,
+  "fg": {}
+ },
+ {
+  "slug": "ramayana-locations",
+  "title": "The Ramayana, Mapped",
+  "pub": "2026-09-12",
+  "fmt": "map",
+  "secs": 42,
+  "charts": 1,
+  "maps": 0,
+  "words": 939,
+  "fg": {}
+ },
+ {
+  "slug": "korean-war-frontline",
+  "title": "Up and down the peninsula",
+  "pub": "2026-09-14",
+  "fmt": "map",
+  "secs": 18,
+  "charts": 2,
+  "maps": 0,
+  "words": 985,
+  "fg": {}
+ },
+ {
+  "slug": "the-domestic-stack",
+  "title": "The Domestic Stack",
+  "pub": "2026-09-21",
+  "fmt": "map",
+  "secs": 18,
+  "charts": 1,
+  "maps": 0,
+  "words": 401,
+  "fg": {}
+ },
+ {
+  "slug": "22-09-26",
+  "title": "The Site-Selection Race",
+  "pub": "2026-09-22",
+  "fmt": "map",
+  "secs": 27,
+  "charts": 1,
+  "maps": 0,
+  "words": 706,
+  "fg": {}
+ }
+]
