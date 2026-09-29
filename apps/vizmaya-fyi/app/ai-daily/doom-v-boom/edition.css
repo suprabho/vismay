@@ -546,6 +546,15 @@ body.dcd-panel-open{overflow:hidden}
 @media (max-width:980px){
   .dcd .db-sides{grid-template-columns:1fr}
 }
+.dcd .dbmeter.narrow{display:none}
+@media (max-width:640px){
+  .dcd .dbmeter.wide{display:none}
+  .dcd .dbmeter.narrow{display:block}
+  .dcd .dbmeter.narrow .dblab{font-size:11px}
+  .dcd .dbmeter.narrow .dbend{font-size:11px;letter-spacing:.1em}
+  .dcd .dbmeter.narrow .dbghost text{font-size:11px}
+  .dcd .dbmeter.narrow .dbnow{font-size:14px}
+}
 /* ---------- research section ---------- */
 .dcd .rhead{display:grid;gap:8px;margin-bottom:22px;max-width:70ch}
 .dcd .rheadline{font-family:var(--serif);font-size:clamp(22px,2.4vw,30px);line-height:1.15;text-wrap:balance}
