@@ -26,6 +26,92 @@ interface Driver {
 }
 
 /**
+ * Meter geometry per breakpoint. The SVG scales with its box, so one wide
+ * viewBox shrinks its labels to ~4px on a phone; the narrow layout keeps
+ * text legible there (CSS shows one or the other). `fs` mirrors the CSS
+ * font sizes, used to keep centred labels inside the track.
+ */
+const GEOM = {
+  wide: { W: 1000, H: 120, L: 60, R: 60, ty: 52, now: 26, lab: 34, g30: 48, g7: 62, fs: { ghost: 10.5, now: 12 } },
+  narrow: { W: 360, H: 140, L: 22, R: 22, ty: 58, now: 30, lab: 32, g30: 50, g7: 66, fs: { ghost: 11, now: 14 } },
+} as const
+
+function Meter({ size, score, d7, d30 }: { size: keyof typeof GEOM; score: number | null; d7: number | null; d30: number | null }) {
+  const { W, H, L, R, ty, now, lab, g30, g7, fs } = GEOM[size]
+  const cx = (v: number) => L + ((v + 1) / 2) * (W - L - R)
+  // Centre a label on x, nudged so its (monospace) text stays within the viewBox.
+  const tx = (x: number, text: string, px: number) => {
+    const half = (text.length * px * 0.6) / 2
+    return Math.min(Math.max(x, half), W - half)
+  }
+  const grad = `dbgrad-${size}`
+  const l30 = d30 != null ? `30-day ${formatSigned(d30)}` : ''
+  const l7 = d7 != null ? `7-day ${formatSigned(d7)}` : ''
+  const lNow = score != null ? `today ${formatSigned(score)}` : ''
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width="100%"
+      className={`dbmeter ${size}`}
+      role="img"
+      aria-label={`Doom versus boom meter, today at ${formatSigned(score)}, 7-day ${formatSigned(d7)}, 30-day ${formatSigned(d30)}`}
+    >
+      <defs>
+        <linearGradient id={grad} x1="0" x2="1">
+          <stop offset="0" className="g-doom" />
+          <stop offset="0.5" className="g-mid" />
+          <stop offset="1" className="g-boom" />
+        </linearGradient>
+      </defs>
+      <rect x={L} y={ty} width={W - L - R} height={10} rx={5} fill={`url(#${grad})`} />
+      {[-1, -0.5, 0, 0.5, 1].map((v) => (
+        <g key={v}>
+          <line x1={cx(v)} y1={ty + 14} x2={cx(v)} y2={ty + 20} className="dbtick" />
+          <text x={cx(v)} y={ty + lab} textAnchor="middle" className="dblab">
+            {v === 0 ? '0' : formatSigned(v)}
+          </text>
+        </g>
+      ))}
+      <text x={L} y={ty - 14} className="dbend doom">
+        ◀ DOOM
+      </text>
+      <text x={W - R} y={ty - 14} textAnchor="end" className="dbend boom">
+        BOOM ▶
+      </text>
+      {d30 != null && (
+        <g className="dbghost">
+          <line x1={cx(d30)} y1={ty - 6} x2={cx(d30)} y2={ty + 16} />
+          <text x={tx(cx(d30), l30, fs.ghost)} y={ty + g30} textAnchor="middle">
+            {l30}
+          </text>
+        </g>
+      )}
+      {d7 != null && (
+        <g className="dbghost">
+          <line x1={cx(d7)} y1={ty - 6} x2={cx(d7)} y2={ty + 16} />
+          <text x={tx(cx(d7), l7, fs.ghost)} y={ty + g7} textAnchor="middle">
+            {l7}
+          </text>
+        </g>
+      )}
+      {score != null && (
+        <>
+          <g className="dbneedle">
+            <line x1={cx(score)} y1={ty - 8} x2={cx(score)} y2={ty + 18} />
+            <circle cx={cx(score)} cy={ty + 5} r={9} />
+            <circle cx={cx(score)} cy={ty + 5} r={4} className="core" />
+          </g>
+          <text x={tx(cx(score), lNow, fs.now)} y={ty - now} textAnchor="middle" className="dbnow">
+            {lNow}
+          </text>
+        </>
+      )}
+    </svg>
+  )
+}
+
+/**
  * Chapter I — the day's mood in one reading. Reports of one development are
  * grouped into an event and counted once, each event weighted by relevance ×
  * impact × coverage: reading = (W_boom − W_doom) / (W_boom + W_doom).
@@ -62,13 +148,6 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
     const pct = Math.round((weight[side] / totalWeight) * 100)
     return `${pct}% of the weight${reports > counts[side] ? ` · from ${reports} reports` : ''}`
   }
-
-  const W = 1000
-  const H = 120
-  const L = 60
-  const R = 60
-  const ty = 52
-  const cx = (v: number) => L + ((v + 1) / 2) * (W - L - R)
 
   const drivers = (list: Driver[], cls: 'boom' | 'doom') =>
     list.map((d) => (
@@ -115,64 +194,8 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
         </div>
       </div>
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        className="dbmeter"
-        role="img"
-        aria-label={`Doom versus boom meter, today at ${formatSigned(score)}, 7-day ${formatSigned(d7)}, 30-day ${formatSigned(d30)}`}
-      >
-        <defs>
-          <linearGradient id="dbgrad" x1="0" x2="1">
-            <stop offset="0" className="g-doom" />
-            <stop offset="0.5" className="g-mid" />
-            <stop offset="1" className="g-boom" />
-          </linearGradient>
-        </defs>
-        <rect x={L} y={ty} width={W - L - R} height={10} rx={5} fill="url(#dbgrad)" />
-        {[-1, -0.5, 0, 0.5, 1].map((v) => (
-          <g key={v}>
-            <line x1={cx(v)} y1={ty + 14} x2={cx(v)} y2={ty + 20} className="dbtick" />
-            <text x={cx(v)} y={ty + 34} textAnchor="middle" className="dblab">
-              {v === 0 ? '0' : formatSigned(v)}
-            </text>
-          </g>
-        ))}
-        <text x={L} y={ty - 14} className="dbend doom">
-          ◀ DOOM
-        </text>
-        <text x={W - R} y={ty - 14} textAnchor="end" className="dbend boom">
-          BOOM ▶
-        </text>
-        {d30 != null && (
-          <g className="dbghost">
-            <line x1={cx(d30)} y1={ty - 6} x2={cx(d30)} y2={ty + 16} />
-            <text x={cx(d30)} y={ty + 48} textAnchor="middle">
-              30-day {formatSigned(d30)}
-            </text>
-          </g>
-        )}
-        {d7 != null && (
-          <g className="dbghost">
-            <line x1={cx(d7)} y1={ty - 6} x2={cx(d7)} y2={ty + 16} />
-            <text x={cx(d7)} y={ty + 62} textAnchor="middle">
-              7-day {formatSigned(d7)}
-            </text>
-          </g>
-        )}
-        {score != null && (
-          <>
-            <g className="dbneedle">
-              <line x1={cx(score)} y1={ty - 8} x2={cx(score)} y2={ty + 18} />
-              <circle cx={cx(score)} cy={ty + 5} r={9} />
-              <circle cx={cx(score)} cy={ty + 5} r={4} className="core" />
-            </g>
-            <text x={cx(score)} y={ty - 26} textAnchor="middle" className="dbnow">
-              today {formatSigned(score)}
-            </text>
-          </>
-        )}
-      </svg>
+      <Meter size="wide" score={score} d7={d7} d30={d30} />
+      <Meter size="narrow" score={score} d7={d7} d30={d30} />
 
       <div className="db-sides">
         <button type="button" className="db-side doom" data-panel="mood:doom">
