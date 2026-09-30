@@ -278,6 +278,12 @@ const TEXT: EditionText = {
     headline: "Reasoning gets cheaper twice over, while the benchmark it's measured on comes under audit",
     sub: "DeepMind's latent scratchpads and Meta's self-play agents post the day's two largest gains, both closed. The open releases are smaller and denser — an 8B distilled MoE, a 13B long-video model — and a Stanford–Princeton audit says 18% of SWE-bench Verified is contaminated.",
   },
+  // Threads earlier editions led with that drew more reports in this window.
+  continuing: [
+    { label: "Meta's Louisiana campus and its gas units", text: 'Four more outlets carried the regulator’s approval of the three gas units; none added a capacity or cost figure.', since: '2026-09-20', sources: [{ name: 'Reuters', url: 'https://www.reuters.com' }, { name: 'DCD', url: 'https://www.datacenterdynamics.com' }] },
+    { label: 'Nvidia export licences for China-bound parts', text: 'Commerce confirmed the licences now cover two more customers; volumes stay undisclosed.', since: '2026-09-21', sources: [{ name: 'Bloomberg', url: 'https://www.bloomberg.com' }] },
+    { label: "xAI's Memphis turbine permit", text: 'Residents filed the appeal flagged on Saturday, and the county set its hearing for 14 October.', since: '2026-09-19', sources: [{ name: 'The Register', url: 'https://www.theregister.com' }, { name: 'Reuters', url: 'https://www.reuters.com' }] },
+  ],
 }
 
 function build(): DcEditionWithContent {
@@ -319,6 +325,7 @@ function build(): DcEditionWithContent {
     windowStart: '2026-09-21T08:15:00Z',
     windowEnd: '2026-09-22T08:15:00Z',
     notes: TEXT.notes,
+    continuing: TEXT.continuing,
     moodCounts: mood.counts,
     moodSeries,
     layers,

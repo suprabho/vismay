@@ -1,5 +1,5 @@
-/** Template-viz floor checks (three rows, one row per subject, two columns for the matrix) and the
- *  Doom v Boom event clustering + weighting.  (run: npx tsx src/dcEditionAssembly.test.ts) */
+/** Template-viz floor checks (three rows, one row per subject, two columns for the matrix), the
+ *  Doom v Boom event clustering + weighting, and the carry-over check across editions.  (run: npx tsx src/dcEditionAssembly.test.ts) */
 import assert from 'node:assert/strict'
 import type { DcEditionStory, DcLayerKey } from './dcEditionTypes'
 import {
@@ -10,17 +10,23 @@ import {
   blendMoodScore,
   buildOrdersViz,
   clusterEvents,
+  continuingFromThreads,
   correlation,
-  fitMarketScale,
-  layerBalancedMove,
-  type MarketStock,
+  deterministicText,
+  echoedThread,
   eventDrivers,
   eventTokens,
   eventWeight,
+  findCarryOvers,
+  fitMarketScale,
+  layerBalancedMove,
+  type MarketStock,
   MARKET_MOOD,
   marketSession,
   MIN_VIZ_ROWS,
+  noteRepeatsThread,
   scoreMarket,
+  threadsByStory,
   scoreMoodEvents,
   sessionMoves,
   subjectKey,
@@ -323,7 +329,79 @@ const vineland = [
   assert.ok(performance.now() - t0 < 200, `took ${Math.round(performance.now() - t0)} ms`)
 }
 
-// 11. The market term: previous session only, clamped, squashed, a quarter of the score.
+// 11. Carry-over across the cutover (the 2026-09-29 → 09-30 editions): the
+// same development re-reported by new outlets is one thread, the headline and
+// notes that restate it are caught, and new news is left alone.
+{
+  const usd = (value: number, unit: string, label: string, subject: string) =>
+    ({ action: 'other' as const, figures: [{ value, unit, label, subject, scope: 'company' as const, status: 'stated' as const }], horizon: null })
+  const boom = (title: string, source: string, event: string, actors: string[], over: Partial<DcEditionStory> = {}) =>
+    news(title, { source, event, actors, mood: 1, publishedAt: '2026-09-29T10:00:00Z', ...over })
+  const helix = (title: string, source: string, event: string) => boom(title, source, event, ['Samsung', 'Helix', 'KKR'], { facts: usd(1, 'bn USD', 'investment in Helix', 'Samsung') })
+  const y = [
+    helix('Samsung Commits $1.0 Billion to AI Infrastructure Firm Backed by KKR, Nvidia', 'Bloomberg', 'Samsung invests $1.0 billion in AI infrastructure firm backed by KKR, Nvidia'),
+    helix("Samsung puts $1B into KKR's Helix to fuel AI infrastructure buildout", 'Reuters', 'Samsung invests $1B in KKR Helix AI infrastructure fund'),
+    boom("AMD acquiring Fei-Fei Li's World Labs AI firm in deal worth $8.2 billion", 'CNBC', 'AMD acquires World Labs for $8.2 billion', ['AMD', 'World Labs'], { tickers: ['AMD'], facts: usd(8.2, 'bn USD', 'acquisition price', 'AMD') }),
+    boom('Seligman Ventures Doubles Deployable Capital to $1B for AI Infrastructure Investments', 'PR Newswire', 'Seligman Ventures doubles deployable capital to $1B for AI infrastructure', ['Seligman Ventures'], { facts: usd(1, 'bn USD', 'deployable capital', 'Seligman Ventures') }),
+    ...window.slice(0, 3),
+  ]
+  const at = { publishedAt: '2026-09-30T02:00:00Z' }
+  const t = [
+    helix('Samsung Invests $1 Billion in KKR-Backed AI Infrastructure Firm Helix', 'The Information', 'Samsung invests $1 billion in KKR-backed AI infrastructure firm Helix'),
+    helix('Samsung Drops $1B on AI Infrastructure Giant Helix', 'The Tech Buzz', 'Samsung invests $1B in AI infrastructure company Helix'),
+    helix('Samsung to invest $1 billion in AI infrastructure company Helix', 'Yonhap', 'Samsung invests $1 billion in AI infrastructure company Helix'),
+    boom('AMD to acquire World Labs for $8.2B in AI infrastructure push', 'proactiveinvestors.com', 'AMD acquires World Labs for $8.2 billion', ['AMD', 'World Labs'], { tickers: ['AMD'], facts: usd(8.2, 'bn USD', 'deal value', 'AMD'), ...at }),
+    boom('Bain: AI build-out needs $6 trillion a year in revenue', 'The National', 'Bain says AI build-out needs $6 trillion in annual revenue', ['Bain'], { facts: usd(6, 'tn USD', 'annual revenue needed', 'AI industry'), ...at }),
+    boom('Accelevation raises $540 million in US IPO', 'Reuters', 'Accelevation raises $540 million in US IPO', ['Accelevation'], { facts: usd(540, 'mn USD', 'IPO proceeds', 'Accelevation'), ...at }),
+  ].map((s) => ({ ...s, publishedAt: '2026-09-30T02:00:00Z' }))
+  const prior = [{ date: '2026-09-29', headline: '', sub: '', notes: [], stories: y }]
+  const idf = buildIdf([...history, ...y, ...t])
+  const threads = findCarryOvers(t, prior, { idf })
+  assert.equal(threads.length, 2, 'Helix and World Labs carried over; Bain and Accelevation are new')
+  assert.deepEqual(threads[0].storyIds.sort(), t.slice(0, 3).map((s) => s.id).sort(), 'all three Helix re-reports are one thread')
+  assert.equal(threads[0].since, '2026-09-29')
+  assert.equal(threads[0].newFigures.length, 0, 'no figure the earlier reports did not state')
+  assert.ok(!threads.some((th) => th.priorIds.includes(y[3].id)), "Seligman's $1B is not Samsung's $1B")
+
+  // The front page: the 09-30 headline restated the Helix thread; new news passes.
+  assert.ok(echoedThread('Samsung puts $1 billion into KKR-backed Helix as Bain says AI needs $6 trillion a year in revenue', threads, idf))
+  assert.equal(echoedThread('Bain says the AI build-out needs $6 trillion a year in revenue', threads, idf), null)
+  assert.equal(echoedThread('Accelevation raises $540 million in a US IPO', threads, idf), null)
+
+  // Notes: the $1B Helix note restates; the $6T Bain note is new.
+  const byStory = threadsByStory(threads)
+  const src = (s: DcEditionStory) => ({ name: s.source ?? '', url: s.url })
+  assert.ok(noteRepeatsThread({ metric: '1', unit: 'bn USD', sources: [src(t[0]), src(t[1])] }, t, byStory))
+  assert.equal(noteRepeatsThread({ metric: '6', unit: 'tn USD', sources: [src(t[4])] }, t, byStory), null)
+  assert.equal(noteRepeatsThread({ metric: '1', unit: 'bn USD', sources: [src(t[0]), src(t[4])] }, t, byStory), null, 'a note that also cites new news stays')
+
+  // A re-report that states something new is an update, not a repeat: the
+  // thread carries the new figure, and a note led by it stays a key note.
+  const update = boom('AMD to acquire World Labs for $8.2B, with a $400M break fee', 'Bloomberg', 'AMD acquires World Labs for $8.2 billion', ['AMD', 'World Labs'], {
+    tickers: ['AMD'],
+    facts: { action: 'other', figures: [...usd(8.2, 'bn USD', 'deal value', 'AMD').figures, ...usd(400, 'mn USD', 'break fee', 'AMD').figures], horizon: null },
+    publishedAt: '2026-09-30T03:00:00Z',
+  })
+  const withUpdate = findCarryOvers([...t, update], prior, { idf: buildIdf([...history, ...y, ...t, update]) })
+  const amdThread = withUpdate.find((th) => th.storyIds.includes(update.id))
+  assert.ok(amdThread, 'the same deal re-reported is carried over')
+  assert.deepEqual(amdThread.newFigures.map((f) => f.value), [400], 'the break fee is new; the $8.2B is not')
+  assert.equal(noteRepeatsThread({ metric: '400', unit: 'mn USD', sources: [src(update)] }, [...t, update], threadsByStory(withUpdate)), null)
+  assert.ok(noteRepeatsThread({ metric: '8.2', unit: 'bn USD', sources: [src(update)] }, [...t, update], threadsByStory(withUpdate)))
+  assert.equal(echoedThread('AMD agrees a $400 million break fee in its World Labs deal', withUpdate, idf), null, 'a headline on the new figure is not an echo')
+
+  // The deterministic edition leads with new news and lists the threads.
+  const det = deterministicText({ stories: t, papers: [], places: new Map(), threads })
+  assert.ok(!/Samsung|World Labs/.test(det.headline), `deterministic headline leads with new news: ${det.headline}`)
+  assert.equal(det.continuing.length, 2)
+  assert.equal(det.continuing[0].since, '2026-09-29')
+  assert.deepEqual(continuingFromThreads(threads, t, 1).length, 1)
+
+  // No earlier editions (the first edition, or a fresh environment): nothing is carried.
+  assert.deepEqual(findCarryOvers(t, []), [])
+}
+
+// 12. The market term: previous session only, clamped, squashed, a quarter of the score.
 {
   assert.equal(marketSession('2026-09-22'), '2026-09-21')
   assert.equal(marketSession('2026-03-01'), '2026-02-28')
@@ -385,7 +463,7 @@ const vineland = [
   assert.equal(scoreMoodEvents(plain, { market: rally, marketWeight: 0.5 }).score, Math.round(0.5 * rally.score * 1000) / 1000, 'calibrated weight')
 }
 
-// 12. Calibration: the fitted scale makes the market reading swing like the news.
+// 13. Calibration: the fitted scale makes the market reading swing like the news.
 {
   // A deterministic spread of daily moves (±3%) and news readings (sd ≈ 0.3).
   const moves = Array.from({ length: 200 }, (_, k) => 3 * Math.sin(k * 1.7))

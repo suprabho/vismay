@@ -559,6 +559,22 @@ export interface EditionChartSkip {
   reason: string
 }
 
+/**
+ * A thread an earlier edition already carried that drew fresh reports in this
+ * window ("Still developing"). The headline, deck and key notes are for what
+ * is new; a development that keeps being reported lands here instead of
+ * leading two mornings running.
+ */
+export interface EditionContinuing {
+  /** The thread, ≤ 8 words ("Samsung's $1B stake in Helix"). */
+  label: string
+  /** One sentence on what this window added — or that it only repeated earlier facts. */
+  text: string
+  /** Edition date the thread first appeared in (YYYY-MM-DD). Derived from the cited stories, never written by the model. */
+  since: string
+  sources: EditionSource[]
+}
+
 /** The prose layer — what the composer (or an editor) writes. */
 export interface EditionText {
   headline: string
@@ -566,6 +582,8 @@ export interface EditionText {
   notes: EditionNote[]
   layers: Record<DcLayerKey, { headline: string; sub: string; notes: EditionLayerNote[] }>
   research: { headline: string; sub: string }
+  /** Carried-over threads (migration 084). Absent on composer runs stored before it. */
+  continuing: EditionContinuing[]
 }
 
 export interface EditionComposerRun {
@@ -596,6 +614,8 @@ export interface DcEdition extends DcEditionSummary {
   windowStart: string
   windowEnd: string
   notes: EditionNote[]
+  /** Threads carried over from earlier editions (migration 084); empty on older rows. */
+  continuing: EditionContinuing[]
   moodCounts: EditionMoodCounts
   moodSeries: EditionMoodPoint[]
   layers: Record<DcLayerKey, EditionLayer>

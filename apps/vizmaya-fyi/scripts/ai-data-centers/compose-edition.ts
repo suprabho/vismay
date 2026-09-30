@@ -28,6 +28,14 @@
  * existing draft and leaves prose, numbers and edits alone (the admin's
  * "Regenerate charts").
  *
+ * Continuity: the window is checked against the last three editions' stories
+ * (findCarryOvers — the Doom v Boom event matching, run across the cutover).
+ * A development an earlier edition already carried may not lead the
+ * headline, deck or key notes unless it adds something; it goes into the
+ * "Still developing" block instead. A headline or deck sentence that still
+ * restates an old thread gets one rewrite; a note that only restates one is
+ * moved to that block.
+ *
  * Editor edits on an existing draft survive a recompose unless
  * --clear-edits is passed; every run is appended to composer_runs so the
  * admin can diff the current text against the previous run.
@@ -59,6 +67,7 @@ import {
   assembleEditionNumbers,
   getDraftEdition,
   listDcNewsTagged,
+  listPriorEditions,
   listDcPapersInWindow,
   listDcPlaces,
   listIeaNewsForEditionWindow,
@@ -88,15 +97,26 @@ import {
   type DcEditionStory,
   type DcPaper,
   type DcPlace,
+  type EditionContinuing,
   type EditionLayerNote,
   type EditionNote,
   type EditionText,
 } from '@vismay/content-source/dcEditionTypes'
 import {
+  buildIdf,
+  CONTINUING_MAX,
   deterministicText,
+  echoedThread,
+  findCarryOvers,
+  formatFigureValue,
   groundNoteMetric,
+  noteRepeatsThread,
   paperGainText,
   sourcesFromIdxs,
+  threadsByStory,
+  type CarryOverThread,
+  type EventIdf,
+  type PriorEdition,
 } from '@vismay/content-source/dcEditionAssembly'
 import { pingEditionRevalidate } from './revalidate'
 
@@ -111,6 +131,8 @@ const MAX_STORIES = 150
 const MAX_PAPERS = 8
 const NOTE_COUNT = 6
 const LAYER_NOTE_COUNT = 3
+/** Editions the window is checked against for carried-over news. */
+const PRIOR_EDITIONS = 3
 
 interface Args {
   date: string
@@ -150,6 +172,8 @@ const COMPOSER_SYSTEM = `You are the editor of "AI Data Centers Daily", a frozen
 
 You receive the window's stories (each with an idx, outlet, layer, place, theme, mood, energy flag, tickers and the FACTS the story states), the kept research papers, the tracked stocks' moves and a few numbers the page already computes. You write the prose layer only; the page computes every chart and count itself.
 
+Readers come every morning, so each edition must lead with what is NEW in its window. News keeps being re-reported for days: a story carrying a "continuing" object reports a development an earlier edition already carried — "since" is the edition date, "previously" is what readers were told, "newFigures" lists anything this window states that the earlier reports did not. "previousEdition" is the last edition's front page.
+
 Write in a plain, specific, newsroom register: no hype, no opinion, no adjectives that are not in the reporting. British or American spelling is fine; be consistent. Never invent facts, numbers, quotes, names or events. Every number you write must appear in the stories you cite for that sentence.
 
 Respond with JSON in this exact shape:
@@ -175,7 +199,10 @@ Respond with JSON in this exact shape:
   "research": {
     "headline": "≤ 16 words on the day in AI research, on its own terms",
     "sub": "2–3 sentences: the largest gains, what was released or closed, the audit or benchmark story if there is one."
-  }
+  },
+  "continuing": [
+    { "label": "≤ 8 words naming the thread ('Samsung's $1B stake in Helix')", "text": "one sentence on what this window added to it", "sourceIdxs": [4, 11] }
+  ]
 }
 
 Rules:
@@ -183,7 +210,9 @@ Rules:
 - Each layer: exactly 3 notes when the layer has 3 or more stories, fewer when it has fewer, none when it has none (then headline: "No <layer> stories in this window", sub: ""). Layer notes cite only stories tagged with that layer.
 - sourceIdxs must be idx values from the input, nothing else.
 - Use the FACTS fields (figures, horizon, action) as the numbers; do not compute new ones.
-- research: write from the papers list only; if it is empty say so plainly.`
+- research: write from the papers list only; if it is empty say so plainly.
+- Lead with what is new. The headline, the deck, the key notes and the layer headlines must not be built on a story that has a "continuing" object, unless that story reports something beyond "previously" (a figure in newFigures, a completion, a reversal, a new party) — and then write about the new part, not the old one. Never lead again with the development previousEdition's headline, deck or notes led with, nor with their lead figures; the same company doing something new is new. A quieter day with new news beats a louder day of re-reports.
+- continuing: the threads from earlier editions that drew more reports in this window, most-reported first, at most ${CONTINUING_MAX}, one item per thread; [] when no story has a "continuing" object. text says what this window added, or plainly that the reports repeated earlier facts ("Eleven more outlets carried it; no new figures."). Cite only stories that have a "continuing" object.`
 
 const modelNoteSchema = z.object({
   metric: z.string().nullable().optional(),
@@ -207,6 +236,7 @@ const proseSchema = z.object({
   notes: z.array(modelNoteSchema),
   layers: z.object({ dc: modelLayerSchema, hyper: modelLayerSchema, semi: modelLayerSchema, equip: modelLayerSchema }),
   research: z.object({ headline: z.string(), sub: z.string() }),
+  continuing: z.array(z.object({ label: z.string(), text: z.string(), sourceIdxs: z.array(z.number().int()) })),
 })
 
 interface ModelNote {
@@ -230,6 +260,15 @@ interface ModelOutput {
   notes?: unknown
   layers?: Record<string, ModelLayer>
   research?: { headline?: unknown; sub?: unknown }
+  continuing?: unknown
+}
+
+/** What the window carries over from earlier editions, for the prompt and the checks. */
+interface Continuity {
+  prior: PriorEdition[]
+  threads: CarryOverThread[]
+  byStory: Map<number, CarryOverThread>
+  idf: EventIdf
 }
 
 function moodParts(s: EditionMoodScore | undefined): { news: number | null; market: string } | null {
@@ -253,11 +292,21 @@ function buildComposerInput(input: {
   papers: DcPaper[]
   places: Map<string, DcPlace>
   numbers: Awaited<ReturnType<typeof assembleEditionNumbers>>
+  continuity: Continuity
 }): unknown {
-  const { stories, ieaStories, papers, places, numbers } = input
+  const { stories, ieaStories, papers, places, numbers, continuity } = input
+  const last = continuity.prior[0]
   return {
     edition: input.editionDate,
     window: input.windowLabel,
+    previousEdition: last
+      ? {
+          date: last.date,
+          headline: last.headline,
+          deck: last.sub,
+          notes: last.notes.map((n) => `${n.metric ? `${n.metric}${n.unit ? ` ${n.unit}` : ''} — ` : ''}${n.label}`),
+        }
+      : null,
     computed: {
       moodScore: numbers.moodScore,
       // What the score is made of: the news reading and, on trading days, the tracked stocks' session (25% of the score).
@@ -285,6 +334,7 @@ function buildComposerInput(input: {
       energy: s.energy,
       tickers: s.tickers,
       facts: s.facts,
+      continuing: continuingOf(s.id, continuity),
     })),
     ieaStories: ieaStories.map((s) => ({ headline: s.title, summary: s.summary?.slice(0, 300) ?? null, publishedAt: s.publishedAt })),
     papers: papers.map((p, idx) => ({
@@ -302,6 +352,16 @@ function buildComposerInput(input: {
   }
 }
 
+function continuingOf(id: number, continuity: Continuity) {
+  const t = continuity.byStory.get(id)
+  if (!t) return null
+  return {
+    since: t.since,
+    previously: t.previously,
+    newFigures: t.newFigures.map((f) => `${formatFigureValue(f.value, f.unit)} ${f.unit} ${f.label}`.trim()),
+  }
+}
+
 const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 
 /**
@@ -309,10 +369,32 @@ const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim
  * sources, ground every note's metric in its cited stories, enforce the
  * counts, and pad anything missing from the deterministic edition.
  */
-function validateModelText(out: ModelOutput, stories: DcEditionStory[], fallback: EditionText): EditionText | null {
+function validateModelText(out: ModelOutput, stories: DcEditionStory[], fallback: EditionText, continuity: Continuity): EditionText | null {
   const headline = str(out.headline, 220)
   const sub = str(out.sub, 700)
   if (!headline || !sub) return null
+
+  // "Still developing": one item per thread, citing only carried-over stories;
+  // `since` comes from the thread, never from the model.
+  const continuing: EditionContinuing[] = []
+  const covered = new Set<CarryOverThread>()
+  const threadOfUrl = (url: string) => {
+    const s = stories.find((x) => x.url === url)
+    return s ? continuity.byStory.get(s.id) : undefined
+  }
+  const addContinuing = (label: string, text: string, sources: EditionNote['sources']) => {
+    const carried = sources.filter((src) => threadOfUrl(src.url))
+    const thread = carried[0] && threadOfUrl(carried[0].url)
+    if (!thread || covered.has(thread) || continuing.length >= CONTINUING_MAX) return
+    covered.add(thread)
+    continuing.push({ label, text, since: thread.since, sources: carried })
+  }
+  for (const raw of Array.isArray(out.continuing) ? (out.continuing as ModelNote[]) : []) {
+    if (!raw || typeof raw !== 'object') continue
+    const label = str(raw.label, 140)
+    const text = str(raw.text, 900)
+    if (label && text) addContinuing(label, text, sourcesFromIdxs(raw.sourceIdxs, stories))
+  }
 
   const notes: EditionNote[] = []
   for (const raw of Array.isArray(out.notes) ? (out.notes as ModelNote[]) : []) {
@@ -330,15 +412,26 @@ function validateModelText(out: ModelOutput, stories: DcEditionStory[], fallback
       energy: raw.energy === true || cited.every((s) => s.energy),
     }
     const grounded = groundNoteMetric(draft, cited)
-    notes.push({ ...draft, metric: grounded.metric, unit: grounded.metric ? grounded.unit : null })
+    const note = { ...draft, metric: grounded.metric, unit: grounded.metric ? grounded.unit : null }
+    // A note that only restates an earlier edition's news moves to "Still developing".
+    if (noteRepeatsThread(note, stories, continuity.byStory)) {
+      console.log(`[compose] note "${note.label}" restates an earlier edition — moved to Still developing`)
+      addContinuing(note.label, note.text, note.sources)
+      continue
+    }
+    notes.push(note)
     if (notes.length === NOTE_COUNT) break
   }
-  // Pad from the deterministic notes, skipping sources already used.
+  // Pad from the deterministic notes (new stories first), skipping sources
+  // already used and anything that restates an earlier edition.
   for (const n of fallback.notes) {
     if (notes.length >= NOTE_COUNT) break
     if (notes.some((x) => x.sources[0]?.url === n.sources[0]?.url)) continue
+    if (noteRepeatsThread(n, stories, continuity.byStory)) continue
     notes.push(n)
   }
+  // The model left the block empty on a day that carries threads: use the deterministic one.
+  if (continuing.length === 0) continuing.push(...fallback.continuing)
 
   const layers = {} as EditionText['layers']
   for (const k of DC_LAYER_KEYS) {
@@ -375,7 +468,22 @@ function validateModelText(out: ModelOutput, stories: DcEditionStory[], fallback
       headline: str(out.research?.headline, 220) || fallback.research.headline,
       sub: str(out.research?.sub, 700) || fallback.research.sub,
     },
+    continuing,
   }
+}
+
+/**
+ * The lines on the front of the edition (the headline, each deck sentence)
+ * that restate a thread an earlier edition already carried, with that thread.
+ */
+function echoes(text: EditionText, continuity: Continuity): { line: string; thread: CarryOverThread }[] {
+  const lines = [text.headline, ...text.sub.replace(/\*/g, '').split(/(?<=[.!?])\s+/)]
+  const out: { line: string; thread: CarryOverThread }[] = []
+  for (const line of lines) {
+    const thread = line.trim() ? echoedThread(line, continuity.threads, continuity.idf) : null
+    if (thread) out.push({ line: line.trim(), thread })
+  }
+  return out
 }
 
 function gatewayConfigured(): boolean {
@@ -386,27 +494,50 @@ async function generateText(
   input: unknown,
   stories: DcEditionStory[],
   fallback: EditionText,
+  continuity: Continuity,
 ): Promise<{ text: EditionText; model: string } | null> {
   if (!gatewayConfigured()) {
     console.warn('[compose] AI_GATEWAY_API_KEY not set — deterministic edition')
     return null
   }
-  try {
+  const basePrompt = `Write the edition for this window:\n${JSON.stringify(input, null, 1)}`
+  const run = async (prompt: string) => {
     const res = await gatewayGenerateText({
       model: COMPOSER_MODEL,
       system: COMPOSER_SYSTEM,
-      prompt: `Write the edition for this window:\n${JSON.stringify(input, null, 1)}`,
+      prompt,
       schema: proseSchema,
       temperature: 0.35,
       maxOutputTokens: 8000,
       metadata: { 'x-vismay-feature': 'dc-edition-prose' },
     })
-    const text = validateModelText(res.result as ModelOutput, stories, fallback)
-    if (!text) {
+    const text = validateModelText(res.result as ModelOutput, stories, fallback, continuity)
+    return text ? { text, model: res.modelUsed || COMPOSER_MODEL } : null
+  }
+  try {
+    const first = await run(basePrompt)
+    if (!first) {
       console.warn('[compose] model output missing headline/sub — deterministic edition')
       return null
     }
-    return { text, model: res.modelUsed || COMPOSER_MODEL }
+    const repeated = echoes(first.text, continuity)
+    if (repeated.length === 0) return first
+    // One rewrite, told exactly which lines lead with old news.
+    const feedback = repeated
+      .map((r) => `- "${r.line}" repeats what the ${r.thread.since} edition already carried ("${r.thread.previously}")`)
+      .join('\n')
+    console.log(`[compose] front page restates earlier editions — one rewrite:\n${feedback}`)
+    const second = await run(
+      `${basePrompt}\n\nA previous draft of this edition led with news earlier editions already carried:\n${feedback}\nRewrite the whole edition so the headline and deck lead with what is new in this window; move those threads to "continuing".`,
+    ).catch((err) => {
+      console.warn(`[compose] rewrite failed (${err instanceof Error ? err.message : String(err)}) — keeping the first draft`)
+      return null
+    })
+    if (!second) return first
+    const still = echoes(second.text, continuity)
+    if (still.length > 0) console.warn(`[compose] rewrite still restates: ${still.map((r) => `"${r.line}"`).join(', ')} — editor to review`)
+    // Keep whichever draft restates less.
+    return still.length <= repeated.length ? second : first
   } catch (err) {
     console.warn(`[compose] prose generation failed (${err instanceof Error ? err.message : String(err)}) — deterministic edition`)
     return null
@@ -540,7 +671,7 @@ async function main() {
     }
   }
 
-  const [stories, ieaStories, places, used] = await Promise.all([
+  const [stories, ieaStories, places, used, prior] = await Promise.all([
     listDcNewsTagged({ start: start.toISOString(), end: end.toISOString(), limit: MAX_STORIES }),
     listIeaNewsForEditionWindow({ start: start.toISOString(), end: end.toISOString() }).catch((err) => {
       console.warn(`[compose] iea_news unavailable (${err instanceof Error ? err.message : err})`)
@@ -548,6 +679,10 @@ async function main() {
     }),
     listDcPlaces(),
     recentlyUsedPaperIds(args.date),
+    listPriorEditions(args.date, { limit: PRIOR_EDITIONS }).catch((err) => {
+      console.warn(`[compose] earlier editions unavailable (${err instanceof Error ? err.message : err}) — no carry-over check`)
+      return [] as PriorEdition[]
+    }),
   ])
   const untagged = stories.filter((s) => !s.layer).length
   console.log(`[compose] ${stories.length} relevant stories (${untagged} untagged) · ${ieaStories.length} iea_news items`)
@@ -564,12 +699,20 @@ async function main() {
     .slice(0, MAX_PAPERS)
   console.log(`[compose] ${papers.length} papers`)
 
+  // Carried-over news: the window against the last few editions' stories.
+  const idf = buildIdf([...prior.flatMap((e) => e.stories), ...stories])
+  const threads = findCarryOvers(stories, prior, { idf })
+  const continuity: Continuity = { prior, threads, byStory: threadsByStory(threads), idf }
+  console.log(
+    `[compose] checked against ${prior.map((e) => e.date).join(', ') || 'no earlier editions'} · ${continuity.byStory.size} of ${stories.length} stories carried over in ${threads.length} threads`,
+  )
+
   const numbers = await assembleEditionNumbers({ editionDate: args.date, stories, ieaStories, papers })
   const placeMap = new Map(places.map((p) => [p.slug, p]))
-  const fallback = deterministicText({ stories, papers, places: placeMap })
+  const fallback = deterministicText({ stories, papers, places: placeMap, threads })
 
-  const modelInput = buildComposerInput({ editionDate: args.date, windowLabel, stories, ieaStories, papers, places: placeMap, numbers })
-  const modelText = stories.length > 0 ? await generateText(modelInput, stories, fallback) : null
+  const modelInput = buildComposerInput({ editionDate: args.date, windowLabel, stories, ieaStories, papers, places: placeMap, numbers, continuity })
+  const modelText = stories.length > 0 ? await generateText(modelInput, stories, fallback, continuity) : null
   const text = modelText?.text ?? fallback
   const model = modelText?.model ?? 'deterministic'
   // v4 rows carry the Doom v Boom grades + event line; v3 rows per-figure
@@ -623,6 +766,9 @@ async function main() {
     text.notes.forEach((n, i) => console.log(`note ${i + 1}: [${n.metric ?? '—'}${n.unit ? ` ${n.unit}` : ''}] ${n.label} — ${n.text} (${n.sources.map((s) => s.name).join(', ')})`))
     for (const k of DC_LAYER_KEYS) console.log(`\n${DC_LAYERS[k].name}: ${text.layers[k].headline} — ${text.layers[k].sub} [${numbers.layerCounts[k]} stories, viz=${numbers.layerViz[k]?.kind ?? 'none'}]`)
     console.log(`\nresearch: ${text.research.headline} — ${text.research.sub}`)
+    console.log(`\nstill developing (${threads.length} threads carried over):`)
+    for (const c of text.continuing) console.log(`  [since ${c.since}] ${c.label} — ${c.text} (${c.sources.map((s) => s.name).join(', ')})`)
+    for (const t of threads) console.log(`  · ${t.storyIds.length} reports / ${t.outlets} outlets · since ${t.since} · ${t.previously}${t.newFigures.length ? ` · new: ${t.newFigures.map((f) => `${f.value} ${f.unit}`).join(', ')}` : ''}`)
     const { events = [], ...moodTotals } = numbers.moodCounts
     console.log(`\nmood ${numbers.moodScore} ${JSON.stringify(moodTotals)} · places ${numbers.geo.places.length} · power ${numbers.energy.hero?.value ?? 0} GW · tape ${numbers.tape.length}`)
     console.log(`\n${describeMoodEvents(events, stories)}`)

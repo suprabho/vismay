@@ -78,6 +78,7 @@ An edition is one page with a masthead, a hero, a ticker tape, seven chapters an
 | Ticker tape | Day's close vs prior close for all active tickers, sorted by move | `dc_stock_prices` | — |
 | I · Doom v Boom | Reports of one development grouped into an event and counted once; each event weighted by relevance × impact × coverage; reading = (W_boom − W_doom) / (W_boom + W_doom). Needle, 7- and 30-day ghost ticks, per side the event count, its share of the weight and the top 3 events | `dc_news.mood`, `.relevance`, `.impact`, `.event`, `.actors`; `dc_editions.mood_score`, `.mood_counts.events` | Doom side, boom side (one row per event) |
 | II · Key notes | Six notes, each led by the number that matters, with source chips | `dc_editions.notes[]` (metric, label, text, sources\[\]) | — |
+| II · Still developing | Under the key notes: threads an earlier edition already carried that drew more reports in this window, one line each on what the window added, with a link to the edition that first ran it | `dc_editions.continuing[]` (label, text, since, sources\[\]) | — |
 | III · By geography | Full-bleed dot-matrix world map (canvas), pins sized by story count, hover tooltip, proportional region bar with layer micro-bars | `dc_news.place`, `.region`, `dc_places` | Place, region |
 | IV · By AI layer | Four tiles: layer headline + sub, one bespoke viz per layer, three sourced notes, count | `dc_editions.layers[]`, per-layer viz data | Layer |
 | V · New research | Research headline + sub; fields moved (today vs 30-edition avg); openness bars; results-at-scale scatter; 8 result-led paper cards | `dc_papers`, `dc_editions.research` | Paper, field |
@@ -125,6 +126,7 @@ Three new tables and six new columns on `dc_news`, all in one migration (`078_dc
 | `status` | text | `draft` · `published`; only one draft at a time |
 | `headline`, `sub` | text | 24-hour headline and deck |
 | `notes` | jsonb | 6 × `{metric, unit, label, text, sources:[{name, url}], energy}` |
+| `continuing` | jsonb | ≤ 5 × `{label, text, since, sources}` — carried-over threads (migration 084) |
 | `mood_score`, `mood_counts` | numeric, jsonb | reading and `{boom, doom, neutral}` — event counts since `method: 'events-v1'`, which also carries the raw report counts, the side weights and every event `{lead, ids, mood, w, r, i, outlets}`; since `score.method: 'news+market-v1'` the score blends the news reading with the tracked stocks' previous session (cap-weighted per AI layer, layers equal; weight and scale from `dc_mood_calibrations`, migration 082), split out in `score {news, market, marketWeight}` |
 | `layers` | jsonb | per layer `{headline, sub, notes:[{text, sources}], viz}` |
 | `research` | jsonb | `{headline, sub, paper_ids[], field_baseline}` |
@@ -161,6 +163,8 @@ The draft goes public at 09:00 UTC whether or not an editor has looked at it; re
 **Papers ingest (new `ingest-papers.ts`).** Query the arXiv API for `cs.AI`, `cs.CL`, `cs.LG`, `cs.CV`, `cs.AR`, `cs.DC` submitted in the window, then a Haiku gate that keeps papers with a data-center-scale or frontier-AI bearing and extracts `area`, `bench`, `baseline`, `result`, `unit`, `compute_bucket`, `scale`, `weights_released`, `code_released` and a one-line `why`. Target 6–10 kept papers a day; upsert on `arxiv_id`.
 
 **Composer (replaces generate-news-recap.ts).** One Gemini call in JSON mode over the window's relevant stories, kept papers, stock moves and `iea_news`, returning `headline`, `sub`, `notes[6]`, `layers{}` with headline / sub / notes, and `research{headline, sub}`. Everything numeric (mood score, counts, figures, composition, field baselines, per-layer viz data) is assembled deterministically from the tagged rows, never by the model. On any model failure the composer falls back to a deterministic edition (headline from the top theme, notes from the largest figures) and marks `model = 'deterministic'`, exactly as the recap worker does today.
+
+**Continuity.** Outlets keep filing on a development for days, so the composer checks the window against the last three editions' stories with the Doom v Boom event matching. A development an earlier edition carried may not lead the headline, deck or key notes unless the window adds something to it (a new figure, a completion, a reversal); it is listed under "Still developing" instead. A headline or deck sentence that still restates an old thread gets one rewrite, and a note that only restates one is moved to the block.
 
 **Freeze.** `publish-edition` (09:00 UTC, or the admin's Publish button) sets `status = 'published'`, `published_at`, and revalidates `/ai-daily/doom-v-boom` and `/ai-daily/doom-v-boom/[date]`. A published row is never updated; a correction is a note in the next edition.
 

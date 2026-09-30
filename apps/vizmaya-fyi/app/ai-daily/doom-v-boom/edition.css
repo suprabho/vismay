@@ -184,6 +184,14 @@ html:has(.dcd){scroll-behavior:smooth}
 @media (min-width:900px){
   .dcd .notes{grid-template-columns:1fr 1fr;column-gap:48px}
 }
+/* still developing — carried-over threads, under the key notes */
+.dcd .continuing{margin-top:40px}
+.dcd .continuing-head{margin-bottom:14px}
+.dcd .continuing-head h3{font-family:var(--serif);font-size:22px;line-height:1.1;letter-spacing:-.01em}
+.dcd .continuing-head p{color:var(--muted);font-size:14px;margin-top:4px;max-width:60ch}
+.dcd .continuing .note p{font-size:15px}
+.dcd .note .tail a.tag{transition:color .15s}
+.dcd .note .tail a.tag:hover{color:var(--accent-mid)}
 /* ---------- geo (full bleed) ---------- */
 .dcd .geo-section{padding-bottom:0}
 .dcd .bleed{width:100%}
