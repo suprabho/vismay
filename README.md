@@ -39,4 +39,8 @@ pnpm --filter vizmaya-fyi lint
 
 Swap `vizmaya-fyi` for any app name to target a different app. The workspace also nests app sub-packages (`apps/vizf1/*`, `apps/footshorts/*`) — see [`pnpm-workspace.yaml`](pnpm-workspace.yaml).
 
+### Vercel builds
+
+Every app's `vercel.json` runs [`scripts/vercel-ignore.mjs`](scripts/vercel-ignore.mjs) as its Ignored Build Step. An app builds only when a file it can reach changed: its own directory, the workspace packages it depends on, its Tailwind `@source` dirs, or the root lockfile/config. Docs and tests don't count. On previews only the PR's own diff counts, so merging `main` into a branch doesn't rebuild everything. travel, umami, kidzovo and vizf1 build previews only for changes in their own directory (production always builds); add `[preview:travel]` or `[preview:all]` to a commit message to force one. Keep code used by one or two apps out of `content-source` (see `packages/dc-editions/`), since every change there reaches seven apps.
+
 Per-app context (active initiatives, env vars, render wiring) lives in each app's `CLAUDE.md`, e.g. [`apps/vizmaya-fyi/CLAUDE.md`](apps/vizmaya-fyi/CLAUDE.md) and [`apps/admin/CLAUDE.md`](apps/admin/CLAUDE.md).
