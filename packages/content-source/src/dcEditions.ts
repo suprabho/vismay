@@ -158,14 +158,14 @@ const PAPER_COLUMNS =
 
 const EDITION_SUMMARY_COLUMNS = 'id, number, edition_date, status, headline, sub, counts, mood_score, published_at'
 /** The edition columns before migration 083 (no `continuing`). */
-const EDITION_COLUMNS_PRE_083 =
+export const EDITION_COLUMNS_PRE_083 =
   `${EDITION_SUMMARY_COLUMNS}, window_start, window_end, notes, mood_counts, mood_series, layers, research, ` +
   'energy, geo, tape, charts, chart_skips, story_ids, paper_ids, iea_ids, model, classifier_version, composer_runs, edited_fields, ' +
   'auto_publish_at, hold_count, generated_at, reviewed_by'
-const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_083}, continuing`
+export const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_083}, continuing`
 
 /** A read or write that failed only because migration 083's `continuing` column isn't there yet. */
-function isMissingContinuing(error: { code?: string; message?: string } | null): boolean {
+export function isMissingContinuing(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false
   return isMissingColumnError(error) || (error.code === 'PGRST204' && /continuing/.test(error.message ?? ''))
 }
@@ -176,7 +176,7 @@ function isMissingContinuing(error: { code?: string; message?: string } | null):
  * render without the "Still developing" block instead of failing. `full` tells
  * a write whether it may include the `continuing` value.
  */
-async function withEditionColumns<T>(
+export async function withEditionColumns<T>(
   run: (cols: string, full: boolean) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
 ) {
   let res = await run(EDITION_COLUMNS, true)
@@ -312,7 +312,7 @@ function mapSummaryRow(r: any): DcEditionSummary {
   }
 }
 
-function mapEditionRow(r: any): DcEdition {
+export function mapEditionRow(r: any): DcEdition {
   return {
     ...mapSummaryRow(r),
     windowStart: r.window_start as string,
