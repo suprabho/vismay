@@ -470,9 +470,18 @@ export interface EditionMarketReading {
   scalePct?: number
 }
 
-/** How `mood_score` blends the news reading and the market. */
-export type EditionScoreMethod = 'news+market-v1'
-export const SCORE_METHOD: EditionScoreMethod = 'news+market-v1'
+/**
+ * How `mood_score` combines the news reading and the market.
+ *   news+market-v1 — a weighted average, (1 − w) × news + w × market. With the
+ *     news reading well above zero and the market near it, that shrank every
+ *     score toward zero, so an up session could lower a booming day.
+ *   news+market-v2 — a tilt, news + w × market (clamped to ±1): a flat session
+ *     leaves the news reading alone, an up session can only raise it.
+ */
+export type EditionScoreMethod = 'news+market-v1' | 'news+market-v2'
+export const SCORE_METHOD: EditionScoreMethod = 'news+market-v2'
+/** The weighted-average method frozen on editions composed before the tilt. */
+export const SCORE_METHOD_AVERAGE: EditionScoreMethod = 'news+market-v1'
 
 export interface EditionMoodScore {
   method: EditionScoreMethod
@@ -480,7 +489,10 @@ export interface EditionMoodScore {
   news: number | null
   /** Null on days without a session (weekends, holidays, missing prices): the score is the news reading. */
   market: EditionMarketReading | null
-  /** The market's share of the score when it is present. */
+  /**
+   * v2: the tilt — how far a market reading of ±1 moves the score. v1: the
+   * market's share of the weighted average.
+   */
   marketWeight: number
 }
 
@@ -559,6 +571,22 @@ export interface EditionChartSkip {
   reason: string
 }
 
+/**
+ * A thread an earlier edition already carried that drew fresh reports in this
+ * window ("Still developing"). The headline, deck and key notes are for what
+ * is new; a development that keeps being reported lands here instead of
+ * leading two mornings running.
+ */
+export interface EditionContinuing {
+  /** The thread, ≤ 8 words ("Samsung's $1B stake in Helix"). */
+  label: string
+  /** One sentence on what this window added — or that it only repeated earlier facts. */
+  text: string
+  /** Edition date the thread first appeared in (YYYY-MM-DD). Derived from the cited stories, never written by the model. */
+  since: string
+  sources: EditionSource[]
+}
+
 /** The prose layer — what the composer (or an editor) writes. */
 export interface EditionText {
   headline: string
@@ -566,6 +594,8 @@ export interface EditionText {
   notes: EditionNote[]
   layers: Record<DcLayerKey, { headline: string; sub: string; notes: EditionLayerNote[] }>
   research: { headline: string; sub: string }
+  /** Carried-over threads (migration 084). Absent on composer runs stored before it. */
+  continuing: EditionContinuing[]
 }
 
 export interface EditionComposerRun {
@@ -596,6 +626,8 @@ export interface DcEdition extends DcEditionSummary {
   windowStart: string
   windowEnd: string
   notes: EditionNote[]
+  /** Threads carried over from earlier editions (migration 084); empty on older rows. */
+  continuing: EditionContinuing[]
   moodCounts: EditionMoodCounts
   moodSeries: EditionMoodPoint[]
   layers: Record<DcLayerKey, EditionLayer>

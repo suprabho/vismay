@@ -179,7 +179,7 @@ const METHOD = [
   },
   {
     title: 'The market',
-    body: 'The market is the previous day’s session for the ~29 tracked AI-infrastructure stocks. Each close-to-close move is capped at ±10%; within each AI layer (data centres, hyperscalers, chips, chip equipment) the moves are weighted by market cap, and the four layers count equally, so the many chip names don’t outvote the rest. The result is read on the same −1 to +1 scale, with the scale calibrated on past days so the market swings about as much as the news. It carries a quarter of the score and the news the other three quarters. With no session in the window (weekends, holidays) the score is the news reading alone.',
+    body: 'The market is the previous day’s session for the US-listed AI-infrastructure stocks we track. Each close-to-close move is capped at ±10%; within each AI layer (data centres, hyperscalers, chips, chip equipment) the moves are weighted by market cap, and the four layers count equally, so the many chip names don’t outvote the rest. The result is read on the same −1 to +1 scale, with the scale calibrated on past days so the market swings about as much as the news. It then tilts the news reading rather than being averaged with it: a flat session leaves the score where the news put it, a strong one moves it by up to a quarter of a point. With no session in the window (weekends, holidays) the score is the news reading alone.',
   },
   {
     title: 'The score',

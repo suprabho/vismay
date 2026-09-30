@@ -168,11 +168,13 @@ async function main() {
   const bandChanges = paired.filter((r) => moodWord(r.news) !== moodWord(r.blended)).length
   const marketStd = stdev(paired.map((r) => r.market!))
   const newsStd = stdev(newsScored.map((d) => d.news))
-  // Share of the blend's variance from each side, covariance split evenly.
+  // Share of the score's variance from each side (score = news + w × market), covariance split evenly.
   const cov = (correlation(paired.map((r) => r.news), paired.map((r) => r.market!)) ?? 0) * newsStd * marketStd
-  const vn = ((1 - weight) * newsStd) ** 2
+  const vn = newsStd ** 2
   const vm = (weight * marketStd) ** 2
-  const vc = 2 * weight * (1 - weight) * cov
+  const vc = 2 * weight * cov
+  const tilts = paired.map((r) => Math.abs(r.blended! - r.news))
+  const loweredOnUp = paired.filter((r) => r.market! > 0 && r.blended! < r.news).length
   const marketShare = vn + vm + vc > 0 ? (vm + vc / 2) / (vn + vm + vc) : 0
 
   say()
@@ -181,7 +183,7 @@ async function main() {
   say(`- **Scale ${scale}%** (was ${current.scalePct}%): an average layer move of ±${scale}% reads as ±0.76`)
   say(`- Session moves: sd ${r3(stdev(moves))}% · p5 ${r3(pct(moves, 0.05))}% · p50 ${r3(pct(moves, 0.5))}% · p95 ${r3(pct(moves, 0.95))}%`)
   say(`- News reading: sd ${r3(newsStd)} · mean ${formatSigned(newsScored.reduce((a, d) => a + d.news, 0) / newsScored.length)}`)
-  say(`- Weight ${weight}: the market is ~${Math.round(marketShare * 100)}% of the score's movement over ${paired.length} paired days; the blend changes the day's word on ${bandChanges} of them`)
+  say(`- Weight ${weight} (a tilt: score = news + ${weight} × market): over ${paired.length} paired days the market moves the score by ${r3(tilts.reduce((a, b) => a + b, 0) / (tilts.length || 1))} on average, ${r3(Math.max(0, ...tilts))} at most — ~${Math.round(marketShare * 100)}% of the score's movement; it changes the day's word on ${bandChanges} of them, and lowers the score on ${loweredOnUp} up sessions`)
   say(`- Correlation, news vs the session it reads: ${correlation(paired.map((r) => r.news), paired.map((r) => r.market!)) ?? '—'} · news vs the next session: ${correlation(lead.map((r) => r.news), lead.map((r) => r.next!)) ?? '—'} (${lead.length} days)`)
   say()
   say(`### Daily readings (backfilled)`)

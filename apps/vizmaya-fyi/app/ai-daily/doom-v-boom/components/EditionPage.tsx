@@ -11,6 +11,7 @@ import TickerTape from './TickerTape'
 import DoomBoomMeter from './DoomBoomMeter'
 import BoomScore from './BoomScore'
 import KeyNotes from './KeyNotes'
+import Continuing from './Continuing'
 import GeoMap from './GeoMap'
 import LayerTile from './LayerTile'
 import ResearchChapter from './ResearchChapter'
@@ -162,6 +163,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
             <h2>Key notes</h2>
           </div>
           <KeyNotes notes={e.notes} />
+          <Continuing items={e.continuing} linkSince={!sample} />
         </section>
 
         <section className="chapter geo-section" id="geo">

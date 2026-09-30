@@ -33,6 +33,7 @@ import {
   type DcRegionKey,
   type DcStoryFigure,
   type DcThemeKey,
+  type EditionContinuing,
   type EditionCounts,
   type EditionEnergy,
   type EditionGeo,
@@ -182,10 +183,11 @@ export function decimalYear(date: string | Date): number {
 // (W_boom − W_doom) / (W_boom + W_doom), neutral excluded. With no duplicates
 // and equal weights that is exactly the old story count.
 //
-// The stored score then mixes in the market (news+market-v1): the tracked
+// The stored score then tilts by the market (news+market-v2): the tracked
 // stocks' previous session — cap-weighted inside each AI layer, the layers
-// averaged equally — as a −1…+1 reading carrying the calibrated weight of
-// the score. No session (weekend, holiday, prices missing) → the news reading.
+// averaged equally — as a −1…+1 reading, added to the news reading at the
+// calibrated weight. No session (weekend, holiday, prices missing) → the
+// news reading.
 
 /**
  * Clustering constants — starting values, calibrated on the compose
@@ -525,7 +527,7 @@ export function toMoodEvent(members: DcEditionStory[]): EditionMoodEvent {
 // Market — the tracked stocks' previous session, mixed into the score
 
 export const MARKET_MOOD = {
-  /** The market's share of the score by default; a calibration row (dc_mood_calibrations) can override it. */
+  /** The tilt by default — a market reading of ±1 moves the score this far; a calibration row (dc_mood_calibrations) can override it. */
   weight: 0.25,
   /**
    * Default scale until the first calibration: an average move of this many
@@ -646,14 +648,16 @@ export function scoreMarket(moves: MarketMove[], session: string, scalePct: numb
 }
 
 /**
- * The stored score: (1 − w) × news + w × market. No news reading → unscored
- * (the market tilts the day's news; it doesn't stand in for it). No market →
- * the news reading unchanged.
+ * The stored score: news + w × market, clamped to ±1. The market tilts the
+ * day's news rather than being averaged with it — an average pulls a strong
+ * news reading toward zero whatever the session did, so an up day could
+ * lower the score. No news reading → unscored (the market doesn't stand in
+ * for the news). No market → the news reading unchanged.
  */
 export function blendMoodScore(news: number | null, market: EditionMarketReading | null, weight: number = MARKET_MOOD.weight): number | null {
   if (news == null) return null
   if (market == null) return news
-  return round3((1 - weight) * news + weight * market.score)
+  return round3(Math.max(-1, Math.min(1, news + weight * market.score)))
 }
 
 const stdev = (values: number[]): number => {
@@ -664,8 +668,9 @@ const stdev = (values: number[]): number => {
 
 /**
  * The scale at which tanh(move / scale) swings as much (standard deviation)
- * as the news reading does, so the market's weight is its real share of the
- * score's movement rather than an artefact of units. Bisection on a
+ * as the news reading does, so the market's weight means the same thing
+ * whatever the units: at weight w a typical session moves the score w times
+ * as far as a typical day's news does. Bisection on a
  * monotonic function; clamped to [0.1%, 20%]. Null when either side is too
  * short or flat to fit.
  */
@@ -802,6 +807,247 @@ export function moodDrivers(stories: DcEditionStory[], side: 'boom' | 'doom', n 
       return Date.parse(b.publishedAt) - Date.parse(a.publishedAt)
     })
     .slice(0, n)
+}
+
+// ---------------------------------------------------------------------------
+// Continuity — what earlier editions already carried
+//
+// Google News keeps surfacing a development for days as more outlets file on
+// it, so two windows can hold no story in common and still lead with the same
+// news ("Samsung puts $1B into Helix" on 29 and 30 September). The window's
+// stories are clustered together with the last few editions' stories, using
+// the same event matching as Doom v Boom. A story that groups with an earlier
+// edition's story is carried over: the prose may not lead with it unless it
+// adds something, and it goes into the edition's "Still developing" block.
+
+/** An earlier published edition, as the carry-over check reads it. */
+export interface PriorEdition {
+  date: string
+  headline: string
+  sub: string
+  notes: EditionNote[]
+  stories: DcEditionStory[]
+}
+
+/** A development an earlier edition carried that this window reported again. */
+export interface CarryOverThread {
+  /** The earliest prior edition that carried it. */
+  since: string
+  /** This window's reports on it, lead first. */
+  storyIds: number[]
+  /** The earlier reports, lead first. */
+  priorIds: number[]
+  /** The earlier lead's canonical line: what readers were already told. */
+  previously: string
+  /** Figures this window states that no earlier report did, i.e. a genuine update. */
+  newFigures: DcStoryFigure[]
+  /** Distinct outlets reporting it in this window. */
+  outlets: number
+}
+
+/** How many "Still developing" items an edition carries at most. */
+export const CONTINUING_MAX = 5
+
+const UPDATE_KINDS = new Set<DcFigureKind>(['power', 'energy', 'money', 'share', 'horizon'])
+
+/** The canonical tokens eventTokens gives a figure written in a headline ("$1 billion" → usd:1000). */
+function figureTokens(f: DcStoryFigure): string[] {
+  const kind = figureKind(f.unit)
+  const mag = figureMagnitude(f)
+  if (kind === 'horizon') return [String(f.value)]
+  if (kind === 'share') return [`pct:${numToken(f.value)}`]
+  if (mag == null) return []
+  if (kind === 'power') return [`mw:${numToken(mag)}`]
+  if (kind === 'energy') return [`mwh:${numToken(mag)}`]
+  if (kind === 'money') return ['usd', 'eur', 'gbp'].map((c) => `${c}:${numToken(mag)}`)
+  return []
+}
+
+function sameFigure(a: DcStoryFigure, b: DcStoryFigure): boolean {
+  if (figureKind(a.unit) !== figureKind(b.unit)) return false
+  const ma = figureMagnitude(a)
+  const mb = figureMagnitude(b)
+  if (ma != null && mb != null) return Math.abs(ma - mb) <= 0.01 * Math.max(Math.abs(ma), Math.abs(mb))
+  return a.value === b.value
+}
+
+/**
+ * The window's carried-over threads, most-reported first. `prior` is the last
+ * few published editions with their member stories; `idf` should span both
+ * sets (the composer builds it once from the prior editions plus the window).
+ */
+export function findCarryOvers(
+  stories: DcEditionStory[],
+  prior: PriorEdition[],
+  opts: { idf?: EventIdf } = {},
+): CarryOverThread[] {
+  const todayIds = new Set(stories.map((s) => s.id))
+  const priorDate = new Map<number, string>()
+  const priorStories: DcEditionStory[] = []
+  for (const e of prior) {
+    for (const s of e.stories) {
+      if (todayIds.has(s.id)) continue
+      const seen = priorDate.get(s.id)
+      if (seen == null) priorStories.push(s)
+      if (seen == null || e.date < seen) priorDate.set(s.id, e.date)
+    }
+  }
+  if (stories.length === 0 || priorStories.length === 0) return []
+  const all = [...stories, ...priorStories]
+  const groups = mergeCarriedGroups(
+    clusterEvents(all, { idf: opts.idf ?? buildIdf(all) }).filter((g) => g.some((s) => todayIds.has(s.id)) && g.some((s) => priorDate.has(s.id))),
+  )
+  const threads: CarryOverThread[] = []
+  for (const g of groups) {
+    const now = g.filter((s) => todayIds.has(s.id))
+    const before = g.filter((s) => priorDate.has(s.id))
+    const priorFigures = before.flatMap((s) => s.facts?.figures ?? [])
+    const priorTokens = new Set<string>()
+    for (const s of before) for (const t of eventTokens(storyEventText(s))) priorTokens.add(t)
+    const newFigures: DcStoryFigure[] = []
+    for (const f of now.flatMap((s) => s.facts?.figures ?? [])) {
+      if (!UPDATE_KINDS.has(figureKind(f.unit))) continue
+      if (priorFigures.some((p) => sameFigure(f, p))) continue
+      if (figureTokens(f).some((t) => priorTokens.has(t))) continue
+      if (newFigures.some((n) => sameFigure(f, n))) continue
+      newFigures.push(f)
+    }
+    threads.push({
+      since: before.map((s) => priorDate.get(s.id)!).sort()[0],
+      storyIds: now.map((s) => s.id),
+      priorIds: before.map((s) => s.id),
+      previously: before[0].event?.trim() || before[0].title,
+      newFigures,
+      outlets: new Set(now.map(outletKey)).size,
+    })
+  }
+  return threads.sort((a, b) => b.outlets - a.outlets || b.storyIds.length - a.storyIds.length || a.storyIds[0] - b.storyIds[0])
+}
+
+/** The money / power figures and organisation-name tokens a group's lines name. */
+function groupSignature(g: DcEditionStory[]): { figures: Set<string>; actors: Set<string> } {
+  const figures = new Set<string>()
+  const actors = new Set<string>()
+  for (const s of g) {
+    for (const t of eventTokens(storyEventText(s))) if (FIGURE_TOKEN.test(t)) figures.add(t)
+    for (const a of s.actors ?? []) for (const t of eventTokens(a)) if (!ACTOR_GENERIC.has(t)) actors.add(t)
+  }
+  return { figures, actors }
+}
+
+/**
+ * The clustering is precision-first, so one development can come out as two
+ * groups (a terse "Samsung invests $1B in Helix" beside the wire copy). Across
+ * editions that would list one thread twice, so carried-over groups that name
+ * the same money / power figure AND the same organisation are joined; the
+ * larger group leads.
+ */
+function mergeCarriedGroups(groups: DcEditionStory[][]): DcEditionStory[][] {
+  const out = [...groups].sort((a, b) => b.length - a.length)
+  const sigs = out.map(groupSignature)
+  for (let i = 0; i < out.length; i++) {
+    for (let j = out.length - 1; j > i; j--) {
+      const a = sigs[i]
+      const b = sigs[j]
+      const sameFigure = [...b.figures].some((t) => a.figures.has(t))
+      const sameActor = [...b.actors].some((t) => a.actors.has(t))
+      if (!sameFigure || !sameActor) continue
+      out[i] = [...out[i], ...out[j]]
+      for (const t of b.figures) a.figures.add(t)
+      for (const t of b.actors) a.actors.add(t)
+      out.splice(j, 1)
+      sigs.splice(j, 1)
+    }
+  }
+  return out
+}
+
+/** story id → its carry-over thread, for the stories that have one. */
+export function threadsByStory(threads: CarryOverThread[]): Map<number, CarryOverThread> {
+  const out = new Map<number, CarryOverThread>()
+  for (const t of threads) for (const id of t.storyIds) out.set(id, t)
+  return out
+}
+
+/**
+ * Share of a thread's identifying weight a line of text repeats (0–1): the
+ * IDF weight of the earlier lead's canonical line that the text also names.
+ * The event line, not the title — titles carry the outlet's framing ("Pre-IPO
+ * perps barely blink") that no later headline repeats.
+ */
+function threadCoverage(textTokens: Set<string>, thread: CarryOverThread, idf: EventIdf): number {
+  let total = 0
+  let shared = 0
+  for (const t of eventTokens(thread.previously)) {
+    const w = idfWeight(idf, t)
+    total += w
+    if (textTokens.has(t)) shared += w
+  }
+  return total > 0 ? shared / total : 0
+}
+
+/** A line repeating this share of a thread's identifying weight is leading with old news. */
+export const ECHO_THRESHOLD = 0.5
+
+/**
+ * The carried-over thread a line (the headline, a deck sentence) leads with
+ * when it adds nothing to it: it repeats at least ECHO_THRESHOLD of what an
+ * earlier edition said and names none of the thread's new figures. Null when
+ * the line is about something new.
+ */
+export function echoedThread(text: string, threads: CarryOverThread[], idf: EventIdf): CarryOverThread | null {
+  const tokens = eventTokens(text)
+  let best: { thread: CarryOverThread; coverage: number } | null = null
+  for (const thread of threads) {
+    if (thread.newFigures.some((f) => figureTokens(f).some((t) => tokens.has(t)))) continue
+    const coverage = threadCoverage(tokens, thread, idf)
+    if (coverage >= ECHO_THRESHOLD && (!best || coverage > best.coverage)) best = { thread, coverage }
+  }
+  return best?.thread ?? null
+}
+
+/**
+ * Does a key note only restate carried-over news? True when every story it
+ * cites is carried over and its lead number is not one of those threads' new
+ * figures (a note with no lead number on carried stories restates too).
+ */
+export function noteRepeatsThread(note: Pick<EditionNote, 'metric' | 'unit' | 'sources'>, stories: DcEditionStory[], byStory: Map<number, CarryOverThread>): CarryOverThread | null {
+  const cited = note.sources.map((src) => stories.find((s) => s.url === src.url)).filter((s): s is DcEditionStory => !!s)
+  if (cited.length === 0) return null
+  const threads = cited.map((s) => byStory.get(s.id))
+  if (threads.some((t) => !t)) return null
+  const metric = note.metric?.trim()
+  if (metric) {
+    const tokens = eventTokens(`${metric} ${note.unit ?? ''}`)
+    const isNew = threads.some((t) => t!.newFigures.some((f) => figureTokens(f).some((ft) => tokens.has(ft)) || tokens.has(numToken(f.value))))
+    if (isNew) return null
+  }
+  return threads[0]!
+}
+
+/**
+ * The deterministic "Still developing" block: the most-reported threads, each
+ * labelled with what readers were told and led by this window's report.
+ */
+export function continuingFromThreads(threads: CarryOverThread[], stories: DcEditionStory[], n = CONTINUING_MAX): EditionContinuing[] {
+  const byId = new Map(stories.map((s) => [s.id, s]))
+  const out: EditionContinuing[] = []
+  for (const t of threads) {
+    const members = t.storyIds.map((id) => byId.get(id)).filter((s): s is DcEditionStory => !!s)
+    if (members.length === 0) continue
+    const reports = `${members.length} more report${members.length === 1 ? '' : 's'}`
+    const update = t.newFigures.length
+      ? `, with ${joinList(t.newFigures.slice(0, 2).map((f) => `${formatFigureValue(f.value, f.unit)}${isYearUnit(f.unit) ? '' : ` ${f.unit}`} ${f.label}`.trim()))} new`
+      : ''
+    out.push({
+      label: shortTitle(t.previously, 72),
+      text: `${reports}${update}: ${members[0].title}`,
+      since: t.since,
+      sources: dedupeSources(members.slice(0, 3).map(storySource)),
+    })
+    if (out.length === n) break
+  }
+  return out
 }
 
 // ---------------------------------------------------------------------------
@@ -1527,17 +1773,24 @@ function byWeight(a: DcEditionStory, b: DcEditionStory): number {
 /**
  * The deterministic edition: headline from the top theme's lead story, notes
  * from the largest stated figures, layer briefs from each layer's lead
- * stories. Used when the model fails, so the cron never goes dark.
+ * stories. Used when the model fails, so the cron never goes dark. Stories
+ * carried over from earlier editions (`threads`) rank after the window's new
+ * ones and never lead; they fill the "Still developing" block.
  */
 export function deterministicText(input: {
   stories: DcEditionStory[]
   papers: DcPaper[]
   places: Map<string, DcPlace>
+  threads?: CarryOverThread[]
 }): EditionText {
-  const { stories, papers, places } = input
-  const themes = topThemes(stories)
-  const ranked = [...stories].sort(byWeight)
-  const lead = themes[0] ? ranked.find((s) => s.theme === themes[0]) ?? ranked[0] : ranked[0]
+  const { stories, papers, places, threads = [] } = input
+  const carried = threadsByStory(threads)
+  const fresh = stories.filter((s) => !carried.has(s.id))
+  const themes = topThemes(fresh.length ? fresh : stories)
+  // New stories first; a carried-over one only fills what the window lacks.
+  const ranked = [...fresh.sort(byWeight), ...stories.filter((s) => carried.has(s.id)).sort(byWeight)]
+  const leadPool = fresh.length ? ranked.slice(0, fresh.length) : ranked
+  const lead = themes[0] ? leadPool.find((s) => s.theme === themes[0]) ?? leadPool[0] : leadPool[0]
   const placeCount = new Set(stories.map((s) => s.place).filter(Boolean)).size
   const themeNames = themes.slice(0, 3).map((t) => DC_THEMES[t].name.toLowerCase())
 
@@ -1604,7 +1857,7 @@ export function deterministicText(input: {
     sub: papers[0]?.why ?? '',
   }
 
-  return { headline, sub, notes: figureNotes, layers, research }
+  return { headline, sub, notes: figureNotes, layers, research, continuing: continuingFromThreads(threads, stories) }
 }
 
 function placesIn(stories: DcEditionStory[], places: Map<string, DcPlace>): string[] {
@@ -1636,7 +1889,7 @@ export function sourcesFromIdxs(idxs: unknown, stories: DcEditionStory[]): Editi
 // Editor edits: dot-path helpers over EditionText
 
 export const EDITABLE_PATH_RE =
-  /^(headline|sub|notes\.\d+\.(metric|unit|label|text|sources|energy)|layers\.(dc|hyper|semi|equip)\.(headline|sub|notes\.\d+\.(text|sources))|research\.(headline|sub))$/
+  /^(headline|sub|notes\.\d+\.(metric|unit|label|text|sources|energy)|layers\.(dc|hyper|semi|equip)\.(headline|sub|notes\.\d+\.(text|sources))|research\.(headline|sub)|continuing\.\d+\.(label|text|sources))$/
 
 export function getPath(obj: unknown, path: string): unknown {
   let cur: unknown = obj
@@ -1661,13 +1914,19 @@ export function setPath(obj: Record<string, unknown>, path: string, value: unkno
   cur[keys[keys.length - 1]] = value
 }
 
-/** Overlay the editor's kept fields from `current` onto freshly generated `next`. */
+/**
+ * Overlay the editor's kept fields from `current` onto freshly generated
+ * `next`. A field whose item the new run no longer has (a "Still developing"
+ * thread that dropped out) is skipped rather than rebuilt half-empty.
+ */
 export function overlayEditedFields(next: EditionText, current: EditionText, editedFields: string[]): EditionText {
   const out = JSON.parse(JSON.stringify(next)) as EditionText
   for (const path of editedFields) {
     if (!EDITABLE_PATH_RE.test(path)) continue
     const v = getPath(current, path)
     if (v === undefined) continue
+    const parent = path.split('.').slice(0, -1).join('.')
+    if (parent && getPath(out, parent) === undefined) continue
     setPath(out as unknown as Record<string, unknown>, path, JSON.parse(JSON.stringify(v)))
   }
   return out
@@ -1695,5 +1954,10 @@ export function flattenText(text: EditionText): Record<string, string> {
   }
   out['research.headline'] = text.research.headline
   out['research.sub'] = text.research.sub
+  // Composer runs stored before migration 084 carry no continuing block.
+  ;(text.continuing ?? []).forEach((c, i) => {
+    out[`continuing.${i}.label`] = c.label
+    out[`continuing.${i}.text`] = c.text
+  })
   return out
 }
