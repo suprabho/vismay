@@ -1,0 +1,86 @@
+name: Calibrate Doom v Boom market term
+
+# Replays the daily Doom v Boom readings (news from the tagged feed, market
+# from dc_stock_prices) and fits the market term's scale so the market
+# reading swings as much as the news reading. The report — the fit, the
+# correlation between the two sides, and every backfilled day — lands in
+# the run's summary. With `write` the result is appended to
+# dc_mood_calibrations (migration 082) and the next compose uses it; without
+# it nothing is written.
+#
+# Needs history: prices (import-dc-stock-prices with full_backfill=true once)
+# and tagged news (scrape-ai-data-centers-news with backfill_days).
+#
+# Required repo secrets (in the `Production` environment so secrets.X resolves):
+#   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+
+on:
+  workflow_dispatch:
+    inputs:
+      news_days:
+        description: 'Edition days of news to replay'
+        default: '60'
+      market_days:
+        description: 'Days of price history to fit the move distribution on'
+        default: '365'
+      weight:
+        description: "Market share of the score, 0–1 (blank = keep the current one)"
+        required: false
+        default: ''
+      write:
+        description: 'Save the calibration (the next compose uses it)'
+        type: boolean
+        default: false
+      note:
+        description: 'Why (stored with the row)'
+        required: false
+        default: ''
+
+concurrency:
+  group: calibrate-dc-mood
+  cancel-in-progress: false
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Calibrate
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEWS_DAYS: ${{ inputs.news_days }}
+          MARKET_DAYS: ${{ inputs.market_days }}
+          WEIGHT: ${{ inputs.weight }}
+          NOTE: ${{ inputs.note }}
+          WRITE: ${{ inputs.write }}
+        # Inputs go through env, never inlined into the command.
+        run: |
+          set -- --news-days "$NEWS_DAYS" --market-days "$MARKET_DAYS" --csv mood-calibration.csv
+          [ -n "$WEIGHT" ] && set -- "$@" --weight "$WEIGHT"
+          [ -n "$NOTE" ] && set -- "$@" --note "$NOTE"
+          [ "$WRITE" = "true" ] && set -- "$@" --write
+          pnpm ai-data-centers:calibrate-mood -- "$@"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mood-calibration
+          path: apps/vizmaya-fyi/mood-calibration.csv
+          if-no-files-found: ignore

@@ -33,6 +33,10 @@ on:
         description: 'Backfill 5 years of history instead of the 1-month incremental window'
         type: boolean
         default: false
+      refresh_caps:
+        description: 'Refresh every US market cap now (normally weekly) — the Doom v Boom market weights'
+        type: boolean
+        default: false
 
 concurrency:
   group: import-dc-stock-prices
@@ -71,4 +75,7 @@ jobs:
           MASSIVE_API_TOKEN: ${{ secrets.MASSIVE_API_TOKEN }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           APIFY_ACTOR_ID: ${{ secrets.APIFY_ACTOR_ID }}
-        run: pnpm ai-data-centers:import-stocks ${{ inputs.full_backfill && '-- --full' || '' }}
+        run: >
+          pnpm ai-data-centers:import-stocks --
+          ${{ inputs.full_backfill && '--full' || '' }}
+          ${{ inputs.refresh_caps && '--refresh-caps' || '' }}

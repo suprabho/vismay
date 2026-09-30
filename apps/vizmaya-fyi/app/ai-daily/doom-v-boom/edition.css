@@ -548,6 +548,10 @@ body.dcd-panel-open{overflow:hidden}
 .dcd .drv .drv-more{font-style:normal;color:var(--muted)}
 .dcd .db-share{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:-4px}
 .dcd .db-note{color:var(--dim)}
+.dcd .db-mix{display:flex;flex-wrap:wrap;gap:8px 28px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:-6px}
+.dcd .db-mix b{font-weight:500;color:var(--bone);font-variant-numeric:tabular-nums}
+.dcd .db-mix small{font-size:inherit;color:var(--dim)}
+.dcd .db-mix em{font-style:normal;color:var(--dim);margin-left:10px}
 .dcd .pill.mood .dot{background:var(--line-strong);box-shadow:none}
 .dcd .pill.mood.boom .dot{background:var(--boom);box-shadow:0 0 0 3px color-mix(in srgb,var(--boom) 18%,transparent)}
 .dcd .pill.mood.doom .dot{background:var(--doom);box-shadow:0 0 0 3px color-mix(in srgb,var(--doom) 18%,transparent)}

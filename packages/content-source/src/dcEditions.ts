@@ -25,6 +25,7 @@ import {
   DC_LAYER_KEYS,
   EDITION_HOLD_MINUTES,
   MOOD_METHOD,
+  SCORE_METHOD,
   editionDateFor,
   editionPublishAt,
   editionWindow,
@@ -77,10 +78,17 @@ import {
   buildIdf,
   buildTape,
   decimalYear,
+  blendMoodScore,
   fieldBaseline,
   flattenText,
+  marketSession,
   powerCommitted,
+  scoreMarket,
   scoreMoodEvents,
+  sessionMoves,
+  DEFAULT_MOOD_CALIBRATION,
+  type MarketStock,
+  type MoodCalibration,
   type PriorEdition,
   type StockName,
 } from './dcEditionAssembly'
@@ -149,14 +157,14 @@ const PAPER_COLUMNS =
   'unit, compute_bucket, scale, weights_released, code_released, why, tags, importance, relevant, published_at'
 
 const EDITION_SUMMARY_COLUMNS = 'id, number, edition_date, status, headline, sub, counts, mood_score, published_at'
-/** The edition columns before migration 082 (no `continuing`). */
-const EDITION_COLUMNS_PRE_082 =
+/** The edition columns before migration 083 (no `continuing`). */
+const EDITION_COLUMNS_PRE_083 =
   `${EDITION_SUMMARY_COLUMNS}, window_start, window_end, notes, mood_counts, mood_series, layers, research, ` +
   'energy, geo, tape, charts, chart_skips, story_ids, paper_ids, iea_ids, model, classifier_version, composer_runs, edited_fields, ' +
   'auto_publish_at, hold_count, generated_at, reviewed_by'
-const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_082}, continuing`
+const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_083}, continuing`
 
-/** A read or write that failed only because migration 082's `continuing` column isn't there yet. */
+/** A read or write that failed only because migration 083's `continuing` column isn't there yet. */
 function isMissingContinuing(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false
   return isMissingColumnError(error) || (error.code === 'PGRST204' && /continuing/.test(error.message ?? ''))
@@ -164,7 +172,7 @@ function isMissingContinuing(error: { code?: string; message?: string } | null):
 
 /**
  * Run a dc_editions query with the full column list, retrying with the
- * pre-082 list when the code is deployed ahead of the migration: editions then
+ * pre-083 list when the code is deployed ahead of the migration: editions then
  * render without the "Still developing" block instead of failing. `full` tells
  * a write whether it may include the `continuing` value.
  */
@@ -172,7 +180,7 @@ async function withEditionColumns<T>(
   run: (cols: string, full: boolean) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
 ) {
   let res = await run(EDITION_COLUMNS, true)
-  if (res.error && isMissingContinuing(res.error)) res = await run(EDITION_COLUMNS_PRE_082, false)
+  if (res.error && isMissingContinuing(res.error)) res = await run(EDITION_COLUMNS_PRE_083, false)
   return res
 }
 
@@ -547,6 +555,123 @@ export async function getDcTapeMoves(windowEnd: Date): Promise<EditionTapeTick[]
   return buildTape(ticks)
 }
 
+/**
+ * Active tickers with their layer category and market cap — the market
+ * term's weights. Reads before migration 082 get no caps (equal weights
+ * inside each layer) rather than failing.
+ */
+export async function getDcMarketStocks(): Promise<Map<string, MarketStock>> {
+  const sb = createServiceClient()
+  let res = await sb.from('dc_stocks').select('ticker, category, market_cap_usd_bn').eq('is_active', true)
+  if (res.error && isMissingColumnError(res.error)) {
+    res = (await sb.from('dc_stocks').select('ticker, category').eq('is_active', true)) as typeof res
+  }
+  if (res.error) throw new Error(`getDcMarketStocks: ${res.error.message}`)
+  const out = new Map<string, MarketStock>()
+  for (const r of (res.data ?? []) as { ticker: string; category: string; market_cap_usd_bn?: number | string | null }[]) {
+    const cap = r.market_cap_usd_bn == null ? null : Number(r.market_cap_usd_bn)
+    out.set(r.ticker, { ticker: r.ticker, category: r.category, capUsdBn: cap != null && cap > 0 ? cap : null })
+  }
+  return out
+}
+
+export interface StoredMoodCalibration extends MoodCalibration {
+  calibratedAt: string | null
+}
+
+/** The newest calibration row, or the code defaults (no row yet, or migration 082 not applied). */
+export async function getMoodCalibration(): Promise<StoredMoodCalibration> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_mood_calibrations')
+    .select('calibrated_at, scale_pct, market_weight')
+    .order('calibrated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) {
+    if (error) console.warn(`[editions] mood calibration unavailable — using defaults (${error.message})`)
+    return { ...DEFAULT_MOOD_CALIBRATION, calibratedAt: null }
+  }
+  const r = data as { calibrated_at: string; scale_pct: number | string; market_weight: number | string }
+  return { scalePct: Number(r.scale_pct), marketWeight: Number(r.market_weight), calibratedAt: r.calibrated_at }
+}
+
+/** Append a calibration row; the composer reads the newest. */
+export async function saveMoodCalibration(input: MoodCalibration & { basis: Record<string, unknown>; note?: string | null }): Promise<void> {
+  const sb = createServiceClient()
+  const { error } = await sb.from('dc_mood_calibrations').insert({
+    scale_pct: input.scalePct,
+    market_weight: input.marketWeight,
+    basis: input.basis,
+    note: input.note ?? null,
+  })
+  if (error) throw new Error(`saveMoodCalibration: ${error.message}`)
+}
+
+/**
+ * The news reading of every edition day in [fromDate, toDate], re-read from
+ * the tagged feed the way the history loop does it (events, weighted, one
+ * IDF over the whole span). For calibration: published scores aren't used,
+ * so every day is measured the same way.
+ */
+export async function readDailyNewsReadings(fromDate: string, toDate: string): Promise<{ date: string; news: number | null; stories: number }[]> {
+  const start = editionWindow(fromDate).start
+  const end = editionWindow(toDate).end
+  const rows = await listDcNewsTaggedAll(start.toISOString(), end.toISOString())
+  if (rows.error) throw new Error(`readDailyNewsReadings: ${rows.error.message}`)
+  const stories = rows.data.map((r) => mapDcStoryRow(r))
+  const idf = buildIdf(stories)
+  const byDay = new Map<string, DcEditionStory[]>()
+  for (const s of stories) {
+    const day = editionDateFor(new Date(s.publishedAt))
+    const arr = byDay.get(day) ?? []
+    arr.push(s)
+    byDay.set(day, arr)
+  }
+  const out: { date: string; news: number | null; stories: number }[] = []
+  for (let t = Date.parse(`${fromDate}T00:00:00Z`); t <= Date.parse(`${toDate}T00:00:00Z`); t += 86_400_000) {
+    const date = new Date(t).toISOString().slice(0, 10)
+    const day = byDay.get(date) ?? []
+    out.push({ date, news: scoreMoodEvents(day, { idf }).score, stories: day.length })
+  }
+  return out
+}
+
+/**
+ * Every active ticker's closes in [from, to] as [trade_date, close] pairs,
+ * ascending — the market term's input for the edition and its 30-day
+ * history. Paged: ~29 tickers × 40 days is right at PostgREST's max_rows.
+ */
+export async function getDcCloseSeries(from: string, to: string): Promise<Map<string, [string, number][]>> {
+  const sb = createServiceClient()
+  const stocksR = await sb.from('dc_stocks').select('ticker').eq('is_active', true)
+  if (stocksR.error) throw new Error(`getDcCloseSeries stocks: ${stocksR.error.message}`)
+  const active = new Set(((stocksR.data ?? []) as { ticker: string }[]).map((s) => s.ticker))
+  const series = new Map<string, [string, number][]>()
+  let read = 0
+  for (let page = 0; page < DC_NEWS_MAX_PAGES; page++) {
+    const { data, error } = await sb
+      .from('dc_stock_prices')
+      .select('ticker, trade_date, close')
+      .gte('trade_date', from)
+      .lte('trade_date', to)
+      .order('trade_date', { ascending: true })
+      .order('ticker', { ascending: true })
+      .range(read, read + DC_NEWS_PAGE_SIZE - 1)
+    if (error) throw new Error(`getDcCloseSeries prices: ${error.message}`)
+    const batch = (data ?? []) as { ticker: string; trade_date: string; close: number | string }[]
+    if (batch.length === 0) break
+    read += batch.length
+    for (const r of batch) {
+      if (!active.has(r.ticker)) continue
+      const arr = series.get(r.ticker) ?? []
+      arr.push([r.trade_date, Number(r.close)])
+      series.set(r.ticker, arr)
+    }
+  }
+  return series
+}
+
 // ---------------------------------------------------------------------------
 // Published editions (public reads)
 
@@ -758,13 +883,24 @@ export async function assembleEditionNumbers(input: {
   const sb = createServiceClient()
   const historyStart = new Date(start.getTime() - 29 * 86_400_000)
 
-  const [places, stocks, tape, historyRowsR, publishedR, papersR] = await Promise.all([
+  // Closes from a week before the first history session through today's, for the market term.
+  const closesFrom = new Date(historyStart.getTime() - 8 * 86_400_000).toISOString().slice(0, 10)
+  const [places, stocks, tape, closes, marketStocks, calibration, historyRowsR, publishedR, papersR] = await Promise.all([
     listDcPlaces(),
     listDcStockNames(),
     getDcTapeMoves(end).catch((err) => {
       console.warn(`[editions] tape unavailable (${err instanceof Error ? err.message : err})`)
       return [] as EditionTapeTick[]
     }),
+    getDcCloseSeries(closesFrom, editionDate).catch((err) => {
+      console.warn(`[editions] closes unavailable — scoring news only (${err instanceof Error ? err.message : err})`)
+      return new Map<string, [string, number][]>()
+    }),
+    getDcMarketStocks().catch((err) => {
+      console.warn(`[editions] stock registry unavailable — scoring news only (${err instanceof Error ? err.message : err})`)
+      return new Map<string, MarketStock>()
+    }),
+    getMoodCalibration(),
     listDcNewsTaggedAll(historyStart.toISOString(), start.toISOString()),
     sb
       .from('dc_editions')
@@ -802,28 +938,46 @@ export async function assembleEditionNumbers(input: {
   // The clustering's IDF: 30 days of the feed plus the window, so a quiet day
   // still knows which words are common in this beat.
   const idf = buildIdf([...historyStories, ...stories])
-  const published = new Map<string, { score: number | null; sameMethod: boolean; gw: number | null }>()
-  for (const r of (publishedR.data ?? []) as { edition_date: string; mood_score: unknown; mood_counts: { method?: string } | null; energy: { hero?: { value?: number } | null } | null }[]) {
+  const published = new Map<string, { score: number | null; events: boolean; blended: boolean; gw: number | null }>()
+  for (const r of (publishedR.data ?? []) as {
+    edition_date: string
+    mood_score: unknown
+    mood_counts: { method?: string; score?: { method?: string } } | null
+    energy: { hero?: { value?: number } | null } | null
+  }[]) {
     // No hero figure means that edition disclosed no power at all. Keep it as
     // null so the history chart can draw the gap; 0 would read as "disclosed,
     // and it was nothing".
     const hero = r.energy?.hero?.value
     published.set(r.edition_date, {
       score: r.mood_score == null ? null : Number(r.mood_score),
-      sameMethod: r.mood_counts?.method === MOOD_METHOD,
+      events: r.mood_counts?.method === MOOD_METHOD,
+      blended: r.mood_counts?.score?.method === SCORE_METHOD,
       gw: hero == null ? null : Number(hero) || null,
     })
   }
+  const marketFor = (d: string) => {
+    const session = marketSession(d)
+    return scoreMarket(sessionMoves(closes, marketStocks, session), session, calibration.scalePct)
+  }
+  const marketWeight = calibration.marketWeight
   const moodSeries: EditionMoodPoint[] = []
   const powerHistory: EditionEnergy['perEdition'] = []
   for (let i = 29; i >= 1; i--) {
     const d = new Date(end.getTime() - i * 86_400_000).toISOString().slice(0, 10)
     const pub = published.get(d)
     const dayStories = byDay.get(d) ?? []
-    // A frozen reading counts only when it was measured the same way (events,
-    // weighted); older editions counted stories, so their day is re-read from
-    // the feed and the 7- and 30-day ticks compare like with like.
-    moodSeries.push({ date: d, score: pub?.sameMethod ? pub.score : scoreMoodEvents(dayStories, { idf }).score })
+    // A frozen reading counts only when it was measured the same way, so the
+    // 7- and 30-day ticks compare like with like: a news+market score as is;
+    // an events-only score (before the market term) is that day's news
+    // reading, so it takes the day's session now; older editions counted
+    // stories, so their day is re-read from the feed.
+    const score = pub?.blended
+      ? pub.score
+      : pub?.events
+        ? blendMoodScore(pub.score, marketFor(d), marketWeight)
+        : scoreMoodEvents(dayStories, { idf, market: marketFor(d), marketWeight }).score
+    moodSeries.push({ date: d, score })
     if (i <= 6) {
       const committed = pub ? null : powerCommitted(dayStories, placeMap, stockMap)
       powerHistory.push({
@@ -833,7 +987,7 @@ export async function assembleEditionNumbers(input: {
       })
     }
   }
-  const mood = scoreMoodEvents(stories, { idf })
+  const mood = scoreMoodEvents(stories, { idf, market: marketFor(editionDate), marketWeight })
   moodSeries.push({ date: editionDate, score: mood.score })
 
   const today = decimalYear(editionDate)
@@ -981,8 +1135,8 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
     generated_at: input.generatedAt,
   }
   const { data, error } = await withEditionColumns((cols, full) => {
-    const { continuing, ...pre082 } = row
-    const values = full ? row : pre082
+    const { continuing, ...pre083 } = row
+    const values = full ? row : pre083
     return existing
       ? sb.from('dc_editions').update(values).eq('id', existing.id).select(cols).single()
       : sb.from('dc_editions').insert(values).select(cols).single()

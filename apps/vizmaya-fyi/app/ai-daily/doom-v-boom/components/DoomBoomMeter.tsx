@@ -1,5 +1,5 @@
-import type { DcEditionStory, EditionMoodCounts, EditionMoodPoint } from '@vismay/content-source/dcEditionTypes'
-import { formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionStory, EditionMoodCounts, EditionMoodPoint, EditionMoodScore } from '@vismay/content-source/dcEditionTypes'
+import { DC_LAYER_KEYS, DC_LAYERS, formatEditionDayLabel, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { eventDrivers, moodDrivers } from '@vismay/content-source/dcEditionAssembly'
 import { hm } from './editionUtils'
 
@@ -112,13 +112,51 @@ function Meter({ size, score, d7, d30 }: { size: keyof typeof GEOM; score: numbe
 }
 
 /**
+ * What the score is made of: the news reading and the market session, each
+ * with its share. Editions scored before the market term carry no split.
+ */
+function Mix({ parts }: { parts: EditionMoodScore }) {
+  const m = parts.market
+  const mw = Math.round(parts.marketWeight * 100)
+  return (
+    <div className="db-mix">
+      <span>
+        News <b>{formatSigned(parts.news)}</b>
+        {m && <small> · {100 - mw}%</small>}
+      </span>
+      {m ? (
+        <span>
+          Market <b>{formatSigned(m.score)}</b>
+          <small> · {mw}%</small>
+          <em>
+            {formatEditionDayLabel(m.session)} session: {m.up} of {m.tickers} tracked stocks up
+            {m.layers
+              ? `; by layer, cap-weighted: ${DC_LAYER_KEYS.filter((k) => m.layers?.[k])
+                  .map((k) => `${DC_LAYERS[k].short} ${formatSigned(m.layers![k]!.avgPct)}%`)
+                  .join(' · ')}`
+              : `, average ${formatSigned(m.avgPct)}%`}
+          </em>
+        </span>
+      ) : (
+        <span>
+          Market <em>no trading session in this window: the score is the news reading</em>
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
  * Chapter I — the day's mood in one reading. Reports of one development are
  * grouped into an event and counted once, each event weighted by relevance ×
- * impact × coverage: reading = (W_boom − W_doom) / (W_boom + W_doom).
- * Server-rendered SVG: the meter with 7- and 30-day ghost ticks, then per
- * side the event count, its share of the weight and the three heaviest
- * events. Both sides open the panel (`mood:boom` / `mood:doom`). Editions
- * composed before events-v1 carry no events and read story by story.
+ * impact × coverage: news = (W_boom − W_doom) / (W_boom + W_doom); on trading
+ * days the tracked stocks' session (cap-weighted per AI layer, layers equal)
+ * carries the calibrated share of the score.
+ * Server-rendered SVG: the meter with 7- and 30-day ghost ticks, the news /
+ * market split, then per side the event count, its share of the weight and
+ * the three heaviest events. Both sides open the panel (`mood:boom` /
+ * `mood:doom`). Editions composed before events-v1 carry no events and read
+ * story by story.
  */
 export default function DoomBoomMeter({ score, counts, series, stories }: Props) {
   const hist = series.map((p) => p.score).filter((v): v is number => v != null)
@@ -196,6 +234,7 @@ export default function DoomBoomMeter({ score, counts, series, stories }: Props)
 
       <Meter size="wide" score={score} d7={d7} d30={d30} />
       <Meter size="narrow" score={score} d7={d7} d30={d30} />
+      {counts.score && <Mix parts={counts.score} />}
 
       <div className="db-sides">
         <button type="button" className="db-side doom" data-panel="mood:doom">

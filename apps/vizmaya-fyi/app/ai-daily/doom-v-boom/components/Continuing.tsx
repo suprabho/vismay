@@ -8,7 +8,7 @@ import { editionHref } from './editionUtils'
  * "Still developing" — threads an earlier edition already carried that drew
  * more reports in this window. They sit under the key notes rather than in
  * them, so a development leads one morning, not three; each links back to the
- * edition that first ran it. Editions composed before migration 082 carry
+ * edition that first ran it. Editions composed before migration 083 carry
  * none and render nothing here.
  */
 export default function Continuing({ items, linkSince = true }: { items: EditionContinuing[]; linkSince?: boolean }) {

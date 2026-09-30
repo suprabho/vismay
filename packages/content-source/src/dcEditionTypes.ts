@@ -434,6 +434,54 @@ export interface EditionMoodCounts {
   weight?: { boom: number; doom: number }
   /** Every event in the edition, heaviest first. */
   events?: EditionMoodEvent[]
+  /**
+   * How the stored score was made from the news reading. Absent on editions
+   * scored before the market term: their score IS the news reading.
+   */
+  score?: EditionMoodScore
+}
+
+/** One AI layer's share of the session: its market-cap-weighted move. */
+export interface EditionMarketLayer {
+  /** Cap-weighted average move of the layer's tickers, after clamping, in percent. */
+  avgPct: number
+  tickers: number
+}
+
+/**
+ * The tracked stocks' previous trading session, read as a mood: each AI
+ * layer's market-cap-weighted move (each ticker clamped), the layers averaged
+ * equally, squashed to −1…+1 by tanh.
+ */
+export interface EditionMarketReading {
+  /** Trade date of the session — the calendar day before the edition. */
+  session: string
+  /** Tickers that closed that session (and the one before it). */
+  tickers: number
+  up: number
+  down: number
+  /** The layers' moves averaged equally, in percent. */
+  avgPct: number
+  /** tanh(avgPct / scalePct), −1…+1. */
+  score: number
+  /** Per layer; a layer with no ticker closing the session is absent. */
+  layers?: Partial<Record<DcLayerKey, EditionMarketLayer>>
+  /** The calibrated scale this reading was squashed with. */
+  scalePct?: number
+}
+
+/** How `mood_score` blends the news reading and the market. */
+export type EditionScoreMethod = 'news+market-v1'
+export const SCORE_METHOD: EditionScoreMethod = 'news+market-v1'
+
+export interface EditionMoodScore {
+  method: EditionScoreMethod
+  /** The events-weighted news reading on its own. */
+  news: number | null
+  /** Null on days without a session (weekends, holidays, missing prices): the score is the news reading. */
+  market: EditionMarketReading | null
+  /** The market's share of the score when it is present. */
+  marketWeight: number
 }
 
 /**
@@ -534,7 +582,7 @@ export interface EditionText {
   notes: EditionNote[]
   layers: Record<DcLayerKey, { headline: string; sub: string; notes: EditionLayerNote[] }>
   research: { headline: string; sub: string }
-  /** Carried-over threads (migration 082). Absent on composer runs stored before it. */
+  /** Carried-over threads (migration 083). Absent on composer runs stored before it. */
   continuing: EditionContinuing[]
 }
 
@@ -566,7 +614,7 @@ export interface DcEdition extends DcEditionSummary {
   windowStart: string
   windowEnd: string
   notes: EditionNote[]
-  /** Threads carried over from earlier editions (migration 082); empty on older rows. */
+  /** Threads carried over from earlier editions (migration 083); empty on older rows. */
   continuing: EditionContinuing[]
   moodCounts: EditionMoodCounts
   moodSeries: EditionMoodPoint[]

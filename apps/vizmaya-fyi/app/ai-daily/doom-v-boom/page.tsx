@@ -93,8 +93,8 @@ export default async function DoomVBoomLanding() {
               <div className="chapter-head">
                 <h2 id="trend-h">The last {Math.min(TREND_DAYS, editions.length)} mornings</h2>
                 <p className="lede">
-                  Each ring is a morning: its green share is the boom share of the day’s weighted developments, and the number is that share out
-                  of 100 — 50 is balanced. Select a ring to read the edition.
+                  Each ring is a morning: its green share is the boom share of the day’s weighted developments, tilted by the tracked stocks’
+                  session, and the number is that share out of 100 — 50 is balanced. Select a ring to read the edition.
                 </p>
               </div>
               <MoodTrend editions={editions.slice(0, TREND_DAYS)} />
@@ -174,8 +174,16 @@ const METHOD = [
     body: 'Each event is weighted by relevance to the build-out (0.6–1×), by impact graded on its size (about 1× for the smallest to 6× for the largest; a plan or warning grades one step below the same thing done), and by coverage (up to 1.75× for widely reported events).',
   },
   {
+    title: 'The news reading',
+    body: 'The news reading is the boom weight minus the doom weight, over their sum — from −1 (all doom) to +1 (all boom), neutral events left out.',
+  },
+  {
+    title: 'The market',
+    body: 'The market is the previous day’s session for the ~29 tracked AI-infrastructure stocks. Each close-to-close move is capped at ±10%; within each AI layer (data centres, hyperscalers, chips, chip equipment) the moves are weighted by market cap, and the four layers count equally, so the many chip names don’t outvote the rest. The result is read on the same −1 to +1 scale, with the scale calibrated on past days so the market swings about as much as the news. It carries a quarter of the score and the news the other three quarters. With no session in the window (weekends, holidays) the score is the news reading alone.',
+  },
+  {
     title: 'The score',
-    body: 'The reading is the boom weight minus the doom weight, over their sum — from −1 (all doom) to +1 (all boom), neutral events left out. The Boom Score is that reading as a share out of 100: 50 is balanced, 45–55 reads “Balanced”, 35–65 “leaning”, 20–80 “clearly”, and beyond that “decisively”.',
+    body: 'The Boom Score is the blended reading as a share out of 100: 50 is balanced, 45–55 reads “Balanced”, 35–65 “leaning”, 20–80 “clearly”, and beyond that “decisively”. Editions before the market term scored news alone.',
   },
   {
     title: 'Frozen and sourced',
@@ -190,7 +198,11 @@ function Methodology() {
         <h2 id="method-h">Methodology</h2>
         <p className="lede">How a morning’s news becomes one Boom Score.</p>
         <p className="mt-6 inline-block rounded-md border border-[var(--line)] bg-[var(--elevated)] px-4 py-3 font-[family-name:var(--mono)] text-[13px] leading-relaxed">
-          reading = (W<sub>boom</sub> − W<sub>doom</sub>) ÷ (W<sub>boom</sub> + W<sub>doom</sub>)
+          news = (W<sub>boom</sub> − W<sub>doom</sub>) ÷ (W<sub>boom</sub> + W<sub>doom</sub>)
+          <br />
+          market = tanh(layer-averaged move % ÷ scale)
+          <br />
+          reading = 0.75 × news + 0.25 × market
           <br />
           Boom Score = (reading + 1) ÷ 2 × 100
         </p>

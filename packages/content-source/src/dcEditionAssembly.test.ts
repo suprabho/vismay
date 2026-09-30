@@ -1,25 +1,34 @@
 /** Template-viz floor checks (three rows, one row per subject, two columns for the matrix), the
  *  Doom v Boom event clustering + weighting, and the carry-over check across editions.  (run: npx tsx src/dcEditionAssembly.test.ts) */
 import assert from 'node:assert/strict'
-import type { DcEditionStory } from './dcEditionTypes'
+import type { DcEditionStory, DcLayerKey } from './dcEditionTypes'
 import {
   type EventIdf,
   buildCapacityViz,
   buildIdf,
   buildMatrixViz,
+  blendMoodScore,
   buildOrdersViz,
   clusterEvents,
   continuingFromThreads,
+  correlation,
   deterministicText,
   echoedThread,
   eventDrivers,
   eventTokens,
   eventWeight,
   findCarryOvers,
+  fitMarketScale,
+  layerBalancedMove,
+  type MarketStock,
+  MARKET_MOOD,
+  marketSession,
   MIN_VIZ_ROWS,
   noteRepeatsThread,
+  scoreMarket,
   threadsByStory,
   scoreMoodEvents,
+  sessionMoves,
   subjectKey,
 } from './dcEditionAssembly'
 
@@ -390,6 +399,86 @@ const vineland = [
 
   // No earlier editions (the first edition, or a fresh environment): nothing is carried.
   assert.deepEqual(findCarryOvers(t, []), [])
+}
+
+// 12. The market term: previous session only, clamped, squashed, a quarter of the score.
+{
+  assert.equal(marketSession('2026-09-22'), '2026-09-21')
+  assert.equal(marketSession('2026-03-01'), '2026-02-28')
+
+  const reg = new Map<string, MarketStock>(
+    ['UP', 'DOWN', 'STALE', 'NOSESSION', 'FIRST', 'UNTRACKED'].map((t) => [t, { ticker: t, category: 'semiconductors', capUsdBn: null }]),
+  )
+  reg.delete('UNTRACKED')
+  const series = new Map<string, [string, number][]>([
+    ['UP', [['2026-09-18', 100], ['2026-09-21', 102]]], // +2% over a weekend
+    ['DOWN', [['2026-09-18', 100], ['2026-09-21', 99]]], // −1%
+    ['STALE', [['2026-09-10', 100], ['2026-09-21', 150]]], // prior close too old
+    ['NOSESSION', [['2026-09-17', 100], ['2026-09-18', 110]]], // didn't trade on the 21st
+    ['FIRST', [['2026-09-21', 100]]], // no prior close
+    ['UNTRACKED', [['2026-09-18', 100], ['2026-09-21', 200]]], // not in the registry
+  ])
+  const sm = sessionMoves(series, reg, '2026-09-21')
+  assert.deepEqual(sm.map((m) => [m.ticker, m.layer, Math.round(m.pct * 100) / 100]), [['UP', 'semi', 2], ['DOWN', 'semi', -1]])
+
+  // Moves: n tickers per layer at a given pct, optional caps.
+  const mv = (layer: DcLayerKey, pcts: number[], caps: (number | null)[] = []) =>
+    pcts.map((pct, k) => ({ ticker: `${layer}${k}`, layer, pct, capUsdBn: caps[k] ?? null }))
+  const all = (pct: number) => [...mv('dc', [pct, pct]), ...mv('hyper', [pct, pct]), ...mv('semi', [pct, pct]), ...mv('equip', [pct, pct])]
+
+  assert.equal(scoreMarket(mv('semi', [1, 2, 3]), '2026-09-21'), null, 'too few tickers')
+  assert.equal(scoreMarket([...mv('semi', Array(8).fill(1)), ...mv('equip', [1])], '2026-09-21'), null, 'too few layers')
+  const flat = scoreMarket(all(0), '2026-09-21')!
+  assert.equal(flat.score, 0)
+  const rally = scoreMarket(all(MARKET_MOOD.scalePct), '2026-09-21')!
+  assert.equal(rally.score, Math.round(Math.tanh(1) * 1000) / 1000)
+  assert.deepEqual([rally.up, rally.down, rally.tickers, rally.scalePct], [8, 0, 8, MARKET_MOOD.scalePct])
+  assert.equal(scoreMarket(all(1), '2026-09-21', 1)!.score, Math.round(Math.tanh(1) * 1000) / 1000, 'calibrated scale')
+
+  // Layers count equally: eleven chip names at +3% don't outvote three flat layers.
+  const chips = layerBalancedMove([...mv('semi', Array(11).fill(3)), ...mv('dc', [0]), ...mv('hyper', [0]), ...mv('equip', [0])])!
+  assert.equal(chips.avgPct, 0.75)
+  assert.deepEqual(chips.layers.semi, { avgPct: 3, tickers: 11 })
+
+  // Within a layer, market cap weighs: a $3,000bn name at +2% against a $100bn one at −4%.
+  const capped = layerBalancedMove([...mv('semi', [2, -4], [3000, 100]), ...mv('dc', [0, 0]), ...mv('hyper', [0, 0]), ...mv('equip', [0, 0])])!
+  assert.equal(capped.layers.semi?.avgPct, Math.round(((3000 * 2 + 100 * -4) / 3100) * 100) / 100)
+  // A missing cap weighs as the layer's median of the known ones.
+  const filled = layerBalancedMove([...mv('semi', [2, -4, 1], [3000, 100, null]), ...mv('dc', [0, 0]), ...mv('hyper', [0, 0]), ...mv('equip', [0])])!
+  assert.equal(filled.layers.semi?.avgPct, Math.round(((3000 * 2 + 100 * -4 + 1550 * 1) / 4650) * 100) / 100)
+  // One +80% print is clamped to +10% before weighting.
+  const spike = layerBalancedMove([...mv('semi', [80, 0]), ...mv('dc', [0, 0]), ...mv('hyper', [0, 0]), ...mv('equip', [0, 0])])!
+  assert.equal(spike.layers.semi?.avgPct, 5)
+
+  assert.equal(blendMoodScore(0.4, null), 0.4, 'no session → news')
+  assert.equal(blendMoodScore(null, rally), null, 'no news → unscored')
+  assert.equal(blendMoodScore(0.4, flat), 0.3)
+
+  const plain = [news('Alpha breaks ground on a campus', { mood: 1, place: 'abilene' }), news('Gamma pauses a lease', { mood: -1, place: 'dublin' })]
+  const r = scoreMoodEvents(plain, { market: rally })
+  assert.equal(r.counts.score?.news, 0)
+  assert.equal(r.score, Math.round(MARKET_MOOD.weight * rally.score * 1000) / 1000)
+  assert.equal(r.counts.score?.market?.session, '2026-09-21')
+  assert.equal(scoreMoodEvents(plain).score, 0, 'no market passed → news reading')
+  assert.equal(scoreMoodEvents(plain, { market: rally, marketWeight: 0.5 }).score, Math.round(0.5 * rally.score * 1000) / 1000, 'calibrated weight')
+}
+
+// 13. Calibration: the fitted scale makes the market reading swing like the news.
+{
+  // A deterministic spread of daily moves (±3%) and news readings (sd ≈ 0.3).
+  const moves = Array.from({ length: 200 }, (_, k) => 3 * Math.sin(k * 1.7))
+  const newsReadings = Array.from({ length: 40 }, (_, k) => 0.42 * Math.sin(k * 2.3))
+  const scale = fitMarketScale(moves, newsReadings)!
+  const sd = (v: number[]) => {
+    const m = v.reduce((a, b) => a + b, 0) / v.length
+    return Math.sqrt(v.reduce((a, x) => a + (x - m) ** 2, 0) / (v.length - 1))
+  }
+  assert.ok(Math.abs(sd(moves.map((m) => Math.tanh(m / scale))) - sd(newsReadings)) < 0.005, `scale ${scale}`)
+  // Calmer news → a larger scale (the same move swings the reading less).
+  assert.ok(fitMarketScale(moves, newsReadings.map((v) => v / 2))! > scale)
+  assert.equal(fitMarketScale(moves.slice(0, 5), newsReadings), null, 'too little history')
+  assert.equal(correlation([1, 2, 3, 4], [2, 4, 6, 8]), 1)
+  assert.equal(correlation([1, 2, 3], [5, 5, 5]), null)
 }
 
 console.log('dcEditionAssembly.test: ok')

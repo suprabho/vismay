@@ -14,7 +14,8 @@ interface Props {
 /**
  * The hero's Boom Score: the Doom v Boom reading as a score out of 100 — the
  * boom share of the weighted events (each development counted once, weighted
- * by relevance × impact × coverage; the share of boom stories on editions
+ * by relevance × impact × coverage, with the tracked stocks' session as a
+ * quarter of it on trading days; the share of boom stories on editions
  * before events-v1) — inside the particle ring, with the signed reading
  * beneath it and the word under the ring. Server component:
  * the ring's canvas (BoomRing) is the only client code, and the dots painted
