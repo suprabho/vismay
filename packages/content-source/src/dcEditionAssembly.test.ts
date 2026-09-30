@@ -452,7 +452,12 @@ const vineland = [
 
   assert.equal(blendMoodScore(0.4, null), 0.4, 'no session → news')
   assert.equal(blendMoodScore(null, rally), null, 'no news → unscored')
-  assert.equal(blendMoodScore(0.4, flat), 0.3)
+  // A tilt, not an average: a flat session leaves the news reading alone,
+  // an up session only raises it, and the result stays inside ±1.
+  assert.equal(blendMoodScore(0.4, flat), 0.4)
+  assert.equal(blendMoodScore(0.4, rally), Math.round((0.4 + MARKET_MOOD.weight * rally.score) * 1000) / 1000)
+  assert.ok(blendMoodScore(0.4, rally)! > 0.4, 'an up session never lowers the score')
+  assert.equal(blendMoodScore(0.95, rally, 1), 1, 'clamped')
 
   const plain = [news('Alpha breaks ground on a campus', { mood: 1, place: 'abilene' }), news('Gamma pauses a lease', { mood: -1, place: 'dublin' })]
   const r = scoreMoodEvents(plain, { market: rally })

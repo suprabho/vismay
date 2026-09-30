@@ -26,6 +26,7 @@ import {
   EDITION_HOLD_MINUTES,
   MOOD_METHOD,
   SCORE_METHOD,
+  SCORE_METHOD_AVERAGE,
   editionDateFor,
   editionPublishAt,
   editionWindow,
@@ -942,20 +943,26 @@ export async function assembleEditionNumbers(input: {
   // The clustering's IDF: 30 days of the feed plus the window, so a quiet day
   // still knows which words are common in this beat.
   const idf = buildIdf([...historyStories, ...stories])
-  const published = new Map<string, { score: number | null; events: boolean; blended: boolean; gw: number | null }>()
+  const published = new Map<string, { score: number | null; news: number | null; events: boolean; blended: boolean; gw: number | null }>()
   for (const r of (publishedR.data ?? []) as {
     edition_date: string
     mood_score: unknown
-    mood_counts: { method?: string; score?: { method?: string } } | null
+    mood_counts: { method?: string; score?: { method?: string; news?: number | null } } | null
     energy: { hero?: { value?: number } | null } | null
   }[]) {
     // No hero figure means that edition disclosed no power at all. Keep it as
     // null so the history chart can draw the gap; 0 would read as "disclosed,
     // and it was nothing".
     const hero = r.energy?.hero?.value
+    const score = r.mood_score == null ? null : Number(r.mood_score)
+    const frozen = r.mood_counts?.score
+    const events = r.mood_counts?.method === MOOD_METHOD
     published.set(r.edition_date, {
-      score: r.mood_score == null ? null : Number(r.mood_score),
-      events: r.mood_counts?.method === MOOD_METHOD,
+      score,
+      // The day's news reading on its own: frozen beside an averaged (v1)
+      // score; the score itself on an edition from before the market term.
+      news: frozen?.method === SCORE_METHOD_AVERAGE ? (frozen.news ?? null) : events && !frozen ? score : null,
+      events,
       blended: r.mood_counts?.score?.method === SCORE_METHOD,
       gw: hero == null ? null : Number(hero) || null,
     })
@@ -972,14 +979,14 @@ export async function assembleEditionNumbers(input: {
     const pub = published.get(d)
     const dayStories = byDay.get(d) ?? []
     // A frozen reading counts only when it was measured the same way, so the
-    // 7- and 30-day ticks compare like with like: a news+market score as is;
-    // an events-only score (before the market term) is that day's news
-    // reading, so it takes the day's session now; older editions counted
+    // 7- and 30-day ticks compare like with like: a tilted (v2) score as is;
+    // an averaged (v1) or events-only edition still has that day's news
+    // reading, which takes the day's session now; older editions counted
     // stories, so their day is re-read from the feed.
     const score = pub?.blended
       ? pub.score
-      : pub?.events
-        ? blendMoodScore(pub.score, marketFor(d), marketWeight)
+      : pub?.events && pub.news != null
+        ? blendMoodScore(pub.news, marketFor(d), marketWeight)
         : scoreMoodEvents(dayStories, { idf, market: marketFor(d), marketWeight }).score
     moodSeries.push({ date: d, score })
     if (i <= 6) {

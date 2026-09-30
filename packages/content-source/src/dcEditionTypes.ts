@@ -470,9 +470,18 @@ export interface EditionMarketReading {
   scalePct?: number
 }
 
-/** How `mood_score` blends the news reading and the market. */
-export type EditionScoreMethod = 'news+market-v1'
-export const SCORE_METHOD: EditionScoreMethod = 'news+market-v1'
+/**
+ * How `mood_score` combines the news reading and the market.
+ *   news+market-v1 — a weighted average, (1 − w) × news + w × market. With the
+ *     news reading well above zero and the market near it, that shrank every
+ *     score toward zero, so an up session could lower a booming day.
+ *   news+market-v2 — a tilt, news + w × market (clamped to ±1): a flat session
+ *     leaves the news reading alone, an up session can only raise it.
+ */
+export type EditionScoreMethod = 'news+market-v1' | 'news+market-v2'
+export const SCORE_METHOD: EditionScoreMethod = 'news+market-v2'
+/** The weighted-average method frozen on editions composed before the tilt. */
+export const SCORE_METHOD_AVERAGE: EditionScoreMethod = 'news+market-v1'
 
 export interface EditionMoodScore {
   method: EditionScoreMethod
@@ -480,7 +489,10 @@ export interface EditionMoodScore {
   news: number | null
   /** Null on days without a session (weekends, holidays, missing prices): the score is the news reading. */
   market: EditionMarketReading | null
-  /** The market's share of the score when it is present. */
+  /**
+   * v2: the tilt — how far a market reading of ±1 moves the score. v1: the
+   * market's share of the weighted average.
+   */
   marketWeight: number
 }
 
