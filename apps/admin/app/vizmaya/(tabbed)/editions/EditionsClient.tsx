@@ -305,6 +305,12 @@ export default function EditionsClient() {
               </span>
               <span className="text-neutral-400">
                 {draft.counts.stories} stories · {draft.counts.papers} papers · mood {draft.moodScore == null ? '—' : `${moodWord(draft.moodScore)} ${formatSigned(draft.moodScore)}`}
+                {draft.moodCounts.score &&
+                  ` (news ${formatSigned(draft.moodCounts.score.news)} · market ${
+                    draft.moodCounts.score.market
+                      ? `${formatSigned(draft.moodCounts.score.market.score)} from ${draft.moodCounts.score.market.tickers} stocks, avg ${formatSigned(draft.moodCounts.score.market.avgPct)}%`
+                      : 'no session'
+                  })`}
               </span>
               {draft.editedFields.length > 0 && <Badge>{draft.editedFields.length} edited fields</Badge>}
               <span className={'font-mono text-xs ' + (countdown?.startsWith('due') ? 'text-amber-300' : 'text-neutral-300')}>

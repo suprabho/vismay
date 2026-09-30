@@ -66,7 +66,14 @@ import {
   saveDraftCharts,
   upsertDraftEdition,
 } from '@vismay/content-source/dcEditions'
-import { EDITION_CHART_SECTIONS, type EditionChartSkip, type EditionCharts, type EditionMoodEvent } from '@vismay/content-source/dcEditionTypes'
+import {
+  EDITION_CHART_SECTIONS,
+  formatSigned,
+  type EditionChartSkip,
+  type EditionCharts,
+  type EditionMoodEvent,
+  type EditionMoodScore,
+} from '@vismay/content-source/dcEditionTypes'
 import { chartPlannerModel, DC_DEFAULT_MODEL, planEditionCharts } from './editionCharts'
 import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 import {
@@ -225,6 +232,19 @@ interface ModelOutput {
   research?: { headline?: unknown; sub?: unknown }
 }
 
+function moodParts(s: EditionMoodScore | undefined): { news: number | null; market: string } | null {
+  if (!s) return null
+  const m = s.market
+  return {
+    news: s.news,
+    market: m
+      ? `${m.session} session: ${m.tickers} tracked stocks; cap-weighted by layer ${Object.entries(m.layers ?? {})
+          .map(([k, l]) => `${k} ${formatSigned(l.avgPct)}%`)
+          .join(', ')}; layers averaged ${formatSigned(m.avgPct)}% → ${formatSigned(m.score)}, ${Math.round(s.marketWeight * 100)}% of the score`
+      : 'no trading session in this window — the score is the news reading',
+  }
+}
+
 function buildComposerInput(input: {
   editionDate: string
   windowLabel: string
@@ -240,6 +260,8 @@ function buildComposerInput(input: {
     window: input.windowLabel,
     computed: {
       moodScore: numbers.moodScore,
+      // What the score is made of: the news reading and, on trading days, the tracked stocks' session (25% of the score).
+      moodParts: moodParts(numbers.moodCounts.score),
       // Events per side, not the stored event list — the prose model needs the balance, not 150 ids.
       moodCounts: { boom: numbers.moodCounts.boom, doom: numbers.moodCounts.doom, neutral: numbers.moodCounts.neutral },
       storiesByLayer: numbers.layerCounts,
