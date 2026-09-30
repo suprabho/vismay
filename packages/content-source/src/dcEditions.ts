@@ -85,6 +85,9 @@ import {
   scoreMarket,
   scoreMoodEvents,
   sessionMoves,
+  DEFAULT_MOOD_CALIBRATION,
+  type MarketStock,
+  type MoodCalibration,
   type StockName,
 } from './dcEditionAssembly'
 
@@ -528,6 +531,88 @@ export async function getDcTapeMoves(windowEnd: Date): Promise<EditionTapeTick[]
 }
 
 /**
+ * Active tickers with their layer category and market cap — the market
+ * term's weights. Reads before migration 082 get no caps (equal weights
+ * inside each layer) rather than failing.
+ */
+export async function getDcMarketStocks(): Promise<Map<string, MarketStock>> {
+  const sb = createServiceClient()
+  let res = await sb.from('dc_stocks').select('ticker, category, market_cap_usd_bn').eq('is_active', true)
+  if (res.error && isMissingColumnError(res.error)) {
+    res = (await sb.from('dc_stocks').select('ticker, category').eq('is_active', true)) as typeof res
+  }
+  if (res.error) throw new Error(`getDcMarketStocks: ${res.error.message}`)
+  const out = new Map<string, MarketStock>()
+  for (const r of (res.data ?? []) as { ticker: string; category: string; market_cap_usd_bn?: number | string | null }[]) {
+    const cap = r.market_cap_usd_bn == null ? null : Number(r.market_cap_usd_bn)
+    out.set(r.ticker, { ticker: r.ticker, category: r.category, capUsdBn: cap != null && cap > 0 ? cap : null })
+  }
+  return out
+}
+
+export interface StoredMoodCalibration extends MoodCalibration {
+  calibratedAt: string | null
+}
+
+/** The newest calibration row, or the code defaults (no row yet, or migration 082 not applied). */
+export async function getMoodCalibration(): Promise<StoredMoodCalibration> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_mood_calibrations')
+    .select('calibrated_at, scale_pct, market_weight')
+    .order('calibrated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) {
+    if (error) console.warn(`[editions] mood calibration unavailable — using defaults (${error.message})`)
+    return { ...DEFAULT_MOOD_CALIBRATION, calibratedAt: null }
+  }
+  const r = data as { calibrated_at: string; scale_pct: number | string; market_weight: number | string }
+  return { scalePct: Number(r.scale_pct), marketWeight: Number(r.market_weight), calibratedAt: r.calibrated_at }
+}
+
+/** Append a calibration row; the composer reads the newest. */
+export async function saveMoodCalibration(input: MoodCalibration & { basis: Record<string, unknown>; note?: string | null }): Promise<void> {
+  const sb = createServiceClient()
+  const { error } = await sb.from('dc_mood_calibrations').insert({
+    scale_pct: input.scalePct,
+    market_weight: input.marketWeight,
+    basis: input.basis,
+    note: input.note ?? null,
+  })
+  if (error) throw new Error(`saveMoodCalibration: ${error.message}`)
+}
+
+/**
+ * The news reading of every edition day in [fromDate, toDate], re-read from
+ * the tagged feed the way the history loop does it (events, weighted, one
+ * IDF over the whole span). For calibration: published scores aren't used,
+ * so every day is measured the same way.
+ */
+export async function readDailyNewsReadings(fromDate: string, toDate: string): Promise<{ date: string; news: number | null; stories: number }[]> {
+  const start = editionWindow(fromDate).start
+  const end = editionWindow(toDate).end
+  const rows = await listDcNewsTaggedAll(start.toISOString(), end.toISOString())
+  if (rows.error) throw new Error(`readDailyNewsReadings: ${rows.error.message}`)
+  const stories = rows.data.map((r) => mapDcStoryRow(r))
+  const idf = buildIdf(stories)
+  const byDay = new Map<string, DcEditionStory[]>()
+  for (const s of stories) {
+    const day = editionDateFor(new Date(s.publishedAt))
+    const arr = byDay.get(day) ?? []
+    arr.push(s)
+    byDay.set(day, arr)
+  }
+  const out: { date: string; news: number | null; stories: number }[] = []
+  for (let t = Date.parse(`${fromDate}T00:00:00Z`); t <= Date.parse(`${toDate}T00:00:00Z`); t += 86_400_000) {
+    const date = new Date(t).toISOString().slice(0, 10)
+    const day = byDay.get(date) ?? []
+    out.push({ date, news: scoreMoodEvents(day, { idf }).score, stories: day.length })
+  }
+  return out
+}
+
+/**
  * Every active ticker's closes in [from, to] as [trade_date, close] pairs,
  * ascending — the market term's input for the edition and its 30-day
  * history. Paged: ~29 tickers × 40 days is right at PostgREST's max_rows.
@@ -753,7 +838,7 @@ export async function assembleEditionNumbers(input: {
 
   // Closes from a week before the first history session through today's, for the market term.
   const closesFrom = new Date(historyStart.getTime() - 8 * 86_400_000).toISOString().slice(0, 10)
-  const [places, stocks, tape, closes, historyRowsR, publishedR, papersR] = await Promise.all([
+  const [places, stocks, tape, closes, marketStocks, calibration, historyRowsR, publishedR, papersR] = await Promise.all([
     listDcPlaces(),
     listDcStockNames(),
     getDcTapeMoves(end).catch((err) => {
@@ -764,6 +849,11 @@ export async function assembleEditionNumbers(input: {
       console.warn(`[editions] closes unavailable — scoring news only (${err instanceof Error ? err.message : err})`)
       return new Map<string, [string, number][]>()
     }),
+    getDcMarketStocks().catch((err) => {
+      console.warn(`[editions] stock registry unavailable — scoring news only (${err instanceof Error ? err.message : err})`)
+      return new Map<string, MarketStock>()
+    }),
+    getMoodCalibration(),
     listDcNewsTaggedAll(historyStart.toISOString(), start.toISOString()),
     sb
       .from('dc_editions')
@@ -821,8 +911,9 @@ export async function assembleEditionNumbers(input: {
   }
   const marketFor = (d: string) => {
     const session = marketSession(d)
-    return scoreMarket(sessionMoves(closes, session), session)
+    return scoreMarket(sessionMoves(closes, marketStocks, session), session, calibration.scalePct)
   }
+  const marketWeight = calibration.marketWeight
   const moodSeries: EditionMoodPoint[] = []
   const powerHistory: EditionEnergy['perEdition'] = []
   for (let i = 29; i >= 1; i--) {
@@ -837,8 +928,8 @@ export async function assembleEditionNumbers(input: {
     const score = pub?.blended
       ? pub.score
       : pub?.events
-        ? blendMoodScore(pub.score, marketFor(d))
-        : scoreMoodEvents(dayStories, { idf, market: marketFor(d) }).score
+        ? blendMoodScore(pub.score, marketFor(d), marketWeight)
+        : scoreMoodEvents(dayStories, { idf, market: marketFor(d), marketWeight }).score
     moodSeries.push({ date: d, score })
     if (i <= 6) {
       const committed = pub ? null : powerCommitted(dayStories, placeMap, stockMap)
@@ -849,7 +940,7 @@ export async function assembleEditionNumbers(input: {
       })
     }
   }
-  const mood = scoreMoodEvents(stories, { idf, market: marketFor(editionDate) })
+  const mood = scoreMoodEvents(stories, { idf, market: marketFor(editionDate), marketWeight })
   moodSeries.push({ date: editionDate, score: mood.score })
 
   const today = decimalYear(editionDate)

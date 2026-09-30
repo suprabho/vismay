@@ -22,6 +22,7 @@ import {
   formatEditionDayLabel,
   MOOD_METHOD,
   SCORE_METHOD,
+  STOCK_CATEGORY_TO_LAYER,
   type CapacityViz,
   type DcEditionStory,
   type DcLayerKey,
@@ -38,6 +39,7 @@ import {
   type EditionGeoRegion,
   type EditionLayerNote,
   type EditionLayerViz,
+  type EditionMarketLayer,
   type EditionMarketReading,
   type EditionMoodCounts,
   type EditionMoodEvent,
@@ -181,7 +183,8 @@ export function decimalYear(date: string | Date): number {
 // and equal weights that is exactly the old story count.
 //
 // The stored score then mixes in the market (news+market-v1): the tracked
-// stocks' previous session as a −1…+1 reading, carrying MARKET_MOOD.weight of
+// stocks' previous session — cap-weighted inside each AI layer, the layers
+// averaged equally — as a −1…+1 reading carrying the calibrated weight of
 // the score. No session (weekend, holiday, prices missing) → the news reading.
 
 /**
@@ -522,17 +525,48 @@ export function toMoodEvent(members: DcEditionStory[]): EditionMoodEvent {
 // Market — the tracked stocks' previous session, mixed into the score
 
 export const MARKET_MOOD = {
-  /** The market's share of the score; the news reading carries the rest. */
+  /** The market's share of the score by default; a calibration row (dc_mood_calibrations) can override it. */
   weight: 0.25,
-  /** An average move of this many percent reads as tanh(1) ≈ ±0.76 — a big day for ~29 AI-infra names. */
+  /**
+   * Default scale until the first calibration: an average move of this many
+   * percent reads as tanh(1) ≈ ±0.76. calibrate-mood.ts fits it so the market
+   * reading swings as much as the news reading.
+   */
   scalePct: 2,
   /** Each ticker's move is clamped to ± this first, so one outsized print can't carry the session. */
   clampPct: 10,
   /** Fewer tickers closing the session than this → no market term (holidays, partial imports). */
   minTickers: 8,
+  /** …or fewer AI layers with a close than this (an Asia-only session is mostly chips). */
+  minLayers: 3,
   /** The prior close may be at most this many days before the session (long weekends, holidays). */
   maxGapDays: 7,
 } as const
+
+/** The two knobs a calibration sets; everything else in MARKET_MOOD is structural. */
+export interface MoodCalibration {
+  scalePct: number
+  marketWeight: number
+}
+
+export const DEFAULT_MOOD_CALIBRATION: MoodCalibration = { scalePct: MARKET_MOOD.scalePct, marketWeight: MARKET_MOOD.weight }
+
+/** A tracked stock as the market term sees it. */
+export interface MarketStock {
+  ticker: string
+  /** dc_stocks.category — mapped to an AI layer through STOCK_CATEGORY_TO_LAYER. */
+  category: string
+  /** Latest market cap in USD bn; null → the layer's median. */
+  capUsdBn: number | null
+}
+
+/** One ticker's close-to-close move on the session. */
+export interface MarketMove {
+  ticker: string
+  layer: DcLayerKey
+  pct: number
+  capUsdBn: number | null
+}
 
 /** The session an edition reads: the calendar day before it, whose closes land inside its window. */
 export function marketSession(editionDate: string): string {
@@ -542,38 +576,72 @@ export function marketSession(editionDate: string): string {
 }
 
 /**
- * Close-to-close moves (percent) of every ticker with a bar ON `session` and
- * an earlier bar within `maxGapDays`. `series` holds [trade_date, close]
- * pairs ascending per ticker.
+ * Close-to-close moves of every tracked ticker with a bar ON `session` and an
+ * earlier bar within `maxGapDays`. `series` holds [trade_date, close] pairs
+ * ascending per ticker; tickers missing from `stocks` (or whose category maps
+ * to no layer) are skipped.
  */
-export function sessionMoves(series: Map<string, [string, number][]>, session: string): number[] {
+export function sessionMoves(series: Map<string, [string, number][]>, stocks: Map<string, MarketStock>, session: string): MarketMove[] {
   const floor = new Date(`${session}T00:00:00Z`)
   floor.setUTCDate(floor.getUTCDate() - MARKET_MOOD.maxGapDays)
   const floorDate = floor.toISOString().slice(0, 10)
-  const moves: number[] = []
-  for (const points of series.values()) {
+  const moves: MarketMove[] = []
+  for (const [ticker, points] of series) {
+    const stock = stocks.get(ticker)
+    const layer = stock ? STOCK_CATEGORY_TO_LAYER[stock.category] : undefined
+    if (!stock || !layer) continue
     const i = points.findIndex(([d]) => d === session)
     if (i < 1) continue
     const [prevDate, prev] = points[i - 1]
     if (prevDate < floorDate || !prev) continue
-    moves.push(((points[i][1] - prev) / prev) * 100)
+    moves.push({ ticker, layer, pct: ((points[i][1] - prev) / prev) * 100, capUsdBn: stock.capUsdBn })
   }
   return moves
 }
 
-/** The session as a mood reading; null below `minTickers`. */
-export function scoreMarket(moves: number[], session: string): EditionMarketReading | null {
+/**
+ * The session's move before squashing: inside each layer the tickers'
+ * clamped moves weighted by market cap (a missing cap weighs as the layer's
+ * median cap; a layer with no caps at all weighs its tickers equally), then
+ * the layers averaged equally. Null below `minTickers` / `minLayers`.
+ */
+export function layerBalancedMove(moves: MarketMove[]): { avgPct: number; layers: Partial<Record<DcLayerKey, EditionMarketLayer>> } | null {
   if (moves.length < MARKET_MOOD.minTickers) return null
   const c = MARKET_MOOD.clampPct
-  const clamped = moves.map((m) => Math.max(-c, Math.min(c, m)))
-  const avg = clamped.reduce((a, b) => a + b, 0) / clamped.length
+  const layers: Partial<Record<DcLayerKey, EditionMarketLayer>> = {}
+  for (const k of DC_LAYER_KEYS) {
+    const inLayer = moves.filter((m) => m.layer === k)
+    if (inLayer.length === 0) continue
+    const known = inLayer.map((m) => m.capUsdBn).filter((v): v is number => v != null && v > 0)
+    const fill = known.length ? median(known) : 1
+    let sum = 0
+    let total = 0
+    for (const m of inLayer) {
+      const w = known.length ? (m.capUsdBn != null && m.capUsdBn > 0 ? m.capUsdBn : fill) : 1
+      sum += w * Math.max(-c, Math.min(c, m.pct))
+      total += w
+    }
+    layers[k] = { avgPct: Math.round((sum / total) * 100) / 100, tickers: inLayer.length }
+  }
+  const present = Object.values(layers)
+  if (present.length < MARKET_MOOD.minLayers) return null
+  const avgPct = present.reduce((a, l) => a + l.avgPct, 0) / present.length
+  return { avgPct: Math.round(avgPct * 100) / 100, layers }
+}
+
+/** The session as a mood reading: tanh(layer-balanced move / scale). */
+export function scoreMarket(moves: MarketMove[], session: string, scalePct: number = MARKET_MOOD.scalePct): EditionMarketReading | null {
+  const balanced = layerBalancedMove(moves)
+  if (!balanced) return null
   return {
     session,
     tickers: moves.length,
-    up: moves.filter((m) => m > 0).length,
-    down: moves.filter((m) => m < 0).length,
-    avgPct: Math.round(avg * 100) / 100,
-    score: round3(Math.tanh(avg / MARKET_MOOD.scalePct)),
+    up: moves.filter((m) => m.pct > 0).length,
+    down: moves.filter((m) => m.pct < 0).length,
+    avgPct: balanced.avgPct,
+    score: round3(Math.tanh(balanced.avgPct / scalePct)),
+    layers: balanced.layers,
+    scalePct,
   }
 }
 
@@ -582,11 +650,58 @@ export function scoreMarket(moves: number[], session: string): EditionMarketRead
  * (the market tilts the day's news; it doesn't stand in for it). No market →
  * the news reading unchanged.
  */
-export function blendMoodScore(news: number | null, market: EditionMarketReading | null): number | null {
+export function blendMoodScore(news: number | null, market: EditionMarketReading | null, weight: number = MARKET_MOOD.weight): number | null {
   if (news == null) return null
   if (market == null) return news
-  const w = MARKET_MOOD.weight
-  return round3((1 - w) * news + w * market.score)
+  return round3((1 - weight) * news + weight * market.score)
+}
+
+const stdev = (values: number[]): number => {
+  if (values.length < 2) return 0
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  return Math.sqrt(values.reduce((a, v) => a + (v - mean) ** 2, 0) / (values.length - 1))
+}
+
+/**
+ * The scale at which tanh(move / scale) swings as much (standard deviation)
+ * as the news reading does, so the market's weight is its real share of the
+ * score's movement rather than an artefact of units. Bisection on a
+ * monotonic function; clamped to [0.1%, 20%]. Null when either side is too
+ * short or flat to fit.
+ */
+export function fitMarketScale(dailyMovesPct: number[], newsReadings: number[]): number | null {
+  if (dailyMovesPct.length < 20 || newsReadings.length < 10) return null
+  const target = stdev(newsReadings)
+  if (!(target > 0) || stdev(dailyMovesPct) === 0) return null
+  const spread = (s: number) => stdev(dailyMovesPct.map((m) => Math.tanh(m / s)))
+  let lo = 0.1
+  let hi = 20
+  // Past the ends the fit can't do better than the clamp.
+  if (spread(lo) <= target) return lo
+  if (spread(hi) >= target) return hi
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    if (spread(mid) > target) lo = mid
+    else hi = mid
+  }
+  return Math.round(((lo + hi) / 2) * 1000) / 1000
+}
+
+/** Pearson correlation; null under three pairs or with a flat side. */
+export function correlation(a: number[], b: number[]): number | null {
+  const n = Math.min(a.length, b.length)
+  if (n < 3) return null
+  const ma = a.slice(0, n).reduce((x, y) => x + y, 0) / n
+  const mb = b.slice(0, n).reduce((x, y) => x + y, 0) / n
+  let num = 0
+  let da = 0
+  let db = 0
+  for (let i = 0; i < n; i++) {
+    num += (a[i] - ma) * (b[i] - mb)
+    da += (a[i] - ma) ** 2
+    db += (b[i] - mb) ** 2
+  }
+  return da === 0 || db === 0 ? null : round3(num / Math.sqrt(da * db))
 }
 
 /**
@@ -599,7 +714,7 @@ export function blendMoodScore(news: number | null, market: EditionMarketReading
  */
 export function scoreMoodEvents(
   stories: DcEditionStory[],
-  opts: { idf?: EventIdf; market?: EditionMarketReading | null } = {},
+  opts: { idf?: EventIdf; market?: EditionMarketReading | null; marketWeight?: number } = {},
 ): { score: number | null; counts: EditionMoodCounts; events: EditionMoodEvent[] } {
   const events = clusterEvents(stories, opts)
     .map(toMoodEvent)
@@ -632,8 +747,9 @@ export function scoreMoodEvents(
   counts.weight = { boom: round3(wb), doom: round3(wd) }
   const news = wb + wd === 0 ? null : round3((wb - wd) / (wb + wd))
   const market = opts.market ?? null
-  counts.score = { method: SCORE_METHOD, news, market, marketWeight: MARKET_MOOD.weight }
-  return { score: blendMoodScore(news, market), counts, events }
+  const marketWeight = opts.marketWeight ?? MARKET_MOOD.weight
+  counts.score = { method: SCORE_METHOD, news, market, marketWeight }
+  return { score: blendMoodScore(news, market, marketWeight), counts, events }
 }
 
 /** An event with its stories resolved: the lead the page shows, the other reports as "also". */

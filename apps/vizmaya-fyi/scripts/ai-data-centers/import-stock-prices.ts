@@ -17,10 +17,16 @@
  * Upsert is idempotent on (ticker, trade_date); prices stay in the listing's
  * native currency; close is split-adjusted.
  *
+ * After the bars, US market caps (dc_stocks.market_cap_usd_bn, migration 082 —
+ * the Doom v Boom market term's weights) are refreshed from massive.com's
+ * ticker reference when older than a week; --refresh-caps forces all of them.
+ * International caps are set by hand (massive.com is US-only).
+ *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full          # ~5y backfill
  *               pnpm ai-data-centers:import-stocks -- --days 90
  *               pnpm ai-data-centers:import-stocks -- --ticker NVDA --dry-run
+ *               pnpm ai-data-centers:import-stocks -- --days 5 --refresh-caps
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
@@ -76,15 +82,18 @@ const MAX_ATTEMPTS = 5
 // aware) so we glide under the cap rather than hammering it.
 const RATE_LIMIT_BASE_MS = 15_000
 const RATE_LIMIT_MAX_MS = 60_000
+// Market caps (the Doom v Boom market term's weights) move slowly; refresh weekly.
+const CAP_MAX_AGE_DAYS = 7
 
 interface Args {
   lookbackDays: number
   dryRun: boolean
   ticker: string | null
+  refreshCaps: boolean
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { lookbackDays: DEFAULT_LOOKBACK_DAYS, dryRun: false, ticker: null }
+  const args: Args = { lookbackDays: DEFAULT_LOOKBACK_DAYS, dryRun: false, ticker: null, refreshCaps: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     // pnpm forwards the `--` separator itself (npm strips it), so a bare
@@ -94,6 +103,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--days') args.lookbackDays = Number(argv[++i]) || DEFAULT_LOOKBACK_DAYS
     else if (a === '--dry-run') args.dryRun = true
     else if (a === '--ticker') args.ticker = argv[++i] ?? null
+    else if (a === '--refresh-caps') args.refreshCaps = true
     else throw new Error(`Unknown flag: ${a}`)
   }
   return args
@@ -246,6 +256,76 @@ async function fetchMassive(ticker: string, from: string, to: string): Promise<P
     })
   }
   return dedupeByDate(rows)
+}
+
+/**
+ * A US ticker's current market cap in USD bn from massive.com's ticker
+ * reference (Polygon's /v3/reference/tickers/{t}). Null when the reference
+ * carries none (some ADRs) — the Doom v Boom market term then weighs the
+ * ticker as its layer's median.
+ */
+async function fetchMassiveMarketCap(ticker: string): Promise<number | null> {
+  if (!MASSIVE_KEY) throw new Error('MASSIVE_API_TOKEN not set — cannot fetch US market caps')
+  const res = await getWithRetry(
+    `${MASSIVE_API_BASE}/v3/reference/tickers/${encodeURIComponent(ticker)}`,
+    { authorization: `Bearer ${MASSIVE_KEY}`, accept: 'application/json', 'user-agent': USER_AGENT },
+    `massive ref ${ticker}`
+  )
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).slice(0, 180).replace(/\s+/g, ' ').trim()
+    throw new Error(`massive ref ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ''}`)
+  }
+  const data = (await res.json()) as { results?: { market_cap?: number | null } }
+  const cap = data.results?.market_cap
+  return typeof cap === 'number' && cap > 0 ? Math.round(cap / 1e7) / 100 : null
+}
+
+/**
+ * Refresh dc_stocks.market_cap_usd_bn for the US tickers whose cap is older
+ * than CAP_MAX_AGE_DAYS (or all of them with --refresh-caps). Caps move
+ * slowly and the free tier is a few calls a minute, so a weekly refresh keeps
+ * the daily run short. Before migration 082 the columns don't exist and the
+ * step is skipped with a note.
+ */
+async function refreshUsMarketCaps(
+  sb: ReturnType<typeof createServiceClient>,
+  tickers: string[],
+  opts: { force: boolean; dryRun: boolean }
+): Promise<void> {
+  if (tickers.length === 0 || !MASSIVE_KEY) return
+  const { data, error } = await sb.from('dc_stocks').select('ticker, market_cap_as_of').in('ticker', tickers)
+  if (error) {
+    console.error(`⚠ market caps skipped — ${error.message} (apply migration 082)`)
+    return
+  }
+  const floor = isoDate(new Date(Date.now() - CAP_MAX_AGE_DAYS * 86_400_000))
+  const due = ((data ?? []) as { ticker: string; market_cap_as_of: string | null }[])
+    .filter((r) => opts.force || !r.market_cap_as_of || r.market_cap_as_of < floor)
+    .map((r) => r.ticker)
+  if (due.length === 0) return
+  console.log(`\nRefreshing market caps for ${due.length} US ticker(s)${opts.dryRun ? ' (dry run)' : ''}`)
+  const today = isoDate(new Date())
+  for (const ticker of due) {
+    try {
+      const cap = await fetchMassiveMarketCap(ticker)
+      if (cap == null) {
+        console.error(`  ✗ ${ticker}: no market cap in the reference`)
+        continue
+      }
+      if (!opts.dryRun) {
+        const { error: upErr } = await sb
+          .from('dc_stocks')
+          .update({ market_cap_usd_bn: cap, market_cap_as_of: today })
+          .eq('ticker', ticker)
+        if (upErr) throw new Error(upErr.message)
+      }
+      console.log(`  ✓ ${ticker}: $${cap.toLocaleString('en-US')}bn`)
+    } catch (err) {
+      // A missing cap only falls back to the layer median, so never fail the price run over it.
+      console.error(`  ✗ ${ticker}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+    await sleep(REQUEST_DELAY_MS + Math.random() * REQUEST_JITTER_MS)
+  }
 }
 
 /** Smallest Yahoo `range` window that comfortably covers a lookback in days. */
@@ -485,6 +565,12 @@ async function main() {
       )
     }
   }
+
+  await refreshUsMarketCaps(
+    sb,
+    usStocks.map((s) => s.ticker),
+    { force: args.refreshCaps, dryRun: args.dryRun }
+  )
 
   const ok = attempted - failures.length
   console.log(`\nDone. ${totalRows} bars across ${ok}/${attempted} attempted tickers.`)

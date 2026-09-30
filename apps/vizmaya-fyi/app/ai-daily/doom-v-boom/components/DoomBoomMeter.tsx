@@ -1,5 +1,5 @@
 import type { DcEditionStory, EditionMoodCounts, EditionMoodPoint, EditionMoodScore } from '@vismay/content-source/dcEditionTypes'
-import { formatEditionDayLabel, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
+import { DC_LAYER_KEYS, DC_LAYERS, formatEditionDayLabel, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
 import { eventDrivers, moodDrivers } from '@vismay/content-source/dcEditionAssembly'
 import { hm } from './editionUtils'
 
@@ -129,7 +129,12 @@ function Mix({ parts }: { parts: EditionMoodScore }) {
           Market <b>{formatSigned(m.score)}</b>
           <small> · {mw}%</small>
           <em>
-            {formatEditionDayLabel(m.session)} session: {m.up} of {m.tickers} tracked stocks up, average {formatSigned(m.avgPct)}%
+            {formatEditionDayLabel(m.session)} session: {m.up} of {m.tickers} tracked stocks up
+            {m.layers
+              ? `; by layer, cap-weighted: ${DC_LAYER_KEYS.filter((k) => m.layers?.[k])
+                  .map((k) => `${DC_LAYERS[k].short} ${formatSigned(m.layers![k]!.avgPct)}%`)
+                  .join(' · ')}`
+              : `, average ${formatSigned(m.avgPct)}%`}
           </em>
         </span>
       ) : (
@@ -145,7 +150,8 @@ function Mix({ parts }: { parts: EditionMoodScore }) {
  * Chapter I — the day's mood in one reading. Reports of one development are
  * grouped into an event and counted once, each event weighted by relevance ×
  * impact × coverage: news = (W_boom − W_doom) / (W_boom + W_doom); on trading
- * days the tracked stocks' session carries a quarter of the score.
+ * days the tracked stocks' session (cap-weighted per AI layer, layers equal)
+ * carries the calibrated share of the score.
  * Server-rendered SVG: the meter with 7- and 30-day ghost ticks, the news /
  * market split, then per side the event count, its share of the weight and
  * the three heaviest events. Both sides open the panel (`mood:boom` /

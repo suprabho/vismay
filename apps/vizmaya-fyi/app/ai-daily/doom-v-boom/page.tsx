@@ -179,7 +179,7 @@ const METHOD = [
   },
   {
     title: 'The market',
-    body: 'The market is the previous day’s session for the ~29 tracked AI-infrastructure stocks: the average close-to-close move, each capped at ±10%, read on the same −1 to +1 scale (an average of ±2% reads about ±0.76). It carries a quarter of the score and the news the other three quarters. With no session in the window (weekends, holidays) the score is the news reading alone.',
+    body: 'The market is the previous day’s session for the ~29 tracked AI-infrastructure stocks. Each close-to-close move is capped at ±10%; within each AI layer (data centres, hyperscalers, chips, chip equipment) the moves are weighted by market cap, and the four layers count equally, so the many chip names don’t outvote the rest. The result is read on the same −1 to +1 scale, with the scale calibrated on past days so the market swings about as much as the news. It carries a quarter of the score and the news the other three quarters. With no session in the window (weekends, holidays) the score is the news reading alone.',
   },
   {
     title: 'The score',
@@ -200,7 +200,7 @@ function Methodology() {
         <p className="mt-6 inline-block rounded-md border border-[var(--line)] bg-[var(--elevated)] px-4 py-3 font-[family-name:var(--mono)] text-[13px] leading-relaxed">
           news = (W<sub>boom</sub> − W<sub>doom</sub>) ÷ (W<sub>boom</sub> + W<sub>doom</sub>)
           <br />
-          market = tanh(avg move % ÷ 2)
+          market = tanh(layer-averaged move % ÷ scale)
           <br />
           reading = 0.75 × news + 0.25 × market
           <br />
