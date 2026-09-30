@@ -45,7 +45,7 @@ import {
   listPriorEditions,
   mapEditionRow,
   withEditionColumns,
-} from '@vismay/content-source/dcEditions'
+} from '@vismay/dc-editions/dcEditions'
 import {
   EDITABLE_PATH_RE,
   buildIdf,
@@ -53,8 +53,8 @@ import {
   findCarryOvers,
   flattenText,
   overlayEditedFields,
-} from '@vismay/content-source/dcEditionAssembly'
-import type { DcEditionStory, EditionContinuing, EditionText } from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditionAssembly'
+import type { DcEditionStory, EditionContinuing, EditionText } from '@vismay/dc-editions/dcEditionTypes'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })

@@ -1,4 +1,4 @@
-import type { EditionSource } from '@vismay/content-source/dcEditionTypes'
+import type { EditionSource } from '@vismay/dc-editions/dcEditionTypes'
 
 /** A backlink chip — every claim on the page links to the reporting it rests on. */
 export default function SourceChip({

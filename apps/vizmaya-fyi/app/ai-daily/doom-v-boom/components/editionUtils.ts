@@ -4,8 +4,8 @@
  */
 
 import type { CSSProperties } from 'react'
-import { timeHm } from '@vismay/content-source/dcEditionAssembly'
-import { formatEditionDate, type DcEditionStory, type EditionGeo } from '@vismay/content-source/dcEditionTypes'
+import { timeHm } from '@vismay/dc-editions/dcEditionAssembly'
+import { formatEditionDate, type DcEditionStory, type EditionGeo } from '@vismay/dc-editions/dcEditionTypes'
 import { boomShare } from './particleRing'
 
 /** Custom DOM event the canvas map and other client bits use to open the panel. */

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { getEpic } from '@vismay/content-source/epics'
-import { getEditionNeighbours, listEditions } from '@vismay/content-source/dcEditions'
-import type { DcEditionNeighbours, DcEditionSummary, DcEditionWithContent } from '@vismay/content-source/dcEditionTypes'
-import { formatEditionDate, formatSigned, moodWord } from '@vismay/content-source/dcEditionTypes'
+import { getEditionNeighbours, listEditions } from '@vismay/dc-editions/dcEditions'
+import type { DcEditionNeighbours, DcEditionSummary, DcEditionWithContent } from '@vismay/dc-editions/dcEditionTypes'
+import { formatEditionDate, formatSigned, moodWord } from '@vismay/dc-editions/dcEditionTypes'
 import { aiDataCentersThemeOverrides, type AiDataCentersTheme } from '../../ai-data-centers/theme'
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vizmaya.fyi'

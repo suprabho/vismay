@@ -1,4 +1,4 @@
-import type { CapacityViz } from '@vismay/content-source/dcEditionTypes'
+import type { CapacityViz } from '@vismay/dc-editions/dcEditionTypes'
 
 /** Data centers — MW added per site vs items paused / frozen (hatched when no MW given). */
 export default function CapacityLedger({ viz, id }: { viz: CapacityViz; id: string }) {

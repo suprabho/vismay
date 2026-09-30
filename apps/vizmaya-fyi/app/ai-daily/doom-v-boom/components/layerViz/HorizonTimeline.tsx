@@ -1,4 +1,4 @@
-import type { HorizonViz } from '@vismay/content-source/dcEditionTypes'
+import type { HorizonViz } from '@vismay/dc-editions/dcEditionTypes'
 import { fitMono } from '../editionUtils'
 
 /** Semiconductors — per-supplier booked-out window on a timeline, plus point events. */

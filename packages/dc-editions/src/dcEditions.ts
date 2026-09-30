@@ -16,7 +16,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { createServiceClient, isMissingColumnError } from './supabase'
+import { createServiceClient, isMissingColumnError } from '@vismay/content-source/supabase'
 import { normaliseCharts, normaliseChartSkips, pruneChartsForMembership } from './dcEditionCharts'
 import {
   DC_FIGURE_SCOPES,

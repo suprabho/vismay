@@ -24,9 +24,9 @@
 import { writeFileSync } from 'node:fs'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { getDcCloseSeries, getDcMarketStocks, getMoodCalibration } from '@vismay/content-source/dcEditions'
-import { blendMoodScore, marketSession, scoreMarket, sessionMoves } from '@vismay/content-source/dcEditionAssembly'
-import { MOOD_METHOD, SCORE_METHOD, formatSigned, moodWord, type EditionMoodScore } from '@vismay/content-source/dcEditionTypes'
+import { getDcCloseSeries, getDcMarketStocks, getMoodCalibration } from '@vismay/dc-editions/dcEditions'
+import { blendMoodScore, marketSession, scoreMarket, sessionMoves } from '@vismay/dc-editions/dcEditionAssembly'
+import { MOOD_METHOD, SCORE_METHOD, formatSigned, moodWord, type EditionMoodScore } from '@vismay/dc-editions/dcEditionTypes'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })

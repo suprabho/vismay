@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { getDraftEdition } from '@vismay/content-source/dcEditions'
-import { editionDateFor } from '@vismay/content-source/dcEditionTypes'
+import { getDraftEdition } from '@vismay/dc-editions/dcEditions'
+import { editionDateFor } from '@vismay/dc-editions/dcEditionTypes'
 import { dispatchRecompose, isRecomposeConfigured } from '@/lib/editionsAdmin'
 
 export const dynamic = 'force-dynamic'

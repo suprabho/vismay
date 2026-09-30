@@ -1,4 +1,4 @@
-import type { EditionNote } from '@vismay/content-source/dcEditionTypes'
+import type { EditionNote } from '@vismay/dc-editions/dcEditionTypes'
 import SourceChip from './SourceChip'
 
 /**

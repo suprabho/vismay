@@ -16,6 +16,7 @@ Monorepo for the Vismay viz engine and the apps it powers.
 
 - `packages/viz-engine/` — the viz engine: module registry, slot dispatchers, core viz modules, charts, and the capture pipeline. Imported by every consumer app. (Originally planned as a stub; the engine has since moved here out of `apps/vizmaya-fyi/`.)
 - `packages/content-source/` — the `fs|db` story reader, story config types and resolver, and the render dispatch handlers (PDF / video / audio / share). Used by `apps/vizmaya-fyi/`.
+- `packages/dc-editions/` — the AI Data Centers daily edition (Doom v Boom): types, assembly, charts and the `dc_editions` readers/writers. Used by `apps/vizmaya-fyi/` and `apps/admin/` only; kept out of `content-source` so edition changes don't rebuild every app.
 - `packages/viz-admin/` — the admin form-schema renderer (`AdminFormFields`) for the Compose / catalog UIs.
 - `packages/admin-core/` — shared admin UI primitives (login form, logout button, tabs).
 - `packages/ai-gateway/` — one wrapper around the Vercel AI Gateway for all text + image generation. New AI features import from here, never from a provider SDK. See [`packages/ai-gateway/README.md`](packages/ai-gateway/README.md).
@@ -37,5 +38,9 @@ pnpm --filter vizmaya-fyi lint
 ```
 
 Swap `vizmaya-fyi` for any app name to target a different app. The workspace also nests app sub-packages (`apps/vizf1/*`, `apps/footshorts/*`) — see [`pnpm-workspace.yaml`](pnpm-workspace.yaml).
+
+### Vercel builds
+
+Every app's `vercel.json` runs [`scripts/vercel-ignore.mjs`](scripts/vercel-ignore.mjs) as its Ignored Build Step. An app builds only when a file it can reach changed: its own directory, the workspace packages it depends on, its Tailwind `@source` dirs, or the root lockfile/config. Docs and tests don't count. On previews only the PR's own diff counts, so merging `main` into a branch doesn't rebuild everything. travel, umami, kidzovo and vizf1 build previews only for changes in their own directory (production always builds); add `[preview:travel]` or `[preview:all]` to a commit message to force one. Keep code used by one or two apps out of `content-source` (see `packages/dc-editions/`), since every change there reaches seven apps.
 
 Per-app context (active initiatives, env vars, render wiring) lives in each app's `CLAUDE.md`, e.g. [`apps/vizmaya-fyi/CLAUDE.md`](apps/vizmaya-fyi/CLAUDE.md) and [`apps/admin/CLAUDE.md`](apps/admin/CLAUDE.md).

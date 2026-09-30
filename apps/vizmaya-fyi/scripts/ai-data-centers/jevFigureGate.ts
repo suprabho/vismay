@@ -33,7 +33,7 @@
  */
 
 import { createGateway } from '@ai-sdk/gateway'
-import type { DcStoryFigure } from '@vismay/content-source/dcEditionTypes'
+import type { DcStoryFigure } from '@vismay/dc-editions/dcEditionTypes'
 
 type BooleanQuestion = {
   type: 'boolean'

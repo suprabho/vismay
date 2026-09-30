@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import type { DcEditionSummary } from '@vismay/content-source/dcEditionTypes'
-import { formatEditionDate } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionSummary } from '@vismay/dc-editions/dcEditionTypes'
+import { formatEditionDate } from '@vismay/dc-editions/dcEditionTypes'
 import { editionHref } from './editionUtils'
 
 /** The archive rail: the last four editions, the current one highlighted. */

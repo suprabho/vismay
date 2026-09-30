@@ -1354,13 +1354,9 @@ export async function upsertDcStockPrices(rows: DcStockPriceRow[]): Promise<numb
 }
 
 // ---------------------------------------------------------------------------
-// AI Data Centers daily snapshot — editions, papers, places (migration 078).
-// The readers live in ./dcEditions.ts (server) and the shared types and
-// vocabularies in ./dcEditionTypes.ts; both re-export here so apps keep one
-// import surface for the epic.
-
-export * from './dcEditionTypes'
-export * from './dcEditions'
+// AI Data Centers daily snapshot — editions, papers, places (migration 078)
+// live in their own package, @vismay/dc-editions, so edition changes only
+// rebuild the apps that use them (admin, vizmaya-fyi).
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Searching for Umami (`searching-for-umami` epic, `umami` app).

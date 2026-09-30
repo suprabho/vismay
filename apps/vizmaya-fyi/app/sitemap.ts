@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
-import { listEditions, listPublishedEpics } from '@vismay/content-source/epics'
+import { listPublishedEpics } from '@vismay/content-source/epics'
+import { listEditions } from '@vismay/dc-editions/dcEditions'
 import { listAuthors } from '@vismay/content-source/authors'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vizmaya.fyi'

@@ -1,4 +1,4 @@
-import type { SourceGroup } from '@vismay/content-source/dcEditionAssembly'
+import type { SourceGroup } from '@vismay/dc-editions/dcEditionAssembly'
 
 /**
  * Chapter VII — every link in the edition grouped by outlet, numbered.

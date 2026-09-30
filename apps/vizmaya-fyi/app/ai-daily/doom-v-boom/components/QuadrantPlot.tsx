@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { DcPaper } from '@vismay/content-source/dcEditionTypes'
-import { DC_COMPUTE_BUCKETS } from '@vismay/content-source/dcEditionTypes'
-import { paperGainNorm, paperGainText, shortTitle } from '@vismay/content-source/dcEditionAssembly'
+import type { DcPaper } from '@vismay/dc-editions/dcEditionTypes'
+import { DC_COMPUTE_BUCKETS } from '@vismay/dc-editions/dcEditionTypes'
+import { paperGainNorm, paperGainText, shortTitle } from '@vismay/dc-editions/dcEditionAssembly'
 
 /**
  * Results at scale — papers placed by reported gain against the estimated

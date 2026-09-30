@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import type { EditionContinuing } from '@vismay/content-source/dcEditionTypes'
-import { formatEditionDate } from '@vismay/content-source/dcEditionTypes'
+import type { EditionContinuing } from '@vismay/dc-editions/dcEditionTypes'
+import { formatEditionDate } from '@vismay/dc-editions/dcEditionTypes'
 import SourceChip from './SourceChip'
 import { editionHref } from './editionUtils'
 

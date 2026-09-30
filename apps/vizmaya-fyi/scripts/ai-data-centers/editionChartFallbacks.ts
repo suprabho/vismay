@@ -16,10 +16,10 @@
  */
 
 import type { DcFacility, DcStockSeries } from '@vismay/content-source/epics'
-import type { DcPaper, EditionChartSection, EditionEnergy, EditionSource, EditionTapeTick } from '@vismay/content-source/dcEditionTypes'
-import { DC_PAPER_AREAS, DC_PAPER_AREA_KEYS, type DcPaperArea } from '@vismay/content-source/dcEditionTypes'
-import { MIN_CHART_ROWS, type ValidatedChartPlan } from '@vismay/content-source/dcEditionCharts'
-import { shortTitle } from '@vismay/content-source/dcEditionAssembly'
+import type { DcPaper, EditionChartSection, EditionEnergy, EditionSource, EditionTapeTick } from '@vismay/dc-editions/dcEditionTypes'
+import { DC_PAPER_AREAS, DC_PAPER_AREA_KEYS, type DcPaperArea } from '@vismay/dc-editions/dcEditionTypes'
+import { MIN_CHART_ROWS, type ValidatedChartPlan } from '@vismay/dc-editions/dcEditionCharts'
+import { shortTitle } from '@vismay/dc-editions/dcEditionAssembly'
 
 /** What rung 4 can draw from. Everything optional: a missing dataset just skips its builders. */
 export interface RecordInputs {

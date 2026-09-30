@@ -1,0 +1,22 @@
+{
+  "name": "@vismay/dc-editions",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AI Data Centers daily edition (Doom v Boom): types, assembly, charts and Supabase readers/writers. Its own package so edition changes only rebuild admin and vizmaya-fyi.",
+  "exports": {
+    "./dcEditions": "./src/dcEditions.ts",
+    "./dcEditionTypes": "./src/dcEditionTypes.ts",
+    "./dcEditionAssembly": "./src/dcEditionAssembly.ts",
+    "./dcEditionCharts": "./src/dcEditionCharts.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vismay/content-source": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

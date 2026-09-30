@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
+import { formatSigned, moodTone, moodWord } from '@vismay/dc-editions/dcEditionTypes'
 import BoomRing from './BoomRing'
 import { boomShare, ringStaticDots } from './particleRing'
 

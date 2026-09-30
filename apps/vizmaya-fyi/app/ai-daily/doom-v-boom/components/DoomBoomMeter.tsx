@@ -1,6 +1,6 @@
-import type { DcEditionStory, EditionMoodCounts, EditionMoodPoint, EditionMoodScore } from '@vismay/content-source/dcEditionTypes'
-import { DC_LAYER_KEYS, DC_LAYERS, formatEditionDayLabel, formatSigned, moodTone, moodWord } from '@vismay/content-source/dcEditionTypes'
-import { eventDrivers, moodDrivers } from '@vismay/content-source/dcEditionAssembly'
+import type { DcEditionStory, EditionMoodCounts, EditionMoodPoint, EditionMoodScore } from '@vismay/dc-editions/dcEditionTypes'
+import { DC_LAYER_KEYS, DC_LAYERS, formatEditionDayLabel, formatSigned, moodTone, moodWord } from '@vismay/dc-editions/dcEditionTypes'
+import { eventDrivers, moodDrivers } from '@vismay/dc-editions/dcEditionAssembly'
 import { hm } from './editionUtils'
 
 interface Props {

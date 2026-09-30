@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import type { DcEditionSummary } from '@vismay/content-source/dcEditionTypes'
-import { formatEditionDate, formatSigned, moodWord } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionSummary } from '@vismay/dc-editions/dcEditionTypes'
+import { formatEditionDate, formatSigned, moodWord } from '@vismay/dc-editions/dcEditionTypes'
 import { boomScore, editionHref } from './editionUtils'
 import { StaticRing } from './ScoreRing'
 
