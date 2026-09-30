@@ -531,15 +531,19 @@ export async function getDcTapeMoves(windowEnd: Date): Promise<EditionTapeTick[]
 }
 
 /**
- * Active tickers with their layer category and market cap — the market
- * term's weights. Reads before migration 082 get no caps (equal weights
- * inside each layer) rather than failing.
+ * Active US-listed tickers with their layer category and market cap — the
+ * market term's universe and weights. US-listed only: those are the prices
+ * (and caps) the importer refreshes by itself every weekday, and they close
+ * on one session. A home-exchange listing is kept up by hand, so its series
+ * goes stale, and its session is a different trading day. Reads before
+ * migration 082 get no caps (equal weights inside each layer) rather than
+ * failing.
  */
 export async function getDcMarketStocks(): Promise<Map<string, MarketStock>> {
   const sb = createServiceClient()
-  let res = await sb.from('dc_stocks').select('ticker, category, market_cap_usd_bn').eq('is_active', true)
+  let res = await sb.from('dc_stocks').select('ticker, category, market_cap_usd_bn').eq('is_active', true).eq('market', 'US')
   if (res.error && isMissingColumnError(res.error)) {
-    res = (await sb.from('dc_stocks').select('ticker, category').eq('is_active', true)) as typeof res
+    res = (await sb.from('dc_stocks').select('ticker, category').eq('is_active', true).eq('market', 'US')) as typeof res
   }
   if (res.error) throw new Error(`getDcMarketStocks: ${res.error.message}`)
   const out = new Map<string, MarketStock>()

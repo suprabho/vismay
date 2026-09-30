@@ -20,7 +20,8 @@
  * After the bars, US market caps (dc_stocks.market_cap_usd_bn, migration 082 —
  * the Doom v Boom market term's weights) are refreshed from massive.com's
  * ticker reference when older than a week; --refresh-caps forces all of them.
- * International caps are set by hand (massive.com is US-only).
+ * The reference has no cap for OTC lines (ATEYY, SFTBY, HNHPF); those are set
+ * by hand and a refresh that finds none leaves the stored cap alone.
  *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full          # ~5y backfill
