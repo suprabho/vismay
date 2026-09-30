@@ -40,6 +40,7 @@ type Patch = {
   notes: { metric: string; unit: string; label: string; text: string; sources: EditionSource[]; energy: boolean }[]
   layers: Record<DcLayerKey, { headline: string; sub: string; notes: { text: string; sources: EditionSource[] }[] }>
   research: { headline: string; sub: string }
+  continuing: { label: string; text: string; sources: EditionSource[] }[]
 }
 
 function toPatch(d: DcDraftEdition): Patch {
@@ -53,13 +54,14 @@ function toPatch(d: DcDraftEdition): Patch {
     notes: d.notes.map((n) => ({ metric: n.metric ?? '', unit: n.unit ?? '', label: n.label, text: n.text, sources: n.sources, energy: n.energy })),
     layers,
     research: { headline: d.research.headline, sub: d.research.sub },
+    continuing: d.continuing.map((c) => ({ label: c.label, text: c.text, sources: c.sources })),
   }
 }
 
 function textOf(d: DcDraftEdition): EditionText {
   const layers = {} as EditionText['layers']
   for (const k of DC_LAYER_KEYS) layers[k] = { headline: d.layers[k].headline, sub: d.layers[k].sub, notes: d.layers[k].notes }
-  return { headline: d.headline, sub: d.sub, notes: d.notes, layers, research: { headline: d.research.headline, sub: d.research.sub } }
+  return { headline: d.headline, sub: d.sub, notes: d.notes, layers, research: { headline: d.research.headline, sub: d.research.sub }, continuing: d.continuing }
 }
 
 const input = 'w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-neutral-100 focus:outline-none focus:border-white/30'
@@ -402,6 +404,25 @@ export default function EditionsClient() {
               ))}
             </div>
 
+            <h3 className="text-sm font-medium pt-2">Still developing</h3>
+            <p className="text-xs text-neutral-500 -mt-2">
+              Threads an earlier edition already carried that drew more reports in this window. The composer keeps them out of the headline, deck and key notes.
+            </p>
+            {patch.continuing.length === 0 ? (
+              <p className="text-xs text-neutral-500">Nothing in this window repeats the last three editions.</p>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {patch.continuing.map((c, i) => (
+                  <div key={i} className="border border-white/10 rounded-xl p-3 space-y-2">
+                    <div className="text-xs text-neutral-500">since {draft.continuing[i]?.since ?? '—'}</div>
+                    <input className={input} placeholder="thread" value={c.label} onChange={(e) => updateContinuing(i, { label: e.target.value })} />
+                    <textarea className={input} rows={2} value={c.text} onChange={(e) => updateContinuing(i, { text: e.target.value })} />
+                    <SourcePicker options={sourceOptions} value={c.sources} onChange={(sources) => updateContinuing(i, { sources })} />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <h3 className="text-sm font-medium pt-2">Energy chart</h3>
             <div className="border border-white/10 rounded-xl p-3 space-y-2">
               <div className="text-xs text-neutral-500">{chartStatus(draft, 'energy')}</div>
@@ -557,6 +578,11 @@ export default function EditionsClient() {
     if (!patch) return
     const notes = patch.notes.map((n, j) => (j === i ? { ...n, ...part } : n))
     setPatch({ ...patch, notes })
+  }
+  function updateContinuing(i: number, part: Partial<Patch['continuing'][number]>) {
+    if (!patch) return
+    const continuing = patch.continuing.map((c, j) => (j === i ? { ...c, ...part } : c))
+    setPatch({ ...patch, continuing })
   }
   function updateLayer(k: DcLayerKey, part: Partial<Patch['layers'][DcLayerKey]>) {
     if (!patch) return

@@ -54,6 +54,7 @@ import {
   type EditionChartSkip,
   type EditionCharts,
   type EditionComposerRun,
+  type EditionContinuing,
   type EditionCounts,
   type EditionEnergy,
   type EditionGeo,
@@ -80,6 +81,7 @@ import {
   flattenText,
   powerCommitted,
   scoreMoodEvents,
+  type PriorEdition,
   type StockName,
 } from './dcEditionAssembly'
 
@@ -147,10 +149,32 @@ const PAPER_COLUMNS =
   'unit, compute_bucket, scale, weights_released, code_released, why, tags, importance, relevant, published_at'
 
 const EDITION_SUMMARY_COLUMNS = 'id, number, edition_date, status, headline, sub, counts, mood_score, published_at'
-const EDITION_COLUMNS =
+/** The edition columns before migration 082 (no `continuing`). */
+const EDITION_COLUMNS_PRE_082 =
   `${EDITION_SUMMARY_COLUMNS}, window_start, window_end, notes, mood_counts, mood_series, layers, research, ` +
   'energy, geo, tape, charts, chart_skips, story_ids, paper_ids, iea_ids, model, classifier_version, composer_runs, edited_fields, ' +
   'auto_publish_at, hold_count, generated_at, reviewed_by'
+const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_082}, continuing`
+
+/** A read or write that failed only because migration 082's `continuing` column isn't there yet. */
+function isMissingContinuing(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return isMissingColumnError(error) || (error.code === 'PGRST204' && /continuing/.test(error.message ?? ''))
+}
+
+/**
+ * Run a dc_editions query with the full column list, retrying with the
+ * pre-082 list when the code is deployed ahead of the migration: editions then
+ * render without the "Still developing" block instead of failing. `full` tells
+ * a write whether it may include the `continuing` value.
+ */
+async function withEditionColumns<T>(
+  run: (cols: string, full: boolean) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
+) {
+  let res = await run(EDITION_COLUMNS, true)
+  if (res.error && isMissingContinuing(res.error)) res = await run(EDITION_COLUMNS_PRE_082, false)
+  return res
+}
 
 function normaliseFacts(raw: unknown): DcStoryFacts | null {
   if (!raw || typeof raw !== 'object') return null
@@ -286,6 +310,7 @@ function mapEditionRow(r: any): DcEdition {
     windowStart: r.window_start as string,
     windowEnd: r.window_end as string,
     notes: Array.isArray(r.notes) ? (r.notes as EditionNote[]) : [],
+    continuing: Array.isArray(r.continuing) ? (r.continuing as EditionContinuing[]) : [],
     moodCounts: { ...emptyMoodCounts(), ...((r.mood_counts as Partial<EditionMoodCounts>) ?? {}) },
     moodSeries: Array.isArray(r.mood_series) ? (r.mood_series as EditionMoodPoint[]) : [],
     layers: normaliseLayers(r.layers),
@@ -537,25 +562,18 @@ async function resolveContent(edition: DcEdition): Promise<DcEditionWithContent>
 /** The published edition for a UTC date, with its stories and papers; null if none. */
 export async function getEdition(date: string): Promise<DcEditionWithContent | null> {
   const sb = createServiceClient()
-  const { data, error } = await sb
-    .from('dc_editions')
-    .select(EDITION_COLUMNS)
-    .eq('edition_date', date)
-    .eq('status', 'published')
-    .maybeSingle()
+  const { data, error } = await withEditionColumns((cols) =>
+    sb.from('dc_editions').select(cols).eq('edition_date', date).eq('status', 'published').maybeSingle(),
+  )
   if (error) throw new Error(`getEdition(${date}): ${error.message}`)
   return data ? resolveContent(mapEditionRow(data)) : null
 }
 
 export async function getLatestEdition(): Promise<DcEditionWithContent | null> {
   const sb = createServiceClient()
-  const { data, error } = await sb
-    .from('dc_editions')
-    .select(EDITION_COLUMNS)
-    .eq('status', 'published')
-    .order('edition_date', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const { data, error } = await withEditionColumns((cols) =>
+    sb.from('dc_editions').select(cols).eq('status', 'published').order('edition_date', { ascending: false }).limit(1).maybeSingle(),
+  )
   if (error) throw new Error(`getLatestEdition: ${error.message}`)
   return data ? resolveContent(mapEditionRow(data)) : null
 }
@@ -616,6 +634,35 @@ export async function getMoodSeries(days = 30): Promise<EditionMoodPoint[]> {
     .reverse()
 }
 
+/**
+ * The editions before `beforeDate` (up to `limit`, none older than `days`)
+ * with their member stories, newest first: what the composer checks the
+ * window against, so a development that already ran isn't led with again.
+ * An earlier draft counts too — the composer publishes it before composing.
+ */
+export async function listPriorEditions(beforeDate: string, opts: { limit?: number; days?: number } = {}): Promise<PriorEdition[]> {
+  const sb = createServiceClient()
+  const oldest = new Date(Date.parse(`${beforeDate}T00:00:00Z`) - (opts.days ?? 4) * 86_400_000).toISOString().slice(0, 10)
+  const { data, error } = await sb
+    .from('dc_editions')
+    .select('edition_date, headline, sub, notes, story_ids')
+    .lt('edition_date', beforeDate)
+    .gte('edition_date', oldest)
+    .order('edition_date', { ascending: false })
+    .limit(opts.limit ?? 3)
+  if (error) throw new Error(`listPriorEditions: ${error.message}`)
+  const rows = (data ?? []) as { edition_date: string; headline: string | null; sub: string | null; notes: unknown; story_ids: unknown[] | null }[]
+  const stories = await listDcNewsByIds([...new Set(rows.flatMap((r) => (r.story_ids ?? []).map(Number)))])
+  const byId = new Map(stories.map((s) => [s.id, s]))
+  return rows.map((r) => ({
+    date: r.edition_date,
+    headline: r.headline ?? '',
+    sub: r.sub ?? '',
+    notes: Array.isArray(r.notes) ? (r.notes as EditionNote[]) : [],
+    stories: (r.story_ids ?? []).map((id) => byId.get(Number(id))).filter((s): s is DcEditionStory => !!s),
+  }))
+}
+
 // ---------------------------------------------------------------------------
 // Draft (admin + pipeline)
 
@@ -626,7 +673,7 @@ export interface DcDraftEdition extends DcEditionWithContent {
 }
 
 async function readDraftRow(sb: Sb): Promise<DcEdition | null> {
-  const { data, error } = await sb.from('dc_editions').select(EDITION_COLUMNS).eq('status', 'draft').limit(1).maybeSingle()
+  const { data, error } = await withEditionColumns((cols) => sb.from('dc_editions').select(cols).eq('status', 'draft').limit(1).maybeSingle())
   if (error) throw new Error(`getDraftEdition: ${error.message}`)
   return data ? mapEditionRow(data) : null
 }
@@ -659,7 +706,7 @@ export async function getDraftEdition(): Promise<DcDraftEdition | null> {
 /** Admin read of any edition by date (draft or published). */
 export async function getEditionForAdmin(date: string): Promise<DcEditionWithContent | null> {
   const sb = createServiceClient()
-  const { data, error } = await sb.from('dc_editions').select(EDITION_COLUMNS).eq('edition_date', date).maybeSingle()
+  const { data, error } = await withEditionColumns((cols) => sb.from('dc_editions').select(cols).eq('edition_date', date).maybeSingle())
   if (error) throw new Error(`getEditionForAdmin(${date}): ${error.message}`)
   return data ? resolveContent(mapEditionRow(data)) : null
 }
@@ -850,7 +897,14 @@ function textFromEdition(e: DcEdition): EditionText {
   for (const k of DC_LAYER_KEYS) {
     layers[k] = { headline: e.layers[k].headline, sub: e.layers[k].sub, notes: e.layers[k].notes }
   }
-  return { headline: e.headline, sub: e.sub, notes: e.notes, layers, research: { headline: e.research.headline, sub: e.research.sub } }
+  return {
+    headline: e.headline,
+    sub: e.sub,
+    notes: e.notes,
+    layers,
+    research: { headline: e.research.headline, sub: e.research.sub },
+    continuing: e.continuing,
+  }
 }
 
 /**
@@ -861,11 +915,9 @@ function textFromEdition(e: DcEdition): EditionText {
 export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition> {
   const sb = createServiceClient()
   const { start, end } = editionWindow(input.editionDate)
-  const { data: existingRow, error: readErr } = await sb
-    .from('dc_editions')
-    .select(EDITION_COLUMNS)
-    .eq('edition_date', input.editionDate)
-    .maybeSingle()
+  const { data: existingRow, error: readErr } = await withEditionColumns((cols) =>
+    sb.from('dc_editions').select(cols).eq('edition_date', input.editionDate).maybeSingle(),
+  )
   if (readErr) throw new Error(`upsertDraftEdition read: ${readErr.message}`)
   const existing = existingRow ? mapEditionRow(existingRow) : null
   if (existing?.status === 'published') {
@@ -899,6 +951,7 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
     headline: text.headline,
     sub: text.sub,
     notes: text.notes,
+    continuing: text.continuing,
     mood_score: n.moodScore,
     mood_counts: n.moodCounts,
     mood_series: n.moodSeries,
@@ -927,10 +980,13 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
     hold_count: existing?.holdCount ?? 0,
     generated_at: input.generatedAt,
   }
-  const q = existing
-    ? sb.from('dc_editions').update(row).eq('id', existing.id).select(EDITION_COLUMNS).single()
-    : sb.from('dc_editions').insert(row).select(EDITION_COLUMNS).single()
-  const { data, error } = await q
+  const { data, error } = await withEditionColumns((cols, full) => {
+    const { continuing, ...pre082 } = row
+    const values = full ? row : pre082
+    return existing
+      ? sb.from('dc_editions').update(values).eq('id', existing.id).select(cols).single()
+      : sb.from('dc_editions').insert(values).select(cols).single()
+  })
   if (error) throw new Error(`upsertDraftEdition write: ${error.message}`)
   return mapEditionRow(data)
 }
@@ -961,6 +1017,7 @@ export interface EditionTextPatch {
   notes?: (Partial<Pick<EditionNote, 'metric' | 'unit' | 'label' | 'text' | 'sources' | 'energy'>> | null)[]
   layers?: Partial<Record<DcLayerKey, { headline?: string; sub?: string; notes?: ({ text?: string; sources?: EditionSource[] } | null)[] }>>
   research?: { headline?: string; sub?: string }
+  continuing?: ({ label?: string; text?: string; sources?: EditionSource[] } | null)[]
 }
 
 const LIMITS = { headline: 220, sub: 700, note: 900, label: 140, metric: 24, unit: 16 }
@@ -1030,6 +1087,13 @@ export async function saveDraftEdition(patch: EditionTextPatch, opts: { editor: 
     if (patch.research.headline !== undefined) next.research.headline = str(patch.research.headline, LIMITS.headline, 'research.headline')
     if (patch.research.sub !== undefined) next.research.sub = str(patch.research.sub, LIMITS.sub, 'research.sub')
   }
+  patch.continuing?.forEach((p, i) => {
+    const c = next.continuing[i]
+    if (!p || !c) return
+    if (p.label !== undefined) c.label = str(p.label, LIMITS.label, `continuing.${i}.label`)
+    if (p.text !== undefined) c.text = str(p.text, LIMITS.note, `continuing.${i}.text`)
+    if (p.sources !== undefined) c.sources = validSources(p.sources, allowed, `continuing.${i}.sources`)
+  })
 
   // Changed dot-paths (text fields via the flattener, sources by JSON compare).
   const before = flattenText(current)
@@ -1045,24 +1109,31 @@ export async function saveDraftEdition(patch: EditionTextPatch, opts: { editor: 
       if (JSON.stringify(n.sources) !== JSON.stringify(current.layers[k].notes[i]?.sources)) changed.add(`layers.${k}.notes.${i}.sources`)
     })
   }
+  next.continuing.forEach((c, i) => {
+    if (JSON.stringify(c.sources) !== JSON.stringify(current.continuing[i]?.sources)) changed.add(`continuing.${i}.sources`)
+  })
   const editedFields = [...changed].filter((p) => EDITABLE_PATH_RE.test(p))
 
   const sb = createServiceClient()
   const layers = { ...draft.layers }
   for (const k of DC_LAYER_KEYS) layers[k] = { ...draft.layers[k], headline: next.layers[k].headline, sub: next.layers[k].sub, notes: next.layers[k].notes }
-  const { error } = await sb
-    .from('dc_editions')
-    .update({
-      headline: next.headline,
-      sub: next.sub,
-      notes: next.notes,
-      layers,
-      research: { ...draft.research, headline: next.research.headline, sub: next.research.sub },
-      edited_fields: editedFields,
-      reviewed_by: opts.editor ?? draft.reviewedBy,
-    })
-    .eq('id', draft.id)
-    .eq('status', 'draft')
+  const values = {
+    headline: next.headline,
+    sub: next.sub,
+    notes: next.notes,
+    layers,
+    research: { ...draft.research, headline: next.research.headline, sub: next.research.sub },
+    edited_fields: editedFields,
+    reviewed_by: opts.editor ?? draft.reviewedBy,
+  }
+  const { error } = await withEditionColumns((_cols, full) =>
+    sb
+      .from('dc_editions')
+      .update(full ? { ...values, continuing: next.continuing } : values)
+      .eq('id', draft.id)
+      .eq('status', 'draft')
+      .select('id'),
+  )
   if (error) throw new Error(`saveDraftEdition: ${error.message}`)
 
   await recordEditionEdit(sb, { editionDate: draft.date, editor: opts.editor, patch, changed: editedFields })
@@ -1155,13 +1226,15 @@ export async function holdDraftEdition(opts: { editor: string | null }): Promise
   if (draft.holdCount >= 1) throw new Error('this draft has already been held once')
   const base = draft.autoPublishAt ? new Date(draft.autoPublishAt) : editionPublishAt(draft.date)
   const next = new Date(Math.max(base.getTime(), Date.now()) + EDITION_HOLD_MINUTES * 60_000)
-  const { data, error } = await sb
-    .from('dc_editions')
-    .update({ auto_publish_at: next.toISOString(), hold_count: draft.holdCount + 1, reviewed_by: opts.editor ?? draft.reviewedBy })
-    .eq('id', draft.id)
-    .eq('status', 'draft')
-    .select(EDITION_COLUMNS)
-    .single()
+  const { data, error } = await withEditionColumns((cols) =>
+    sb
+      .from('dc_editions')
+      .update({ auto_publish_at: next.toISOString(), hold_count: draft.holdCount + 1, reviewed_by: opts.editor ?? draft.reviewedBy })
+      .eq('id', draft.id)
+      .eq('status', 'draft')
+      .select(cols)
+      .single(),
+  )
   if (error) throw new Error(`holdDraftEdition: ${error.message}`)
   return mapEditionRow(data)
 }
@@ -1193,18 +1266,20 @@ export async function publishDraftEdition(opts: { reviewedBy?: string | null; on
     .maybeSingle()
   if (maxErr) throw new Error(`publishDraftEdition number: ${maxErr.message}`)
   const number = draft.number ?? (Number((maxRow as { number?: number } | null)?.number ?? 0) + 1)
-  const { data, error } = await sb
-    .from('dc_editions')
-    .update({
-      status: 'published',
-      number,
-      published_at: new Date().toISOString(),
-      reviewed_by: opts.reviewedBy ?? draft.reviewedBy,
-    })
-    .eq('id', draft.id)
-    .eq('status', 'draft')
-    .select(EDITION_COLUMNS)
-    .single()
+  const { data, error } = await withEditionColumns((cols) =>
+    sb
+      .from('dc_editions')
+      .update({
+        status: 'published',
+        number,
+        published_at: new Date().toISOString(),
+        reviewed_by: opts.reviewedBy ?? draft.reviewedBy,
+      })
+      .eq('id', draft.id)
+      .eq('status', 'draft')
+      .select(cols)
+      .single(),
+  )
   if (error) throw new Error(`publishDraftEdition: ${error.message}`)
   return { published: true, edition: mapEditionRow(data), reason: null }
 }
@@ -1225,13 +1300,15 @@ export async function publishStaleDrafts(beforeDate: string): Promise<DcEdition[
 /** The rare hard case: pull a published edition back to draft. */
 export async function unpublishEdition(date: string): Promise<DcEdition | null> {
   const sb = createServiceClient()
-  const { data, error } = await sb
-    .from('dc_editions')
-    .update({ status: 'draft', published_at: null })
-    .eq('edition_date', date)
-    .eq('status', 'published')
-    .select(EDITION_COLUMNS)
-    .maybeSingle()
+  const { data, error } = await withEditionColumns((cols) =>
+    sb
+      .from('dc_editions')
+      .update({ status: 'draft', published_at: null })
+      .eq('edition_date', date)
+      .eq('status', 'published')
+      .select(cols)
+      .maybeSingle(),
+  )
   if (error) throw new Error(`unpublishEdition(${date}): ${error.message}`)
   return data ? mapEditionRow(data) : null
 }
