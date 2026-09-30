@@ -112,22 +112,25 @@ function Meter({ size, score, d7, d30 }: { size: keyof typeof GEOM; score: numbe
 }
 
 /**
- * What the score is made of: the news reading and the market session, each
- * with its share. Editions scored before the market term carry no split.
+ * What the score is made of: the news reading and the market session. Since
+ * news+market-v2 the market tilts the news reading (shown as the points it
+ * added); v1 editions averaged the two, so they keep their shares. Editions
+ * scored before the market term carry no split.
  */
 function Mix({ parts }: { parts: EditionMoodScore }) {
   const m = parts.market
+  const averaged = parts.method === 'news+market-v1'
   const mw = Math.round(parts.marketWeight * 100)
   return (
     <div className="db-mix">
       <span>
         News <b>{formatSigned(parts.news)}</b>
-        {m && <small> · {100 - mw}%</small>}
+        {m && averaged && <small> · {100 - mw}%</small>}
       </span>
       {m ? (
         <span>
           Market <b>{formatSigned(m.score)}</b>
-          <small> · {mw}%</small>
+          <small> · {averaged ? `${mw}%` : `tilts the score ${formatSigned(Math.round(parts.marketWeight * m.score * 100) / 100)}`}</small>
           <em>
             {formatEditionDayLabel(m.session)} session: {m.up} of {m.tickers} tracked stocks up
             {m.layers
@@ -151,7 +154,7 @@ function Mix({ parts }: { parts: EditionMoodScore }) {
  * grouped into an event and counted once, each event weighted by relevance ×
  * impact × coverage: news = (W_boom − W_doom) / (W_boom + W_doom); on trading
  * days the tracked stocks' session (cap-weighted per AI layer, layers equal)
- * carries the calibrated share of the score.
+ * tilts that reading by its calibrated weight.
  * Server-rendered SVG: the meter with 7- and 30-day ghost ticks, the news /
  * market split, then per side the event count, its share of the weight and
  * the three heaviest events. Both sides open the panel (`mood:boom` /

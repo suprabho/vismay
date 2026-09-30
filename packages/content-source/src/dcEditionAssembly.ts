@@ -183,10 +183,11 @@ export function decimalYear(date: string | Date): number {
 // (W_boom − W_doom) / (W_boom + W_doom), neutral excluded. With no duplicates
 // and equal weights that is exactly the old story count.
 //
-// The stored score then mixes in the market (news+market-v1): the tracked
+// The stored score then tilts by the market (news+market-v2): the tracked
 // stocks' previous session — cap-weighted inside each AI layer, the layers
-// averaged equally — as a −1…+1 reading carrying the calibrated weight of
-// the score. No session (weekend, holiday, prices missing) → the news reading.
+// averaged equally — as a −1…+1 reading, added to the news reading at the
+// calibrated weight. No session (weekend, holiday, prices missing) → the
+// news reading.
 
 /**
  * Clustering constants — starting values, calibrated on the compose
@@ -526,7 +527,7 @@ export function toMoodEvent(members: DcEditionStory[]): EditionMoodEvent {
 // Market — the tracked stocks' previous session, mixed into the score
 
 export const MARKET_MOOD = {
-  /** The market's share of the score by default; a calibration row (dc_mood_calibrations) can override it. */
+  /** The tilt by default — a market reading of ±1 moves the score this far; a calibration row (dc_mood_calibrations) can override it. */
   weight: 0.25,
   /**
    * Default scale until the first calibration: an average move of this many
@@ -647,14 +648,16 @@ export function scoreMarket(moves: MarketMove[], session: string, scalePct: numb
 }
 
 /**
- * The stored score: (1 − w) × news + w × market. No news reading → unscored
- * (the market tilts the day's news; it doesn't stand in for it). No market →
- * the news reading unchanged.
+ * The stored score: news + w × market, clamped to ±1. The market tilts the
+ * day's news rather than being averaged with it — an average pulls a strong
+ * news reading toward zero whatever the session did, so an up day could
+ * lower the score. No news reading → unscored (the market doesn't stand in
+ * for the news). No market → the news reading unchanged.
  */
 export function blendMoodScore(news: number | null, market: EditionMarketReading | null, weight: number = MARKET_MOOD.weight): number | null {
   if (news == null) return null
   if (market == null) return news
-  return round3((1 - weight) * news + weight * market.score)
+  return round3(Math.max(-1, Math.min(1, news + weight * market.score)))
 }
 
 const stdev = (values: number[]): number => {
@@ -665,8 +668,9 @@ const stdev = (values: number[]): number => {
 
 /**
  * The scale at which tanh(move / scale) swings as much (standard deviation)
- * as the news reading does, so the market's weight is its real share of the
- * score's movement rather than an artefact of units. Bisection on a
+ * as the news reading does, so the market's weight means the same thing
+ * whatever the units: at weight w a typical session moves the score w times
+ * as far as a typical day's news does. Bisection on a
  * monotonic function; clamped to [0.1%, 20%]. Null when either side is too
  * short or flat to fit.
  */

@@ -279,7 +279,7 @@ function moodParts(s: EditionMoodScore | undefined): { news: number | null; mark
     market: m
       ? `${m.session} session: ${m.tickers} tracked stocks; cap-weighted by layer ${Object.entries(m.layers ?? {})
           .map(([k, l]) => `${k} ${formatSigned(l.avgPct)}%`)
-          .join(', ')}; layers averaged ${formatSigned(m.avgPct)}% → ${formatSigned(m.score)}, ${Math.round(s.marketWeight * 100)}% of the score`
+          .join(', ')}; layers averaged ${formatSigned(m.avgPct)}% → ${formatSigned(m.score)}, which tilts the news reading by ${formatSigned(Math.round(s.marketWeight * m.score * 100) / 100)}`
       : 'no trading session in this window — the score is the news reading',
   }
 }
