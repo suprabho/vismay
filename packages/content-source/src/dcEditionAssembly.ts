@@ -1950,7 +1950,7 @@ export function flattenText(text: EditionText): Record<string, string> {
   }
   out['research.headline'] = text.research.headline
   out['research.sub'] = text.research.sub
-  // Composer runs stored before migration 083 carry no continuing block.
+  // Composer runs stored before migration 084 carry no continuing block.
   ;(text.continuing ?? []).forEach((c, i) => {
     out[`continuing.${i}.label`] = c.label
     out[`continuing.${i}.text`] = c.text

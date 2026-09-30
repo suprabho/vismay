@@ -582,7 +582,7 @@ export interface EditionText {
   notes: EditionNote[]
   layers: Record<DcLayerKey, { headline: string; sub: string; notes: EditionLayerNote[] }>
   research: { headline: string; sub: string }
-  /** Carried-over threads (migration 083). Absent on composer runs stored before it. */
+  /** Carried-over threads (migration 084). Absent on composer runs stored before it. */
   continuing: EditionContinuing[]
 }
 
@@ -614,7 +614,7 @@ export interface DcEdition extends DcEditionSummary {
   windowStart: string
   windowEnd: string
   notes: EditionNote[]
-  /** Threads carried over from earlier editions (migration 083); empty on older rows. */
+  /** Threads carried over from earlier editions (migration 084); empty on older rows. */
   continuing: EditionContinuing[]
   moodCounts: EditionMoodCounts
   moodSeries: EditionMoodPoint[]

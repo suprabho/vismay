@@ -1,11 +1,11 @@
 /**
  * Backward-compatibility check for the daily edition's "Still developing"
- * block (dc_editions.continuing, migration 083).
+ * block (dc_editions.continuing, migration 084).
  *
  * The code has to keep working in every state it can meet in production:
  *
- *   - the code deployed before migration 083 is applied (no `continuing`
- *     column: reads and writes fall back to the pre-083 column list);
+ *   - the code deployed before migration 084 is applied (no `continuing`
+ *     column: reads and writes fall back to the pre-084 column list);
  *   - editions published before the feature (no `continuing` value, and
  *     published rows are frozen, so they are never backfilled);
  *   - composer runs stored on a draft before the feature (their `text` has
@@ -19,9 +19,9 @@
  *
  *   OFFLINE (always runs, no env): drives the real fallback code with the
  *     exact errors PostgREST returns for a missing column, and the real
- *     mappers / text helpers with pre-083 shapes.
+ *     mappers / text helpers with pre-084 shapes.
  *   LIVE (runs when the Supabase env is present, read-only): probes whether
- *     083 is applied, reads recent editions through the public readers,
+ *     084 is applied, reads recent editions through the public readers,
  *     checks every stored `continuing` item and every stored composer run,
  *     and dry-runs the carry-over check on the latest edition. Never writes.
  *
@@ -36,7 +36,7 @@ import assert from 'node:assert/strict'
 import { config as loadEnv } from 'dotenv'
 import {
   EDITION_COLUMNS,
-  EDITION_COLUMNS_PRE_083,
+  EDITION_COLUMNS_PRE_084,
   getDraftEdition,
   getEditionForAdmin,
   getLatestEdition,
@@ -87,8 +87,8 @@ function warn(msg: string): void {
 const MISSING_ON_SELECT = { code: '42703', message: 'column dc_editions.continuing does not exist' }
 const MISSING_ON_WRITE = { code: 'PGRST204', message: "Could not find the 'continuing' column of 'dc_editions' in the schema cache" }
 
-/** A dc_editions row as the table held it before migration 083. */
-function pre083Row(over: Record<string, unknown> = {}): Record<string, unknown> {
+/** A dc_editions row as the table held it before migration 084. */
+function pre084Row(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: 'e-old',
     number: 7,
@@ -127,7 +127,7 @@ function pre083Row(over: Record<string, unknown> = {}): Record<string, unknown> 
 }
 
 /** Prose as composer runs stored it before the feature: no `continuing` key. */
-function pre083Text(): EditionText {
+function pre084Text(): EditionText {
   const layer = { headline: 'h', sub: 's', notes: [{ text: 'n', sources: [{ name: 'A', url: 'https://a.example/1' }] }] }
   return {
     headline: 'Old headline',
@@ -162,11 +162,11 @@ const story = (id: number, title: string, over: Partial<DcEditionStory> = {}): D
 // Offline
 
 async function offline(): Promise<void> {
-  console.log('\nOffline — the fallback paths, driven with pre-083 shapes')
+  console.log('\nOffline — the fallback paths, driven with pre-084 shapes')
 
   await check('the column lists differ only by `continuing`', () => {
-    assert.equal(EDITION_COLUMNS, `${EDITION_COLUMNS_PRE_083}, continuing`)
-    assert.ok(!/continuing/.test(EDITION_COLUMNS_PRE_083))
+    assert.equal(EDITION_COLUMNS, `${EDITION_COLUMNS_PRE_084}, continuing`)
+    assert.ok(!/continuing/.test(EDITION_COLUMNS_PRE_084))
   })
 
   await check('PostgREST "missing column" errors are recognised, others are not', () => {
@@ -177,17 +177,17 @@ async function offline(): Promise<void> {
     assert.ok(!isMissingContinuing(null))
   })
 
-  await check('read before 083: retries once with the pre-083 list', async () => {
+  await check('read before 084: retries once with the pre-084 list', async () => {
     const calls: { cols: string; full: boolean }[] = []
     const res = await withEditionColumns(async (cols, full) => {
       calls.push({ cols, full })
-      return cols.includes('continuing') ? { data: null, error: MISSING_ON_SELECT } : { data: pre083Row(), error: null }
+      return cols.includes('continuing') ? { data: null, error: MISSING_ON_SELECT } : { data: pre084Row(), error: null }
     })
     assert.equal(res.error, null)
-    assert.deepEqual(calls.map((c) => [c.cols, c.full]), [[EDITION_COLUMNS, true], [EDITION_COLUMNS_PRE_083, false]])
+    assert.deepEqual(calls.map((c) => [c.cols, c.full]), [[EDITION_COLUMNS, true], [EDITION_COLUMNS_PRE_084, false]])
   })
 
-  await check('write before 083: the retry is told to drop the `continuing` value', async () => {
+  await check('write before 084: the retry is told to drop the `continuing` value', async () => {
     const written: Record<string, unknown>[] = []
     const row = { headline: 'h', continuing: [] as EditionContinuing[] }
     const res = await withEditionColumns(async (_cols, full) => {
@@ -201,11 +201,11 @@ async function offline(): Promise<void> {
     assert.ok(!('continuing' in written[1]), 'second attempt carries no continuing key')
   })
 
-  await check('after 083: one call, full column list, nothing dropped', async () => {
+  await check('after 084: one call, full column list, nothing dropped', async () => {
     const calls: boolean[] = []
     const res = await withEditionColumns(async (_cols, full) => {
       calls.push(full)
-      return { data: pre083Row({ continuing: [] }), error: null }
+      return { data: pre084Row({ continuing: [] }), error: null }
     })
     assert.equal(res.error, null)
     assert.deepEqual(calls, [true])
@@ -222,14 +222,14 @@ async function offline(): Promise<void> {
   })
 
   await check('an edition row without `continuing` (or null) maps to []', () => {
-    assert.deepEqual(mapEditionRow(pre083Row()).continuing, [])
-    assert.deepEqual(mapEditionRow(pre083Row({ continuing: null })).continuing, [])
+    assert.deepEqual(mapEditionRow(pre084Row()).continuing, [])
+    assert.deepEqual(mapEditionRow(pre084Row({ continuing: null })).continuing, [])
     const item: EditionContinuing = { label: 'L', text: 'T', since: '2026-09-24', sources: [{ name: 'A', url: 'https://a.example/1' }] }
-    assert.deepEqual(mapEditionRow(pre083Row({ continuing: [item] })).continuing, [item])
+    assert.deepEqual(mapEditionRow(pre084Row({ continuing: [item] })).continuing, [item])
   })
 
   await check('a composer run stored before the feature still flattens for the admin diff', () => {
-    const flat = flattenText(pre083Text())
+    const flat = flattenText(pre084Text())
     assert.equal(flat.headline, 'Old headline')
     assert.ok(!Object.keys(flat).some((k) => k.startsWith('continuing.')))
   })
@@ -241,16 +241,16 @@ async function offline(): Promise<void> {
   })
 
   await check('a recompose keeps edits when the current draft predates `continuing`', () => {
-    const next = { ...pre083Text(), headline: 'New', continuing: [{ label: 'L', text: 'T', since: '2026-09-24', sources: [] }] }
-    const current = { ...pre083Text(), headline: 'Edited' }
+    const next = { ...pre084Text(), headline: 'New', continuing: [{ label: 'L', text: 'T', since: '2026-09-24', sources: [] }] }
+    const current = { ...pre084Text(), headline: 'Edited' }
     const out = overlayEditedFields(next, current, ['headline', 'continuing.0.text'])
     assert.equal(out.headline, 'Edited')
     assert.equal(out.continuing[0].text, 'T', 'no value to carry over, so the new run stands')
   })
 
   await check('an edit to a thread the new run no longer has is skipped, not half-rebuilt', () => {
-    const next = { ...pre083Text(), continuing: [] as EditionContinuing[] }
-    const current = { ...pre083Text(), continuing: [{ label: 'L', text: 'Edited', since: '2026-09-24', sources: [] }] }
+    const next = { ...pre084Text(), continuing: [] as EditionContinuing[] }
+    const current = { ...pre084Text(), continuing: [{ label: 'L', text: 'Edited', since: '2026-09-24', sources: [] }] }
     const out = overlayEditedFields(next, current, ['continuing.0.text'])
     assert.deepEqual(out.continuing, [])
   })
@@ -288,7 +288,7 @@ async function live(limit: number): Promise<void> {
   const probe = await sb.from('dc_editions').select('continuing').limit(1)
   const applied = !probe.error
   if (probe.error && !isMissingContinuing(probe.error)) throw new Error(`probe failed: ${probe.error.message}`)
-  console.log(`  migration 083: ${applied ? 'applied' : 'NOT applied — every read below goes through the pre-083 fallback'}`)
+  console.log(`  migration 084: ${applied ? 'applied' : 'NOT applied — every read below goes through the pre-084 fallback'}`)
 
   const summaries = await listEditionsForAdmin(limit)
   console.log(`  reading ${summaries.length} editions (${summaries.filter((s) => s.status === 'published').length} published)`)
@@ -300,7 +300,7 @@ async function live(limit: number): Promise<void> {
       const e = await getEditionForAdmin(s.date)
       assert.ok(e, 'reader returned nothing')
       assert.ok(Array.isArray(e.continuing), 'continuing is not an array')
-      if (!applied) assert.equal(e.continuing.length, 0, 'pre-083 read produced items')
+      if (!applied) assert.equal(e.continuing.length, 0, 'pre-084 read produced items')
       if (e.continuing.length > 0) withBlock++
       const urls = new Set([...e.stories, ...e.ieaStories].map((x) => x.url))
       e.continuing.forEach((c, i) => {

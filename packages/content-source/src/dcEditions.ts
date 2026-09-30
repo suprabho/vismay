@@ -157,14 +157,14 @@ const PAPER_COLUMNS =
   'unit, compute_bucket, scale, weights_released, code_released, why, tags, importance, relevant, published_at'
 
 const EDITION_SUMMARY_COLUMNS = 'id, number, edition_date, status, headline, sub, counts, mood_score, published_at'
-/** The edition columns before migration 083 (no `continuing`). */
-export const EDITION_COLUMNS_PRE_083 =
+/** The edition columns before migration 084 (no `continuing`). */
+export const EDITION_COLUMNS_PRE_084 =
   `${EDITION_SUMMARY_COLUMNS}, window_start, window_end, notes, mood_counts, mood_series, layers, research, ` +
   'energy, geo, tape, charts, chart_skips, story_ids, paper_ids, iea_ids, model, classifier_version, composer_runs, edited_fields, ' +
   'auto_publish_at, hold_count, generated_at, reviewed_by'
-export const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_083}, continuing`
+export const EDITION_COLUMNS = `${EDITION_COLUMNS_PRE_084}, continuing`
 
-/** A read or write that failed only because migration 083's `continuing` column isn't there yet. */
+/** A read or write that failed only because migration 084's `continuing` column isn't there yet. */
 export function isMissingContinuing(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false
   return isMissingColumnError(error) || (error.code === 'PGRST204' && /continuing/.test(error.message ?? ''))
@@ -172,7 +172,7 @@ export function isMissingContinuing(error: { code?: string; message?: string } |
 
 /**
  * Run a dc_editions query with the full column list, retrying with the
- * pre-083 list when the code is deployed ahead of the migration: editions then
+ * pre-084 list when the code is deployed ahead of the migration: editions then
  * render without the "Still developing" block instead of failing. `full` tells
  * a write whether it may include the `continuing` value.
  */
@@ -180,7 +180,7 @@ export async function withEditionColumns<T>(
   run: (cols: string, full: boolean) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
 ) {
   let res = await run(EDITION_COLUMNS, true)
-  if (res.error && isMissingContinuing(res.error)) res = await run(EDITION_COLUMNS_PRE_083, false)
+  if (res.error && isMissingContinuing(res.error)) res = await run(EDITION_COLUMNS_PRE_084, false)
   return res
 }
 
@@ -556,15 +556,19 @@ export async function getDcTapeMoves(windowEnd: Date): Promise<EditionTapeTick[]
 }
 
 /**
- * Active tickers with their layer category and market cap — the market
- * term's weights. Reads before migration 082 get no caps (equal weights
- * inside each layer) rather than failing.
+ * Active US-listed tickers with their layer category and market cap — the
+ * market term's universe and weights. US-listed only: those are the prices
+ * (and caps) the importer refreshes by itself every weekday, and they close
+ * on one session. A home-exchange listing is kept up by hand, so its series
+ * goes stale, and its session is a different trading day. Reads before
+ * migration 082 get no caps (equal weights inside each layer) rather than
+ * failing.
  */
 export async function getDcMarketStocks(): Promise<Map<string, MarketStock>> {
   const sb = createServiceClient()
-  let res = await sb.from('dc_stocks').select('ticker, category, market_cap_usd_bn').eq('is_active', true)
+  let res = await sb.from('dc_stocks').select('ticker, category, market_cap_usd_bn').eq('is_active', true).eq('market', 'US')
   if (res.error && isMissingColumnError(res.error)) {
-    res = (await sb.from('dc_stocks').select('ticker, category').eq('is_active', true)) as typeof res
+    res = (await sb.from('dc_stocks').select('ticker, category').eq('is_active', true).eq('market', 'US')) as typeof res
   }
   if (res.error) throw new Error(`getDcMarketStocks: ${res.error.message}`)
   const out = new Map<string, MarketStock>()
@@ -1135,8 +1139,8 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
     generated_at: input.generatedAt,
   }
   const { data, error } = await withEditionColumns((cols, full) => {
-    const { continuing, ...pre083 } = row
-    const values = full ? row : pre083
+    const { continuing, ...pre084 } = row
+    const values = full ? row : pre084
     return existing
       ? sb.from('dc_editions').update(values).eq('id', existing.id).select(cols).single()
       : sb.from('dc_editions').insert(values).select(cols).single()

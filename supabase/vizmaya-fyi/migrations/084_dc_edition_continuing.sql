@@ -1,4 +1,4 @@
--- 083: "Still developing" — threads carried over from earlier editions.
+-- 084: "Still developing" — threads carried over from earlier editions.
 --
 -- Google News keeps surfacing a development for days as more outlets file on
 -- it, so two consecutive windows can share no story and still lead with the
