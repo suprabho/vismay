@@ -18,6 +18,8 @@ import {
   buildLayerViz,
   buildTape,
   decimalYear,
+  marketSession,
+  scoreMarket,
   scoreMoodEvents,
   type StockName,
 } from '@vismay/content-source/dcEditionAssembly'
@@ -281,7 +283,8 @@ function build(): DcEditionWithContent {
   const placeMap = new Map(PLACES.map((p) => [p.slug, p]))
   const stockMap = new Map(STOCKS.map((s) => [s.ticker, s]))
   const today = decimalYear(SAMPLE_DATE)
-  const mood = scoreMoodEvents(STORIES)
+  // The tape's moves are the previous session's, so they stand in for the close series here.
+  const mood = scoreMoodEvents(STORIES, { market: scoreMarket(TAPE.map((t) => t.changePct), marketSession(SAMPLE_DATE)) })
   const geo = buildGeo(STORIES, PLACES)
   const energy = buildEnergy(STORIES, IEA_STORIES, { places: placeMap, stocks: stockMap, history: POWER_HISTORY, editionDate: SAMPLE_DATE })
   const layers = {} as Record<DcLayerKey, EditionLayer>

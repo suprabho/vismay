@@ -25,6 +25,7 @@ import {
   DC_LAYER_KEYS,
   EDITION_HOLD_MINUTES,
   MOOD_METHOD,
+  SCORE_METHOD,
   editionDateFor,
   editionPublishAt,
   editionWindow,
@@ -76,10 +77,14 @@ import {
   buildIdf,
   buildTape,
   decimalYear,
+  blendMoodScore,
   fieldBaseline,
   flattenText,
+  marketSession,
   powerCommitted,
+  scoreMarket,
   scoreMoodEvents,
+  sessionMoves,
   type StockName,
 } from './dcEditionAssembly'
 
@@ -522,6 +527,41 @@ export async function getDcTapeMoves(windowEnd: Date): Promise<EditionTapeTick[]
   return buildTape(ticks)
 }
 
+/**
+ * Every active ticker's closes in [from, to] as [trade_date, close] pairs,
+ * ascending — the market term's input for the edition and its 30-day
+ * history. Paged: ~29 tickers × 40 days is right at PostgREST's max_rows.
+ */
+export async function getDcCloseSeries(from: string, to: string): Promise<Map<string, [string, number][]>> {
+  const sb = createServiceClient()
+  const stocksR = await sb.from('dc_stocks').select('ticker').eq('is_active', true)
+  if (stocksR.error) throw new Error(`getDcCloseSeries stocks: ${stocksR.error.message}`)
+  const active = new Set(((stocksR.data ?? []) as { ticker: string }[]).map((s) => s.ticker))
+  const series = new Map<string, [string, number][]>()
+  let read = 0
+  for (let page = 0; page < DC_NEWS_MAX_PAGES; page++) {
+    const { data, error } = await sb
+      .from('dc_stock_prices')
+      .select('ticker, trade_date, close')
+      .gte('trade_date', from)
+      .lte('trade_date', to)
+      .order('trade_date', { ascending: true })
+      .order('ticker', { ascending: true })
+      .range(read, read + DC_NEWS_PAGE_SIZE - 1)
+    if (error) throw new Error(`getDcCloseSeries prices: ${error.message}`)
+    const batch = (data ?? []) as { ticker: string; trade_date: string; close: number | string }[]
+    if (batch.length === 0) break
+    read += batch.length
+    for (const r of batch) {
+      if (!active.has(r.ticker)) continue
+      const arr = series.get(r.ticker) ?? []
+      arr.push([r.trade_date, Number(r.close)])
+      series.set(r.ticker, arr)
+    }
+  }
+  return series
+}
+
 // ---------------------------------------------------------------------------
 // Published editions (public reads)
 
@@ -711,12 +751,18 @@ export async function assembleEditionNumbers(input: {
   const sb = createServiceClient()
   const historyStart = new Date(start.getTime() - 29 * 86_400_000)
 
-  const [places, stocks, tape, historyRowsR, publishedR, papersR] = await Promise.all([
+  // Closes from a week before the first history session through today's, for the market term.
+  const closesFrom = new Date(historyStart.getTime() - 8 * 86_400_000).toISOString().slice(0, 10)
+  const [places, stocks, tape, closes, historyRowsR, publishedR, papersR] = await Promise.all([
     listDcPlaces(),
     listDcStockNames(),
     getDcTapeMoves(end).catch((err) => {
       console.warn(`[editions] tape unavailable (${err instanceof Error ? err.message : err})`)
       return [] as EditionTapeTick[]
+    }),
+    getDcCloseSeries(closesFrom, editionDate).catch((err) => {
+      console.warn(`[editions] closes unavailable — scoring news only (${err instanceof Error ? err.message : err})`)
+      return new Map<string, [string, number][]>()
     }),
     listDcNewsTaggedAll(historyStart.toISOString(), start.toISOString()),
     sb
@@ -755,17 +801,27 @@ export async function assembleEditionNumbers(input: {
   // The clustering's IDF: 30 days of the feed plus the window, so a quiet day
   // still knows which words are common in this beat.
   const idf = buildIdf([...historyStories, ...stories])
-  const published = new Map<string, { score: number | null; sameMethod: boolean; gw: number | null }>()
-  for (const r of (publishedR.data ?? []) as { edition_date: string; mood_score: unknown; mood_counts: { method?: string } | null; energy: { hero?: { value?: number } | null } | null }[]) {
+  const published = new Map<string, { score: number | null; events: boolean; blended: boolean; gw: number | null }>()
+  for (const r of (publishedR.data ?? []) as {
+    edition_date: string
+    mood_score: unknown
+    mood_counts: { method?: string; score?: { method?: string } } | null
+    energy: { hero?: { value?: number } | null } | null
+  }[]) {
     // No hero figure means that edition disclosed no power at all. Keep it as
     // null so the history chart can draw the gap; 0 would read as "disclosed,
     // and it was nothing".
     const hero = r.energy?.hero?.value
     published.set(r.edition_date, {
       score: r.mood_score == null ? null : Number(r.mood_score),
-      sameMethod: r.mood_counts?.method === MOOD_METHOD,
+      events: r.mood_counts?.method === MOOD_METHOD,
+      blended: r.mood_counts?.score?.method === SCORE_METHOD,
       gw: hero == null ? null : Number(hero) || null,
     })
+  }
+  const marketFor = (d: string) => {
+    const session = marketSession(d)
+    return scoreMarket(sessionMoves(closes, session), session)
   }
   const moodSeries: EditionMoodPoint[] = []
   const powerHistory: EditionEnergy['perEdition'] = []
@@ -773,10 +829,17 @@ export async function assembleEditionNumbers(input: {
     const d = new Date(end.getTime() - i * 86_400_000).toISOString().slice(0, 10)
     const pub = published.get(d)
     const dayStories = byDay.get(d) ?? []
-    // A frozen reading counts only when it was measured the same way (events,
-    // weighted); older editions counted stories, so their day is re-read from
-    // the feed and the 7- and 30-day ticks compare like with like.
-    moodSeries.push({ date: d, score: pub?.sameMethod ? pub.score : scoreMoodEvents(dayStories, { idf }).score })
+    // A frozen reading counts only when it was measured the same way, so the
+    // 7- and 30-day ticks compare like with like: a news+market score as is;
+    // an events-only score (before the market term) is that day's news
+    // reading, so it takes the day's session now; older editions counted
+    // stories, so their day is re-read from the feed.
+    const score = pub?.blended
+      ? pub.score
+      : pub?.events
+        ? blendMoodScore(pub.score, marketFor(d))
+        : scoreMoodEvents(dayStories, { idf, market: marketFor(d) }).score
+    moodSeries.push({ date: d, score })
     if (i <= 6) {
       const committed = pub ? null : powerCommitted(dayStories, placeMap, stockMap)
       powerHistory.push({
@@ -786,7 +849,7 @@ export async function assembleEditionNumbers(input: {
       })
     }
   }
-  const mood = scoreMoodEvents(stories, { idf })
+  const mood = scoreMoodEvents(stories, { idf, market: marketFor(editionDate) })
   moodSeries.push({ date: editionDate, score: mood.score })
 
   const today = decimalYear(editionDate)

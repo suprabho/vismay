@@ -434,6 +434,42 @@ export interface EditionMoodCounts {
   weight?: { boom: number; doom: number }
   /** Every event in the edition, heaviest first. */
   events?: EditionMoodEvent[]
+  /**
+   * How the stored score was made from the news reading. Absent on editions
+   * scored before the market term: their score IS the news reading.
+   */
+  score?: EditionMoodScore
+}
+
+/**
+ * The tracked stocks' previous trading session, read as a mood: the average
+ * close-to-close move (each clamped) squashed to −1…+1 by tanh.
+ */
+export interface EditionMarketReading {
+  /** Trade date of the session — the calendar day before the edition. */
+  session: string
+  /** Tickers that closed that session (and the one before it). */
+  tickers: number
+  up: number
+  down: number
+  /** Equal-weighted average move, after clamping, in percent. */
+  avgPct: number
+  /** tanh(avgPct / scale), −1…+1. */
+  score: number
+}
+
+/** How `mood_score` blends the news reading and the market. */
+export type EditionScoreMethod = 'news+market-v1'
+export const SCORE_METHOD: EditionScoreMethod = 'news+market-v1'
+
+export interface EditionMoodScore {
+  method: EditionScoreMethod
+  /** The events-weighted news reading on its own. */
+  news: number | null
+  /** Null on days without a session (weekends, holidays, missing prices): the score is the news reading. */
+  market: EditionMarketReading | null
+  /** The market's share of the score when it is present. */
+  marketWeight: number
 }
 
 /**

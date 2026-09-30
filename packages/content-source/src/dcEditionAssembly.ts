@@ -21,6 +21,7 @@ import {
   emptyFieldBaseline,
   formatEditionDayLabel,
   MOOD_METHOD,
+  SCORE_METHOD,
   type CapacityViz,
   type DcEditionStory,
   type DcLayerKey,
@@ -37,6 +38,7 @@ import {
   type EditionGeoRegion,
   type EditionLayerNote,
   type EditionLayerViz,
+  type EditionMarketReading,
   type EditionMoodCounts,
   type EditionMoodEvent,
   type EditionNote,
@@ -177,6 +179,10 @@ export function decimalYear(date: string | Date): number {
 // (relevance × impact × coverage), and reads the balance of weight:
 // (W_boom − W_doom) / (W_boom + W_doom), neutral excluded. With no duplicates
 // and equal weights that is exactly the old story count.
+//
+// The stored score then mixes in the market (news+market-v1): the tracked
+// stocks' previous session as a −1…+1 reading, carrying MARKET_MOOD.weight of
+// the score. No session (weekend, holiday, prices missing) → the news reading.
 
 /**
  * Clustering constants — starting values, calibrated on the compose
@@ -512,16 +518,88 @@ export function toMoodEvent(members: DcEditionStory[]): EditionMoodEvent {
   return ev
 }
 
+// ---------------------------------------------------------------------------
+// Market — the tracked stocks' previous session, mixed into the score
+
+export const MARKET_MOOD = {
+  /** The market's share of the score; the news reading carries the rest. */
+  weight: 0.25,
+  /** An average move of this many percent reads as tanh(1) ≈ ±0.76 — a big day for ~29 AI-infra names. */
+  scalePct: 2,
+  /** Each ticker's move is clamped to ± this first, so one outsized print can't carry the session. */
+  clampPct: 10,
+  /** Fewer tickers closing the session than this → no market term (holidays, partial imports). */
+  minTickers: 8,
+  /** The prior close may be at most this many days before the session (long weekends, holidays). */
+  maxGapDays: 7,
+} as const
+
+/** The session an edition reads: the calendar day before it, whose closes land inside its window. */
+export function marketSession(editionDate: string): string {
+  const d = new Date(`${editionDate}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Close-to-close moves (percent) of every ticker with a bar ON `session` and
+ * an earlier bar within `maxGapDays`. `series` holds [trade_date, close]
+ * pairs ascending per ticker.
+ */
+export function sessionMoves(series: Map<string, [string, number][]>, session: string): number[] {
+  const floor = new Date(`${session}T00:00:00Z`)
+  floor.setUTCDate(floor.getUTCDate() - MARKET_MOOD.maxGapDays)
+  const floorDate = floor.toISOString().slice(0, 10)
+  const moves: number[] = []
+  for (const points of series.values()) {
+    const i = points.findIndex(([d]) => d === session)
+    if (i < 1) continue
+    const [prevDate, prev] = points[i - 1]
+    if (prevDate < floorDate || !prev) continue
+    moves.push(((points[i][1] - prev) / prev) * 100)
+  }
+  return moves
+}
+
+/** The session as a mood reading; null below `minTickers`. */
+export function scoreMarket(moves: number[], session: string): EditionMarketReading | null {
+  if (moves.length < MARKET_MOOD.minTickers) return null
+  const c = MARKET_MOOD.clampPct
+  const clamped = moves.map((m) => Math.max(-c, Math.min(c, m)))
+  const avg = clamped.reduce((a, b) => a + b, 0) / clamped.length
+  return {
+    session,
+    tickers: moves.length,
+    up: moves.filter((m) => m > 0).length,
+    down: moves.filter((m) => m < 0).length,
+    avgPct: Math.round(avg * 100) / 100,
+    score: round3(Math.tanh(avg / MARKET_MOOD.scalePct)),
+  }
+}
+
+/**
+ * The stored score: (1 − w) × news + w × market. No news reading → unscored
+ * (the market tilts the day's news; it doesn't stand in for it). No market →
+ * the news reading unchanged.
+ */
+export function blendMoodScore(news: number | null, market: EditionMarketReading | null): number | null {
+  if (news == null) return null
+  if (market == null) return news
+  const w = MARKET_MOOD.weight
+  return round3((1 - w) * news + w * market.score)
+}
+
 /**
  * The Doom v Boom reading: cluster, one mood + weight per event, then the
- * balance of weight. `counts` is what `dc_editions.mood_counts` stores —
- * event counts per side, the raw report counts, the side weights and every
- * event (heaviest first), so the page's drivers and panel are frozen with
- * the score.
+ * balance of weight, blended with the market session when one is given.
+ * `counts` is what `dc_editions.mood_counts` stores — event counts per side,
+ * the raw report counts, the side weights, every event (heaviest first) and
+ * the news / market split of the score, so the page's drivers and panel are
+ * frozen with it.
  */
 export function scoreMoodEvents(
   stories: DcEditionStory[],
-  opts: { idf?: EventIdf } = {},
+  opts: { idf?: EventIdf; market?: EditionMarketReading | null } = {},
 ): { score: number | null; counts: EditionMoodCounts; events: EditionMoodEvent[] } {
   const events = clusterEvents(stories, opts)
     .map(toMoodEvent)
@@ -552,8 +630,10 @@ export function scoreMoodEvents(
     } else counts.neutral += 1
   }
   counts.weight = { boom: round3(wb), doom: round3(wd) }
-  const score = wb + wd === 0 ? null : round3((wb - wd) / (wb + wd))
-  return { score, counts, events }
+  const news = wb + wd === 0 ? null : round3((wb - wd) / (wb + wd))
+  const market = opts.market ?? null
+  counts.score = { method: SCORE_METHOD, news, market, marketWeight: MARKET_MOOD.weight }
+  return { score: blendMoodScore(news, market), counts, events }
 }
 
 /** An event with its stories resolved: the lead the page shows, the other reports as "also". */

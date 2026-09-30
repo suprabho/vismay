@@ -7,13 +7,18 @@ import {
   buildCapacityViz,
   buildIdf,
   buildMatrixViz,
+  blendMoodScore,
   buildOrdersViz,
   clusterEvents,
   eventDrivers,
   eventTokens,
   eventWeight,
+  MARKET_MOOD,
+  marketSession,
   MIN_VIZ_ROWS,
+  scoreMarket,
   scoreMoodEvents,
+  sessionMoves,
   subjectKey,
 } from './dcEditionAssembly'
 
@@ -312,6 +317,42 @@ const vineland = [
   const t0 = performance.now()
   scoreMoodEvents(many)
   assert.ok(performance.now() - t0 < 200, `took ${Math.round(performance.now() - t0)} ms`)
+}
+
+// 11. The market term: previous session only, clamped, squashed, a quarter of the score.
+{
+  assert.equal(marketSession('2026-09-22'), '2026-09-21')
+  assert.equal(marketSession('2026-03-01'), '2026-02-28')
+
+  const series = new Map<string, [string, number][]>([
+    ['UP', [['2026-09-18', 100], ['2026-09-21', 102]]], // +2% over a weekend
+    ['DOWN', [['2026-09-18', 100], ['2026-09-21', 99]]], // −1%
+    ['STALE', [['2026-09-10', 100], ['2026-09-21', 150]]], // prior close too old
+    ['NOSESSION', [['2026-09-17', 100], ['2026-09-18', 110]]], // didn't trade on the 21st
+    ['FIRST', [['2026-09-21', 100]]], // no prior close
+  ])
+  assert.deepEqual(sessionMoves(series, '2026-09-21').map((m) => Math.round(m * 100) / 100), [2, -1])
+
+  assert.equal(scoreMarket([1, 2, 3], '2026-09-21'), null, 'too few tickers')
+  const flat = scoreMarket(Array(10).fill(0), '2026-09-21')!
+  assert.equal(flat.score, 0)
+  const rally = scoreMarket(Array(10).fill(MARKET_MOOD.scalePct), '2026-09-21')!
+  assert.equal(rally.score, Math.round(Math.tanh(1) * 1000) / 1000)
+  assert.deepEqual([rally.up, rally.down, rally.tickers], [10, 0, 10])
+  // One +80% print is clamped to +10%: 9 flat + 10 → avg 1%.
+  const spike = scoreMarket([...Array(9).fill(0), 80], '2026-09-21')!
+  assert.equal(spike.avgPct, 1)
+
+  assert.equal(blendMoodScore(0.4, null), 0.4, 'no session → news')
+  assert.equal(blendMoodScore(null, rally), null, 'no news → unscored')
+  assert.equal(blendMoodScore(0.4, flat), 0.3)
+
+  const plain = [news('Alpha breaks ground on a campus', { mood: 1, place: 'abilene' }), news('Gamma pauses a lease', { mood: -1, place: 'dublin' })]
+  const r = scoreMoodEvents(plain, { market: rally })
+  assert.equal(r.counts.score?.news, 0)
+  assert.equal(r.score, Math.round(MARKET_MOOD.weight * rally.score * 1000) / 1000)
+  assert.equal(r.counts.score?.market?.session, '2026-09-21')
+  assert.equal(scoreMoodEvents(plain).score, 0, 'no market passed → news reading')
 }
 
 console.log('dcEditionAssembly.test: ok')
