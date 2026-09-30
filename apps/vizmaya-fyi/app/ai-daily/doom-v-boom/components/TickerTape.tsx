@@ -1,5 +1,5 @@
-import type { EditionTapeTick } from '@vismay/content-source/dcEditionTypes'
-import { DC_LAYERS, STOCK_CATEGORY_TO_LAYER } from '@vismay/content-source/dcEditionTypes'
+import type { EditionTapeTick } from '@vismay/dc-editions/dcEditionTypes'
+import { DC_LAYERS, STOCK_CATEGORY_TO_LAYER } from '@vismay/dc-editions/dcEditionTypes'
 import { fmtPct } from './editionUtils'
 
 /**

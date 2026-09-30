@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getDraftEdition } from '@vismay/content-source/dcEditions'
+import { getDraftEdition } from '@vismay/dc-editions/dcEditions'
 import EditionPage from '../components/EditionPage'
 import { SITE_URL, loadEditionContext } from '../editionContext'
 

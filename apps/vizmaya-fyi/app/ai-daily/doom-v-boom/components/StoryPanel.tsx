@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { DcEditionStory, DcPaper, DcPaperArea, EditionGeo, EditionMoodEvent } from '@vismay/content-source/dcEditionTypes'
+import type { DcEditionStory, DcPaper, DcPaperArea, EditionGeo, EditionMoodEvent } from '@vismay/dc-editions/dcEditionTypes'
 import {
   DC_COMPUTE_BUCKETS,
   DC_LAYERS,
@@ -12,8 +12,8 @@ import {
   type DcLayerKey,
   type DcRegionKey,
   type DcThemeKey,
-} from '@vismay/content-source/dcEditionTypes'
-import { arxivUrl, domainOf, paperGainDetail, resolveMoodEvents, timeHm, type ResolvedMoodEvent } from '@vismay/content-source/dcEditionAssembly'
+} from '@vismay/dc-editions/dcEditionTypes'
+import { arxivUrl, domainOf, paperGainDetail, resolveMoodEvents, timeHm, type ResolvedMoodEvent } from '@vismay/dc-editions/dcEditionAssembly'
 import { PANEL_EVENT, storyMinutes } from './editionUtils'
 
 export interface PanelData {

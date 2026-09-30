@@ -55,6 +55,7 @@
     "@vismay/admin-core": "workspace:*",
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/dc-editions": "workspace:*",
     "@vismay/render-surface": "workspace:*",
     "@vismay/ui": "workspace:*",
     "@vismay/story-pipeline": "workspace:*",

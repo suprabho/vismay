@@ -1,4 +1,4 @@
-import type { EditionChartSkip, EditionCharts } from '@vismay/content-source/dcEditionTypes'
+import type { EditionChartSkip, EditionCharts } from '@vismay/dc-editions/dcEditionTypes'
 
 /**
  * The sample edition's planned charts. Generated from the fixture stories by

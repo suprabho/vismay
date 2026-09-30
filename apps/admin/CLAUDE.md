@@ -128,7 +128,7 @@ next edition.
   GITHUB_DISPATCH_* env; 503 when unset), `POST …/draft/hold`,
   `PUT …/draft/membership`, `GET /api/vizmaya/editions` (archive). Server
   helpers in [lib/editionsAdmin.ts](lib/editionsAdmin.ts); readers/writers
-  in `packages/content-source/src/dcEditions.ts`.
+  in `packages/dc-editions/src/dcEditions.ts`.
 - **Audit:** every save and membership change writes an `ai_generations`
   row (kind `edition_edit`, model `editor`, prompt = the patch), and
   `reviewed_by` carries the admin email (Supabase-auth mode).

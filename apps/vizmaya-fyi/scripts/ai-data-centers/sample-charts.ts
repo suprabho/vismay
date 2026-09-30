@@ -47,7 +47,7 @@ async function main() {
   for (const s of skips) console.log(`  ${s.section}: template — ${s.reason}`)
   const out = resolve(__dirname, '../../app/ai-daily/doom-v-boom/sampleCharts.ts')
   const body =
-    `import type { EditionChartSkip, EditionCharts } from '@vismay/content-source/dcEditionTypes'\n\n` +
+    `import type { EditionChartSkip, EditionCharts } from '@vismay/dc-editions/dcEditionTypes'\n\n` +
     `/**\n * The sample edition's planned charts. Generated from the fixture stories by\n * \`pnpm ai-data-centers:sample-charts\` (scripts/ai-data-centers/sample-charts.ts),\n * which runs the real planner + renderer against fixture.ts and writes this\n * file; empty means the sample draws its templates.\n *\n * Model: ${modelUsed ?? 'none'} · ${new Date().toISOString().slice(0, 10)}\n */\n` +
     `export const SAMPLE_CHARTS: EditionCharts = ${JSON.stringify(charts, null, 2)}\n\n` +
     `export const SAMPLE_CHART_SKIPS: EditionChartSkip[] = ${JSON.stringify(skips, null, 2)}\n`

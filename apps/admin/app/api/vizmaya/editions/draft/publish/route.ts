@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { adminEmail } from '@/lib/adminIdentity'
-import { publishDraftEdition } from '@vismay/content-source/dcEditions'
+import { publishDraftEdition } from '@vismay/dc-editions/dcEditions'
 import { editionPublicUrl, pingEditionRevalidate } from '@/lib/editionsAdmin'
 
 export const dynamic = 'force-dynamic'

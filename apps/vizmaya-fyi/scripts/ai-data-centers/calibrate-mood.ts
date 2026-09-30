@@ -46,7 +46,7 @@ import {
   getMoodCalibration,
   readDailyNewsReadings,
   saveMoodCalibration,
-} from '@vismay/content-source/dcEditions'
+} from '@vismay/dc-editions/dcEditions'
 import {
   blendMoodScore,
   correlation,
@@ -55,8 +55,8 @@ import {
   marketSession,
   scoreMarket,
   sessionMoves,
-} from '@vismay/content-source/dcEditionAssembly'
-import { editionDateFor, formatSigned, moodWord } from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditionAssembly'
+import { editionDateFor, formatSigned, moodWord } from '@vismay/dc-editions/dcEditionTypes'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })

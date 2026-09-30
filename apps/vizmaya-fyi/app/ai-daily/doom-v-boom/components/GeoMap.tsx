@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { EditionGeoPlace, EditionGeoRegion } from '@vismay/content-source/dcEditionTypes'
-import { DC_LAYERS, DC_REGIONS, type DcLayerKey } from '@vismay/content-source/dcEditionTypes'
+import type { EditionGeoPlace, EditionGeoRegion } from '@vismay/dc-editions/dcEditionTypes'
+import { DC_LAYERS, DC_REGIONS, type DcLayerKey } from '@vismay/dc-editions/dcEditionTypes'
 import { LAND_MASK } from './landMask'
 import { PANEL_EVENT } from './editionUtils'
 

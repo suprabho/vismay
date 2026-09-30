@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { DcDraftEdition } from '@vismay/content-source/dcEditions'
+import type { DcDraftEdition } from '@vismay/dc-editions/dcEditions'
 import {
   DC_LAYERS,
   DC_LAYER_KEYS,
@@ -16,8 +16,8 @@ import {
   type EditionMoodEvent,
   type EditionSource,
   type EditionText,
-} from '@vismay/content-source/dcEditionTypes'
-import { flattenText } from '@vismay/content-source/dcEditionAssembly'
+} from '@vismay/dc-editions/dcEditionTypes'
+import { flattenText } from '@vismay/dc-editions/dcEditionAssembly'
 import { Badge, timeAgo } from '@/components/vizmaya/pipeline/shared'
 
 interface DraftResponse {

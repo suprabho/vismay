@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { moodTone } from '@vismay/content-source/dcEditionTypes'
+import { moodTone } from '@vismay/dc-editions/dcEditionTypes'
 import BoomRing from './BoomRing'
 import { boomShare, ringParticles, ringStaticDots } from './particleRing'
 

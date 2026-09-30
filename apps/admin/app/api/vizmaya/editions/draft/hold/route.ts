@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { adminEmail } from '@/lib/adminIdentity'
-import { holdDraftEdition } from '@vismay/content-source/dcEditions'
+import { holdDraftEdition } from '@vismay/dc-editions/dcEditions'
 
 export const dynamic = 'force-dynamic'
 

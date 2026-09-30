@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { listEditionsForAdmin } from '@vismay/content-source/dcEditions'
+import { listEditionsForAdmin } from '@vismay/dc-editions/dcEditions'
 import { editionPublicUrl } from '@/lib/editionsAdmin'
 
 export const dynamic = 'force-dynamic'

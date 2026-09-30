@@ -1,6 +1,6 @@
-import type { DcPaper, EditionChart, EditionResearch } from '@vismay/content-source/dcEditionTypes'
-import { DC_PAPER_AREAS, DC_PAPER_AREA_KEYS } from '@vismay/content-source/dcEditionTypes'
-import { paperGainText } from '@vismay/content-source/dcEditionAssembly'
+import type { DcPaper, EditionChart, EditionResearch } from '@vismay/dc-editions/dcEditionTypes'
+import { DC_PAPER_AREAS, DC_PAPER_AREA_KEYS } from '@vismay/dc-editions/dcEditionTypes'
+import { paperGainText } from '@vismay/dc-editions/dcEditionAssembly'
 import QuadrantPlot from './QuadrantPlot'
 import PlannedChart from './PlannedChart'
 

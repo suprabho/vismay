@@ -1,4 +1,4 @@
-import type { EditionChart } from '@vismay/content-source/dcEditionTypes'
+import type { EditionChart } from '@vismay/dc-editions/dcEditionTypes'
 import SourceChip from './SourceChip'
 import { themeChartSvg } from './chartSvg'
 

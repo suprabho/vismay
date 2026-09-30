@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { adminEmail } from '@/lib/adminIdentity'
-import { getDraftEdition, saveDraftEdition, type EditionTextPatch } from '@vismay/content-source/dcEditions'
+import { getDraftEdition, saveDraftEdition, type EditionTextPatch } from '@vismay/dc-editions/dcEditions'
 import { composerStatus, draftPreviewUrl, isRecomposeConfigured } from '@/lib/editionsAdmin'
 
 export const dynamic = 'force-dynamic'

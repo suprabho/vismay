@@ -1,4 +1,4 @@
-import type { OrdersViz } from '@vismay/content-source/dcEditionTypes'
+import type { OrdersViz } from '@vismay/dc-editions/dcEditionTypes'
 import { fitMono } from '../editionUtils'
 
 /** Semi equipment — pull-forwards as arrows, windows as bars, risks in the negative colour. */

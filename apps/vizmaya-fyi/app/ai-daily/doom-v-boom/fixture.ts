@@ -22,7 +22,7 @@ import {
   scoreMarket,
   scoreMoodEvents,
   type StockName,
-} from '@vismay/content-source/dcEditionAssembly'
+} from '@vismay/dc-editions/dcEditionAssembly'
 import {
   DC_LAYER_KEYS,
   STOCK_CATEGORY_TO_LAYER,
@@ -41,7 +41,7 @@ import {
   type EditionMoodPoint,
   type EditionTapeTick,
   type EditionText,
-} from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditionTypes'
 
 // Planned charts for the sample: filled by scripts/ai-data-centers/sample-charts.ts
 // (see sampleCharts.ts); empty until that file is generated.

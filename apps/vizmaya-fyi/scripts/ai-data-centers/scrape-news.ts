@@ -76,8 +76,8 @@ import {
   type DcStoryFacts,
   type DcStoryFigure,
   type DcThemeKey,
-} from '@vismay/content-source/dcEditionTypes'
-import { figureMagnitude, MOOD_WEIGHTS } from '@vismay/content-source/dcEditionAssembly'
+} from '@vismay/dc-editions/dcEditionTypes'
+import { figureMagnitude, MOOD_WEIGHTS } from '@vismay/dc-editions/dcEditionAssembly'
 import { gateFigures } from './jevFigureGate'
 
 loadEnv({ path: '.env.local' })

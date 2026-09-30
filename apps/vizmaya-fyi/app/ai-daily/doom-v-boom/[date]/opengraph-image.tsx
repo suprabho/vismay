@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { notFound } from 'next/navigation'
-import { getEdition, listEditions } from '@vismay/content-source/dcEditions'
-import { formatEditionDate, formatSigned, moodWord } from '@vismay/content-source/dcEditionTypes'
+import { getEdition, listEditions } from '@vismay/dc-editions/dcEditions'
+import { formatEditionDate, formatSigned, moodWord } from '@vismay/dc-editions/dcEditionTypes'
 import { StoryOgCard } from '@/components/seo/StoryOgCard'
 import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../../ai-data-centers/theme'
 

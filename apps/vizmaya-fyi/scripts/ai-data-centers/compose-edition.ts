@@ -65,7 +65,7 @@ import {
   publishStaleDrafts,
   saveDraftCharts,
   upsertDraftEdition,
-} from '@vismay/content-source/dcEditions'
+} from '@vismay/dc-editions/dcEditions'
 import {
   EDITION_CHART_SECTIONS,
   formatSigned,
@@ -73,7 +73,7 @@ import {
   type EditionCharts,
   type EditionMoodEvent,
   type EditionMoodScore,
-} from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditionTypes'
 import { chartPlannerModel, DC_DEFAULT_MODEL, planEditionCharts } from './editionCharts'
 import { getDcStockMarket, listDataCenters } from '@vismay/content-source/epics'
 import {
@@ -91,13 +91,13 @@ import {
   type EditionLayerNote,
   type EditionNote,
   type EditionText,
-} from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditionTypes'
 import {
   deterministicText,
   groundNoteMetric,
   paperGainText,
   sourcesFromIdxs,
-} from '@vismay/content-source/dcEditionAssembly'
+} from '@vismay/dc-editions/dcEditionAssembly'
 import { pingEditionRevalidate } from './revalidate'
 
 loadEnv({ path: '.env.local' })

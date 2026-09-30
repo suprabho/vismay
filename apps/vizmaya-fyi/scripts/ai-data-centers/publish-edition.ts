@@ -22,7 +22,7 @@
  */
 
 import { config as loadEnv } from 'dotenv'
-import { publishDraftEdition } from '@vismay/content-source/dcEditions'
+import { publishDraftEdition } from '@vismay/dc-editions/dcEditions'
 import { pingEditionRevalidate } from './revalidate'
 
 loadEnv({ path: '.env.local' })

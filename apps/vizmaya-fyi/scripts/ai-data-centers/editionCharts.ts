@@ -11,7 +11,7 @@
  * `buildEChartsOption`, so a chart here is built the way a story chart is.
  *
  * Every plan then passes the grounding test in
- * `@vismay/content-source/dcEditionCharts` (each numeric cell must be a figure
+ * `@vismay/dc-editions/dcEditionCharts` (each numeric cell must be a figure
  * the row's story states; ≥ 3 rows), is compiled to an ECharts option, themed
  * to the edition's palette, and rendered to an SVG string with ECharts' SSR
  * renderer. The page inlines the SVG and swaps the palette hexes for CSS
@@ -36,7 +36,7 @@ import {
   type EditionChartSkip,
   type EditionChartSpec,
   type EditionCharts,
-} from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditionTypes'
 import {
   MAX_CHART_ROWS,
   MAX_RANGE_RATIO,
@@ -45,7 +45,7 @@ import {
   sectionStories,
   validateChartPlan,
   type PlannerSectionInput,
-} from '@vismay/content-source/dcEditionCharts'
+} from '@vismay/dc-editions/dcEditionCharts'
 import { AI_DATA_CENTERS_THEME_DEFAULTS as T } from '../../app/ai-data-centers/theme'
 import { recordChart, type RecordInputs } from './editionChartFallbacks'
 

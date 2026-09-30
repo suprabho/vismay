@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getEdition } from '@vismay/content-source/dcEditions'
+import { getEdition } from '@vismay/dc-editions/dcEditions'
 
 export const dynamic = 'force-dynamic'
 

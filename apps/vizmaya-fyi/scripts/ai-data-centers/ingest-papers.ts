@@ -31,8 +31,8 @@ import {
   listKnownArxivIds,
   upsertDcPapers,
   type DcPaperUpsert,
-} from '@vismay/content-source/dcEditions'
-import { DC_PAPER_AREA_KEYS, type DcPaperArea, type DcPaperKind } from '@vismay/content-source/dcEditionTypes'
+} from '@vismay/dc-editions/dcEditions'
+import { DC_PAPER_AREA_KEYS, type DcPaperArea, type DcPaperKind } from '@vismay/dc-editions/dcEditionTypes'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })

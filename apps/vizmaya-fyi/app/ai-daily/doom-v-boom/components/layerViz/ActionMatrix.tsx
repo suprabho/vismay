@@ -1,4 +1,4 @@
-import type { MatrixViz } from '@vismay/content-source/dcEditionTypes'
+import type { MatrixViz } from '@vismay/dc-editions/dcEditionTypes'
 
 /** Hyperscalers — company × action matrix (power deal, capacity, permit, pause, disclosure). */
 export default function ActionMatrix({ viz }: { viz: MatrixViz }) {
