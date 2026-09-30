@@ -27,6 +27,7 @@
  *               pnpm ai-data-centers:import-stocks -- --days 90
  *               pnpm ai-data-centers:import-stocks -- --ticker NVDA --dry-run
  *               pnpm ai-data-centers:import-stocks -- --days 5 --refresh-caps
+ *               pnpm ai-data-centers:import-stocks -- --probe TOELY,SFTBY   # can massive.com serve these? (no DB)
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
@@ -90,10 +91,12 @@ interface Args {
   dryRun: boolean
   ticker: string | null
   refreshCaps: boolean
+  /** Symbols to test against massive.com without touching the database. */
+  probe: string[] | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { lookbackDays: DEFAULT_LOOKBACK_DAYS, dryRun: false, ticker: null, refreshCaps: false }
+  const args: Args = { lookbackDays: DEFAULT_LOOKBACK_DAYS, dryRun: false, ticker: null, refreshCaps: false, probe: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     // pnpm forwards the `--` separator itself (npm strips it), so a bare
@@ -104,6 +107,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--dry-run') args.dryRun = true
     else if (a === '--ticker') args.ticker = argv[++i] ?? null
     else if (a === '--refresh-caps') args.refreshCaps = true
+    else if (a === '--probe') args.probe = (argv[++i] ?? '').split(',').map((t) => t.trim()).filter(Boolean)
     else throw new Error(`Unknown flag: ${a}`)
   }
   return args
@@ -463,8 +467,38 @@ async function upsertRows(
   }
 }
 
+/**
+ * Ask massive.com for bars + a market cap for symbols that aren't in dc_stocks
+ * yet — the check before tracking a company through a US listing (an OTC ADR,
+ * say). Reads only; the database is never touched.
+ */
+async function probeSymbols(symbols: string[], lookbackDays: number): Promise<void> {
+  const { from, to } = dateWindow(lookbackDays)
+  console.log(`Probing ${symbols.length} symbol(s) on massive.com, bars ${from} → ${to}`)
+  for (const symbol of symbols) {
+    try {
+      const rows = await fetchMassive(symbol, from, to)
+      const cap = await fetchMassiveMarketCap(symbol).catch((err) => (err instanceof Error ? err.message : String(err)))
+      const capNote = typeof cap === 'number' ? `$${cap}bn` : cap == null ? 'none in reference' : `failed (${cap})`
+      if (rows.length === 0) console.error(`  ✗ ${symbol}: 0 bars in range; cap ${capNote}`)
+      else
+        console.log(
+          `  ✓ ${symbol}: ${rows.length} bars ${rows[0].trade_date} → ${rows[rows.length - 1].trade_date}, ` +
+            `last close ${rows[rows.length - 1].close}; cap ${capNote}`
+        )
+    } catch (err) {
+      console.error(`  ✗ ${symbol}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+    await sleep(REQUEST_DELAY_MS + Math.random() * REQUEST_JITTER_MS)
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
+  if (args.probe) {
+    await probeSymbols(args.probe, args.lookbackDays)
+    return
+  }
   const sb = createServiceClient()
 
   let query = sb

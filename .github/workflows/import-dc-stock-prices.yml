@@ -37,6 +37,10 @@ on:
         description: 'Refresh every US market cap now (normally weekly) — the Doom v Boom market weights'
         type: boolean
         default: false
+      probe:
+        description: 'Only test these symbols against massive.com (comma-separated, e.g. TOELY,SFTBY) — nothing is written'
+        required: false
+        default: ''
 
 concurrency:
   group: import-dc-stock-prices
@@ -75,7 +79,9 @@ jobs:
           MASSIVE_API_TOKEN: ${{ secrets.MASSIVE_API_TOKEN }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           APIFY_ACTOR_ID: ${{ secrets.APIFY_ACTOR_ID }}
-        run: >
-          pnpm ai-data-centers:import-stocks --
-          ${{ inputs.full_backfill && '--full' || '' }}
-          ${{ inputs.refresh_caps && '--refresh-caps' || '' }}
+          PROBE: ${{ inputs.probe }}
+        # The free-text input goes through env, never inlined into the command.
+        run: |
+          set --
+          [ -n "$PROBE" ] && set -- "$@" --probe "$PROBE"
+          pnpm ai-data-centers:import-stocks -- "$@" ${{ inputs.full_backfill && '--full' || '' }} ${{ inputs.refresh_caps && '--refresh-caps' || '' }}
