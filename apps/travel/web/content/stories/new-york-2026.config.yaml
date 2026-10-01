@@ -64,7 +64,7 @@ sections:
           - type: travel:ticket
             title: "KATZ'S DELICATESSEN"
             venue: 205 E Houston St
-            time: 9:00 AM
+            time: 8:45 AM
             line: "No. 47 · pastrami on rye · matzo ball soup"
             price: "$27.45"
             stampText: ADMIT ONE
@@ -235,7 +235,7 @@ sections:
                 shadow: 0 10px 30px rgba(20, 16, 8, 0.18)
           - type: travel:tapeNote
             title: UNTIL NEXT TIME
-            text: "13 stops · 10.5 hours · 386 photos. see you soon, new york."
+            text: "12 stops · 42,258 steps · 31 km · 7 trains · 386 photos. see you soon, new york."
             paper: sticky
             rotation: -2
             enterDelay: 250

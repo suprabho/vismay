@@ -176,7 +176,7 @@ days:
       Guggenheim). Evening: the length of Central Park on foot, then the subway home by seven."
     stops:
       - slug: walk-the-brooklyn-bridge
-        time: 7:00 AM
+        time: 7:50 AM
         emoji: 🌉
         name: The Brooklyn Bridge
         desc: Seen from below rather than walked — the F train straight to York St, then the bridge from
@@ -190,7 +190,7 @@ days:
         suggestedBy:
           - Srayana
       - slug: dumbo-piers-manhattan-skyline
-        time: 7:45 AM
+        time: 7:55 AM
         emoji: 🌆
         name: DUMBO Piers — Manhattan Skyline
         desc: Best view of Manhattan anywhere — the skyline framed by bridge cables. Beautiful in the early
@@ -204,7 +204,7 @@ days:
           - Suprabho
           - Srayana
       - slug: katzs-delicatessen
-        time: 9:00 AM
+        time: 8:45 AM
         emoji: 🥪
         name: Katz's Delicatessen
         desc: The most famous deli in New York — pastrami on rye, towering sandwiches, and a room that
@@ -218,7 +218,7 @@ days:
         suggestedBy:
           - Suprabho
       - slug: the-high-line
-        time: 10:00 AM
+        time: 10:15 AM
         emoji: 🛤
         name: The High Line
         desc: Elevated rail converted to a linear park. Walk from Meatpacking north to Hudson Yards. ~1.5
@@ -231,7 +231,7 @@ days:
         suggestedBy:
           - Suprabho
       - slug: the-edge-hudson-yards
-        time: 10:20 AM
+        time: 10:45 AM
         emoji: ☁️
         name: The Edge, Hudson Yards
         desc: 100 floors up, glass-floored outdoor deck. Better than One World Trade — you see all the
@@ -245,7 +245,7 @@ days:
           - Suprabho
           - Srayana
       - slug: how-i-met-your-mother-mcgees-pub
-        time: 10:40 AM
+        time: 11:45 AM
         emoji: 📺
         name: How I Met Your Mother — McGee's Pub
         desc: The real-life bar that inspired MacLaren's Pub. 240 W 55th St in Midtown. The interior is
@@ -256,7 +256,7 @@ days:
           - 40.7642
         tag: TV Spot
       - slug: museum-of-modern-art-moma
-        time: 11:00 AM
+        time: 11:55 AM
         emoji: 🎨
         name: Museum of Modern Art (MoMA)
         desc: Starry Night, Warhols, Picasso. One of the world's greatest modern art collections.
@@ -268,7 +268,7 @@ days:
         suggestedBy:
           - Ritwik
       - slug: rockefeller-center-lego-store
-        time: 12:15 PM
+        time: 12:45 PM
         emoji: 🏙
         name: Rockefeller Center & LEGO Store
         desc: Art Deco complex with Top of the Rock observation deck. The flagship LEGO Store at 30
@@ -283,7 +283,7 @@ days:
           - Ritwik
           - Suprabho
       - slug: grand-central-terminal
-        time: 1:15 PM
+        time: 1:55 PM
         emoji: 🚂
         name: Grand Central Terminal
         desc: Beaux-Arts masterpiece — the main concourse ceiling is one of NYC's great interiors. The
@@ -296,7 +296,7 @@ days:
         suggestedBy:
           - Suprabho
       - slug: the-metropolitan-museum-of-art
-        time: 2:30 PM
+        time: 3:00 PM
         emoji: 🎨
         name: The Metropolitan Museum of Art
         desc: Plan 2 hours. Egyptian wing, European paintings, Greek sculpture. Pick 2–3 sections and go
@@ -322,7 +322,7 @@ days:
         suggestedBy:
           - Ritwik
       - slug: central-park
-        time: 5:30 PM
+        time: 5:20 PM
         emoji: 🌿
         name: Central Park
         desc: 843 acres of green in the most vertical city. Bethesda Terrace, the Reservoir, Strawberry
