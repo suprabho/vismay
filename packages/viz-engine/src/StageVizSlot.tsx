@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useRef, type CSSProperties } from 'react'
 import { useStoryShell } from './StoryShellContext'
+import StageEditChrome from './StageEditChrome'
 import { resolveAssetUrl } from './lib/assetUrl'
 import { sampleBeat } from './lib/resolveStage'
 import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion'
@@ -67,10 +68,15 @@ function StageEntityView({
   entity,
   activeUnit,
   registerNode,
+  editing,
 }: {
   entity: ResolvedStageEntity
   activeUnit: number
   registerNode: (id: string, el: HTMLDivElement | null) => void
+  /** Editor mode (W2): every entity becomes hittable for on-canvas
+   *  selection, overriding the authored `interactive` flag (objects are
+   *  `pointer-events: none` by design outside the editor). */
+  editing: boolean
 }) {
   const idx = clampIdx(activeUnit, entity.frames.length)
   const frame = entity.frames[idx]
@@ -99,8 +105,8 @@ function StageEntityView({
     willChange: 'transform, opacity',
     width: `${size * 100}vmin`,
     height: 'auto',
-    pointerEvents: entity.interactive ? 'auto' : 'none',
-    cursor: entity.interactive ? 'grab' : 'default',
+    pointerEvents: editing || entity.interactive ? 'auto' : 'none',
+    cursor: editing || entity.interactive ? 'grab' : 'default',
     userSelect: 'none',
   }
 
@@ -127,7 +133,7 @@ export interface StageVizSlotProps {
 }
 
 export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
-  const { isCapture, units, scrub, seek } = useStoryShell()
+  const { isCapture, units, scrub, seek, editing } = useStoryShell()
   const reducedMotion = usePrefersReducedMotion()
   const snap = isCapture || reducedMotion
 
@@ -302,16 +308,31 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
           map background (z-0) which is earlier still. */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         {back.map((e) => (
-          <StageEntityView key={e.id} entity={e} activeUnit={activeUnit} registerNode={registerNode} />
+          <StageEntityView
+            key={e.id}
+            entity={e}
+            activeUnit={activeUnit}
+            registerNode={registerNode}
+            editing={editing === true}
+          />
         ))}
       </div>
       {/* FRONT — above the foreground (z-10) and hero (z-20), below the logo
           (z-50). Hosts subjects that take z-focus. */}
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: FRONT_Z }} aria-hidden>
         {front.map((e) => (
-          <StageEntityView key={e.id} entity={e} activeUnit={activeUnit} registerNode={registerNode} />
+          <StageEntityView
+            key={e.id}
+            entity={e}
+            activeUnit={activeUnit}
+            registerNode={registerNode}
+            editing={editing === true}
+          />
         ))}
       </div>
+      {/* Editor-only on-canvas chrome (W2): selection ring, transform
+          handles, and the viz-story-entity-* bridge. */}
+      {editing && <StageEditChrome stage={stage} activeUnit={activeUnit} nodeRefs={nodeRefs} />}
     </>
   )
 }
