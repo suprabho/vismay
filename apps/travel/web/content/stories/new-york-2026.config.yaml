@@ -33,7 +33,7 @@ sections:
         priority: true
 
   - id: walk-the-brooklyn-bridge
-    text: Walk the Brooklyn Bridge
+    text: The Brooklyn Bridge
     scrapbook: { stop: walk-the-brooklyn-bridge, template: hero }
     map:
       center: [-73.9969, 40.7061]
@@ -48,14 +48,6 @@ sections:
       zoom: 15.4
       pitch: 40
       bearing: -20
-
-  - id: gleasons-gym
-    text: Gleasons Gym
-    scrapbook: { stop: gleasons-gym, template: note }
-    map:
-      center: [-73.9787, 40.6945]
-      zoom: 15.2
-      pitch: 40
 
   - id: katzs-delicatessen
     text: "Katz's Delicatessen"
@@ -210,7 +202,7 @@ sections:
     scrapbook:
       stop: central-park
       template: scatter
-      offset: 30
+      offset: 1
       tip: false
     map:
       center: [-73.9712, 40.7769]
