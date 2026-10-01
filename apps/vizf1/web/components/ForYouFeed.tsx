@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { StoryRings } from '@/components/StoryRings'
 import { SectionHeader } from '@/components/SectionHeader'
 import { ChampionshipPodiums } from '@/components/ChampionshipPodiums'
@@ -24,6 +25,13 @@ export function ForYouFeed() {
       <SeasonStandingsChart />
 
       <UpcomingRaceCalendar />
+
+      <p className="mt-10 text-center text-xs text-muted">
+        New here?{' '}
+        <Link href="/about-us" className="font-medium text-text underline-offset-4 hover:text-accent hover:underline">
+          See what VizF1 does
+        </Link>
+      </p>
     </div>
   )
 }

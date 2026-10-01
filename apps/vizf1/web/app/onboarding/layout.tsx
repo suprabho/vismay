@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect } from 'react'
+import { AuthGate } from '@/components/AuthGate'
 import { useAuth } from '@/lib/AuthProvider'
 
 function Spinner() {
@@ -21,11 +22,7 @@ function Gate({ children }: { children: React.ReactNode }) {
   const blocked = loading || (!!session && !profile)
 
   useEffect(() => {
-    if (blocked) return
-    if (!session) {
-      router.replace('/login')
-      return
-    }
+    if (blocked || !session) return
     // Already-onboarded users only reach onboarding via the edit flow.
     if (profile?.onboarded_at && !edit) {
       router.replace('/following')
@@ -33,6 +30,14 @@ function Gate({ children }: { children: React.ReactNode }) {
   }, [blocked, session, profile, edit, router])
 
   if (blocked) return <Spinner />
+  // Logged out: ask to sign in right here instead of bouncing to /login.
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <AuthGate message="Sign in to pick your drivers and teams">{children}</AuthGate>
+      </div>
+    )
+  }
   return <>{children}</>
 }
 

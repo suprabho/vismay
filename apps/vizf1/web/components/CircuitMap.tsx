@@ -14,7 +14,7 @@ type CircuitGeom = {
   track_bounds: unknown
 }
 
-function useCircuitGeometry(circuitId: string) {
+export function useCircuitGeometry(circuitId: string) {
   return useQuery({
     enabled: Boolean(circuitId),
     queryKey: ['vizf1', 'circuit', circuitId],

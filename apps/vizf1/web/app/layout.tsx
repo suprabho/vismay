@@ -3,6 +3,7 @@ import { Saira, Martian_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/lib/ThemeProvider'
 import { QueryProvider } from '@/lib/QueryProvider'
 import { AuthProvider } from '@/lib/AuthProvider'
+import { AuthModalProvider } from '@/lib/AuthModalProvider'
 import './globals.css'
 
 const saira = Saira({
@@ -55,7 +56,9 @@ export default function RootLayout({
       <body className="bg-bg text-text antialiased min-h-screen">
         <ThemeProvider>
           <QueryProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <AuthModalProvider>{children}</AuthModalProvider>
+            </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Info } from '@phosphor-icons/react'
 import { VF1MonogramFlat } from '@vizf1/brand/logos'
 import { useAuth } from '@/lib/AuthProvider'
+import { useAuthModal } from '@/lib/AuthModalProvider'
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean }
 
@@ -29,6 +31,7 @@ const NAV: NavItem[] = [
 export function AppHeader() {
   const pathname = usePathname() ?? ''
   const { session, loading } = useAuth()
+  const { requireAuth } = useAuthModal()
 
   const letter = (session?.user?.email ?? '?').charAt(0).toUpperCase()
 
@@ -58,23 +61,35 @@ export function AppHeader() {
             )
           })}
         </nav>
-        {!loading &&
-          (session ? (
-            <Link
-              href="/following"
-              aria-label="Following"
-              className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-text hover:border-muted"
-            >
-              {letter}
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="absolute right-4 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text hover:border-muted sm:px-3 sm:text-sm"
-            >
-              Sign in
-            </Link>
-          ))}
+        <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
+          <Link
+            href="/about-us"
+            aria-label="About VizF1"
+            title="About VizF1"
+            className="hidden h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:text-text sm:flex"
+          >
+            <Info size={20} />
+          </Link>
+          {!loading &&
+            (session ? (
+              <Link
+                href="/following"
+                aria-label="Following"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-text hover:border-muted"
+              >
+                {letter}
+              </Link>
+            ) : (
+              // Signing in happens in place (modal), then lands on Following.
+              <button
+                type="button"
+                onClick={() => requireAuth('/following')}
+                className="whitespace-nowrap rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text hover:border-muted sm:px-3 sm:text-sm"
+              >
+                Sign in
+              </button>
+            ))}
+        </div>
       </div>
     </header>
   )
