@@ -13,7 +13,8 @@
     "./media": "./src/media.ts",
     "./espnCups": "./src/espnCups.ts",
     "./espnMatch": "./src/espnMatch.ts",
-    "./entityKeys": "./src/entityKeys.ts"
+    "./entityKeys": "./src/entityKeys.ts",
+    "./nationalTeams": "./src/nationalTeams.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

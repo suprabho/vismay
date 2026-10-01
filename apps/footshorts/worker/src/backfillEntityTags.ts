@@ -13,9 +13,17 @@
  *
  * Run via: npm run backfill:entity-tags [-- slug ...]
  *   (defaults to the teams renamed by the 20260705 + 20260709 slug-fix migrations)
+ *
+ * National-team mode, for articles ingested before the 211 national teams
+ * existed as entities (20261001000000_national_team_entities.sql):
+ *   npm run backfill:entity-tags -- --national-teams [--days=30]
+ * Scans headlines of summarized articles from the last N days (default 30)
+ * with findNationalTeams (nationalTeamMatch.ts) — headlines only, since
+ * summaries are full of passing "England midfielder …" mentions.
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { findNationalTeams } from './nationalTeamMatch';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false },
@@ -58,8 +66,75 @@ async function fetchMatchingArticles(term: string): Promise<{ id: string }[]> {
   return matches;
 }
 
+async function insertTags(rows: { article_id: string; entity_id: string }[]): Promise<number> {
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
+    const { data, error } = await supabase
+      .from('article_entities')
+      .upsert(rows.slice(i, i + UPSERT_CHUNK), { onConflict: 'article_id,entity_id', ignoreDuplicates: true })
+      .select('article_id');
+    if (error) throw error;
+    inserted += data?.length ?? 0;
+  }
+  return inserted;
+}
+
+async function runNationalTeams(days: number) {
+  const { data: teams, error: tErr } = await supabase
+    .from('entities')
+    .select('id, slug')
+    .eq('type', 'team')
+    .not('fifa_code', 'is', null);
+  if (tErr) throw tErr;
+  if (!teams || teams.length === 0) {
+    console.error('[entity-tags] no national-team entities — apply 20261001000000_national_team_entities.sql first');
+    process.exit(1);
+  }
+  const idBySlug = new Map(teams.map((t) => [t.slug, t.id]));
+
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const rows: { article_id: string; entity_id: string }[] = [];
+  const perTeam = new Map<string, number>();
+  let scanned = 0;
+
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('articles')
+      .select('id, headline')
+      .eq('status', 'summarized')
+      .gte('published_at', since)
+      .order('published_at', { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+
+    for (const a of data ?? []) {
+      scanned++;
+      for (const slug of findNationalTeams(a.headline ?? '')) {
+        const entityId = idBySlug.get(slug);
+        if (!entityId) continue;
+        rows.push({ article_id: a.id, entity_id: entityId });
+        perTeam.set(slug, (perTeam.get(slug) ?? 0) + 1);
+      }
+    }
+    if (!data || data.length < PAGE) break;
+  }
+
+  const inserted = await insertTags(rows);
+  const top = [...perTeam.entries()].sort((a, b) => b[1] - a[1]);
+  console.log(`[entity-tags] national teams, last ${days}d: scanned=${scanned} matched=${rows.length} newly-tagged=${inserted}`);
+  console.log(`[entity-tags]   ${top.map(([slug, n]) => `${slug}=${n}`).join(' ') || '(no matches)'}`);
+}
+
 async function run() {
-  const slugs = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+  const args = process.argv.slice(2);
+  if (args.includes('--national-teams')) {
+    const daysArg = args.find((a) => a.startsWith('--days='));
+    const days = daysArg ? Number(daysArg.slice('--days='.length)) : 30;
+    if (!Number.isFinite(days) || days <= 0) throw new Error(`--days wants a positive number, got ${daysArg}`);
+    return runNationalTeams(days);
+  }
+
+  const slugs = args.filter((a) => !a.startsWith('-'));
   const targets = slugs.length > 0 ? slugs : DEFAULT_SLUGS;
 
   let totalInserted = 0;
@@ -84,19 +159,7 @@ async function run() {
       continue;
     }
 
-    let inserted = 0;
-    for (let i = 0; i < articles.length; i += UPSERT_CHUNK) {
-      const rows = articles.slice(i, i + UPSERT_CHUNK).map((a) => ({
-        article_id: a.id,
-        entity_id: entity.id,
-      }));
-      const { data, error } = await supabase
-        .from('article_entities')
-        .upsert(rows, { onConflict: 'article_id,entity_id', ignoreDuplicates: true })
-        .select('article_id');
-      if (error) throw error;
-      inserted += data?.length ?? 0;
-    }
+    const inserted = await insertTags(articles.map((a) => ({ article_id: a.id, entity_id: entity.id })));
 
     totalInserted += inserted;
     console.log(

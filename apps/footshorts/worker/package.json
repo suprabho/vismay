@@ -36,7 +36,8 @@
     "backfill:entity-tags": "tsx --env-file=.env src/backfillEntityTags.ts",
     "eval": "tsx --env-file=.env src/eval/run.ts",
     "typecheck": "tsc --noEmit",
-    "jev:gate:test": "tsx src/jevEntityGate.test.ts"
+    "jev:gate:test": "tsx src/jevEntityGate.test.ts",
+    "national-teams:test": "tsx --test src/nationalTeams.test.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.87",
