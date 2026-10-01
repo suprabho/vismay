@@ -158,7 +158,7 @@ days:
     heading: "Day 3: Brooklyn Morning → West Side Midtown → Uptown Museums"
     title: Brooklyn Morning → West Side Midtown → Uptown Museums
     label: Day 3 · Full Day
-    subtitle: Brooklyn Bridge · DUMBO · Gleasons Gym · Katz's Deli · High Line · The Edge · McGee's Pub
+    subtitle: Brooklyn Bridge · DUMBO · Katz's Deli · High Line · The Edge · McGee's Pub
       (HIMYM) · MoMA · Rockefeller · LEGO Store · Grand Central · MET · Guggenheim · Central Park
     color: "#2ca068"
     center:
@@ -170,10 +170,10 @@ days:
       coordinates:
         - -73.9923
         - 40.7261
-    notes: "Early start — walk the Brooklyn Bridge and explore DUMBO before the crowds. Back to
-      Manhattan for Katz's breakfast, then west to the High Line → Hudson Yards → McGee's → MoMA →
-      Rockefeller/LEGO Store → Grand Central. Afternoon: Museum Mile (MET + Guggenheim). Evening:
-      Central Park, Times Square, then Village."
+    notes: "Early start — the F train to York St and DUMBO before the crowds, the Brooklyn Bridge
+      from below. Back to Manhattan for Katz's breakfast, then west to the High Line → Hudson Yards
+      → McGee's → MoMA → Rockefeller/LEGO Store → Grand Central. Afternoon: Museum Mile (MET +
+      Guggenheim). Evening: the length of Central Park on foot, then the subway home by seven."
     stops:
       - slug: walk-the-brooklyn-bridge
         time: 7:00 AM
@@ -182,11 +182,11 @@ days:
         desc: Seen from below rather than walked — the F train straight to York St, then the bridge from
           the Brooklyn side, peaceful before the crowds. Gothic towers and steel cables are incredible
           in the morning light.
-        tip: 📍 Subway from NoHo (Broadway-Lafayette → Chambers St) · Start from City Hall Park side
+        tip: 📍 F train from NoHo to York St · Pier 1 in Brooklyn Bridge Park for the view
         coordinates:
           - -73.9969
           - 40.7061
-        tag: Walk
+        tag: Views
         suggestedBy:
           - Srayana
       - slug: dumbo-piers-manhattan-skyline
@@ -203,19 +203,6 @@ days:
         suggestedBy:
           - Suprabho
           - Srayana
-      - slug: gleasons-gym
-        time: 8:15 AM
-        emoji: 🥊
-        name: Gleasons Gym
-        desc: Legendary Brooklyn boxing gym — Muhammad Ali, Mike Tyson trained here. Quick visit while in
-          DUMBO.
-        tip: Opens early · 15-min walk from the bridge
-        coordinates:
-          - -73.9787
-          - 40.6945
-        tag: Experience
-        suggestedBy:
-          - Ritwik
       - slug: katzs-delicatessen
         time: 9:00 AM
         emoji: 🥪
