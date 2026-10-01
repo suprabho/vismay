@@ -58,7 +58,7 @@ media:
   - file: d3-dumbo-piers-manhattan-skyline-06.jpg
     kind: image
     day: 3
-    stop: dumbo-piers-manhattan-skyline
+    stop: walk-the-brooklyn-bridge
     takenAt: 2026-03-14T02:32:49.000Z
     match: auto
     original: 20260314_080248.jpg
@@ -121,14 +121,14 @@ media:
   - file: d3-dumbo-piers-manhattan-skyline-15.jpg
     kind: image
     day: 3
-    stop: dumbo-piers-manhattan-skyline
+    stop: gleasons-gym
     takenAt: 2026-03-14T02:42:04.000Z
     match: auto
     original: 20260314_081204.jpg
   - file: d3-dumbo-piers-manhattan-skyline-16.jpg
     kind: image
     day: 3
-    stop: dumbo-piers-manhattan-skyline
+    stop: gleasons-gym
     takenAt: 2026-03-14T02:42:06.000Z
     match: auto
     original: 20260314_081206.jpg
@@ -163,357 +163,357 @@ media:
   - file: d3-the-edge-hudson-yards-01.jpg
     kind: image
     day: 3
-    stop: the-edge-hudson-yards
+    stop: the-high-line
     takenAt: 2026-03-14T04:54:57.000Z
     match: auto
     original: 20260314_102457.jpg
   - file: d3-the-edge-hudson-yards-02.jpg
     kind: image
     day: 3
-    stop: the-edge-hudson-yards
+    stop: the-high-line
     takenAt: 2026-03-14T04:55:02.000Z
     match: auto
     original: 20260314_102502.jpg
   - file: d3-the-edge-hudson-yards-03.jpg
     kind: image
     day: 3
-    stop: the-edge-hudson-yards
+    stop: the-high-line
     takenAt: 2026-03-14T05:04:44.000Z
     match: auto
     original: 20260314_103443.jpg
   - file: d3-the-edge-hudson-yards-04.jpg
     kind: image
     day: 3
-    stop: the-edge-hudson-yards
+    stop: the-high-line
     takenAt: 2026-03-14T05:04:48.000Z
     match: auto
     original: 20260314_103448.jpg
   - file: d3-the-edge-hudson-yards-05.jpg
     kind: image
     day: 3
-    stop: the-edge-hudson-yards
+    stop: the-high-line
     takenAt: 2026-03-14T05:04:50.000Z
     match: auto
     original: 20260314_103450.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-01.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:14:39.000Z
     match: auto
     original: 20260314_104439.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-02.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:14:40.000Z
     match: auto
     original: 20260314_104440.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-03.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:14:45.000Z
     match: auto
     original: 20260314_104445.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-04.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:14:47.000Z
     match: auto
     original: 20260314_104447.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-05.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:16:24.000Z
     match: auto
     original: 20260314_104624.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-06.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:16:28.000Z
     match: auto
     original: 20260314_104628.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-07.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-edge-hudson-yards
     takenAt: 2026-03-14T05:17:51.000Z
     match: auto
     original: 20260314_104751.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-08.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-edge-hudson-yards
     takenAt: 2026-03-14T05:17:52.000Z
     match: auto
     original: 20260314_104752.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-09.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:17:55.000Z
     match: auto
     original: 20260314_104755.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-10.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:19:49.000Z
     match: auto
     original: 20260314_104949.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-11.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:19:50.000Z
     match: auto
     original: 20260314_104950.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-12.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:19:55.000Z
     match: auto
     original: 20260314_104955.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-13.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:19:58.000Z
     match: auto
     original: 20260314_104958.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-14.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:23:08.000Z
     match: auto
     original: 20260314_105308.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-15.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:23:10.000Z
     match: auto
     original: 20260314_105310.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-16.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-high-line
     takenAt: 2026-03-14T05:23:22.000Z
     match: auto
     original: 20260314_105322.jpg
   - file: d3-how-i-met-your-mother-mcgees-pub-17.jpg
     kind: image
     day: 3
-    stop: how-i-met-your-mother-mcgees-pub
+    stop: the-edge-hudson-yards
     takenAt: 2026-03-14T05:23:24.000Z
     match: auto
     original: 20260314_105324.jpg
   - file: d3-museum-of-modern-art-moma-01.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:03:23.000Z
     match: auto
     original: 20260314_113323.jpg
   - file: d3-museum-of-modern-art-moma-02.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:03:26.000Z
     match: auto
     original: 20260314_113326.jpg
   - file: d3-museum-of-modern-art-moma-03.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:03:29.000Z
     match: auto
     original: 20260314_113329.jpg
   - file: d3-museum-of-modern-art-moma-04.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:03:31.000Z
     match: auto
     original: 20260314_113331.jpg
   - file: d3-museum-of-modern-art-moma-05.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:03:32.000Z
     match: auto
     original: 20260314_113332.jpg
   - file: d3-museum-of-modern-art-moma-06.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:05:39.000Z
     match: auto
     original: 20260314_113539.jpg
   - file: d3-museum-of-modern-art-moma-07.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:05:50.000Z
     match: auto
     original: 20260314_113550.jpg
   - file: d3-museum-of-modern-art-moma-08.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:05:51.000Z
     match: auto
     original: 20260314_113551.jpg
   - file: d3-museum-of-modern-art-moma-09.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:05:52.000Z
     match: auto
     original: 20260314_113552.jpg
   - file: d3-museum-of-modern-art-moma-10.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:06:00.000Z
     match: auto
     original: 20260314_113559.jpg
   - file: d3-museum-of-modern-art-moma-11.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:06:04.000Z
     match: auto
     original: 20260314_113604.jpg
   - file: d3-museum-of-modern-art-moma-12.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:06:06.000Z
     match: auto
     original: 20260314_113606.jpg
   - file: d3-museum-of-modern-art-moma-13.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:06:53.000Z
     match: auto
     original: 20260314_113653.jpg
   - file: d3-museum-of-modern-art-moma-14.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:06:56.000Z
     match: auto
     original: 20260314_113655.jpg
   - file: d3-museum-of-modern-art-moma-15.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:09:12.000Z
     match: auto
     original: 20260314_113912.jpg
   - file: d3-museum-of-modern-art-moma-16.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:09:13.000Z
     match: auto
     original: 20260314_113913.jpg
   - file: d3-museum-of-modern-art-moma-17.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:09:16.000Z
     match: auto
     original: 20260314_113915.jpg
   - file: d3-museum-of-modern-art-moma-18.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:09:20.000Z
     match: auto
     original: 20260314_113920.jpg
   - file: d3-museum-of-modern-art-moma-19.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:12:44.000Z
     match: auto
     original: 20260314_114244.jpg
   - file: d3-museum-of-modern-art-moma-20.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:12:47.000Z
     match: auto
     original: 20260314_114247.jpg
   - file: d3-museum-of-modern-art-moma-21.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:12:48.000Z
     match: auto
     original: 20260314_114248.jpg
   - file: d3-museum-of-modern-art-moma-22.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:13:01.000Z
     match: auto
     original: 20260314_114300.jpg
   - file: d3-museum-of-modern-art-moma-23.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:13:02.000Z
     match: auto
     original: 20260314_114301.jpg
   - file: d3-museum-of-modern-art-moma-24.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:13:30.000Z
     match: auto
     original: 20260314_114330.jpg
   - file: d3-museum-of-modern-art-moma-25.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:13:35.000Z
     match: auto
     original: 20260314_114334.jpg
   - file: d3-museum-of-modern-art-moma-26.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:14:21.000Z
     match: auto
     original: 20260314_114421.jpg
   - file: d3-museum-of-modern-art-moma-27.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:14:23.000Z
     match: auto
     original: 20260314_114423.jpg
   - file: d3-museum-of-modern-art-moma-28.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:15:07.000Z
     match: auto
     original: 20260314_114507.jpg
   - file: d3-museum-of-modern-art-moma-29.jpg
     kind: image
     day: 3
-    stop: museum-of-modern-art-moma
+    stop: how-i-met-your-mother-mcgees-pub
     takenAt: 2026-03-14T06:15:09.000Z
     match: auto
     original: 20260314_114509.jpg
@@ -770,14 +770,14 @@ media:
   - file: d3-rockefeller-center-lego-store-01.jpg
     kind: image
     day: 3
-    stop: rockefeller-center-lego-store
+    stop: museum-of-modern-art-moma
     takenAt: 2026-03-14T06:45:10.000Z
     match: auto
     original: 20260314_121510.jpg
   - file: d3-rockefeller-center-lego-store-02.jpg
     kind: image
     day: 3
-    stop: rockefeller-center-lego-store
+    stop: museum-of-modern-art-moma
     takenAt: 2026-03-14T06:45:15.000Z
     match: auto
     original: 20260314_121515.jpg
@@ -1015,63 +1015,63 @@ media:
   - file: d3-grand-central-terminal-01.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:46:20.000Z
     match: auto
     original: 20260314_131620.jpg
   - file: d3-grand-central-terminal-02.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:46:24.000Z
     match: auto
     original: 20260314_131624.jpg
   - file: d3-grand-central-terminal-03.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:46:31.000Z
     match: auto
     original: 20260314_131631.jpg
   - file: d3-grand-central-terminal-04.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:46:37.000Z
     match: auto
     original: 20260314_131637.jpg
   - file: d3-grand-central-terminal-05.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:50:17.000Z
     match: auto
     original: 20260314_132017.jpg
   - file: d3-grand-central-terminal-06.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:50:18.000Z
     match: auto
     original: 20260314_132018.jpg
   - file: d3-grand-central-terminal-07.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:50:19.000Z
     match: auto
     original: 20260314_132019.jpg
   - file: d3-grand-central-terminal-08.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:50:20.000Z
     match: auto
     original: 20260314_132020.jpg
   - file: d3-grand-central-terminal-09.jpg
     kind: image
     day: 3
-    stop: grand-central-terminal
+    stop: rockefeller-center-lego-store
     takenAt: 2026-03-14T07:50:22.000Z
     match: auto
     original: 20260314_132022.jpg
@@ -2002,14 +2002,14 @@ media:
   - file: d3-the-metropolitan-museum-of-art-104.jpg
     kind: image
     day: 3
-    stop: the-metropolitan-museum-of-art
+    stop: guggenheim-museum
     takenAt: 2026-03-14T10:58:39.000Z
     match: auto
     original: 20260314_162839.jpg
   - file: d3-the-metropolitan-museum-of-art-105.jpg
     kind: image
     day: 3
-    stop: the-metropolitan-museum-of-art
+    stop: guggenheim-museum
     takenAt: 2026-03-14T10:59:22.000Z
     match: auto
     original: 20260314_162922.jpg
@@ -2274,49 +2274,49 @@ media:
   - file: d3-guggenheim-museum-37.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:36:48.000Z
     match: auto
     original: 20260314_170648.jpg
   - file: d3-guggenheim-museum-38.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:50:38.000Z
     match: auto
     original: 20260314_172038.jpg
   - file: d3-guggenheim-museum-39.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:50:42.000Z
     match: auto
     original: 20260314_172041.jpg
   - file: d3-guggenheim-museum-40.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:50:44.000Z
     match: auto
     original: 20260314_172044.jpg
   - file: d3-guggenheim-museum-41.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:51:04.000Z
     match: auto
     original: 20260314_172104.jpg
   - file: d3-guggenheim-museum-42.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:54:22.000Z
     match: auto
     original: 20260314_172422.jpg
   - file: d3-guggenheim-museum-43.jpg
     kind: image
     day: 3
-    stop: guggenheim-museum
+    stop: central-park
     takenAt: 2026-03-14T11:54:24.000Z
     match: auto
     original: 20260314_172423.jpg

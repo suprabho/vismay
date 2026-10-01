@@ -1,6 +1,6 @@
 ---
 title: "New York"
-subtitle: "Day Three — Mar 14, 2026 · 13 stops · 386 photos"
+subtitle: "Day Three — Mar 14, 2026 · 12 stops · 42,258 steps · 386 photos"
 byline: "A travel scrapbook"
 date: "2026-03-15"
 status: "draft"
@@ -29,72 +29,68 @@ theme:
 
 # New York
 
-One day. Thirteen stops. Brooklyn before sunrise, Museum Mile by afternoon, Central Park at golden hour.
+One day. Twelve stops. Brooklyn at first light, Museum Mile by afternoon, Central Park at golden hour.
 
-## Walk the Brooklyn Bridge
+## The Brooklyn Bridge
 
-We were on the bridge by seven, and it was worth every lost minute of sleep. Almost nobody else out — just the gothic towers, the steel cables catching the first light, and the city waking up on the far side.
+The plan was to walk it. Instead the F train had us in Brooklyn eleven minutes after leaving the hotel, so we met the bridge from underneath — gothic towers, cables catching the first light.
 
 ## DUMBO Piers — Manhattan Skyline
 
-Down the stairs on the Brooklyn side and straight to the water. The skyline framed by bridge cables really is the best view of Manhattan anywhere, and in the early morning light we had the piers almost to ourselves.
-
-## Gleasons Gym
-
-A quick detour while we were in DUMBO — the legendary boxing gym where Ali and Tyson trained. It opens early; the smell of canvas and old leather is exactly what you'd hope. We peeked in, paid our respects, and moved on.
+Up out of York Street station and straight down to the water. The skyline framed by bridge cables really is the best view of Manhattan anywhere, and in the early morning light we had the piers almost to ourselves.
 
 ## Katz's Delicatessen
 
-Breakfast at nine: pastrami on rye in a room that hasn't changed in decades. We split one sandwich between us and it was still too much. No photos — hands were busy.
+Six minutes back under the river, then pastrami on rye at quarter to nine in a room that hasn't changed in decades. One sandwich between us, still too much. No photos — hands were busy.
 
 ## The High Line
 
-Back across the river and up onto the old elevated rail. We walked the stretch from Meatpacking toward Hudson Yards, coffee in hand, the city sliding past at balcony height.
+A quick hop west on the subway, then up onto the old elevated rail and north toward Hudson Yards — a sky-bridge overhead, a building-sized mural, avenues opening up below.
 
 ## The Edge, Hudson Yards
 
-A hundred floors up with a glass floor underfoot. Better than One World Trade because from here you can actually see all the icons at once. Midday light, no haze — we got lucky.
+We never went up — from the High Line, the Edge is the building that keeps photobombing you: that triangular deck jutting out over Hudson Yards, a hundred floors up. Midday light, no haze — it looked good enough from down here.
 
 ## How I Met Your Mother — McGee's Pub
 
-The real MacLaren's. Booth seating, show posters, themed cocktails at eleven in the morning. We took the photos we came for.
+Nine minutes on the subway to Columbus Circle, then on foot to the real MacLaren's — or the bar that inspired it — a little brick building on West 55th under a glass tower. We didn't go in; the red PUB sign was what we came for.
 
 ## Museum of Modern Art (MoMA)
 
-Starry Night, the Warhols, Picasso after Picasso. We moved fast and still lost an hour without noticing.
+Starry Night, Warhol's soup cans, Monet's Water Lilies wrapping a whole room. We moved fast and still didn't want to leave.
 
 ## The MoMA Clips
 
-Some rooms you can't photograph — you just have to film the walk-through. Two clips from inside, before the crowds thickened.
+Some rooms you can't photograph — you just have to film them. A clip from inside, before the crowds thickened.
 
 ## Rockefeller Center & LEGO Store
 
-The Art Deco complex, then straight into the flagship LEGO Store — massive NYC-themed builds, the Pick-a-Brick wall, and souvenirs we absolutely did not need.
+St. Patrick's Cathedral first — white spires against a hard blue sky — then Atlas holding up the world across the street. Then straight into the flagship LEGO Store: a brick-built Empire State, Pikachu in the window, and souvenirs we absolutely did not need.
 
 ## Grand Central Terminal
 
-The celestial ceiling is one of the great interiors of the city, and it's free. We stood in the middle of the concourse looking up like everyone else, then found the Whispering Gallery.
+Outside: Mercury on the roofline, the Chrysler Building peeking over its shoulder. Inside, the celestial ceiling — one of the great interiors of the city, and free. Everything since MoMA had been on foot; from here, the subway uptown.
 
 ## The Metropolitan Museum of Art
 
-Two hours, three wings — Egyptian, European paintings, Greek sculpture. Pick your battles and go deep; we still shot more here than anywhere else on the trip.
+Up from 86th Street to Fifth Avenue, then an hour and change in too many wings — the Temple of Dendur, Monet's lilies, Greek marble, the Chinese courtyard. We shot more here than anywhere.
 
 ## The MET — Second Wind
 
-The overflow pile. One museum, a hundred and five photos — these are the ones that survived the cut.
+The overflow pile. One museum, over a hundred photos — these are the ones that survived the cut.
 
 ## Guggenheim Museum
 
-Frank Lloyd Wright's spiral, walked from the top down like you're supposed to. The rotunda from the ground floor is the shot everyone takes and it's still worth taking.
+Nine minutes up Fifth Avenue to Frank Lloyd Wright's spiral, taken over by Carol Bove — crumpled steel in candy colours on every ramp. The rotunda from below is the shot everyone takes and it's still worth taking.
 
 ## Central Park
 
-Five-thirty in the park: Bethesda Terrace, the lake, 843 acres exhaling at once. We drifted south with no particular plan.
+Twenty past five at the Reservoir: flat blue water, the San Remo's twin towers on the far shore. Then the length of the park on foot — almost six kilometres in under an hour.
 
 ## Golden Hour in the Park
 
-The light went soft and everything turned to honey. The last stretch of the day, saved by whoever decided parks should face west.
+The light went soft and everything turned to honey, Billionaires' Row lined up above the bare trees. We came out by the Plaza just after six, walked east to Lexington, and let the subway carry us home — back at the hotel before seven.
 
 ## Day's End
 
-Thirteen stops, ten and a half hours, three hundred and eighty-six photos. Brooklyn at dawn to Central Park at dusk — the day that made the trip.
+Twelve stops, nearly twelve hours, 42,258 steps — a personal record. Brooklyn at first light to Central Park at golden hour — the day that made the trip.

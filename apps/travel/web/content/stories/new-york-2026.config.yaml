@@ -33,7 +33,7 @@ sections:
         priority: true
 
   - id: walk-the-brooklyn-bridge
-    text: Walk the Brooklyn Bridge
+    text: The Brooklyn Bridge
     scrapbook: { stop: walk-the-brooklyn-bridge, template: hero }
     map:
       center: [-73.9969, 40.7061]
@@ -48,14 +48,6 @@ sections:
       zoom: 15.4
       pitch: 40
       bearing: -20
-
-  - id: gleasons-gym
-    text: Gleasons Gym
-    scrapbook: { stop: gleasons-gym, template: note }
-    map:
-      center: [-73.9787, 40.6945]
-      zoom: 15.2
-      pitch: 40
 
   - id: katzs-delicatessen
     text: "Katz's Delicatessen"
@@ -72,7 +64,7 @@ sections:
           - type: travel:ticket
             title: "KATZ'S DELICATESSEN"
             venue: 205 E Houston St
-            time: 9:00 AM
+            time: 8:45 AM
             line: "No. 47 · pastrami on rye · matzo ball soup"
             price: "$27.45"
             stampText: ADMIT ONE
@@ -210,7 +202,7 @@ sections:
     scrapbook:
       stop: central-park
       template: scatter
-      offset: 30
+      offset: 1
       tip: false
     map:
       center: [-73.9712, 40.7769]
@@ -243,7 +235,7 @@ sections:
                 shadow: 0 10px 30px rgba(20, 16, 8, 0.18)
           - type: travel:tapeNote
             title: UNTIL NEXT TIME
-            text: "13 stops · 10.5 hours · 386 photos. see you soon, new york."
+            text: "12 stops · 42,258 steps · 31 km · 7 trains · 386 photos. see you soon, new york."
             paper: sticky
             rotation: -2
             enterDelay: 250

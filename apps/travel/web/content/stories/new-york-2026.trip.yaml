@@ -158,7 +158,7 @@ days:
     heading: "Day 3: Brooklyn Morning → West Side Midtown → Uptown Museums"
     title: Brooklyn Morning → West Side Midtown → Uptown Museums
     label: Day 3 · Full Day
-    subtitle: Brooklyn Bridge · DUMBO · Gleasons Gym · Katz's Deli · High Line · The Edge · McGee's Pub
+    subtitle: Brooklyn Bridge · DUMBO · Katz's Deli · High Line · The Edge · McGee's Pub
       (HIMYM) · MoMA · Rockefeller · LEGO Store · Grand Central · MET · Guggenheim · Central Park
     color: "#2ca068"
     center:
@@ -170,26 +170,27 @@ days:
       coordinates:
         - -73.9923
         - 40.7261
-    notes: "Early start — walk the Brooklyn Bridge and explore DUMBO before the crowds. Back to
-      Manhattan for Katz's breakfast, then west to the High Line → Hudson Yards → McGee's → MoMA →
-      Rockefeller/LEGO Store → Grand Central. Afternoon: Museum Mile (MET + Guggenheim). Evening:
-      Central Park, Times Square, then Village."
+    notes: "Early start — the F train to York St and DUMBO before the crowds, the Brooklyn Bridge
+      from below. Back to Manhattan for Katz's breakfast, then west to the High Line → Hudson Yards
+      → McGee's → MoMA → Rockefeller/LEGO Store → Grand Central. Afternoon: Museum Mile (MET +
+      Guggenheim). Evening: the length of Central Park on foot, then the subway home by seven."
     stops:
       - slug: walk-the-brooklyn-bridge
-        time: 7:00 AM
+        time: 7:50 AM
         emoji: 🌉
-        name: Walk the Brooklyn Bridge
-        desc: Early morning walk across the bridge — peaceful before the crowds. Gothic towers and steel
-          cables are incredible in the morning light.
-        tip: 📍 Subway from NoHo (Broadway-Lafayette → Chambers St) · Start from City Hall Park side
+        name: The Brooklyn Bridge
+        desc: Seen from below rather than walked — the F train straight to York St, then the bridge from
+          the Brooklyn side, peaceful before the crowds. Gothic towers and steel cables are incredible
+          in the morning light.
+        tip: 📍 F train from NoHo to York St · Pier 1 in Brooklyn Bridge Park for the view
         coordinates:
           - -73.9969
           - 40.7061
-        tag: Walk
+        tag: Views
         suggestedBy:
           - Srayana
       - slug: dumbo-piers-manhattan-skyline
-        time: 7:45 AM
+        time: 7:55 AM
         emoji: 🌆
         name: DUMBO Piers — Manhattan Skyline
         desc: Best view of Manhattan anywhere — the skyline framed by bridge cables. Beautiful in the early
@@ -202,21 +203,8 @@ days:
         suggestedBy:
           - Suprabho
           - Srayana
-      - slug: gleasons-gym
-        time: 8:15 AM
-        emoji: 🥊
-        name: Gleasons Gym
-        desc: Legendary Brooklyn boxing gym — Muhammad Ali, Mike Tyson trained here. Quick visit while in
-          DUMBO.
-        tip: Opens early · 15-min walk from the bridge
-        coordinates:
-          - -73.9787
-          - 40.6945
-        tag: Experience
-        suggestedBy:
-          - Ritwik
       - slug: katzs-delicatessen
-        time: 9:00 AM
+        time: 8:45 AM
         emoji: 🥪
         name: Katz's Delicatessen
         desc: The most famous deli in New York — pastrami on rye, towering sandwiches, and a room that
@@ -230,7 +218,7 @@ days:
         suggestedBy:
           - Suprabho
       - slug: the-high-line
-        time: 10:00 AM
+        time: 10:15 AM
         emoji: 🛤
         name: The High Line
         desc: Elevated rail converted to a linear park. Walk from Meatpacking north to Hudson Yards. ~1.5
@@ -243,7 +231,7 @@ days:
         suggestedBy:
           - Suprabho
       - slug: the-edge-hudson-yards
-        time: 10:20 AM
+        time: 10:45 AM
         emoji: ☁️
         name: The Edge, Hudson Yards
         desc: 100 floors up, glass-floored outdoor deck. Better than One World Trade — you see all the
@@ -257,7 +245,7 @@ days:
           - Suprabho
           - Srayana
       - slug: how-i-met-your-mother-mcgees-pub
-        time: 10:40 AM
+        time: 11:45 AM
         emoji: 📺
         name: How I Met Your Mother — McGee's Pub
         desc: The real-life bar that inspired MacLaren's Pub. 240 W 55th St in Midtown. The interior is
@@ -268,7 +256,7 @@ days:
           - 40.7642
         tag: TV Spot
       - slug: museum-of-modern-art-moma
-        time: 11:00 AM
+        time: 11:55 AM
         emoji: 🎨
         name: Museum of Modern Art (MoMA)
         desc: Starry Night, Warhols, Picasso. One of the world's greatest modern art collections.
@@ -280,7 +268,7 @@ days:
         suggestedBy:
           - Ritwik
       - slug: rockefeller-center-lego-store
-        time: 12:15 PM
+        time: 12:45 PM
         emoji: 🏙
         name: Rockefeller Center & LEGO Store
         desc: Art Deco complex with Top of the Rock observation deck. The flagship LEGO Store at 30
@@ -295,7 +283,7 @@ days:
           - Ritwik
           - Suprabho
       - slug: grand-central-terminal
-        time: 1:15 PM
+        time: 1:55 PM
         emoji: 🚂
         name: Grand Central Terminal
         desc: Beaux-Arts masterpiece — the main concourse ceiling is one of NYC's great interiors. The
@@ -308,7 +296,7 @@ days:
         suggestedBy:
           - Suprabho
       - slug: the-metropolitan-museum-of-art
-        time: 2:30 PM
+        time: 3:00 PM
         emoji: 🎨
         name: The Metropolitan Museum of Art
         desc: Plan 2 hours. Egyptian wing, European paintings, Greek sculpture. Pick 2–3 sections and go
@@ -334,7 +322,7 @@ days:
         suggestedBy:
           - Ritwik
       - slug: central-park
-        time: 5:30 PM
+        time: 5:20 PM
         emoji: 🌿
         name: Central Park
         desc: 843 acres of green in the most vertical city. Bethesda Terrace, the Reservoir, Strawberry
