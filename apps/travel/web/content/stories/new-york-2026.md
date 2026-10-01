@@ -1,6 +1,6 @@
 ---
 title: "New York"
-subtitle: "Day Three — Mar 14, 2026 · 12 stops · 14 km on foot · 386 photos"
+subtitle: "Day Three — Mar 14, 2026 · 12 stops · 42,258 steps · 386 photos"
 byline: "A travel scrapbook"
 date: "2026-03-15"
 status: "draft"
@@ -93,4 +93,4 @@ The light went soft and everything turned to honey, Billionaires' Row lined up a
 
 ## Day's End
 
-Twelve stops, nearly twelve hours door to door. Fourteen kilometres on foot, seven trains, three hundred and eighty-six photos. Brooklyn at first light to Central Park at golden hour — the day that made the trip.
+Twelve stops, nearly twelve hours door to door. 42,258 steps — thirty-one kilometres by the watch, every gallery included, and a personal record — seven trains, three hundred and eighty-six photos. Brooklyn at first light to Central Park at golden hour — the day that made the trip.
