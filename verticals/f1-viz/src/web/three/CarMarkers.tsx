@@ -1,26 +1,27 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useCarModel, cloneCarModel } from './carModel'
-import type { CarPositionTrack, RaceDriver } from '../replay/types'
-import { interpolateFrame } from '../replay/trackProjection'
-import type { WorldProjector } from './track3d'
+import { CAR_LENGTH_M, CAR_WIDTH_M, cloneCarModel, useCarModel, type CarModelTemplate } from './carModel'
+import type { RaceDriver } from '../replay/types'
+import type { RaceState } from './raceState'
 
-const EMA_ALPHA = 0.25 // elevation smoothing — kills 4 Hz GPS-Z steps
+/**
+ * Front wheels read better slightly exaggerated (pure geometry is only ~4° in
+ * a fast corner); the steering wheel turns ~9× the road-wheel angle.
+ */
+const WHEEL_STEER_GAIN = 1.5
+const MAX_WHEEL_STEER = 0.42
+const STEERING_RATIO = 9
+const MAX_STEERING_WHEEL = 2.8
 
 interface MarkersProps {
   modelUrl?: string
   drivers: RaceDriver[]
-  tracks: Map<number, CarPositionTrack>
-  visibleDrivers: Set<number>
   focusedDriver: number | null
-  projector: WorldProjector
-  currentTimeRef: React.RefObject<number>
-  /** Chase view: car-scale markers, only the focused car labelled. */
-  chase?: boolean
+  state: RaceState
 }
 
-export function CarMarkers({ modelUrl, drivers, tracks, visibleDrivers, focusedDriver, projector, currentTimeRef, chase = false }: MarkersProps) {
+export function CarMarkers({ modelUrl, drivers, focusedDriver, state }: MarkersProps) {
   const model = useCarModel(modelUrl)
   return (
     <>
@@ -30,12 +31,8 @@ export function CarMarkers({ modelUrl, drivers, tracks, visibleDrivers, focusedD
           model={model}
           useModel={!!modelUrl}
           driver={d}
-          track={tracks.get(d.driverNumber) ?? null}
-          visible={visibleDrivers.has(d.driverNumber)}
           focused={d.driverNumber === focusedDriver}
-          projector={projector}
-          currentTimeRef={currentTimeRef}
-          chase={chase}
+          state={state}
         />
       ))}
     </>
@@ -65,37 +62,36 @@ function makeLabelTexture(label: string, color: string): THREE.CanvasTexture {
 }
 
 interface MarkerProps {
-  model: THREE.Group | null
+  model: CarModelTemplate | null
   useModel: boolean
   driver: RaceDriver
-  track: CarPositionTrack | null
-  visible: boolean
   focused: boolean
-  projector: WorldProjector
-  currentTimeRef: React.RefObject<number>
-  chase: boolean
+  state: RaceState
 }
 
-/** Marker radius in chase mode — roughly an F1 car's footprint. */
-const CHASE_CAR_RADIUS = 3
+/** Sphere marker radius (true scale) when no car model is configured. */
+const SPHERE_RADIUS = 1.4
+/** Label width at true scale (m), and its floor as a fraction of the view height. */
+const LABEL_W = 3.6
+const LABEL_SCREEN = 0.06
+const LABEL_SCREEN_MAX = 0.14
+const FOLLOW_LABEL_RANGE_M = 350
+const CAR_HEIGHT_M = 1.2
 
-function CarMarker({ model, useModel, driver, track, visible, focused, projector, currentTimeRef, chase }: MarkerProps) {
+function clamp(v: number, limit: number) {
+  return Math.max(-limit, Math.min(limit, v))
+}
+
+function CarMarker({ model, useModel, driver, focused, state }: MarkerProps) {
   const color = driver.teamColour || '#9CA3AF'
   const car = useMemo(() => (model ? cloneCarModel(model, color) : null), [model, color])
   useEffect(() => () => car?.materials.forEach((m) => m.dispose()), [car])
-  const headingRef = useRef<THREE.Group>(null)
   const groupRef = useRef<THREE.Group>(null)
+  const bodyRef = useRef<THREE.Group>(null)
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const ringRef = useRef<THREE.Mesh>(null)
-  const emaY = useRef<number | null>(null)
-
-  // Overview markers are sized for the whole circuit (~17 m spheres at
-  // Melbourne scale). A chase camera sits a few car-lengths back, where those
-  // balloon into a wall of overlapping spheres and labels — so chase mode
-  // uses car-scale markers (~6 m) and labels only the focused car.
-  const carRadius = chase ? CHASE_CAR_RADIUS : Math.max(7, projector.radius * 0.013)
-  const showLabel = !chase || focused
-  const carLift = useModel ? 0.15 : carRadius
+  const labelRef = useRef<THREE.Sprite>(null)
+  const camera = useThree((s) => s.camera)
   const texture = useMemo(
     () => makeLabelTexture(driver.abbreviation || String(driver.driverNumber), color),
     [driver.abbreviation, driver.driverNumber, color],
@@ -104,78 +100,79 @@ function CarMarker({ model, useModel, driver, track, visible, focused, projector
 
   useFrame(() => {
     const g = groupRef.current
+    const cs = state.byNumber.get(driver.driverNumber)
     if (!g) return
-    if (!visible || !track) {
-      g.visible = false
-      return
-    }
-    const t = currentTimeRef.current ?? 0
-    const frame = interpolateFrame(track, t)
-    if (!frame.ok) {
+    if (!cs || !cs.active) {
       g.visible = false
       return
     }
     g.visible = true
+    const k = state.boost
+    const overview = state.mode === 'orbit'
+    // Close-up shots of this car: its own label would fill the frame (the HUD names it).
+    const closeUp = state.cameraTarget === driver.driverNumber && (state.shot === 'pov' || state.shot === 'chase')
+    g.position.copy(cs.pos)
+    g.scale.setScalar(k)
 
-    const [wx, wy, wz] = projector.toWorld(frame.x, frame.y, frame.z)
-    const targetY = projector.hasElevation
-      ? frame.z != null
-        ? wy
-        : projector.nearestY(frame.x, frame.y)
-      : 0
-    emaY.current = emaY.current == null ? targetY : emaY.current + EMA_ALPHA * (targetY - emaY.current)
-    g.position.set(wx, emaY.current + carLift, wz)
-    g.scale.setScalar(focused ? (chase ? 1.3 : 1.6) : 1)
-
-    // The supplied RB22 points along +Z. Use a centred telemetry tangent,
-    // including the last sample; keep the heading while stationary.
-    if (headingRef.current) {
-      const before = interpolateFrame(track, Math.max(track.frames.t[0], t - 150))
-      const after = interpolateFrame(track, t + 150)
-      if (before.ok && after.ok) {
-        const [bx, , bz] = projector.toWorld(before.x, before.y)
-        const [ax, , az] = projector.toWorld(after.x, after.y)
-        if (Math.hypot(ax - bx, az - bz) > 0.01) {
-          headingRef.current.rotation.y = Math.atan2(ax - bx, az - bz)
-        }
-      }
+    if (bodyRef.current) {
+      bodyRef.current.rotation.set(-cs.pitch, cs.heading, 0, 'YXZ')
     }
-    const inPit = frame.status === 2
+    if (car) {
+      // + steer = turning left: front wheels yaw left, the wheel turns anticlockwise.
+      const wheel = clamp(cs.steer * WHEEL_STEER_GAIN, MAX_WHEEL_STEER)
+      if (car.wheelFL) car.wheelFL.rotation.y = wheel
+      if (car.wheelFR) car.wheelFR.rotation.y = wheel
+      if (car.steering) car.steering.rotation.z = -clamp(cs.steer * STEERING_RATIO, MAX_STEERING_WHEEL)
+    }
+
+    const inPit = cs.status === 2
     car?.materials.forEach((m) => { m.opacity = inPit ? 0.4 : 1 })
-    const off = frame.status === 1
     if (matRef.current) matRef.current.opacity = inPit ? 0.4 : 1
+    const off = cs.status === 1
     if (ringRef.current) {
-      ringRef.current.visible = focused || off
+      ringRef.current.visible = overview && (focused || off)
       ;(ringRef.current.material as THREE.MeshBasicMaterial).color.set(off ? '#F59E0B' : '#ffffff')
+    }
+    const label = labelRef.current
+    if (label) {
+      // Every car labelled except the one in a close-up. True size up close,
+      // but never smaller than a fixed share of the screen.
+      const dist = g.position.distanceTo(camera.position)
+      // Following a car, distant labels just stack up along the horizon.
+      label.visible = !closeUp && (overview || dist < FOLLOW_LABEL_RANGE_M)
+      const fov = (camera as THREE.PerspectiveCamera).fov ?? 50
+      const viewH = 2 * dist * Math.tan(THREE.MathUtils.degToRad(fov / 2))
+      // …and never more than a sliver of the frame for a car right by the lens.
+      const w = Math.min(Math.max(LABEL_W, viewH * LABEL_SCREEN), viewH * LABEL_SCREEN_MAX)
+      label.scale.set(w / k, w / 2 / k, 1)
+      label.position.y = (CAR_HEIGHT_M * k + w * 0.3) / k
     }
   })
 
   return (
     <group ref={groupRef} visible={false}>
-      {useModel ? (
-        <group ref={headingRef} scale={carRadius * 2}>
-          {car ? <primitive object={car.scene} dispose={null} /> : (
-            <mesh position={[0, 0.1, 0]}>
-              <boxGeometry args={[0.38, 0.2, 1]} />
+      <group ref={bodyRef}>
+        {useModel ? (
+          car ? <primitive object={car.scene} dispose={null} /> : (
+            <mesh position={[0, 0.5, 0]}>
+              <boxGeometry args={[CAR_WIDTH_M, 0.9, CAR_LENGTH_M]} />
               <meshStandardMaterial ref={matRef} color={color} transparent />
             </mesh>
-          )}
-        </group>
-      ) : (
-        <mesh>
-          <sphereGeometry args={[carRadius, 16, 16]} />
-          <meshStandardMaterial ref={matRef} color={color} emissive={color} emissiveIntensity={focused ? 0.6 : 0.45} transparent />
-        </mesh>
-      )}
-      <mesh ref={ringRef} position={[0, useModel ? carRadius * 0.25 : 0, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-        <torusGeometry args={[carRadius * 1.7, carRadius * 0.22, 8, 32]} />
+          )
+        ) : (
+          <mesh position={[0, SPHERE_RADIUS, 0]}>
+            <sphereGeometry args={[SPHERE_RADIUS, 16, 16]} />
+            <meshStandardMaterial ref={matRef} color={color} emissive={color} emissiveIntensity={focused ? 0.6 : 0.45} transparent />
+          </mesh>
+        )}
+      </group>
+      <mesh ref={ringRef} position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <torusGeometry args={[CAR_LENGTH_M * 0.75, 0.35, 8, 40]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      {showLabel && (
-        <sprite position={[0, carRadius * 2.8, 0]} scale={[carRadius * 5, carRadius * 2.5, 1]}>
-          <spriteMaterial map={texture} transparent depthTest={false} depthWrite={false} />
-        </sprite>
-      )}
+      <sprite ref={labelRef} position={[0, CAR_HEIGHT_M + 1, 0]} scale={[LABEL_W, LABEL_W / 2, 1]}>
+        <spriteMaterial map={texture} transparent depthTest={false} depthWrite={false} />
+      </sprite>
     </group>
   )
 }

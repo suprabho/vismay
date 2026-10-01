@@ -1777,6 +1777,9 @@ importers:
 
   verticals/f1-viz:
     dependencies:
+      '@phosphor-icons/react':
+        specifier: ^2.1.10
+        version: 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@react-three/drei':
         specifier: ^10.0.0
         version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.14)(expo-asset@55.0.17(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(expo-file-system@55.0.20(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)))(expo@55.0.24)(react-dom@19.2.4(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(three@0.171.0))(@types/react@19.2.14)(@types/three@0.171.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.171.0)

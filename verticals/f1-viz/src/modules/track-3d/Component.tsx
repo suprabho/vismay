@@ -63,7 +63,9 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
   }, [race.tracks, playback.currentTimeMs])
 
   const interactive = (config.interactive ?? false) && !isCapture
-  const chaseCam = (config.chaseCam ?? false) && !isCapture
+  // Capture/print keeps the deterministic static overview framing.
+  const cameraMode = isCapture ? 'orbit' : config.cameraMode ?? (config.chaseCam ? 'chase' : 'orbit')
+  const cameraControls = (config.cameraControls ?? interactive) && !isCapture
 
   if (race.loading) {
     return (
@@ -107,7 +109,8 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
           sectorBests={race.sectorBests}
           currentLap={currentLap}
           currentTimeRef={playback.currentTimeRef}
-          chaseCam={chaseCam}
+          cameraMode={cameraMode}
+          cameraControls={cameraControls}
           interactive={interactive}
           onReady={noteReady}
         />
