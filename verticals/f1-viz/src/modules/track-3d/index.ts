@@ -1,11 +1,14 @@
 import type { VizModule } from '@vismay/viz-engine'
 import type { ReplayFixture } from '../../web/replay/dataSource'
+import { isCameraMode, type CameraMode } from '../../web/three/cameraModes'
 
 /**
  * `f1:track-3d` — Foreground viz module: a Three.js / react-three-fiber 3D track
- * view with an extruded sector-coloured ribbon, animated car markers, corner
- * labels, and an optional chase camera. Ported from the f1_backend 3D viewport
- * and built on the proven `starship:viewer` R3F recipe.
+ * view with an extruded sector-coloured ribbon, true-scale cars (steering front
+ * wheels and steering wheel), corner labels, and broadcast-style cameras — an
+ * auto director, driver POV, chase, trackside TV, helicopter and free orbit.
+ * Ported from the f1_backend 3D viewport and built on the proven
+ * `starship:viewer` R3F recipe.
  *
  * Consumes the SAME replay data seam as `f1:race-replay` (session + circuit +
  * per-driver position tracks) — only the renderer differs. Source is resolved
@@ -25,10 +28,18 @@ export interface Track3DConfig {
   sessionRef?: string
   fixtureUrl?: string
   fallbackRef?: string
-  /** Driver to focus (chase target + highlight). */
+  /** Driver to focus (camera target + highlight). */
   focalDriverNumber?: number | null
-  /** Camera trails the focused car during playback. */
+  /**
+   * Starting camera: 'auto' (director cuts between shots of the action),
+   * 'pov' (onboard), 'chase', 'tv' (trackside), 'heli' or 'orbit' (free
+   * overview). Defaults to 'chase' when `chaseCam` is set, else 'orbit'.
+   */
+  cameraMode?: CameraMode
+  /** Legacy: camera trails the focused car — same as cameraMode 'chase'. */
   chaseCam?: boolean
+  /** Show the camera picker + HUD over the view. Defaults to `interactive`. */
+  cameraControls?: boolean
   /** Allow user orbit (OrbitControls). Off by default so scroll passes through. */
   interactive?: boolean
   /**
@@ -66,6 +77,8 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Track3
     fallbackRef: typeof r.fallbackRef === 'string' ? r.fallbackRef : undefined,
     focalDriverNumber: typeof r.focalDriverNumber === 'number' ? r.focalDriverNumber : undefined,
     chaseCam: typeof r.chaseCam === 'boolean' ? r.chaseCam : undefined,
+    cameraMode: isCameraMode(r.cameraMode) ? r.cameraMode : undefined,
+    cameraControls: typeof r.cameraControls === 'boolean' ? r.cameraControls : undefined,
     interactive: typeof r.interactive === 'boolean' ? r.interactive : undefined,
     autoPlay: typeof r.autoPlay === 'boolean' ? r.autoPlay : undefined,
   }

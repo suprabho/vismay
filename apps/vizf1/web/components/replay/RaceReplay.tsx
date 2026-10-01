@@ -148,7 +148,9 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
         : { sessionRef, fallbackRef: 'demo' }),
       focalDriverNumber: focusedDriver,
       interactive: true,
-      chaseCam: false,
+      // Broadcast-style director; the in-view picker switches to POV, chase,
+      // trackside, heli or free orbit. Focusing a driver locks the camera on them.
+      cameraMode: 'auto' as const,
       autoPlay: true,
     }),
     [sessionRef, focusedDriver],

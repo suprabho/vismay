@@ -83,3 +83,12 @@ export function buildWorldProjector(circuit: CircuitGeometry): WorldProjector {
 
   return { toWorld, hasElevation, nearestY, outlineWorld, radius }
 }
+
+/**
+ * Half-width of the rendered road (m). Cars render at true scale, so the
+ * ribbon stays close to a real circuit's 12–20 m rather than the old
+ * overview-sized band; very large circuits get a little more for legibility.
+ */
+export function trackHalfWidth(projector: WorldProjector): number {
+  return Math.min(10, Math.max(7, projector.radius * 0.008))
+}

@@ -6,7 +6,7 @@ import type { WorldProjector } from './track3d'
 interface Props {
   circuit: CircuitGeometry
   projector: WorldProjector
-  /** Chase view: car-scale labels instead of the circuit-overview size. */
+  /** Following a car: car-scale labels instead of the circuit-overview size. */
   chase?: boolean
 }
 
@@ -33,10 +33,10 @@ function makeCornerTexture(label: string): THREE.CanvasTexture {
 /** Static corner labels ("T1"…) baked into sprites once per circuit. */
 export function CornerMarkers3D({ circuit, projector, chase = false }: Props) {
   // Overview labels are ~30 m wide at Melbourne scale; from a chase camera a
-  // few car-lengths back they fill the sky, so chase mode uses a fixed ~12 m.
-  const size = chase ? 12 : Math.max(20, projector.radius * 0.05)
+  // few car-lengths back they fill the sky, so follow cameras use ~7 m.
+  const size = chase ? 7 : Math.max(20, projector.radius * 0.05)
   const markers = useMemo(() => {
-    const lift = chase ? 6 : Math.max(8, projector.radius * 0.03)
+    const lift = chase ? 5 : Math.max(8, projector.radius * 0.03)
     return circuit.corners.map((corner) => {
       const [wx, , wz] = projector.toWorld(corner.x, corner.y)
       const wy = projector.nearestY(corner.x, corner.y)
@@ -55,7 +55,7 @@ export function CornerMarkers3D({ circuit, projector, chase = false }: Props) {
     <>
       {markers.map((m) => (
         <sprite key={m.key} position={m.position} scale={[size, size * 0.5, 1]}>
-          <spriteMaterial map={m.texture} transparent depthTest={false} depthWrite={false} opacity={0.55} />
+          <spriteMaterial map={m.texture} transparent depthTest={false} depthWrite={false} opacity={chase ? 0.4 : 0.55} />
         </sprite>
       ))}
     </>

@@ -29,6 +29,7 @@
     "nativewind": { "optional": true }
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@vismay/viz-engine": "workspace:*",
     "three": "^0.171.0",
     "@react-three/fiber": "^9.1.0",
