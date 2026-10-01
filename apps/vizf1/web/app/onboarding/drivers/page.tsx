@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useMemo, useState } from 'react'
 import { EntityChip } from '@vismay/f1-viz/web'
 import { BackButton } from '@/components/BackButton'
+import { useAuth } from '@/lib/AuthProvider'
+import { useAuthModal } from '@/lib/AuthModalProvider'
 import { useAllDrivers } from '@/lib/useCatalog'
 import { useFollowMutation, useFollows } from '@/lib/usePreferences'
 
@@ -21,6 +23,8 @@ function OnboardingDriversInner() {
   const router = useRouter()
   const params = useSearchParams()
   const edit = params.get('edit')
+  const { session } = useAuth()
+  const { requireAuth } = useAuthModal()
   const { data: drivers, isLoading } = useAllDrivers()
   const { data: follows } = useFollows()
   const { follow, unfollow } = useFollowMutation()
@@ -28,6 +32,7 @@ function OnboardingDriversInner() {
   const [initial, setInitial] = useState<Set<string>>(new Set())
   const [seeded, setSeeded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
 
   // Seed `picked`/`initial` from existing follows once the catalog (and, in edit
@@ -64,14 +69,26 @@ function OnboardingDriversInner() {
   }
 
   async function next() {
+    // Session lapsed mid-flow: ask to sign back in rather than fail the writes.
+    if (!session) {
+      requireAuth(`/onboarding/drivers${edit ? '?edit=1' : ''}`)
+      return
+    }
     setBusy(true)
+    setError(null)
     const toFollow = Array.from(picked).filter((id) => !initial.has(id))
     const toUnfollow = Array.from(initial).filter((id) => !picked.has(id))
-    await Promise.all([
-      ...toFollow.map((id) => follow.mutateAsync({ type: 'driver', id })),
-      ...toUnfollow.map((id) => unfollow.mutateAsync({ type: 'driver', id })),
-    ])
-    setBusy(false)
+    try {
+      await Promise.all([
+        ...toFollow.map((id) => follow.mutateAsync({ type: 'driver', id })),
+        ...toUnfollow.map((id) => unfollow.mutateAsync({ type: 'driver', id })),
+      ])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save your drivers.')
+      return
+    } finally {
+      setBusy(false)
+    }
     const qs = new URLSearchParams()
     if (edit) qs.set('edit', '1')
     const suffix = qs.toString()
@@ -118,6 +135,11 @@ function OnboardingDriversInner() {
       </div>
 
       <div className="sticky bottom-0 border-t border-border bg-bg px-6 py-4">
+        {error ? (
+          <p role="alert" className="mb-3 text-center text-sm text-accent">
+            {error} Please try again.
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={next}

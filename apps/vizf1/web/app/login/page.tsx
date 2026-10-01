@@ -1,33 +1,33 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, type CSSProperties } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo } from 'react'
 import { AuthWidget, createSupabaseAuthClient } from '@vismay/ui'
 import { ChequeredFlagMark } from '@vizf1/brand/logos'
 import { useAuth } from '@/lib/AuthProvider'
+import { AUTH_BRAND_STYLE } from '@/lib/AuthModalProvider'
 import { supabaseAuth } from '@/lib/supabaseAuth'
 
-// Map vizf1's brand tokens (hex `--color-*`) onto the shared widget's `--auth-*`
-// variables, so the widget renders in VizF1's brand.
-const BRAND_STYLE = {
-  '--auth-bg': 'transparent',
-  '--auth-surface': 'var(--color-surface)',
-  '--auth-fg': 'var(--color-text)',
-  '--auth-muted': 'var(--color-muted)',
-  '--auth-border': 'var(--color-border)',
-  '--auth-accent': 'var(--color-accent)',
-  '--auth-accent-fg': 'var(--color-accent-text)',
-} as CSSProperties
-
-export default function LoginPage() {
-  const { session, loading } = useAuth()
+function LoginInner() {
+  const { session, profile, loading } = useAuth()
   const router = useRouter()
+  const params = useSearchParams()
+  // Same-origin paths only, so `?next=` can't bounce users off-site.
+  const nextParam = params.get('next')
+  const next = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null
 
+  // Once signed in (and the profile has landed), new accounts go through
+  // onboarding; returning users go where they were headed.
   useEffect(() => {
-    if (!loading && session) router.replace('/onboarding/drivers')
-  }, [loading, session, router])
+    if (loading || !session || !profile) return
+    router.replace(profile.onboarded_at ? (next ?? '/following') : '/onboarding/drivers')
+  }, [loading, session, profile, next, router])
 
   const authClient = useMemo(() => createSupabaseAuthClient(supabaseAuth()), [])
+  const oauthRedirect =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`
+      : undefined
 
   return (
     <main className="flex min-h-screen flex-col justify-center bg-bg px-6">
@@ -36,12 +36,20 @@ export default function LoginPage() {
           authClient={authClient}
           providers={['password', 'google']}
           allowSignup
+          redirectTo={oauthRedirect}
           brand={{ name: 'VizF1', logo: <ChequeredFlagMark className="h-6 w-auto text-accent" /> }}
           copy={{ signupSubtitle: 'Create an account to follow drivers and teams.' }}
-          onAuthed={() => router.replace('/onboarding/drivers')}
-          style={BRAND_STYLE}
+          style={AUTH_BRAND_STYLE}
         />
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
   )
 }

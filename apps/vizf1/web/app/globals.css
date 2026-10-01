@@ -47,3 +47,13 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
 }
+
+/* Landing (/about-us): standings bars grow in from the left. */
+@keyframes vf-bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vf-bar-grow { animation: none !important; }
+}

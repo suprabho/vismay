@@ -5,6 +5,7 @@ import { Suspense, useState } from 'react'
 import { EntityChip } from '@vismay/f1-viz/web'
 import { BackButton } from '@/components/BackButton'
 import { useAuth } from '@/lib/AuthProvider'
+import { useAuthModal } from '@/lib/AuthModalProvider'
 import { supabaseAuth } from '@/lib/supabaseAuth'
 import { useAllConstructors } from '@/lib/useCatalog'
 import { useFollowMutation, useFollows } from '@/lib/usePreferences'
@@ -24,6 +25,7 @@ function OnboardingConstructorsInner() {
   const params = useSearchParams()
   const edit = params.get('edit')
   const { session, refreshProfile } = useAuth()
+  const { requireAuth } = useAuthModal()
   const { data: constructors, isLoading } = useAllConstructors()
   const { data: follows } = useFollows()
   const { follow, unfollow } = useFollowMutation()
@@ -31,6 +33,7 @@ function OnboardingConstructorsInner() {
   const [initial, setInitial] = useState<Set<string>>(new Set())
   const [seeded, setSeeded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!seeded && constructors && (!edit || follows)) {
     if (edit && follows) {
@@ -54,22 +57,34 @@ function OnboardingConstructorsInner() {
   }
 
   async function finish() {
-    if (!session) return
+    // Session lapsed mid-flow: ask to sign back in rather than silently no-op.
+    if (!session) {
+      requireAuth(`/onboarding/constructors${edit ? '?edit=1' : ''}`)
+      return
+    }
     setBusy(true)
+    setError(null)
     const toFollow = Array.from(picked).filter((id) => !initial.has(id))
     const toUnfollow = Array.from(initial).filter((id) => !picked.has(id))
-    await Promise.all([
-      ...toFollow.map((id) => follow.mutateAsync({ type: 'constructor', id })),
-      ...toUnfollow.map((id) => unfollow.mutateAsync({ type: 'constructor', id })),
-    ])
-    if (!edit) {
-      await supabaseAuth()
-        .from('vizf1_profiles')
-        .update({ onboarded_at: new Date().toISOString() })
-        .eq('id', session.user.id)
-      await refreshProfile()
+    try {
+      await Promise.all([
+        ...toFollow.map((id) => follow.mutateAsync({ type: 'constructor', id })),
+        ...toUnfollow.map((id) => unfollow.mutateAsync({ type: 'constructor', id })),
+      ])
+      if (!edit) {
+        const { error: profileError } = await supabaseAuth()
+          .from('vizf1_profiles')
+          .update({ onboarded_at: new Date().toISOString() })
+          .eq('id', session.user.id)
+        if (profileError) throw profileError
+        await refreshProfile()
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save your teams.')
+      return
+    } finally {
+      setBusy(false)
     }
-    setBusy(false)
     router.replace(edit ? '/following' : '/feed')
   }
 
@@ -102,6 +117,11 @@ function OnboardingConstructorsInner() {
       </div>
 
       <div className="sticky bottom-0 border-t border-border bg-bg px-6 py-4">
+        {error ? (
+          <p role="alert" className="mb-3 text-center text-sm text-accent">
+            {error} Please try again.
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={finish}
