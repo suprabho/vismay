@@ -12,6 +12,7 @@ import {
 } from '../../web/clip/clipSource'
 import { usePlayback } from '../../web/shared/usePlayback'
 import { AlertIcon, CameraIcon, GaugeIcon, PauseIcon, PlayIcon, ResetIcon, SpinnerIcon } from '../../web/replay/icons'
+import { RACE_EVENT_STYLE, formatPitTime, periodAtLap, type RaceEventKind } from '../../web/events/raceEvents'
 import type { TelemetryClipConfig } from './index'
 
 interface CarPos {
@@ -19,6 +20,8 @@ interface CarPos {
   x: number
   y: number
   frameIdx: number
+  /** The car's own lap at the playhead. */
+  lap: number
   trailX: number[]
   trailY: number[]
 }
@@ -193,7 +196,8 @@ export default function TelemetryClipComponent({
         const trailY = track.frames.y.slice(start, frameIdx + 1)
         trailX.push(x)
         trailY.push(y)
-        return { driverNumber: track.driverNumber, x, y, frameIdx, trailX, trailY }
+        const lap = track.frames.lap?.[frameIdx] ?? 0
+        return { driverNumber: track.driverNumber, x, y, frameIdx, lap, trailX, trailY }
       })
       .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -268,6 +272,65 @@ export default function TelemetryClipComponent({
     })
   })()
 
+  // Race events laid along the clip timeline: neutralisation / flag spans from
+  // the reference car's lap boundaries, and a tick per pit entry (end of the
+  // in-lap on that car's own frames). Clip time τ is `track.t0Ms + τ` per car.
+  const raceEvents = config.raceEvents
+  const eventStrip = useMemo(() => {
+    if (!data?.tracks.length || !raceEvents || durationMs <= 0) return null
+    const ref = data.tracks.find((t) => t.driverNumber === config.focalDriverNumber) ?? data.tracks[0]
+    const frac = (ms: number) => Math.min(1, Math.max(0, ms / durationMs))
+    const lapSpan = new Map<number, [number, number]>()
+    for (let i = 0; i < ref.frames.t.length; i++) {
+      const lap = ref.frames.lap[i]
+      const ms = ref.frames.t[i] - ref.t0Ms
+      const span = lapSpan.get(lap)
+      if (span) span[1] = ms
+      else lapSpan.set(lap, [ms, ms])
+    }
+    const segments: Array<{ kind: RaceEventKind; left: number; width: number; title: string }> = []
+    for (const p of raceEvents.periods) {
+      let start = Infinity
+      let end = -Infinity
+      for (const [lap, [a, b]] of lapSpan) {
+        if (lap < p.startLap || lap > p.endLap) continue
+        start = Math.min(start, a)
+        end = Math.max(end, b)
+      }
+      if (start > end) continue
+      const label = RACE_EVENT_STYLE[p.kind].label
+      const laps = p.startLap === p.endLap ? `lap ${p.startLap}` : `laps ${p.startLap}–${p.endLap}`
+      segments.push({
+        kind: p.kind,
+        left: frac(start),
+        width: Math.max(0.006, frac(end) - frac(start)),
+        title: `${label} · ${laps}${p.message ? ` · ${p.message}` : ''}`,
+      })
+    }
+    const ticks: Array<{ key: string; left: number; color: string; title: string }> = []
+    for (const stop of raceEvents.pitStops) {
+      const track = data.tracks.find((t) => t.driverNumber === stop.driverNumber)
+      if (!track) continue
+      let ms: number | null = null
+      for (let i = track.frames.t.length - 1; i >= 0; i--) {
+        if (track.frames.lap[i] === stop.lap) {
+          ms = track.frames.t[i] - track.t0Ms
+          break
+        }
+      }
+      if (ms == null) continue
+      const driver = data.drivers.find((d) => d.driverNumber === stop.driverNumber)
+      const raw = (driver?.teamColour ?? '').replace(/^#/, '')
+      ticks.push({
+        key: `${stop.driverNumber}:${stop.lap}`,
+        left: frac(ms),
+        color: raw ? `#${raw}` : '#fff',
+        title: `${driver?.abbreviation ?? `#${stop.driverNumber}`} pit · lap ${stop.lap} · ${formatPitTime(stop)}`,
+      })
+    }
+    return segments.length || ticks.length ? { segments, ticks } : null
+  }, [data, raceEvents, durationMs, config.focalDriverNumber])
+
   if (loading) {
     return (
       <div ref={rootRef} className="flex aspect-video max-h-full w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface">
@@ -332,8 +395,17 @@ export default function TelemetryClipComponent({
     const throttle = tel ? interp(tel.throttle, fi, ni, r) : 0
     const brake = (tel ? interp(tel.brake, fi, ni, r) : 0) * 100
     const gear = tel?.nGear?.[fi] ?? 0
-    return { driver, tel, color, speed, throttle, brake, gear }
+    // FastF1 / OpenF1 DRS codes: 10, 12 and 14 mean the flap is open.
+    const drsOpen = (tel?.drs?.[fi] ?? 0) >= 10
+    const rpm = tel?.rpm ? Math.round(interp(tel.rpm, fi, ni, r)) : null
+    const lap = carPositions.find((p) => p.driverNumber === driver.driverNumber)?.lap || tel?.lap || config.lapFrom
+    const pit = raceEvents?.pitStops.find((s) => s.driverNumber === driver.driverNumber && s.lap === lap) ?? null
+    return { driver, tel, color, speed, throttle, brake, gear, drsOpen, rpm, lap, pit }
   })
+  // Track status at the lead clip car's lap (race-control laps are leader laps).
+  const leadLap = readouts.reduce((m, x) => Math.max(m, x.lap), 0)
+  const status = periodAtLap(raceEvents?.periods, leadLap)
+  const statusStyle = status ? RACE_EVENT_STYLE[status.kind] : null
   const pickDriver = (driverNumber: number) => {
     const selecting = selectedDriver !== driverNumber
     setSelectedDriver(selecting ? driverNumber : null)
@@ -365,6 +437,15 @@ export default function TelemetryClipComponent({
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {statusStyle && (
+            <span
+              className="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[10px] font-black uppercase tracking-wider text-black"
+              style={{ backgroundColor: statusStyle.color }}
+              title={status?.message ?? statusStyle.label}
+            >
+              {statusStyle.short}
+            </span>
+          )}
           {gapText && (
             <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-text">
               GAP <span className="font-bold">{gapText}</span>
@@ -454,7 +535,7 @@ export default function TelemetryClipComponent({
             className="grid shrink-0 divide-x divide-border border-t border-border"
             style={{ gridTemplateColumns: `repeat(${Math.max(1, readouts.length)}, minmax(0, 1fr))` }}
           >
-            {readouts.map(({ driver, color, speed, throttle, brake, gear }) => {
+            {readouts.map(({ driver, color, speed, throttle, brake, gear, drsOpen, pit }) => {
               const isSel = selectedDriver === driver.driverNumber
               return (
                 <button
@@ -467,8 +548,17 @@ export default function TelemetryClipComponent({
                 >
                   <span className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: color }} />
                   <div className="flex items-baseline justify-between gap-1">
-                    <span className="truncate font-mono text-sm font-black tracking-tighter text-text">
-                      {driver.abbreviation || `#${driver.driverNumber}`}
+                    <span className="flex min-w-0 items-center gap-1">
+                      <span className="truncate font-mono text-sm font-black tracking-tighter text-text">
+                        {driver.abbreviation || `#${driver.driverNumber}`}
+                      </span>
+                      {pit ? (
+                        <span className="shrink-0 rounded-sm bg-text px-1 font-mono text-[8px] font-black leading-tight text-bg" title={`Pit stop · ${formatPitTime(pit)}`}>
+                          PIT {formatPitTime(pit)}
+                        </span>
+                      ) : drsOpen ? (
+                        <span className="shrink-0 rounded-sm bg-emerald-500 px-1 font-mono text-[8px] font-black leading-tight text-black">DRS</span>
+                      ) : null}
                     </span>
                     <span className="shrink-0 font-mono text-[10px] font-bold tabular-nums text-muted">
                       G{gear === 0 ? 'N' : gear}
@@ -492,7 +582,7 @@ export default function TelemetryClipComponent({
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-border lg:col-span-1">
-            {readouts.map(({ driver, tel, color, speed, throttle, brake, gear }) => {
+            {readouts.map(({ driver, color, speed, throttle, brake, gear, drsOpen, rpm, lap, pit }) => {
               const isSel = selectedDriver === driver.driverNumber
               return (
                 <button
@@ -512,8 +602,15 @@ export default function TelemetryClipComponent({
                       </span>
                       <span className="truncate font-mono text-[10px] font-bold uppercase tracking-widest text-muted">{driver.teamName}</span>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap font-mono text-[10px] font-bold text-muted">
-                      <GaugeIcon size={12} /> LAP {tel?.lap ?? config.lapFrom}
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="flex items-center gap-1 whitespace-nowrap font-mono text-[10px] font-bold text-muted">
+                        <GaugeIcon size={12} /> LAP {lap}
+                      </span>
+                      {pit && (
+                        <span className="whitespace-nowrap rounded-sm bg-text px-1 font-mono text-[9px] font-black text-bg">
+                          PIT {formatPitTime(pit)}
+                        </span>
+                      )}
                     </span>
                   </div>
                   {/* Stacked for the narrow ⅓ column: speed + gear, then the pedals. */}
@@ -529,6 +626,18 @@ export default function TelemetryClipComponent({
                       <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-widest text-muted">Gear</span>
                       <span className="font-mono text-3xl font-black tabular-nums text-text">{gear === 0 ? 'N' : gear}</span>
                     </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 pl-3 font-mono text-[9px] font-bold uppercase tracking-widest">
+                    <span
+                      className={`rounded-sm px-1 ${drsOpen ? 'bg-emerald-500 text-black' : 'border border-border text-muted'}`}
+                    >
+                      DRS
+                    </span>
+                    {rpm != null && (
+                      <span className="text-muted">
+                        <span className="tabular-nums text-text">{rpm.toLocaleString()}</span> rpm
+                      </span>
+                    )}
                   </div>
                   <div className="mt-3 flex items-end gap-3 pl-3">
                     <div className="flex flex-1 flex-col">
@@ -571,15 +680,42 @@ export default function TelemetryClipComponent({
         >
           {playback.playing ? <PauseIcon size={compact ? 14 : 18} /> : atEnd ? <ResetIcon size={compact ? 14 : 18} /> : <PlayIcon size={compact ? 14 : 18} />}
         </button>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.001}
-          value={progress}
-          onChange={(e) => playback.seek(parseFloat(e.target.value) * durationMs)}
-          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-border accent-accent"
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.001}
+            value={progress}
+            onChange={(e) => playback.seek(parseFloat(e.target.value) * durationMs)}
+            className="h-2 w-full cursor-pointer appearance-none rounded-full bg-border accent-accent"
+          />
+          {eventStrip && (
+            <div className="relative h-1.5 w-full rounded-full bg-border/40" aria-label="Race events in this clip">
+              {eventStrip.segments.map((seg, i) => (
+                <span
+                  key={`${seg.kind}-${i}`}
+                  className="absolute top-0 h-full rounded-full"
+                  style={{
+                    left: `${seg.left * 100}%`,
+                    width: `${seg.width * 100}%`,
+                    backgroundColor: RACE_EVENT_STYLE[seg.kind].color,
+                    opacity: seg.kind === 'YELLOW' ? 0.6 : 0.9,
+                  }}
+                  title={seg.title}
+                />
+              ))}
+              {eventStrip.ticks.map((t) => (
+                <span
+                  key={t.key}
+                  className="absolute -top-1 h-3.5 w-1 -translate-x-1/2 rounded-full ring-1 ring-black"
+                  style={{ left: `${t.left * 100}%`, backgroundColor: t.color }}
+                  title={t.title}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

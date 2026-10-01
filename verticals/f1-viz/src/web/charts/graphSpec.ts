@@ -39,6 +39,10 @@ export interface GraphAnnotation {
   xRange?: [number | string, number | string]
   color: string
   label: string
+  /** Point annotations: y to pin at (defaults to the axis floor). */
+  yValue?: number
+  /** Point annotations: marker symbol, e.g. 'pin' | 'circle' | 'triangle'. */
+  symbol?: string
   meta?: Record<string, unknown>
 }
 
@@ -49,7 +53,20 @@ export interface GraphSpec {
   subtitle?: string
   sessionKey?: string
   xAxis?: { key: string; label: string; unit: string }
-  yAxis?: { key: string; label: string; unit: string; domain?: [number, number] }
+  yAxis?: {
+    key: string
+    label: string
+    unit: string
+    domain?: [number, number]
+    /** Flip the axis (positions: P1 on top). */
+    inverse?: boolean
+    /** Value formatting for ticks + tooltip: 'laptime' renders seconds as m:ss.sss. */
+    format?: 'laptime' | 'integer'
+  }
+  /** Line family: curve the lines (default true). Off for discrete per-lap values. */
+  smooth?: boolean
+  /** Add an x-range slider + wheel/pinch zoom. */
+  zoom?: boolean
   series: GraphSeries[]
   dataPoints: Record<string, unknown>[]
   projectionConfig?: {
