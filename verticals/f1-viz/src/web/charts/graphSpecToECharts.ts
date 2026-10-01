@@ -11,6 +11,9 @@ import type { EChartsOption } from 'echarts'
 import type { ChartColors } from '@vismay/viz-engine'
 import type { GraphSpec, GraphSeries } from './graphSpec'
 
+/** Carrier series for annotation overlays — kept out of the legend and tooltip. */
+const OVERLAY_SERIES = '__overlays'
+
 function num(v: unknown): number | null {
   const n = typeof v === 'number' ? v : Number(v)
   return Number.isFinite(n) ? n : null
@@ -21,18 +24,71 @@ function seriesDash(s: GraphSeries): 'solid' | 'dashed' {
   return s.type === 'projected' || s.type === 'reference' ? 'dashed' : 'solid'
 }
 
+/** Seconds → "1:23.456" (`digits` = fractional digits; ticks use 1: "1:23.5"). */
+export function formatLapTime(sec: number, digits = 3): string {
+  const sign = sec < 0 ? '-' : ''
+  const abs = Math.abs(sec)
+  const m = Math.floor(abs / 60)
+  const rest = abs - m * 60
+  return m > 0 ? `${sign}${m}:${rest.toFixed(digits).padStart(digits ? 3 + digits : 2, '0')}` : `${sign}${rest.toFixed(digits)}s`
+}
+
+function valueFormatter(spec: GraphSpec, tick: boolean): (v: number) => string {
+  const fmt = spec.yAxis?.format
+  const unit = spec.yAxis?.unit
+  if (fmt === 'laptime') return (v) => formatLapTime(v, tick ? 1 : 3)
+  if (fmt === 'integer') return (v) => String(Math.round(v))
+  return (v) => {
+    const s = Number.isInteger(v) ? String(v) : v.toFixed(tick ? 1 : 2)
+    return !tick && unit ? `${s} ${unit}` : s
+  }
+}
+
 function annotationOverlays(spec: GraphSpec, colors: ChartColors) {
   const markLineData: Record<string, unknown>[] = []
   const markAreaData: Array<Array<Record<string, unknown>>> = []
   const markPointData: Record<string, unknown>[] = []
+  const floor = spec.yAxis?.domain?.[spec.yAxis.inverse ? 1 : 0] ?? 0
+  // Bands that start right after the previous one drop their label a line so
+  // back-to-back periods (SC straight into a red flag) don't overprint.
+  let lastBandEnd = -Infinity
+  let staggered = false
   for (const a of spec.annotations ?? []) {
     const color = a.color || colors.muted
     if (a.type === 'line' && a.xValue != null) {
-      markLineData.push({ xAxis: a.xValue, label: { formatter: a.label, color }, lineStyle: { color, type: 'dashed' } })
+      markLineData.push({
+        xAxis: a.xValue,
+        label: { formatter: a.label, color, position: 'insideEndTop', fontSize: 10 },
+        lineStyle: { color, type: 'dashed' },
+      })
     } else if (a.type === 'band' && a.xRange) {
-      markAreaData.push([{ xAxis: a.xRange[0], itemStyle: { color: `${color}22` }, label: { formatter: a.label, color } }, { xAxis: a.xRange[1] }])
+      const start = Number(a.xRange[0])
+      staggered = !staggered && Number.isFinite(start) && start - lastBandEnd < 3
+      lastBandEnd = Number(a.xRange[1])
+      markAreaData.push([
+        {
+          xAxis: a.xRange[0],
+          itemStyle: { color: `${color}2e` },
+          label: {
+            formatter: a.label,
+            color,
+            position: 'insideTop',
+            fontSize: 9,
+            fontWeight: 'bold',
+            distance: staggered ? 16 : 5,
+          },
+        },
+        { xAxis: a.xRange[1] },
+      ])
     } else if ((a.type === 'point' || a.type === 'label') && a.xValue != null) {
-      markPointData.push({ coord: [a.xValue, 0], value: a.label, itemStyle: { color } })
+      markPointData.push({
+        coord: [a.xValue, a.yValue ?? floor],
+        value: a.label,
+        symbol: a.symbol ?? 'circle',
+        symbolSize: a.symbol === 'pin' ? 26 : 9,
+        itemStyle: { color, borderColor: '#000', borderWidth: 1 },
+        label: { show: !!a.label, formatter: a.label, position: 'top', color, fontSize: 9, distance: 4 },
+      })
     }
   }
   return { markLineData, markAreaData, markPointData }
@@ -44,7 +100,7 @@ export function graphSpecToECharts(spec: GraphSpec, colors: ChartColors): EChart
   const xs = rows.map((r) => r[xKey])
   const xNumeric = xs.length > 0 && xs.every((v) => num(v) != null)
   const axisLabelColor = colors.muted
-  const grid = { left: 48, right: 18, top: spec.title ? 44 : 18, bottom: 36 }
+  const grid = { left: 48, right: 18, top: spec.title ? 44 : 18, bottom: spec.zoom ? 72 : 42 }
 
   const baseAxis = {
     nameTextStyle: { color: axisLabelColor, fontFamily: 'var(--font-mono)', fontSize: 10 },
@@ -94,44 +150,100 @@ export function graphSpecToECharts(spec: GraphSpec, colors: ChartColors): EChart
       : [{ id: 'y', label: spec.yAxis?.label ?? 'value', color: colors.accent ?? '#f59e0b', dataKey: spec.yAxis?.key ?? 'y', type: 'actual' }]
 
   const { markLineData, markAreaData, markPointData } = annotationOverlays(spec, colors)
+  const hasOverlays = markLineData.length + markAreaData.length + markPointData.length > 0
 
-  const series = seriesDefs.map((s, i) => {
+  const series: Record<string, unknown>[] = seriesDefs.map((s) => {
     const data = rows.map((r) => {
       const y = num(r[s.dataKey])
       return xNumeric ? [num(r[xKey]), y] : y
     })
     const color = s.color || colors.accent || '#f59e0b'
-    const isFirst = i === 0
     return {
       name: s.label,
       type: echKind,
-      smooth: echKind === 'line',
+      smooth: echKind === 'line' && (spec.smooth ?? true),
       showSymbol: echKind === 'scatter' || rows.length <= 40,
       symbolSize: echKind === 'scatter' ? 7 : 4,
       data,
       itemStyle: { color },
       lineStyle: echKind === 'line' ? { color, type: seriesDash(s), width: isSpark ? 1.5 : 2 } : undefined,
       areaStyle: isArea ? { color: `${color}33` } : undefined,
-      ...(isFirst
-        ? {
-            markLine: markLineData.length ? { symbol: 'none', data: markLineData } : undefined,
-            markArea: markAreaData.length ? { data: markAreaData } : undefined,
-            markPoint: markPointData.length ? { data: markPointData } : undefined,
-          }
-        : {}),
     }
   })
+  // Overlays ride a data-less carrier series so hiding a driver in the legend
+  // never takes the event bands / pit markers with it.
+  if (hasOverlays) {
+    series.push({
+      name: OVERLAY_SERIES,
+      type: 'line',
+      data: rows.map((r) => (xNumeric ? [num(r[xKey]), null] : null)),
+      showSymbol: false,
+      silent: true,
+      z: 1,
+      markLine: markLineData.length ? { symbol: 'none', silent: true, data: markLineData } : undefined,
+      markArea: markAreaData.length ? { silent: true, data: markAreaData } : undefined,
+      markPoint: markPointData.length ? { data: markPointData } : undefined,
+    })
+  }
 
   const yDomain = spec.yAxis?.domain
+  const tickFmt = valueFormatter(spec, true)
+  const tipFmt = valueFormatter(spec, false)
+  const xLabel = spec.xAxis?.label ?? ''
+  const showLegend = seriesDefs.length > 1 && !isSpark
+  const titleH = spec.title ? 30 : 4
   return {
     backgroundColor: 'transparent',
-    title: spec.title ? { text: spec.title, left: 'center', textStyle: { color: colors.muted, fontSize: 12 } } : undefined,
-    legend: seriesDefs.length > 1 && !isSpark ? { top: spec.title ? 22 : 0, textStyle: { color: axisLabelColor, fontSize: 10 } } : undefined,
-    grid: isSpark ? { left: 4, right: 4, top: 4, bottom: 4 } : { ...grid, top: seriesDefs.length > 1 ? grid.top + 18 : grid.top },
+    title: spec.title ? { text: spec.title, left: 'center', top: 0, textStyle: { color: colors.muted, fontSize: 12 } } : undefined,
+    legend: showLegend
+      ? {
+          top: titleH,
+          data: seriesDefs.map((s) => s.label),
+          itemWidth: 14,
+          itemHeight: 8,
+          textStyle: { color: axisLabelColor, fontSize: 10 },
+        }
+      : undefined,
+    tooltip: isSpark
+      ? undefined
+      : {
+          trigger: 'axis',
+          confine: true,
+          formatter: (params: unknown) => {
+            const list = (Array.isArray(params) ? params : [params]) as Array<{
+              seriesName?: string
+              marker?: string
+              value?: unknown
+              axisValueLabel?: string
+            }>
+            const rowsOut = list
+              .filter((p) => p.seriesName !== OVERLAY_SERIES)
+              .map((p) => {
+                const v = Array.isArray(p.value) ? p.value[1] : p.value
+                return typeof v === 'number' ? `${p.marker ?? ''}${p.seriesName}&nbsp;&nbsp;<b>${tipFmt(v)}</b>` : null
+              })
+              .filter(Boolean)
+            if (!rowsOut.length) return ''
+            return [`${xLabel} ${list[0]?.axisValueLabel ?? ''}`.trim(), ...rowsOut].join('<br/>')
+          },
+        },
+    grid: isSpark
+      ? { left: 4, right: 4, top: 4, bottom: 4 }
+      : { ...grid, left: spec.yAxis?.format === 'laptime' ? 56 : grid.left, top: titleH + (showLegend ? 26 : 14) },
+    dataZoom: spec.zoom && !isSpark
+      ? [
+          { type: 'inside', xAxisIndex: 0, filterMode: 'none' },
+          { type: 'slider', xAxisIndex: 0, filterMode: 'none', height: 16, bottom: 8, showDetail: false, borderColor: 'transparent' },
+        ]
+      : undefined,
     xAxis: {
       type: xNumeric ? 'value' : 'category',
       data: xNumeric ? undefined : xs.map((v) => String(v)),
+      min: xNumeric ? 'dataMin' : undefined,
+      max: xNumeric ? 'dataMax' : undefined,
       name: isSpark ? undefined : spec.xAxis?.label,
+      nameLocation: 'middle',
+      nameGap: 28,
       show: !isSpark,
       ...baseAxis,
     },
@@ -140,8 +252,13 @@ export function graphSpecToECharts(spec: GraphSpec, colors: ChartColors): EChart
       name: isSpark ? undefined : spec.yAxis?.label,
       min: yDomain ? yDomain[0] : undefined,
       max: yDomain ? yDomain[1] : undefined,
+      // Without an explicit domain, fit the data instead of anchoring at 0 —
+      // a 0-based axis flattens 1:20 vs 1:22 lap times into one line.
+      scale: !yDomain && echKind !== 'bar',
+      inverse: spec.yAxis?.inverse ?? false,
       show: !isSpark,
       ...baseAxis,
+      axisLabel: { ...baseAxis.axisLabel, formatter: tickFmt },
     },
     series: series as EChartsOption['series'],
   }

@@ -35,12 +35,34 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
   const sessionRef = config.sessionKey ?? config.sessionRef ?? 'sample'
   const race = useReplayData(source, sessionRef)
 
+  // Lap window → time window on the focal (else first visible) car's frames,
+  // so the 3D view plays the same stretch of race as the 2D clip.
+  const { lapFrom, lapTo } = config
+  const windowMs = useMemo(() => {
+    if (!race.bounds) return null
+    if (lapFrom == null && lapTo == null) return race.bounds
+    const pick = config.focalDriverNumber ?? config.driverNumbers?.[0]
+    const ref = (pick != null ? race.tracks.get(pick) : undefined) ?? race.tracks.values().next().value
+    if (!ref) return race.bounds
+    const lo = lapFrom ?? 1
+    const hi = lapTo ?? Infinity
+    let t0 = Infinity
+    let t1 = -Infinity
+    for (let i = 0; i < ref.frames.t.length; i++) {
+      const lap = ref.frames.lap[i]
+      if (lap < lo || lap > hi) continue
+      if (ref.frames.t[i] < t0) t0 = ref.frames.t[i]
+      if (ref.frames.t[i] > t1) t1 = ref.frames.t[i]
+    }
+    return t0 < t1 ? { t0Ms: t0, tEndMs: t1 } : race.bounds
+  }, [race.bounds, race.tracks, lapFrom, lapTo, config.focalDriverNumber, config.driverNumbers])
+
   const playback = usePlayback({
-    t0Ms: race.bounds?.t0Ms ?? 0,
-    tEndMs: race.bounds?.tEndMs ?? 0,
+    t0Ms: windowMs?.t0Ms ?? 0,
+    tEndMs: windowMs?.tEndMs ?? 0,
     autoPlay: config.autoPlay ?? (mode === 'autoplay' || mode === 'scroll'),
     mode,
-    capturePlayhead: race.bounds ? Math.round((race.bounds.t0Ms + race.bounds.tEndMs) / 2) : 'end',
+    capturePlayhead: windowMs ? Math.round((windowMs.t0Ms + windowMs.tEndMs) / 2) : 'end',
     resetKey: race.tracks,
   })
 
@@ -51,7 +73,10 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
     return () => cancelAnimationFrame(h)
   }, [race.loading, noteReady])
 
-  const visibleDrivers = useMemo(() => new Set(race.tracks.keys()), [race.tracks])
+  const visibleDrivers = useMemo(() => {
+    const only = config.driverNumbers?.length ? new Set(config.driverNumbers) : null
+    return new Set([...race.tracks.keys()].filter((n) => !only || only.has(n)))
+  }, [race.tracks, config.driverNumbers])
   const focusedDriver = config.focalDriverNumber ?? null
 
   const currentLap = useMemo(() => {
@@ -115,19 +140,22 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
           onReady={noteReady}
         />
       </div>
-      {race.bounds && !isCapture && (
+      {windowMs && !isCapture && (
         <div className="flex shrink-0 items-center gap-3">
           <button
             type="button"
-            onClick={playback.toggle}
+            onClick={() => {
+              if (playback.currentTimeMs >= windowMs.tEndMs) playback.seek(windowMs.t0Ms)
+              playback.toggle()
+            }}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-text text-bg transition-colors hover:bg-accent"
           >
             {playback.playing ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
           </button>
           <input
             type="range"
-            min={race.bounds.t0Ms}
-            max={race.bounds.tEndMs}
+            min={windowMs.t0Ms}
+            max={windowMs.tEndMs}
             step={50}
             value={playback.currentTimeMs}
             onChange={(e) => playback.seek(Number(e.target.value))}

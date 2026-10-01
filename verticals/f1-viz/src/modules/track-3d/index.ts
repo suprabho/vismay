@@ -48,6 +48,11 @@ export interface Track3DConfig {
    */
   carModelUrl?: string
   autoPlay?: boolean
+  /** Play only this lap window (the focal car's laps); omitted = the whole session. */
+  lapFrom?: number
+  lapTo?: number
+  /** Only show these cars; omitted = the full grid. */
+  driverNumbers?: number[]
 }
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Track3DConfig {
@@ -81,6 +86,11 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Track3
     cameraControls: typeof r.cameraControls === 'boolean' ? r.cameraControls : undefined,
     interactive: typeof r.interactive === 'boolean' ? r.interactive : undefined,
     autoPlay: typeof r.autoPlay === 'boolean' ? r.autoPlay : undefined,
+    lapFrom: typeof r.lapFrom === 'number' ? r.lapFrom : undefined,
+    lapTo: typeof r.lapTo === 'number' ? r.lapTo : undefined,
+    driverNumbers: Array.isArray(r.driverNumbers)
+      ? (r.driverNumbers.filter((n) => typeof n === 'number') as number[])
+      : undefined,
   }
 }
 

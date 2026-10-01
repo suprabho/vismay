@@ -1,5 +1,6 @@
 import type { VizModule } from '@vismay/viz-engine'
 import type { TelemetryChannel, TelemetryClipPayload } from '../../web/clip/clipSource'
+import type { RaceEvents } from '../../web/events/raceEvents'
 
 /**
  * `f1:telemetry-clip` — Foreground viz module: an animated telemetry replay for
@@ -38,6 +39,22 @@ export interface TelemetryClipConfig {
   /** Origin for the clip route when rendering off the vizf1 origin (render surface). */
   apiBase?: string
   autoPlay?: boolean
+  /**
+   * Lap-keyed race events (SC / VSC / flags + pit stops) overlaid on the
+   * scrubber and dashboard. Inline only — the host app resolves them.
+   */
+  raceEvents?: RaceEvents
+}
+
+function parseRaceEvents(raw: unknown): RaceEvents | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  if (!Array.isArray(r.periods) || !Array.isArray(r.pitStops)) return undefined
+  return {
+    source: r.source === 'openf1' ? 'openf1' : 'timing',
+    periods: r.periods as RaceEvents['periods'],
+    pitStops: r.pitStops as RaceEvents['pitStops'],
+  }
 }
 
 const VALID_CHANNELS = new Set<TelemetryChannel>(['speed', 'throttle', 'brake', 'drs', 'nGear', 'rpm'])
@@ -84,6 +101,7 @@ function parseConfig(
     clipUrl: typeof r.clipUrl === 'string' ? r.clipUrl : undefined,
     apiBase: typeof r.apiBase === 'string' ? r.apiBase : undefined,
     autoPlay: typeof r.autoPlay === 'boolean' ? r.autoPlay : undefined,
+    raceEvents: parseRaceEvents(r.raceEvents),
   }
 }
 
