@@ -4,11 +4,12 @@ import { createServerSupabase } from '@/lib/supabaseServerAuth'
 export const runtime = 'nodejs'
 
 const ONBOARDING = '/onboarding/drivers'
+const HOME = '/feed'
 
 /**
  * OAuth / magic-link return path. Exchanges the `?code` for a session (cookies
- * set via `createServerSupabase`) and redirects to `?next` (default
- * `/onboarding/drivers`). Consumer signup is open, so there's no allow-list.
+ * set via `createServerSupabase`) and redirects to `?next` (default `/feed`).
+ * Consumer signup is open, so there's no allow-list.
  *
  * The sign-in modal sets `?next` to wherever the visitor was headed; a
  * brand-new account still goes through onboarding first.
@@ -16,7 +17,7 @@ const ONBOARDING = '/onboarding/drivers'
 export async function GET(req: Request) {
   const url = new URL(req.url)
   const code = url.searchParams.get('code')
-  const nextParam = url.searchParams.get('next') || ONBOARDING
+  const nextParam = url.searchParams.get('next') || HOME
   let next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : `/${nextParam.replace(/^\/+/, '')}`
 
   if (code) {

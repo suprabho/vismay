@@ -23,9 +23,10 @@ function Gate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (blocked || !session) return
-    // Already-onboarded users only reach onboarding via the edit flow.
+    // Already-onboarded users only reach onboarding via the edit flow; send
+    // them home (this also covers the moment onboarding itself completes).
     if (profile?.onboarded_at && !edit) {
-      router.replace('/following')
+      router.replace('/feed')
     }
   }, [blocked, session, profile, edit, router])
 

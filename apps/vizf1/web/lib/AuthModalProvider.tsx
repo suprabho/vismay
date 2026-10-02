@@ -103,12 +103,13 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   // Visible only while a request is pending and the user isn't signed in.
   const open = requested && !session
 
-  // Computed at render time so Google OAuth returns to the intended page.
+  // Computed at render time so Google OAuth returns to the intended page —
+  // or, with no explicit destination, to the page the modal opened over.
   const oauthRedirect =
     typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback${
-          next ? `?next=${encodeURIComponent(next)}` : ''
-        }`
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+          next ?? `${window.location.pathname}${window.location.search}`,
+        )}`
       : undefined
 
   return (
