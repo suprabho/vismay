@@ -4352,7 +4352,13 @@ export default function CanvasClient({
         }}
       >
         <a
-          href={appSlug ? `/${appSlug}/${slug}` : `/vizmaya/${slug}`}
+          // `appSlug` is the story's VERTICAL ('f1', …); the editor route is
+          // keyed by the consumer app ('vizf1', …). vizmaya-fyi lives at /vizmaya.
+          href={
+            appSlugForVertical(appSlug) === 'vizmaya-fyi'
+              ? `/vizmaya/${slug}`
+              : `/${appSlugForVertical(appSlug)}/${slug}`
+          }
           title="Back to the story editor"
           style={{
             pointerEvents: 'auto',
