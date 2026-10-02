@@ -20,7 +20,7 @@ function LoginInner() {
   // onboarding; returning users go where they were headed.
   useEffect(() => {
     if (loading || !session || !profile) return
-    router.replace(profile.onboarded_at ? (next ?? '/following') : '/onboarding/drivers')
+    router.replace(profile.onboarded_at ? (next ?? '/feed') : '/onboarding/drivers')
   }, [loading, session, profile, next, router])
 
   const authClient = useMemo(() => createSupabaseAuthClient(supabaseAuth()), [])

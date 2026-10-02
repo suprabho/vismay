@@ -80,10 +80,11 @@ export function AppHeader() {
                 {letter}
               </Link>
             ) : (
-              // Signing in happens in place (modal), then lands on Following.
+              // Signing in happens in place (modal) and leaves the visitor on
+              // the page they were on (new accounts go through onboarding).
               <button
                 type="button"
-                onClick={() => requireAuth('/following')}
+                onClick={() => requireAuth()}
                 className="whitespace-nowrap rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text hover:border-muted sm:px-3 sm:text-sm"
               >
                 Sign in

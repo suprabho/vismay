@@ -349,7 +349,7 @@ export function AboutLanding() {
             <FooterColumn
               heading="Account"
               links={[
-                { label: 'Sign in', href: '/login?next=/following' },
+                { label: 'Sign in', href: '/login' },
                 { label: 'Create account', href: '/login' },
               ]}
             />
