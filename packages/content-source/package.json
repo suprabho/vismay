@@ -52,6 +52,7 @@
     "./vizmayaShareCards": "./src/vizmayaShareCards.ts",
     "./videoProjects": "./src/videoProjects.ts",
     "./footshortsBlocks": "./src/footshortsBlocks.ts",
+    "./footshortsMatchBrief": "./src/footshortsMatchBrief.ts",
     "./storyDemoConfig": "./src/storyDemoConfig.ts",
     "./storyNewsletter": "./src/storyNewsletter.ts",
     "./storyNewsletterConfig": "./src/storyNewsletterConfig.ts",

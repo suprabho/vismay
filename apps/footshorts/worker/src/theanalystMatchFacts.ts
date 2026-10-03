@@ -18,7 +18,10 @@
  *      zero existing events get rows, mirroring events.ts's "no events yet"
  *      gate so the API-Football/Sportradar writers and this one never
  *      double-write. --events-backfill opts stats-done, events-missing
- *      fixtures into a re-scrape to drain the backlog.
+ *      fixtures into a re-scrape to drain the backlog. The same render also
+ *      yields the Opta-OS narrative feed — minute-by-minute commentary plus
+ *      Opta's own season-context INSIGHTS — written to opta_match_stories
+ *      (not gap-filled: one source, so the freshest scrape wins).
  *
  * A third, manual mode — --fixture-id=<uuid> — narrows both phases to one
  * fixture and always attempts it (bypassing the "already done"/gap-fill
@@ -45,6 +48,7 @@
  * Usage:
  *   npm run match-facts                # all tracked competitions
  *   npm run match-facts -- --competition=premier-league
+ *   npm run match-facts -- --stories-backfill   # drain the commentary/insights backlog
  *   npm run match-facts -- --dry       # discover + scrape, print, no writes
  *   npm run match-facts -- --dry --dump-events   # + Opta DOM dump (selector debugging)
  *   npm run match-facts -- --events-backfill     # re-scrape stats-done fixtures lacking events
@@ -67,6 +71,7 @@ import {
   type MatchCentreData,
   type MatchEvent,
   type MatchHeader,
+  type MatchStory,
 } from './theanalyst/matchCentre';
 import { closeBrowser } from './theanalyst/fetch';
 
@@ -91,6 +96,7 @@ function parseArgs(argv: string[]): {
   dry: boolean;
   dumpEvents: boolean;
   eventsBackfill: boolean;
+  storiesBackfill: boolean;
   fixtureId: string | null;
   url: string | null;
 } {
@@ -98,6 +104,7 @@ function parseArgs(argv: string[]): {
   let dry = false;
   let dumpEvents = false;
   let eventsBackfill = false;
+  let storiesBackfill = false;
   let fixtureId: string | null = null;
   let url: string | null = null;
   for (const a of argv) {
@@ -114,12 +121,17 @@ function parseArgs(argv: string[]): {
     // the events extractor lands. Off by default so a fixture whose page
     // genuinely yields no events can't be re-scraped every cron run forever.
     else if (a === '--events-backfill') eventsBackfill = true;
+    // Same idea for the narrative feed: re-scrape fixtures whose stats landed
+    // BEFORE commentary/insights were captured at all, so the backlog drains
+    // once. Off by default — a match whose page genuinely carries no cards
+    // must not be re-scraped every run forever.
+    else if (a === '--stories-backfill') storiesBackfill = true;
     // Manual single-fixture mode (the studio's "Extract goals now" button) —
     // see the module doc comment.
     else if (a.startsWith('--fixture-id=')) fixtureId = a.slice('--fixture-id='.length) || null;
     else console.warn(`[match-facts] ignoring unknown arg: ${a}`);
   }
-  return { competition, dry, dumpEvents, eventsBackfill, fixtureId, url };
+  return { competition, dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureId, url };
 }
 
 type FixtureRow = {
@@ -227,12 +239,43 @@ async function loadFixturesWithEvents(fixtureIds: string[]): Promise<Set<string>
   return has;
 }
 
+/** Which of `fixtureIds` already have ANY opta_match_stories rows — the
+ *  --stories-backfill gate. Paged for the same reason as the events loader. */
+async function loadFixturesWithStories(fixtureIds: string[]): Promise<Set<string>> {
+  const has = new Set<string>();
+  if (fixtureIds.length === 0) return has;
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('opta_match_stories')
+      .select('fixture_id')
+      .in('fixture_id', fixtureIds)
+      .order('fixture_id')
+      .range(from, from + PAGE - 1);
+    // Tolerate a missing table (migration 20261003000000 not applied yet):
+    // treat every fixture as story-less so the backfill simply writes them.
+    if (error) {
+      console.warn(`[match-facts] opta_match_stories query failed (${error.message}) — treating all as missing`);
+      return has;
+    }
+    for (const r of data ?? []) has.add((r as { fixture_id: string }).fixture_id);
+    if (!data || data.length < PAGE) break;
+  }
+  return has;
+}
+
 async function scrapeForCompetition(
   comp: TheanalystCompetition,
   budget: { remaining: number },
-  opts: { dry: boolean; dumpEvents: boolean; eventsBackfill: boolean; fixtureId?: string | null }
+  opts: {
+    dry: boolean;
+    dumpEvents: boolean;
+    eventsBackfill: boolean;
+    storiesBackfill: boolean;
+    fixtureId?: string | null;
+  }
 ): Promise<number> {
-  const { dry, dumpEvents, eventsBackfill, fixtureId } = opts;
+  const { dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureId } = opts;
   // Manual single-fixture mode always attempts the one fixture, bypassing the
   // "already done"/gap-fill skip gates below — a user clicking the button
   // expects an immediate attempt, not a silent no-op because an earlier
@@ -270,9 +313,13 @@ async function scrapeForCompetition(
   const done = new Set((existing ?? []).map((r) => r.fixture_id));
 
   const hasEvents = await loadFixturesWithEvents(mapped.map((f) => f.id));
+  const hasStories = storiesBackfill
+    ? await loadFixturesWithStories(mapped.map((f) => f.id))
+    : new Set<string>();
 
   let scraped = 0;
   let eventsWritten = 0;
+  let storyCards = 0;
   for (const fixture of mapped) {
     // Stats drive the scrape gate, exactly as before; --events-backfill
     // additionally opts stats-done fixtures that still lack events into a
@@ -280,7 +327,8 @@ async function scrapeForCompetition(
     // mode (forced) ignores both gates.
     const needsStats = forced || !done.has(fixture.id);
     const needsEvents = forced || (eventsBackfill && !hasEvents.has(fixture.id));
-    if (!needsStats && !needsEvents) continue;
+    const needsStories = storiesBackfill && !hasStories.has(fixture.id);
+    if (!needsStats && !needsEvents && !needsStories) continue;
     if (budget.remaining <= 0) {
       console.log('[match-facts] per-run scrape budget exhausted — remaining fixtures wait for the next run');
       break;
@@ -350,10 +398,19 @@ async function scrapeForCompetition(
         `[match-facts] fixture ${fixture.id}: 0 goal event(s) parsed (${facts.events.length} total event(s) found)`
       );
     }
+
+    // Commentary + insights from the same render. Not gap-filled (single
+    // source, freshest wins) and never fatal — a failure here must not cost
+    // the stats or the timeline this page already gave us.
+    const storiesWritten = await writeMatchStories(fixture.id, fixture.theanalyst_match_id, facts.stories, now);
+    if (storiesWritten > 0) {
+      storyCards += storiesWritten;
+      console.log(`[match-facts] fixture ${fixture.id}: ${storiesWritten} narrative card(s)`);
+    }
   }
 
   console.log(
-    `[match-facts] ${comp.competitionSlug}: scraped ${scraped} match(es), wrote ${eventsWritten} timeline event(s)`
+    `[match-facts] ${comp.competitionSlug}: scraped ${scraped} match(es), wrote ${eventsWritten} timeline event(s), ${storyCards} narrative card(s)`
   );
   return scraped;
 }
@@ -377,6 +434,57 @@ async function upsertMatchFacts(
     { onConflict: 'fixture_id,side' }
   );
   return error ? error.message : null;
+}
+
+/**
+ * Commentary + insights upsert, keyed on (fixture_id, seq) so a re-scrape
+ * overwrites in place. Unlike fixture_events this is NOT gap-filled: these
+ * cards have one source, so the freshest scrape always wins and a match whose
+ * feed grew (a late insight) picks the new cards up.
+ *
+ * Stale rows from a shorter previous feed are deleted after the upsert, so the
+ * table never keeps cards the page no longer shows. Returns rows written.
+ */
+async function writeMatchStories(
+  fixtureId: string,
+  theanalystMatchId: string,
+  stories: MatchStory[],
+  now: string
+): Promise<number> {
+  if (stories.length === 0) return 0;
+  const { error } = await supabase.from('opta_match_stories').upsert(
+    stories.map((c) => ({
+      fixture_id: fixtureId,
+      seq: c.seq,
+      theanalyst_match_id: theanalystMatchId,
+      kind: c.kind,
+      minute: c.minute,
+      extra_minute: c.extraMinute,
+      side: c.side,
+      body: c.body,
+      scraped_at: now,
+      updated_at: now,
+    })),
+    { onConflict: 'fixture_id,seq' }
+  );
+  if (error) {
+    console.error(`[match-facts] stories upsert failed for fixture ${fixtureId}: ${error.message}`);
+    return 0;
+  }
+  // Drop rows this run did NOT write (a previously longer feed). Keyed on the
+  // seq values actually written rather than `seq >= count`: that shortcut is
+  // only correct while seq is dense, and when extractMatchStories briefly
+  // numbered by raw DOM index it silently deleted rows this very function had
+  // just inserted.
+  const { error: delError } = await supabase
+    .from('opta_match_stories')
+    .delete()
+    .eq('fixture_id', fixtureId)
+    .not('seq', 'in', `(${stories.map((c) => c.seq).join(',')})`);
+  if (delError) {
+    console.warn(`[match-facts] stale story cleanup failed for fixture ${fixtureId}: ${delError.message}`);
+  }
+  return stories.length;
 }
 
 // ── --url mode ───────────────────────────────────────────────────────────────
@@ -629,6 +737,14 @@ async function scrapeFromUrl(
   } else {
     console.log(`[match-facts] fixture ${fixture.id}: no timeline events parsed`);
   }
+
+  // Commentary + insights from the same render (freshest wins; see writeMatchStories).
+  const cards = await writeMatchStories(fixture.id, ids.matchId, facts.stories, now);
+  console.log(
+    cards > 0
+      ? `[match-facts] fixture ${fixture.id}: ${cards} narrative card(s)`
+      : `[match-facts] fixture ${fixture.id}: no narrative cards parsed`
+  );
 }
 
 /**
@@ -693,9 +809,10 @@ async function writeFixtureEvents(
 }
 
 async function run() {
-  const { competition, dry, dumpEvents, eventsBackfill, fixtureId, url } = parseArgs(process.argv.slice(2));
+  const { competition, dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureId, url } =
+    parseArgs(process.argv.slice(2));
   if (url) {
-    if (competition || eventsBackfill) {
+    if (competition || eventsBackfill || storiesBackfill) {
       console.warn('[match-facts] --url ignores --competition/--events-backfill (the link is the scope)');
     }
     await scrapeFromUrl(url, { fixtureId, dry, dumpEvents });
@@ -728,7 +845,13 @@ async function run() {
       failed.push(`${comp.competitionSlug} (discovery)`);
     }
     try {
-      await scrapeForCompetition(comp, budget, { dry, dumpEvents, eventsBackfill, fixtureId });
+      await scrapeForCompetition(comp, budget, {
+        dry,
+        dumpEvents,
+        eventsBackfill,
+        storiesBackfill,
+        fixtureId,
+      });
     } catch (e: any) {
       console.error(`[match-facts] ${comp.competitionSlug}: scrape failed — ${e?.message ?? e}`);
       failed.push(`${comp.competitionSlug} (scrape)`);

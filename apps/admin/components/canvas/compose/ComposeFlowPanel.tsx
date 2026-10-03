@@ -135,6 +135,10 @@ export function ComposeFlow({
           onCreateRecap={flow.createRecap}
           onLoadTelemetrySessions={flow.loadTelemetrySessions}
           onCreateTelemetrySource={flow.createTelemetrySource}
+          onLoadMatchCompetitions={flow.loadMatchCompetitions}
+          onLoadMatches={flow.loadMatches}
+          onScrapeMatch={flow.scrapeMatch}
+          onCreateMatchSource={flow.createMatchSource}
         />
       </div>
 
