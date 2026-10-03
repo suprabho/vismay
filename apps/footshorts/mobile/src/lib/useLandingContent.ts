@@ -189,6 +189,9 @@ export function useLandingCrests() {
           .select('id, slug, name, type, crest_url, primary_color')
           .eq('type', 'team')
           .not('crest_url', 'is', null)
+          // Clubs only: national teams carry popularity 0 and a flag crest, so
+          // they'd fill the tail of the grid alphabetically (Afghanistan, Albania…).
+          .is('fifa_code', null)
           .order('popularity', { ascending: false })
           .order('name')
           .limit(36),

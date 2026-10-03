@@ -12,6 +12,8 @@
  * table in one place so a fix for one caller fixes them all.
  */
 
+import { NATIONAL_TEAM_ALIASES } from './nationalTeams';
+
 /** Lowercase, strip accents, collapse non-alphanumerics to single dashes. The
  * same rule `entity_aliases.alias_slug` is stored with. */
 export function normalizeEntityKey(s: string): string {
@@ -26,6 +28,9 @@ export function normalizeEntityKey(s: string): string {
 // Common aliases — extend as you find misses in the worker's [entity-miss] logs.
 // Slugs on the right must match canonical entity slugs produced by seed.ts commonName().
 export const ENTITY_ALIASES: Record<string, string> = {
+  // national teams — FIFA/official spellings ("Korea Republic", "Côte d'Ivoire",
+  // "USA", "Türkiye") → the common-name slugs in nationalTeams.ts
+  ...NATIONAL_TEAM_ALIASES,
   // teams — English
   'man-utd': 'manchester-united',
   'man-united': 'manchester-united',
