@@ -68,7 +68,7 @@ const fsVisual = visualSystem('deck', FOOTSHORTS_PACK)
 const vmVisual = visualSystem('deck')
 check('f1 menu has f1 types', f1Visual.includes('f1:race-card') && f1Visual.includes('f1:driver-standings'))
 check('f1 menu has no fs types', !f1Visual.includes('fs:'))
-check('fs menu has fs types', fsVisual.includes('fs:match-card') && fsVisual.includes('fs:standings-table') && fsVisual.includes('fs:team-form-strip'))
+check('fs menu has fs types', fsVisual.includes('fs:match-card') && fsVisual.includes('fs:standings-table') && fsVisual.includes('fs:team-form-strip') && fsVisual.includes('fs:match-timeline'))
 check('fs menu has no f1 types', !fsVisual.includes('f1:'))
 check('vizmaya menu has no vertical types', !vmVisual.includes('f1:') && !vmVisual.includes('fs:'))
 check('f1 outline inline list has f1 types', outlineSystem('deck', F1_PACK).includes('f1:race-card'))
@@ -172,6 +172,13 @@ const SAMPLES: Record<string, Record<string, unknown>> = {
       },
     ],
   },
+  'fs:match-timeline': {
+    type: 'fs:match-timeline',
+    filter: 'goal',
+    // Empty by design — the fs graft fills the events from the match brief
+    // (same contract as f1:position-chart's lanes).
+    events: [],
+  },
   'fs:team-form-strip': {
     type: 'fs:team-form-strip',
     teamId: 'arsenal',
@@ -260,6 +267,7 @@ const MODULE_PATHS: Record<string, string> = {
   'fs:match-card': 'footshorts-viz/src/modules/match-card',
   'fs:standings-table': 'footshorts-viz/src/modules/standings-table',
   'fs:team-form-strip': 'footshorts-viz/src/modules/team-form-strip',
+  'fs:match-timeline': 'footshorts-viz/src/modules/match-timeline',
 }
 
 async function antiDrift(packTypes: readonly PackLayerType[]) {

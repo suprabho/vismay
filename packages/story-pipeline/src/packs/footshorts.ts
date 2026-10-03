@@ -17,6 +17,11 @@ import type { DomainPack, PackLayerType } from './types'
  *   - fs:team-form-strip — one team's recent results; fixtures carry minimal
  *                          refs (id/slug/name), scores + ISO kickoffs from the
  *                          sources.
+ *   - fs:match-timeline  — a match's goals/cards/subs down the minute. The
+ *                          model emits a filter and an EMPTY events array; the
+ *                          fs graft fills the real events from the compose
+ *                          match brief's `fs:match-timeline` block, so minutes
+ *                          and scorers are never generated.
  *
  * Skipped footshorts modules, and why:
  *   - fs:standings-over-matchdays — needs a position-by-matchday history per
@@ -227,6 +232,42 @@ const teamFormStrip: PackLayerType = {
   }),
 }
 
+const matchTimeline: PackLayerType = {
+  type: 'fs:match-timeline',
+  label: "a match's event timeline — goals, cards and substitutions down the minute",
+  regions: ['chart', 'default'],
+  promptDoc:
+    'The visual for a beat about HOW A MATCH UNFOLDED — the order of the goals, a red card that ' +
+    'changed it, the substitution that turned it. ONLY when the sources carry an ' +
+    'fs:match-timeline block (the compose match brief emits one per match): emit `events: []` ' +
+    'and the app fills that match\'s real events. NEVER write events, minutes or scorers ' +
+    'yourself. Set "filter" to narrow the timeline to the beat\'s claim — "goal" for a ' +
+    'scoring sequence, "card" for a discipline beat, "subst" for a substitution beat, "all" ' +
+    '(or omit) for the whole match. One timeline per match at most; name the teams in the prose, ' +
+    'not the identifiers.',
+  schema: z.object({
+    type: z.literal('fs:match-timeline'),
+    filter: z
+      .enum(['all', 'goal', 'card', 'subst'])
+      .optional()
+      .describe('Narrows the timeline at render time. Omit for all events.'),
+    events: z
+      .array(
+        z.object({
+          id: z.string(),
+          fixture_id: z.string(),
+          side: z.enum(['home', 'away']),
+          minute: z.number().int(),
+          type: z.enum(['goal', 'card', 'subst', 'var']),
+          detail: z.string().nullable(),
+          player_name: z.string().nullable(),
+        }),
+      )
+      .max(0)
+      .describe('Always an empty array — filled from the match brief.'),
+  }),
+}
+
 export const FOOTSHORTS_PACK: DomainPack = {
   id: 'footshorts',
   name: 'Footshorts',
@@ -241,21 +282,31 @@ export const FOOTSHORTS_PACK: DomainPack = {
     'preview, or an fs:match-card GRID (several fixtures tiled) for a matchday or results ' +
     'round-up; name the type explicitly; a league ' +
     'table or standings beat MUST use fs:standings-table (the ONLY way to show standings — ' +
-    'never a chart/keyValue/table); one team\'s recent run wants fs:team-form-strip. These ' +
+    'never a chart/keyValue/table); one team\'s recent run wants fs:team-form-strip. When a ' +
+    'MATCH BRIEF is in the sources, build the match beats on its fact sheet (the Opta stat set) ' +
+    'and its timeline: a beat about the ORDER of events — how the goals came, the red card, the ' +
+    'substitution that turned it — is shown by that match\'s fs:match-timeline, while a beat ' +
+    'about the BALANCE of the match (shots, xG, possession, duels) is a bigStat or chart built ' +
+    'from the fact-sheet numbers. These ' +
     'REPLACE a generic chart/keyValue for fixture, table, and form beats — plan charts only ' +
     'for trends (goals per matchday, points progression), never as table furniture. A typical ' +
     'football story features at least one of these modules when the sources support it.',
   contentGuidance:
     'VOICE: football desk, not a fan blog — form and table context over hot takes, exact ' +
     'scorelines and matchdays from the sources, competitions by their proper names. One ' +
-    'precise stat beats three vague ones.',
+    'precise stat beats three vague ones. When a match brief is in the sources its figures are ' +
+    'Opta\'s: quote them as given (xG to two decimals, possession as a percentage) and never ' +
+    'round a scoreline or move a minute. Never narrate the visual ("this timeline shows…") — ' +
+    'state what happened.',
   visualGuidance:
     'Prefer the Footshorts modules where they fit the beat: a fixture or result wants ' +
     'fs:match-card (one fixture; or layout "grid" with "cards" to tile several fixtures for a ' +
-    'matchday or results round-up); a team\'s recent run wants fs:team-form-strip. STANDINGS RULE: any ' +
+    'matchday or results round-up); a team\'s recent run wants fs:team-form-strip; a beat about ' +
+    'the order of a match\'s events wants that match\'s fs:match-timeline with `events: []` and a ' +
+    'filter matching the claim. STANDINGS RULE: any ' +
     'league-table or standings beat MUST render as fs:standings-table with the table AS ' +
     'rows — never show standings as a chart, keyValue, bigStat list, or generic table. Use ' +
     'core layers (bigStat, chart, quote) for everything else.',
   bylineExample: 'By the Footshorts desk',
-  extraLayerTypes: [matchCard, standingsTable, teamFormStrip],
+  extraLayerTypes: [matchCard, standingsTable, teamFormStrip, matchTimeline],
 }

@@ -168,22 +168,16 @@ interface FixtureDbRow {
   away_team_name: string | null
 }
 
-async function readFixturesFromDb(
+const FIXTURE_COLUMNS =
+  'id, competition_slug, season, matchday, stage, phase, kickoff_at, status, home_score, away_score, home_team_id, away_team_id, home_team_name, away_team_name'
+
+/** Join raw fixture rows to their team entities, producing the `FixtureRowInput`
+ *  shape the block builders consume. Shared by the competition read and the
+ *  by-id read the match brief uses. */
+async function hydrateFixtureRows(
   supabase: Supabase,
-  q: FixtureQuery,
+  rows: FixtureDbRow[],
 ): Promise<FixtureRowInput[]> {
-  let query = supabase
-    .from('fixtures')
-    .select(
-      'id, competition_slug, season, matchday, stage, phase, kickoff_at, status, home_score, away_score, home_team_id, away_team_id, home_team_name, away_team_name',
-    )
-    .eq('competition_slug', q.competitionSlug)
-    .eq('season', q.season)
-  if (q.phase) query = query.eq('phase', q.phase)
-  if (q.stage) query = query.eq('stage', q.stage)
-  const { data, error } = await query.order('kickoff_at', { ascending: true })
-  if (error || !data) return []
-  const rows = data as FixtureDbRow[]
   const teams = await loadTeamEntities(
     supabase,
     rows.flatMap((r) => [r.home_team_id, r.away_team_id].filter((x): x is string => !!x)),
@@ -204,6 +198,22 @@ async function readFixturesFromDb(
     home: r.home_team_id ? teamRefFromEntity(teams.get(r.home_team_id), true) : null,
     away: r.away_team_id ? teamRefFromEntity(teams.get(r.away_team_id), true) : null,
   }))
+}
+
+async function readFixturesFromDb(
+  supabase: Supabase,
+  q: FixtureQuery,
+): Promise<FixtureRowInput[]> {
+  let query = supabase
+    .from('fixtures')
+    .select(FIXTURE_COLUMNS)
+    .eq('competition_slug', q.competitionSlug)
+    .eq('season', q.season)
+  if (q.phase) query = query.eq('phase', q.phase)
+  if (q.stage) query = query.eq('stage', q.stage)
+  const { data, error } = await query.order('kickoff_at', { ascending: true })
+  if (error || !data) return []
+  return hydrateFixtureRows(supabase, data as unknown as FixtureDbRow[])
 }
 
 // ── football-data.org fallback (single competition) ──────────────────────────
@@ -514,6 +524,211 @@ export async function fetchFixtureEvents(fixtureId: string): Promise<FixtureEven
     .order('minute', { ascending: true })
   if (error) throw error
   return (data ?? []) as FixtureEventRow[]
+}
+
+/** Fixtures by id, team refs hydrated, kickoff order. The match-brief entry
+ *  point — the compose picker sends the ids the editor ticked, not a
+ *  competition+season slice. Unknown ids are simply absent. SERVER-ONLY. */
+export async function fetchFixturesByIds(fixtureIds: string[]): Promise<FixtureRowInput[]> {
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean)))
+  if (ids.length === 0) return []
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select(FIXTURE_COLUMNS)
+    .in('id', ids)
+    .order('kickoff_at', { ascending: true })
+  if (error || !data) return []
+  return hydrateFixtureRows(supabase, data as unknown as FixtureDbRow[])
+}
+
+/** Display names for a set of competition slugs, from the league entities
+ *  ("champions-league" → "UEFA Champions League"). Slugs with no league entity
+ *  are absent; callers fall back to title-casing the slug. SERVER-ONLY. */
+export async function fetchCompetitionNames(slugs: string[]): Promise<Map<string, string>> {
+  const wanted = Array.from(new Set(slugs.filter(Boolean)))
+  const names = new Map<string, string>()
+  if (wanted.length === 0) return names
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entities')
+    .select('slug, name')
+    .eq('type', 'league')
+    .in('slug', wanted)
+  if (error || !data) return names
+  for (const row of data as Array<{ slug: string; name: string }>) names.set(row.slug, row.name)
+  return names
+}
+
+// ── Opta match facts ─────────────────────────────────────────────────────────
+
+/** One side's Opta stats for a fixture, from `opta_match_facts` (the
+ *  theanalyst.com match-centre scrape, written by the worker's
+ *  theanalystMatchFacts.ts). Every figure is nullable — the match centre does
+ *  not always carry the full stat set. SERVER-ONLY. */
+export interface MatchFactsRow {
+  fixture_id: string
+  side: 'home' | 'away'
+  xg: number | null
+  shots: number | null
+  shots_on_target: number | null
+  possession: number | null
+  passes: number | null
+  pass_accuracy: number | null
+  big_chances: number | null
+  big_chances_missed: number | null
+  corners: number | null
+  fouls: number | null
+  yellow_cards: number | null
+  red_cards: number | null
+  offsides: number | null
+  /**
+   * Every OTHER stat the Opta match centre reported, verbatim, keyed by the
+   * page's own label ("Shots off target", "Tackles won", "Aerial duels won",
+   * …). The scraper promotes 13 labels to columns and banks the rest here
+   * (migration 20260824000001), so the full six-table Opta stat set is already
+   * on disk — nothing above the columns needs a re-scrape to read.
+   *
+   * COMPOSE-ONLY by convention: the Match facts admin tab reads the columns
+   * alone, and only the compose match brief expands this, so a label the page
+   * renames can never break an existing surface.
+   */
+  raw_stats: Record<string, number> | null
+}
+
+const MATCH_FACTS_COLUMNS =
+  'fixture_id, side, xg, shots, shots_on_target, possession, passes, pass_accuracy, ' +
+  'big_chances, big_chances_missed, corners, fouls, yellow_cards, red_cards, offsides, raw_stats'
+
+/** Opta match facts (both sides) for a set of fixtures. Returns [] rather than
+ *  throwing on a miss — plenty of finished fixtures have never been scraped,
+ *  and the brief degrades to the timeline alone. SERVER-ONLY. */
+export async function fetchMatchFacts(fixtureIds: string[]): Promise<MatchFactsRow[]> {
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean)))
+  if (ids.length === 0) return []
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('opta_match_facts')
+    .select(MATCH_FACTS_COLUMNS)
+    .in('fixture_id', ids)
+  if (error || !data) return []
+  return data as unknown as MatchFactsRow[]
+}
+
+// ── Opta narrative cards (commentary + insights) ─────────────────────────────
+
+/** One card from the match centre's narrative feed — `opta_match_stories`,
+ *  written by the worker's theanalystMatchFacts.ts from the same page render
+ *  as the stats and the timeline. SERVER-ONLY. */
+export interface MatchStoryRow {
+  fixture_id: string
+  seq: number
+  kind: 'commentary' | 'insight' | 'pre_match_insight' | 'match_preview'
+  minute: number | null
+  extra_minute: number | null
+  side: 'home' | 'away' | null
+  body: string
+}
+
+/**
+ * Commentary + insights for a set of fixtures, in the page's own order (newest
+ * first). Returns [] rather than throwing — the feed is a bonus beside the
+ * stats, and plenty of fixtures were scraped before it was captured at all.
+ * SERVER-ONLY.
+ */
+export async function fetchMatchStories(fixtureIds: string[]): Promise<MatchStoryRow[]> {
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean)))
+  if (ids.length === 0) return []
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('opta_match_stories')
+    .select('fixture_id, seq, kind, minute, extra_minute, side, body')
+    .in('fixture_id', ids)
+    .order('seq', { ascending: true })
+  if (error || !data) return []
+  return data as unknown as MatchStoryRow[]
+}
+
+// ── Match-brief coverage (compose "Add match" picker) ────────────────────────
+
+/** What a match can actually contribute to a brief: whether Opta facts landed,
+ *  and how many timeline events it has. */
+export interface MatchBriefCoverage {
+  fixtureId: string
+  /** True when `opta_match_facts` has at least one side for this fixture. */
+  facts: boolean
+  /** Rows in `fixture_events`; 0 = no timeline to show. */
+  events: number
+  /** Opta INSIGHTS cards in `opta_match_stories` — the season-context lines,
+   *  counted separately from commentary because they're what an editor picks a
+   *  match for. */
+  insights: number
+}
+
+/**
+ * Per-fixture facts/timeline coverage for one competition+season, so the compose
+ * picker can badge each match with what a brief would actually carry instead of
+ * letting an editor pick an empty one. Fixtures with neither are still listed
+ * (badge-less) — the brief falls back to the scoreline.
+ *
+ * SERVER-ONLY. Events are counted with the same paged read as
+ * {@link fetchMatchtimeCoverage} (PostgREST caps a response at 1,000 rows and a
+ * full league season runs to several thousand events).
+ */
+export async function fetchMatchBriefCoverage(
+  competitionSlug: string,
+  season: string,
+): Promise<MatchBriefCoverage[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('id')
+    .eq('competition_slug', competitionSlug)
+    .eq('season', season)
+  if (error || !data) return []
+  const ids = (data as Array<{ id: string }>).map((r) => r.id)
+  if (ids.length === 0) return []
+
+  const counts = new Map<string, number>()
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data: evs, error: evErr } = await supabase
+      .from('fixture_events')
+      .select('id, fixture_id')
+      .in('fixture_id', ids)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (evErr) break
+    const page = (evs ?? []) as Array<{ fixture_id: string }>
+    for (const e of page) counts.set(e.fixture_id, (counts.get(e.fixture_id) ?? 0) + 1)
+    if (page.length < PAGE) break
+  }
+
+  const withFacts = new Set<string>()
+  const { data: facts } = await supabase
+    .from('opta_match_facts')
+    .select('fixture_id')
+    .in('fixture_id', ids)
+  for (const f of (facts ?? []) as Array<{ fixture_id: string }>) withFacts.add(f.fixture_id)
+
+  // Insight cards per fixture. Tolerant of a missing table so an environment
+  // that hasn't run migration 20261003000000 yet still gets facts/events.
+  const insights = new Map<string, number>()
+  const { data: stories } = await supabase
+    .from('opta_match_stories')
+    .select('fixture_id')
+    .eq('kind', 'insight')
+    .in('fixture_id', ids)
+  for (const r of (stories ?? []) as Array<{ fixture_id: string }>) {
+    insights.set(r.fixture_id, (insights.get(r.fixture_id) ?? 0) + 1)
+  }
+
+  return ids.map((id) => ({
+    fixtureId: id,
+    facts: withFacts.has(id),
+    events: counts.get(id) ?? 0,
+    insights: insights.get(id) ?? 0,
+  }))
 }
 
 // ── Sportradar match-timeline coverage (admin Pipeline tab) ──────────────────
