@@ -16,6 +16,7 @@ import { registerEmbedUrlTool } from './tools/embedUrl.js'
 import { registerRenderModuleImageTool } from './tools/renderModuleImage.js'
 import { registerRenderStoryVideoTool } from './tools/renderStoryVideo.js'
 import { registerHeygenTools } from './tools/heygenVideo.js'
+import { registerHtmlStoryTools } from './tools/htmlStories.js'
 
 export function createServer(): McpServer {
   const config = loadConfig()
@@ -29,6 +30,7 @@ export function createServer(): McpServer {
   registerRenderModuleImageTool(server, config)
   registerRenderStoryVideoTool(server, config)
   registerHeygenTools(server, config)
+  registerHtmlStoryTools(server, config)
 
   return server
 }

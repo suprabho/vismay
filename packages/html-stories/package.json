@@ -1,0 +1,21 @@
+{
+  "name": "@vismay/html-stories",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, and the agent brief. Its own package so changes here only rebuild admin and vizmaya-fyi.",
+  "exports": {
+    "./htmlStories": "./src/htmlStories.ts",
+    "./meta": "./src/meta.ts",
+    "./brief": "./src/brief.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vismay/content-source": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

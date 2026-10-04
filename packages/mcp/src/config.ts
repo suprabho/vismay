@@ -20,6 +20,8 @@ export interface VismayMcpConfig {
   repoRoot: string
   /** Directory used when render_module_image is asked to return a file path. */
   screenshotDir: string
+  /** Site that hosts HTML stories and their publish API, e.g. https://vizmaya.fyi */
+  htmlStoriesUrl: string
 }
 
 function env(name: string): string | undefined {
@@ -36,7 +38,20 @@ export function loadConfig(): VismayMcpConfig {
       env('VISMAY_REPO_ROOT') ??
       new URL('../../../', import.meta.url).pathname.replace(/\/$/, ''),
     screenshotDir: env('SCREENSHOT_DIR') ?? '/tmp/vismay-mcp-screenshots',
+    htmlStoriesUrl: (env('HTML_STORIES_URL') ?? 'https://vizmaya.fyi').replace(/\/$/, ''),
   }
+}
+
+/** Throws a descriptive error if the HTML story publish token is missing. */
+export function requireHtmlStoriesEnv(): { token: string } {
+  const token = env('HTML_STORIES_TOKEN')
+  if (!token) {
+    throw new Error(
+      'publish_html_story needs HTML_STORIES_TOKEN in the MCP server env ' +
+        '(the same value as HTML_STORIES_TOKEN on the vizmaya-fyi deployment).',
+    )
+  }
+  return { token }
 }
 
 /** Throws a descriptive error if the HeyGen API key is missing. */

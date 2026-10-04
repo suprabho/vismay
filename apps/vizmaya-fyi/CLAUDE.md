@@ -121,6 +121,22 @@ direct (unofficial, cookie-auth) API push is a deliberate non-goal for v1.
   (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `NEXT_PUBLIC_MAPBOX_TOKEN`, `ADMIN_SESSION_SECRET`).
 
+## HTML stories (`/s/<slug>`) — agent-authored pages
+
+A second, independent story pipeline: any agent (Claude, ChatGPT, Cursor, …)
+writes one finished, self-contained HTML page and it is served exactly as
+posted. No config, no viz engine, no render step, and nothing here reads or
+writes the `stories` tables.
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/085_html_stories.sql](../../supabase/vizmaya-fyi/migrations/085_html_stories.sql) — `html_stories` (one row per slug, `status` draft/published/archived) + append-only `html_story_versions` (a row whenever the HTML changes). Service-role only (RLS on, no policies).
+- **Package:** [packages/html-stories](../../packages/html-stories) — `htmlStories.ts` (readers/writers), `meta.ts` (slug rules, `<title>`/meta extraction, `lintHtml` = the hosting contract), `brief.ts` (what the agent reads first; edit this to change the design direction).
+- **Serve:** [app/s/[slug]/route.ts](app/s/[slug]/route.ts) returns the stored document with `Content-Security-Policy: sandbox allow-scripts …` (no `allow-same-origin`), so story scripts run in an opaque origin with no vizmaya.fyi cookies or storage. CDN-cached 60s.
+- **Agent publish API:** `POST /api/html-stories` ([route](app/api/html-stories/route.ts)), `Authorization: Bearer $HTML_STORIES_TOKEN`. Raw `text/html` body with `?slug=&publish=1`, or JSON `{slug, html, status|publish, title, description}`. Returns the URL and lint `warnings`. Without a slug it is derived from `<title>`.
+- **Brief:** `GET /api/html-stories/brief` (public markdown), the admin "Copy agent brief" button, and the MCP `get_html_story_brief` tool all serve `htmlStoryBrief()`.
+- **Admin:** the **HTML stories** tab (`/vizmaya/html-stories` in apps/admin): paste/upload, sandboxed phone/desktop preview, publish/unpublish, version history with restore.
+- **MCP:** `publish_html_story` + `get_html_story_brief` in [packages/mcp](../../packages/mcp) (needs `HTML_STORIES_TOKEN`; `HTML_STORIES_URL` defaults to https://vizmaya.fyi).
+- **Deploy:** apply migration 085 → set `HTML_STORIES_TOKEN` (any long random string) on the vizmaya-fyi Vercel project. Without the token the publish API answers 503; the admin tab and `/s/<slug>` work regardless.
+
 ## Epics (/energy-profile, /epstein, …)
 
 Topic collections that bundle a bespoke landing page with curated vizmaya stories. Data model lives in migration `015_epics_iea.sql` (per-epic tables still carry the `iea_` prefix from when the epic was called "iea"; renamed to `energy-profile` in migration 019).

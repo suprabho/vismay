@@ -23,6 +23,7 @@
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/dc-editions": "workspace:*",
+    "@vismay/html-stories": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",
