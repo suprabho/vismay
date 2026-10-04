@@ -17,6 +17,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { fdFetch, sleep, FD_TOKEN, filterCompetitions } from './footballData';
+import { FdTeam, NATIONAL_TEAM_CODES, NON_DOMESTIC_CODES, topUpCompetitionTeams } from './competitionTeams';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -131,6 +132,40 @@ async function loadTeamIndex(): Promise<Map<number, string>> {
   const map = new Map<number, string>();
   for (const t of data ?? []) map.set(t.football_data_id as number, t.id as string);
   return map;
+}
+
+/**
+ * Add any club in this competition's current season that `entities` lacks —
+ * see competitionTeams.ts. Runs before the fixtures/standings writes so they
+ * link to the new rows in the same pass.
+ */
+async function syncTeams(
+  comp: { id: string; slug: string; football_data_id: number },
+  teamIndex: Map<number, string>,
+) {
+  const data = await fdFetch<{ competition?: { code?: string }; teams: FdTeam[] }>(
+    `/competitions/${comp.football_data_id}/teams`,
+  );
+  const code = data.competition?.code ?? '';
+  if (NATIONAL_TEAM_CODES.has(code)) {
+    console.log(`  [${comp.slug}] teams: national-team competition, skipped`);
+    return;
+  }
+  const result = await topUpCompetitionTeams(
+    supabase,
+    // An unknown code is treated as non-domestic: membership still lands, but
+    // a club's league_slug is never pointed at a cup.
+    { id: comp.id, slug: comp.slug, domestic: Boolean(code) && !NON_DOMESTIC_CODES.has(code) },
+    data.teams ?? [],
+    teamIndex,
+  );
+  console.log(
+    `  [${comp.slug}] teams: ${data.teams?.length ?? 0} in season, +${result.inserted.length} new` +
+      (result.inserted.length ? ` (${result.inserted.join(', ')})` : '') +
+      (result.claimed.length ? `, claimed ${result.claimed.join(', ')}` : '') +
+      `, ${result.aliases} short-name aliases`,
+  );
+  for (const c of result.collisions) console.warn(`  [${comp.slug}] teams: slug collision, skipped ${c}`);
 }
 
 async function syncFixtures(
@@ -281,6 +316,13 @@ async function main() {
   );
 
   for (const comp of comps) {
+    try {
+      await syncTeams(comp, teamIndex);
+    } catch (e) {
+      console.error(`  [${comp.slug}] teams failed:`, (e as Error).message);
+    }
+    await sleep(6500);
+
     try {
       await syncFixtures(comp, teamIndex);
     } catch (e) {

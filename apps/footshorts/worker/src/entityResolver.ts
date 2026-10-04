@@ -56,9 +56,19 @@ type EntityMeta = { name: string; type: EntityType };
  */
 const TAGGED_TYPES: readonly EntityType[] = ['league', 'team'];
 
+/** A team row broken into name words, for resolveByTokens. */
+type TeamTokens = { id: string; name: string; country: string | null; tokens: Set<string> };
+
+/** Where the article came from, for breaking ties between same-named clubs. */
+export type ResolveContext = {
+  /** ISO 3166-1 alpha-2 of the outlet (RssSource.country), e.g. 'ES'. */
+  country?: string;
+};
+
 // In-memory caches — refreshed on each worker run
 let entityCache: Map<string, string> | null = null;
 let entityMetaCache: Map<string, EntityMeta> | null = null;
+let teamTokenCache: TeamTokens[] | null = null;
 let aliasCache: Map<string, string> | null = null;
 
 /** PostgREST caps every response at `max-rows` (1000 on Supabase), silently —
@@ -99,24 +109,30 @@ async function selectAll<T>(
 async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, string>> {
   if (entityCache) return entityCache;
 
-  const data = await selectAll<{ id: string; name: string; slug: string; type: EntityType }>(
+  const data = await selectAll<{ id: string; name: string; slug: string; type: EntityType; country: string | null }>(
     supabase,
     'entities',
-    'id, name, slug, type',
+    'id, name, slug, type, country',
     { column: 'type', in: TAGGED_TYPES }
   );
 
   const cache = new Map<string, string>();
   const meta = new Map<string, EntityMeta>();
+  const teamTokens: TeamTokens[] = [];
   for (const e of data) {
     // Index by normalized name AND slug for fast lookup
     cache.set(`${e.type}:${normalize(e.name)}`, e.id);
     cache.set(`${e.type}:${e.slug}`, e.id);
     // Reverse index, so a resolved id can name itself without a second query.
     meta.set(e.id, { name: e.name, type: e.type });
+    if (e.type === 'team') {
+      const tokens = new Set([...nameTokens(e.slug), ...nameTokens(normalize(e.name))]);
+      teamTokens.push({ id: e.id, name: e.name, country: e.country, tokens });
+    }
   }
   entityCache = cache;
   entityMetaCache = meta;
+  teamTokenCache = teamTokens;
   return cache;
 }
 
@@ -141,11 +157,70 @@ async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, str
   return cache;
 }
 
+/** Words of a normalized key, with TEAM_TOKEN_SYNONYMS stems added. */
+function nameTokens(key: string): string[] {
+  const out: string[] = [];
+  for (const t of key.split('-')) {
+    if (!t) continue;
+    out.push(t);
+    const syn = TEAM_TOKEN_SYNONYMS[t];
+    if (syn) out.push(syn);
+  }
+  return out;
+}
+
+/** football-data.org `area.name`s (what entities.country holds) for the
+ *  outlet countries in sources.ts. */
+const OUTLET_COUNTRY: Record<string, string> = {
+  ES: 'Spain',
+  AR: 'Argentina',
+  CO: 'Colombia',
+  MX: 'Mexico',
+  PT: 'Portugal',
+  IT: 'Italy',
+  FR: 'France',
+  DE: 'Germany',
+  NL: 'Netherlands',
+  BR: 'Brazil',
+  GB: 'England',
+};
+
+/**
+ * Last-resort team match on name words: a club is a hit when it carries every
+ * word of the extracted name. Club-type words ("Real", "Club", "de") are
+ * ignored unless they're all there is. So "Real Sociedad" finds "Real
+ * Sociedad de Fútbol", "Celta" finds "RC Celta de Vigo", "Racing Santander"
+ * finds "Real Racing Club de Santander" — the short forms press uses for
+ * official football-data names that slugs and aliases don't reach.
+ *
+ * Only ever a unique answer. Several candidates ("Madrid", "Manchester") are
+ * narrowed to the outlet's country when we know it — bare "Racing" in Marca
+ * is Racing Santander, in L'Équipe it'd be Lens — and otherwise left as a
+ * miss. Every extracted word must match, short ones included, so a reserve
+ * side ("Villarreal B", "Osasuna B") never lands on the first team.
+ */
+function resolveByTokens(slug: string, context: ResolveContext): TeamTokens | null {
+  const teams = teamTokenCache;
+  if (!teams) return null;
+  const all = nameTokens(slug);
+  const significant = all.filter((t) => !TEAM_NOISE_TOKENS.has(t));
+  const query = significant.length > 0 ? significant : all;
+  if (query.length === 0) return null;
+
+  let hits = teams.filter((t) => query.every((q) => t.tokens.has(q)));
+  if (hits.length > 1 && context.country) {
+    const country = OUTLET_COUNTRY[context.country.toUpperCase()];
+    hits = country ? hits.filter((t) => t.country === country) : [];
+  }
+  return hits.length === 1 ? hits[0]! : null;
+}
+
 async function resolveOne(
   cache: Map<string, string>,
   aliases: Map<string, string>,
   type: 'league' | 'team' | 'player',
-  name: string
+  name: string,
+  context: ResolveContext = {}
 ): Promise<string | null> {
   const slug = normalize(name);
 
@@ -168,7 +243,16 @@ async function resolveOne(
   // for selecciones in Spanish copy. Retry once on the bare country name.
   if (type === 'team') {
     const bare = slug.replace(/-national-(?:football-)?team$/, '');
-    if (bare !== slug && bare) return resolveOne(cache, aliases, type, bare);
+    if (bare !== slug && bare) return resolveOne(cache, aliases, type, bare, context);
+  }
+
+  // 2d. Name-word match against every team row.
+  if (type === 'team') {
+    const hit = resolveByTokens(slug, context);
+    if (hit) {
+      console.log(`[entity-fuzzy] team=${name} -> ${hit.name}`);
+      return hit.id;
+    }
   }
 
   // 3. Unknown — log for later backfill
@@ -183,7 +267,8 @@ async function resolveOne(
  */
 export async function resolveEntitiesDetailed(
   supabase: SupabaseClient,
-  entities: GeminiSummary['entities']
+  entities: GeminiSummary['entities'],
+  context: ResolveContext = {}
 ): Promise<ResolvedEntity[]> {
   const cache = await loadEntityCache(supabase);
   const aliases = await loadAliasCache(supabase);
@@ -201,7 +286,7 @@ export async function resolveEntitiesDetailed(
 
   for (const [type, names] of byType) {
     for (const sourceName of names) {
-      const id = await resolveOne(cache, aliases, type, sourceName);
+      const id = await resolveOne(cache, aliases, type, sourceName, context);
       if (!id || seen.has(id)) continue;
       seen.add(id);
       // An id always comes from the cache we just built, so meta is present;
@@ -236,6 +321,7 @@ export async function resolveTeamName(
 export function clearEntityCache() {
   entityCache = null;
   entityMetaCache = null;
+  teamTokenCache = null;
   aliasCache = null;
 }
 

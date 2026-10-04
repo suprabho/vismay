@@ -1,11 +1,11 @@
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { ENTITY_ALIASES, normalizeEntityKey } from '@footshorts/shared/entityKeys';
 import { NATIONAL_TEAMS, nationalTeamFlagUrl } from '@footshorts/shared/nationalTeams';
 import { clearEntityCache, resolveEntitiesDetailed } from './entityResolver';
 import { findNationalTeams } from './nationalTeamMatch';
+import { fakeSupabase } from './fakeSupabase';
 
 const MIGRATION = new URL(
   '../../../../supabase/footshorts/migrations/20261001000000_national_team_entities.sql',
@@ -82,29 +82,6 @@ test('findNationalTeams: skips other sides, ambiguous names and look-alike phras
   assert.deepEqual(findNationalTeams('Nigeria and Niger'), ['nigeria', 'niger']);
   assert.deepEqual(findNationalTeams('Arsenal beat Chelsea'), []);
 });
-
-/** Just enough of a Supabase client for the resolver's two cache loads —
- *  including PostgREST's silent 1000-row cap, which is what hid every
- *  national team past the first page in production. */
-const MAX_ROWS = 1000;
-function fakeSupabase(tables: Record<string, Record<string, unknown>[]>): SupabaseClient {
-  return {
-    from: (table: string) => ({
-      select: () => ({
-        in: (column: string, values: unknown[]) => ({
-          order: () => ({
-            range: async (from: number, to: number) => ({
-              data: (tables[table] ?? [])
-                .filter((r) => values.includes(r[column]))
-                .slice(from, Math.min(to + 1, from + MAX_ROWS)),
-              error: null,
-            }),
-          }),
-        }),
-      }),
-    }),
-  } as unknown as SupabaseClient;
-}
 
 test('resolver tags national teams by name, slug and alias once the rows exist', async () => {
   clearEntityCache();

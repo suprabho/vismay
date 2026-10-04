@@ -37,7 +37,8 @@
     "eval": "tsx --env-file=.env src/eval/run.ts",
     "typecheck": "tsc --noEmit",
     "jev:gate:test": "tsx src/jevEntityGate.test.ts",
-    "national-teams:test": "tsx --test src/nationalTeams.test.ts"
+    "national-teams:test": "tsx --test src/nationalTeams.test.ts",
+    "entity-tags:test": "tsx --test src/entityResolver.test.ts src/competitionTeams.test.ts src/nationalTeams.test.ts src/entityKeys.test.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.87",
