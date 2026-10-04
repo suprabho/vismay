@@ -46,6 +46,16 @@ type EntityType = 'league' | 'team' | 'player';
 
 type EntityMeta = { name: string; type: EntityType };
 
+/**
+ * The entity types article tagging links. Players are left out: the only
+ * `entities(type='player')` rows are the WC26 squads (squads/process.ts) —
+ * ~1,250 names that are a squad roster, not a curated follow list. Matching
+ * them made player chips depend on whether someone happened to be in a World
+ * Cup squad, and they were what pushed the table past the 1000-row cap.
+ * Gemini still extracts players; they're just not resolved or tagged.
+ */
+const TAGGED_TYPES: readonly EntityType[] = ['league', 'team'];
+
 // In-memory caches — refreshed on each worker run
 let entityCache: Map<string, string> | null = null;
 let entityMetaCache: Map<string, EntityMeta> | null = null;
@@ -56,9 +66,9 @@ let aliasCache: Map<string, string> | null = null;
 const PAGE = 1000;
 
 /**
- * Every row of a table, paged. An unpaged `select()` on `entities` stopped at
- * the first 1000 rows once the WC26 squads (~1,250 players) and the 211
- * national teams landed — and with no ORDER BY, which 1000 was arbitrary. The
+ * Every matching row of a table, paged. An unpaged `select()` on `entities`
+ * stopped at the first 1000 rows once the WC26 squads (~1,250 players) and the
+ * 211 national teams landed — and with no ORDER BY, which 1000 was arbitrary. The
  * resolver then missed rows that plainly exist: Argentina, Germany, Spain,
  * Sevilla, even aliased ones like Bayern and Atlético Madrid, while Benin and
  * Burkina Faso happened to make the cut. It hit every source, but national
@@ -68,13 +78,15 @@ const PAGE = 1000;
 async function selectAll<T>(
   supabase: SupabaseClient,
   table: string,
-  columns: string
+  columns: string,
+  where: { column: string; in: readonly string[] }
 ): Promise<T[]> {
   const rows: T[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from(table)
       .select(columns)
+      .in(where.column, [...where.in])
       .order('id')
       .range(from, from + PAGE - 1);
     if (error) throw error;
@@ -90,7 +102,8 @@ async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, st
   const data = await selectAll<{ id: string; name: string; slug: string; type: EntityType }>(
     supabase,
     'entities',
-    'id, name, slug, type'
+    'id, name, slug, type',
+    { column: 'type', in: TAGGED_TYPES }
   );
 
   const cache = new Map<string, string>();
@@ -116,7 +129,8 @@ async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, str
   const data = await selectAll<{ entity_type: string; alias_slug: string; entity_id: string }>(
     supabase,
     'entity_aliases',
-    'entity_type, alias_slug, entity_id'
+    'entity_type, alias_slug, entity_id',
+    { column: 'entity_type', in: TAGGED_TYPES }
   );
 
   const cache = new Map<string, string>();
@@ -179,10 +193,10 @@ export async function resolveEntitiesDetailed(
   const resolved: ResolvedEntity[] = [];
   const seen = new Set<string>();
 
+  // No players — see TAGGED_TYPES.
   const byType: [EntityType, string[]][] = [
     ['league', entities.leagues],
     ['team', entities.teams],
-    ['player', entities.players],
   ];
 
   for (const [type, names] of byType) {

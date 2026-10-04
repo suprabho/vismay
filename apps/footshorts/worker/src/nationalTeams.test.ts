@@ -87,14 +87,18 @@ test('findNationalTeams: skips other sides, ambiguous names and look-alike phras
  *  including PostgREST's silent 1000-row cap, which is what hid every
  *  national team past the first page in production. */
 const MAX_ROWS = 1000;
-function fakeSupabase(tables: Record<string, unknown[]>): SupabaseClient {
+function fakeSupabase(tables: Record<string, Record<string, unknown>[]>): SupabaseClient {
   return {
     from: (table: string) => ({
       select: () => ({
-        order: () => ({
-          range: async (from: number, to: number) => ({
-            data: (tables[table] ?? []).slice(from, Math.min(to + 1, from + MAX_ROWS)),
-            error: null,
+        in: (column: string, values: unknown[]) => ({
+          order: () => ({
+            range: async (from: number, to: number) => ({
+              data: (tables[table] ?? [])
+                .filter((r) => values.includes(r[column]))
+                .slice(from, Math.min(to + 1, from + MAX_ROWS)),
+              error: null,
+            }),
           }),
         }),
       }),
@@ -121,32 +125,47 @@ test('resolver tags national teams by name, slug and alias once the rows exist',
 });
 
 test('resolver sees entities past the first 1000 rows', async () => {
-  // WC26 squads put ~1,250 players ahead of the national teams; an unpaged
-  // select stopped at row 1000 and logged [entity-miss] team=Argentina.
+  // An unpaged select stopped at row 1000 and logged [entity-miss]
+  // team=Argentina once the table outgrew it.
   clearEntityCache();
-  const players = Array.from({ length: 1500 }, (_, i) => ({
-    id: `p${i}`,
-    name: `Player ${i}`,
-    slug: `player-${i}`,
-    type: 'player',
+  const clubs = Array.from({ length: 1500 }, (_, i) => ({
+    id: `c${i}`,
+    name: `Club ${i}`,
+    slug: `club-${i}`,
+    type: 'team',
   }));
   const supabase = fakeSupabase({
     entities: [
-      ...players,
+      ...clubs,
       ...NATIONAL_TEAMS.map((t) => ({ id: `id-${t.fifaCode}`, name: t.name, slug: t.slug, type: 'team' })),
     ],
     entity_aliases: [],
   });
   const resolved = await resolveEntitiesDetailed(supabase, {
     leagues: [],
-    teams: ['Argentina', 'Germany', 'Mexico'],
-    players: ['Player 1499'],
+    teams: ['Argentina', 'Germany', 'Mexico', 'Club 1499'],
+    players: [],
   });
   clearEntityCache();
-  assert.deepEqual(
-    resolved.map((e) => e.id),
-    ['id-ARG', 'id-GER', 'id-MEX', 'p1499'],
-  );
+  assert.deepEqual(resolved.map((e) => e.id), ['id-ARG', 'id-GER', 'id-MEX', 'c1499']);
+});
+
+test('resolver skips WC26 squad players', async () => {
+  clearEntityCache();
+  const supabase = fakeSupabase({
+    entities: [
+      { id: 'p-messi', name: 'Lionel Messi', slug: 'lionel-messi', type: 'player' },
+      { id: 'id-ARG', name: 'Argentina', slug: 'argentina', type: 'team' },
+    ],
+    entity_aliases: [{ entity_type: 'player', alias_slug: 'leo-messi', entity_id: 'p-messi' }],
+  });
+  const resolved = await resolveEntitiesDetailed(supabase, {
+    leagues: [],
+    teams: ['Argentina'],
+    players: ['Lionel Messi', 'Leo Messi'],
+  });
+  clearEntityCache();
+  assert.deepEqual(resolved.map((e) => e.id), ['id-ARG']);
 });
 
 test('resolver strips Gemini\'s "National Team" suffix', async () => {
