@@ -1,11 +1,11 @@
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { ENTITY_ALIASES, normalizeEntityKey } from '@footshorts/shared/entityKeys';
 import { NATIONAL_TEAMS, nationalTeamFlagUrl } from '@footshorts/shared/nationalTeams';
 import { clearEntityCache, resolveEntitiesDetailed } from './entityResolver';
 import { findNationalTeams } from './nationalTeamMatch';
+import { fakeSupabase } from './fakeSupabase';
 
 const MIGRATION = new URL(
   '../../../../supabase/footshorts/migrations/20261001000000_national_team_entities.sql',
@@ -83,13 +83,6 @@ test('findNationalTeams: skips other sides, ambiguous names and look-alike phras
   assert.deepEqual(findNationalTeams('Arsenal beat Chelsea'), []);
 });
 
-/** Just enough of a Supabase client for the resolver's two cache loads. */
-function fakeSupabase(tables: Record<string, unknown[]>): SupabaseClient {
-  return {
-    from: (table: string) => ({ select: async () => ({ data: tables[table] ?? [], error: null }) }),
-  } as unknown as SupabaseClient;
-}
-
 test('resolver tags national teams by name, slug and alias once the rows exist', async () => {
   clearEntityCache();
   const supabase = fakeSupabase({
@@ -106,4 +99,63 @@ test('resolver tags national teams by name, slug and alias once the rows exist',
     resolved.map((e) => e.id),
     ['id-ARG', 'id-BOL', 'id-KOR', 'id-CIV', 'id-USA', 'id-IRL'],
   );
+});
+
+test('resolver sees entities past the first 1000 rows', async () => {
+  // An unpaged select stopped at row 1000 and logged [entity-miss]
+  // team=Argentina once the table outgrew it.
+  clearEntityCache();
+  const clubs = Array.from({ length: 1500 }, (_, i) => ({
+    id: `c${i}`,
+    name: `Club ${i}`,
+    slug: `club-${i}`,
+    type: 'team',
+  }));
+  const supabase = fakeSupabase({
+    entities: [
+      ...clubs,
+      ...NATIONAL_TEAMS.map((t) => ({ id: `id-${t.fifaCode}`, name: t.name, slug: t.slug, type: 'team' })),
+    ],
+    entity_aliases: [],
+  });
+  const resolved = await resolveEntitiesDetailed(supabase, {
+    leagues: [],
+    teams: ['Argentina', 'Germany', 'Mexico', 'Club 1499'],
+    players: [],
+  });
+  clearEntityCache();
+  assert.deepEqual(resolved.map((e) => e.id), ['id-ARG', 'id-GER', 'id-MEX', 'c1499']);
+});
+
+test('resolver skips WC26 squad players', async () => {
+  clearEntityCache();
+  const supabase = fakeSupabase({
+    entities: [
+      { id: 'p-messi', name: 'Lionel Messi', slug: 'lionel-messi', type: 'player' },
+      { id: 'id-ARG', name: 'Argentina', slug: 'argentina', type: 'team' },
+    ],
+    entity_aliases: [{ entity_type: 'player', alias_slug: 'leo-messi', entity_id: 'p-messi' }],
+  });
+  const resolved = await resolveEntitiesDetailed(supabase, {
+    leagues: [],
+    teams: ['Argentina'],
+    players: ['Lionel Messi', 'Leo Messi'],
+  });
+  clearEntityCache();
+  assert.deepEqual(resolved.map((e) => e.id), ['id-ARG']);
+});
+
+test('resolver strips Gemini\'s "National Team" suffix', async () => {
+  clearEntityCache();
+  const supabase = fakeSupabase({
+    entities: NATIONAL_TEAMS.map((t) => ({ id: `id-${t.fifaCode}`, name: t.name, slug: t.slug, type: 'team' })),
+    entity_aliases: [],
+  });
+  const resolved = await resolveEntitiesDetailed(supabase, {
+    leagues: [],
+    teams: ['Argentina National Team', 'Spain national team', 'Burkina Faso National Team'],
+    players: [],
+  });
+  clearEntityCache();
+  assert.deepEqual(resolved.map((e) => e.id), ['id-ARG', 'id-ESP', 'id-BFA']);
 });

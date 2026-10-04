@@ -99,6 +99,8 @@ type CandidateArticle = {
   publishedAt: string | null;
   /** Source feed language ('es', ...). Omitted/'en' = English. */
   language?: string;
+  /** Outlet country (ISO 3166-1 alpha-2), for tie-breaking same-named clubs. */
+  country?: string;
 };
 
 async function isKnownUrl(urlHash: string): Promise<boolean> {
@@ -183,7 +185,9 @@ async function processCandidateArticle(
       return;
     }
 
-    const candidates = await resolveEntitiesDetailed(supabase, gemini.entities);
+    const candidates = await resolveEntitiesDetailed(supabase, gemini.entities, {
+      country: candidate.country,
+    });
 
     // Precision gate. Judged against the article text Gemini saw, not the
     // 60-word summary, so "mentioned in passing" is decided on the real thing.
@@ -284,6 +288,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
         imageUrl: extractImage(item),
         publishedAt: item.isoDate ?? item.pubDate ?? null,
         language: source.language,
+        country: source.country,
       },
       stats
     );
