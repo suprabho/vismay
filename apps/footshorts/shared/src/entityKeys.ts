@@ -46,6 +46,8 @@ export const ENTITY_ALIASES: Record<string, string> = {
   'atletico': 'club-atletico-de-madrid',
   'atletico-madrid': 'club-atletico-de-madrid',
   'betis': 'real-betis-balompie',
+  'athletic': 'athletic-club',          // Spanish press never says "Athletic Club"
+  'athletic-bilbao': 'athletic-club',
   // teams — German
   'bayern': 'bayern-munchen',
   'bayern-munich': 'bayern-munchen',

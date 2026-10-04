@@ -51,18 +51,51 @@ let entityCache: Map<string, string> | null = null;
 let entityMetaCache: Map<string, EntityMeta> | null = null;
 let aliasCache: Map<string, string> | null = null;
 
+/** PostgREST caps every response at `max-rows` (1000 on Supabase), silently —
+ *  no error, just a short page. Read whole tables in pages of exactly that. */
+const PAGE = 1000;
+
+/**
+ * Every row of a table, paged. An unpaged `select()` on `entities` stopped at
+ * the first 1000 rows once the WC26 squads (~1,250 players) and the 211
+ * national teams landed — and with no ORDER BY, which 1000 was arbitrary. The
+ * resolver then missed rows that plainly exist: Argentina, Germany, Spain,
+ * Sevilla, even aliased ones like Bayern and Atlético Madrid, while Benin and
+ * Burkina Faso happened to make the cut. It hit every source, but national
+ * team stories (which the Spanish/LatAm feeds are full of) showed it worst.
+ * Ordered by id so pages don't overlap or skip.
+ */
+async function selectAll<T>(
+  supabase: SupabaseClient,
+  table: string,
+  columns: string
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    rows.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) break;
+  }
+  return rows;
+}
+
 async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, string>> {
   if (entityCache) return entityCache;
 
-  const { data, error } = await supabase
-    .from('entities')
-    .select('id, name, slug, type');
-
-  if (error) throw error;
+  const data = await selectAll<{ id: string; name: string; slug: string; type: EntityType }>(
+    supabase,
+    'entities',
+    'id, name, slug, type'
+  );
 
   const cache = new Map<string, string>();
   const meta = new Map<string, EntityMeta>();
-  for (const e of data ?? []) {
+  for (const e of data) {
     // Index by normalized name AND slug for fast lookup
     cache.set(`${e.type}:${normalize(e.name)}`, e.id);
     cache.set(`${e.type}:${e.slug}`, e.id);
@@ -80,14 +113,14 @@ async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, st
 async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, string>> {
   if (aliasCache) return aliasCache;
 
-  const { data, error } = await supabase
-    .from('entity_aliases')
-    .select('entity_type, alias_slug, entity_id');
-
-  if (error) throw error;
+  const data = await selectAll<{ entity_type: string; alias_slug: string; entity_id: string }>(
+    supabase,
+    'entity_aliases',
+    'entity_type, alias_slug, entity_id'
+  );
 
   const cache = new Map<string, string>();
-  for (const a of data ?? []) {
+  for (const a of data) {
     cache.set(`${a.entity_type}:${a.alias_slug}`, a.entity_id);
   }
   aliasCache = cache;
@@ -116,6 +149,13 @@ async function resolveOne(
   // 2b. Editor-taught alias hit (entity_aliases table)
   const dbAliasHit = aliases.get(`${type}:${slug}`);
   if (dbAliasHit) return dbAliasHit;
+
+  // 2c. "Argentina National Team" / "Spain national team" — Gemini's phrasing
+  // for selecciones in Spanish copy. Retry once on the bare country name.
+  if (type === 'team') {
+    const bare = slug.replace(/-national-(?:football-)?team$/, '');
+    if (bare !== slug && bare) return resolveOne(cache, aliases, type, bare);
+  }
 
   // 3. Unknown — log for later backfill
   console.log(`[entity-miss] ${type}=${name} (slug=${slug})`);
