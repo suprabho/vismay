@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Copy, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
+import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
 import type { MatchCompetition, MatchOption } from '@/components/canvas/compose/useComposeFlow'
@@ -19,7 +20,7 @@ interface MatchContextPick {
  * "Copy agent brief" plus a style randomizer: Shuffle swaps the brief's house
  * style for a palette and font trio drawn from the app's stories' themes.
  *
- * For footshorts there is also a match picker: tick up to six matches (and
+ * For footshorts there is also a match picker: tick up to MAX_CONTEXT_MATCHES (and
  * write the editorial angle) and the brief gains their match context — Opta
  * facts and full stat set, timeline, insights, commentary, build-up, both
  * sides' form and schedule, the table, and the competition's next fixtures.
@@ -190,6 +191,8 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           title="Match context"
           subtitle="Facts, timeline, insights, schedules and the table, appended to the agent brief"
           submitLabel="Add to brief"
+          showEventFilter={false}
+          maxMatches={MAX_CONTEXT_MATCHES}
           onClose={() => setPicking(false)}
           loadCompetitions={loadCompetitions}
           loadMatches={loadMatches}

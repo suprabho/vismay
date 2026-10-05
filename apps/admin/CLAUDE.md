@@ -180,7 +180,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   style randomizer (palettes/fonts from the app's own stories) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
-  Opta scrape, reused with its own labels) — whose picks make the brief carry
+  Opta scrape and a team search, reused with its own labels and a 12-match cap) — whose picks make the brief carry
   the match context (`buildMatchContext` in
   `@vismay/content-source/footshortsMatchBrief`). The brief is fetched whenever
   style or matches change and copied synchronously on click.

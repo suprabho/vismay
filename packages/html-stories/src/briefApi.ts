@@ -8,7 +8,7 @@
  *   - `style=random` swaps the house style for a palette and font trio drawn
  *     from the app's published viz-engine stories (./styles); falls back to the
  *     house style if the stories can't be read.
- *   - footshorts only: `fixtures=<id>,<id>` (up to MAX_BRIEF_MATCHES) appends
+ *   - footshorts only: `fixtures=<id>,<id>` (up to MAX_CONTEXT_MATCHES) appends
  *     the match context for those matches (./footshortsBrief), with an optional
  *     `prompt`. The context is read from the match tables with the service
  *     client, so this variant wants the same bearer token as publishing — the
@@ -19,7 +19,7 @@
 
 import type { HtmlStoryApp } from './apps'
 import { htmlStoryBrief } from './brief'
-import { footshortsHtmlStoryBrief, MAX_BRIEF_MATCHES } from './footshortsBrief'
+import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadStoryStylePool } from './storyStyles'
 import { pickRandomStyle, type StoryStyle } from './styles'
@@ -39,8 +39,8 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   const random = url.searchParams.get('style') === 'random'
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
 
-  if (fixtureIds.length > MAX_BRIEF_MATCHES) {
-    return new Response(`at most ${MAX_BRIEF_MATCHES} matches per brief`, { status: 400 })
+  if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
+    return new Response(`at most ${MAX_CONTEXT_MATCHES} matches per brief`, { status: 400 })
   }
   if (fixtureIds.length && !isHtmlStoriesTokenRequest(req)) {
     const why = process.env[HTML_STORIES_TOKEN_ENV]

@@ -9,17 +9,17 @@
  * Server only — the context is read with the service-role client.
  */
 
-import { buildMatchContext, MAX_BRIEF_MATCHES } from '@vismay/content-source/footshortsMatchBrief'
+import { buildMatchContext, MAX_CONTEXT_MATCHES } from '@vismay/content-source/footshortsMatchBrief'
 import { htmlStoryBrief } from './brief'
 import type { StoryStyle } from './styles'
 
-export { MAX_BRIEF_MATCHES }
+export { MAX_CONTEXT_MATCHES }
 
 export interface FootshortsBriefOptions {
   /** e.g. https://footshorts.com — the hosting site; also where the context's match links point. */
   siteUrl: string
   style?: StoryStyle | null
-  /** Fixture ids (up to {@link MAX_BRIEF_MATCHES}) the story is about. Empty: a brief with no match context. */
+  /** Fixture ids (up to {@link MAX_CONTEXT_MATCHES}) the story is about. Empty: a brief with no match context. */
   fixtureIds?: string[]
   /** Editorial intent, surfaced at the top of the context. */
   prompt?: string

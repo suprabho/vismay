@@ -631,6 +631,14 @@ const CONTEXT_MAX_PREVIEW = 12
 const CONTEXT_SCHEDULE_LIMIT = 6
 /** The competition's next fixtures after the latest match in the brief. */
 const CONTEXT_NEXT_UP = 10
+/**
+ * Most matches one context covers: a full matchday. The compose brief's
+ * {@link MAX_BRIEF_MATCHES} (6) guards the story pipeline's 12k-per-source
+ * prompt budget; an HTML story has no such budget — the agent reads the whole
+ * thing once — so the only costs here are the reads (two schedule queries per
+ * team, one table per competition) and the brief's length.
+ */
+export const MAX_CONTEXT_MATCHES = 12
 
 export interface MatchContextOptions {
   /** Editorial intent — surfaced at the top so the agent writes to it. */
@@ -773,7 +781,7 @@ function standingsSection(
 /**
  * Build the match context for an HTML-story brief. Same entry contract as
  * {@link buildMatchBrief}: `fixtureIds` in any order, emitted in kickoff order,
- * capped at {@link MAX_BRIEF_MATCHES}; throws only when no fixture resolves.
+ * capped at {@link MAX_CONTEXT_MATCHES}; throws only when no fixture resolves.
  *
  * SERVER-ONLY (service-role reads).
  */
@@ -782,7 +790,7 @@ export async function buildMatchContext(
   { prompt, siteUrl = 'https://footshorts.com' }: MatchContextOptions = {},
 ): Promise<string> {
   const site = siteUrl.replace(/\/$/, '')
-  const ids = Array.from(new Set(fixtureIds.filter(Boolean))).slice(0, MAX_BRIEF_MATCHES)
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean))).slice(0, MAX_CONTEXT_MATCHES)
   if (ids.length === 0) throw new Error('buildMatchContext: no fixture ids')
 
   const fixtures = await fetchFixturesByIds(ids)

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
-import { footshortsHtmlStoryBrief, MAX_BRIEF_MATCHES } from '@vismay/html-stories/footshortsBrief'
+import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { isAuthed } from '@/lib/adminAuth'
 import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
@@ -39,8 +39,8 @@ export async function POST(req: Request) {
   const fixtureIds = Array.isArray(b.fixtureIds)
     ? b.fixtureIds.filter((id): id is string => typeof id === 'string' && id.trim() !== '')
     : []
-  if (fixtureIds.length > MAX_BRIEF_MATCHES) {
-    return NextResponse.json({ error: `at most ${MAX_BRIEF_MATCHES} matches per brief` }, { status: 400 })
+  if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
+    return NextResponse.json({ error: `at most ${MAX_CONTEXT_MATCHES} matches per brief` }, { status: 400 })
   }
   const prompt = typeof b.prompt === 'string' && b.prompt.trim() ? b.prompt.trim() : undefined
 

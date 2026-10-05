@@ -4,8 +4,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MatchCompetition, MatchOption } from './useComposeFlow'
 import { Chip, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
-/** Most matches one brief covers — mirrors MAX_BRIEF_MATCHES server-side. */
+/** Most matches one compose brief covers — mirrors MAX_BRIEF_MATCHES server-side
+ *  (the story pipeline's per-source prompt budget). The HTML-stories brief has no
+ *  such budget and passes its own `maxMatches`. */
 const MAX_MATCHES = 6
+
+/** Case- and accent-insensitive team filter: "celta" finds "RC Celta de Vigo". */
+function normalize(s: string): string {
+  return s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
 
 /**
  * "Add match" picker (footshorts only). Choose a competition+season, tick the
@@ -34,6 +41,7 @@ export function MatchPicker({
   subtitle = 'Opta match facts + the event timeline, attached as a source',
   submitLabel = 'Add match source',
   showEventFilter = true,
+  maxMatches = MAX_MATCHES,
 }: {
   onClose: () => void
   /** Header copy and the submit button — the HTML-stories brief generator reuses this picker with its own. */
@@ -42,6 +50,8 @@ export function MatchPicker({
   submitLabel?: string
   /** The timeline event-type filter only matters to the compose graft; the HTML brief hides it. */
   showEventFilter?: boolean
+  /** How many matches may be ticked. Default the compose brief's 6. */
+  maxMatches?: number
   loadCompetitions: () => Promise<MatchCompetition[]>
   loadMatches: (competition: string, season: string) => Promise<MatchOption[]>
   onScrape: (
@@ -60,6 +70,8 @@ export function MatchPicker({
   const [matches, setMatches] = useState<MatchOption[]>([])
   const [loadingMatches, setLoadingMatches] = useState(false)
   const [picked, setPicked] = useState<string[]>([])
+  // Team search over the loaded list — a league season is 380 fixtures.
+  const [search, setSearch] = useState('')
   const [eventFilter, setEventFilter] = useState<'all' | 'goal' | 'card' | 'subst'>('all')
   const [prompt, setPrompt] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -153,7 +165,7 @@ export function MatchPicker({
   function toggle(id: string) {
     setPicked((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id)
-      if (prev.length >= MAX_MATCHES) return prev
+      if (prev.length >= maxMatches) return prev
       return [...prev, id]
     })
   }
@@ -172,7 +184,13 @@ export function MatchPicker({
     else setError('Could not build the brief — see the error above the stage.')
   }
 
-  const atCap = picked.length >= MAX_MATCHES
+  const atCap = picked.length >= maxMatches
+
+  const visible = useMemo(() => {
+    const q = normalize(search.trim())
+    if (!q) return matches
+    return matches.filter((m) => normalize(`${m.home} ${m.away}`).includes(q))
+  }, [matches, search])
 
   return (
     <div
@@ -228,7 +246,7 @@ export function MatchPicker({
                   <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                     Matches{' '}
                     <span className="normal-case text-neutral-600">
-                      — {picked.length}/{MAX_MATCHES} picked
+                      — {picked.length}/{maxMatches} picked
                     </span>
                   </span>
                   <div className="flex items-center gap-2">
@@ -249,15 +267,30 @@ export function MatchPicker({
                     )}
                   </div>
                 </div>
+                {!loadingMatches && matches.length > 0 && (
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by team…"
+                    aria-label="Search matches by team"
+                    className={`w-full ${inputCls}`}
+                  />
+                )}
                 {loadingMatches ? (
                   <p className="px-1 py-6 text-center text-xs text-neutral-500">Loading matches…</p>
                 ) : matches.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-white/10 px-3 py-8 text-center text-xs text-neutral-600">
                     No fixtures for this competition + season.
                   </p>
+                ) : visible.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-white/10 px-3 py-8 text-center text-xs text-neutral-600">
+                    No match in this competition involves &ldquo;{search.trim()}&rdquo;.
+                    {picked.length > 0 && ' Your picks are kept.'}
+                  </p>
                 ) : (
                   <ul className="max-h-64 space-y-1 overflow-y-auto">
-                    {matches.map((m) => {
+                    {visible.map((m) => {
                       const checked = picked.includes(m.id)
                       const played =
                         m.status === 'finished' && m.homeScore != null && m.awayScore != null
