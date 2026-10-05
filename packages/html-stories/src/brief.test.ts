@@ -85,6 +85,24 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(!b.includes('Every number has a source. End with a "Sources & method"'))
   assert.equal(b.includes('saves a draft'), randomizer !== 'desk', `${randomizer}: gate note`)
 }
+// Maps: Mapbox scrollytelling only with a public token; MapLibre otherwise.
+const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
+for (const app of ['vizmaya-fyi', 'footshorts'] as const) {
+  const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', app, mapboxToken: pk })
+  assert.ok(m.includes('## Maps: Mapbox scrollytelling'), `${app}: maps section`)
+  assert.ok(m.includes(`mapboxgl.accessToken = '${pk}'`))
+  assert.ok(m.includes('access_token=' + pk))
+  assert.ok(m.indexOf('## Maps') > m.indexOf('## Charts') && m.indexOf('## Maps') < m.indexOf('## Content'))
+  assert.ok(m.includes('the sticky graphic is a map'))
+  assert.ok(!m.includes("Don't use Mapbox"))
+}
+for (const mapboxToken of [null, '', 'sk.secret-token', 'not-a-token']) {
+  const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', mapboxToken })
+  assert.ok(!m.includes('## Maps'), `no maps for ${mapboxToken}`)
+  assert.ok(!m.includes('sk.secret-token'))
+  assert.ok(m.includes("Don't use Mapbox") && m.includes('MapLibre GL'))
+}
+
 // No spin: none of it.
 assert.ok(!viz.includes('## Your assignment') && !viz.includes('Research stub'))
 

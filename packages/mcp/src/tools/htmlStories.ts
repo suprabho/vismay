@@ -72,10 +72,10 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       const houseBrief = () => htmlStoryBrief({ app, siteUrl: site })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
       if (spinId && app !== 'vizmaya-fyi') throw new Error('Randomizer spins are vizmaya stories: use app "vizmaya-fyi".')
-      if (!randomStyle && ids.length === 0 && !spinId) return { content: [{ type: 'text', text: houseBrief() }] }
 
-      // Styles come from the site's stories and the match context from its
-      // tables, so ask the deployed site for the brief rather than reading here.
+      // Styles come from the site's stories, the match context from its tables
+      // and the Mapbox token from its env, so ask the deployed site for the
+      // brief rather than building it here. The local build is the fallback.
       const url = new URL(`${site}/api/html-stories/brief`)
       if (randomStyle) url.searchParams.set('style', 'random')
       if (spinId) url.searchParams.set('spin', spinId)
@@ -98,6 +98,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         const reason = e instanceof Error ? e.message : String(e)
         if (ids.length) throw new Error(`Could not build the match context: ${reason}`)
         if (spinId) throw new Error(`Could not build the brief for spin ${spinId}: ${reason}`)
+        if (!randomStyle) return { content: [{ type: 'text', text: houseBrief() }] }
         return {
           content: [
             { type: 'text', text: `(Random style unavailable: ${reason}. Using the house style.)\n\n${houseBrief()}` },

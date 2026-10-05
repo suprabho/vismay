@@ -16,6 +16,11 @@
  * spin's sections live in the randomizer package; this file only decides
  * where they go. Without a spin the brief is unchanged.
  *
+ * Maps are Mapbox scrollytelling when the deployment has a public Mapbox token
+ * (NEXT_PUBLIC_MAPBOX_TOKEN, the one the sites' own map pages use): the brief
+ * hands the agent that token and the sticky-map pattern. Without one the brief
+ * falls back to MapLibre and D3-geo.
+ *
  * Keep it about outcomes and constraints, not a component catalogue: the whole
  * point of this pipeline is that the agent designs the page itself.
  */
@@ -60,6 +65,24 @@ export interface BriefOptions {
    * sections, and ends with the spin's research file (or its stub).
    */
   spin?: BriefSpin | null
+  /**
+   * A public Mapbox token (`pk.…`) to hand the agent for scrollytelling maps.
+   * Omit to use the deployment's NEXT_PUBLIC_MAPBOX_TOKEN; null for no Mapbox
+   * (the brief then points at MapLibre). Anything that isn't a public token is
+   * ignored: the brief is served publicly, so a secret `sk.` token must never
+   * reach it.
+   */
+  mapboxToken?: string | null
+}
+
+/** Pinned with the repo's own mapbox-gl dependency. */
+const MAPBOX_GL_VERSION = '3.21.0'
+
+/** The token to put in the brief, or null for none (see BriefOptions.mapboxToken). */
+export function briefMapboxToken(option?: string | null): string | null {
+  const raw = option === undefined ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : option
+  const token = raw?.trim()
+  return token && token.startsWith('pk.') ? token : null
 }
 
 /** The vizmaya house palette: the story reader's defaults. */
@@ -172,6 +195,74 @@ Use ${app === 'footshorts' ? 'them' : 'both'}. They make a page scannable, but t
   as two letters. A flag always sits beside the country name, never instead of it.`
 }
 
+/** The "Maps" section: Mapbox scrollytelling, given a public token. */
+function mapsSection(app: HtmlStoryApp, token: string): string {
+  const places =
+    app === 'footshorts'
+      ? "a title race's away days, a club's scouting map, a tournament's host cities"
+      : 'a trade route, a river basin, where the plants or the outbreaks cluster'
+  return `## Maps: Mapbox scrollytelling
+
+When the story happens somewhere (${places}), tell that part on a Mapbox map
+that moves as the reader scrolls. Skip it when the place is incidental: a map
+that only shows where a country is doesn't earn a screen.
+
+Setup:
+- Load \`https://api.mapbox.com/mapbox-gl-js/v${MAPBOX_GL_VERSION}/mapbox-gl.js\` and
+  \`https://api.mapbox.com/mapbox-gl-js/v${MAPBOX_GL_VERSION}/mapbox-gl.css\`.
+- Token: \`mapboxgl.accessToken = '${token}'\`. It is a public token, made to sit
+  in page source. If tiles don't load in a local preview, check the posted
+  draft before changing anything: the token may only allow the site.
+- Basemap: \`mapbox://styles/mapbox/dark-v11\` on a dark page, \`light-v11\` on a
+  light one. On \`style.load\`, pull it toward your palette with
+  \`setPaintProperty\` (land and background to your background and surface,
+  water a shade of them, roads and POI labels hidden, place labels small and
+  muted) so your data is the brightest thing on screen.
+- \`projection: 'globe'\` for a story that crosses continents, \`'mercator'\` for a
+  city or a region.
+- Keep the Mapbox logo and attribution visible: the terms require it.
+- The sandbox has no storage and no Cache API. Mapbox GL copes and falls back to
+  the network; a one-off console warning about its cache is expected, not a bug.
+
+The pattern:
+- **One map, sticky.** One map per page, reused by every step (browsers cap
+  WebGL contexts). It sits in a \`position: sticky; top: 0; height: 100svh\`
+  container and the text steps scroll past it as cards on your surface colour.
+  Desktop: a 360–420px text column beside the map. Phones: the map fills the
+  screen and the cards pass over it, one step per screen.
+- **Chapters.** Each step is \`<section data-step data-chapter="…">\` and maps to
+  one chapter in a JS array: a camera (\`center\`, \`zoom\`, \`pitch\`, \`bearing\`)
+  plus at most one data change (show a layer, highlight a feature, extend a
+  route). One step, one move, one point.
+- **Trigger.** IntersectionObserver (a step is active when it crosses the middle
+  of the viewport) or Scrollama. On enter, \`map.flyTo({ ...camera, padding,
+  duration: 2000, essential: true })\`. Scrolling back up replays the earlier
+  chapter, so each chapter sets the whole state it needs, not a diff.
+- **Padding.** Pass \`padding\` to \`flyTo\` so the subject lands in the visible part
+  of the map, not under the text card: left or right padding beside the desktop
+  column, bottom padding on phones.
+- **Scroll stays the page's.** \`interactive: false\`, so the map never eats a
+  scroll or a swipe. If you want a free-explore map, put it after the
+  scrollytelling, with \`cooperativeGestures: true\`.
+- **Data.** GeoJSON inline in the page or from an absolute https URL. Add every
+  source and layer once, on \`load\`, at zero opacity, and let chapters fade them
+  with \`setPaintProperty\` (\`fill-opacity\`, \`line-opacity\`, \`circle-opacity\`)
+  rather than adding and removing layers. Grow routes with \`lineMetrics: true\`
+  and an animated \`line-trim-offset\`. A step entered before \`load\` fires is
+  applied when it does.
+- **Colour and labels.** The chart rules hold: accent for the subject, grey for
+  context, features labelled on the map rather than in a legend (a small key in
+  the card is fine for a colour scale), flags beside country names.
+- **Reduced motion.** \`jumpTo\` instead of \`flyTo\`, and routes appear whole.
+- **Fallback.** Give the map container a background image from the Static
+  Images API at the first chapter's camera
+  (\`https://api.mapbox.com/styles/v1/mapbox/<your basemap>/static/<lng>,<lat>,<zoom>,<bearing>,<pitch>/1280x1280@2x?access_token=${token}\`),
+  so a failed script or no WebGL still shows the place, and write each step so
+  it reads on its own.
+- **Check it.** At 375×812, scroll through every step: the step's subject is on
+  screen and not under its card, and labels don't collide.`
+}
+
 function contentSection(app: HtmlStoryApp, hasContext: boolean): string {
   const meta = HTML_STORY_APP_META[app]
   if (app !== 'footshorts') {
@@ -210,8 +301,16 @@ function demoteHeadings(markdown: string): string {
   return markdown.replace(/^(#{1,5}) /gm, (_m, hashes: string) => `${hashes}# `)
 }
 
-export function htmlStoryBrief({ siteUrl, app = DEFAULT_HTML_STORY_APP, style, context, spin }: BriefOptions): string {
+export function htmlStoryBrief({
+  siteUrl,
+  app = DEFAULT_HTML_STORY_APP,
+  style,
+  context,
+  spin,
+  mapboxToken,
+}: BriefOptions): string {
   const site = siteUrl.replace(/\/$/, '')
+  const mapbox = briefMapboxToken(mapboxToken)
   const meta = HTML_STORY_APP_META[app]
   const siteName = site.replace(/^https?:\/\//, '')
   const hasContext = !!context?.trim()
@@ -285,6 +384,8 @@ Animate on scroll. The page should feel alive as the reader moves through it:
 - **Big numbers count up** to their value when they appear.
 - **Scrollytelling** when the data has a sequence: a sticky graphic with text
   steps that change it. Mark each step \`<section data-step>\`.${
+    mapbox ? ' When the sequence moves through places, the sticky graphic is a map (see Maps).' : ''
+  }${
     app === 'footshorts'
       ? `
   A match timeline is exactly this: the scoreline, xG race or momentum graphic
@@ -305,8 +406,13 @@ How to build it:
 ## Charts
 
 - D3 v7 or Observable Plot for bespoke charts; ECharts is fine for standard
-  ones. For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
-  with free tiles. Don't use Mapbox: it needs a token.
+  ones. ${
+    mapbox
+      ? `For maps, see Maps below; D3-geo with world-atlas/us-atlas TopoJSON is fine
+  for a small static choropleth or locator.`
+      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
+  with free tiles. Don't use Mapbox: this deployment has no token for it.`
+  }
 - Each chart makes one point, and its title states that point ("${
     app === 'footshorts' ? 'Arsenal had the ball, Chelsea had the chances' : 'Exports doubled after 2019'
   }", not "${app === 'footshorts' ? 'Possession and shots' : 'Exports 2015–2024'}").
@@ -316,7 +422,7 @@ How to build it:
 - Put a source line under every chart, linked to the original.
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
-
+${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
 ${spin ? spinContentSection(meta.desk) : contentSection(app, hasContext)}
 ${spin ? `\n${reelScriptSection()}\n` : ''}
 ## Before you post: check your own work
