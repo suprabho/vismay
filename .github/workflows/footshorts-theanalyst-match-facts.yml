@@ -64,6 +64,11 @@ on:
         required: false
         type: boolean
         default: false
+      stories_backfill:
+        description: 'Also re-scrape stats-done fixtures that lack opta_match_stories rows — the commentary/insights backlog (budget-capped; needs ~11 runs to drain 218 fixtures).'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: footshorts-theanalyst-match-facts
@@ -111,6 +116,7 @@ jobs:
           INPUT_DRY: ${{ inputs.dry }}
           INPUT_DUMP_EVENTS: ${{ inputs.dump_events }}
           INPUT_EVENTS_BACKFILL: ${{ inputs.events_backfill }}
+          INPUT_STORIES_BACKFILL: ${{ inputs.stories_backfill }}
         run: |
           ARGS=()
           [ -n "$INPUT_COMPETITION" ] && ARGS+=("--competition=$INPUT_COMPETITION")
@@ -119,4 +125,5 @@ jobs:
           [ "$INPUT_DRY" = "true" ] && ARGS+=("--dry")
           [ "$INPUT_DUMP_EVENTS" = "true" ] && ARGS+=("--dump-events")
           [ "$INPUT_EVENTS_BACKFILL" = "true" ] && ARGS+=("--events-backfill")
+          [ "$INPUT_STORIES_BACKFILL" = "true" ] && ARGS+=("--stories-backfill")
           pnpm match-facts:ci -- "${ARGS[@]}"

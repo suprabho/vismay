@@ -14,6 +14,9 @@
  *                    and keeps the caption the model wrote for its section.
  *   6. chart window — a position-chart layer takes the block whose lap window
  *                    the model copied (whole race vs a moment's zoom).
+ *   7. match brief  — one of several fs:match-timeline directives lands in the
+ *                    section about ITS match, matched on the home/away the
+ *                    compose match brief carries.
  */
 import assert from 'node:assert'
 import { extractDirectives, extractFsDirectives } from '@vismay/viz-engine/src/lib/recapFences'
@@ -195,5 +198,34 @@ graftSectionBody(wholeRace as any, chartDirectives, 'How the race unfolded.', 'f
 assert.equal((wholeRace.foreground[0] as any).lapTo, 57, 'whole-race window picked, not the first (zoomed) block')
 assert.equal((wholeRace.foreground[0] as any).lanes[0].driverCode, 'ANT', 'whole-race lanes grafted')
 console.log('✓ position-chart graft: the copied lap window selects the block')
+
+// ── 7. match brief: a multi-match timeline lands in the right section ───────
+// A fs:match-timeline config is otherwise just an events array, so every
+// timeline in a 2-match brief scored 0 and the first one filled every section.
+// The brief carries each timeline's home/away for exactly this reason
+// (packages/content-source/src/footshortsMatchBrief.ts).
+const matchBrief = [
+  '```fs:match-timeline',
+  '{ "home": "Arsenal", "away": "Chelsea", "filter": "all", "events": [{ "id": "e1", "fixture_id": "f1", "side": "home", "minute": 23, "type": "goal", "detail": "Normal Goal", "player_name": "Bukayo Saka" }] }',
+  '```',
+  '```fs:match-timeline',
+  '{ "home": "Liverpool", "away": "Everton", "filter": "all", "events": [{ "id": "e2", "fixture_id": "f2", "side": "home", "minute": 11, "type": "goal", "detail": "Penalty", "player_name": "Mohamed Salah" }] }',
+  '```',
+].join('\n')
+const timelines = collectRecapDirectives([matchBrief])
+assert.equal(timelines.length, 2, 'two timeline directives extracted')
+// The model emits events: [] (what the footshorts pack tells it to do).
+const tlBody = {
+  foreground: {
+    layout: 'stat-left-chart-right',
+    regions: { chart: [{ type: 'fs:match-timeline', filter: 'goal', events: [], style: { pad: 1 } }] },
+  },
+}
+assert.equal(graftSectionBody(tlBody as any, timelines, 'Liverpool were three up before Everton settled'), 1)
+const tl = tlBody.foreground.regions.chart[0] as any
+assert.equal(tl.events.length, 1, 'events filled from the brief')
+assert.equal(tl.events[0].player_name, 'Mohamed Salah', "took the section's own match, not the first")
+assert.deepEqual(tl.style, { pad: 1 }, 'engine-level style preserved')
+console.log('✓ match-brief graft: the timeline for the section\'s own match wins')
 
 console.log('\nALL RECAP INGESTION CHECKS PASSED')

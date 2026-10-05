@@ -5,7 +5,8 @@ import type { StorySource } from '@vismay/content-source/storySources'
 import { SourceRow } from './SourceRow'
 import { SourceLibraryModal, type LibraryTab, type LibraryPage } from './SourceLibraryModal'
 import { TelemetrySessionPicker } from './TelemetrySessionPicker'
-import type { TelemetrySession } from './useComposeFlow'
+import { MatchPicker } from './MatchPicker'
+import type { MatchCompetition, MatchOption, TelemetrySession } from './useComposeFlow'
 import { SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
 /**
@@ -36,6 +37,10 @@ export function SourcesStage({
   onCreateRecap,
   onLoadTelemetrySessions,
   onCreateTelemetrySource,
+  onLoadMatchCompetitions,
+  onLoadMatches,
+  onScrapeMatch,
+  onCreateMatchSource,
 }: {
   sources: StorySource[]
   busy: string | null
@@ -43,7 +48,8 @@ export function SourcesStage({
   pending: number
   wide?: boolean
   /** The draft's vertical (frontmatter `vertical`, per CanvasPage) — gates the
-   *  footshorts-only "Create recap" button and the f1-only telemetry picker. */
+   *  footshorts-only "Create recap" / "Add match" buttons and the f1-only
+   *  telemetry picker. */
   appSlug?: string | null
   onAddUrl: (url: string) => Promise<boolean>
   onAddText: (text: string) => Promise<boolean>
@@ -65,6 +71,17 @@ export function SourcesStage({
     constructors?: string[]
     prompt?: string
   }) => Promise<boolean>
+  onLoadMatchCompetitions: () => Promise<MatchCompetition[]>
+  onLoadMatches: (competition: string, season: string) => Promise<MatchOption[]>
+  onScrapeMatch: (
+    fixtureId: string,
+    competition: string,
+  ) => Promise<'dispatched' | 'unconfigured' | 'failed'>
+  onCreateMatchSource: (opts: {
+    fixtureIds: string[]
+    eventFilter?: 'all' | 'goal' | 'card' | 'subst'
+    prompt?: string
+  }) => Promise<boolean>
 }) {
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
@@ -72,6 +89,7 @@ export function SourcesStage({
   // "Create recap" opens the SAME library modal in recap-only mode.
   const [recapOpen, setRecapOpen] = useState(false)
   const [telemetryOpen, setTelemetryOpen] = useState(false)
+  const [matchOpen, setMatchOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const showRecap = appSlug === 'footshorts'
   // `appSlug` is actually the story's frontmatter `vertical` (see CanvasPage) —
@@ -161,14 +179,24 @@ export function SourcesStage({
         + From library
       </button>
       {showRecap && (
-        <button
-          onClick={() => setRecapOpen(true)}
-          disabled={!!busy}
-          className={`w-full ${btnGhostCls}`}
-          title="Pull a match-day recap from the library and generate recap-focused angles"
-        >
-          🏆 Create recap
-        </button>
+        <>
+          <button
+            onClick={() => setRecapOpen(true)}
+            disabled={!!busy}
+            className={`w-full ${btnGhostCls}`}
+            title="Pull a match-day recap from the library and generate recap-focused angles"
+          >
+            🏆 Create recap
+          </button>
+          <button
+            onClick={() => setMatchOpen(true)}
+            disabled={!!busy}
+            className={`w-full ${btnGhostCls}`}
+            title="Build a brief from selected matches (full Opta match facts + the event timeline) and attach it as a source"
+          >
+            ⚽ Add match
+          </button>
+        </>
       )}
       {showTelemetry && (
         <button
@@ -224,6 +252,15 @@ export function SourcesStage({
           onClose={() => setTelemetryOpen(false)}
           loadSessions={onLoadTelemetrySessions}
           onCreate={onCreateTelemetrySource}
+        />
+      )}
+      {matchOpen && (
+        <MatchPicker
+          onClose={() => setMatchOpen(false)}
+          loadCompetitions={onLoadMatchCompetitions}
+          loadMatches={onLoadMatches}
+          onScrape={onScrapeMatch}
+          onCreate={onCreateMatchSource}
         />
       )}
       <SectionHeading

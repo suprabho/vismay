@@ -49,6 +49,34 @@ export interface TelemetrySession {
   constructors: TelemetryConstructor[]
 }
 
+/** A (competition, season) pair with ingested football data (for the
+ *  footshorts "Add match" picker). */
+export interface MatchCompetition {
+  slug: string
+  name: string
+  season: string
+}
+/** One fixture in that competition, badged with what a match brief could
+ *  actually carry for it. */
+export interface MatchOption {
+  id: string
+  home: string
+  away: string
+  kickoffAt: string
+  status: string
+  homeScore: number | null
+  awayScore: number | null
+  matchday: number | null
+  stage: string | null
+  /** `opta_match_facts` has at least one side for this fixture. */
+  facts: boolean
+  /** Rows in `fixture_events` — 0 means no timeline. */
+  events: number
+  /** Opta INSIGHTS cards — the season-context lines, the strongest reason to
+   *  pick one match over another. */
+  insights: number
+}
+
 /** How many section "Write"/"Rewrite" calls may materialise concurrently. */
 export const MAX_CONCURRENT_SECTIONS = 3
 
@@ -444,6 +472,68 @@ export function useComposeFlow({
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
   }
+
+  // ── Footshorts match source (footshorts only) ────────────────────────────
+  // Both loaders hit the shared /api/footshorts/data/* routes (outside the
+  // per-story compose namespace), so they're direct fetches rather than `call`
+  // and degrade to an empty list instead of flagging a stage error.
+  async function loadMatchCompetitions(): Promise<MatchCompetition[]> {
+    try {
+      const res = await fetch('/api/footshorts/data/competitions', { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { competitions?: MatchCompetition[] }
+      return data.competitions ?? []
+    } catch {
+      return []
+    }
+  }
+  async function loadMatches(competition: string, season: string): Promise<MatchOption[]> {
+    try {
+      const qs = `competition=${encodeURIComponent(competition)}&season=${encodeURIComponent(season)}`
+      const res = await fetch(`/api/footshorts/data/matches?${qs}`, { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { rows?: MatchOption[] }
+      return data.rows ?? []
+    } catch {
+      return []
+    }
+  }
+  // Scrape ONE match's Opta match centre on demand (facts + commentary +
+  // insights), for a fixture the picker shows as uncaptured. Dispatches the
+  // worker — it lands a minute or two later, so the picker tells the editor to
+  // refresh rather than pretending the data is already there.
+  async function scrapeMatch(
+    fixtureId: string,
+    competition: string,
+  ): Promise<'dispatched' | 'unconfigured' | 'failed'> {
+    try {
+      const res = await fetch('/api/footshorts/data/matches/scrape', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fixtureId, competition }),
+      })
+      if (!res.ok) return 'failed'
+      const data = (await res.json()) as { mode?: 'dispatched' | 'unconfigured' }
+      return data.mode ?? 'failed'
+    } catch {
+      return 'failed'
+    }
+  }
+  // Build the match brief server-side (Opta facts + timeline) and attach it as
+  // a text source.
+  async function createMatchSource(opts: {
+    fixtureIds: string[]
+    eventFilter?: 'all' | 'goal' | 'card' | 'subst'
+    prompt?: string
+  }): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add match', 'match-source', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(opts),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
     // Persist immediately (fire-and-forget) so the choice survives a reload
@@ -766,6 +856,10 @@ export function useComposeFlow({
     createRecap,
     loadTelemetrySessions,
     createTelemetrySource,
+    loadMatchCompetitions,
+    loadMatches,
+    scrapeMatch,
+    createMatchSource,
     pickAngle,
     genOutline,
     regenSection,

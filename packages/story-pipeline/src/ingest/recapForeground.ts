@@ -206,7 +206,11 @@ function directiveKeywords(d: FsDirective): string[] {
   // f1 telemetry directives: caption + sessionKey are the strongest section hints.
   pushStr(c.caption)
   pushStr(c.sessionKey)
-  // Walk nested fixtures / rows for team names (bracket, standings, match-tile/row).
+  // Walk nested fixtures / rows / events for the names that identify a
+  // directive: team names (bracket, standings, match-tile/row) and, for an
+  // fs:match-timeline — whose config is otherwise just an events array — the
+  // players in it, so a section about one match's goals takes THAT match's
+  // timeline rather than the first one in the brief.
   const visit = (node: unknown): void => {
     if (Array.isArray(node)) return node.forEach(visit)
     if (!node || typeof node !== 'object') return
@@ -214,10 +218,13 @@ function directiveKeywords(d: FsDirective): string[] {
     pushStr(o.name)
     pushStr(o.home_team_name)
     pushStr(o.away_team_name)
+    pushStr(o.player_name)
+    pushStr(o.assist_name)
     for (const v of Object.values(o)) if (v && typeof v === 'object') visit(v)
   }
   visit(c.fixtures)
   visit(c.rows)
+  visit(c.events)
   return words
 }
 

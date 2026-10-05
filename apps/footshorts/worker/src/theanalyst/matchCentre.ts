@@ -1,6 +1,8 @@
 /**
  * theanalyst.com Opta match-centre scraper — per-match stats for both sides,
- * plus the match timeline (see the match-events section below).
+ * the match timeline (see the match-events section below), and the Opta-OS
+ * narrative feed (commentary + insights; see extractMatchStories). All three
+ * come out of ONE page render.
  *
  * VERIFIED LIVE (2026-08-24, timeline 2026-08-26) against a real finished
  * match. Two things were wrong in the original (authored without site
@@ -97,7 +99,35 @@ export type MatchHeader = {
   matchDate: string | null;
 };
 
-export type MatchCentreData = MatchFactsPayload & { events: MatchEvent[]; header: MatchHeader | null };
+/**
+ * One card from the match centre's narrative panel — the `Opta-OS` widget that
+ * sits beside the stat tables (its tab bar reads Commentary / Chalkboard /
+ * Pass Map / xG Map). The feed mixes Opta's minute-by-minute COMMENTARY with
+ * its INSIGHTS: season-context nuggets ("Valencia have attempted 22 shots in
+ * this game, their highest total in a single match in the Primera División this
+ * season") that no other source we hold can produce.
+ *
+ * VERIFIED LIVE (2026-10-03) against Valencia 2-3 Real Sociedad: 116 cards —
+ * 97 commentary, 16 insights, 2 pre-match insights, 1 match preview.
+ */
+export type MatchStory = {
+  /** Document order among the CAPTURED cards (dense, 0-based), newest first —
+   *  not the raw DOM index; see the push site in extractMatchStories. */
+  seq: number;
+  kind: 'commentary' | 'insight' | 'pre_match_insight' | 'match_preview';
+  /** Null on the build-up cards, which carry no clock. */
+  minute: number | null;
+  extraMinute: number | null;
+  /** Resolved from the card's crest against the scoreboard's two crests. */
+  side: 'home' | 'away' | null;
+  body: string;
+};
+
+export type MatchCentreData = MatchFactsPayload & {
+  events: MatchEvent[];
+  stories: MatchStory[];
+  header: MatchHeader | null;
+};
 
 export type MatchCentreIds = { competitionId: string; seasonId: string; matchId: string };
 
@@ -408,6 +438,93 @@ export function extractMatchEvents($: cheerio.CheerioAPI): MatchEvent[] {
   return events;
 }
 
+/** The card type label the widget prints → our `kind`. Unknown labels are
+ *  skipped rather than guessed at, so a new card type can't land as commentary. */
+const STORY_KINDS: Record<string, MatchStory['kind']> = {
+  COMMENTARY: 'commentary',
+  INSIGHTS: 'insight',
+  'PRE MATCH INSIGHTS': 'pre_match_insight',
+  'MATCH PREVIEW': 'match_preview',
+};
+
+/** The Opta team id inside a crest image URL (`…&id=<optaTeamId>`). */
+function crestTeamId($img: cheerio.Cheerio<never>): string | null {
+  const src = $img.attr('src') ?? '';
+  return /[?&]id=([^&]+)/.exec(src)?.[1] ?? null;
+}
+
+/**
+ * Commentary + insights from the `Opta-OS` card feed.
+ *
+ * Each card is `.Opta-OS-Card` with a `.Opta-OS-Card-Type-Label` ("COMMENTARY"
+ * / "INSIGHTS"), a `.Opta-OS-Card-Time` clock, a `.Opta-OS-Card-Crest` image
+ * whose URL carries the Opta team id, and `.Opta-OS-Card-Text` prose. Sides are
+ * resolved by matching that team id against the scoreboard's own two crests
+ * (`table.Opta-MatchHeader-Crested`, home first) — the cards themselves carry
+ * no home/away class.
+ *
+ * Returns [] rather than throwing: this panel is a bonus beside the stats, and
+ * a layout change here must never cost us a match's numbers.
+ */
+export function extractMatchStories($: cheerio.CheerioAPI): MatchStory[] {
+  const cards = $('.Opta-OS-Card').toArray();
+  if (cards.length === 0) return [];
+
+  // Scoreboard crests in document order: [0] home, [1] away (verified live,
+  // and corroborated by the Opta-Home / Opta-Away classes on the same cells).
+  const headerIds = $('table.Opta-MatchHeader-Crested img')
+    .toArray()
+    .map((el) => crestTeamId($(el) as never))
+    .filter((id): id is string => !!id);
+  const sideFor = (teamId: string | null): MatchStory['side'] => {
+    if (!teamId) return null;
+    if (teamId === headerIds[0]) return 'home';
+    if (teamId === headerIds[1]) return 'away';
+    return null;
+  };
+
+  const out: MatchStory[] = [];
+  // Count skips BY REASON, naming the labels: "20 skipped" alone can't tell a
+  // card type we failed to map (fixable) from a genuinely text-less card like a
+  // lineup or video tile (correctly ignored).
+  const unmapped = new Map<string, number>();
+  let empty = 0;
+  cards.forEach((el) => {
+    const $c = $(el);
+    const label = $c.find('.Opta-OS-Card-Type-Label').first().text().replace(/\s+/g, ' ').trim().toUpperCase();
+    const kind = STORY_KINDS[label];
+    const body = $c.find('.Opta-OS-Card-Text').first().text().replace(/\s+/g, ' ').trim();
+    if (!kind) {
+      unmapped.set(label || '(no label)', (unmapped.get(label || '(no label)') ?? 0) + 1);
+      return;
+    }
+    if (!body) {
+      empty++;
+      return;
+    }
+    const clock = parseEventMinute($c.find('.Opta-OS-Card-Time').first().text());
+    out.push({
+      // Dense, assigned AFTER the skips — never the raw card index. The writer
+      // prunes a shrunken feed with `delete … where seq >= rows.length`, which
+      // silently deletes live rows if these numbers have gaps.
+      seq: out.length,
+      kind,
+      minute: clock?.minute ?? null,
+      extraMinute: clock?.extraMinute ?? null,
+      side: sideFor(crestTeamId($c.find('.Opta-OS-Card-Crest img').first() as never)),
+      body,
+    });
+  });
+  if (unmapped.size > 0) {
+    const detail = [...unmapped.entries()].map(([l, n]) => `${n}× "${l}"`).join(', ');
+    console.warn(`[match-centre] narrative cards with an unmapped type label: ${detail}`);
+  }
+  if (empty > 0) {
+    console.warn(`[match-centre] ${empty} narrative card(s) skipped (no text — lineup/media tile)`);
+  }
+  return out;
+}
+
 /**
  * Selector-debugging aid for the CI loop (workflow input dump_events=true):
  * an inventory of every Opta-ish class token on the page, plus a text peek at
@@ -457,6 +574,12 @@ export async function fetchMatchFacts(
   const html = await fetchRenderedHtml(url, {
     waitForSelector: 'table.Opta-Stats-Bars, table.Opta-shotoverview',
     timeoutMs: 20_000,
+    // The Opta-OS narrative widget mounts AFTER the stats tables, so a capture
+    // taken the moment the stats appear usually has no cards at all (run 1 of
+    // the backfill stored cards for 3 of 20 matches). Best-effort: a page that
+    // genuinely has no narrative feed still yields its stats and timeline.
+    settleSelector: '.Opta-OS-Card',
+    settleTimeoutMs: 8_000,
   });
   const $ = cheerio.load(html);
   $('script, style, noscript').remove();
@@ -507,6 +630,17 @@ export async function fetchMatchFacts(
       `[match-centre] event extraction failed (stats unaffected): ${(e as Error).message} (${url})`
     );
   }
+  // Commentary + insights from the SAME render, isolated the same way: a
+  // selector failure here logs and yields [], never touching the stats.
+  let stories: MatchStory[] = [];
+  try {
+    stories = extractMatchStories($);
+  } catch (e) {
+    console.warn(
+      `[match-centre] story extraction failed (stats unaffected): ${(e as Error).message} (${url})`
+    );
+  }
+
   if (opts?.dumpEvents) {
     console.log(`[match-centre] ${url}\n[match-centre] parsed ${events.length} event(s): ${JSON.stringify(events)}`);
     console.log(dumpUnparsedOptaRegions($));
@@ -521,5 +655,5 @@ export async function fetchMatchFacts(
     console.warn(`[match-centre] header extraction failed (stats unaffected): ${(e as Error).message} (${url})`);
   }
 
-  return { home, away, events, header };
+  return { home, away, events, stories, header };
 }

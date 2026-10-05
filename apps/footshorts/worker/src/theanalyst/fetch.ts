@@ -96,7 +96,16 @@ export async function closeBrowser(): Promise<void> {
  */
 export async function fetchRenderedHtml(
   url: string,
-  opts?: { timeoutMs?: number; waitForSelector?: string }
+  opts?: {
+    timeoutMs?: number;
+    waitForSelector?: string;
+    /** A SECOND, best-effort wait applied after `waitForSelector` resolves, for
+     *  a widget that mounts later than the one that gates the capture (the
+     *  match centre's narrative feed lands after its stat tables). Never fatal:
+     *  a page without it returns whatever had rendered by the deadline. */
+    settleSelector?: string;
+    settleTimeoutMs?: number;
+  }
 ): Promise<string> {
   const wait = lastFetchAt + CRAWL_DELAY_MS - Date.now();
   if (wait > 0) await sleep(wait);
@@ -111,6 +120,11 @@ export async function fetchRenderedHtml(
       await page.waitForSelector(opts.waitForSelector, { timeout: opts.timeoutMs ?? 15_000 }).catch(() => {});
     } else {
       await page.waitForLoadState('networkidle', { timeout: opts?.timeoutMs ?? 15_000 }).catch(() => {});
+    }
+    if (opts?.settleSelector) {
+      await page
+        .waitForSelector(opts.settleSelector, { timeout: opts.settleTimeoutMs ?? 8_000 })
+        .catch(() => {});
     }
     return await page.content();
   } finally {
