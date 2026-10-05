@@ -4,8 +4,16 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowSquareOut, Desktop, DeviceMobile, UploadSimple } from '@phosphor-icons/react'
+import { auraCaptureUrl } from '@vismay/viz-engine'
 import { brandHtmlStory } from '@vismay/html-stories/branding'
-import { extractHtmlMeta, isSafeSlug, lintHtml, slugify, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import {
+  extractHtmlMeta,
+  isSafeSlug,
+  lintHtml,
+  parseAuraSlug,
+  slugify,
+  type HtmlStoryStatus,
+} from '@vismay/html-stories/meta'
 
 interface Version {
   id: number
@@ -38,6 +46,9 @@ export default function HtmlStoryEditorClient({
   const [status, setStatus] = useState<HtmlStoryStatus>('draft')
   const [html, setHtml] = useState('')
   const [savedHtml, setSavedHtml] = useState('')
+  // Aura scene behind the served page and on its home-page card; picked after the HTML is in.
+  const [aura, setAura] = useState('')
+  const [savedAura, setSavedAura] = useState('')
   const [versions, setVersions] = useState<Version[]>([])
   const [versionPreview, setVersionPreview] = useState<{ id: number; html: string } | null>(null)
   const [viewport, setViewport] = useState<Viewport>('phone')
@@ -54,8 +65,13 @@ export default function HtmlStoryEditorClient({
     return body
   }
 
-  function applyStory(body: { story: { title: string | null; description: string | null; status: HtmlStoryStatus; html: string }; versions?: Version[] }) {
+  function applyStory(body: {
+    story: { title: string | null; description: string | null; status: HtmlStoryStatus; html: string; aura: string | null }
+    versions?: Version[]
+  }) {
     setTitle(body.story.title ?? '')
+    setAura(body.story.aura ?? '')
+    setSavedAura(body.story.aura ?? '')
     setDescription(body.story.description ?? '')
     setStatus(body.story.status)
     setHtml(body.story.html)
@@ -98,7 +114,10 @@ export default function HtmlStoryEditorClient({
     return () => clearTimeout(t)
   }, [html])
 
-  const dirty = create || html !== savedHtml || titleTouched || descriptionTouched
+  const auraSlug = aura.trim() ? parseAuraSlug(aura) : null
+  const auraInvalid = aura.trim() !== '' && !auraSlug
+  const auraChanged = (auraSlug ?? '') !== savedAura
+  const dirty = create || html !== savedHtml || titleTouched || descriptionTouched || auraChanged
 
   async function readFile(file: File) {
     setHtml(await file.text())
@@ -109,6 +128,10 @@ export default function HtmlStoryEditorClient({
     const slug = shownSlug
     if (!isSafeSlug(slug) || slug === 'new') {
       setError('Slug must be lowercase letters, digits and single hyphens.')
+      return
+    }
+    if (auraInvalid) {
+      setError('Aura must be a scene slug or an aura.promad.design scene URL.')
       return
     }
     setSaving(true)
@@ -124,6 +147,7 @@ export default function HtmlStoryEditorClient({
           status: nextStatus,
           title: titleTouched ? title : undefined,
           description: descriptionTouched ? description : undefined,
+          aura: create || auraChanged ? (auraSlug ?? '') : undefined,
         }),
       })
       const body = await res.json()
@@ -197,7 +221,7 @@ export default function HtmlStoryEditorClient({
   const liveUrl = `${siteUrl}/s/${shownSlug || '<slug>'}`
   const shownHtml = versionPreview?.html ?? previewHtml
   // Wrapped in the same vizmaya header/footer the public route adds.
-  const brandedPreview = brandHtmlStory(shownHtml, { siteUrl })
+  const brandedPreview = brandHtmlStory(shownHtml, { siteUrl, aura: auraSlug })
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row min-h-0">
@@ -322,6 +346,37 @@ export default function HtmlStoryEditorClient({
                   setDescriptionTouched(true)
                 }}
               />
+            </div>
+            <div>
+              <label className={label}>Aura background</label>
+              <div className="flex gap-3 items-start">
+                <div className="w-16 h-16 shrink-0 rounded-lg border border-white/10 bg-neutral-900 overflow-hidden">
+                  {auraSlug && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={auraSlug}
+                      src={auraCaptureUrl(auraSlug, { w: 128, h: 128 })}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                    />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input
+                    className={`${field}${auraInvalid ? ' border-red-500/50' : ''}`}
+                    value={aura}
+                    placeholder="Scene slug or aura.promad.design URL"
+                    spellCheck={false}
+                    onChange={(e) => setAura(e.target.value)}
+                  />
+                  <p className={`text-xs mt-1 ${auraInvalid ? 'text-red-400' : 'text-neutral-600'}`}>
+                    {auraInvalid
+                      ? 'Not a scene slug or scene URL.'
+                      : 'Laid behind the page and played on its home-page card. Empty keeps the og:image thumbnail.'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

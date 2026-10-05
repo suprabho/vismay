@@ -135,6 +135,32 @@ export function parseThemeMetaContent(content: string): ThemeColors | null {
   return REQUIRED_THEME_SLOTS.every((k) => colors[k]) ? colors : null
 }
 
+/**
+ * Aura scenes (aura.promad.design) are chosen per story after the HTML is
+ * written, not by the agent: the slug lives in html_stories.aura and is laid
+ * behind the page when it's served (./branding) and on its listing card.
+ */
+export const MAX_AURA_SLUG_LENGTH = 200
+
+/**
+ * An aura scene slug from what an editor pastes: the bare slug, or any
+ * aura.promad.design URL that names it (`/scenes/<slug>`, `/embed/<slug>`).
+ * Null when it isn't one.
+ */
+export function parseAuraSlug(input: string): string | null {
+  let s = input.trim()
+  const url = s.match(/^https?:\/\/[^/]+\/(?:scenes|embed|s)\/([^/?#]+)/i)
+  if (url) {
+    try {
+      s = decodeURIComponent(url[1] ?? '')
+    } catch {
+      return null
+    }
+  }
+  s = s.toLowerCase()
+  return s.length <= MAX_AURA_SLUG_LENGTH && SAFE_SLUG.test(s) ? s : null
+}
+
 export interface HtmlLint {
   /** Problems that make the page unpublishable. */
   errors: string[]

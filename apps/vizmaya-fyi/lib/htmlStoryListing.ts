@@ -41,6 +41,9 @@ export async function getHtmlStoryCards(): Promise<StoryCardData[]> {
       date: s.publishedAt ?? s.updatedAt,
       byline: '',
       theme,
+      // With an aura the card plays it (StoryCard's default priority); the
+      // og:image stays as the thumbnail for stories without one.
+      aura: s.aura ?? undefined,
       thumbnail: s.ogImageUrl ?? undefined,
     }
   })

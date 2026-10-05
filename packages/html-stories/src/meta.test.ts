@@ -1,7 +1,7 @@
 /** Checks for metadata extraction + the hosting lint.
  *  (run: npx tsx src/meta.test.ts) */
 import assert from 'node:assert/strict'
-import { extractHtmlMeta, extractThemeMeta, isSafeSlug, lintHtml, slugify, themeMetaContent } from './meta'
+import { extractHtmlMeta, extractThemeMeta, isSafeSlug, lintHtml, parseAuraSlug, slugify, themeMetaContent } from './meta'
 
 const good = `<!doctype html>
 <html lang="en"><head>
@@ -63,5 +63,13 @@ assert.equal(themeMetaContent(theme), 'background:#0a0e14; surface:#111820; text
 assert.equal(extractThemeMeta(good.replace('accent:#D85A30', 'accent:red')), null)
 assert.equal(extractThemeMeta('<p>no tag</p>'), null)
 assert.ok(lintHtml(good.replace(/<meta name="vizmaya:theme"[^>]*>/, '')).warnings.some((w) => w.includes('vizmaya:theme')))
+
+// Aura slugs: bare, or pulled out of a scene / embed URL.
+assert.equal(parseAuraSlug('  minimalist-gold-background '), 'minimalist-gold-background')
+assert.equal(parseAuraSlug('https://aura.promad.design/scenes/blue-lines/capture.png?w=1'), 'blue-lines')
+assert.equal(parseAuraSlug('https://aura.promad.design/embed/Blue-Lines?hideText=true'), 'blue-lines')
+assert.equal(parseAuraSlug('blue lines'), null)
+assert.equal(parseAuraSlug('"><script>'), null)
+assert.equal(parseAuraSlug('https://aura.promad.design/embed/%E0%A4%A'), null)
 
 console.log('meta: ok')

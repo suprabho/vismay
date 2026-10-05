@@ -12,6 +12,7 @@
  * and the `.riv` from the site, which serves it with CORS for this.
  */
 
+import { auraCaptureUrl, auraEmbedUrl } from '@vismay/viz-engine/src/lib/aura'
 import { extractThemeMeta, type ThemeColors } from './meta'
 
 /** Pinned to the version the apps' `@rive-app/canvas` resolves to. */
@@ -84,6 +85,8 @@ const logoMark = (logo: Look['logo']) => `<svg viewBox="0 0 1080 1080" aria-hidd
 export interface BrandingOptions {
   /** e.g. https://vizmaya.fyi. Logo assets and links resolve against it. */
   siteUrl: string
+  /** Aura scene slug (html_stories.aura) to lay behind the page, if any. */
+  aura?: string | null
 }
 
 /** Shared by both bars; each passes its colours in as custom properties. */
@@ -151,15 +154,43 @@ document.head.appendChild(s);
 }catch(e){}})(${cfg});</script>`
 }
 
+/** How much of the page background washes over the aura, so text written for that background stays legible. */
+const AURA_VEIL_OPACITY = 0.35
+
+/**
+ * The story's aura scene as a fixed full-viewport backdrop behind the page,
+ * like the viz-engine stories' page backdrop. The capture still paints first
+ * (and stays if the live embed never loads, or for reduced-motion readers),
+ * the animated embed goes over it, and a veil of the page background over
+ * both. The page's own html/body backgrounds are cleared so it shows through;
+ * sections that paint their own background still cover it.
+ */
+function auraHtml(slug: string, theme: ThemeColors | null): string {
+  const bg = theme?.background
+  const still = auraCaptureUrl(slug, { w: 1920, h: 1080 })
+  const embed = auraEmbedUrl(slug)
+  return `<style>html,body{background:transparent!important}</style><vizmaya-aura aria-hidden="true"><template shadowrootmode="open"><style>
+:host{all:initial;display:block;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none${bg ? `;background:${bg}` : ''}}
+img,iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;object-fit:cover;background:transparent}
+.veil{position:absolute;inset:0${bg ? `;background:${bg};opacity:${AURA_VEIL_OPACITY}` : ''}}
+@media (prefers-reduced-motion:reduce){iframe{display:none}}
+</style><img src="${escapeAttr(still)}" alt="" onerror="this.remove()"><iframe src="${escapeAttr(embed)}" title="" tabindex="-1" loading="lazy"></iframe><div class="veil"></div></template></vizmaya-aura>`
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+}
+
 /**
  * Wrap a story document in the vizmaya header and footer, in the palette the
- * page declares (`<meta name="vizmaya:theme">`) or else the home page's look.
+ * page declares (`<meta name="vizmaya:theme">`) or else the home page's look,
+ * with the story's aura scene behind it when one is set.
  */
-export function brandHtmlStory(html: string, { siteUrl }: BrandingOptions): string {
+export function brandHtmlStory(html: string, { siteUrl, aura }: BrandingOptions): string {
   const site = siteUrl.replace(/\/$/, '')
   const theme = extractThemeMeta(html)
   const look = theme ? themedLook(theme) : HOME_LOOK
-  const header = headerHtml(site, look)
+  const header = (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)
   const footer = footerHtml(site, look) + riveScript(site, look)
 
   let out = html

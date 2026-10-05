@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@vismay/content-source": "workspace:*"
+    "@vismay/content-source": "workspace:*",
+    "@vismay/viz-engine": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",

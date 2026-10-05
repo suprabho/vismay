@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
-import { HTML_STORY_STATUSES, isSafeSlug, lintHtml, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import { HTML_STORY_STATUSES, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
 export async function GET() {
@@ -26,6 +26,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid status' }, { status: 400 })
   }
 
+  // A string sets the aura ('' clears it); omitted keeps the current one.
+  const aura = typeof b.aura === 'string' ? (b.aura.trim() ? parseAuraSlug(b.aura) : null) : undefined
+  if (aura === null && typeof b.aura === 'string' && b.aura.trim()) {
+    return NextResponse.json({ error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }, { status: 400 })
+  }
+
   const lint = lintHtml(b.html)
   if (lint.errors.length) return NextResponse.json({ error: lint.errors.join(' '), ...lint }, { status: 400 })
 
@@ -38,6 +44,7 @@ export async function POST(req: Request) {
       title: str(b.title),
       description: str(b.description),
       ogImageUrl: str(b.ogImageUrl),
+      aura,
       source: str(b.source) === 'admin:restore' ? 'admin:restore' : 'admin',
     })
     return NextResponse.json({ ok: true, created, story, warnings: lint.warnings })
