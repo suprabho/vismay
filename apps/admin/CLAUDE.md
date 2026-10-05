@@ -156,3 +156,31 @@ stories from (falling back to the engine's `DEFAULT_THEME`).
 - **App slug, not vertical:** the canvas passes the story's *vertical* as
   `appSlug` (`f1`); `CanvasClient` resolves it with `appSlugForVertical()` from
   `@vismay/verticals/data` before it reaches the presets strip (`vizf1`).
+
+## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories)
+
+Agent-authored, self-contained HTML pages hosted as-is at `<site>/s/<slug>`
+([packages/html-stories](../../packages/html-stories); the pipeline is
+documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)). One
+table, scoped by `app_slug`; one set of admin code for every hosting app:
+
+- **Pages:** `app/vizmaya/(tabbed)/html-stories` and
+  `app/[appSlug]/(tabbed)/html-stories` (footshorts; other apps 404) render
+  [components/html-stories/HtmlStoriesIndex.tsx](components/html-stories/HtmlStoriesIndex.tsx);
+  the editor pages under `vizmaya/html-stories/[slug]|new` and
+  `[appSlug]/html-stories/[slug]|new` render
+  [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
+  (paste/upload, lint, preview in that site's chrome, publish, history).
+  [lib/htmlStoryApps.ts](lib/htmlStoryApps.ts) maps an app to its public site
+  and admin base path.
+- **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
+  `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
+  `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
+  (`{ app, style?, fixtureIds?, prompt? }` → markdown) for the Copy-brief button.
+- **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
+  style randomizer (palettes/fonts from the app's own stories) and, for
+  footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
+  Opta scrape, reused with its own labels) — whose picks make the brief carry
+  the match context (`buildMatchContext` in
+  `@vismay/content-source/footshortsMatchBrief`). The brief is fetched whenever
+  style or matches change and copied synchronously on click.

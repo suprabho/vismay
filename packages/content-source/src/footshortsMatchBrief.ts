@@ -34,14 +34,20 @@ import {
   type FixtureEventInput,
   type FixtureRowInput,
 } from './footshortsBlocks'
+import type { StandingRowInput } from './footshortsBlocks'
 import {
   fetchCompetitionNames,
   fetchFixtureEvents,
   fetchFixturesByIds,
   fetchMatchFacts,
   fetchMatchStories,
+  fetchStandingsFromDb,
+  fetchTeamSchedules,
+  fetchUpcomingCompetitionFixtures,
+  type FixtureSchedules,
   type MatchFactsRow,
   type MatchStoryRow,
+  type TeamSchedule,
 } from './footshortsData'
 
 /** Most matches one brief covers — past this the per-source prompt budget
@@ -306,12 +312,13 @@ function commentaryLines(
   events: FixtureEventInput[],
   homeName: string,
   awayName: string,
+  cap = MAX_COMMENTARY,
 ): string[] {
   if (events.length === 0) return []
   const eventMinutes = new Set(events.map((e) => e.minute))
   const picks = stories
     .filter((c) => c.kind === 'commentary' && c.minute != null && eventMinutes.has(c.minute))
-    .slice(0, MAX_COMMENTARY)
+    .slice(0, cap)
   if (picks.length === 0) return []
   return picks.map((c) => {
     const team = c.side === 'home' ? homeName : c.side === 'away' ? awayName : null
@@ -322,9 +329,10 @@ function commentaryLines(
 
 /** Pre-match insights + the match preview — build-up context, for a fixture
  *  that hasn't been played (or a story that wants the framing). */
-function previewLines(stories: MatchStoryRow[]): string[] {
+function previewLines(stories: MatchStoryRow[], cap = Infinity): string[] {
   return stories
     .filter((c) => c.kind === 'pre_match_insight' || c.kind === 'match_preview')
+    .slice(0, cap)
     .map((c) => `- ${c.body}`)
 }
 
@@ -594,6 +602,420 @@ export async function buildMatchBrief(
       lines.push('')
     }
   }
+
+  return lines.join('\n')
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Match CONTEXT — the HTML-story flavour of the brief
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Same tables, different reader. The compose brief above is tuned for the
+// story pipeline: `fs:` fences for the graft and hard caps so six matches fit a
+// 12k-character per-source prompt budget. An HTML story has neither — the
+// agent reads the whole thing once and designs its own page — so this one
+// carries everything a match can tell: the full Opta stat set for EVERY
+// match, the whole timeline, every insight, the commentary on the key moments,
+// the build-up cards, and what the compose brief leaves out altogether: each
+// team's form coming in and schedule after, the league table, and the
+// competition's next fixtures. No fences, no identifiers in prose except the
+// public URLs the page should link to.
+
+/** Insight cards per match — effectively all of them; Opta rarely writes more. */
+const CONTEXT_MAX_INSIGHTS = 40
+/** Commentary lines on timeline-event minutes per match. */
+const CONTEXT_MAX_COMMENTARY = 30
+/** Build-up cards (match preview + pre-match insights) per match. */
+const CONTEXT_MAX_PREVIEW = 12
+/** Each team's results before / fixtures after the match. */
+const CONTEXT_SCHEDULE_LIMIT = 6
+/** The competition's next fixtures after the latest match in the brief. */
+const CONTEXT_NEXT_UP = 10
+
+export interface MatchContextOptions {
+  /** Editorial intent — surfaced at the top so the agent writes to it. */
+  prompt?: string
+  /** The footshorts site, for the match and team links. Default https://footshorts.com. */
+  siteUrl?: string
+}
+
+/** "Sat 20 Sep" — UTC, deterministic. */
+function shortDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}`
+}
+
+/** "20:00 UTC" */
+function shortTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`
+}
+
+/** W / D / L from one team's point of view, or '' before the match is played. */
+function resultLetter(f: FixtureRowInput, teamSlug: string | null | undefined): string {
+  if (!teamSlug || f.status !== 'finished' || f.home_score == null || f.away_score == null) return ''
+  const isHome = f.home?.slug === teamSlug
+  const isAway = f.away?.slug === teamSlug
+  if (!isHome && !isAway) return ''
+  const mine = isHome ? f.home_score : f.away_score
+  const theirs = isHome ? f.away_score : f.home_score
+  return mine > theirs ? 'W' : mine < theirs ? 'L' : 'D'
+}
+
+/** One schedule row: "Sat 20 Sep · Premier League · Arsenal 2 – 0 Tottenham (W)". */
+function scheduleLine(
+  f: FixtureRowInput,
+  teamSlug: string | null | undefined,
+  compName: (f: FixtureRowInput) => string,
+): string {
+  const played = f.status === 'finished' && f.home_score != null && f.away_score != null
+  const letter = resultLetter(f, teamSlug)
+  const when = played ? shortDate(f.kickoff_at) : `${shortDate(f.kickoff_at)}, ${shortTime(f.kickoff_at)}`
+  const status = !played && f.status !== 'scheduled' ? ` (${STATUS_LABEL[f.status] ?? f.status})` : ''
+  return `- ${when} · ${compName(f)} · ${scoreline(f)}${letter ? ` (${letter})` : ''}${status}`
+}
+
+function teamLines(f: FixtureRowInput, site: string): string[] {
+  const out: string[] = []
+  for (const side of ['home', 'away'] as const) {
+    const ref = side === 'home' ? f.home : f.away
+    const name = sideName(f, side)
+    const bits = [`**${name}** (${side})`]
+    if (ref?.crest_url) bits.push(`crest: ${ref.crest_url}`)
+    if (ref?.primary_color) bits.push(`colour: \`${ref.primary_color}\``)
+    if (ref?.slug) bits.push(`footshorts page: ${site}/team/${ref.slug}`)
+    out.push(`- ${bits.join(' · ')}`)
+  }
+  return out
+}
+
+function scheduleSection(
+  f: FixtureRowInput,
+  schedules: FixtureSchedules | undefined,
+  compName: (f: FixtureRowInput) => string,
+): string[] {
+  if (!schedules) return []
+  const lines: string[] = []
+  for (const side of ['home', 'away'] as const) {
+    const s: TeamSchedule | null = schedules[side]
+    if (!s) continue
+    const name = sideName(f, side)
+    const slug = s.team?.slug ?? (side === 'home' ? f.home?.slug : f.away?.slug)
+    if (s.recent.length === 0 && s.upcoming.length === 0) continue
+    lines.push(`**${name}**`)
+    lines.push('')
+    if (s.recent.length) {
+      const form = s.recent
+        .map((r) => resultLetter(r, slug))
+        .filter(Boolean)
+        .reverse()
+        .join(' ')
+      lines.push(`Coming in${form ? ` (form, oldest first: ${form})` : ''}:`)
+      lines.push('')
+      for (const r of s.recent) lines.push(scheduleLine(r, slug, compName))
+      lines.push('')
+    }
+    if (s.upcoming.length) {
+      lines.push('Next up:')
+      lines.push('')
+      for (const r of s.upcoming) lines.push(scheduleLine(r, slug, compName))
+      lines.push('')
+    }
+  }
+  return lines
+}
+
+/**
+ * The league table, with the match's two teams marked. For a group phase only
+ * the groups the two teams sit in are printed; a league table is printed whole
+ * (20 rows is what a table story needs).
+ */
+function standingsSection(
+  rows: StandingRowInput[],
+  f: FixtureRowInput,
+  compName: string,
+): string[] {
+  if (rows.length === 0) return []
+  const mine = new Set([f.home?.slug, f.away?.slug].filter(Boolean) as string[])
+  const groups = new Map<string, StandingRowInput[]>()
+  for (const r of rows) {
+    const key = r.group_label ?? ''
+    const list = groups.get(key)
+    if (list) list.push(r)
+    else groups.set(key, [r])
+  }
+  const lines: string[] = []
+  for (const [label, list] of groups) {
+    if (label && !list.some((r) => mine.has(r.team?.slug ?? r.team_id))) continue
+    lines.push(`**${label ? `${compName} · ${label}` : compName}**${label ? '' : ' (full table)'}`)
+    lines.push('')
+    lines.push('| # | Team | P | W | D | L | GF | GA | GD | Pts | Form |')
+    lines.push('|---|---|---|---|---|---|---|---|---|---|---|')
+    for (const r of list) {
+      const slug = r.team?.slug ?? r.team_id
+      const name = r.team?.name ?? slugName(r.team_id)
+      const mark = mine.has(slug) ? ' ◀' : ''
+      const gd = r.goal_difference > 0 ? `+${r.goal_difference}` : String(r.goal_difference)
+      lines.push(
+        `| ${r.position} | ${name}${mark} | ${r.played} | ${r.won} | ${r.draw} | ${r.lost} | ${r.goals_for} | ${r.goals_against} | ${gd} | ${r.points} | ${r.form ?? ''} |`,
+      )
+    }
+    lines.push('')
+  }
+  if (lines.length) lines.push('_◀ marks the teams in this match. Form is the last five, oldest first, as the source reports it._', '')
+  return lines
+}
+
+/**
+ * Build the match context for an HTML-story brief. Same entry contract as
+ * {@link buildMatchBrief}: `fixtureIds` in any order, emitted in kickoff order,
+ * capped at {@link MAX_BRIEF_MATCHES}; throws only when no fixture resolves.
+ *
+ * SERVER-ONLY (service-role reads).
+ */
+export async function buildMatchContext(
+  fixtureIds: string[],
+  { prompt, siteUrl = 'https://footshorts.com' }: MatchContextOptions = {},
+): Promise<string> {
+  const site = siteUrl.replace(/\/$/, '')
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean))).slice(0, MAX_BRIEF_MATCHES)
+  if (ids.length === 0) throw new Error('buildMatchContext: no fixture ids')
+
+  const fixtures = await fetchFixturesByIds(ids)
+  if (fixtures.length === 0) throw new Error('buildMatchContext: no such fixtures')
+  const resolved = fixtures.map((f) => f.id)
+
+  // One standings read per competition+season, and the competition's next
+  // fixtures after the latest match in the brief.
+  const compSeasons = Array.from(new Set(fixtures.map((f) => `${f.competition_slug}::${f.season}`)))
+  const latestKickoff = fixtures.reduce((m, f) => (f.kickoff_at > m ? f.kickoff_at : m), fixtures[0]!.kickoff_at)
+
+  const [factRows, storyRows, schedules, standingsList, nextUpList, ...eventLists] = await Promise.all([
+    fetchMatchFacts(resolved),
+    fetchMatchStories(resolved),
+    fetchTeamSchedules(resolved, { limit: CONTEXT_SCHEDULE_LIMIT }),
+    Promise.all(
+      compSeasons.map(async (key) => {
+        const [slug, season] = key.split('::') as [string, string]
+        return [key, await fetchStandingsFromDb(slug, season).catch(() => [] as StandingRowInput[])] as const
+      }),
+    ),
+    Promise.all(
+      compSeasons.map(async (key) => {
+        const [slug, season] = key.split('::') as [string, string]
+        return [key, await fetchUpcomingCompetitionFixtures(slug, season, latestKickoff, CONTEXT_NEXT_UP).catch(() => [])] as const
+      }),
+    ),
+    ...resolved.map((id) => fetchFixtureEvents(id)),
+  ])
+  const standingsBy = new Map(standingsList)
+  const nextUpBy = new Map(nextUpList)
+
+  // Competition names for everything the context mentions — the matches, both
+  // teams' schedules (other competitions), and the next-up list.
+  const compSlugs = new Set<string>(fixtures.map((f) => f.competition_slug))
+  for (const s of schedules.values()) {
+    for (const side of [s.home, s.away]) {
+      for (const f of [...(side?.recent ?? []), ...(side?.upcoming ?? [])]) compSlugs.add(f.competition_slug)
+    }
+  }
+  const names = await fetchCompetitionNames(Array.from(compSlugs))
+  const compName = (f: FixtureRowInput) => names.get(f.competition_slug) ?? slugName(f.competition_slug)
+
+  const factsBy = new Map<string, { home: MatchFactsRow | null; away: MatchFactsRow | null }>()
+  for (const row of factRows) {
+    const slot = factsBy.get(row.fixture_id) ?? { home: null, away: null }
+    slot[row.side] = row
+    factsBy.set(row.fixture_id, slot)
+  }
+  const eventsBy = new Map<string, FixtureEventInput[]>()
+  resolved.forEach((id, i) => eventsBy.set(id, eventLists[i] ?? []))
+  const storiesBy = new Map<string, MatchStoryRow[]>()
+  for (const c of storyRows) {
+    const list = storiesBy.get(c.fixture_id)
+    if (list) list.push(c)
+    else storiesBy.set(c.fixture_id, [c])
+  }
+
+  const lines: string[] = []
+  const single = fixtures.length === 1
+  const comps = Array.from(new Set(fixtures.map(compName)))
+  lines.push(
+    single
+      ? `# Match context — ${scoreline(fixtures[0]!)} (${comps[0]})`
+      : `# Match context — ${fixtures.length} matches (${comps.join(', ')})`,
+  )
+  lines.push('')
+  lines.push(
+    single
+      ? `${competitionLine(fixtures[0]!, comps[0]!)} · ${kickoffLine(fixtures[0]!.kickoff_at)}.`
+      : `${fixtures.length} matches from ${comps.join(', ')}, in kickoff order.`,
+  )
+  lines.push('')
+  if (prompt && prompt.trim()) {
+    lines.push(`> **Editorial focus:** ${prompt.trim()}`)
+    lines.push('')
+  }
+  lines.push(
+    'Every figure below comes from footshorts’ own match tables: the Opta match-centre stat set, ' +
+      'the event timeline, Opta’s own insights and commentary (all via theanalyst.com), and the ' +
+      'fixtures and standings (via football-data.org). Use the numbers, minutes and names verbatim. ' +
+      'Times are UTC. Where a section is missing, that data was never captured for the match — ' +
+      'write around the gap rather than filling it.',
+  )
+  lines.push('')
+
+  for (const f of fixtures) {
+    const homeName = sideName(f, 'home')
+    const awayName = sideName(f, 'away')
+    const name = compName(f)
+    const facts = factsBy.get(f.id) ?? { home: null, away: null }
+    const events = eventsBy.get(f.id) ?? []
+    const stories = storiesBy.get(f.id) ?? []
+
+    lines.push(`## ${scoreline(f)}`)
+    lines.push('')
+    lines.push(
+      [competitionLine(f, name), kickoffLine(f.kickoff_at), STATUS_LABEL[f.status] ?? f.status, f.venue ?? '']
+        .filter(Boolean)
+        .join(' · ') + '.',
+    )
+    lines.push('')
+    lines.push(`Footshorts match page: ${site}/match/${f.id}`)
+    lines.push('')
+
+    lines.push('### Teams')
+    lines.push('')
+    lines.push(...teamLines(f, site))
+    lines.push('')
+
+    const home = facts.home ?? emptyFacts(f.id, 'home')
+    const away = facts.away ?? emptyFacts(f.id, 'away')
+    const core = factsTable(home, away, homeName, awayName)
+    if (core.length) {
+      lines.push('### Match facts')
+      lines.push('')
+      lines.push(...core)
+      lines.push('')
+    } else if (f.status === 'finished') {
+      lines.push(
+        '_No Opta match facts for this fixture — the match centre has not been scraped for it. ' +
+          'Build this match on the scoreline, the timeline and the schedule context only._',
+      )
+      lines.push('')
+    }
+
+    const extra = extraFactsTable(home, away, homeName, awayName)
+    if (extra.length) {
+      lines.push('### Opta — full stat set')
+      lines.push('')
+      lines.push(
+        '_Everything else the Opta match centre reported for this match, in its own labels. ' +
+          'Use these for the specific claim a beat makes (blocks, duels, tackles, crosses) rather ' +
+          'than listing them. Some are percentages: a figure is a SHARE wherever the two sides ' +
+          'add up to 100 (aerial duels won, duels success rate) — never write one of those as a ' +
+          'count of actions._',
+      )
+      lines.push('')
+      lines.push(...extra)
+      lines.push('')
+    }
+
+    if (events.length) {
+      lines.push('### Timeline')
+      lines.push('')
+      lines.push(
+        '_Every goal, card and substitution, in match order. "assist:" names the assister; on a ' +
+          'substitution the first name goes off and the second comes on._',
+      )
+      lines.push('')
+      for (const e of events) lines.push(eventLine(e, homeName, awayName))
+      lines.push('')
+    }
+
+    const insights = insightLines(stories, homeName, awayName, CONTEXT_MAX_INSIGHTS)
+    if (insights.length) {
+      lines.push('### Opta insights')
+      lines.push('')
+      lines.push(
+        '_Opta\'s own notes on what this match means against the rest of the season, newest first. ' +
+          'Each is a complete, checked fact — quote one rather than deriving your own season claim, ' +
+          'which the tables above cannot support._',
+      )
+      lines.push('')
+      lines.push(...insights)
+      lines.push('')
+    }
+
+    const commentary = commentaryLines(stories, events, homeName, awayName, CONTEXT_MAX_COMMENTARY)
+    if (commentary.length) {
+      lines.push('### Commentary on the key moments')
+      lines.push('')
+      lines.push(
+        '_Opta\'s live commentary for the minutes the timeline records an event — the detail ' +
+          'behind each beat, newest first. Paraphrase; never present it as someone\'s quoted words._',
+      )
+      lines.push('')
+      lines.push(...commentary)
+      lines.push('')
+    }
+
+    const preview = previewLines(stories, CONTEXT_MAX_PREVIEW)
+    if (preview.length) {
+      lines.push('### Before the match')
+      lines.push('')
+      lines.push('_The build-up as Opta framed it before kick-off: the preview and pre-match insights._')
+      lines.push('')
+      lines.push(...preview)
+      lines.push('')
+    }
+
+    const sched = scheduleSection(f, schedules.get(f.id), compName)
+    if (sched.length) {
+      lines.push('### Form and schedule')
+      lines.push('')
+      lines.push(
+        '_Each side\'s matches in the weeks either side of this one, across every competition we ' +
+          'hold. Results are read from that team\'s point of view._',
+      )
+      lines.push('')
+      lines.push(...sched)
+    }
+
+    const table = standingsSection(standingsBy.get(`${f.competition_slug}::${f.season}`) ?? [], f, name)
+    if (table.length) {
+      lines.push('### Table')
+      lines.push('')
+      lines.push(
+        '_The standings as last ingested — they may already include this result; check played ' +
+          'counts before saying what the match changed._',
+      )
+      lines.push('')
+      lines.push(...table)
+    }
+  }
+
+  // The competition's next fixtures, once per competition.
+  for (const key of compSeasons) {
+    const next = nextUpBy.get(key) ?? []
+    if (next.length === 0) continue
+    const [slug] = key.split('::') as [string, string]
+    lines.push(`## Next up in ${names.get(slug) ?? slugName(slug)}`)
+    lines.push('')
+    for (const f of next) lines.push(scheduleLine(f, null, compName))
+    lines.push('')
+  }
+
+  lines.push('## Sources')
+  lines.push('')
+  lines.push('- Match facts, insights and commentary: Opta, via the theanalyst.com match centre.')
+  lines.push('- Fixtures, results, schedules and standings: football-data.org.')
+  lines.push(`- Match pages: ${site}/match/<id> (linked above); team pages: ${site}/team/<slug>.`)
+  lines.push('')
 
   return lines.join('\n')
 }

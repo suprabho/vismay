@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server'
-import { listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
+import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
+import { HtmlStorySlugTakenError, listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
 import { HTML_STORY_STATUSES, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
-export async function GET() {
+/**
+ * Admin's session-gated HTML stories API, for every hosting app: `?app=`
+ * (vizmaya-fyi — the default — or footshorts) scopes the list and the save.
+ * Agents don't post here; they use each site's token-gated
+ * /api/html-stories (packages/html-stories/src/publishApi.ts).
+ */
+
+export async function GET(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const stories = await listHtmlStoriesForAdmin()
+  const app = parseHtmlStoryApp(new URL(req.url).searchParams.get('app'))
+  if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
+  const stories = await listHtmlStoriesForAdmin(app)
   return NextResponse.json({ stories })
 }
 
@@ -15,6 +25,8 @@ export async function POST(req: Request) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!b || typeof b !== 'object') return NextResponse.json({ error: 'expected a JSON object' }, { status: 400 })
 
+  const app = parseHtmlStoryApp(b.app ?? new URL(req.url).searchParams.get('app'))
+  if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
   if (typeof b.slug !== 'string' || !isSafeSlug(b.slug)) {
     return NextResponse.json(
       { error: 'slug must be lowercase letters, digits and single hyphens (max 80 chars)' },
@@ -39,6 +51,7 @@ export async function POST(req: Request) {
   try {
     const { story, created } = await saveHtmlStory({
       slug: b.slug,
+      app,
       html: b.html,
       status: (b.status as HtmlStoryStatus | undefined) ?? undefined,
       title: str(b.title),
@@ -49,6 +62,7 @@ export async function POST(req: Request) {
     })
     return NextResponse.json({ ok: true, created, story, warnings: lint.warnings })
   } catch (e) {
+    if (e instanceof HtmlStorySlugTakenError) return NextResponse.json({ error: e.message }, { status: 409 })
     return NextResponse.json({ error: e instanceof Error ? e.message : 'write failed' }, { status: 500 })
   }
 }

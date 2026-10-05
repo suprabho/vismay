@@ -10,7 +10,7 @@ import { listPublishedHtmlStories } from '@vismay/html-stories/htmlStories'
  * yet) leaves the pages with their viz-engine stories rather than a 500.
  */
 export async function getHtmlStoryCards(): Promise<StoryCardData[]> {
-  const stories = await listPublishedHtmlStories().catch((err) => {
+  const stories = await listPublishedHtmlStories('vizmaya-fyi').catch((err) => {
     console.error('[html-stories] listing failed:', err)
     return []
   })

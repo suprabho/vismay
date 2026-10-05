@@ -30,8 +30,18 @@ export function MatchPicker({
   loadMatches,
   onScrape,
   onCreate,
+  title = '⚽ Add match',
+  subtitle = 'Opta match facts + the event timeline, attached as a source',
+  submitLabel = 'Add match source',
+  showEventFilter = true,
 }: {
   onClose: () => void
+  /** Header copy and the submit button — the HTML-stories brief generator reuses this picker with its own. */
+  title?: string
+  subtitle?: string
+  submitLabel?: string
+  /** The timeline event-type filter only matters to the compose graft; the HTML brief hides it. */
+  showEventFilter?: boolean
   loadCompetitions: () => Promise<MatchCompetition[]>
   loadMatches: (competition: string, season: string) => Promise<MatchOption[]>
   onScrape: (
@@ -175,10 +185,8 @@ export function MatchPicker({
       >
         <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-medium">⚽ Add match</h2>
-            <p className="truncate text-[11px] text-neutral-500">
-              Opta match facts + the event timeline, attached as a source
-            </p>
+            <h2 className="text-sm font-medium">{title}</h2>
+            <p className="truncate text-[11px] text-neutral-500">{subtitle}</p>
           </div>
           <button
             onClick={onClose}
@@ -326,6 +334,7 @@ export function MatchPicker({
                 {note && <p className="text-[11px] leading-relaxed text-amber-300/80">{note}</p>}
               </div>
 
+              {showEventFilter && (
               <label className="block space-y-1.5">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
                   Timeline events
@@ -343,6 +352,7 @@ export function MatchPicker({
                   <option value="subst">Substitutions only</option>
                 </select>
               </label>
+              )}
 
               <label className="block space-y-1.5">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
@@ -374,7 +384,7 @@ export function MatchPicker({
             disabled={picked.length === 0 || submitting || loadingMatches}
             className={btnPrimaryCls}
           >
-            {submitting ? 'Building brief…' : 'Add match source'}
+            {submitting ? 'Building brief…' : submitLabel}
           </button>
         </div>
       </div>

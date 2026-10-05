@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowSquareOut, Desktop, DeviceMobile, UploadSimple } from '@phosphor-icons/react'
 import { auraCaptureUrl } from '@vismay/viz-engine'
+import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { brandHtmlStory } from '@vismay/html-stories/branding'
 import {
   extractHtmlMeta,
@@ -27,16 +28,27 @@ type Viewport = 'phone' | 'desktop'
 /** Same sandbox the public /s/<slug> route serves under, so the preview breaks where the live page would. */
 const PREVIEW_SANDBOX = 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals'
 
+/**
+ * The HTML story editor for one hosting app: paste/upload, sandboxed preview
+ * in that site's chrome, publish/unpublish, history with restore. `basePath`
+ * is the admin section it lives under (/vizmaya/html-stories,
+ * /footshorts/html-stories); every API call carries `app`.
+ */
 export default function HtmlStoryEditorClient({
   slug: initialSlug,
   create,
   siteUrl,
+  app,
+  basePath,
 }: {
   slug: string
   create: boolean
   siteUrl: string
+  app: HtmlStoryApp
+  basePath: string
 }) {
   const router = useRouter()
+  const appQs = `app=${encodeURIComponent(app)}`
   const [slug, setSlug] = useState(initialSlug)
   const [slugTouched, setSlugTouched] = useState(false)
   const [title, setTitle] = useState('')
@@ -59,7 +71,7 @@ export default function HtmlStoryEditorClient({
   const fileInput = useRef<HTMLInputElement>(null)
 
   async function fetchStory(s: string) {
-    const res = await fetch(`/api/vizmaya/html-stories/${s}`)
+    const res = await fetch(`/api/html-stories/${s}?${appQs}`)
     const body = await res.json()
     if (!res.ok) throw new Error(body.error ?? 'load failed')
     return body
@@ -138,10 +150,11 @@ export default function HtmlStoryEditorClient({
     setError(null)
     setNotice(null)
     try {
-      const res = await fetch('/api/vizmaya/html-stories', {
+      const res = await fetch('/api/html-stories', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          app,
           slug,
           html,
           status: nextStatus,
@@ -157,7 +170,7 @@ export default function HtmlStoryEditorClient({
           // Replaced an existing slug; say so rather than silently overwrite.
           setNotice('A story with this slug already existed; its HTML was replaced (the old version is in history).')
         }
-        router.replace(`/vizmaya/html-stories/${slug}`)
+        router.replace(`${basePath}/${slug}`)
         return
       }
       applyStory(await fetchStory(slug))
@@ -175,10 +188,10 @@ export default function HtmlStoryEditorClient({
     setError(null)
     setNotice(null)
     try {
-      const res = await fetch(`/api/vizmaya/html-stories/${slug}`, {
+      const res = await fetch(`/api/html-stories/${slug}?${appQs}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify({ app, status: next }),
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error ?? 'update failed')
@@ -195,9 +208,9 @@ export default function HtmlStoryEditorClient({
     if (!confirm(`Delete "${title || slug}" and all its versions? This can't be undone.`)) return
     setSaving(true)
     try {
-      const res = await fetch(`/api/vizmaya/html-stories/${slug}`, { method: 'DELETE' })
+      const res = await fetch(`/api/html-stories/${slug}?${appQs}`, { method: 'DELETE' })
       if (!res.ok) throw new Error((await res.json()).error ?? 'delete failed')
-      router.push('/vizmaya/html-stories')
+      router.push(basePath)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'delete failed')
       setSaving(false)
@@ -206,7 +219,7 @@ export default function HtmlStoryEditorClient({
 
   async function previewVersion(id: number) {
     if (versionPreview?.id === id) return setVersionPreview(null)
-    const res = await fetch(`/api/vizmaya/html-stories/${slug}/versions/${id}`)
+    const res = await fetch(`/api/html-stories/${slug}/versions/${id}?${appQs}`)
     const body = await res.json()
     if (!res.ok) return setError(body.error ?? 'load failed')
     setVersionPreview({ id, html: body.html })
@@ -220,15 +233,15 @@ export default function HtmlStoryEditorClient({
   const label = 'block text-xs uppercase tracking-wider text-neutral-500 mb-1.5'
   const liveUrl = `${siteUrl}/s/${shownSlug || '<slug>'}`
   const shownHtml = versionPreview?.html ?? previewHtml
-  // Wrapped in the same vizmaya header/footer the public route adds.
-  const brandedPreview = brandHtmlStory(shownHtml, { siteUrl, aura: auraSlug })
+  // Wrapped in the same header/footer the public route adds for this site.
+  const brandedPreview = brandHtmlStory(shownHtml, { siteUrl, aura: auraSlug, app })
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row min-h-0">
       {/* Left: source + controls */}
       <div className="lg:w-[440px] shrink-0 border-b lg:border-b-0 lg:border-r border-white/5 overflow-y-auto">
         <div className="px-4 py-5">
-          <Link href="/vizmaya/html-stories" className="text-sm text-neutral-400 hover:text-white">
+          <Link href={basePath} className="text-sm text-neutral-400 hover:text-white">
             ← HTML stories
           </Link>
           <div className="flex items-center gap-2 mt-3 mb-5">
@@ -315,7 +328,7 @@ export default function HtmlStoryEditorClient({
                 className={field}
                 value={shownSlug}
                 disabled={!create}
-                placeholder="india-solar-boom-2026"
+                placeholder={app === 'footshorts' ? 'arsenal-chelsea-xg-gap-2026' : 'india-solar-boom-2026'}
                 onChange={(e) => {
                   setSlug(e.target.value)
                   setSlugTouched(true)
