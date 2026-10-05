@@ -166,10 +166,11 @@ interface FixtureDbRow {
   away_team_id: string | null
   home_team_name: string | null
   away_team_name: string | null
+  venue?: string | null
 }
 
 const FIXTURE_COLUMNS =
-  'id, competition_slug, season, matchday, stage, phase, kickoff_at, status, home_score, away_score, home_team_id, away_team_id, home_team_name, away_team_name'
+  'id, competition_slug, season, matchday, stage, phase, kickoff_at, status, home_score, away_score, home_team_id, away_team_id, home_team_name, away_team_name, venue'
 
 /** Join raw fixture rows to their team entities, producing the `FixtureRowInput`
  *  shape the block builders consume. Shared by the competition read and the
@@ -197,6 +198,7 @@ async function hydrateFixtureRows(
     away_team_name: r.away_team_name,
     home: r.home_team_id ? teamRefFromEntity(teams.get(r.home_team_id), true) : null,
     away: r.away_team_id ? teamRefFromEntity(teams.get(r.away_team_id), true) : null,
+    venue: r.venue ?? null,
   }))
 }
 
@@ -560,6 +562,136 @@ export async function fetchCompetitionNames(slugs: string[]): Promise<Map<string
   return names
 }
 
+// ── Schedules and tables (HTML-story match context) ──────────────────────────
+
+/** Standings for a competition+season from the DB alone — no football-data.org
+ *  fallback, so a brief build never triggers an ingest. [] when none. */
+export async function fetchStandingsFromDb(
+  competitionSlug: string,
+  season: string,
+): Promise<StandingRowInput[]> {
+  return readStandingsFromDb(createServiceClient(), competitionSlug, season)
+}
+
+/** One team's fixtures either side of an anchor match, across every competition
+ *  we hold: the form coming in and what is next. */
+export interface TeamSchedule {
+  /** The team as the anchor fixture names it (entity slug). */
+  team: TeamRef | null
+  /** Played before the anchor, newest first. */
+  recent: FixtureRowInput[]
+  /** Kicking off after the anchor, soonest first. */
+  upcoming: FixtureRowInput[]
+}
+
+export interface FixtureSchedules {
+  home: TeamSchedule | null
+  away: TeamSchedule | null
+}
+
+/**
+ * Both sides' schedules around each fixture: the matches each team played in
+ * the `days` before kickoff and the ones it has in the `days` after, across all
+ * competitions, capped at `limit` a side. One query per distinct team, so a
+ * six-match brief about one league costs about a dozen reads.
+ *
+ * SERVER-ONLY. Fixtures whose team is not a seeded entity (a free-text
+ * `home_team_name`) get null for that side — there is no id to look up.
+ */
+export async function fetchTeamSchedules(
+  fixtureIds: string[],
+  { days = 45, limit = 8 }: { days?: number; limit?: number } = {},
+): Promise<Map<string, FixtureSchedules>> {
+  const out = new Map<string, FixtureSchedules>()
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean)))
+  if (ids.length === 0) return out
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('id, home_team_id, away_team_id, kickoff_at')
+    .in('id', ids)
+  if (error || !data) return out
+  const anchors = data as Array<{
+    id: string
+    home_team_id: string | null
+    away_team_id: string | null
+    kickoff_at: string
+  }>
+
+  // Every team's window, widest span across the anchors it appears in.
+  const windows = new Map<string, { from: number; to: number }>()
+  const ms = days * 86_400_000
+  for (const a of anchors) {
+    const t = new Date(a.kickoff_at).getTime()
+    if (Number.isNaN(t)) continue
+    for (const teamId of [a.home_team_id, a.away_team_id]) {
+      if (!teamId) continue
+      const w = windows.get(teamId) ?? { from: t - ms, to: t + ms }
+      w.from = Math.min(w.from, t - ms)
+      w.to = Math.max(w.to, t + ms)
+      windows.set(teamId, w)
+    }
+  }
+
+  const byTeam = new Map<string, FixtureRowInput[]>()
+  await Promise.all(
+    Array.from(windows.entries()).map(async ([teamId, w]) => {
+      const { data: rows, error: err } = await supabase
+        .from('fixtures')
+        .select(FIXTURE_COLUMNS)
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+        .gte('kickoff_at', new Date(w.from).toISOString())
+        .lte('kickoff_at', new Date(w.to).toISOString())
+        .order('kickoff_at', { ascending: true })
+      if (err || !rows) return
+      byTeam.set(teamId, await hydrateFixtureRows(supabase, rows as unknown as FixtureDbRow[]))
+    }),
+  )
+
+  for (const a of anchors) {
+    const t = new Date(a.kickoff_at).getTime()
+    const side = (teamId: string | null): TeamSchedule | null => {
+      if (!teamId) return null
+      const all = byTeam.get(teamId) ?? []
+      const others = all.filter((f) => f.id !== a.id)
+      const recent = others
+        .filter((f) => new Date(f.kickoff_at).getTime() < t)
+        .sort((x, y) => y.kickoff_at.localeCompare(x.kickoff_at))
+        .slice(0, limit)
+      const upcoming = others
+        .filter((f) => new Date(f.kickoff_at).getTime() > t)
+        .slice(0, limit)
+      // The team ref as the anchor row (always inside the window) names it.
+      const anchor = all.find((f) => f.id === a.id)
+      const team = anchor ? (teamId === a.home_team_id ? anchor.home : anchor.away) : null
+      return { team, recent, upcoming }
+    }
+    out.set(a.id, { home: side(a.home_team_id), away: side(a.away_team_id) })
+  }
+  return out
+}
+
+/** The competition's fixtures kicking off after `afterIso`, soonest first — the
+ *  "next up" list a brief closes on. DB only; [] when none. SERVER-ONLY. */
+export async function fetchUpcomingCompetitionFixtures(
+  competitionSlug: string,
+  season: string,
+  afterIso: string,
+  limit = 10,
+): Promise<FixtureRowInput[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select(FIXTURE_COLUMNS)
+    .eq('competition_slug', competitionSlug)
+    .eq('season', season)
+    .gt('kickoff_at', afterIso)
+    .order('kickoff_at', { ascending: true })
+    .limit(limit)
+  if (error || !data) return []
+  return hydrateFixtureRows(supabase, data as unknown as FixtureDbRow[])
+}
+
 // ── Opta match facts ─────────────────────────────────────────────────────────
 
 /** One side's Opta stats for a fixture, from `opta_match_facts` (the
@@ -686,8 +818,15 @@ export async function fetchMatchBriefCoverage(
     .eq('competition_slug', competitionSlug)
     .eq('season', season)
   if (error || !data) return []
-  const ids = (data as Array<{ id: string }>).map((r) => r.id)
+  return fetchMatchBriefCoverageForIds((data as Array<{ id: string }>).map((r) => r.id))
+}
+
+/** The same coverage for an explicit set of fixtures — a team's matches across
+ *  competitions, as the picker's team search lists them. SERVER-ONLY. */
+export async function fetchMatchBriefCoverageForIds(fixtureIds: string[]): Promise<MatchBriefCoverage[]> {
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean)))
   if (ids.length === 0) return []
+  const supabase = createServiceClient()
 
   const counts = new Map<string, number>()
   const PAGE = 1000
@@ -729,6 +868,35 @@ export async function fetchMatchBriefCoverage(
     events: counts.get(id) ?? 0,
     insights: insights.get(id) ?? 0,
   }))
+}
+
+/**
+ * One team's fixtures across EVERY competition we hold, newest kickoff first —
+ * the picker's team search, so a brief can gather a club's league, cup and
+ * European matches together. `teamSlug` is the entity slug. [] when the team
+ * is unknown. SERVER-ONLY.
+ */
+export async function fetchFixturesForTeam(
+  teamSlug: string,
+  { limit = 80 }: { limit?: number } = {},
+): Promise<FixtureRowInput[]> {
+  const supabase = createServiceClient()
+  const { data: team, error: teamErr } = await supabase
+    .from('entities')
+    .select('id')
+    .eq('type', 'team')
+    .eq('slug', teamSlug)
+    .maybeSingle()
+  if (teamErr || !team) return []
+  const id = (team as { id: string }).id
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select(FIXTURE_COLUMNS)
+    .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
+    .order('kickoff_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 200))
+  if (error || !data) return []
+  return hydrateFixtureRows(supabase, data as unknown as FixtureDbRow[])
 }
 
 // ── Sportradar match-timeline coverage (admin Pipeline tab) ──────────────────
@@ -1018,6 +1186,9 @@ export async function searchFootshortsEntities(opts: {
   q?: string
   type?: 'team' | 'league'
   limit?: number
+  /** Default true (the share-card badge picker needs an image). The match
+   *  picker's team search passes false: a crest-less club still has fixtures. */
+  requireCrest?: boolean
 }): Promise<FootshortsEntityResult[]> {
   const limit = Math.min(Math.max(opts.limit ?? 30, 1), 60)
   const supabase = createServiceClient()
@@ -1025,9 +1196,9 @@ export async function searchFootshortsEntities(opts: {
     .from('entities')
     .select('id, type, slug, name, crest_url')
     .in('type', opts.type ? [opts.type] : ['team', 'league'])
-    .not('crest_url', 'is', null)
     .order('name', { ascending: true })
     .limit(limit)
+  if (opts.requireCrest !== false) query = query.not('crest_url', 'is', null)
   const q = opts.q?.trim()
   if (q) query = query.ilike('name', `%${q}%`)
   const { data, error } = await query

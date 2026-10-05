@@ -58,6 +58,31 @@ football-data.org ─▶ scores worker (every 12h) ─────────�
                                   RN + web ◀── follow graph queries
 ```
 
+## HTML stories (`footshorts.com/s/<slug>`)
+
+Agent-authored pages, hosted as written: any agent (Claude, ChatGPT, Cursor, …)
+reads the brief, writes one self-contained HTML file and posts it; the web app
+serves it under a CSP sandbox wrapped only in the Footshorts header and footer,
+and lists it on the feed's **Editorial** tab beside the viz-engine stories.
+Shared machinery in [`packages/html-stories`](../../packages/html-stories)
+(rows in the shared `html_stories` table with `app_slug = 'footshorts'`); full
+notes in [`apps/vizmaya-fyi/CLAUDE.md`](../vizmaya-fyi/CLAUDE.md#html-stories-sslug--agent-authored-pages).
+
+- **Brief:** `GET /api/html-stories/brief` — the footshorts house style
+  (classic theme, Forum / Space Grotesk / Space Mono), chrome and posting
+  rules. `?style=random` borrows a palette and fonts from an editorial story.
+  `?fixtures=<id>,<id>&prompt=…` (with the publish token as a bearer) appends
+  the **match context** for up to forty matches: Opta facts and the full stat
+  set, the timeline, Opta's insights and commentary, the build-up, each side's
+  form and schedule, the league table and the competition's next fixtures.
+  Admin's `/footshorts/html-stories` tab builds the same brief from a match
+  picker ("Copy agent brief").
+- **Publish:** `POST /api/html-stories?slug=…&publish=1` with the HTML body and
+  `Authorization: Bearer $HTML_STORIES_TOKEN`; or the MCP `publish_html_story`
+  tool with `app: "footshorts"`; or paste into the admin tab.
+- **Env (web):** `SUPABASE_SERVICE_ROLE_KEY` (the table is RLS-locked to the
+  service role) and `HTML_STORIES_TOKEN` (any long random string).
+
 ## Phase status
 
 - [x] Phase 0: Foundations

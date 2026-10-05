@@ -1,7 +1,8 @@
 /**
- * Vizmaya chrome for agent-authored HTML stories: a header with the animated
- * Rive logo and a footer with the static logo mark, wrapped around whatever
- * the agent posted. Applied when the page is served (`/s/<slug>`) and in the
+ * Site chrome for agent-authored HTML stories, wrapped around whatever the
+ * agent posted: for vizmaya a header with the animated Rive logo and a footer
+ * with the static logo mark; for footshorts the app's mark and navigation in
+ * its dark bar. Applied when the page is served (`/s/<slug>`) and in the
  * admin preview, never to the stored HTML, so every published story picks it
  * up without a re-post and the stored HTML stays exactly what the agent wrote.
  *
@@ -13,6 +14,7 @@
  */
 
 import { auraCaptureUrl, auraEmbedUrl } from '@vismay/viz-engine/src/lib/aura'
+import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { extractThemeMeta, type ThemeColors } from './meta'
 
 /** Pinned to the version the apps' `@rive-app/canvas` resolves to. */
@@ -85,6 +87,8 @@ const logoMark = (logo: Look['logo']) => `<svg viewBox="0 0 1080 1080" aria-hidd
 export interface BrandingOptions {
   /** e.g. https://vizmaya.fyi. Logo assets and links resolve against it. */
   siteUrl: string
+  /** Whose chrome to wrap the page in. Default vizmaya-fyi. */
+  app?: HtmlStoryApp
   /** Aura scene slug (html_stories.aura) to lay behind the page, if any. */
   aura?: string | null
 }
@@ -154,6 +158,88 @@ document.head.appendChild(s);
 }catch(e){}})(${cfg});</script>`
 }
 
+// ── Footshorts chrome ────────────────────────────────────────────────────────
+
+interface FootshortsLook {
+  header: BarColors
+  footer: BarColors
+  /** The F mark's fill. */
+  mark: string
+}
+
+/**
+ * Used when the page doesn't declare its palette: the app's `classic` theme
+ * (apps/footshorts/brand/src/themes/classic.ts) — the same near-black bar the
+ * feed sits under, with the brand orange-red mark.
+ */
+const FOOTSHORTS_HOME_LOOK: FootshortsLook = {
+  header: { bg: '#0B0B0F', fg: '#F4F4F5', link: '#8E8E99', line: '#24242E' },
+  footer: { bg: '#16161D', fg: '#F4F4F5', link: '#8E8E99', line: '#24242E' },
+  mark: '#F26A3C',
+}
+
+/** The bars in the page's own palette; the mark takes its accent. */
+function footshortsThemedLook(t: ThemeColors): FootshortsLook {
+  const bg = t.background!
+  const surface = t.surface ?? bg
+  const line = t.line ?? t.muted!
+  return {
+    header: { bg, fg: t.text!, link: t.muted!, line },
+    footer: { bg: surface, fg: t.text!, link: t.muted!, line },
+    mark: t.accent!,
+  }
+}
+
+/**
+ * public/brand/mark-f.svg from the footshorts web app, inlined and recoloured
+ * for the same reason the vizmaya mark is: the page's opaque origin can't load
+ * it from a protected preview deployment.
+ */
+const footshortsMark = (fill: string) =>
+  `<svg viewBox="0 0 215.073 260.428" aria-hidden="true"><path d="M 180.211 38.9 C 175.957 43.647 169.878 46.349 163.505 46.325 L 83.484 46.028 C 67.282 45.968 54.007 58.88 53.619 75.078 L 52.946 103.15 L 137.655 103.15 L 101.195 149.071 L 69.018 149.071 C 60.87 149.071 54.237 155.623 54.137 163.77 L 52.946 260.428 L 0 260.428 L 3.417 65.792 C 4.058 29.271 33.847 0 70.374 0 L 215.073 0 L 180.211 38.9 Z" fill="${fill}"/></svg>`
+
+const FOOTSHORTS_BAR_STYLE = `
+:host{all:initial;display:block;position:relative;z-index:1;background:var(--bg);color:var(--fg);font:14px/1.4 'Space Grotesk',-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1600px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
+.mono{font-family:'Space Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase}
+.link{color:var(--link);transition:color .2s}
+.link:hover,.link:focus-visible{color:var(--fg)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
+.brand svg{width:22px;height:27px}
+a:focus-visible{outline:2px solid #00D26A;outline-offset:3px;border-radius:4px}
+`
+
+function footshortsBarStyle(c: BarColors): string {
+  return `:host{--bg:${c.bg};--fg:${c.fg};--link:${c.link};--line:${c.line}}${FOOTSHORTS_BAR_STYLE}`
+}
+
+function footshortsHeaderHtml(site: string, look: FootshortsLook): string {
+  const meta = HTML_STORY_APP_META.footshorts
+  return `<footshorts-header><template shadowrootmode="open"><style>${footshortsBarStyle(look.header)}
+:host{border-bottom:1px solid var(--line)}
+.bar{height:60px}
+.brand{font-size:19px}
+.links{display:flex;gap:20px}
+@media (max-width:480px){.bar{height:52px}.brand{font-size:17px}}
+</style><div class="bar" role="banner"><a class="brand" href="${site}/feed" aria-label="Footshorts home">${footshortsMark(look.mark)}<span>Footshorts</span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></footshorts-header>`
+}
+
+function footshortsFooterHtml(site: string, look: FootshortsLook): string {
+  const year = new Date().getUTCFullYear()
+  const meta = HTML_STORY_APP_META.footshorts
+  return `<footshorts-footer><template shadowrootmode="open"><style>${footshortsBarStyle(look.footer)}
+:host{border-top:1px solid var(--line)}
+.bar{flex-wrap:wrap;padding-top:28px;padding-bottom:28px}
+.brand svg{width:28px;height:34px}
+.name{font-size:18px;line-height:1.1}
+.tag{color:var(--link);margin-top:4px;font-weight:400}
+.links{display:flex;flex-wrap:wrap;gap:12px 20px}
+</style><div class="bar" role="contentinfo"><a class="brand" href="${site}/feed">${footshortsMark(look.mark)}<span><span class="name" style="display:block">Footshorts</span><span class="mono tag" style="display:block">Football, in short · © ${year} Footshorts</span></span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a><a class="link" href="${site}/privacy">Privacy</a></nav></div></template></footshorts-footer>`
+}
+
 /** How much of the page background washes over the aura, so text written for that background stays legible. */
 const AURA_VEIL_OPACITY = 0.35
 
@@ -182,16 +268,24 @@ function escapeAttr(s: string): string {
 }
 
 /**
- * Wrap a story document in the vizmaya header and footer, in the palette the
- * page declares (`<meta name="vizmaya:theme">`) or else the home page's look,
+ * Wrap a story document in its site's header and footer, in the palette the
+ * page declares (`<meta name="vizmaya:theme">`) or else the site's home look,
  * with the story's aura scene behind it when one is set.
  */
-export function brandHtmlStory(html: string, { siteUrl, aura }: BrandingOptions): string {
+export function brandHtmlStory(html: string, { siteUrl, aura, app = DEFAULT_HTML_STORY_APP }: BrandingOptions): string {
   const site = siteUrl.replace(/\/$/, '')
   const theme = extractThemeMeta(html)
-  const look = theme ? themedLook(theme) : HOME_LOOK
-  const header = (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)
-  const footer = footerHtml(site, look) + riveScript(site, look)
+  let header: string
+  let footer: string
+  if (app === 'footshorts') {
+    const look = theme ? footshortsThemedLook(theme) : FOOTSHORTS_HOME_LOOK
+    header = (aura ? auraHtml(aura, theme) : '') + footshortsHeaderHtml(site, look)
+    footer = footshortsFooterHtml(site, look)
+  } else {
+    const look = theme ? themedLook(theme) : HOME_LOOK
+    header = (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)
+    footer = footerHtml(site, look) + riveScript(site, look)
+  }
 
   let out = html
   const bodyOpen = /<body\b[^>]*>/i.exec(out)

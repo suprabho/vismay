@@ -20,8 +20,18 @@ export interface VismayMcpConfig {
   repoRoot: string
   /** Directory used when render_module_image is asked to return a file path. */
   screenshotDir: string
-  /** Site that hosts HTML stories and their publish API, e.g. https://vizmaya.fyi */
+  /** Site that hosts vizmaya HTML stories and their publish API, e.g. https://vizmaya.fyi */
   htmlStoriesUrl: string
+  /** Site that hosts footshorts HTML stories, e.g. https://footshorts.com */
+  footshortsHtmlStoriesUrl: string
+}
+
+/** The apps whose sites host HTML stories (mirrors @vismay/html-stories/apps). */
+export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts'
+
+/** The hosting site for an app's HTML stories. */
+export function htmlStoriesUrlFor(config: VismayMcpConfig, app: HtmlStoryApp): string {
+  return app === 'footshorts' ? config.footshortsHtmlStoriesUrl : config.htmlStoriesUrl
 }
 
 function env(name: string): string | undefined {
@@ -39,16 +49,30 @@ export function loadConfig(): VismayMcpConfig {
       new URL('../../../', import.meta.url).pathname.replace(/\/$/, ''),
     screenshotDir: env('SCREENSHOT_DIR') ?? '/tmp/vismay-mcp-screenshots',
     htmlStoriesUrl: (env('HTML_STORIES_URL') ?? 'https://vizmaya.fyi').replace(/\/$/, ''),
+    footshortsHtmlStoriesUrl: (env('FOOTSHORTS_HTML_STORIES_URL') ?? 'https://footshorts.com').replace(/\/$/, ''),
   }
 }
 
+/**
+ * The publish token for an app's HTML stories, or null. Each deployment has its
+ * own HTML_STORIES_TOKEN; footshorts' is FOOTSHORTS_HTML_STORIES_TOKEN here,
+ * falling back to HTML_STORIES_TOKEN when both sites share one value.
+ */
+export function htmlStoriesToken(app: HtmlStoryApp): string | null {
+  if (app === 'footshorts') return env('FOOTSHORTS_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
+  return env('HTML_STORIES_TOKEN') ?? null
+}
+
 /** Throws a descriptive error if the HTML story publish token is missing. */
-export function requireHtmlStoriesEnv(): { token: string } {
-  const token = env('HTML_STORIES_TOKEN')
+export function requireHtmlStoriesEnv(app: HtmlStoryApp = 'vizmaya-fyi'): { token: string } {
+  const token = htmlStoriesToken(app)
   if (!token) {
     throw new Error(
-      'publish_html_story needs HTML_STORIES_TOKEN in the MCP server env ' +
-        '(the same value as HTML_STORIES_TOKEN on the vizmaya-fyi deployment).',
+      app === 'footshorts'
+        ? 'publish_html_story for footshorts needs FOOTSHORTS_HTML_STORIES_TOKEN (or HTML_STORIES_TOKEN) in ' +
+            'the MCP server env (the same value as HTML_STORIES_TOKEN on the footshorts web deployment).'
+        : 'publish_html_story needs HTML_STORIES_TOKEN in the MCP server env ' +
+            '(the same value as HTML_STORIES_TOKEN on the vizmaya-fyi deployment).',
     )
   }
   return { token }

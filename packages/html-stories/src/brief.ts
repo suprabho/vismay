@@ -1,27 +1,44 @@
 /**
  * The brief an agent reads before writing an HTML story. Admin's HTML stories
- * tab has a "Copy agent brief" button that hands this to any chat agent; the
- * MCP server returns it from `get_html_story_brief`.
+ * tabs have a "Copy agent brief" button that hands this to any chat agent; the
+ * MCP server returns it from `get_html_story_brief`; each site serves it at
+ * /api/html-stories/brief.
+ *
+ * One brief per app (./apps): the hosting contract and the craft rules are the
+ * same everywhere, the house style, the chrome and the posting targets are the
+ * site's own, and footshorts briefs can carry a match context (facts,
+ * timeline, insights, commentary, schedules and tables for the matches the
+ * story is about — built server-side, see ./footshortsBrief).
  *
  * Keep it about outcomes and constraints, not a component catalogue: the whole
  * point of this pipeline is that the agent designs the page itself.
  */
 
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 
 export interface BriefOptions {
   /** e.g. https://vizmaya.fyi */
   siteUrl: string
+  /** Which site the story is for. Default vizmaya-fyi. */
+  app?: HtmlStoryApp
   /**
    * A palette + font trio drawn from an existing story (see ./styles). Replaces
    * the house style in the brief. Omit for the house style.
    */
   style?: StoryStyle | null
+  /**
+   * Source material appended to the brief as its last section — for footshorts
+   * the match context (see @vismay/content-source/footshortsMatchBrief's
+   * buildMatchContext). Markdown; its headings are demoted under the brief's.
+   */
+  context?: string | null
 }
 
-const HOUSE_PALETTE: ThemeColors = {
+/** The vizmaya house palette: the story reader's defaults. */
+const VIZMAYA_PALETTE: ThemeColors = {
   background: '#0a0e14',
   surface: '#111820',
   text: '#e0ddd5',
@@ -32,15 +49,50 @@ const HOUSE_PALETTE: ThemeColors = {
   teal: '#1D9E75',
 }
 
-const HOUSE_STYLE = `House style (use it unless the story clearly wants its own look):
+/**
+ * The footshorts house palette: the app's `classic` theme
+ * (apps/footshorts/brand/src/themes/classic.ts). Brand orange-red is the
+ * accent, the deeper brand red (the `terrace` theme's) the secondary, and the
+ * app's green "live" pop the tertiary.
+ */
+const FOOTSHORTS_PALETTE: ThemeColors = {
+  background: '#0B0B0F',
+  surface: '#16161D',
+  text: '#F4F4F5',
+  muted: '#8E8E99',
+  line: '#24242E',
+  accent: '#F26A3C',
+  accent2: '#C2410C',
+  teal: '#00D26A',
+}
+
+export const HOUSE_PALETTES: Record<HtmlStoryApp, ThemeColors> = {
+  'vizmaya-fyi': VIZMAYA_PALETTE,
+  footshorts: FOOTSHORTS_PALETTE,
+}
+
+const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
+  'vizmaya-fyi': `House style (use it unless the story clearly wants its own look):
 - Background \`#0a0e14\`, surface \`#111820\`, text \`#e0ddd5\`, muted \`#5a6a70\`, hairlines \`#1a2830\`.
 - Accent \`#D85A30\` (the one colour that means "look here"), secondary \`#534AB7\`, teal \`#1D9E75\`.
 - Type: Fraunces for headlines and big numbers, Inter for body, JetBrains Mono for
   labels, axes and data (all on Google Fonts). Body 18–20px, line-height 1.6,
-  measure 60–70 characters.`
+  measure 60–70 characters.`,
+  footshorts: `House style (the footshorts app's own look; use it unless the story clearly wants its own):
+- A dark page. Background \`#0B0B0F\`, surface \`#16161D\`, text \`#F4F4F5\`, muted \`#8E8E99\`, hairlines \`#24242E\`.
+- Accent \`#F26A3C\` (the brand orange-red: the one colour that means "look here"),
+  secondary \`#C2410C\`, green \`#00D26A\` (the app's "live" pop — use it sparingly, for
+  what is happening now or went right).
+- Team colours are allowed on top of these, but only for the two or three teams
+  the story is about, and only where a bar, line or badge stands for that team.
+- Type: Forum for headlines and big numbers, Space Grotesk for body, Space Mono for
+  labels, axes and data (all on Google Fonts:
+  \`https://fonts.googleapis.com/css2?family=Forum&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap\`).
+  Body 18–20px, line-height 1.6, measure 60–70 characters.`,
+}
 
-function styleSection(style: StoryStyle | null | undefined): string {
-  if (!style) return HOUSE_STYLE
+function styleSection(app: HtmlStoryApp, style: StoryStyle | null | undefined): string {
+  if (!style) return HOUSE_STYLE[app]
   const { palette: c, fonts } = style
   const from =
     style.paletteFrom.slug === style.fontsFrom.slug
@@ -63,14 +115,94 @@ so this page gets its own look. Use it instead of the house style:
   don't introduce new hues.`
 }
 
-export function htmlStoryBrief({ siteUrl, style }: BriefOptions): string {
-  const site = siteUrl.replace(/\/$/, '')
-  return `# Writing a vizmaya HTML story
+/** The "icons and flags" section; footshorts adds club crests. */
+function iconsSection(app: HtmlStoryApp): string {
+  const crests =
+    app === 'footshorts'
+      ? `
+- **Crests: from the match context.** Each team in the match context comes with
+  its crest URL. Show the crest beside the team name in stat cards, table rows
+  and chart labels (\`<img src="…" alt="" width="20" height="20">\`, or an SVG
+  \`<image>\` inside charts), the way flags sit beside countries. A crest always
+  sits beside the name, never instead of it, and a team with no crest URL just
+  gets its name. For national teams use the flag instead of a crest.`
+      : ''
+  return `## Icons${app === 'footshorts' ? ', crests' : ''} and flags
 
-You are writing one finished data story for vizmaya.fyi as a single,
+Use ${app === 'footshorts' ? 'them' : 'both'}. They make a page scannable, but they support the words and never replace them.
+
+- **Icons: Phosphor.** Load
+  \`https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css\`
+  (swap \`regular\` for \`fill\` or \`duotone\` if you want those weights too), then
+  write \`<i class="ph ph-trend-up" aria-hidden="true"></i>\`. Use them for section
+  markers, stat cards, callouts and key-takeaway lists. Stick to one weight, and
+  size them to the text they sit next to. Use no other icon set and no emoji.${crests}
+- **Flags: flag-icons.** Whenever a country appears (a table row, a chart label,
+  a stat card, a map callout${app === 'footshorts' ? ', a national team' : ''}), show its flag next to its name. Load
+  \`https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css\` and write
+  \`<span class="fi fi-in"></span>\` (ISO 3166-1 alpha-2, lowercase; add \`fis\`
+  for a square flag). Inside SVG charts, use
+  \`<image href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/in.svg">\`
+  (or \`flags/1x1/\` for round markers). Never use emoji flags: Windows shows them
+  as two letters. A flag always sits beside the country name, never instead of it.`
+}
+
+function contentSection(app: HtmlStoryApp, hasContext: boolean): string {
+  const meta = HTML_STORY_APP_META[app]
+  if (app !== 'footshorts') {
+    return `## Content
+
+- Every number has a source. End with a "Sources & method" section of links.
+- Byline "${meta.desk}" plus the date.
+- Write plainly. No hype. Lead with the finding.`
+  }
+  const contextRules = hasContext
+    ? `- **The match context at the end of this brief is your primary source.** Every
+  scoreline, minute, scorer, stat and table row comes from it, verbatim: never
+  round a score, move a goal to another minute, or derive a season claim the
+  context does not make (quote an Opta insight instead). If a figure you want is
+  not in the context, say so in the page rather than inventing it.
+- Lead with WHY the result happened (17 shots for 1.8 xG is a different story
+  from 4 shots for 1.8 xG), then the moments in the order the timeline gives them,
+  then what it means for the table and the fixtures to come.
+- Paraphrase the commentary; never present it as someone's quoted words.
+- Link each match to its footshorts match page (the URL is in the context).`
+    : `- Every number has a source. If the brief carries no match context, build the
+  page from the sources you are given and link every figure to one.`
+  return `## Content
+
+${contextRules}
+- Sources & method: end with a short section of links — the footshorts match
+  pages, plus "Opta via theanalyst.com match centre" for the stats, insights and
+  commentary, and "football-data.org" for fixtures and tables.
+- Byline "${meta.desk}" plus the date.
+- Write like a good match report, not a press release: plain, specific, no hype.
+  Lead with the finding.`
+}
+
+/** Demote `# ` and `## ` headings so the appended context nests under the brief's own. */
+function demoteHeadings(markdown: string): string {
+  return markdown.replace(/^(#{1,5}) /gm, (_m, hashes: string) => `${hashes}# `)
+}
+
+export function htmlStoryBrief({ siteUrl, app = DEFAULT_HTML_STORY_APP, style, context }: BriefOptions): string {
+  const site = siteUrl.replace(/\/$/, '')
+  const meta = HTML_STORY_APP_META[app]
+  const siteName = site.replace(/^https?:\/\//, '')
+  const hasContext = !!context?.trim()
+  const chrome =
+    app === 'footshorts'
+      ? `The only thing added is a slim Footshorts header (the mark and the app's
+navigation) above your page and a Footshorts footer below it`
+      : `The only thing added is a slim vizmaya header (logo) above
+your page and a vizmaya footer below it`
+  const footshortsMcp = app === 'footshorts' ? ' and `app: "footshorts"`' : ''
+
+  return `# Writing a ${meta.name} HTML story
+
+You are writing one finished ${app === 'footshorts' ? 'football data story for Footshorts' : 'data story for vizmaya.fyi'} as a single,
 self-contained HTML file. It is hosted exactly as you write it at
-${site}/s/<slug>. The only thing added is a slim vizmaya header (logo) above
-your page and a vizmaya footer below it, so don't add your own site logo,
+${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
 charts, and the words.
 
@@ -83,8 +215,8 @@ charts, and the words.
    - \`<title>\`: the story headline. It becomes the story's title.
    - \`<meta name="description">\`: a one-sentence summary.
    - \`og:title\`, \`og:description\`, \`og:image\` (absolute https URL, 1200×630) and \`twitter:card\` = \`summary_large_image\`.
-   - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(style?.palette ?? HOUSE_PALETTE)}">\`:
-     your page's colours, as hex. The vizmaya header, footer and logo are tinted
+   - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(style?.palette ?? HOUSE_PALETTES[app])}">\`:
+     your page's colours, as hex. The ${meta.name} header, footer and logo are tinted
      to match. Copy it as given, and update it if you change the palette.
 3. Every asset is inline or an absolute \`https://\` URL. There is no folder next
    to the page, so \`./chart.js\` or \`images/map.png\` will 404.
@@ -99,29 +231,12 @@ charts, and the words.
 ## Design direction
 
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters
-Graphics, NYT Upshot): editorial, calm, confident. One idea per screen.
+Graphics, NYT Upshot${app === 'footshorts' ? ', The Athletic' : ''}): editorial, calm, confident. One idea per screen.
 
-${styleSection(style)}
+${styleSection(app, style)}
 - Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
 
-## Icons and flags
-
-Use both. They make a page scannable, but they support the words and never replace them.
-
-- **Icons: Phosphor.** Load
-  \`https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css\`
-  (swap \`regular\` for \`fill\` or \`duotone\` if you want those weights too), then
-  write \`<i class="ph ph-trend-up" aria-hidden="true"></i>\`. Use them for section
-  markers, stat cards, callouts and key-takeaway lists. Stick to one weight, and
-  size them to the text they sit next to. Use no other icon set and no emoji.
-- **Flags: flag-icons.** Whenever a country appears (a table row, a chart label,
-  a stat card, a map callout), show its flag next to its name. Load
-  \`https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css\` and write
-  \`<span class="fi fi-in"></span>\` (ISO 3166-1 alpha-2, lowercase; add \`fis\`
-  for a square flag). Inside SVG charts, use
-  \`<image href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/in.svg">\`
-  (or \`flags/1x1/\` for round markers). Never use emoji flags: Windows shows them
-  as two letters. A flag always sits beside the country name, never instead of it.
+${iconsSection(app)}
 
 ## Motion and scroll animation
 
@@ -133,7 +248,13 @@ Animate on scroll. The page should feel alive as the reader moves through it:
   page load.
 - **Big numbers count up** to their value when they appear.
 - **Scrollytelling** when the data has a sequence: a sticky graphic with text
-  steps that change it. Mark each step \`<section data-step>\`.
+  steps that change it. Mark each step \`<section data-step>\`.${
+    app === 'footshorts'
+      ? `
+  A match timeline is exactly this: the scoreline, xG race or momentum graphic
+  stays put while the goals, cards and substitutions step past it.`
+      : ''
+  }
 
 How to build it:
 - IntersectionObserver is enough; GSAP ScrollTrigger is fine for richer sequences.
@@ -150,8 +271,9 @@ How to build it:
 - D3 v7 or Observable Plot for bespoke charts; ECharts is fine for standard
   ones. For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
   with free tiles. Don't use Mapbox: it needs a token.
-- Each chart makes one point, and its title states that point ("Exports doubled
-  after 2019", not "Exports 2015–2024").
+- Each chart makes one point, and its title states that point ("${
+    app === 'footshorts' ? 'Arsenal had the ball, Chelsea had the chances' : 'Exports doubled after 2019'
+  }", not "${app === 'footshorts' ? 'Possession and shots' : 'Exports 2015–2024'}").
 - Label lines and bars directly instead of using legends. Use at most 5–6 colours,
   grey for context and the accent for the subject.
 - Bars start at zero. Show units. Use tabular numerals. Round sensibly.
@@ -159,11 +281,7 @@ How to build it:
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.
 
-## Content
-
-- Every number has a source. End with a "Sources & method" section of links.
-- Byline "vizmaya desk" plus the date.
-- Write plainly. No hype. Lead with the finding.
+${contentSection(app, hasContext)}
 
 ## Before you post: check your own work
 
@@ -179,15 +297,30 @@ If you can't render it, re-read your chart code for these specific failures.
 ## Posting
 
 Pick the first one you can do:
-- **MCP tool**: call \`publish_html_story\` with \`slug\` and \`html\`.
+- **MCP tool**: call \`publish_html_story\` with \`slug\` and \`html\`${footshortsMcp}.
 - **HTTP**: \`POST ${site}/api/html-stories?slug=<slug>\` with the HTML as the
   body (\`Content-Type: text/html\`) and \`Authorization: Bearer $HTML_STORIES_TOKEN\`.
   Add \`&publish=1\` to make it public right away; otherwise it saves as a draft.
   The response lists \`warnings\`. Fix them and post again to the same slug.
 - **Otherwise**: give the user the complete HTML file. They will paste it into
-  the admin's HTML stories tab.
+  the admin's HTML stories tab for ${siteName}.
 
-Slugs are lowercase words joined by hyphens, e.g. \`india-solar-boom-2026\`.
+Slugs are lowercase words joined by hyphens, e.g. \`${
+    app === 'footshorts' ? 'arsenal-chelsea-xg-gap-2026' : 'india-solar-boom-2026'
+  }\`.
 Posting to an existing slug replaces it; older versions stay restorable.
+${
+  hasContext
+    ? `
+---
+
+# Source material
+
+Everything below comes from the ${meta.name} match tables. It is the story's
+evidence; the rules above say how to use it.
+
+${demoteHeadings(context!.trim())}
 `
+    : ''
+}`
 }

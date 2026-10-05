@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import {
   deleteHtmlStory,
   getHtmlStoryForAdmin,
@@ -10,21 +11,26 @@ import { isAuthed } from '@/lib/adminAuth'
 
 type Ctx = { params: Promise<{ slug: string }> }
 
-export async function GET(_req: Request, { params }: Ctx) {
+/** One app's story (`?app=`); another app's story with the same slug is a 404 here. */
+export async function GET(req: Request, { params }: Ctx) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const app = parseHtmlStoryApp(new URL(req.url).searchParams.get('app'))
+  if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
   const { slug } = await params
-  const story = await getHtmlStoryForAdmin(slug)
+  const story = await getHtmlStoryForAdmin(slug, app)
   if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
-  const versions = await listHtmlStoryVersions(slug)
+  const versions = await listHtmlStoryVersions(slug, 50, app)
   return NextResponse.json({ story, versions, lint: lintHtml(story.html) })
 }
 
-/** Status / metadata only; HTML changes go through POST /api/vizmaya/html-stories. */
+/** Status / metadata only; HTML changes go through POST /api/html-stories. */
 export async function PATCH(req: Request, { params }: Ctx) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug } = await params
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!b || typeof b !== 'object') return NextResponse.json({ error: 'expected a JSON object' }, { status: 400 })
+  const app = parseHtmlStoryApp(b.app ?? new URL(req.url).searchParams.get('app'))
+  if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
 
   const patch: Parameters<typeof updateHtmlStoryMeta>[1] = {}
   if (b.status !== undefined) {
@@ -46,7 +52,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   }
 
   try {
-    const story = await updateHtmlStoryMeta(slug, patch)
+    const story = await updateHtmlStoryMeta(slug, patch, app)
     if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
     return NextResponse.json({ ok: true, story })
   } catch (e) {
@@ -54,11 +60,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const app = parseHtmlStoryApp(new URL(req.url).searchParams.get('app'))
+  if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
   const { slug } = await params
   try {
-    await deleteHtmlStory(slug)
+    await deleteHtmlStory(slug, app)
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'delete failed' }, { status: 500 })
   }

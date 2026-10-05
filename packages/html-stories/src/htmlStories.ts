@@ -2,14 +2,21 @@
  * Server-side reads/writes for agent-authored HTML stories.
  *
  * Tables html_stories + html_story_versions (migration 085). Consumers: the
- * public /s/<slug> route and the token-gated publish API in vizmaya-fyi, and
- * the HTML stories tab in admin.
+ * public /s/<slug> route and the token-gated publish API in vizmaya-fyi and
+ * footshorts, and the HTML stories tabs in admin.
+ *
+ * One table serves every app (./apps): each row's `app_slug` says which site
+ * it belongs to, and every read here is scoped to one app, so a footshorts
+ * listing never shows a vizmaya story. Slugs are the primary key, so they are
+ * unique across apps: a save that would take over another app's slug is
+ * refused rather than silently moving the story.
  *
  * Server only — imports the service Supabase client. Client components take
  * types and helpers from ./meta.
  */
 
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { DEFAULT_HTML_STORY_APP, type HtmlStoryApp } from './apps'
 import {
   extractHtmlMeta,
   extractThemeMeta,
@@ -21,6 +28,8 @@ import {
 
 export interface HtmlStorySummary {
   slug: string
+  /** The site this story is hosted on (html_stories.app_slug). */
+  app: HtmlStoryApp
   title: string
   description: string | null
   ogImageUrl: string | null
@@ -53,6 +62,8 @@ export interface HtmlStoryVersion {
 
 export interface HtmlStoryInput {
   slug: string
+  /** The site to host it on. Omitted: vizmaya-fyi (the column default). */
+  app?: HtmlStoryApp
   html: string
   /** Overrides what the document's own <title> / meta tags say. */
   title?: string | null
@@ -67,7 +78,7 @@ export interface HtmlStoryInput {
 }
 
 const BASE_COLUMNS =
-  'slug, title, description, og_image_url, status, source, published_at, updated_at, created_at'
+  'slug, app_slug, title, description, og_image_url, status, source, published_at, updated_at, created_at'
 const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura`
 const AURA_MIGRATION_HINT = 'Setting an aura needs migration 087_html_stories_aura.sql applied'
 
@@ -78,6 +89,7 @@ export function hasServiceEnv(): boolean {
 function mapSummary(r: any): HtmlStorySummary {
   return {
     slug: r.slug,
+    app: (r.app_slug as HtmlStoryApp | undefined) ?? DEFAULT_HTML_STORY_APP,
     title: r.title,
     description: r.description ?? null,
     ogImageUrl: r.og_image_url ?? null,
@@ -116,25 +128,37 @@ async function selectCompat<T>(
 
 // --- Public read ---
 
-/** The published page for /s/<slug>, or null (unknown, draft, or archived). */
-export async function getPublishedHtmlStory(slug: string): Promise<HtmlStory | null> {
+/** The published page for /s/<slug> on one app, or null (unknown, another app's, draft, or archived). */
+export async function getPublishedHtmlStory(
+  slug: string,
+  app: HtmlStoryApp = DEFAULT_HTML_STORY_APP,
+): Promise<HtmlStory | null> {
   if (!hasServiceEnv()) return null
   const { data, error } = await selectCompat(
     (cols) =>
-      createServiceClient().from('html_stories').select(cols).eq('slug', slug).eq('status', 'published').maybeSingle(),
+      createServiceClient()
+        .from('html_stories')
+        .select(cols)
+        .eq('slug', slug)
+        .eq('app_slug', app)
+        .eq('status', 'published')
+        .maybeSingle(),
     `${SUMMARY_COLUMNS}, html`,
   )
   if (error) throw new Error(`getPublishedHtmlStory ${slug}: ${error.message}`)
   return data ? mapStory(data) : null
 }
 
-/** Every published story, newest first, for the home grid and the archive. */
-export async function listPublishedHtmlStories(): Promise<PublishedHtmlStory[]> {
+/** Every published story on one app, newest first, for its home grid / archive / editorial tab. */
+export async function listPublishedHtmlStories(
+  app: HtmlStoryApp = DEFAULT_HTML_STORY_APP,
+): Promise<PublishedHtmlStory[]> {
   if (!hasServiceEnv()) return []
   const query = (columns: string) =>
     createServiceClient()
       .from('html_stories')
       .select(columns)
+      .eq('app_slug', app)
       .eq('status', 'published')
       .order('published_at', { ascending: false, nullsFirst: false })
   // Before migration 086 the cards just go untinted; before 087, aura-less.
@@ -148,39 +172,68 @@ export async function listPublishedHtmlStories(): Promise<PublishedHtmlStory[]> 
 
 // --- Admin / publish (service role; include drafts) ---
 
-export async function listHtmlStoriesForAdmin(): Promise<HtmlStorySummary[]> {
+export async function listHtmlStoriesForAdmin(
+  app: HtmlStoryApp = DEFAULT_HTML_STORY_APP,
+): Promise<HtmlStorySummary[]> {
   const { data, error } = await selectCompat(
-    (cols) => createServiceClient().from('html_stories').select(cols).order('updated_at', { ascending: false }),
+    (cols) =>
+      createServiceClient()
+        .from('html_stories')
+        .select(cols)
+        .eq('app_slug', app)
+        .order('updated_at', { ascending: false }),
     SUMMARY_COLUMNS,
   )
   if (error) throw new Error(`listHtmlStoriesForAdmin: ${error.message}`)
   return (data ?? []).map(mapSummary)
 }
 
-export async function getHtmlStoryForAdmin(slug: string): Promise<HtmlStory | null> {
+export async function getHtmlStoryForAdmin(
+  slug: string,
+  app: HtmlStoryApp = DEFAULT_HTML_STORY_APP,
+): Promise<HtmlStory | null> {
   const { data, error } = await selectCompat(
-    (cols) => createServiceClient().from('html_stories').select(cols).eq('slug', slug).maybeSingle(),
+    (cols) =>
+      createServiceClient().from('html_stories').select(cols).eq('slug', slug).eq('app_slug', app).maybeSingle(),
     `${SUMMARY_COLUMNS}, html`,
   )
   if (error) throw new Error(`getHtmlStoryForAdmin ${slug}: ${error.message}`)
   return data ? mapStory(data) : null
 }
 
+/** The error a save gets when the slug is already another app's story. */
+export class HtmlStorySlugTakenError extends Error {
+  constructor(
+    public readonly slug: string,
+    public readonly ownerApp: HtmlStoryApp,
+  ) {
+    super(`slug "${slug}" is already a ${ownerApp} story; pick another slug`)
+    this.name = 'HtmlStorySlugTakenError'
+  }
+}
+
 /**
  * Create or replace a story's HTML. Title/description/og:image come from the
  * explicit input first, then from the new document's own tags, then from the
  * previous row. A version row is appended whenever the HTML changes.
+ *
+ * Throws {@link HtmlStorySlugTakenError} when the slug belongs to a different
+ * app: slugs are global (the primary key), and a re-post must never move a
+ * story from one site to another.
  */
 export async function saveHtmlStory(
   input: HtmlStoryInput,
 ): Promise<{ story: HtmlStorySummary; created: boolean }> {
   const sb = createServiceClient()
+  const app = input.app ?? DEFAULT_HTML_STORY_APP
   const { data: existing, error: readErr } = await sb
     .from('html_stories')
-    .select('slug, title, description, og_image_url, status, published_at, html')
+    .select('slug, app_slug, title, description, og_image_url, status, published_at, html')
     .eq('slug', input.slug)
     .maybeSingle()
   if (readErr) throw new Error(`saveHtmlStory ${input.slug}: ${readErr.message}`)
+  const ownerApp = ((existing?.app_slug as HtmlStoryApp | null | undefined) ?? DEFAULT_HTML_STORY_APP)
+  if (existing && ownerApp !== app) throw new HtmlStorySlugTakenError(input.slug, ownerApp)
 
   const meta = extractHtmlMeta(input.html)
   const theme = extractThemeMeta(input.html)
@@ -188,6 +241,7 @@ export async function saveHtmlStory(
   const now = new Date().toISOString()
   const row = {
     slug: input.slug,
+    app_slug: app,
     title: input.title?.trim() || meta.title || existing?.title || input.slug,
     description: input.description?.trim() || meta.description || existing?.description || null,
     og_image_url: input.ogImageUrl?.trim() || meta.ogImageUrl || existing?.og_image_url || null,
@@ -237,6 +291,7 @@ export async function updateHtmlStoryMeta(
     status?: HtmlStoryStatus
     aura?: string | null
   },
+  app: HtmlStoryApp = DEFAULT_HTML_STORY_APP,
 ): Promise<HtmlStorySummary | null> {
   const sb = createServiceClient()
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -246,12 +301,18 @@ export async function updateHtmlStoryMeta(
   if (patch.status !== undefined) {
     update.status = patch.status
     if (patch.status === 'published') {
-      const { data: cur } = await sb.from('html_stories').select('published_at').eq('slug', slug).maybeSingle()
+      const { data: cur } = await sb
+        .from('html_stories')
+        .select('published_at')
+        .eq('slug', slug)
+        .eq('app_slug', app)
+        .maybeSingle()
       if (cur && !cur.published_at) update.published_at = update.updated_at
     }
   }
   if (patch.aura !== undefined) update.aura = patch.aura
-  const run = (cols: string) => sb.from('html_stories').update(update).eq('slug', slug).select(cols).maybeSingle()
+  const run = (cols: string) =>
+    sb.from('html_stories').update(update).eq('slug', slug).eq('app_slug', app).select(cols).maybeSingle()
   let { data, error } = await run(SUMMARY_COLUMNS)
   if (isMissingColumn(error)) {
     if (patch.aura !== undefined) throw new Error(`${AURA_MIGRATION_HINT} (${slug})`)
@@ -261,12 +322,33 @@ export async function updateHtmlStoryMeta(
   return data ? mapSummary(data) : null
 }
 
-export async function deleteHtmlStory(slug: string): Promise<void> {
-  const { error } = await createServiceClient().from('html_stories').delete().eq('slug', slug)
+export async function deleteHtmlStory(slug: string, app: HtmlStoryApp = DEFAULT_HTML_STORY_APP): Promise<void> {
+  const { error } = await createServiceClient().from('html_stories').delete().eq('slug', slug).eq('app_slug', app)
   if (error) throw new Error(`deleteHtmlStory ${slug}: ${error.message}`)
 }
 
-export async function listHtmlStoryVersions(slug: string, limit = 50): Promise<HtmlStoryVersion[]> {
+/** Which app owns a slug, or null when no story has it. */
+export async function getHtmlStoryApp(slug: string): Promise<HtmlStoryApp | null> {
+  const { data, error } = await createServiceClient()
+    .from('html_stories')
+    .select('app_slug')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw new Error(`getHtmlStoryApp ${slug}: ${error.message}`)
+  if (!data) return null
+  return (data.app_slug as HtmlStoryApp | null) ?? DEFAULT_HTML_STORY_APP
+}
+
+/**
+ * A story's version history. Versions hang off the slug, which is global, so
+ * pass `app` to get [] for a slug another app owns (the admin routes do).
+ */
+export async function listHtmlStoryVersions(
+  slug: string,
+  limit = 50,
+  app?: HtmlStoryApp,
+): Promise<HtmlStoryVersion[]> {
+  if (app && (await getHtmlStoryApp(slug)) !== app) return []
   const { data, error } = await createServiceClient()
     .from('html_story_versions')
     .select('id, slug, title, source, created_at')
@@ -283,7 +365,12 @@ export async function listHtmlStoryVersions(slug: string, limit = 50): Promise<H
   }))
 }
 
-export async function getHtmlStoryVersionHtml(slug: string, id: number): Promise<string | null> {
+export async function getHtmlStoryVersionHtml(
+  slug: string,
+  id: number,
+  app?: HtmlStoryApp,
+): Promise<string | null> {
+  if (app && (await getHtmlStoryApp(slug)) !== app) return null
   const { data, error } = await createServiceClient()
     .from('html_story_versions')
     .select('html')

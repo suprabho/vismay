@@ -63,6 +63,8 @@ export interface FixtureRowInput {
   away_team_name: string | null
   home: TeamRef | null
   away: TeamRef | null
+  /** Stadium, when the source carried one. Only the match brief reads it. */
+  venue?: string | null
 }
 
 /** Subset of `STAGE_LABELS` in `@vismay/footshorts-viz/src/stageLabel.ts`,

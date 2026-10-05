@@ -3,44 +3,87 @@
  *
  * The agent-authored HTML story pipeline (packages/html-stories): the agent
  * reads the brief, writes one self-contained HTML page, and publishes it to
- * vizmaya.fyi/s/<slug> through the token-gated publish API. Pure HTTP to the
- * deployed site, so no dev server is needed.
+ * <site>/s/<slug> through the token-gated publish API. Two sites host them —
+ * vizmaya.fyi (the default) and footshorts.com — chosen with `app`. Pure HTTP
+ * to the deployed site, so no dev server is needed.
+ *
+ * A footshorts brief can carry a MATCH CONTEXT: pass `fixtureIds` (up to 40 footshorts
+ * fixture uuids, from the admin HTML stories tab's match picker or a
+ * footshorts.com/match/<id> URL) and the site appends everything its match
+ * tables know — Opta facts and the full stat set, the timeline, insights,
+ * commentary, the build-up, both sides' form and schedule, the table and the
+ * competition's next fixtures. That variant needs the publish token.
  */
 
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
-import { requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
+import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
+
+const appSchema = z
+  .enum(['vizmaya-fyi', 'footshorts'])
+  .default('vizmaya-fyi')
+  .describe('Which site hosts the story: vizmaya.fyi (default) or footshorts.com.')
 
 export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfig): void {
   server.registerTool(
     'get_html_story_brief',
     {
-      title: 'Get the vizmaya HTML story brief',
+      title: 'Get the HTML story brief',
       description:
-        'Read this before writing a vizmaya HTML story. It covers the hosting contract ' +
-        '(one self-contained HTML file), the house design direction, chart rules, a ' +
-        'self-check list, and how to publish. Pass randomStyle=true to swap the house style ' +
-        'for a palette and fonts drawn at random from the existing stories.',
+        'Read this before writing a vizmaya or footshorts HTML story. It covers the hosting ' +
+        'contract (one self-contained HTML file), the site\'s house design direction, chart ' +
+        'rules, a self-check list, and how to publish. Pass randomStyle=true to swap the house ' +
+        'style for a palette and fonts drawn at random from the site\'s existing stories. For ' +
+        'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
+        'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
+        'written from, plus an optional editorial prompt.',
       inputSchema: {
+        app: appSchema,
         randomStyle: z
           .boolean()
           .default(false)
           .describe('Use a random palette + font trio from an existing story instead of the house style.'),
+        fixtureIds: z
+          .array(z.string().min(1))
+          .max(40)
+          .optional()
+          .describe('footshorts only: fixture ids the story is about; their match context is appended to the brief.'),
+        prompt: z
+          .string()
+          .optional()
+          .describe('footshorts only, with fixtureIds: the editorial angle, surfaced at the top of the match context.'),
       },
     },
-    async ({ randomStyle }) => {
-      const houseBrief = () => htmlStoryBrief({ siteUrl: config.htmlStoriesUrl })
-      if (!randomStyle) return { content: [{ type: 'text', text: houseBrief() }] }
-      // The story themes live with the site's content, so ask the site for the
-      // randomized brief rather than reading stories here.
+    async ({ app, randomStyle, fixtureIds, prompt }) => {
+      const site = htmlStoriesUrlFor(config, app)
+      const houseBrief = () => htmlStoryBrief({ app, siteUrl: site })
+      const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
+      if (!randomStyle && ids.length === 0) return { content: [{ type: 'text', text: houseBrief() }] }
+
+      // Styles come from the site's stories and the match context from its
+      // tables, so ask the deployed site for the brief rather than reading here.
+      const url = new URL(`${site}/api/html-stories/brief`)
+      if (randomStyle) url.searchParams.set('style', 'random')
+      if (ids.length) {
+        url.searchParams.set('fixtures', ids.join(','))
+        if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
+      }
+      const token = htmlStoriesToken(app)
+      if (ids.length && !token) {
+        throw new Error(
+          'The match context needs the footshorts publish token in the MCP server env ' +
+            '(FOOTSHORTS_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
+        )
+      }
       try {
-        const res = await fetch(`${config.htmlStoriesUrl}/api/html-stories/brief?style=random`)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const res = await fetch(url, token ? { headers: { authorization: `Bearer ${token}` } } : undefined)
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
         return { content: [{ type: 'text', text: await res.text() }] }
       } catch (e) {
         const reason = e instanceof Error ? e.message : String(e)
+        if (ids.length) throw new Error(`Could not build the match context: ${reason}`)
         return {
           content: [
             { type: 'text', text: `(Random style unavailable: ${reason}. Using the house style.)\n\n${houseBrief()}` },
@@ -53,14 +96,16 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
   server.registerTool(
     'publish_html_story',
     {
-      title: 'Publish a vizmaya HTML story',
+      title: 'Publish an HTML story',
       description:
-        'Publish one complete, self-contained HTML document to vizmaya.fyi/s/<slug>. Pass the ' +
-        'document as `html` or as a local `filePath`. Without publish=true it saves as a draft ' +
-        '(re-posting an already published slug keeps it live). Posting to an existing slug ' +
-        'replaces it; earlier versions stay restorable in admin. Returns the URL and lint ' +
-        'warnings: fix them and post again to the same slug.',
+        'Publish one complete, self-contained HTML document to vizmaya.fyi/s/<slug> or (app: ' +
+        '"footshorts") footshorts.com/s/<slug>. Pass the document as `html` or as a local ' +
+        '`filePath`. Without publish=true it saves as a draft (re-posting an already published ' +
+        'slug keeps it live). Posting to an existing slug replaces it; earlier versions stay ' +
+        'restorable in admin. Returns the URL and lint warnings: fix them and post again to the ' +
+        'same slug.',
       inputSchema: {
+        app: appSchema,
         slug: z
           .string()
           .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'lowercase words joined by single hyphens')
@@ -76,17 +121,17 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .string()
           .optional()
           .describe(
-            'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its home-page card ' +
+            'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its listing card ' +
               'background. Only when the user names one; omitted, a re-post keeps the current aura.',
           ),
       },
     },
-    async ({ slug, html, filePath, publish, title, description, aura }) => {
-      const { token } = requireHtmlStoriesEnv()
+    async ({ app, slug, html, filePath, publish, title, description, aura }) => {
+      const { token } = requireHtmlStoriesEnv(app)
       if (!html && !filePath) throw new Error('Pass either html or filePath.')
       const doc = html ?? (await readFile(filePath!, 'utf8'))
 
-      const res = await fetch(`${config.htmlStoriesUrl}/api/html-stories`, {
+      const res = await fetch(`${htmlStoriesUrlFor(config, app)}/api/html-stories`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify({

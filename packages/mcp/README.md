@@ -79,8 +79,8 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `embed_url` | no | A live, iframe-able URL rendering one module from a config. |
 | `render_module_image` | yes (catalog) | Screenshot one module to a PNG (base64 or saved path). |
 | `render_story_video` | yes (vizmaya-fyi) | Render a story (or a section clip) to an MP4 URL. |
-| `get_html_story_brief` | no (`randomStyle` calls the deployed site) | The brief to read before writing a vizmaya HTML story. `randomStyle: true` swaps the house look for a palette + fonts from an existing story. |
-| `publish_html_story` | no (calls the deployed site) | Publish a self-contained HTML story to `vizmaya.fyi/s/<slug>`. |
+| `get_html_story_brief` | no (`randomStyle` / `fixtureIds` call the deployed site) | The brief to read before writing a vizmaya or footshorts HTML story (`app`). `randomStyle: true` swaps the house look for a palette + fonts from an existing story. For footshorts, `fixtureIds` (up to 40) appends the match context — Opta facts, timeline, insights, commentary, schedules, table — with an optional `prompt`. |
+| `publish_html_story` | no (calls the deployed site) | Publish a self-contained HTML story to `vizmaya.fyi/s/<slug>` or, with `app: "footshorts"`, `footshorts.com/s/<slug>`. |
 
 ## Environment
 
@@ -94,6 +94,8 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `VISMAY_REPO_ROOT` | render_story_video | auto-derived |
 | `HTML_STORIES_URL` | publish_html_story, get_html_story_brief | `https://vizmaya.fyi` |
 | `HTML_STORIES_TOKEN` | publish_html_story | — (required; same value as on the vizmaya-fyi deployment) |
+| `FOOTSHORTS_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "footshorts"`) | `https://footshorts.com` |
+| `FOOTSHORTS_HTML_STORIES_TOKEN` | publish_html_story and the match-context brief for footshorts | falls back to `HTML_STORIES_TOKEN` (same value as on the footshorts web deployment) |
 
 The metadata tools (`list_verticals` / `list_modules`) need none of these.
 

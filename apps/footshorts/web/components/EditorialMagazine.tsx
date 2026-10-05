@@ -2,8 +2,28 @@
 
 import Link from 'next/link';
 import { useEditorialEpics, useEditorialStories } from '@/lib/useEditorialStories';
+import { useHtmlStories } from '@/lib/useHtmlStories';
 import type { EditorialEpicSummary, EditorialStorySummary } from '@footshorts/shared';
+import type { PublishedHtmlStory } from '@vismay/html-stories/htmlStories';
 import { AuraBackground } from '@/components/AuraBackground';
+
+/**
+ * One magazine card, whichever table it came from: a viz-engine editorial story
+ * (`/editorial/<slug>`, client-routed) or an agent-authored HTML story
+ * (`/s/<slug>`, a route handler, so a plain full navigation).
+ */
+interface MagazineCard {
+  key: string;
+  href: string;
+  title: string;
+  /** Sort key and the card's date: published_at, else created/updated. */
+  date: string;
+  aura: string | null;
+  /** Inline background when the page declared its palette; else the slug gradient. */
+  background: string;
+  /** True for /s/<slug>: rendered with <a>, not <Link>. */
+  external: boolean;
+}
 
 // Hash slug → HSL hue so each story has a distinct, deterministic accent
 // gradient. Cover images live in story frontmatter and aren't fetched here
@@ -25,31 +45,85 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function HeroCard({ story }: { story: EditorialStorySummary }) {
+function editorialCard(story: EditorialStorySummary): MagazineCard {
+  return {
+    key: `editorial:${story.slug}`,
+    href: `/editorial/${story.slug}`,
+    title: story.title,
+    date: story.publishedAt ?? story.createdAt,
+    aura: story.aura,
+    background: gradientFor(story.slug),
+    external: false,
+  };
+}
+
+/** An HTML story wears its own palette (its `vizmaya:theme` meta) when it declared one. */
+function htmlStoryCard(story: PublishedHtmlStory): MagazineCard {
+  const t = story.theme;
+  const background =
+    t?.background && t.accent
+      ? `linear-gradient(135deg, ${t.surface ?? t.background} 0%, ${t.background} 60%, ${t.accent}33 100%)`
+      : gradientFor(story.slug);
+  return {
+    key: `html:${story.slug}`,
+    href: `/s/${story.slug}`,
+    title: story.title,
+    date: story.publishedAt ?? story.updatedAt,
+    aura: story.aura,
+    background,
+    external: true,
+  };
+}
+
+/** <Link> for app routes, <a> for the HTML story route handler. */
+function CardLink({
+  card,
+  className,
+  style,
+  children,
+}: {
+  card: MagazineCard;
+  className: string;
+  style: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  if (card.external) {
+    return (
+      <a href={card.href} className={className} style={style}>
+        {children}
+      </a>
+    );
+  }
   return (
-    <Link
-      href={`/editorial/${story.slug}`}
+    <Link href={card.href} className={className} style={style}>
+      {children}
+    </Link>
+  );
+}
+
+function HeroCard({ card }: { card: MagazineCard }) {
+  return (
+    <CardLink
+      card={card}
       className="group relative block overflow-hidden rounded-2xl border border-border"
-      style={{ background: gradientFor(story.slug), aspectRatio: '5 / 4' }}
+      style={{ background: card.background, aspectRatio: '5 / 4' }}
     >
-      {story.aura && <AuraBackground slug={story.aura} />}
+      {card.aura && <AuraBackground slug={card.aura} />}
       <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white">
         <div className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] opacity-80">
           <span>Editorial</span>
           <span aria-hidden>·</span>
-          <time dateTime={story.publishedAt ?? story.createdAt}>
-            {formatDate(story.publishedAt ?? story.createdAt)}
-          </time>
+          <time dateTime={card.date}>{formatDate(card.date)}</time>
         </div>
         <div>
-          <h2 className="font-serif text-2xl leading-tight md:text-3xl">{story.title}</h2>
+          <h2 className="font-serif text-2xl leading-tight md:text-3xl">{card.title}</h2>
           <div className="mt-3 inline-flex items-center gap-1.5 text-sm opacity-80 group-hover:opacity-100">
             Read story
             <span aria-hidden>→</span>
           </div>
         </div>
       </div>
-    </Link>
+    </CardLink>
   );
 }
 
@@ -73,24 +147,21 @@ function EpicCard({ epic }: { epic: EditorialEpicSummary }) {
   );
 }
 
-function GridCard({ story }: { story: EditorialStorySummary }) {
+function GridCard({ card }: { card: MagazineCard }) {
   return (
-    <Link
-      href={`/editorial/${story.slug}`}
+    <CardLink
+      card={card}
       className="group relative block overflow-hidden rounded-xl border border-border"
-      style={{ background: gradientFor(story.slug), aspectRatio: '4 / 5' }}
+      style={{ background: card.background, aspectRatio: '4 / 5' }}
     >
-      {story.aura && <AuraBackground slug={story.aura} />}
+      {card.aura && <AuraBackground slug={card.aura} />}
       <div className="relative z-10 flex h-full flex-col justify-between p-4 text-white">
-        <time
-          dateTime={story.publishedAt ?? story.createdAt}
-          className="text-[0.65rem] uppercase tracking-[0.18em] opacity-75"
-        >
-          {formatDate(story.publishedAt ?? story.createdAt)}
+        <time dateTime={card.date} className="text-[0.65rem] uppercase tracking-[0.18em] opacity-75">
+          {formatDate(card.date)}
         </time>
-        <h3 className="font-serif text-base leading-snug">{story.title}</h3>
+        <h3 className="font-serif text-base leading-snug">{card.title}</h3>
       </div>
-    </Link>
+    </CardLink>
   );
 }
 
@@ -100,6 +171,10 @@ export function EditorialMagazine() {
   // shouldn't block the magazine from rendering when the stories query
   // returns first.
   const { data: epics } = useEditorialEpics();
+  // Agent-authored HTML stories (footshorts.com/s/<slug>) sit in the same
+  // magazine, newest first alongside the editorial stories. Also independent:
+  // a slow or failed read never blocks the rest.
+  const { data: htmlStories } = useHtmlStories();
 
   if (isLoading) {
     return (
@@ -118,10 +193,13 @@ export function EditorialMagazine() {
     );
   }
 
-  const safeStories = stories ?? [];
+  const cards: MagazineCard[] = [
+    ...(stories ?? []).map(editorialCard),
+    ...(htmlStories ?? []).map(htmlStoryCard),
+  ].sort((a, b) => b.date.localeCompare(a.date));
   const safeEpics = epics ?? [];
 
-  if (safeStories.length === 0 && safeEpics.length === 0) {
+  if (cards.length === 0 && safeEpics.length === 0) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center px-4 text-center">
         <p className="mb-2 text-lg text-text">No stories yet</p>
@@ -132,7 +210,7 @@ export function EditorialMagazine() {
     );
   }
 
-  const [hero, ...rest] = safeStories;
+  const [hero, ...rest] = cards;
 
   return (
     <div className="pb-12">
@@ -148,11 +226,11 @@ export function EditorialMagazine() {
           </div>
         </div>
       )}
-      {hero && <HeroCard story={hero} />}
+      {hero && <HeroCard card={hero} />}
       {rest.length > 0 && (
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-          {rest.map((s) => (
-            <GridCard key={s.slug} story={s} />
+          {rest.map((c) => (
+            <GridCard key={c.key} card={c} />
           ))}
         </div>
       )}

@@ -137,6 +137,8 @@ export function ComposeFlow({
           onCreateTelemetrySource={flow.createTelemetrySource}
           onLoadMatchCompetitions={flow.loadMatchCompetitions}
           onLoadMatches={flow.loadMatches}
+          onSearchMatchTeams={flow.searchTeams}
+          onLoadTeamMatches={flow.loadTeamMatches}
           onScrapeMatch={flow.scrapeMatch}
           onCreateMatchSource={flow.createMatchSource}
         />

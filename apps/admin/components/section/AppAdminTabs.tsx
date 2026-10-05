@@ -19,6 +19,8 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/recaps`, label: 'Recaps' })
     tabs.push({ href: `/${appSlug}/power-rankings`, label: 'Power rankings' })
     tabs.push({ href: `/${appSlug}/match-facts`, label: 'Match facts' })
+    // Agent-authored pages hosted at footshorts.com/s/<slug> (packages/html-stories).
+    tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
     tabs.push({ href: `/${appSlug}/cup-fixtures`, label: 'Cup fixtures' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
