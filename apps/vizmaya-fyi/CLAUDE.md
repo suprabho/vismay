@@ -135,6 +135,7 @@ writes the `stories` tables.
 - **Brief:** `GET /api/html-stories/brief` (public markdown), the admin "Copy agent brief" button, and the MCP `get_html_story_brief` tool all serve `htmlStoryBrief()`.
 - **Admin:** the **HTML stories** tab (`/vizmaya/html-stories` in apps/admin): paste/upload, sandboxed phone/desktop preview, publish/unpublish, version history with restore.
 - **MCP:** `publish_html_story` + `get_html_story_brief` in [packages/mcp](../../packages/mcp) (needs `HTML_STORIES_TOKEN`; `HTML_STORIES_URL` defaults to https://vizmaya.fyi).
+- **Listings:** published HTML stories lead the home grid and the `/stories` archive, newest first, ahead of the curated viz-engine order ([lib/htmlStoryListing.ts](lib/htmlStoryListing.ts) → `listPublishedHtmlStories`). Cards link to `/s/<slug>` with a plain `<a>` (`StoryCardData.href`), use `og:image` as the thumbnail and are tinted from the page's `vizmaya:theme` palette, which [migration 086](../../supabase/vizmaya-fyi/migrations/086_html_stories_theme_meta.sql) keeps in `html_stories.theme_meta` (written on save, backfilled from stored HTML) so listings never read the documents. Before 086 the cards render untinted and saves skip the column.
 - **Deploy:** apply migration 085 → set `HTML_STORIES_TOKEN` (any long random string) on the vizmaya-fyi Vercel project. Without the token the publish API answers 503; the admin tab and `/s/<slug>` work regardless.
 
 ## Epics (/energy-profile, /epstein, …)

@@ -104,8 +104,8 @@ export function StoryBentoGrid({
         data={item.data}
         n={item.n}
         big={ctx.big}
-        href={hrefBase ? `${hrefBase}${item.data.slug}` : undefined}
-        linkComponent={linkComponent}
+        href={item.data.href ?? (hrefBase ? `${hrefBase}${item.data.slug}` : undefined)}
+        linkComponent={item.data.href ? undefined : linkComponent}
       />
     ))
 
@@ -123,7 +123,7 @@ export function StoryBentoGrid({
                 <div className="carousel-slide" key={si} style={stacked ? undefined : { width: `${100 / total}%` }}>
                   <div className={'bento-slide' + (four ? ' four' : '')}>
                     {sl.items.map((it, idx) => (
-                      <Fragment key={it.data.slug}>
+                      <Fragment key={it.data.href ?? it.data.slug}>
                         {render(it, { big: four ? idx === 0 : idx < 2, index: sl.offset + idx })}
                       </Fragment>
                     ))}

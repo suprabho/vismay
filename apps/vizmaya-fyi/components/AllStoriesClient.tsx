@@ -10,6 +10,8 @@ export interface ArchiveStory {
   subtitle: string
   date: string
   byline: string
+  /** Set for HTML stories (/s/<slug>), which aren't a Next route: plain <a>. */
+  href?: string
 }
 
 const css = `
@@ -143,8 +145,10 @@ export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] 
 
       <section className="list">
         <div className="list-inner">
-          {stories.map((s, i) => (
-            <Link key={s.slug} href={`/story/${s.slug}`} className="row">
+          {stories.map((s, i) => {
+            const Row = s.href ? 'a' : Link
+            return (
+            <Row key={s.href ?? s.slug} href={s.href ?? `/story/${s.slug}`} className="row">
               <div className="row-num">
                 #{String(i + 1).padStart(2, '0')}
                 <span className="date">
@@ -157,8 +161,9 @@ export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] 
                 {s.byline && <div className="byline">{s.byline}</div>}
               </div>
               <div className="arrow">Read →</div>
-            </Link>
-          ))}
+            </Row>
+            )
+          })}
         </div>
       </section>
 

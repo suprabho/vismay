@@ -20,6 +20,12 @@ export interface StoryCardData {
   thumbnail?: string
   /** Optional text colour when a thumbnail is shown — keeps title/READ legible. */
   thumbnailTextColor?: string
+  /**
+   * Where the card links when it isn't `${hrefBase}${slug}` — e.g. an HTML
+   * story at /s/<slug>. Rendered as a plain <a> (a full page load), since the
+   * target isn't a route the link component can navigate to client-side.
+   */
+  href?: string
 }
 
 /** A card plus the 0-based number shown as its badge (padded to two digits). */

@@ -10,7 +10,14 @@
  */
 
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { extractHtmlMeta, type HtmlStoryStatus } from './meta'
+import {
+  extractHtmlMeta,
+  extractThemeMeta,
+  parseThemeMetaContent,
+  themeMetaContent,
+  type HtmlStoryStatus,
+  type ThemeColors,
+} from './meta'
 
 export interface HtmlStorySummary {
   slug: string
@@ -26,6 +33,12 @@ export interface HtmlStorySummary {
 
 export interface HtmlStory extends HtmlStorySummary {
   html: string
+}
+
+/** A published story as the home page and /stories archive list it. */
+export interface PublishedHtmlStory extends HtmlStorySummary {
+  /** The page's declared palette (<meta name="vizmaya:theme">), when complete. */
+  theme: ThemeColors | null
 }
 
 export interface HtmlStoryVersion {
@@ -89,6 +102,30 @@ export async function getPublishedHtmlStory(slug: string): Promise<HtmlStory | n
   return data ? mapStory(data) : null
 }
 
+/** PostgREST's missing-column errors: 42703 on select, PGRST204 on write. */
+function isMissingColumn(error: { code?: string } | null): boolean {
+  return error?.code === '42703' || error?.code === 'PGRST204'
+}
+
+/** Every published story, newest first, for the home grid and the archive. */
+export async function listPublishedHtmlStories(): Promise<PublishedHtmlStory[]> {
+  if (!hasServiceEnv()) return []
+  const query = (columns: string) =>
+    createServiceClient()
+      .from('html_stories')
+      .select(columns)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false, nullsFirst: false })
+  let { data, error } = await query(`${SUMMARY_COLUMNS}, theme_meta`)
+  // Before migration 086 the cards just go untinted.
+  if (isMissingColumn(error)) ({ data, error } = await query(SUMMARY_COLUMNS))
+  if (error) throw new Error(`listPublishedHtmlStories: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    ...mapSummary(r),
+    theme: r.theme_meta ? parseThemeMetaContent(r.theme_meta) : null,
+  }))
+}
+
 // --- Admin / publish (service role; include drafts) ---
 
 export async function listHtmlStoriesForAdmin(): Promise<HtmlStorySummary[]> {
@@ -127,6 +164,7 @@ export async function saveHtmlStory(
   if (readErr) throw new Error(`saveHtmlStory ${input.slug}: ${readErr.message}`)
 
   const meta = extractHtmlMeta(input.html)
+  const theme = extractThemeMeta(input.html)
   const status: HtmlStoryStatus = input.status ?? existing?.status ?? 'draft'
   const now = new Date().toISOString()
   const row = {
@@ -135,17 +173,22 @@ export async function saveHtmlStory(
     description: input.description?.trim() || meta.description || existing?.description || null,
     og_image_url: input.ogImageUrl?.trim() || meta.ogImageUrl || existing?.og_image_url || null,
     html: input.html,
+    // Kept beside the document so listings can tint cards without reading it.
+    theme_meta: theme ? themeMetaContent(theme) : null,
     status,
     source: input.source,
     published_at: existing?.published_at ?? (status === 'published' ? now : null),
     updated_at: now,
   }
 
-  const { data, error } = await sb
-    .from('html_stories')
-    .upsert(row, { onConflict: 'slug' })
-    .select(SUMMARY_COLUMNS)
-    .single()
+  const upsert = (r: Record<string, unknown>) =>
+    sb.from('html_stories').upsert(r, { onConflict: 'slug' }).select(SUMMARY_COLUMNS).single()
+  let { data, error } = await upsert(row)
+  if (isMissingColumn(error)) {
+    // Before migration 086: save without the palette; the backfill picks it up.
+    const { theme_meta: _, ...pre086 } = row
+    ;({ data, error } = await upsert(pre086))
+  }
   if (error) throw new Error(`saveHtmlStory ${input.slug}: ${error.message}`)
 
   if (!existing || existing.html !== input.html) {

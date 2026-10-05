@@ -4,6 +4,7 @@ import { getEpic, listEpicsForHome } from '@vismay/content-source/epics'
 import { listEditions } from '@vismay/dc-editions/dcEditions'
 import { formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/dc-editions/dcEditionTypes'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import { getHtmlStoryCards } from '@/lib/htmlStoryListing'
 import HomeClient, { type HomeStory, type HomeEpic, type HomeDailyEdition } from '@/components/HomeClient'
 import { boomScore, editionHref } from './ai-daily/doom-v-boom/components/editionUtils'
 import { EDITION_CSS_VARS, resolveAiDataCentersTheme, type AiDataCentersTheme } from './ai-data-centers/theme'
@@ -20,14 +21,17 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [stories, epics, editions, dcEpic] = await Promise.all([
+  const [stories, htmlStories, epics, editions, dcEpic] = await Promise.all([
     getAllStories('vizmaya-fyi'),
+    getHtmlStoryCards(),
     listEpicsForHome('vizmaya-fyi'),
     // Best-effort: the home page must not 500 if the editions table is unavailable.
     listEditions(3).catch(() => []),
     getEpic('ai-data-centers').catch(() => null),
   ])
-  const homeStories: HomeStory[] = stories.map((s) => ({
+  // Agent-authored HTML stories (/s/<slug>) lead, newest first, ahead of the
+  // curated viz-engine order.
+  const homeStories: HomeStory[] = [...htmlStories, ...stories.map((s) => ({
     slug: s.slug,
     title: s.title,
     subtitle: s.subtitle,
@@ -38,7 +42,7 @@ export default async function HomePage() {
     topic: s.topic,
     thumbnail: s.thumbnail,
     thumbnailTextColor: s.thumbnailTextColor,
-  }))
+  }))]
   const homeEpics: HomeEpic[] = epics.map((e) => ({
     slug: e.slug,
     name: e.name,
