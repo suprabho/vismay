@@ -3,6 +3,7 @@ import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { StoryStyle } from '@vismay/html-stories/styles'
+import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { isAuthed } from '@/lib/adminAuth'
 import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
 
@@ -11,10 +12,12 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
  * so a footshorts brief can carry its match context (service-role reads of the
  * match tables). JSON body:
  *
- *   { app, style?, fixtureIds?, prompt? }
+ *   { app, style?, fixtureIds?, prompt?, spinId? }
  *
  * `style` is the randomizer's pick (the client shows its swatches, so it must
- * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only.
+ * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
+ * `spinId` (vizmaya only) is a logged randomizer spin, whose assignment,
+ * research protocol, format and research file the brief then carries.
  * Answers text/markdown.
  */
 export const runtime = 'nodejs'
@@ -44,12 +47,25 @@ export async function POST(req: Request) {
   }
   const prompt = typeof b.prompt === 'string' && b.prompt.trim() ? b.prompt.trim() : undefined
 
+  let spin = null
+  if (b.spinId != null) {
+    if (app !== 'vizmaya-fyi' || !isSpinId(b.spinId)) {
+      return NextResponse.json({ error: 'spinId must be a vizmaya randomizer spin id' }, { status: 400 })
+    }
+    try {
+      spin = await getSpin(b.spinId)
+    } catch (e) {
+      return NextResponse.json({ error: `spin lookup failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 })
+    }
+    if (!spin) return NextResponse.json({ error: `no spin ${b.spinId}` }, { status: 404 })
+  }
+
   let brief: string
   try {
     brief =
       app === 'footshorts'
         ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt })
-        : htmlStoryBrief({ app, siteUrl, style })
+        : htmlStoryBrief({ app, siteUrl, style, spin })
   } catch (e) {
     return NextResponse.json(
       { error: `match context failed: ${e instanceof Error ? e.message : String(e)}` },

@@ -176,7 +176,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, style?, fixtureIds?, prompt? }` → markdown) for the Copy-brief button.
+  (`{ app, style?, fixtureIds?, prompt?, spinId? }` → markdown) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   style randomizer (palettes/fonts from the app's own stories) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
@@ -184,3 +184,23 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   the match context (`buildMatchContext` in
   `@vismay/content-source/footshortsMatchBrief`). The brief is fetched whenever
   style or matches change and copied synchronously on click.
+
+## Randomizer tab (/vizmaya/randomizer)
+
+The slot machine for the Vizmaya story randomizers (Desk, Atlas, Epics;
+[packages/randomizer](../../packages/randomizer), migration 088; the pipeline
+is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)).
+
+- **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
+  → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
+  three tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  with a one-tap reason, the Atlas pair / Epics sequence toggle, the style die,
+  the rules that fired, the spin log, the hero insight gate (approve / send back
+  with a note, paste research), the composed brief's assignment with Copy agent
+  brief and Copy research stub, and the Desk heat table (stale and failed
+  refreshes shown).
+- **API (`isAuthed()`-gated):** `GET|POST /api/randomizer/spins`,
+  `PATCH /api/randomizer/spins/[id]` (`{ action: 'approve'|'send_back', note }`
+  or `{ research }`), `GET /api/randomizer/heat`. They call the same
+  `@vismay/randomizer/spins` helpers as the token-gated agent routes on
+  vizmaya-fyi, so the draw rules hold whoever spins.

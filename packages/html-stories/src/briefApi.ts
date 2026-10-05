@@ -13,6 +13,11 @@
  *     `prompt`. The context is read from the match tables with the service
  *     client, so this variant wants the same bearer token as publishing — the
  *     MCP server and admin send it; the plain brief stays public.
+ *   - vizmaya only: `spin=<id>` renders the brief for a logged randomizer spin
+ *     (@vismay/randomizer): its assignment, research protocol, format and
+ *     research file. Read-only on purpose: spins are created by the
+ *     authenticated spin endpoint, never here, so the public URL cannot fill
+ *     the log the repeat blocks read. Spin ids are random uuids.
  *
  * Server only.
  */
@@ -20,6 +25,8 @@
 import type { HtmlStoryApp } from './apps'
 import { htmlStoryBrief } from './brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief'
+import { getSpin, isSpinId } from '@vismay/randomizer/spins'
+import type { SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadStoryStylePool } from './storyStyles'
 import { pickRandomStyle, type StoryStyle } from './styles'
@@ -38,6 +45,19 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   const url = new URL(req.url)
   const random = url.searchParams.get('style') === 'random'
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
+  const spinId = url.searchParams.get('spin')?.trim() || null
+
+  let spin: SpinRecord | null = null
+  if (spinId) {
+    if (app !== 'vizmaya-fyi') return new Response('randomizer spins are vizmaya stories', { status: 400 })
+    if (!isSpinId(spinId)) return new Response('spin must be a spin id', { status: 400 })
+    try {
+      spin = await getSpin(spinId)
+    } catch (e) {
+      return new Response(`spin lookup failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
+    }
+    if (!spin) return new Response(`no spin ${spinId}`, { status: 404 })
+  }
 
   if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
     return new Response(`at most ${MAX_CONTEXT_MATCHES} matches per brief`, { status: 400 })
@@ -68,7 +88,7 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
             fixtureIds,
             prompt: url.searchParams.get('prompt')?.trim() || undefined,
           })
-        : htmlStoryBrief({ app, siteUrl: url.origin, style })
+        : htmlStoryBrief({ app, siteUrl: url.origin, style, spin })
   } catch (e) {
     return new Response(`match context failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
   }
@@ -76,8 +96,8 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   return new Response(brief, {
     headers: {
       'content-type': 'text/markdown; charset=utf-8',
-      // A random or match-specific brief must differ per request; the house brief is cacheable.
-      'cache-control': random || fixtureIds.length ? 'no-store' : 'public, s-maxage=3600',
+      // A random, match-specific or spin brief must differ per request; the house brief is cacheable.
+      'cache-control': random || fixtureIds.length || spin ? 'no-store' : 'public, s-maxage=3600',
     },
   })
 }

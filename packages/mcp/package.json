@@ -19,6 +19,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@vismay/content-source": "workspace:*",
     "@vismay/html-stories": "workspace:*",
+    "@vismay/randomizer": "workspace:*",
     "playwright": "^1.59.1",
     "zod": "^3.23.8"
   },

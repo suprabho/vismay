@@ -27,6 +27,7 @@
     "@vismay/f1-viz": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",
+    "@vismay/randomizer": "workspace:*",
     "@vismay/starship-viz": "workspace:*",
     "@vismay/story-pipeline": "workspace:*",
     "@vismay/ui": "workspace:*",

@@ -1,0 +1,25 @@
+{
+  "name": "@vismay/randomizer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Vizmaya story randomizers (Desk, Atlas, Epics): datasets, the one shared draw (heat weighting, region and tradition balancing, quotas, repeat blocks, locks), the spin's agent-brief sections and research stub, and the randomizer_spins / desk_heat readers and writers. Pure modules are client-safe; ./spins is server only.",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./datasets": "./src/datasets.ts",
+    "./draw": "./src/draw.ts",
+    "./spinBrief": "./src/spinBrief.ts",
+    "./stub": "./src/stub.ts",
+    "./text": "./src/text.ts",
+    "./spins": "./src/spins.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vismay/content-source": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

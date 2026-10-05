@@ -6,6 +6,7 @@ const TABS: AdminTab[] = [
   { href: '/vizmaya', label: 'Stories', exact: true },
   { href: '/vizmaya/compose', label: 'Compose' },
   { href: '/vizmaya/html-stories', label: 'HTML stories' },
+  { href: '/vizmaya/randomizer', label: 'Randomizer' },
   { href: '/vizmaya/epics', label: 'Epics' },
   { href: '/vizmaya/pipeline', label: 'Pipeline' },
   { href: '/vizmaya/recaps', label: 'Recaps' },

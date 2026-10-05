@@ -17,6 +17,7 @@ import { registerRenderModuleImageTool } from './tools/renderModuleImage.js'
 import { registerRenderStoryVideoTool } from './tools/renderStoryVideo.js'
 import { registerHeygenTools } from './tools/heygenVideo.js'
 import { registerHtmlStoryTools } from './tools/htmlStories.js'
+import { registerRandomizerTools } from './tools/randomizer.js'
 
 export function createServer(): McpServer {
   const config = loadConfig()
@@ -31,6 +32,7 @@ export function createServer(): McpServer {
   registerRenderStoryVideoTool(server, config)
   registerHeygenTools(server, config)
   registerHtmlStoryTools(server, config)
+  registerRandomizerTools(server, config)
 
   return server
 }
