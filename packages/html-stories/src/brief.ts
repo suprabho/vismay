@@ -20,8 +20,10 @@ export function htmlStoryBrief({ siteUrl }: BriefOptions): string {
 
 You are writing one finished data story for vizmaya.fyi as a single,
 self-contained HTML file. It is hosted exactly as you write it at
-${site}/s/<slug>. Nothing post-processes it, so what you write is what readers
-get. You own the design, the charts, and the words.
+${site}/s/<slug>. The only thing added is a slim vizmaya header (logo) above
+your page and a vizmaya footer below it, so don't add your own site logo,
+masthead or site footer. Everything in between is yours: the design, the
+charts, and the words.
 
 ## The hosting contract (must)
 

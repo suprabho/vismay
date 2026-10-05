@@ -1,10 +1,12 @@
 import { getPublishedHtmlStory } from '@vismay/html-stories/htmlStories'
+import { brandHtmlStory } from '@vismay/html-stories/branding'
 import { isSafeSlug } from '@vismay/html-stories/meta'
 
 /**
- * Serves an agent-authored HTML story exactly as it was posted (migration 085,
- * packages/html-stories). No React shell, no viz engine: the document is the
- * whole page.
+ * Serves an agent-authored HTML story as it was posted (migration 085,
+ * packages/html-stories), wrapped only in the vizmaya header and footer
+ * (packages/html-stories/src/branding.ts). No React shell, no viz engine: the
+ * document is the whole page.
  *
  * The page is arbitrary third-party-ish HTML on our domain, so it is served
  * under a CSP sandbox without allow-same-origin: scripts run, but in an opaque
@@ -18,7 +20,7 @@ const SANDBOX =
   'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms ' +
   'allow-modals allow-downloads allow-presentation'
 
-export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const story = isSafeSlug(slug) ? await getPublishedHtmlStory(slug) : null
   if (!story) {
@@ -27,7 +29,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, s-maxage=30' },
     })
   }
-  return new Response(story.html, {
+  const html = brandHtmlStory(story.html, { siteUrl: new URL(req.url).origin })
+  return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'content-security-policy': SANDBOX,

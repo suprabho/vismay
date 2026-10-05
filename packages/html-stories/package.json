@@ -6,7 +6,8 @@
   "exports": {
     "./htmlStories": "./src/htmlStories.ts",
     "./meta": "./src/meta.ts",
-    "./brief": "./src/brief.ts"
+    "./brief": "./src/brief.ts",
+    "./branding": "./src/branding.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
