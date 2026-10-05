@@ -338,8 +338,7 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
               timeMs={playheadMs}
               standings={liveStandings}
               sampleChannels={sampleChannels}
-              // In 3D, sit above the viz's own play/scrub bar.
-              className={viewMode === '3d' ? 'bottom-16 right-4' : 'bottom-4 right-4'}
+              className="mt-3"
               onClose={() => setFocusedDriver(null)}
             />
           )}

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { X } from '@phosphor-icons/react'
 import type { AggregatesByDriverLap, CarPositionTrack, CircuitGeometry, RaceDriver } from '@/lib/replay/types'
 import { gapToCarAhead, speedAt, speedHistory } from '@/lib/replay/liveTelemetry'
 import type { ChannelSample } from '@/lib/replay/useLapChannels'
@@ -16,7 +17,7 @@ interface Props {
   standings: Map<number, number>
   /** Real car channels at a time, when the session has them (null → derive from positions). */
   sampleChannels?: (tMs: number) => ChannelSample | null
-  /** Positioning classes; the card anchors to the viewport's bottom-right by default. */
+  /** Extra classes for the strip's container (spacing in the parent layout). */
   className?: string
   onClose?: () => void
 }
@@ -51,7 +52,7 @@ export function FocusedDriverCard({
   timeMs,
   standings,
   sampleChannels,
-  className = 'bottom-4 right-4',
+  className = '',
   onClose,
 }: Props) {
   const track = tracks.get(driver.driverNumber)
@@ -89,15 +90,13 @@ export function FocusedDriverCard({
   const hasPedals = channels != null && (channels.throttle != null || channels.brake != null)
 
   return (
-    <div
-      className={`absolute z-20 w-[268px] rounded-xl border border-border bg-surface/95 shadow-lg backdrop-blur-sm ${className}`}
-    >
+    <div className={`flex flex-col overflow-hidden rounded-xl border border-border bg-surface sm:flex-row ${className}`}>
       <div
-        className="flex items-center gap-3 border-b border-border px-4 py-2.5"
+        className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 sm:w-[240px] sm:border-b-0 sm:border-r"
         style={{ borderLeftWidth: 3, borderLeftColor: colour }}
       >
         <div
-          className="flex h-8 w-8 items-center justify-center font-mono tabular-nums font-bold text-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center font-mono tabular-nums font-bold text-white"
           style={{ backgroundColor: colour }}
         >
           {driver.driverNumber}
@@ -113,21 +112,24 @@ export function FocusedDriverCard({
         </div>
         {onClose && (
           <button
+            type="button"
             onClick={onClose}
-            className="font-mono tabular-nums text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-accent"
+            title="Unfocus"
+            aria-label="Unfocus driver"
+            className="shrink-0 p-1 text-muted transition-colors hover:text-accent"
           >
-            Unfocus
+            <X size={14} weight="bold" />
           </button>
         )}
       </div>
 
       {speed == null ? (
-        <div className="px-4 py-6 text-center font-mono tabular-nums text-[10px] text-muted">
+        <div className="flex flex-1 items-center justify-center px-4 py-4 font-mono tabular-nums text-[10px] text-muted">
           No live telemetry at this point.
         </div>
       ) : (
-        <div className="space-y-3 p-4">
-          <div className="flex items-end justify-between gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 sm:flex sm:items-center sm:justify-between">
+          <div className="col-span-2 flex items-center gap-4">
             <div className="flex flex-col">
               <span className="flex items-center gap-1.5 wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
@@ -141,36 +143,32 @@ export function FocusedDriverCard({
                 <span className="font-mono tabular-nums text-[10px] text-muted">lap avg {Math.round(lapAvg)}</span>
               )}
             </div>
-            <div className="flex flex-col items-end gap-1">
-              {channels && (channels.gear != null || channels.drs != null) && (
-                <div className="flex items-center gap-1.5">
-                  {isDrsOpen(channels.drs) && (
-                    <span className="rounded-sm bg-emerald-500/20 px-1 font-mono text-[9px] font-bold uppercase tracking-widest text-emerald-400">
-                      DRS
-                    </span>
-                  )}
-                  {channels.gear != null && (
-                    <span className="font-mono tabular-nums text-[10px] text-muted">
-                      G<span className="ml-0.5 text-sm font-bold text-text">{channels.gear || 'N'}</span>
-                    </span>
-                  )}
-                </div>
-              )}
-              <Sparkline data={trend} color={colour} width={90} height={28} />
-            </div>
+            <Sparkline data={trend} color={colour} width={90} height={28} />
+            {channels && (channels.gear != null || channels.drs != null) && (
+              <div className="flex flex-col items-start gap-1">
+                {channels.gear != null && (
+                  <span className="font-mono tabular-nums text-[10px] text-muted">
+                    G<span className="ml-0.5 text-sm font-bold text-text">{channels.gear || 'N'}</span>
+                  </span>
+                )}
+                {isDrsOpen(channels.drs) && (
+                  <span className="rounded-sm bg-emerald-500/20 px-1 font-mono text-[9px] font-bold uppercase tracking-widest text-emerald-400">
+                    DRS
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {hasPedals && (
-            <div className="space-y-1.5">
+            <div className="col-span-2 w-full space-y-1.5 sm:w-36">
               <PedalBar label="Thr" value={channels.throttle ?? 0} className="bg-emerald-500" />
               <PedalBar label="Brk" value={channels.brake ? 100 : 0} className="bg-red-500" />
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 border-t border-border pt-2">
-            <Metric label="Live Pos" value={posLabel} />
-            <Metric label="Gap ahead" value={gapValue} detail={gapDetail} />
-          </div>
+          <Metric label="Live Pos" value={posLabel} />
+          <Metric label="Gap ahead" value={gapValue} detail={gapDetail} />
         </div>
       )}
     </div>
