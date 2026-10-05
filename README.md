@@ -17,6 +17,7 @@ Monorepo for the Vismay viz engine and the apps it powers.
 - `packages/viz-engine/` — the viz engine: module registry, slot dispatchers, core viz modules, charts, and the capture pipeline. Imported by every consumer app. (Originally planned as a stub; the engine has since moved here out of `apps/vizmaya-fyi/`.)
 - `packages/content-source/` — the `fs|db` story reader, story config types and resolver, and the render dispatch handlers (PDF / video / audio / share). Used by `apps/vizmaya-fyi/`.
 - `packages/dc-editions/` — the AI Data Centers daily edition (Doom v Boom): types, assembly, charts and the `dc_editions` readers/writers. Used by `apps/vizmaya-fyi/` and `apps/admin/` only; kept out of `content-source` so edition changes don't rebuild every app.
+- `packages/html-stories/` — agent-authored HTML stories: any agent writes one finished, self-contained HTML page and it is hosted as-is at `vizmaya.fyi/s/<slug>`. Storage, metadata/lint helpers and the agent brief. Separate from the viz-engine story pipeline; used by `apps/vizmaya-fyi/` and `apps/admin/` only.
 - `packages/viz-admin/` — the admin form-schema renderer (`AdminFormFields`) for the Compose / catalog UIs.
 - `packages/admin-core/` — shared admin UI primitives (login form, logout button, tabs).
 - `packages/ai-gateway/` — one wrapper around the Vercel AI Gateway for all text + image generation. New AI features import from here, never from a provider SDK. See [`packages/ai-gateway/README.md`](packages/ai-gateway/README.md).

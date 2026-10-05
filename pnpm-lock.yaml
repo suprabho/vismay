@@ -77,6 +77,9 @@ importers:
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../verticals/footshorts-viz
+      '@vismay/html-stories':
+        specifier: workspace:*
+        version: link:../../packages/html-stories
       '@vismay/kidzovo-viz':
         specifier: workspace:*
         version: link:../../verticals/kidzovo-viz
@@ -170,7 +173,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -986,7 +989,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -1117,6 +1120,9 @@ importers:
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../verticals/footshorts-viz
+      '@vismay/html-stories':
+        specifier: workspace:*
+        version: link:../../packages/html-stories
       '@vismay/kidzovo-viz':
         specifier: workspace:*
         version: link:../../verticals/kidzovo-viz
@@ -1403,6 +1409,19 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/html-stories:
+    dependencies:
+      '@vismay/content-source':
+        specifier: workspace:*
+        version: link:../content-source
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -1411,6 +1430,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../content-source
+      '@vismay/html-stories':
+        specifier: workspace:*
+        version: link:../html-stories
       playwright:
         specifier: ^1.59.1
         version: 1.60.0

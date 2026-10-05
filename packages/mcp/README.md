@@ -79,6 +79,8 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `embed_url` | no | A live, iframe-able URL rendering one module from a config. |
 | `render_module_image` | yes (catalog) | Screenshot one module to a PNG (base64 or saved path). |
 | `render_story_video` | yes (vizmaya-fyi) | Render a story (or a section clip) to an MP4 URL. |
+| `get_html_story_brief` | no | The brief to read before writing a vizmaya HTML story. |
+| `publish_html_story` | no (calls the deployed site) | Publish a self-contained HTML story to `vizmaya.fyi/s/<slug>`. |
 
 ## Environment
 
@@ -90,6 +92,8 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `SUPABASE_SERVICE_ROLE_KEY` | render_story_video | — (required) |
 | `SCREENSHOT_DIR` | render_module_image (`returnAs:'path'`) | `/tmp/vismay-mcp-screenshots` |
 | `VISMAY_REPO_ROOT` | render_story_video | auto-derived |
+| `HTML_STORIES_URL` | publish_html_story, get_html_story_brief | `https://vizmaya.fyi` |
+| `HTML_STORIES_TOKEN` | publish_html_story | — (required; same value as on the vizmaya-fyi deployment) |
 
 The metadata tools (`list_verticals` / `list_modules`) need none of these.
 
