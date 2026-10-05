@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowSquareOut } from '@phosphor-icons/react/dist/ssr'
-import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { listHtmlStoriesForAdmin, type HtmlStorySummary } from '@vismay/html-stories/htmlStories'
+import { loadStoryStylePool } from '@vismay/html-stories/storyStyles'
+import type { StylePool } from '@vismay/html-stories/styles'
 import { isAuthed } from '@/lib/adminAuth'
 import { vizmayaPublicUrl } from '@/lib/publicSite'
-import { CopyBriefButton } from './CopyBriefButton'
+import { BriefGenerator } from './BriefGenerator'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,11 +20,11 @@ export default async function AdminHtmlStoriesPage() {
 
   let stories: HtmlStorySummary[] = []
   let loadError: string | null = null
-  try {
-    stories = await listHtmlStoriesForAdmin()
-  } catch (e) {
-    loadError = e instanceof Error ? e.message : 'load failed'
-  }
+  const [storiesResult, poolResult] = await Promise.allSettled([listHtmlStoriesForAdmin(), loadStoryStylePool()])
+  if (storiesResult.status === 'fulfilled') stories = storiesResult.value
+  else loadError = storiesResult.reason instanceof Error ? storiesResult.reason.message : 'load failed'
+  // The style randomizer is optional: without a pool the brief keeps the house style.
+  const stylePool: StylePool | null = poolResult.status === 'fulfilled' ? poolResult.value : null
 
   return (
     <div className="flex-1 flex flex-col">
@@ -35,7 +36,7 @@ export default async function AdminHtmlStoriesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CopyBriefButton brief={htmlStoryBrief({ siteUrl: vizmayaPublicUrl })} />
+          <BriefGenerator siteUrl={vizmayaPublicUrl} pool={stylePool} />
           <Link
             href="/vizmaya/html-stories/new"
             className="text-sm text-neutral-200 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
@@ -50,7 +51,8 @@ export default async function AdminHtmlStoriesPage() {
         <ol className="list-decimal ml-5 mt-2 space-y-1.5">
           <li>
             Give the agent the brief: <em>Copy agent brief</em> above, or point it at{' '}
-            <code className="text-neutral-300">{vizmayaPublicUrl}/api/html-stories/brief</code>.
+            <code className="text-neutral-300">{vizmayaPublicUrl}/api/html-stories/brief</code>. <em>Randomize style</em>{' '}
+            (or <code>?style=random</code> on that URL) swaps the house look for a palette and fonts from an existing story.
           </li>
           <li>
             Agents that can make HTTP calls post directly:
