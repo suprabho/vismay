@@ -41,9 +41,19 @@ const core: AnyVizModule[] = [
 
 const registry = new Map<string, AnyVizModule>(core.map((m) => [m.type, m]))
 
+// Re-registering a type is a no-op (first registration wins). A vertical's
+// `register()` can legitimately run more than once per client — the bundler may
+// evaluate a module that calls it in more than one chunk, HMR re-runs it, or an
+// app calls it directly as well as via `loadVertical`. Throwing here used to
+// surface as an uncaught error that took down the whole page (e.g. vizf1's
+// replay page on switching to the 3D view).
 export function registerVizModule(m: AnyVizModule): void {
-  if (registry.has(m.type)) {
-    throw new Error(`Viz module '${m.type}' already registered`)
+  const existing = registry.get(m.type)
+  if (existing) {
+    if (existing !== m && process.env.NODE_ENV !== 'production') {
+      console.warn(`[viz-engine] viz module '${m.type}' already registered — keeping the first`)
+    }
+    return
   }
   registry.set(m.type, m)
 }

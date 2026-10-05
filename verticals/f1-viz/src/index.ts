@@ -18,7 +18,20 @@
 
 import { registerVizModule } from '@vismay/viz-engine'
 
-export async function register(): Promise<void> {
+// Cached so repeat calls (VizMount's module-level boot, `loadVertical('f1')`,
+// a module evaluated in more than one chunk) share a single registration pass.
+let registered: Promise<void> | null = null
+
+export function register(): Promise<void> {
+  registered ??= doRegister().catch((err) => {
+    // Let a later call retry (e.g. after a transient chunk-load failure).
+    registered = null
+    throw err
+  })
+  return registered
+}
+
+async function doRegister(): Promise<void> {
   const [
     { default: raceRowModule },
     { default: driverStandingsModule },
