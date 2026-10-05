@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowSquareOut, Desktop, DeviceMobile, UploadSimple } from '@phosphor-icons/react'
+import { brandHtmlStory } from '@vismay/html-stories/branding'
 import { extractHtmlMeta, isSafeSlug, lintHtml, slugify, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 
 interface Version {
@@ -195,6 +196,8 @@ export default function HtmlStoryEditorClient({
   const label = 'block text-xs uppercase tracking-wider text-neutral-500 mb-1.5'
   const liveUrl = `${siteUrl}/s/${shownSlug || '<slug>'}`
   const shownHtml = versionPreview?.html ?? previewHtml
+  // Wrapped in the same vizmaya header/footer the public route adds.
+  const brandedPreview = brandHtmlStory(shownHtml, { siteUrl })
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row min-h-0">
@@ -436,7 +439,7 @@ export default function HtmlStoryEditorClient({
           {shownHtml.trim() ? (
             <iframe
               title="Story preview"
-              srcDoc={shownHtml}
+              srcDoc={brandedPreview}
               sandbox={PREVIEW_SANDBOX}
               className={`bg-white border border-white/10 h-full ${
                 viewport === 'phone' ? 'w-[390px] rounded-[20px]' : 'w-full rounded-lg'

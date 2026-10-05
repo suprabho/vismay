@@ -97,6 +97,40 @@ export function extractHtmlMeta(html: string): HtmlMeta {
   }
 }
 
+/**
+ * The page's palette, declared by the agent as
+ * `<meta name="vizmaya:theme" content="background:#0a0e14; text:#e0ddd5; …">`
+ * so the vizmaya header, footer and logo (./branding) can match it. The slots
+ * are the story theme's (./styles StylePalette), which are also the logo's.
+ */
+export const THEME_META_NAME = 'vizmaya:theme'
+export const THEME_SLOTS = ['background', 'surface', 'text', 'muted', 'line', 'accent', 'accent2', 'teal'] as const
+export type ThemeSlot = (typeof THEME_SLOTS)[number]
+export type ThemeColors = Partial<Record<ThemeSlot, string>>
+/** The slots the branding can't do without. */
+const REQUIRED_THEME_SLOTS: ThemeSlot[] = ['background', 'text', 'muted', 'accent', 'accent2', 'teal']
+/** Hex only: these values are written into CSS and a script. */
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
+
+/** The `content` of the theme meta tag for a palette. */
+export function themeMetaContent(colors: ThemeColors): string {
+  return THEME_SLOTS.filter((k) => colors[k]).map((k) => `${k}:${colors[k]}`).join('; ')
+}
+
+/** The page's declared palette, or null when the tag is missing or lacks a required slot. */
+export function extractThemeMeta(html: string): ThemeColors | null {
+  const content = metaContent(metaTags(html), THEME_META_NAME)
+  if (!content) return null
+  const colors: ThemeColors = {}
+  for (const pair of content.split(';')) {
+    const [key, value] = pair.split(':').map((v) => v.trim())
+    if ((THEME_SLOTS as readonly string[]).includes(key ?? '') && value && HEX.test(value)) {
+      colors[key as ThemeSlot] = value
+    }
+  }
+  return REQUIRED_THEME_SLOTS.every((k) => colors[k]) ? colors : null
+}
+
 export interface HtmlLint {
   /** Problems that make the page unpublishable. */
   errors: string[]
@@ -138,6 +172,12 @@ export function lintHtml(html: string): HtmlLint {
   if (!meta.title) warnings.push('Missing <title>; the story will be listed under its slug.')
   if (!meta.description) warnings.push('Missing <meta name="description">; link previews will have no summary.')
   if (!meta.ogImageUrl) warnings.push('Missing <meta property="og:image">; link previews will have no image.')
+  if (!extractThemeMeta(html)) {
+    warnings.push(
+      `Missing or incomplete <meta name="${THEME_META_NAME}">; the vizmaya header and footer won't match the page's colours. ` +
+        `It needs hex values for ${REQUIRED_THEME_SLOTS.join(', ')}.`,
+    )
+  }
 
   const relative = new Set<string>()
   const attrRe = /\b(?:src|href|poster)\s*=\s*["']([^"']+)["']/gi

@@ -1,7 +1,7 @@
 /** Checks for metadata extraction + the hosting lint.
  *  (run: npx tsx src/meta.test.ts) */
 import assert from 'node:assert/strict'
-import { extractHtmlMeta, isSafeSlug, lintHtml, slugify } from './meta'
+import { extractHtmlMeta, extractThemeMeta, isSafeSlug, lintHtml, slugify, themeMetaContent } from './meta'
 
 const good = `<!doctype html>
 <html lang="en"><head>
@@ -10,6 +10,7 @@ const good = `<!doctype html>
 <title>India&rsquo;s solar boom &amp; the grid</title>
 <meta content="Capacity tripled in four years." name="description">
 <meta property='og:image' content='https://cdn.example.com/og.png'>
+<meta name="vizmaya:theme" content="background:#0a0e14; surface:#111820; text:#e0ddd5; muted:#5a6a70; accent:#D85A30; accent2:#534AB7; teal:#1D9E75">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 </head><body><a href="/">home</a><a href="#sources">sources</a><h1>Ignored</h1></body></html>`
@@ -42,7 +43,7 @@ assert.deepEqual(lintHtml(guarded).warnings, [])
 // Missing head bits warn.
 const bare = lintHtml('<html><body><p>x</p></body></html>')
 assert.equal(bare.errors.length, 0)
-assert.equal(bare.warnings.length, 5)
+assert.equal(bare.warnings.length, 6)
 
 // Size cap.
 assert.equal(lintHtml(good.replace('</body>', 'x'.repeat(4 * 1024 * 1024) + '</body>')).errors.length, 1)
@@ -54,5 +55,13 @@ assert.ok(!isSafeSlug('India'))
 assert.ok(!isSafeSlug('a--b'))
 assert.ok(!isSafeSlug('-a'))
 assert.ok(!isSafeSlug('a'.repeat(81)))
+
+// The theme tag round-trips, keeps only hex values, and needs its core slots.
+const theme = { background: '#0a0e14', surface: '#111820', text: '#e0ddd5', muted: '#5a6a70', accent: '#D85A30', accent2: '#534AB7', teal: '#1D9E75' }
+assert.deepEqual(extractThemeMeta(good), theme)
+assert.equal(themeMetaContent(theme), 'background:#0a0e14; surface:#111820; text:#e0ddd5; muted:#5a6a70; accent:#D85A30; accent2:#534AB7; teal:#1D9E75')
+assert.equal(extractThemeMeta(good.replace('accent:#D85A30', 'accent:red')), null)
+assert.equal(extractThemeMeta('<p>no tag</p>'), null)
+assert.ok(lintHtml(good.replace(/<meta name="vizmaya:theme"[^>]*>/, '')).warnings.some((w) => w.includes('vizmaya:theme')))
 
 console.log('meta: ok')

@@ -29,6 +29,12 @@ const nextConfig: NextConfig = {
         headers: [{ key: "X-Robots-Tag", value: "noindex" }],
       },
       {
+        // HTML stories (/s/<slug>) run in an opaque-origin sandbox, so the
+        // header's Rive player fetches the logo cross-origin.
+        source: "/vizmaya-logo.riv",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      },
+      {
         // /wallet-geo is iframe-embeddable from any origin (epic landing
         // pages are designed to be dropped into partner sites). The default
         // Next.js response has no frame-ancestors CSP, but we set it

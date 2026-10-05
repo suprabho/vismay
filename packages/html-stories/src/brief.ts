@@ -8,7 +8,7 @@
  */
 
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
-import { MAX_HTML_BYTES } from './meta'
+import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 
 export interface BriefOptions {
@@ -19,6 +19,17 @@ export interface BriefOptions {
    * the house style in the brief. Omit for the house style.
    */
   style?: StoryStyle | null
+}
+
+const HOUSE_PALETTE: ThemeColors = {
+  background: '#0a0e14',
+  surface: '#111820',
+  text: '#e0ddd5',
+  muted: '#5a6a70',
+  line: '#1a2830',
+  accent: '#D85A30',
+  accent2: '#534AB7',
+  teal: '#1D9E75',
 }
 
 const HOUSE_STYLE = `House style (use it unless the story clearly wants its own look):
@@ -58,8 +69,10 @@ export function htmlStoryBrief({ siteUrl, style }: BriefOptions): string {
 
 You are writing one finished data story for vizmaya.fyi as a single,
 self-contained HTML file. It is hosted exactly as you write it at
-${site}/s/<slug>. Nothing post-processes it, so what you write is what readers
-get. You own the design, the charts, and the words.
+${site}/s/<slug>. The only thing added is a slim vizmaya header (logo) above
+your page and a vizmaya footer below it, so don't add your own site logo,
+masthead or site footer. Everything in between is yours: the design, the
+charts, and the words.
 
 ## The hosting contract (must)
 
@@ -70,6 +83,9 @@ get. You own the design, the charts, and the words.
    - \`<title>\`: the story headline. It becomes the story's title.
    - \`<meta name="description">\`: a one-sentence summary.
    - \`og:title\`, \`og:description\`, \`og:image\` (absolute https URL, 1200×630) and \`twitter:card\` = \`summary_large_image\`.
+   - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(style?.palette ?? HOUSE_PALETTE)}">\`:
+     your page's colours, as hex. The vizmaya header, footer and logo are tinted
+     to match. Copy it as given, and update it if you change the palette.
 3. Every asset is inline or an absolute \`https://\` URL. There is no folder next
    to the page, so \`./chart.js\` or \`images/map.png\` will 404.
 4. Load libraries from a CDN (jsdelivr, unpkg, cdnjs) with pinned versions.
