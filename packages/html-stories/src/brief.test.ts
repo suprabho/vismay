@@ -3,6 +3,8 @@
 import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
+import { draw } from '@vismay/randomizer/draw'
+import type { SpinRecord } from '@vismay/randomizer/types'
 
 // vizmaya: unchanged defaults.
 const viz = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi/' })
@@ -55,5 +57,35 @@ const styled = htmlStoryBrief({
 assert.ok(styled.includes('A light page. Background `#FAF7F2`'))
 assert.ok(styled.includes('background:#FAF7F2;'))
 assert.ok(!styled.includes('background:#0B0B0F'))
+
+// A randomizer spin adds its sections around the generic ones, and ends with the research stub.
+for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
+  const now = new Date('2026-10-05T12:00:00Z')
+  const spin = {
+    ...draw({ randomizer, seed: 99, now }),
+    id: '00000000-0000-4000-8000-0000000000aa',
+    seed: '00000063',
+    status: 'spun',
+    heroInsight: null,
+    researchMd: null,
+    createdAt: now.toISOString(),
+  } as Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'>
+  const b = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
+  const at = (h: string) => b.indexOf(h)
+  for (const h of ['## Your assignment', '## Research protocol', '## Deliverables', '## Format:', '## Reel script', '# Research stub']) {
+    assert.ok(at(h) > 0, `${randomizer}: missing ${h}`)
+  }
+  assert.ok(at('## Your assignment') < at('## The hosting contract'))
+  assert.ok(at('## Format:') < at('## The hosting contract'))
+  assert.ok(at('## Reel script') > at('## Content') && at('## Reel script') < at('## Before you post'))
+  assert.ok(at('# Research stub') > at('## Posting'))
+  assert.ok(b.includes(`spinId: "${spin.id}"`))
+  assert.ok(b.includes("the playbook's checklist"))
+  assert.ok(b.includes('traces to a Verified row in your claims log'))
+  assert.ok(!b.includes('Every number has a source. End with a "Sources & method"'))
+  assert.equal(b.includes('saves a draft'), randomizer !== 'desk', `${randomizer}: gate note`)
+}
+// No spin: none of it.
+assert.ok(!viz.includes('## Your assignment') && !viz.includes('Research stub'))
 
 console.log('brief: ok')

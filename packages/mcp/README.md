@@ -80,7 +80,11 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `render_module_image` | yes (catalog) | Screenshot one module to a PNG (base64 or saved path). |
 | `render_story_video` | yes (vizmaya-fyi) | Render a story (or a section clip) to an MP4 URL. |
 | `get_html_story_brief` | no (`randomStyle` / `fixtureIds` call the deployed site) | The brief to read before writing a vizmaya or footshorts HTML story (`app`). `randomStyle: true` swaps the house look for a palette + fonts from an existing story. For footshorts, `fixtureIds` (up to 40) appends the match context — Opta facts, timeline, insights, commentary, schedules, table — with an optional `prompt`. |
-| `publish_html_story` | no (calls the deployed site) | Publish a self-contained HTML story to `vizmaya.fyi/s/<slug>` or, with `app: "footshorts"`, `footshorts.com/s/<slug>`. |
+| `publish_html_story` | no (calls the deployed site) | Publish a self-contained HTML story to `vizmaya.fyi/s/<slug>` or, with `app: "footshorts"`, `footshorts.com/s/<slug>`. `spinId` ties the page to a randomizer spin. |
+| `spin_randomizer` | no (calls vizmaya.fyi) | Draw and log a story topic from the Vizmaya randomizers (`desk`, `atlas`, `epics`; see `packages/randomizer`), with locks (`from` + `locks`), re-spins (`respin` + `reason`), Atlas pair spins and Epics sequence mode. Pass the returned id as `spinId` to `get_html_story_brief` for the spin's full brief. |
+| `get_randomizer_spin` | no (calls vizmaya.fyi) | One spin: reels, rules, status, hero insight, reviewer note and research stub. |
+| `save_spin_research` | no (calls vizmaya.fyi) | Save a spin's research MD (claims log, HERO INSIGHT). Atlas and Epics insights then wait for approval in admin. |
+| `get_desk_heat` / `refresh_desk_heat` | no (calls vizmaya.fyi) | Read every Desk segment's heat and staleness, and write a refresh (heat, headlines, failures). Run it weekly. |
 
 ## Environment
 
@@ -93,7 +97,7 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `SCREENSHOT_DIR` | render_module_image (`returnAs:'path'`) | `/tmp/vismay-mcp-screenshots` |
 | `VISMAY_REPO_ROOT` | render_story_video | auto-derived |
 | `HTML_STORIES_URL` | publish_html_story, get_html_story_brief | `https://vizmaya.fyi` |
-| `HTML_STORIES_TOKEN` | publish_html_story | — (required; same value as on the vizmaya-fyi deployment) |
+| `HTML_STORIES_TOKEN` | publish_html_story, the randomizer tools | — (required; same value as on the vizmaya-fyi deployment) |
 | `FOOTSHORTS_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "footshorts"`) | `https://footshorts.com` |
 | `FOOTSHORTS_HTML_STORIES_TOKEN` | publish_html_story and the match-context brief for footshorts | falls back to `HTML_STORIES_TOKEN` (same value as on the footshorts web deployment) |
 

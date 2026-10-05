@@ -1,0 +1,684 @@
+{
+  "_note": "Starter catalogue from the playbook (3.2), extended freely. Place statuses and modern identifications are starting points: research verifies every one (3.4, 3.5) before it reaches a script. Text references are given only where they are standard; research adds the rest with the edition it cites. Western European, Finnic and Tibetan and Mongolian are added to the playbook's nine traditions so the balancing rule can place Dante, Milton, Goethe, Camoes, the Song of Roland, the Kalevala and Gesar.",
+  "traditions": [
+    "South Asian", "Greco-Roman", "Persian", "East Asian", "African", "Mesoamerican", "Norse and Germanic", "Near Eastern", "Slavic and Steppe",
+    "Western European", "Finnic", "Tibetan and Mongolian"
+  ],
+  "lenses": [
+    { "name": "Is it real", "description": "Does the evidence support the place the text names, and how strong is it?" },
+    { "name": "Who claims it", "description": "Which community, state, temple or tourism body promotes the identification, since when, and why." },
+    { "name": "What is there today", "description": "What physically stands at the site now, who visits, and who looks after it." },
+    { "name": "What it means in the argument", "description": "Why the text puts this place at this point: what the setting does for the idea." },
+    { "name": "How retellings changed it", "description": "How later versions, translations, films or regional tellings moved or reshaped the place." },
+    { "name": "Money and politics on it today", "description": "Heritage listings, pilgrimage economies, development projects and political claims that sit on the site." }
+  ],
+  "epics": [
+    {
+      "id": "iliad", "title": "Iliad", "tradition": "Greco-Roman", "types": ["Heroic and war"],
+      "approx_date_of_composition": "c. 750 to 650 BCE, from an older oral tradition", "language": "Homeric Greek", "structure": "24 books",
+      "geography_status": { "dominant": "Claimed", "note": "Troy itself rests on archaeology at Hisarlik; whether a war like Homer's happened there is still argued." },
+      "best_editions_and_translations": ["Richmond Lattimore (1951)", "Robert Fagles (1990)", "Caroline Alexander (2015)", "Emily Wilson (2023)"],
+      "key_scholarly_sources": ["Joachim Latacz, Troy and Homer (Oxford University Press, 2004)"],
+      "episodes": [
+        { "id": "book-2", "name": "Book 2: The Catalogue of Ships", "places": [
+          { "id": "aulis", "name": "Aulis", "modern": "Avlida, Boeotia, Greece", "country": "gr", "status": "Verified" },
+          { "id": "mycenae", "name": "Mycenae", "modern": "Mykines, Argolis, Greece", "country": "gr", "status": "Verified" }
+        ] },
+        { "id": "book-21", "name": "Book 21: Achilles fights the river", "places": [
+          { "id": "scamander", "name": "The Scamander", "modern": "Karamenderes river, Çanakkale, Türkiye", "country": "tr", "status": "Claimed" }
+        ] },
+        { "id": "book-22", "name": "Book 22: The death of Hector", "places": [
+          { "id": "troy", "name": "Troy", "modern": "Hisarlik, Çanakkale, Türkiye", "country": "tr", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "odyssey", "title": "Odyssey", "tradition": "Greco-Roman", "types": ["Voyage and return"],
+      "approx_date_of_composition": "c. 725 to 650 BCE, from an older oral tradition", "language": "Homeric Greek", "structure": "24 books",
+      "geography_status": { "dominant": "Claimed", "note": "The wanderings have been mapped onto the Mediterranean since antiquity; almost every stop has rival claimants." },
+      "best_editions_and_translations": ["Richmond Lattimore (1965)", "Robert Fagles (1996)", "Emily Wilson (2017)"],
+      "key_scholarly_sources": ["Robert Bittlestone, with James Diggle and John Underhill, Odysseus Unbound (Cambridge University Press, 2005)"],
+      "episodes": [
+        { "id": "book-5", "name": "Book 5: Calypso's island", "places": [
+          { "id": "ogygia", "name": "Ogygia", "modern": "Gozo, Malta (one claim of several)", "country": "mt", "status": "Claimed" }
+        ] },
+        { "id": "book-9", "name": "Book 9: The Lotus-eaters and the Cyclops", "places": [
+          { "id": "lotus-eaters", "name": "Land of the Lotus-eaters", "modern": "Djerba, Tunisia (traditional claim)", "country": "tn", "status": "Claimed" },
+          { "id": "cyclopes", "name": "Land of the Cyclopes", "modern": "Sicily, Italy (traditional claim)", "country": "it", "status": "Claimed" }
+        ] },
+        { "id": "book-10", "name": "Book 10: Circe", "places": [
+          { "id": "aeaea", "name": "Aeaea", "modern": "Monte Circeo, Lazio, Italy", "country": "it", "status": "Claimed" }
+        ] },
+        { "id": "book-12", "name": "Book 12: Scylla and Charybdis", "places": [
+          { "id": "scylla-charybdis", "name": "Scylla and Charybdis", "modern": "Strait of Messina, Italy (traditional claim)", "country": "it", "status": "Claimed" }
+        ] },
+        { "id": "book-13", "name": "Book 13: The return to Ithaca", "places": [
+          { "id": "ithaca", "name": "Ithaca", "modern": "Ithaki, or Paliki on Kefalonia, Greece (debated)", "country": "gr", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "aeneid", "title": "Aeneid", "tradition": "Greco-Roman", "types": ["Voyage and return", "Foundational and creation"],
+      "approx_date_of_composition": "29 to 19 BCE", "language": "Latin", "structure": "12 books",
+      "geography_status": { "dominant": "Verified", "note": "Virgil routes Aeneas through real Roman-era places, though he projects later cities back into the heroic age." },
+      "best_editions_and_translations": ["Robert Fitzgerald (1983)", "Robert Fagles (2006)", "Shadi Bartsch (2021)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "book-1", "name": "Book 1: Carthage", "places": [
+          { "id": "carthage", "name": "Carthage", "modern": "Carthage, Tunis, Tunisia", "country": "tn", "status": "Verified" }
+        ] },
+        { "id": "book-3", "name": "Book 3: The wanderings", "places": [
+          { "id": "buthrotum", "name": "Buthrotum", "modern": "Butrint, Albania", "country": "al", "status": "Verified" }
+        ] },
+        { "id": "book-6", "name": "Book 6: The underworld", "places": [
+          { "id": "cumae", "name": "Cumae", "modern": "Cuma, Campania, Italy", "country": "it", "status": "Verified" },
+          { "id": "avernus", "name": "Lake Avernus", "modern": "Lago d'Averno, Campania, Italy", "country": "it", "status": "Verified" }
+        ] },
+        { "id": "book-7", "name": "Book 7: Landing in Latium", "places": [
+          { "id": "lavinium", "name": "Lavinium", "modern": "Pratica di Mare, Lazio, Italy", "country": "it", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "theogony", "title": "Theogony", "tradition": "Greco-Roman", "types": ["Foundational and creation"],
+      "approx_date_of_composition": "c. 700 BCE", "language": "Greek", "structure": "1,022 lines",
+      "geography_status": { "dominant": "Symbolic", "note": "A few real mountains anchor a cosmos that is not meant as a map." },
+      "best_editions_and_translations": ["M. L. West, edition and commentary (Oxford, 1966); translation (Oxford World's Classics, 1988)", "Glenn W. Most (Loeb Classical Library, 2006)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "proem", "name": "Proem: the Muses", "places": [
+          { "id": "helicon", "name": "Mount Helicon", "modern": "Elikonas, Boeotia, Greece", "country": "gr", "text_ref": "lines 1 to 115", "status": "Verified" }
+        ] },
+        { "id": "birth-of-zeus", "name": "The birth of Zeus", "places": [
+          { "id": "lyktos", "name": "Lyktos, Crete", "modern": "Lyttos, Heraklion, Crete, Greece", "country": "gr", "status": "Claimed" }
+        ] },
+        { "id": "titanomachy", "name": "The war with the Titans", "places": [
+          { "id": "othrys", "name": "Mount Othrys", "modern": "Othrys, Phthiotis, Greece", "country": "gr", "status": "Verified" },
+          { "id": "tartarus", "name": "Tartarus", "modern": "Not literal geography", "status": "Symbolic" }
+        ] }
+      ]
+    },
+    {
+      "id": "mahabharata", "title": "Mahabharata", "tradition": "South Asian", "types": ["Heroic and war", "Philosophical and spiritual"],
+      "approx_date_of_composition": "c. 400 BCE to 400 CE, in layers", "language": "Sanskrit", "structure": "18 parvas",
+      "geography_status": { "dominant": "Claimed", "note": "Its cities are identified with real sites, and excavations there are argued over; the identifications rest on tradition more than on proof." },
+      "best_editions_and_translations": ["Critical Edition, Bhandarkar Oriental Research Institute (Pune, 1933 to 1966)", "J. A. B. van Buitenen (University of Chicago Press, books 1 to 5)", "Bibek Debroy (Penguin, unabridged)"],
+      "key_scholarly_sources": ["B. B. Lal, excavations at Hastinapura (1950 to 1952), Ancient India 10 and 11"],
+      "episodes": [
+        { "id": "adi-parva", "name": "Adi Parva", "places": [
+          { "id": "hastinapura", "name": "Hastinapura", "modern": "Hastinapur, Meerut district, Uttar Pradesh, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "sabha-parva", "name": "Sabha Parva", "places": [
+          { "id": "indraprastha", "name": "Indraprastha", "modern": "Purana Qila, Delhi, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "bhishma-parva", "name": "Bhishma Parva", "places": [
+          { "id": "kurukshetra", "name": "Kurukshetra", "modern": "Kurukshetra, Haryana, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "mausala-parva", "name": "Mausala Parva", "places": [
+          { "id": "dvaraka", "name": "Dvaraka", "modern": "Dwarka, Gujarat, India (offshore finds debated)", "country": "in", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "bhagavad-gita", "title": "Bhagavad Gita", "tradition": "South Asian", "types": ["Philosophical and spiritual"], "part_of": "mahabharata",
+      "approx_date_of_composition": "c. 200 BCE to 200 CE", "language": "Sanskrit", "structure": "18 chapters (Bhishma Parva 23 to 40 in the Critical Edition)",
+      "geography_status": { "dominant": "Claimed", "note": "One battlefield, claimed at Kurukshetra, carries a dialogue whose field is also a metaphor for the body." },
+      "best_editions_and_translations": ["Barbara Stoler Miller (1986)", "Winthrop Sargeant (SUNY Press)", "Laurie L. Patton (Penguin, 2008)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "chapter-1", "name": "Chapter 1: Arjuna's despair", "places": [
+          { "id": "kurukshetra", "name": "Kurukshetra", "modern": "Kurukshetra, Haryana, India", "country": "in", "text_ref": "1.1", "status": "Claimed" },
+          { "id": "jyotisar", "name": "Jyotisar", "modern": "Jyotisar, Kurukshetra district, Haryana, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "chapter-13", "name": "Chapter 13: The field and its knower", "places": [
+          { "id": "kshetra", "name": "The field (kshetra)", "modern": "Not literal geography: the body", "text_ref": "13.1", "status": "Symbolic" }
+        ] }
+      ]
+    },
+    {
+      "id": "shanti-parva", "title": "Mahabharata: Shanti Parva", "tradition": "South Asian", "types": ["Philosophical and spiritual", "Moral and social"], "part_of": "mahabharata",
+      "approx_date_of_composition": "c. 200 BCE to 400 CE", "language": "Sanskrit", "structure": "Book 12 of the Mahabharata: Rajadharma, Apaddharma and Mokshadharma sections",
+      "geography_status": { "dominant": "Claimed", "note": "A dying teacher on the battlefield: the place matters for who speaks, not for a route." },
+      "best_editions_and_translations": ["Critical Edition, Bhandarkar Oriental Research Institute", "Bibek Debroy (Penguin, unabridged)", "Alexander Wynne, Clay Sanskrit Library (Mokshadharma, part)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "coronation", "name": "Opening: Yudhishthira's grief and coronation", "places": [
+          { "id": "hastinapura", "name": "Hastinapura", "modern": "Hastinapur, Meerut district, Uttar Pradesh, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "rajadharma", "name": "Rajadharma: Bhishma on the bed of arrows", "places": [
+          { "id": "bhishma-kund", "name": "Bhishma's bed of arrows", "modern": "Bhishma Kund, Narkatari, Kurukshetra, Haryana, India", "country": "in", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "ramayana", "title": "Ramayana", "tradition": "South Asian", "types": ["Voyage and return", "Moral and social"],
+      "approx_date_of_composition": "c. 5th century BCE to 3rd century CE (Valmiki)", "language": "Sanskrit", "structure": "7 kandas",
+      "geography_status": { "dominant": "Claimed", "note": "A route across the subcontinent that pilgrimage and politics have fixed on the map; scholars have proposed very different geographies." },
+      "best_editions_and_translations": ["Critical Edition, Oriental Institute, Baroda (1960 to 1975)", "Robert P. Goldman and others (Princeton University Press, 1984 to 2017)", "Arshia Sattar (abridged, Penguin)"],
+      "key_scholarly_sources": ["H. D. Sankalia, Ramayana: Myth or Reality? (1973)"],
+      "episodes": [
+        { "id": "ayodhya-kanda", "name": "Ayodhya Kanda", "places": [
+          { "id": "ayodhya", "name": "Ayodhya", "modern": "Ayodhya, Uttar Pradesh, India", "country": "in", "status": "Claimed" },
+          { "id": "chitrakuta", "name": "Chitrakuta", "modern": "Chitrakoot, on the Uttar Pradesh and Madhya Pradesh border, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "aranya-kanda", "name": "Aranya Kanda", "places": [
+          { "id": "panchavati", "name": "Panchavati", "modern": "Panchavati, Nashik, Maharashtra, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "kishkindha-kanda", "name": "Kishkindha Kanda", "places": [
+          { "id": "kishkindha", "name": "Kishkindha", "modern": "Around Hampi, Karnataka, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "yuddha-kanda", "name": "Yuddha Kanda", "places": [
+          { "id": "setu", "name": "The bridge (Setu)", "modern": "Rama Setu, Rameswaram to Mannar", "country": "in", "status": "Claimed" },
+          { "id": "lanka", "name": "Lanka", "modern": "Sri Lanka (identification debated)", "country": "lk", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "ramcharitmanas", "title": "Ramcharitmanas", "tradition": "South Asian", "types": ["Moral and social", "Philosophical and spiritual"],
+      "approx_date_of_composition": "Begun 1574 (Tulsidas)", "language": "Awadhi", "structure": "7 kands",
+      "geography_status": { "dominant": "Claimed", "note": "The Ramayana route retold in a living devotional text; its places are pilgrimage sites first." },
+      "best_editions_and_translations": ["Gita Press, Gorakhpur", "W. Douglas P. Hill (1952)", "Philip Lutgendorf, Murty Classical Library of India (from 2016)"],
+      "key_scholarly_sources": ["Philip Lutgendorf, The Life of a Text: Performing the Ramcaritmanas of Tulsidas (University of California Press, 1991)"],
+      "episodes": [
+        { "id": "bal-kand", "name": "Bal Kand", "places": [
+          { "id": "ayodhya", "name": "Ayodhya", "modern": "Ayodhya, Uttar Pradesh, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "ayodhya-kand", "name": "Ayodhya Kand", "places": [
+          { "id": "prayag", "name": "Prayag (Bharadvaja's ashram)", "modern": "Prayagraj, Uttar Pradesh, India", "country": "in", "status": "Claimed" },
+          { "id": "chitrakoot", "name": "Chitrakoot", "modern": "Chitrakoot, on the Uttar Pradesh and Madhya Pradesh border, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "lanka-kand", "name": "Lanka Kand", "places": [
+          { "id": "rameswaram", "name": "Rameswaram", "modern": "Rameswaram, Tamil Nadu, India", "country": "in", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "yoga-vasistha", "title": "Yoga Vasistha", "tradition": "South Asian", "types": ["Philosophical and spiritual"],
+      "approx_date_of_composition": "c. 6th to 14th century CE (dating debated)", "language": "Sanskrit", "structure": "6 prakaranas",
+      "geography_status": { "dominant": "Symbolic", "note": "Worlds nest inside rooms and dreams: the geography is the argument that the world is mind." },
+      "best_editions_and_translations": ["Swami Venkatesananda, The Concise Yoga Vasistha (SUNY Press, 1984)", "Vihari-Lala Mitra (1891 to 1899)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "vairagya", "name": "Vairagya Prakarana: Rama's despondency", "places": [
+          { "id": "ayodhya", "name": "Dasharatha's court, Ayodhya", "modern": "Ayodhya, Uttar Pradesh, India", "country": "in", "status": "Claimed" }
+        ] },
+        { "id": "utpatti", "name": "Utpatti Prakarana: the story of Lila", "places": [
+          { "id": "lila-worlds", "name": "The worlds inside the space of a room", "modern": "Not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "upashama", "name": "Upashama Prakarana: King Janaka", "places": [
+          { "id": "mithila", "name": "Mithila", "modern": "Janakpur, Madhesh Province, Nepal (claimed)", "country": "np", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "buddhacarita", "title": "Buddhacarita", "tradition": "South Asian", "types": ["Philosophical and spiritual"],
+      "approx_date_of_composition": "c. 1st to 2nd century CE (Ashvaghosha)", "language": "Sanskrit", "structure": "28 cantos (cantos 1 to 14 survive in Sanskrit; all 28 in Tibetan and Chinese)",
+      "geography_status": { "dominant": "Verified", "note": "The key sites of the Buddha's life are fixed by Ashokan inscriptions and excavation; Kapilavastu is the exception." },
+      "best_editions_and_translations": ["E. H. Johnston (1936)", "Patrick Olivelle, Clay Sanskrit Library (2008)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "canto-1", "name": "Canto 1: The birth", "places": [
+          { "id": "lumbini", "name": "Lumbini", "modern": "Lumbini, Rupandehi, Nepal", "country": "np", "status": "Verified" }
+        ] },
+        { "id": "canto-5", "name": "Canto 5: The departure", "places": [
+          { "id": "kapilavastu", "name": "Kapilavastu", "modern": "Tilaurakot, Nepal, or Piprahwa, India (debated)", "country": "np", "status": "Claimed" }
+        ] },
+        { "id": "canto-14", "name": "Canto 14: The awakening", "places": [
+          { "id": "bodh-gaya", "name": "Bodh Gaya", "modern": "Bodh Gaya, Bihar, India", "country": "in", "status": "Verified" }
+        ] },
+        { "id": "canto-15", "name": "Canto 15: The first sermon (Tibetan and Chinese only)", "places": [
+          { "id": "sarnath", "name": "Rishipatana (the deer park)", "modern": "Sarnath, Uttar Pradesh, India", "country": "in", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "manimekalai", "title": "Manimekalai", "tradition": "South Asian", "types": ["Philosophical and spiritual"],
+      "approx_date_of_composition": "c. 6th century CE (Sattanar; dating debated)", "language": "Tamil", "structure": "30 cantos",
+      "geography_status": { "dominant": "Claimed", "note": "Real Tamil ports and cities frame a journey to an island whose identification is a claim." },
+      "best_editions_and_translations": ["Alain Danielou, Manimekhalai: The Dancer with the Magic Bowl (1989)"],
+      "key_scholarly_sources": ["Paula Richman, Women, Branch Stories, and Religious Rhetoric in a Tamil Buddhist Text (Syracuse, 1988)"],
+      "episodes": [
+        { "id": "festival-of-indra", "name": "The festival of Indra at Puhar", "places": [
+          { "id": "puhar", "name": "Puhar", "modern": "Poompuhar, Tamil Nadu, India", "country": "in", "status": "Verified" }
+        ] },
+        { "id": "manipallavam", "name": "The island of Manipallavam", "places": [
+          { "id": "manipallavam", "name": "Manipallavam", "modern": "Nainativu, Sri Lanka (claimed)", "country": "lk", "status": "Claimed" }
+        ] },
+        { "id": "kanchi", "name": "The final cantos at Kanchi", "places": [
+          { "id": "kanchi", "name": "Kanchi", "modern": "Kanchipuram, Tamil Nadu, India", "country": "in", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "silappatikaram", "title": "Silappatikaram", "tradition": "South Asian", "types": ["Moral and social"],
+      "approx_date_of_composition": "c. 5th to 6th century CE (Ilango Adigal; dating debated)", "language": "Tamil", "structure": "3 kandams, 30 cantos",
+      "geography_status": { "dominant": "Verified", "note": "One kandam per Tamil kingdom: Chola Puhar, Pandya Madurai and Chera Vanji, the last still argued over." },
+      "best_editions_and_translations": ["R. Parthasarathy, The Cilappatikaram: The Tale of an Anklet (Columbia University Press, 1993)", "Alain Danielou (1965)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "puhar-kandam", "name": "Puhar Kandam", "places": [
+          { "id": "puhar", "name": "Puhar", "modern": "Poompuhar, Tamil Nadu, India", "country": "in", "status": "Verified" }
+        ] },
+        { "id": "madurai-kandam", "name": "Madurai Kandam", "places": [
+          { "id": "madurai", "name": "Madurai", "modern": "Madurai, Tamil Nadu, India", "country": "in", "status": "Verified" }
+        ] },
+        { "id": "vanji-kandam", "name": "Vanji Kandam", "places": [
+          { "id": "vanji", "name": "Vanji", "modern": "Karur, Tamil Nadu, or Kodungallur, Kerala (debated)", "country": "in", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "shahnameh", "title": "Shahnameh", "tradition": "Persian", "types": ["Heroic and war"],
+      "approx_date_of_composition": "Completed 1010 CE (Ferdowsi)", "language": "Persian", "structure": "About 50,000 couplets, by the reigns of 50 kings",
+      "geography_status": { "dominant": "Claimed", "note": "Mythical and historical kingdoms share one map; many of its lands are identified only loosely." },
+      "best_editions_and_translations": ["Djalal Khaleghi-Motlagh, critical edition (1988 to 2008)", "Dick Davis (Viking, 2006)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "zahhak", "name": "Zahhak and Fereydun", "places": [
+          { "id": "damavand", "name": "Mount Damavand", "modern": "Mount Damavand, Mazandaran, Iran", "country": "ir", "status": "Claimed" }
+        ] },
+        { "id": "seven-labours", "name": "Rostam's Seven Labours", "places": [
+          { "id": "mazandaran", "name": "Mazandaran", "modern": "Northern Iran (identification debated)", "country": "ir", "status": "Claimed" }
+        ] },
+        { "id": "rostam-sohrab", "name": "Rostam and Sohrab", "places": [
+          { "id": "samangan", "name": "Samangan", "modern": "Samangan province, Afghanistan", "country": "af", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "gilgamesh", "title": "Epic of Gilgamesh", "tradition": "Near Eastern", "types": ["Foundational and creation", "Heroic and war"],
+      "approx_date_of_composition": "Standard Babylonian version c. 1200 to 1100 BCE; Sumerian poems c. 2100 BCE", "language": "Akkadian (Sumerian forerunners)", "structure": "12 tablets",
+      "geography_status": { "dominant": "Claimed", "note": "Uruk is excavated; the journeys out of it head for places scholars locate only by argument." },
+      "best_editions_and_translations": ["Andrew George, The Babylonian Gilgamesh Epic (Oxford University Press, 2003)", "Andrew George (Penguin, 1999)", "Benjamin R. Foster (Norton)"],
+      "key_scholarly_sources": ["Andrew George, The Babylonian Gilgamesh Epic (2003), introduction and commentary"],
+      "episodes": [
+        { "id": "tablet-1", "name": "Tablet I", "places": [
+          { "id": "uruk", "name": "Uruk", "modern": "Warka, Muthanna, Iraq", "country": "iq", "status": "Verified" }
+        ] },
+        { "id": "tablet-5", "name": "Tablet V", "places": [
+          { "id": "cedar-forest", "name": "The Cedar Forest", "modern": "Lebanon, or the Zagros (debated)", "country": "lb", "status": "Claimed" }
+        ] },
+        { "id": "tablet-11", "name": "Tablet XI", "places": [
+          { "id": "mouth-of-rivers", "name": "Utnapishtim's home at the mouth of the rivers", "modern": "Bahrain (Dilmun, proposed)", "country": "bh", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "enuma-elish", "title": "Enuma Elish", "tradition": "Near Eastern", "types": ["Foundational and creation"],
+      "approx_date_of_composition": "c. 18th to 12th century BCE (dating debated)", "language": "Akkadian", "structure": "7 tablets",
+      "geography_status": { "dominant": "Symbolic", "note": "Primordial waters until the last tablets, when the cosmos is built around one real city: Babylon." },
+      "best_editions_and_translations": ["W. G. Lambert, Babylonian Creation Myths (Eisenbrauns, 2013)"],
+      "key_scholarly_sources": ["W. G. Lambert, Babylonian Creation Myths (2013)"],
+      "episodes": [
+        { "id": "tablet-1", "name": "Tablet I: Apsu and Tiamat", "places": [
+          { "id": "primordial-waters", "name": "The primordial waters", "modern": "Not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "tablet-6", "name": "Tablet VI: Babylon and the Esagila", "places": [
+          { "id": "babylon", "name": "Babylon", "modern": "Babylon, near Hillah, Babil, Iraq", "country": "iq", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "thousand-and-one-nights", "title": "Thousand and One Nights", "tradition": "Near Eastern", "types": ["Moral and social"],
+      "approx_date_of_composition": "Compiled from the 8th to the 14th century, from Persian, Indian and Arabic sources", "language": "Arabic", "structure": "A frame tale and nested stories, by nights",
+      "geography_status": { "dominant": "Verified", "note": "Real cities of the Abbasid and Mamluk worlds, filled with invented adventures." },
+      "best_editions_and_translations": ["Muhsin Mahdi, critical edition of the Syrian manuscript (1984)", "Husain Haddawy (Norton, 1990)", "Malcolm C. Lyons and Ursula Lyons (Penguin, 2008)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "frame", "name": "The frame story", "places": [
+          { "id": "samarkand", "name": "Samarkand (Shahzaman's kingdom)", "modern": "Samarkand, Uzbekistan", "country": "uz", "status": "Claimed" }
+        ] },
+        { "id": "sinbad", "name": "Sinbad the Sailor", "places": [
+          { "id": "basra", "name": "Basra", "modern": "Basra, Iraq", "country": "iq", "status": "Verified" }
+        ] },
+        { "id": "harun", "name": "Tales of Harun al-Rashid", "places": [
+          { "id": "baghdad", "name": "Baghdad", "modern": "Baghdad, Iraq", "country": "iq", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "journey-to-the-west", "title": "Journey to the West", "tradition": "East Asian", "types": ["Voyage and return", "Philosophical and spiritual"],
+      "approx_date_of_composition": "c. 1592 (attributed to Wu Cheng'en)", "language": "Chinese", "structure": "100 chapters",
+      "geography_status": { "dominant": "Claimed", "note": "A fictionalised Silk Road pilgrimage: real end points, invented stops that towns now claim." },
+      "best_editions_and_translations": ["Anthony C. Yu (University of Chicago Press, 1977 to 1983; revised 2012)", "Arthur Waley, Monkey (abridged, 1942)", "Julia Lovell, Monkey King (abridged, Penguin, 2021)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "chapters-1-7", "name": "Chapters 1 to 7: The Monkey King", "places": [
+          { "id": "huaguo-shan", "name": "Flower Fruit Mountain", "modern": "Huaguo Shan, Lianyungang, Jiangsu, China (claimed)", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "chapters-11-13", "name": "Chapters 11 to 13: Setting out", "places": [
+          { "id": "changan", "name": "Chang'an", "modern": "Xi'an, Shaanxi, China", "country": "cn", "status": "Verified" }
+        ] },
+        { "id": "chapters-59-61", "name": "Chapters 59 to 61: The Flaming Mountains", "places": [
+          { "id": "flaming-mountains", "name": "The Flaming Mountains", "modern": "Turpan, Xinjiang, China", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "chapter-98", "name": "Chapter 98: Arrival", "places": [
+          { "id": "vulture-peak", "name": "Vulture Peak", "modern": "Rajgir, Bihar, India", "country": "in", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "three-kingdoms", "title": "Romance of the Three Kingdoms", "tradition": "East Asian", "types": ["Heroic and war"],
+      "approx_date_of_composition": "14th century (attributed to Luo Guanzhong); Mao Zonggang's edition c. 1680", "language": "Chinese", "structure": "120 chapters",
+      "geography_status": { "dominant": "Claimed", "note": "History of the 3rd century, novelised: the battles happened, and several towns claim the exact spot." },
+      "best_editions_and_translations": ["Moss Roberts (University of California Press, 1991)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "chapter-1", "name": "Chapter 1: The oath in the peach garden", "places": [
+          { "id": "zhuozhou", "name": "Zhuo commandery", "modern": "Zhuozhou, Hebei, China", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "chapters-49-50", "name": "Chapters 49 to 50: Red Cliffs", "places": [
+          { "id": "red-cliffs", "name": "Red Cliffs", "modern": "Chibi, Hubei, China (site debated)", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "chapter-104", "name": "Chapter 104: Zhuge Liang's death", "places": [
+          { "id": "wuzhang", "name": "Wuzhang Plains", "modern": "Qishan county, Shaanxi, China", "country": "cn", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "water-margin", "title": "Water Margin", "tradition": "East Asian", "types": ["Heroic and war", "Moral and social"],
+      "approx_date_of_composition": "14th century (attributed to Shi Nai'an)", "language": "Chinese", "structure": "70, 100 and 120 chapter versions",
+      "geography_status": { "dominant": "Claimed", "note": "Outlaw legends set in real Song dynasty Shandong, now a regional tourism circuit." },
+      "best_editions_and_translations": ["Sidney Shapiro, Outlaws of the Marsh (1980)", "John and Alex Dent-Young, The Marshes of Mount Liang (1994 to 2002)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "wu-song", "name": "Wu Song and the tiger", "places": [
+          { "id": "jingyang-ridge", "name": "Jingyang Ridge", "modern": "Yanggu county, Shandong, China (claimed)", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "liangshan", "name": "The gathering at Liangshan", "places": [
+          { "id": "liangshan-marsh", "name": "Liangshan Marsh", "modern": "Liangshan county, Shandong, China", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "dongjing", "name": "The capital", "places": [
+          { "id": "dongjing", "name": "Dongjing", "modern": "Kaifeng, Henan, China", "country": "cn", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "tale-of-genji", "title": "Tale of Genji", "tradition": "East Asian", "types": ["Moral and social"],
+      "approx_date_of_composition": "Early 11th century (Murasaki Shikibu)", "language": "Japanese", "structure": "54 chapters",
+      "geography_status": { "dominant": "Verified", "note": "The Heian capital and its edges; exile and the Uji chapters move just beyond it." },
+      "best_editions_and_translations": ["Royall Tyler (2001)", "Edward Seidensticker (1976)", "Dennis Washburn (2015)", "Arthur Waley (1925 to 1933)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "kiritsubo", "name": "Chapter 1: Kiritsubo", "places": [
+          { "id": "heian-kyo", "name": "The Heian palace", "modern": "Kyoto, Japan", "country": "jp", "status": "Verified" }
+        ] },
+        { "id": "suma", "name": "Chapter 12: Suma", "places": [
+          { "id": "suma", "name": "Suma", "modern": "Suma, Kobe, Hyogo, Japan", "country": "jp", "status": "Claimed" }
+        ] },
+        { "id": "uji-chapters", "name": "Chapters 45 to 54: The Uji chapters", "places": [
+          { "id": "uji", "name": "Uji", "modern": "Uji, Kyoto prefecture, Japan", "country": "jp", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "kojiki", "title": "Kojiki", "tradition": "East Asian", "types": ["Foundational and creation"],
+      "approx_date_of_composition": "712 CE (compiled by O no Yasumaro)", "language": "Old Japanese, written in Chinese characters", "structure": "3 books",
+      "geography_status": { "dominant": "Claimed", "note": "Myth tied to real shrines: several prefectures claim the same divine landings." },
+      "best_editions_and_translations": ["Donald L. Philippi (1968)", "Gustav Heldt (Columbia University Press, 2014)", "Basil Hall Chamberlain (1882)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "izanagi-izanami", "name": "Book 1: Izanagi and Izanami", "places": [
+          { "id": "onogoro", "name": "Onogoro", "modern": "Awaji Island area, Hyogo, Japan (claimed)", "country": "jp", "status": "Claimed" },
+          { "id": "yomotsu-hirasaka", "name": "Yomotsu Hirasaka, the slope to Yomi", "modern": "Higashiizumo, Matsue, Shimane, Japan (claimed)", "country": "jp", "status": "Claimed" }
+        ] },
+        { "id": "okuninushi", "name": "Book 1: Okuninushi", "places": [
+          { "id": "izumo", "name": "Izumo", "modern": "Izumo, Shimane, Japan", "country": "jp", "status": "Claimed" }
+        ] },
+        { "id": "ninigi", "name": "Book 1: The descent of Ninigi", "places": [
+          { "id": "takachiho", "name": "Takachiho", "modern": "Takachiho, Miyazaki, or the Kirishima range (rival claims)", "country": "jp", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "sundiata", "title": "Epic of Sundiata", "tradition": "African", "types": ["Heroic and war", "Foundational and creation"],
+      "approx_date_of_composition": "Oral tradition about 13th century events; written versions from the 20th century", "language": "Maninka (Mande)", "structure": "Oral; versions differ by griot (D. T. Niane's 1960 prose version follows Mamadou Kouyate)",
+      "geography_status": { "dominant": "Claimed", "note": "Real Mande places, identified through oral tradition; the capital Niani is still debated." },
+      "best_editions_and_translations": ["D. T. Niane, Sundiata: An Epic of Old Mali (1960; English translation by G. D. Pickett, 1965)", "John William Johnson, The Epic of Son-Jara (Indiana University Press, 1986)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "childhood", "name": "Childhood", "places": [
+          { "id": "niani", "name": "Niani", "modern": "Niani, Guinea (debated as the capital)", "country": "gn", "status": "Claimed" }
+        ] },
+        { "id": "exile", "name": "Exile", "places": [
+          { "id": "mema", "name": "Mema", "modern": "On the Mali and Mauritania border", "country": "ml", "status": "Claimed" }
+        ] },
+        { "id": "kirina", "name": "The battle of Kirina", "places": [
+          { "id": "kirina", "name": "Kirina", "modern": "Koulikoro region, Mali", "country": "ml", "status": "Claimed" }
+        ] },
+        { "id": "kurukan-fuga", "name": "The assembly of Kurukan Fuga", "places": [
+          { "id": "kangaba", "name": "Kurukan Fuga", "modern": "Near Kangaba, Koulikoro region, Mali", "country": "ml", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "popol-vuh", "title": "Popol Vuh", "tradition": "Mesoamerican", "types": ["Foundational and creation", "Philosophical and spiritual"],
+      "approx_date_of_composition": "Alphabetic K'iche' text c. 1554 to 1558; copied by Francisco Ximenez c. 1701", "language": "K'iche' Maya", "structure": "4 parts (conventional division)",
+      "geography_status": { "dominant": "Symbolic", "note": "An underworld and a creation that end in a real, excavated K'iche' capital." },
+      "best_editions_and_translations": ["Dennis Tedlock (1985; revised 1996)", "Allen J. Christenson (2003)", "Michael Bazzett (2018)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "part-1", "name": "Part 1: The creation", "places": [
+          { "id": "primordial-sea", "name": "The calm sea and the sky", "modern": "Not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "part-2", "name": "Part 2: The Hero Twins", "places": [
+          { "id": "xibalba", "name": "Xibalba", "modern": "Linked to the caves of Alta Verapaz, Guatemala", "country": "gt", "status": "Symbolic" }
+        ] },
+        { "id": "part-4", "name": "Part 4: The K'iche' kingdom", "places": [
+          { "id": "qumarkaj", "name": "Q'umarkaj", "modern": "Near Santa Cruz del Quiche, Guatemala", "country": "gt", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "kalevala", "title": "Kalevala", "tradition": "Finnic", "types": ["Foundational and creation"],
+      "approx_date_of_composition": "Compiled by Elias Lonnrot, 1835 and 1849, from oral poetry", "language": "Finnish", "structure": "50 poems (runos)",
+      "geography_status": { "dominant": "Symbolic", "note": "Almost all Symbolic: Kalevala and Pohjola are lands of the poem, gathered from singers in Karelia." },
+      "best_editions_and_translations": ["Keith Bosley (Oxford World's Classics, 1989)", "Francis Peabody Magoun Jr. (Harvard University Press, 1963)", "Eino Friberg (1988)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "poem-1", "name": "Poem 1: The creation", "places": [
+          { "id": "primordial-sea", "name": "The primordial sea", "modern": "Not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "poem-10", "name": "Poem 10: The forging of the Sampo", "places": [
+          { "id": "pohjola", "name": "Pohjola", "modern": "The North, not fixed", "status": "Symbolic" }
+        ] },
+        { "id": "poem-16", "name": "Poem 16: Vainamoinen in Tuonela", "places": [
+          { "id": "tuonela", "name": "Tuonela", "modern": "Not literal geography: the land of the dead", "status": "Symbolic" }
+        ] }
+      ]
+    },
+    {
+      "id": "divine-comedy", "title": "Divine Comedy", "tradition": "Western European", "types": ["Philosophical and spiritual"],
+      "approx_date_of_composition": "c. 1308 to 1321", "language": "Italian (Tuscan)", "structure": "3 canticles, 100 cantos",
+      "geography_status": { "dominant": "Symbolic", "note": "An invented cosmos built on medieval geography, crowded with real Italian cities." },
+      "best_editions_and_translations": ["Giorgio Petrocchi, critical edition (1966 to 1967)", "Robert and Jean Hollander (2000 to 2007)", "Robert M. Durling and Ronald L. Martinez (Oxford)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "inferno-1", "name": "Inferno, Canto 1", "places": [
+          { "id": "dark-wood", "name": "The dark wood", "modern": "Not literal geography", "text_ref": "Inferno 1.1 to 3", "status": "Symbolic" }
+        ] },
+        { "id": "inferno-5", "name": "Inferno, Canto 5: Francesca", "places": [
+          { "id": "ravenna", "name": "The city on the shore where the Po descends", "modern": "Ravenna, Emilia-Romagna, Italy", "country": "it", "text_ref": "Inferno 5.97 to 99", "status": "Verified" }
+        ] },
+        { "id": "inferno-33", "name": "Inferno, Canto 33: Ugolino", "places": [
+          { "id": "pisa", "name": "Pisa and the tower of hunger", "modern": "Pisa, Tuscany, Italy", "country": "it", "status": "Verified" }
+        ] },
+        { "id": "purgatorio-1", "name": "Purgatorio, Canto 1", "places": [
+          { "id": "mount-purgatory", "name": "Mount Purgatory", "modern": "The antipode of Jerusalem, not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "paradiso-15-17", "name": "Paradiso, Cantos 15 to 17: Cacciaguida", "places": [
+          { "id": "florence", "name": "Florence", "modern": "Florence, Tuscany, Italy", "country": "it", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "paradise-lost", "title": "Paradise Lost", "tradition": "Western European", "types": ["Philosophical and spiritual"],
+      "approx_date_of_composition": "1667 (10 books); 1674 (12 books)", "language": "English", "structure": "12 books",
+      "geography_status": { "dominant": "Symbolic", "note": "Heaven, Hell and Eden, with Milton placing Eden on a real Mesopotamian map." },
+      "best_editions_and_translations": ["Alastair Fowler (Longman, 2nd edition, 1998)", "Barbara K. Lewalski (Blackwell, 2007)", "John Leonard (Penguin, 2000)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "book-1", "name": "Book 1: Pandemonium", "places": [
+          { "id": "pandemonium", "name": "Pandemonium", "modern": "Not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "book-3", "name": "Book 3: Satan lands on earth", "places": [
+          { "id": "niphates", "name": "Mount Niphates", "modern": "The Niphates range, eastern Taurus, Türkiye (ancient name)", "country": "tr", "status": "Claimed" }
+        ] },
+        { "id": "book-4", "name": "Book 4: Eden", "places": [
+          { "id": "eden", "name": "Eden", "modern": "Placed by Milton between Auran and Seleucia on the Tigris; not literal geography", "status": "Symbolic" }
+        ] }
+      ]
+    },
+    {
+      "id": "faust", "title": "Faust", "tradition": "Western European", "types": ["Philosophical and spiritual"],
+      "approx_date_of_composition": "Part One 1808; Part Two 1832 (Goethe)", "language": "German", "structure": "Two parts in scenes",
+      "geography_status": { "dominant": "Verified", "note": "A study and a soul, staged in real German places and a dream of ancient Greece." },
+      "best_editions_and_translations": ["Walter Arndt, ed. Cyrus Hamlin (Norton)", "David Luke (Oxford World's Classics)", "Stuart Atkins (Princeton University Press)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "auerbachs-cellar", "name": "Part One: Auerbach's Cellar", "places": [
+          { "id": "auerbachs-keller", "name": "Auerbach's Cellar", "modern": "Auerbachs Keller, Leipzig, Germany", "country": "de", "status": "Verified" }
+        ] },
+        { "id": "walpurgis-night", "name": "Part One: Walpurgis Night", "places": [
+          { "id": "brocken", "name": "The Brocken", "modern": "Brocken, Harz, Saxony-Anhalt, Germany", "country": "de", "status": "Verified" }
+        ] },
+        { "id": "helena", "name": "Part Two, Act 3: Helena", "places": [
+          { "id": "sparta", "name": "Menelaus's palace at Sparta", "modern": "Sparti, Laconia, Greece", "country": "gr", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "lusiads", "title": "Lusiads", "tradition": "Western European", "types": ["Voyage and return", "Heroic and war"],
+      "approx_date_of_composition": "1572 (Luis de Camoes)", "language": "Portuguese", "structure": "10 cantos",
+      "geography_status": { "dominant": "Verified", "note": "Vasco da Gama's real route of 1497 to 1498, with gods and an Isle of Love added." },
+      "best_editions_and_translations": ["Landeg White (Oxford World's Classics, 1997)", "William C. Atkinson (Penguin, 1952)", "Richard Fanshawe (1655)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "canto-1", "name": "Canto 1: Mozambique", "places": [
+          { "id": "mozambique-island", "name": "Mozambique Island", "modern": "Ilha de Mocambique, Nampula, Mozambique", "country": "mz", "status": "Verified" }
+        ] },
+        { "id": "canto-4", "name": "Canto 4: Departure", "places": [
+          { "id": "belem", "name": "Belem, Lisbon", "modern": "Belem, Lisbon, Portugal", "country": "pt", "status": "Verified" }
+        ] },
+        { "id": "canto-5", "name": "Canto 5: Adamastor", "places": [
+          { "id": "cape-of-good-hope", "name": "The Cape of Storms", "modern": "Cape of Good Hope, Western Cape, South Africa", "country": "za", "status": "Verified" }
+        ] },
+        { "id": "canto-7", "name": "Canto 7: Calicut", "places": [
+          { "id": "calicut", "name": "Calicut", "modern": "Kozhikode, Kerala, India", "country": "in", "status": "Verified" }
+        ] },
+        { "id": "canto-9", "name": "Canto 9: The Isle of Love", "places": [
+          { "id": "isle-of-love", "name": "The Isle of Love", "modern": "Not literal geography", "status": "Symbolic" }
+        ] }
+      ]
+    },
+    {
+      "id": "song-of-roland", "title": "Song of Roland", "tradition": "Western European", "types": ["Heroic and war"],
+      "approx_date_of_composition": "c. 1100 (Oxford manuscript, Digby 23)", "language": "Old French", "structure": "291 laisses, about 4,000 lines",
+      "geography_status": { "dominant": "Verified", "note": "A real ambush of 778 in the Pyrenees, retold three centuries later as a crusade." },
+      "best_editions_and_translations": ["Glyn Burgess (Penguin, 1990)", "Dorothy L. Sayers (Penguin, 1957)", "Gerard J. Brault (1978)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "saragossa", "name": "Marsile's council", "places": [
+          { "id": "saragossa", "name": "Saragossa", "modern": "Zaragoza, Aragon, Spain", "country": "es", "status": "Verified" }
+        ] },
+        { "id": "rencesvals", "name": "The battle at Rencesvals", "places": [
+          { "id": "roncevaux", "name": "Rencesvals", "modern": "Roncesvalles pass, Navarre, Spain", "country": "es", "status": "Verified" }
+        ] },
+        { "id": "aix", "name": "The trial at Aix", "places": [
+          { "id": "aix", "name": "Aix", "modern": "Aachen, North Rhine-Westphalia, Germany", "country": "de", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "nibelungenlied", "title": "Nibelungenlied", "tradition": "Norse and Germanic", "types": ["Heroic and war"],
+      "approx_date_of_composition": "c. 1200", "language": "Middle High German", "structure": "39 aventiuren, about 2,400 stanzas",
+      "geography_status": { "dominant": "Claimed", "note": "Real Rhine and Danube towns, with the Burgundian court at Worms and Etzel's court still argued over." },
+      "best_editions_and_translations": ["A. T. Hatto (Penguin, 1965)", "Burton Raffel (Yale University Press, 2006)", "Cyril Edwards (Oxford World's Classics, 2010)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "worms", "name": "The Burgundian court", "places": [
+          { "id": "worms", "name": "Worms", "modern": "Worms, Rhineland-Palatinate, Germany", "country": "de", "status": "Verified" }
+        ] },
+        { "id": "siegfried", "name": "Siegfried's home", "places": [
+          { "id": "xanten", "name": "Xanten", "modern": "Xanten, North Rhine-Westphalia, Germany", "country": "de", "status": "Claimed" }
+        ] },
+        { "id": "journey-east", "name": "The journey to the Huns", "places": [
+          { "id": "bechelaren", "name": "Bechelaren", "modern": "Pochlarn, Lower Austria", "country": "at", "status": "Claimed" },
+          { "id": "etzelburg", "name": "Etzel's court", "modern": "Esztergom or Buda, Hungary (debated)", "country": "hu", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "beowulf", "title": "Beowulf", "tradition": "Norse and Germanic", "types": ["Heroic and war"],
+      "approx_date_of_composition": "c. 700 to 1000 CE (manuscript c. 1000, Cotton Vitellius A.xv)", "language": "Old English", "structure": "3,182 lines",
+      "geography_status": { "dominant": "Claimed", "note": "A poem written in England about Scandinavia: Heorot's site has a strong archaeological claim at Lejre." },
+      "best_editions_and_translations": ["Klaeber's Beowulf, 4th edition, ed. Fulk, Bjork and Niles (2008)", "Seamus Heaney (1999)", "Maria Dahvana Headley (2020)"],
+      "key_scholarly_sources": ["John D. Niles, Beowulf and Lejre (2007)"],
+      "episodes": [
+        { "id": "heorot", "name": "Grendel at Heorot", "places": [
+          { "id": "heorot", "name": "Heorot", "modern": "Lejre, Zealand, Denmark", "country": "dk", "status": "Claimed" }
+        ] },
+        { "id": "the-mere", "name": "Grendel's mother", "places": [
+          { "id": "the-mere", "name": "The mere", "modern": "Not literal geography", "status": "Symbolic" }
+        ] },
+        { "id": "the-dragon", "name": "The dragon", "places": [
+          { "id": "geatland", "name": "The land of the Geats", "modern": "Vastergotland, southern Sweden", "country": "se", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "manas", "title": "Epic of Manas", "tradition": "Slavic and Steppe", "types": ["Heroic and war"],
+      "approx_date_of_composition": "Oral tradition; recorded from the 1850s (Valikhanov, Radloff); Sagymbai Orozbakov's version in the 1920s", "language": "Kyrgyz", "structure": "Oral trilogy: Manas, Semetey, Seitek",
+      "geography_status": { "dominant": "Claimed", "note": "A national epic mapped onto Kyrgyz landscapes; its best known site is a 14th century mausoleum for someone else." },
+      "best_editions_and_translations": ["A. T. Hatto, The Manas of Wilhelm Radloff (1990)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "youth", "name": "Manas's birth and youth", "places": [
+          { "id": "altai", "name": "The Altai", "modern": "Altai mountains", "status": "Claimed" }
+        ] },
+        { "id": "talas", "name": "Manas at Talas", "places": [
+          { "id": "manas-ordo", "name": "Manas's tomb", "modern": "Manas Ordo, Talas region, Kyrgyzstan", "country": "kg", "status": "Claimed" }
+        ] },
+        { "id": "great-campaign", "name": "The Great Campaign", "places": [
+          { "id": "beejin", "name": "Beejin", "modern": "Often read as Beijing; the identification is debated", "country": "cn", "status": "Claimed" }
+        ] }
+      ]
+    },
+    {
+      "id": "igor", "title": "The Tale of Igor's Campaign", "tradition": "Slavic and Steppe", "types": ["Heroic and war"],
+      "approx_date_of_composition": "Late 12th century (the campaign was in 1185); the only manuscript burned in 1812, and authenticity has been debated", "language": "Old East Slavic", "structure": "One short poem",
+      "geography_status": { "dominant": "Verified", "note": "Real Rus' towns, and one battle river nobody has located." },
+      "best_editions_and_translations": ["Vladimir Nabokov, The Song of Igor's Campaign (1960)", "Serge Zenkovsky, Medieval Russia's Epics, Chronicles and Tales"],
+      "key_scholarly_sources": ["Edward L. Keenan, Josef Dobrovsky and the Origins of the Igor' Tale (Harvard, 2003)"],
+      "episodes": [
+        { "id": "setting-out", "name": "Igor sets out", "places": [
+          { "id": "novgorod-seversky", "name": "Novgorod-Seversky", "modern": "Novhorod-Siverskyi, Chernihiv, Ukraine", "country": "ua", "status": "Verified" }
+        ] },
+        { "id": "battle", "name": "The battle on the Kayala", "places": [
+          { "id": "kayala", "name": "The Kayala river", "modern": "Unlocated", "status": "Lost" }
+        ] },
+        { "id": "lament", "name": "Yaroslavna's lament", "places": [
+          { "id": "putivl", "name": "Putivl", "modern": "Putyvl, Sumy, Ukraine", "country": "ua", "status": "Verified" }
+        ] }
+      ]
+    },
+    {
+      "id": "gesar", "title": "Epic of King Gesar", "tradition": "Tibetan and Mongolian", "types": ["Heroic and war"],
+      "approx_date_of_composition": "Oral tradition; a Mongolian woodblock print in 1716; Tibetan bards still perform it", "language": "Tibetan (Mongolian versions)", "structure": "Oral; dozens of episodes (dru), varying by bard",
+      "geography_status": { "dominant": "Claimed", "note": "Ling is placed in Kham, and towns across the Tibetan plateau and Mongolia claim its episodes." },
+      "best_editions_and_translations": ["Robin Kornman, Sangye Khandro and Lama Chonam, The Epic of Gesar of Ling (2012)", "Alexandra David-Neel and Lama Yongden, The Superhuman Life of Gesar of Ling (1933)"],
+      "key_scholarly_sources": [],
+      "episodes": [
+        { "id": "birth", "name": "The birth of Gesar", "places": [
+          { "id": "ling", "name": "Ling", "modern": "Kham, around Dege, Garze, Sichuan, China (claimed)", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "hor", "name": "The war with Hor", "places": [
+          { "id": "hor", "name": "Hor", "modern": "Northern Tibet (identification debated)", "country": "cn", "status": "Claimed" }
+        ] },
+        { "id": "jang", "name": "The war with Jang", "places": [
+          { "id": "jang", "name": "Jang (Sadam's kingdom)", "modern": "Lijiang, Yunnan, China (claimed)", "country": "cn", "status": "Claimed" }
+        ] }
+      ]
+    }
+  ]
+}

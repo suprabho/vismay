@@ -1,0 +1,141 @@
+{
+  "_note": "Sample lists. The playbook says to keep the existing Desk industries, sub-industries and lenses; they were not in the repo (decision D5), so these stand in until they are pasted here. heat is a seed: the live value comes from desk_heat once a refresh writes it.",
+  "industries": [
+    { "id": "semis", "name": "Semiconductors" },
+    { "id": "aiinfra", "name": "AI infrastructure" },
+    { "id": "energy", "name": "Energy" },
+    { "id": "capmkts", "name": "Capital markets" },
+    { "id": "shipping", "name": "Shipping" },
+    { "id": "defense", "name": "Defense" },
+    { "id": "pharma", "name": "Pharma" }
+  ],
+  "sub_industries": [
+    {
+      "id": "hbm-memory", "industry": "semis", "name": "HBM memory", "heat": 88, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["HBM revenue by vendor", "DRAM contract price", "HBM share of DRAM bit output", "Memory capex"],
+      "primary_sources": ["SK hynix, Samsung and Micron filings", "TrendForce", "WSTS"]
+    },
+    {
+      "id": "advanced-packaging", "industry": "semis", "name": "Advanced packaging", "heat": 74, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["CoWoS capacity (wafers per month)", "Packaging capex", "OSAT revenue", "Lead times"],
+      "primary_sources": ["TSMC quarterly reports", "ASE and Amkor filings", "SEMI"]
+    },
+    {
+      "id": "lithography-equipment", "industry": "semis", "name": "Lithography equipment", "heat": 61, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["EUV and DUV system shipments", "Order backlog", "Revenue by customer country", "Export licence rules"],
+      "primary_sources": ["ASML annual and quarterly reports", "US BIS rules", "Dutch government export notices"]
+    },
+    {
+      "id": "mature-node-foundry", "industry": "semis", "name": "Mature-node foundry", "heat": 38, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Capacity by country", "Utilisation rate", "Wafer price", "Subsidy commitments"],
+      "primary_sources": ["SMIC, UMC and GlobalFoundries filings", "SEMI World Fab Forecast", "Government subsidy announcements"]
+    },
+    {
+      "id": "data-center-power", "industry": "aiinfra", "name": "Data center power", "heat": 92, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Contracted MW", "Interconnection queue (GW)", "Wholesale power price", "Data center share of electricity demand"],
+      "primary_sources": ["IEA", "Grid operator queue reports (PJM, ERCOT)", "Utility rate filings"]
+    },
+    {
+      "id": "gpu-cloud", "industry": "aiinfra", "name": "GPU cloud", "heat": 79, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Hyperscaler capex", "GPU rental price per hour", "Contracted backlog", "Debt raised by neoclouds"],
+      "primary_sources": ["Hyperscaler 10-Q filings", "CoreWeave and peers' filings", "SEC EDGAR"]
+    },
+    {
+      "id": "liquid-cooling", "industry": "aiinfra", "name": "Liquid cooling", "heat": 45, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Rack power density (kW)", "Cooling vendor revenue", "Water use per MW", "Share of new builds with liquid cooling"],
+      "primary_sources": ["Vertiv and Schneider filings", "Uptime Institute surveys", "Local water permits"]
+    },
+    {
+      "id": "subsea-cables", "industry": "aiinfra", "name": "Subsea cables", "heat": 52, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Cables in service and planned", "Capacity (Tbps) by route", "Owners by company", "Faults and repair times"],
+      "primary_sources": ["TeleGeography", "ITU", "National cable landing licences"]
+    },
+    {
+      "id": "grid-batteries", "industry": "energy", "name": "Grid batteries", "heat": 66, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Installed storage (GWh)", "Battery pack price", "Cell supply by country", "Capacity market prices"],
+      "primary_sources": ["EIA", "BloombergNEF price survey", "National grid operators"]
+    },
+    {
+      "id": "uranium-and-smrs", "industry": "energy", "name": "Uranium and SMRs", "heat": 58, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Uranium spot and term price", "Enrichment capacity by country", "SMR licensing milestones", "Reactor construction starts"],
+      "primary_sources": ["IAEA PRIS", "US NRC", "Cameco and Kazatomprom filings"]
+    },
+    {
+      "id": "lng-shipping", "industry": "energy", "name": "LNG shipping", "heat": 49, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["LNG carrier day rates", "Export volumes by country", "Fleet orderbook", "Regasification capacity"],
+      "primary_sources": ["GIIGNL annual report", "EIA", "Shipbroker reports"]
+    },
+    {
+      "id": "rooftop-solar", "industry": "energy", "name": "Rooftop solar", "heat": 34, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Installed rooftop capacity", "Module price", "Net metering tariffs", "Installer bankruptcies"],
+      "primary_sources": ["IEA PVPS", "National energy regulators", "MNRE (India), SEIA (US)"]
+    },
+    {
+      "id": "prediction-markets", "industry": "capmkts", "name": "Prediction markets", "heat": 71, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Monthly traded volume", "Open interest", "Share by venue", "Regulatory actions"],
+      "primary_sources": ["CFTC filings and orders", "Venue disclosures", "Court records"]
+    },
+    {
+      "id": "private-credit", "industry": "capmkts", "name": "Private credit", "heat": 63, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["AUM", "Default and non-accrual rates", "Bank lending to funds", "Payment-in-kind share"],
+      "primary_sources": ["BDC 10-K filings", "Federal Reserve Financial Stability Report", "IMF Global Financial Stability Report"]
+    },
+    {
+      "id": "ipo-pipeline", "industry": "capmkts", "name": "IPO pipeline", "heat": 40, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["IPOs and proceeds by exchange", "First-day returns", "Draft filings on file", "Lock-up expiries"],
+      "primary_sources": ["SEC EDGAR S-1 filings", "SEBI DRHP filings", "Exchange data"]
+    },
+    {
+      "id": "container-rates", "industry": "shipping", "name": "Container rates", "heat": 55, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Spot rate index by lane", "Schedule reliability", "Idle fleet", "Carrier earnings"],
+      "primary_sources": ["Shanghai Containerized Freight Index", "Drewry World Container Index", "Carrier filings"]
+    },
+    {
+      "id": "red-sea-routing", "industry": "shipping", "name": "Red Sea routing", "heat": 60, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Suez Canal transits", "Cape of Good Hope diversions", "Canal revenue", "War risk insurance premiums"],
+      "primary_sources": ["Suez Canal Authority", "IMF PortWatch", "UNCTAD"]
+    },
+    {
+      "id": "shipbuilding", "industry": "shipping", "name": "Shipbuilding", "heat": 42, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Orderbook by country", "Newbuild prices", "Deliveries", "Yard capacity"],
+      "primary_sources": ["Clarksons Research", "OECD shipbuilding data", "National industry ministries"]
+    },
+    {
+      "id": "drones", "industry": "defense", "name": "Drones", "heat": 77, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Procurement orders", "Unit cost", "Production capacity claims", "Export approvals"],
+      "primary_sources": ["Defence ministry budgets", "Contract award notices", "SIPRI Arms Transfers Database"]
+    },
+    {
+      "id": "munitions-supply-chain", "industry": "defense", "name": "Munitions supply chain", "heat": 64, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["155mm shell output per month", "Explosives (TNT, nitrocellulose) capacity", "Procurement spend", "Delivery backlog"],
+      "primary_sources": ["US Army and DoD budget documents", "EU ASAP programme reports", "Manufacturer filings"]
+    },
+    {
+      "id": "glp-1-drugs", "industry": "pharma", "name": "GLP-1 drugs", "heat": 81, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Prescriptions", "Net price", "Revenue by drug", "Manufacturing capacity investment"],
+      "primary_sources": ["Novo Nordisk and Eli Lilly filings", "FDA drug shortage list", "CMS data"]
+    },
+    {
+      "id": "api-supply-chain", "industry": "pharma", "name": "API supply chain", "heat": 47, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["API imports by source country", "Drug master files by country", "Shortages", "Plant inspection outcomes"],
+      "primary_sources": ["FDA", "CDSCO", "Indian commerce ministry trade data"]
+    },
+    {
+      "id": "biosimilars", "industry": "pharma", "name": "Biosimilars", "heat": 29, "heat_updated": null, "top_headlines": [],
+      "key_metrics": ["Approvals", "Price versus reference biologic", "Market share after launch", "Patent litigation"],
+      "primary_sources": ["FDA Purple Book", "EMA", "Company filings"]
+    }
+  ],
+  "lenses": [
+    { "name": "Concealment", "description": "What is not being disclosed, who benefits from the opacity, and what the filings leave out." },
+    { "name": "Market", "description": "Price, volume and share: who is winning, who is losing, and what the market is pricing in." },
+    { "name": "Choke point", "description": "Where one supplier, route, licence or rule can stop the whole system." },
+    { "name": "Who pays", "description": "Where the cost finally lands: consumers, taxpayers, workers, a region or a balance sheet." },
+    { "name": "Regulatory", "description": "The rule, regulator or court that changes the economics, and who lobbied for it." }
+  ],
+  "freshness": [
+    { "name": "Breaking", "days": 7, "window": "last 7 days" },
+    { "name": "Developing", "days": 90, "window": "last 90 days" },
+    { "name": "Evergreen", "days": null, "window": "no news window" }
+  ]
+}

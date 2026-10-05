@@ -13,6 +13,11 @@
  * tables know — Opta facts and the full stat set, the timeline, insights,
  * commentary, the build-up, both sides' form and schedule, the table and the
  * competition's next fixtures. That variant needs the publish token.
+ *
+ * A vizmaya brief can carry a randomizer spin instead (`spinId`, from
+ * `spin_randomizer` in ./randomizer): the assignment, research protocol,
+ * output format and research file for that spin. Publishing with the same
+ * `spinId` ties the page to the spin.
  */
 
 import { readFile } from 'node:fs/promises'
@@ -38,7 +43,8 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'style for a palette and fonts drawn at random from the site\'s existing stories. For ' +
         'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
         'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
-        'written from, plus an optional editorial prompt.',
+        'written from, plus an optional editorial prompt. For a vizmaya randomizer spin, pass spinId ' +
+        '(from spin_randomizer) to get its assignment, research protocol, output format and research file.',
       inputSchema: {
         app: appSchema,
         randomStyle: z
@@ -54,18 +60,25 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .string()
           .optional()
           .describe('footshorts only, with fixtureIds: the editorial angle, surfaced at the top of the match context.'),
+        spinId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe('vizmaya only: a randomizer spin id; the brief carries that spin\'s assignment and research.'),
       },
     },
-    async ({ app, randomStyle, fixtureIds, prompt }) => {
+    async ({ app, randomStyle, fixtureIds, prompt, spinId }) => {
       const site = htmlStoriesUrlFor(config, app)
       const houseBrief = () => htmlStoryBrief({ app, siteUrl: site })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
-      if (!randomStyle && ids.length === 0) return { content: [{ type: 'text', text: houseBrief() }] }
+      if (spinId && app !== 'vizmaya-fyi') throw new Error('Randomizer spins are vizmaya stories: use app "vizmaya-fyi".')
+      if (!randomStyle && ids.length === 0 && !spinId) return { content: [{ type: 'text', text: houseBrief() }] }
 
       // Styles come from the site's stories and the match context from its
       // tables, so ask the deployed site for the brief rather than reading here.
       const url = new URL(`${site}/api/html-stories/brief`)
       if (randomStyle) url.searchParams.set('style', 'random')
+      if (spinId) url.searchParams.set('spin', spinId)
       if (ids.length) {
         url.searchParams.set('fixtures', ids.join(','))
         if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
@@ -84,6 +97,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       } catch (e) {
         const reason = e instanceof Error ? e.message : String(e)
         if (ids.length) throw new Error(`Could not build the match context: ${reason}`)
+        if (spinId) throw new Error(`Could not build the brief for spin ${spinId}: ${reason}`)
         return {
           content: [
             { type: 'text', text: `(Random style unavailable: ${reason}. Using the house style.)\n\n${houseBrief()}` },
@@ -103,7 +117,8 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         '`filePath`. Without publish=true it saves as a draft (re-posting an already published ' +
         'slug keeps it live). Posting to an existing slug replaces it; earlier versions stay ' +
         'restorable in admin. Returns the URL and lint warnings: fix them and post again to the ' +
-        'same slug.',
+        'same slug. Pass spinId when the page answers a randomizer spin, so the spin log records ' +
+        'what shipped (an Atlas or Epics spin whose hero insight is not approved yet saves as a draft).',
       inputSchema: {
         app: appSchema,
         slug: z
@@ -124,9 +139,10 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
             'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its listing card ' +
               'background. Only when the user names one; omitted, a re-post keeps the current aura.',
           ),
+        spinId: z.string().uuid().optional().describe('vizmaya only: the randomizer spin this page answers.'),
       },
     },
-    async ({ app, slug, html, filePath, publish, title, description, aura }) => {
+    async ({ app, slug, html, filePath, publish, title, description, aura, spinId }) => {
       const { token } = requireHtmlStoriesEnv(app)
       if (!html && !filePath) throw new Error('Pass either html or filePath.')
       const doc = html ?? (await readFile(filePath!, 'utf8'))
@@ -141,6 +157,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           title,
           description,
           aura,
+          spinId,
           source: 'mcp',
         }),
       })

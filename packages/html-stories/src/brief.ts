@@ -10,11 +10,30 @@
  * timeline, insights, commentary, schedules and tables for the matches the
  * story is about — built server-side, see ./footshortsBrief).
  *
+ * A vizmaya brief can also carry a randomizer spin (@vismay/randomizer): the
+ * topic the Desk, Atlas or Epics randomizer drew, with its research protocol,
+ * deliverables, output format, reel script rules and quality checklist. The
+ * spin's sections live in the randomizer package; this file only decides
+ * where they go. Without a spin the brief is unchanged.
+ *
  * Keep it about outcomes and constraints, not a component catalogue: the whole
  * point of this pipeline is that the agent designs the page itself.
  */
 
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import {
+  assignmentSection,
+  chartRules,
+  checklistSection,
+  contentSection as spinContentSection,
+  deliverablesSection,
+  formatSection,
+  postingLines,
+  reelScriptSection,
+  researchAppendix,
+  researchProtocolSection,
+  type BriefSpin,
+} from '@vismay/randomizer/spinBrief'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
@@ -35,6 +54,12 @@ export interface BriefOptions {
    * buildMatchContext). Markdown; its headings are demoted under the brief's.
    */
   context?: string | null
+  /**
+   * A logged randomizer spin (vizmaya only): the brief gains the assignment,
+   * research protocol, deliverables, output format, reel script and checklist
+   * sections, and ends with the spin's research file (or its stub).
+   */
+  spin?: BriefSpin | null
 }
 
 /** The vizmaya house palette: the story reader's defaults. */
@@ -185,11 +210,22 @@ function demoteHeadings(markdown: string): string {
   return markdown.replace(/^(#{1,5}) /gm, (_m, hashes: string) => `${hashes}# `)
 }
 
-export function htmlStoryBrief({ siteUrl, app = DEFAULT_HTML_STORY_APP, style, context }: BriefOptions): string {
+export function htmlStoryBrief({ siteUrl, app = DEFAULT_HTML_STORY_APP, style, context, spin }: BriefOptions): string {
   const site = siteUrl.replace(/\/$/, '')
   const meta = HTML_STORY_APP_META[app]
   const siteName = site.replace(/^https?:\/\//, '')
   const hasContext = !!context?.trim()
+  const assignment = spin
+    ? `
+${assignmentSection(spin)}
+
+${researchProtocolSection(spin)}
+
+${deliverablesSection(spin, site)}
+
+${formatSection(spin)}
+`
+    : ''
   const chrome =
     app === 'footshorts'
       ? `The only thing added is a slim Footshorts header (the mark and the app's
@@ -205,7 +241,7 @@ self-contained HTML file. It is hosted exactly as you write it at
 ${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
 charts, and the words.
-
+${assignment}
 ## The hosting contract (must)
 
 1. One complete document: \`<!doctype html>\`, \`<html lang="en">\`, \`<head>\`, \`<body>\`.
@@ -279,10 +315,10 @@ How to build it:
 - Bars start at zero. Show units. Use tabular numerals. Round sensibly.
 - Put a source line under every chart, linked to the original.
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
-  drop to fewer ticks. Test this.
+  drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 
-${contentSection(app, hasContext)}
-
+${spin ? spinContentSection(meta.desk) : contentSection(app, hasContext)}
+${spin ? `\n${reelScriptSection()}\n` : ''}
 ## Before you post: check your own work
 
 If you can run a browser, render the page at 375×812 and 1440×900 and look at
@@ -293,7 +329,7 @@ the screenshots. Then fix:
 - low-contrast text
 
 If you can't render it, re-read your chart code for these specific failures.
-
+${spin ? `\n${checklistSection(spin)}\n` : ''}
 ## Posting
 
 Pick the first one you can do:
@@ -309,7 +345,7 @@ Slugs are lowercase words joined by hyphens, e.g. \`${
     app === 'footshorts' ? 'arsenal-chelsea-xg-gap-2026' : 'india-solar-boom-2026'
   }\`.
 Posting to an existing slug replaces it; older versions stay restorable.
-${
+${spin ? `\n${postingLines(spin)}\n` : ''}${
   hasContext
     ? `
 ---
@@ -320,6 +356,14 @@ Everything below comes from the ${meta.name} match tables. It is the story's
 evidence; the rules above say how to use it.
 
 ${demoteHeadings(context!.trim())}
+`
+    : ''
+}${
+  spin
+    ? `
+---
+
+${researchAppendix(spin)}
 `
     : ''
 }`

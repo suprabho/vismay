@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     '@vismay/story-embed',
     '@vismay/ui',
     '@vismay/html-stories',
+    '@vismay/randomizer',
     '@vismay/content-source',
   ],
 };

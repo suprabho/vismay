@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
     '@vismay/content-source',
     '@vismay/dc-editions',
     '@vismay/html-stories',
+    '@vismay/randomizer',
     '@vismay/story-pipeline',
     '@vismay/viz-engine',
     '@vismay/footshorts-viz',

@@ -83,6 +83,9 @@ importers:
       '@vismay/kidzovo-viz':
         specifier: workspace:*
         version: link:../../verticals/kidzovo-viz
+      '@vismay/randomizer':
+        specifier: workspace:*
+        version: link:../../packages/randomizer
       '@vismay/starship-viz':
         specifier: workspace:*
         version: link:../../verticals/starship-viz
@@ -173,7 +176,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -240,7 +243,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -1417,6 +1420,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../content-source
+      '@vismay/randomizer':
+        specifier: workspace:*
+        version: link:../randomizer
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../viz-engine
@@ -1439,6 +1445,9 @@ importers:
       '@vismay/html-stories':
         specifier: workspace:*
         version: link:../html-stories
+      '@vismay/randomizer':
+        specifier: workspace:*
+        version: link:../randomizer
       playwright:
         specifier: ^1.59.1
         version: 1.60.0
@@ -1452,6 +1461,19 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/randomizer:
+    dependencies:
+      '@vismay/content-source':
+        specifier: workspace:*
+        version: link:../content-source
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
       typescript:
         specifier: ^5
         version: 5.9.3
