@@ -9,7 +9,9 @@ import { AlertIcon, SpinnerIcon } from './icons'
 import VizMount from '@/components/VizMount'
 import { createFixtureDataSource } from '@/lib/replay/dataSource'
 import { useReplayData } from '@/lib/replay/useReplayData'
-import { computeLiveStandings, findFrameIndex, timeAtLapStart } from '@/lib/replay/trackProjection'
+import { useLapChannels } from '@/lib/replay/useLapChannels'
+import { findFrameIndex, timeAtLapStart } from '@/lib/replay/trackProjection'
+import { computeLiveStandingsByDistance } from '@/lib/replay/liveTelemetry'
 import type { ProcessedLap } from '@/lib/replay/types'
 
 interface RaceReplayProps {
@@ -32,6 +34,10 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
     return createFixtureDataSource({ fallbackRef: 'demo' })
   }, [])
   const race = useReplayData(source, sessionRef)
+  // Real per-sample channels only exist for ingested sessions; the route needs
+  // the resolved session_key (sessionRef may be a round number).
+  const channelSessionKey =
+    process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase' ? race.session?.sessionKey ?? null : null
 
   // ── Playback state ──────────────────────────────────────────────────────────
   const [playing, setPlaying] = useState(false)
@@ -47,6 +53,9 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
   const [focusedDriver, setFocusedDriver] = useState<number | null>(null)
   // Viewport renderer: the SVG 2D map (default) or the orbit-able 3D track.
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d')
+  // The 3D viz runs its own playback; it reports its playhead here so the
+  // focused card and live standings follow what's on screen.
+  const [threeDTimeMs, setThreeDTimeMs] = useState<number | null>(null)
   const [sortMode, setSortMode] = useState<StandingsSortMode>('live')
   const [sortModeUserSet, setSortModeUserSet] = useState(false)
 
@@ -121,14 +130,16 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, speed, race.bounds, race.tracks, lapTo])
 
+  const playheadMs = viewMode === '3d' && threeDTimeMs != null ? threeDTimeMs : currentTimeMs
+
   // ── Derived: current lap from an anchor driver ──────────────────────────────
   const currentLap = useMemo(() => {
     if (race.tracks.size === 0) return 0
     const anchor = race.tracks.values().next().value
     if (!anchor) return 0
-    const idx = findFrameIndex(anchor.frames.t, currentTimeMs)
+    const idx = findFrameIndex(anchor.frames.t, playheadMs)
     return idx >= 0 ? anchor.frames.lap[idx] : 0
-  }, [currentTimeMs, race.tracks])
+  }, [playheadMs, race.tracks])
 
   const focusedDriverObj = useMemo(
     () => race.session?.drivers.find((d) => d.driverNumber === focusedDriver) ?? null,
@@ -152,15 +163,18 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
       // trackside, heli or free orbit. Focusing a driver locks the camera on them.
       cameraMode: 'auto' as const,
       autoPlay: true,
+      onPlayhead: setThreeDTimeMs,
     }),
     [sessionRef, focusedDriver],
   )
 
-  // Live race position per driver, recomputed at the 100 ms cadence of currentTimeMs.
+  // Live race position per driver, recomputed at the 100 ms cadence of the playhead.
   const liveStandings = useMemo(
-    () => computeLiveStandings(race.tracks, currentTimeMs, race.circuit),
-    [race.tracks, currentTimeMs, race.circuit],
+    () => computeLiveStandingsByDistance(race.tracks, playheadMs, race.circuit),
+    [race.tracks, playheadMs, race.circuit],
   )
+
+  const sampleChannels = useLapChannels(channelSessionKey, focusedDriver, currentLap)
 
   // Auto-switch to live ordering on first play; respect manual override afterwards.
   useEffect(() => {
@@ -272,8 +286,15 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
                   key={m}
                   type="button"
                   onClick={() => {
+                    if (m === viewMode) return
                     setViewMode(m)
-                    if (m === '3d') setPlaying(false)
+                    if (m === '3d') {
+                      setPlaying(false)
+                      setThreeDTimeMs(null)
+                    } else if (threeDTimeMs != null) {
+                      // Pick the 2D replay up where the 3D view left off.
+                      handleSeek(threeDTimeMs)
+                    }
                   }}
                   aria-pressed={viewMode === m}
                   className={
@@ -309,9 +330,16 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
           {focusedDriverObj && (
             <FocusedDriverCard
               driver={focusedDriverObj}
+              drivers={race.session?.drivers ?? []}
               currentLap={currentLap}
               aggregates={race.aggregates}
-              livePosition={liveStandings.get(focusedDriverObj.driverNumber) ?? null}
+              tracks={race.tracks}
+              circuit={race.circuit}
+              timeMs={playheadMs}
+              standings={liveStandings}
+              sampleChannels={sampleChannels}
+              // In 3D, sit above the viz's own play/scrub bar.
+              className={viewMode === '3d' ? 'bottom-16 right-4' : 'bottom-4 right-4'}
               onClose={() => setFocusedDriver(null)}
             />
           )}
