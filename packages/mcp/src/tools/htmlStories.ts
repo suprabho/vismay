@@ -21,12 +21,33 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       description:
         'Read this before writing a vizmaya HTML story. It covers the hosting contract ' +
         '(one self-contained HTML file), the house design direction, chart rules, a ' +
-        'self-check list, and how to publish.',
-      inputSchema: {},
+        'self-check list, and how to publish. Pass randomStyle=true to swap the house style ' +
+        'for a palette and fonts drawn at random from the existing stories.',
+      inputSchema: {
+        randomStyle: z
+          .boolean()
+          .default(false)
+          .describe('Use a random palette + font trio from an existing story instead of the house style.'),
+      },
     },
-    async () => ({
-      content: [{ type: 'text', text: htmlStoryBrief({ siteUrl: config.htmlStoriesUrl }) }],
-    }),
+    async ({ randomStyle }) => {
+      const houseBrief = () => htmlStoryBrief({ siteUrl: config.htmlStoriesUrl })
+      if (!randomStyle) return { content: [{ type: 'text', text: houseBrief() }] }
+      // The story themes live with the site's content, so ask the site for the
+      // randomized brief rather than reading stories here.
+      try {
+        const res = await fetch(`${config.htmlStoriesUrl}/api/html-stories/brief?style=random`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return { content: [{ type: 'text', text: await res.text() }] }
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : String(e)
+        return {
+          content: [
+            { type: 'text', text: `(Random style unavailable: ${reason}. Using the house style.)\n\n${houseBrief()}` },
+          ],
+        }
+      }
+    },
   )
 
   server.registerTool(

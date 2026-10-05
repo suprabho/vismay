@@ -7,14 +7,52 @@
  * point of this pipeline is that the agent designs the page itself.
  */
 
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { MAX_HTML_BYTES } from './meta'
+import { isLightPalette, type StoryStyle } from './styles'
 
 export interface BriefOptions {
   /** e.g. https://vizmaya.fyi */
   siteUrl: string
+  /**
+   * A palette + font trio drawn from an existing story (see ./styles). Replaces
+   * the house style in the brief. Omit for the house style.
+   */
+  style?: StoryStyle | null
 }
 
-export function htmlStoryBrief({ siteUrl }: BriefOptions): string {
+const HOUSE_STYLE = `House style (use it unless the story clearly wants its own look):
+- Background \`#0a0e14\`, surface \`#111820\`, text \`#e0ddd5\`, muted \`#5a6a70\`, hairlines \`#1a2830\`.
+- Accent \`#D85A30\` (the one colour that means "look here"), secondary \`#534AB7\`, teal \`#1D9E75\`.
+- Type: Fraunces for headlines and big numbers, Inter for body, JetBrains Mono for
+  labels, axes and data (all on Google Fonts). Body 18–20px, line-height 1.6,
+  measure 60–70 characters.`
+
+function styleSection(style: StoryStyle | null | undefined): string {
+  if (!style) return HOUSE_STYLE
+  const { palette: c, fonts } = style
+  const from =
+    style.paletteFrom.slug === style.fontsFrom.slug
+      ? `the "${style.paletteFrom.title}" story`
+      : `existing stories (colours from "${style.paletteFrom.title}", type from "${style.fontsFrom.title}")`
+  const status = [
+    c.positive && `positive \`${c.positive}\``,
+    c.amber && `warning \`${c.amber}\``,
+    c.red && `negative \`${c.red}\``,
+  ].filter(Boolean)
+  const fontsUrl = getFontImportUrl(fonts)
+  return `Style for this story. It was picked at random from ${from}
+so this page gets its own look. Use it instead of the house style:
+- ${isLightPalette(c) ? 'A light page' : 'A dark page'}. Background \`${c.background}\`, surface \`${c.surface}\`, text \`${c.text}\`, muted \`${c.muted}\`${c.line ? `, hairlines \`${c.line}\`` : ''}.
+- Accent \`${c.accent}\` (the one colour that means "look here"), secondary \`${c.accent2}\`, tertiary \`${c.teal}\`.${status.length ? `\n- Status colours: ${status.join(', ')}.` : ''}
+- Type: ${fonts.serif} for headlines and big numbers, ${fonts.sans} for body, ${fonts.mono} for
+  labels, axes and data${fontsUrl ? ` (Google Fonts: \`${fontsUrl}\`)` : ''}. Body 18–20px, line-height 1.6,
+  measure 60–70 characters.
+- Keep these exact values. Use tints and shades of them for extra chart steps;
+  don't introduce new hues.`
+}
+
+export function htmlStoryBrief({ siteUrl, style }: BriefOptions): string {
   const site = siteUrl.replace(/\/$/, '')
   return `# Writing a vizmaya HTML story
 
@@ -47,12 +85,7 @@ get. You own the design, the charts, and the words.
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters
 Graphics, NYT Upshot): editorial, calm, confident. One idea per screen.
 
-House style (use it unless the story clearly wants its own look):
-- Background \`#0a0e14\`, surface \`#111820\`, text \`#e0ddd5\`, muted \`#5a6a70\`, hairlines \`#1a2830\`.
-- Accent \`#D85A30\` (the one colour that means "look here"), secondary \`#534AB7\`, teal \`#1D9E75\`.
-- Type: Fraunces for headlines and big numbers, Inter for body, JetBrains Mono for
-  labels, axes and data (all on Google Fonts). Body 18–20px, line-height 1.6,
-  measure 60–70 characters.
+${styleSection(style)}
 - Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
 
 ## Icons and flags
