@@ -53,6 +53,11 @@ export interface Track3DConfig {
   lapTo?: number
   /** Only show these cars; omitted = the full grid. */
   driverNumbers?: number[]
+  /**
+   * Runtime-only (not JSON): called with the playhead (ms from session t0) at
+   * ~10 Hz, so a host page can keep its own readouts in step with the 3D view.
+   */
+  onPlayhead?: (timeMs: number) => void
 }
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Track3DConfig {
@@ -91,6 +96,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Track3
     driverNumbers: Array.isArray(r.driverNumbers)
       ? (r.driverNumbers.filter((n) => typeof n === 'number') as number[])
       : undefined,
+    onPlayhead: typeof r.onPlayhead === 'function' ? (r.onPlayhead as (timeMs: number) => void) : undefined,
   }
 }
 

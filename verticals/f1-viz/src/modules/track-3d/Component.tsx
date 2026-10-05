@@ -73,6 +73,11 @@ export default function Track3DComponent({ config, mode, noteReady }: VizRenderP
     return () => cancelAnimationFrame(h)
   }, [race.loading, noteReady])
 
+  const { onPlayhead } = config
+  useEffect(() => {
+    if (windowMs) onPlayhead?.(playback.currentTimeMs)
+  }, [onPlayhead, windowMs, playback.currentTimeMs])
+
   const visibleDrivers = useMemo(() => {
     const only = config.driverNumbers?.length ? new Set(config.driverNumbers) : null
     return new Set([...race.tracks.keys()].filter((n) => !only || only.has(n)))

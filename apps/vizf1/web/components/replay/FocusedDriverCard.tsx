@@ -1,16 +1,26 @@
 import { useMemo } from 'react'
-import type { AggregatesByDriverLap, RaceDriver } from '@/lib/replay/types'
+import { X } from '@phosphor-icons/react'
+import type { AggregatesByDriverLap, CarPositionTrack, CircuitGeometry, RaceDriver } from '@/lib/replay/types'
+import { gapToCarAhead, speedAt, speedHistory } from '@/lib/replay/liveTelemetry'
+import type { ChannelSample } from '@/lib/replay/useLapChannels'
 
 interface Props {
   driver: RaceDriver
+  drivers: RaceDriver[]
   currentLap: number
   aggregates: AggregatesByDriverLap
-  /** Live ordinal race position at the current time, if known. */
-  livePosition?: number | null
+  tracks: Map<number, CarPositionTrack>
+  circuit: CircuitGeometry | null
+  /** Playhead (ms from session t0) the readout is computed for. */
+  timeMs: number
+  /** Live ordinal race positions at `timeMs`. */
+  standings: Map<number, number>
+  /** Real car channels at a time, when the session has them (null → derive from positions). */
+  sampleChannels?: (tMs: number) => ChannelSample | null
+  /** Extra classes for the strip's container (spacing in the parent layout). */
+  className?: string
   onClose?: () => void
 }
-
-const SPARK_WINDOW = 6
 
 /** Tiny pure-SVG sparkline (ported from the donor's race/Sparkline). */
 function Sparkline({ data, color, width = 90, height = 30 }: { data: number[]; color: string; width?: number; height?: number }) {
@@ -29,34 +39,64 @@ function Sparkline({ data, color, width = 90, height = 30 }: { data: number[]; c
   )
 }
 
-export function FocusedDriverCard({ driver, currentLap, aggregates, livePosition, onClose }: Props) {
-  const perLap = aggregates.get(driver.driverNumber)
-  const current = perLap?.get(currentLap)
+/** OpenF1 DRS codes 10/12/14 mean the flap is open; FastF1 uses the same scale. */
+const isDrsOpen = (drs: number | null) => drs != null && drs >= 10
 
-  // Speed trend: last SPARK_WINDOW laps up to currentLap
-  const trend = useMemo(() => {
-    if (!perLap) return [] as number[]
-    const out: number[] = []
-    for (let l = Math.max(1, currentLap - SPARK_WINDOW + 1); l <= currentLap; l++) {
-      const a = perLap.get(l)
-      if (a) out.push(a.avgSpeed)
-    }
-    return out
-  }, [perLap, currentLap])
+export function FocusedDriverCard({
+  driver,
+  drivers,
+  currentLap,
+  aggregates,
+  tracks,
+  circuit,
+  timeMs,
+  standings,
+  sampleChannels,
+  className = '',
+  onClose,
+}: Props) {
+  const track = tracks.get(driver.driverNumber)
+  const lapAvg = aggregates.get(driver.driverNumber)?.get(currentLap)?.avgSpeed
+
+  const channels = sampleChannels?.(timeMs) ?? null
+  const derivedSpeed = track ? speedAt(track, timeMs) : null
+  const speed = channels?.speed ?? derivedSpeed
+  const trend = useMemo(() => (track ? speedHistory(track, timeMs) : []), [track, timeMs])
+
+  const gap = useMemo(
+    () => gapToCarAhead(tracks, circuit, driver.driverNumber, standings, timeMs),
+    [tracks, circuit, driver.driverNumber, standings, timeMs],
+  )
 
   const colour = driver.teamColour || '#444'
+  const livePosition = standings.get(driver.driverNumber)
   const posLabel = livePosition != null && Number.isFinite(livePosition) ? `P${livePosition}` : '—'
-  const gap =
-    current && Number.isFinite(current.minGapToAheadM) ? `${Math.round(current.minGapToAheadM)} m` : '—'
+
+  let gapValue = '—'
+  let gapDetail: string | null = null
+  if (gap.kind === 'leader') {
+    gapValue = 'Leader'
+  } else if (gap.kind === 'gap') {
+    const ahead = drivers.find((d) => d.driverNumber === gap.aheadDriver)
+    gapValue = gap.seconds != null ? `+${gap.seconds.toFixed(1)}s` : gap.metres != null ? `${Math.round(gap.metres)} m` : '—'
+    gapDetail = [
+      `to ${ahead?.abbreviation || `#${gap.aheadDriver}`}`,
+      gap.seconds != null && gap.metres != null ? `${Math.round(gap.metres)} m` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  }
+
+  const hasPedals = channels != null && (channels.throttle != null || channels.brake != null)
 
   return (
-    <div className="absolute bottom-4 left-4 z-20 w-[300px] rounded-xl border border-border bg-surface/95 shadow-lg backdrop-blur-sm">
+    <div className={`flex flex-col overflow-hidden rounded-xl border border-border bg-surface sm:flex-row ${className}`}>
       <div
-        className="flex items-center gap-3 border-b border-border px-4 py-2.5"
+        className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 sm:w-[240px] sm:border-b-0 sm:border-r"
         style={{ borderLeftWidth: 3, borderLeftColor: colour }}
       >
         <div
-          className="flex h-8 w-8 items-center justify-center font-mono tabular-nums font-bold text-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center font-mono tabular-nums font-bold text-white"
           style={{ backgroundColor: colour }}
         >
           {driver.driverNumber}
@@ -65,53 +105,95 @@ export function FocusedDriverCard({ driver, currentLap, aggregates, livePosition
           <div className="truncate wdth-dense text-xs font-semibold text-text">
             {driver.fullName || driver.abbreviation}
           </div>
-          <div className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
-            {driver.teamName || '—'} · Lap {currentLap}
+          <div className="flex wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+            <span className="truncate">{driver.teamName || '—'}</span>
+            <span className="shrink-0 whitespace-pre"> · Lap {currentLap}</span>
           </div>
         </div>
         {onClose && (
           <button
+            type="button"
             onClick={onClose}
-            className="font-mono tabular-nums text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-accent"
+            title="Unfocus"
+            aria-label="Unfocus driver"
+            className="shrink-0 p-1 text-muted transition-colors hover:text-accent"
           >
-            Unfocus
+            <X size={14} weight="bold" />
           </button>
         )}
       </div>
 
-      {!current ? (
-        <div className="px-4 py-6 text-center font-mono tabular-nums text-[10px] text-muted">
-          No telemetry for lap {currentLap}.
+      {speed == null ? (
+        <div className="flex flex-1 items-center justify-center px-4 py-4 font-mono tabular-nums text-[10px] text-muted">
+          No live telemetry at this point.
         </div>
       ) : (
-        <div className="space-y-3 p-4">
-          {/* Speed row with sparkline */}
-          <div className="flex items-end justify-between">
+        <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 sm:flex sm:items-center sm:justify-between">
+          <div className="col-span-2 flex items-center gap-4">
             <div className="flex flex-col">
-              <span className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Avg Speed</span>
-              <span className="font-mono tabular-nums text-sm font-bold text-text">
-                {Math.round(current.avgSpeed)}
-                <span className="ml-1 font-mono tabular-nums text-[10px] text-muted">km/h</span>
+              <span className="flex items-center gap-1.5 wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
+                Speed
               </span>
+              <span className="font-mono tabular-nums text-xl font-bold leading-tight text-text">
+                {Math.round(speed)}
+                <span className="ml-1 font-mono tabular-nums text-[10px] font-normal text-muted">km/h</span>
+              </span>
+              {lapAvg != null && (
+                <span className="font-mono tabular-nums text-[10px] text-muted">lap avg {Math.round(lapAvg)}</span>
+              )}
             </div>
-            <Sparkline data={trend} color={colour} width={90} height={30} />
+            <Sparkline data={trend} color={colour} width={90} height={28} />
+            {channels && (channels.gear != null || channels.drs != null) && (
+              <div className="flex flex-col items-start gap-1">
+                {channels.gear != null && (
+                  <span className="font-mono tabular-nums text-[10px] text-muted">
+                    G<span className="ml-0.5 text-sm font-bold text-text">{channels.gear || 'N'}</span>
+                  </span>
+                )}
+                {isDrsOpen(channels.drs) && (
+                  <span className="rounded-sm bg-emerald-500/20 px-1 font-mono text-[9px] font-bold uppercase tracking-widest text-emerald-400">
+                    DRS
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 border-t border-border pt-2">
-            <Metric label="Live Pos" value={posLabel} />
-            <Metric label="Gap ahead" value={gap} />
-          </div>
+          {hasPedals && (
+            <div className="col-span-2 w-full space-y-1.5 sm:w-36">
+              <PedalBar label="Thr" value={channels.throttle ?? 0} className="bg-emerald-500" />
+              <PedalBar label="Brk" value={channels.brake ? 100 : 0} className="bg-red-500" />
+            </div>
+          )}
+
+          <Metric label="Live Pos" value={posLabel} />
+          <Metric label="Gap ahead" value={gapValue} detail={gapDetail} />
         </div>
       )}
     </div>
   )
 }
 
-function Metric({ label, value }: { label: string; value: number | string }) {
+function PedalBar({ label, value, className }: { label: string; value: number; className: string }) {
+  const pct = Math.max(0, Math.min(100, value))
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-7 font-mono text-[9px] uppercase tracking-widest text-muted">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+        <div className={`h-full rounded-full transition-[width] duration-100 ${className}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-7 text-right font-mono tabular-nums text-[9px] text-muted">{Math.round(pct)}</span>
+    </div>
+  )
+}
+
+function Metric({ label, value, detail }: { label: string; value: number | string; detail?: string | null }) {
   return (
     <div className="flex flex-col">
       <span className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">{label}</span>
       <span className="font-mono tabular-nums text-sm font-bold text-text">{value}</span>
+      {detail && <span className="font-mono tabular-nums text-[10px] text-muted">{detail}</span>}
     </div>
   )
 }
