@@ -120,7 +120,11 @@ export function themeMetaContent(colors: ThemeColors): string {
 /** The page's declared palette, or null when the tag is missing or lacks a required slot. */
 export function extractThemeMeta(html: string): ThemeColors | null {
   const content = metaContent(metaTags(html), THEME_META_NAME)
-  if (!content) return null
+  return content ? parseThemeMetaContent(content) : null
+}
+
+/** A theme tag's `content` (as stored in html_stories.theme_meta) as a palette, or null. */
+export function parseThemeMetaContent(content: string): ThemeColors | null {
   const colors: ThemeColors = {}
   for (const pair of content.split(';')) {
     const [key, value] = pair.split(':').map((v) => v.trim())
