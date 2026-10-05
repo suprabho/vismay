@@ -1414,6 +1414,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../content-source
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../viz-engine
     devDependencies:
       '@types/node':
         specifier: ^20

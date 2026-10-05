@@ -5,7 +5,7 @@ import {
   listHtmlStoryVersions,
   updateHtmlStoryMeta,
 } from '@vismay/html-stories/htmlStories'
-import { HTML_STORY_STATUSES, lintHtml, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import { HTML_STORY_STATUSES, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
 type Ctx = { params: Promise<{ slug: string }> }
@@ -36,6 +36,14 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (typeof b.title === 'string' && b.title.trim()) patch.title = b.title.trim()
   if (b.description !== undefined) patch.description = typeof b.description === 'string' && b.description.trim() ? b.description.trim() : null
   if (b.ogImageUrl !== undefined) patch.ogImageUrl = typeof b.ogImageUrl === 'string' && b.ogImageUrl.trim() ? b.ogImageUrl.trim() : null
+  if (b.aura !== undefined) {
+    const raw = typeof b.aura === 'string' ? b.aura.trim() : ''
+    const aura = raw ? parseAuraSlug(raw) : null
+    if (raw && !aura) {
+      return NextResponse.json({ error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }, { status: 400 })
+    }
+    patch.aura = aura
+  }
 
   try {
     const story = await updateHtmlStoryMeta(slug, patch)

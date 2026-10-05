@@ -72,9 +72,16 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         publish: z.boolean().default(false).describe('Make the story public now.'),
         title: z.string().optional().describe('Override the <title>-derived title.'),
         description: z.string().optional().describe('Override the meta description.'),
+        aura: z
+          .string()
+          .optional()
+          .describe(
+            'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its home-page card ' +
+              'background. Only when the user names one; omitted, a re-post keeps the current aura.',
+          ),
       },
     },
-    async ({ slug, html, filePath, publish, title, description }) => {
+    async ({ slug, html, filePath, publish, title, description, aura }) => {
       const { token } = requireHtmlStoriesEnv()
       if (!html && !filePath) throw new Error('Pass either html or filePath.')
       const doc = html ?? (await readFile(filePath!, 'utf8'))
@@ -88,6 +95,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           status: publish ? 'published' : undefined,
           title,
           description,
+          aura,
           source: 'mcp',
         }),
       })

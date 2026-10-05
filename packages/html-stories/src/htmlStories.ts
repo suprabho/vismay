@@ -29,6 +29,8 @@ export interface HtmlStorySummary {
   publishedAt: string | null
   updatedAt: string
   createdAt: string
+  /** Aura scene slug laid behind the page and its listing card (migration 087). */
+  aura: string | null
 }
 
 export interface HtmlStory extends HtmlStorySummary {
@@ -60,10 +62,14 @@ export interface HtmlStoryInput {
   status?: HtmlStoryStatus
   /** Who posted it: 'admin', 'api', 'mcp', or a free-form agent name. */
   source: string
+  /** Aura scene slug; null clears it. Omitted: an existing story keeps its aura. */
+  aura?: string | null
 }
 
-const SUMMARY_COLUMNS =
+const BASE_COLUMNS =
   'slug, title, description, og_image_url, status, source, published_at, updated_at, created_at'
+const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura`
+const AURA_MIGRATION_HINT = 'Setting an aura needs migration 087_html_stories_aura.sql applied'
 
 export function hasServiceEnv(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -80,6 +86,7 @@ function mapSummary(r: any): HtmlStorySummary {
     publishedAt: r.published_at ?? null,
     updatedAt: r.updated_at,
     createdAt: r.created_at,
+    aura: r.aura ?? null,
   }
 }
 
@@ -87,24 +94,38 @@ function mapStory(r: any): HtmlStory {
   return { ...mapSummary(r), html: r.html }
 }
 
+/** PostgREST's missing-column errors: 42703 on select, PGRST204 on write. */
+function isMissingColumn(error: { code?: string } | null): boolean {
+  return error?.code === '42703' || error?.code === 'PGRST204'
+}
+
+/**
+ * Run a select with the current columns, and again without the ones later
+ * migrations added (aura: 087, theme_meta: 086) if the database predates
+ * them, so the code can ship before the migrations do.
+ */
+async function selectCompat<T>(
+  run: (columns: string) => PromiseLike<{ data: T; error: { code?: string; message: string } | null }>,
+  columns: string,
+): Promise<{ data: T; error: { code?: string; message: string } | null }> {
+  let res = await run(columns)
+  if (isMissingColumn(res.error)) res = await run(columns.replace(SUMMARY_COLUMNS, BASE_COLUMNS))
+  if (isMissingColumn(res.error)) res = await run(columns.replace(SUMMARY_COLUMNS, BASE_COLUMNS).replace(', theme_meta', ''))
+  return res
+}
+
 // --- Public read ---
 
 /** The published page for /s/<slug>, or null (unknown, draft, or archived). */
 export async function getPublishedHtmlStory(slug: string): Promise<HtmlStory | null> {
   if (!hasServiceEnv()) return null
-  const { data, error } = await createServiceClient()
-    .from('html_stories')
-    .select(`${SUMMARY_COLUMNS}, html`)
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle()
+  const { data, error } = await selectCompat(
+    (cols) =>
+      createServiceClient().from('html_stories').select(cols).eq('slug', slug).eq('status', 'published').maybeSingle(),
+    `${SUMMARY_COLUMNS}, html`,
+  )
   if (error) throw new Error(`getPublishedHtmlStory ${slug}: ${error.message}`)
   return data ? mapStory(data) : null
-}
-
-/** PostgREST's missing-column errors: 42703 on select, PGRST204 on write. */
-function isMissingColumn(error: { code?: string } | null): boolean {
-  return error?.code === '42703' || error?.code === 'PGRST204'
 }
 
 /** Every published story, newest first, for the home grid and the archive. */
@@ -116,9 +137,8 @@ export async function listPublishedHtmlStories(): Promise<PublishedHtmlStory[]> 
       .select(columns)
       .eq('status', 'published')
       .order('published_at', { ascending: false, nullsFirst: false })
-  let { data, error } = await query(`${SUMMARY_COLUMNS}, theme_meta`)
-  // Before migration 086 the cards just go untinted.
-  if (isMissingColumn(error)) ({ data, error } = await query(SUMMARY_COLUMNS))
+  // Before migration 086 the cards just go untinted; before 087, aura-less.
+  const { data, error } = await selectCompat(query, `${SUMMARY_COLUMNS}, theme_meta`)
   if (error) throw new Error(`listPublishedHtmlStories: ${error.message}`)
   return (data ?? []).map((r: any) => ({
     ...mapSummary(r),
@@ -129,20 +149,19 @@ export async function listPublishedHtmlStories(): Promise<PublishedHtmlStory[]> 
 // --- Admin / publish (service role; include drafts) ---
 
 export async function listHtmlStoriesForAdmin(): Promise<HtmlStorySummary[]> {
-  const { data, error } = await createServiceClient()
-    .from('html_stories')
-    .select(SUMMARY_COLUMNS)
-    .order('updated_at', { ascending: false })
+  const { data, error } = await selectCompat(
+    (cols) => createServiceClient().from('html_stories').select(cols).order('updated_at', { ascending: false }),
+    SUMMARY_COLUMNS,
+  )
   if (error) throw new Error(`listHtmlStoriesForAdmin: ${error.message}`)
   return (data ?? []).map(mapSummary)
 }
 
 export async function getHtmlStoryForAdmin(slug: string): Promise<HtmlStory | null> {
-  const { data, error } = await createServiceClient()
-    .from('html_stories')
-    .select(`${SUMMARY_COLUMNS}, html`)
-    .eq('slug', slug)
-    .maybeSingle()
+  const { data, error } = await selectCompat(
+    (cols) => createServiceClient().from('html_stories').select(cols).eq('slug', slug).maybeSingle(),
+    `${SUMMARY_COLUMNS}, html`,
+  )
   if (error) throw new Error(`getHtmlStoryForAdmin ${slug}: ${error.message}`)
   return data ? mapStory(data) : null
 }
@@ -177,17 +196,24 @@ export async function saveHtmlStory(
     theme_meta: theme ? themeMetaContent(theme) : null,
     status,
     source: input.source,
+    // Omitted from the upsert when not given, so a re-post keeps the aura.
+    ...(input.aura !== undefined ? { aura: input.aura } : {}),
     published_at: existing?.published_at ?? (status === 'published' ? now : null),
     updated_at: now,
   }
 
-  const upsert = (r: Record<string, unknown>) =>
-    sb.from('html_stories').upsert(r, { onConflict: 'slug' }).select(SUMMARY_COLUMNS).single()
-  let { data, error } = await upsert(row)
+  const upsert = (r: Record<string, unknown>, cols: string) =>
+    sb.from('html_stories').upsert(r, { onConflict: 'slug' }).select(cols).single()
+  let { data, error } = await upsert(row, SUMMARY_COLUMNS)
   if (isMissingColumn(error)) {
-    // Before migration 086: save without the palette; the backfill picks it up.
-    const { theme_meta: _, ...pre086 } = row
-    ;({ data, error } = await upsert(pre086))
+    // Before migration 087 (aura) or 086 (palette; the backfill picks it up).
+    if (input.aura != null) throw new Error(`${AURA_MIGRATION_HINT} (${input.slug})`)
+    const { aura: _a, ...pre087 } = row as typeof row & { aura?: unknown }
+    ;({ data, error } = await upsert(pre087, BASE_COLUMNS))
+    if (isMissingColumn(error)) {
+      const { theme_meta: _t, ...pre086 } = pre087
+      ;({ data, error } = await upsert(pre086, BASE_COLUMNS))
+    }
   }
   if (error) throw new Error(`saveHtmlStory ${input.slug}: ${error.message}`)
 
@@ -204,7 +230,13 @@ export async function saveHtmlStory(
 /** Change status / metadata without touching the HTML. */
 export async function updateHtmlStoryMeta(
   slug: string,
-  patch: { title?: string; description?: string | null; ogImageUrl?: string | null; status?: HtmlStoryStatus },
+  patch: {
+    title?: string
+    description?: string | null
+    ogImageUrl?: string | null
+    status?: HtmlStoryStatus
+    aura?: string | null
+  },
 ): Promise<HtmlStorySummary | null> {
   const sb = createServiceClient()
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -218,12 +250,13 @@ export async function updateHtmlStoryMeta(
       if (cur && !cur.published_at) update.published_at = update.updated_at
     }
   }
-  const { data, error } = await sb
-    .from('html_stories')
-    .update(update)
-    .eq('slug', slug)
-    .select(SUMMARY_COLUMNS)
-    .maybeSingle()
+  if (patch.aura !== undefined) update.aura = patch.aura
+  const run = (cols: string) => sb.from('html_stories').update(update).eq('slug', slug).select(cols).maybeSingle()
+  let { data, error } = await run(SUMMARY_COLUMNS)
+  if (isMissingColumn(error)) {
+    if (patch.aura !== undefined) throw new Error(`${AURA_MIGRATION_HINT} (${slug})`)
+    ;({ data, error } = await run(BASE_COLUMNS))
+  }
   if (error) throw new Error(`updateHtmlStoryMeta ${slug}: ${error.message}`)
   return data ? mapSummary(data) : null
 }

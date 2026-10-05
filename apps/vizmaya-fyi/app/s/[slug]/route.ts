@@ -5,7 +5,8 @@ import { isSafeSlug } from '@vismay/html-stories/meta'
 /**
  * Serves an agent-authored HTML story as it was posted (migration 085,
  * packages/html-stories), wrapped only in the vizmaya header and footer
- * (packages/html-stories/src/branding.ts). No React shell, no viz engine: the
+ * (packages/html-stories/src/branding.ts), over its aura scene when one is
+ * set. No React shell, no viz engine: the
  * document is the whole page.
  *
  * The page is arbitrary third-party-ish HTML on our domain, so it is served
@@ -29,7 +30,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, s-maxage=30' },
     })
   }
-  const html = brandHtmlStory(story.html, { siteUrl: new URL(req.url).origin })
+  const html = brandHtmlStory(story.html, { siteUrl: new URL(req.url).origin, aura: story.aura })
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',

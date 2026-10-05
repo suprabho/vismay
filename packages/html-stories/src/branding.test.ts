@@ -41,4 +41,16 @@ assert.ok(!themed.includes('#F4F1EC'))
 const bad = brandHtmlStory(doc.replace('<title>T</title>', '<meta name="vizmaya:theme" content="background:red;}</style><script>; text:#000">'), { siteUrl: site })
 assert.ok(bad.includes('--bg:#F4F1EC'))
 
+// No aura unless one is set.
+assert.ok(!out.includes('vizmaya-aura') && !out.includes('aura.promad.design'))
+// An aura goes behind the page: still + live embed + a veil in the page background, body cleared.
+const aura = brandHtmlStory(themed.length ? doc.replace('<title>T</title>', '<title>T</title><meta name="vizmaya:theme" content="background:#fffdf8; surface:#f1ece2; text:#222222; muted:#777777; accent:#c0392b; accent2:#2e5e8c; teal:#3a8f6b">') : doc, { siteUrl: site, aura: 'gold-lines' })
+assert.ok(aura.includes('<BODY class="x"><style>html,body{background:transparent!important}</style><vizmaya-aura'))
+assert.ok(aura.indexOf('</vizmaya-aura>') < aura.indexOf('<vizmaya-header>'))
+assert.ok(aura.includes('src="https://aura.promad.design/scenes/gold-lines/capture.png?w=1920&amp;h=1080&amp;dpr=1"'))
+assert.ok(aura.includes('src="https://aura.promad.design/embed/gold-lines?hideText=true&amp;'))
+assert.ok(aura.includes('.veil{position:absolute;inset:0;background:#fffdf8;opacity:0.35}'))
+// Without a palette there's no veil colour to wash with.
+assert.ok(brandHtmlStory(doc, { siteUrl: site, aura: 'gold-lines' }).includes('.veil{position:absolute;inset:0}'))
+
 console.log('branding: ok')

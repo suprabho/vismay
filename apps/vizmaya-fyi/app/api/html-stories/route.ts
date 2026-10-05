@@ -6,6 +6,7 @@ import {
   extractHtmlMeta,
   isSafeSlug,
   lintHtml,
+  parseAuraSlug,
   slugify,
   type HtmlStoryStatus,
 } from '@vismay/html-stories/meta'
@@ -18,9 +19,13 @@ import {
  *
  * Two body shapes:
  *   - `Content-Type: text/html` — the document itself; options in the query
- *     string (`slug`, `publish=1` or `status`, `title`, `description`, `source`).
+ *     string (`slug`, `publish=1` or `status`, `title`, `description`, `aura`,
+ *     `source`).
  *   - `Content-Type: application/json` — `{ slug, html, status?, publish?,
- *     title?, description?, ogImageUrl?, source? }`.
+ *     title?, description?, ogImageUrl?, aura?, source? }`.
+ *
+ * `aura` is an aura.promad.design scene slug (or scene URL) laid behind the
+ * page and on its listing card. Omitted, a re-post keeps the story's aura.
  *
  * Without a slug, one is derived from the document's <title>. The response
  * carries lint `warnings` so the agent can fix and re-post to the same slug.
@@ -44,6 +49,7 @@ interface PublishRequest {
   title?: string
   description?: string
   ogImageUrl?: string
+  aura?: string
   source?: string
 }
 
@@ -72,8 +78,13 @@ async function readBody(req: Request): Promise<PublishRequest | { error: string 
     return { error: `status must be one of ${HTML_STORY_STATUSES.join(', ')}` }
   }
 
+  const auraRaw = pick('aura')
+  const aura = auraRaw ? parseAuraSlug(auraRaw) : undefined
+  if (auraRaw && !aura) return { error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }
+
   return {
     html,
+    aura: aura ?? undefined,
     slug: pick('slug'),
     status: statusRaw as HtmlStoryStatus | undefined,
     title: pick('title'),
@@ -113,6 +124,7 @@ export async function POST(req: Request) {
       title: parsed.title,
       description: parsed.description,
       ogImageUrl: parsed.ogImageUrl,
+      aura: parsed.aura,
       source: parsed.source ? `api:${parsed.source.slice(0, 40)}` : 'api',
     })
     const url = `${new URL(req.url).origin}/s/${story.slug}`
