@@ -28,7 +28,7 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
   const stylePool: StylePool | null = poolResult.status === 'fulfilled' ? poolResult.value : null
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
       <div className="px-4 py-5 border-b border-white/5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">HTML stories</h1>

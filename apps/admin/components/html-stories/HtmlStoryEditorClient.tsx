@@ -237,9 +237,12 @@ export default function HtmlStoryEditorClient({
   const brandedPreview = brandHtmlStory(shownHtml, { siteUrl, aura: auraSlug, app })
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+    // The admin root is h-svh + overflow-hidden, so each page scrolls itself.
+    // Wide: two panes side by side, each its own scroller. Narrow: one column,
+    // the whole page scrolls (a scroller inside a clipped column would not).
+    <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto lg:overflow-hidden">
       {/* Left: source + controls */}
-      <div className="lg:w-[440px] shrink-0 border-b lg:border-b-0 lg:border-r border-white/5 overflow-y-auto">
+      <div className="lg:w-[440px] shrink-0 border-b lg:border-b-0 lg:border-r border-white/5 lg:min-h-0 lg:overflow-y-auto">
         <div className="px-4 py-5">
           <Link href={basePath} className="text-sm text-neutral-400 hover:text-white">
             ← HTML stories
@@ -487,7 +490,7 @@ export default function HtmlStoryEditorClient({
       </div>
 
       {/* Right: preview */}
-      <div className="flex-1 flex flex-col min-h-[70vh] lg:min-h-0 bg-neutral-950">
+      <div className="shrink-0 lg:shrink lg:flex-1 flex flex-col min-h-[70vh] lg:min-h-0 bg-neutral-950">
         <div className="shrink-0 flex items-center justify-between gap-2 px-4 py-2 border-b border-white/5 text-xs text-neutral-500">
           <span>{versionPreview ? `Previewing an earlier version` : 'Preview (same sandbox as the live page)'}</span>
           <div className="flex gap-1">
