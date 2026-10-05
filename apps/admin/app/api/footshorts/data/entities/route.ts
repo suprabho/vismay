@@ -5,7 +5,9 @@ import { searchFootshortsEntities } from '@vismay/content-source/footshortsData'
 /**
  * Team crest / competition logo search for the share-card badge picker.
  * `?q=<name>&type=team|league&limit=<n>`. Only entities with a crest are
- * returned. The client drops a result onto the card as a draggable overlay.
+ * returned — unless `&crest=any`, which the match picker's team search passes
+ * (a crest-less club still has fixtures). The share-card client drops a result
+ * onto the card as a draggable overlay.
  */
 
 export const runtime = 'nodejs'
@@ -24,6 +26,7 @@ export async function GET(req: Request) {
       q,
       type,
       limit: Number.isFinite(limit) ? limit : undefined,
+      requireCrest: url.searchParams.get('crest') !== 'any',
     })
     return NextResponse.json({ ok: true, items })
   } catch (e) {

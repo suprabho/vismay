@@ -632,13 +632,15 @@ const CONTEXT_SCHEDULE_LIMIT = 6
 /** The competition's next fixtures after the latest match in the brief. */
 const CONTEXT_NEXT_UP = 10
 /**
- * Most matches one context covers: a full matchday. The compose brief's
- * {@link MAX_BRIEF_MATCHES} (6) guards the story pipeline's 12k-per-source
- * prompt budget; an HTML story has no such budget — the agent reads the whole
- * thing once — so the only costs here are the reads (two schedule queries per
- * team, one table per competition) and the brief's length.
+ * Most matches one context covers: a club's whole run across competitions, or
+ * several matchdays. The compose brief's {@link MAX_BRIEF_MATCHES} (6) guards
+ * the story pipeline's 12k-per-source prompt budget; an HTML story has no such
+ * budget — the agent reads the whole thing once — so the costs here are the
+ * reads (one events query per match, one schedule query per team, one table
+ * per competition) and the brief's length: a fully scraped match runs to
+ * roughly 10k characters, so forty is on the order of 100k tokens.
  */
-export const MAX_CONTEXT_MATCHES = 12
+export const MAX_CONTEXT_MATCHES = 40
 
 export interface MatchContextOptions {
   /** Editorial intent — surfaced at the top so the agent writes to it. */

@@ -818,8 +818,15 @@ export async function fetchMatchBriefCoverage(
     .eq('competition_slug', competitionSlug)
     .eq('season', season)
   if (error || !data) return []
-  const ids = (data as Array<{ id: string }>).map((r) => r.id)
+  return fetchMatchBriefCoverageForIds((data as Array<{ id: string }>).map((r) => r.id))
+}
+
+/** The same coverage for an explicit set of fixtures — a team's matches across
+ *  competitions, as the picker's team search lists them. SERVER-ONLY. */
+export async function fetchMatchBriefCoverageForIds(fixtureIds: string[]): Promise<MatchBriefCoverage[]> {
+  const ids = Array.from(new Set(fixtureIds.filter(Boolean)))
   if (ids.length === 0) return []
+  const supabase = createServiceClient()
 
   const counts = new Map<string, number>()
   const PAGE = 1000
@@ -861,6 +868,35 @@ export async function fetchMatchBriefCoverage(
     events: counts.get(id) ?? 0,
     insights: insights.get(id) ?? 0,
   }))
+}
+
+/**
+ * One team's fixtures across EVERY competition we hold, newest kickoff first —
+ * the picker's team search, so a brief can gather a club's league, cup and
+ * European matches together. `teamSlug` is the entity slug. [] when the team
+ * is unknown. SERVER-ONLY.
+ */
+export async function fetchFixturesForTeam(
+  teamSlug: string,
+  { limit = 80 }: { limit?: number } = {},
+): Promise<FixtureRowInput[]> {
+  const supabase = createServiceClient()
+  const { data: team, error: teamErr } = await supabase
+    .from('entities')
+    .select('id')
+    .eq('type', 'team')
+    .eq('slug', teamSlug)
+    .maybeSingle()
+  if (teamErr || !team) return []
+  const id = (team as { id: string }).id
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select(FIXTURE_COLUMNS)
+    .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
+    .order('kickoff_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 200))
+  if (error || !data) return []
+  return hydrateFixtureRows(supabase, data as unknown as FixtureDbRow[])
 }
 
 // ── Sportradar match-timeline coverage (admin Pipeline tab) ──────────────────
@@ -1150,6 +1186,9 @@ export async function searchFootshortsEntities(opts: {
   q?: string
   type?: 'team' | 'league'
   limit?: number
+  /** Default true (the share-card badge picker needs an image). The match
+   *  picker's team search passes false: a crest-less club still has fixtures. */
+  requireCrest?: boolean
 }): Promise<FootshortsEntityResult[]> {
   const limit = Math.min(Math.max(opts.limit ?? 30, 1), 60)
   const supabase = createServiceClient()
@@ -1157,9 +1196,9 @@ export async function searchFootshortsEntities(opts: {
     .from('entities')
     .select('id, type, slug, name, crest_url')
     .in('type', opts.type ? [opts.type] : ['team', 'league'])
-    .not('crest_url', 'is', null)
     .order('name', { ascending: true })
     .limit(limit)
+  if (opts.requireCrest !== false) query = query.not('crest_url', 'is', null)
   const q = opts.q?.trim()
   if (q) query = query.ilike('name', `%${q}%`)
   const { data, error } = await query

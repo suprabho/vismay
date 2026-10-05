@@ -6,7 +6,7 @@ import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
-import type { MatchCompetition, MatchOption } from '@/components/canvas/compose/useComposeFlow'
+import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canvas/compose/useComposeFlow'
 
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
 
@@ -20,7 +20,8 @@ interface MatchContextPick {
  * "Copy agent brief" plus a style randomizer: Shuffle swaps the brief's house
  * style for a palette and font trio drawn from the app's stories' themes.
  *
- * For footshorts there is also a match picker: tick up to MAX_CONTEXT_MATCHES (and
+ * For footshorts there is also a match picker — by competition, or by team
+ * across every competition: tick up to MAX_CONTEXT_MATCHES (and
  * write the editorial angle) and the brief gains their match context — Opta
  * facts and full stat set, timeline, insights, commentary, build-up, both
  * sides' form and schedule, the table, and the competition's next fixtures.
@@ -90,6 +91,26 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
     try {
       const qs = `competition=${encodeURIComponent(competition)}&season=${encodeURIComponent(season)}`
       const res = await fetch(`/api/footshorts/data/matches?${qs}`, { cache: 'no-store' })
+      if (!res.ok) return []
+      return ((await res.json()) as { rows?: MatchOption[] }).rows ?? []
+    } catch {
+      return []
+    }
+  }
+  async function searchTeams(q: string): Promise<MatchTeam[]> {
+    try {
+      const qs = `q=${encodeURIComponent(q)}&type=team&crest=any&limit=12`
+      const res = await fetch(`/api/footshorts/data/entities?${qs}`, { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { items?: Array<{ slug: string; name: string; crest_url: string | null }> }
+      return (data.items ?? []).map((t) => ({ slug: t.slug, name: t.name, crestUrl: t.crest_url }))
+    } catch {
+      return []
+    }
+  }
+  async function loadTeamMatches(teamSlug: string): Promise<MatchOption[]> {
+    try {
+      const res = await fetch(`/api/footshorts/data/matches?team=${encodeURIComponent(teamSlug)}`, { cache: 'no-store' })
       if (!res.ok) return []
       return ((await res.json()) as { rows?: MatchOption[] }).rows ?? []
     } catch {
@@ -196,6 +217,8 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           onClose={() => setPicking(false)}
           loadCompetitions={loadCompetitions}
           loadMatches={loadMatches}
+          searchTeams={searchTeams}
+          loadTeamMatches={loadTeamMatches}
           onScrape={scrape}
           onCreate={async ({ fixtureIds, prompt }) => {
             setMatches({ fixtureIds, prompt })

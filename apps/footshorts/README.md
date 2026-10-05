@@ -72,7 +72,7 @@ notes in [`apps/vizmaya-fyi/CLAUDE.md`](../vizmaya-fyi/CLAUDE.md#html-stories-ss
   (classic theme, Forum / Space Grotesk / Space Mono), chrome and posting
   rules. `?style=random` borrows a palette and fonts from an editorial story.
   `?fixtures=<id>,<id>&prompt=…` (with the publish token as a bearer) appends
-  the **match context** for up to twelve matches: Opta facts and the full stat
+  the **match context** for up to forty matches: Opta facts and the full stat
   set, the timeline, Opta's insights and commentary, the build-up, each side's
   form and schedule, the league table and the competition's next fixtures.
   Admin's `/footshorts/html-stories` tab builds the same brief from a match

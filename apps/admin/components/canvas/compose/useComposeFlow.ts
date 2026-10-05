@@ -68,6 +68,10 @@ export interface MatchOption {
   awayScore: number | null
   matchday: number | null
   stage: string | null
+  /** competition_slug — the scrape dispatch needs it, and a team's list spans competitions. */
+  competition: string
+  competitionName: string
+  season: string
   /** `opta_match_facts` has at least one side for this fixture. */
   facts: boolean
   /** Rows in `fixture_events` — 0 means no timeline. */
@@ -75,6 +79,13 @@ export interface MatchOption {
   /** Opta INSIGHTS cards — the season-context lines, the strongest reason to
    *  pick one match over another. */
   insights: number
+}
+
+/** A team as the picker's team search lists it. */
+export interface MatchTeam {
+  slug: string
+  name: string
+  crestUrl: string | null
 }
 
 /** How many section "Write"/"Rewrite" calls may materialise concurrently. */
@@ -498,6 +509,28 @@ export function useComposeFlow({
       return []
     }
   }
+  // The picker's team scope: a club's matches across every competition.
+  async function searchTeams(q: string): Promise<MatchTeam[]> {
+    try {
+      const qs = `q=${encodeURIComponent(q)}&type=team&crest=any&limit=12`
+      const res = await fetch(`/api/footshorts/data/entities?${qs}`, { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { items?: Array<{ slug: string; name: string; crest_url: string | null }> }
+      return (data.items ?? []).map((t) => ({ slug: t.slug, name: t.name, crestUrl: t.crest_url }))
+    } catch {
+      return []
+    }
+  }
+  async function loadTeamMatches(teamSlug: string): Promise<MatchOption[]> {
+    try {
+      const res = await fetch(`/api/footshorts/data/matches?team=${encodeURIComponent(teamSlug)}`, { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { rows?: MatchOption[] }
+      return data.rows ?? []
+    } catch {
+      return []
+    }
+  }
   // Scrape ONE match's Opta match centre on demand (facts + commentary +
   // insights), for a fixture the picker shows as uncaptured. Dispatches the
   // worker — it lands a minute or two later, so the picker tells the editor to
@@ -858,6 +891,8 @@ export function useComposeFlow({
     createTelemetrySource,
     loadMatchCompetitions,
     loadMatches,
+    searchTeams,
+    loadTeamMatches,
     scrapeMatch,
     createMatchSource,
     pickAngle,

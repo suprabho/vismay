@@ -6,7 +6,7 @@ import { SourceRow } from './SourceRow'
 import { SourceLibraryModal, type LibraryTab, type LibraryPage } from './SourceLibraryModal'
 import { TelemetrySessionPicker } from './TelemetrySessionPicker'
 import { MatchPicker } from './MatchPicker'
-import type { MatchCompetition, MatchOption, TelemetrySession } from './useComposeFlow'
+import type { MatchCompetition, MatchOption, TelemetrySession, MatchTeam } from './useComposeFlow'
 import { SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
 /**
@@ -39,6 +39,8 @@ export function SourcesStage({
   onCreateTelemetrySource,
   onLoadMatchCompetitions,
   onLoadMatches,
+  onSearchMatchTeams,
+  onLoadTeamMatches,
   onScrapeMatch,
   onCreateMatchSource,
 }: {
@@ -73,6 +75,8 @@ export function SourcesStage({
   }) => Promise<boolean>
   onLoadMatchCompetitions: () => Promise<MatchCompetition[]>
   onLoadMatches: (competition: string, season: string) => Promise<MatchOption[]>
+  onSearchMatchTeams: (q: string) => Promise<MatchTeam[]>
+  onLoadTeamMatches: (teamSlug: string) => Promise<MatchOption[]>
   onScrapeMatch: (
     fixtureId: string,
     competition: string,
@@ -259,6 +263,8 @@ export function SourcesStage({
           onClose={() => setMatchOpen(false)}
           loadCompetitions={onLoadMatchCompetitions}
           loadMatches={onLoadMatches}
+          searchTeams={onSearchMatchTeams}
+          loadTeamMatches={onLoadTeamMatches}
           onScrape={onScrapeMatch}
           onCreate={onCreateMatchSource}
         />

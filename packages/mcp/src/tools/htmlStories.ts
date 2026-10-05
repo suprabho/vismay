@@ -7,7 +7,7 @@
  * vizmaya.fyi (the default) and footshorts.com — chosen with `app`. Pure HTTP
  * to the deployed site, so no dev server is needed.
  *
- * A footshorts brief can carry a MATCH CONTEXT: pass `fixtureIds` (up to 12 footshorts
+ * A footshorts brief can carry a MATCH CONTEXT: pass `fixtureIds` (up to 40 footshorts
  * fixture uuids, from the admin HTML stories tab's match picker or a
  * footshorts.com/match/<id> URL) and the site appends everything its match
  * tables know — Opta facts and the full stat set, the timeline, insights,
@@ -36,7 +36,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'contract (one self-contained HTML file), the site\'s house design direction, chart ' +
         'rules, a self-check list, and how to publish. Pass randomStyle=true to swap the house ' +
         'style for a palette and fonts drawn at random from the site\'s existing stories. For ' +
-        'footshorts, pass fixtureIds (up to 12 fixture ids) to append the match context — Opta ' +
+        'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
         'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
         'written from, plus an optional editorial prompt.',
       inputSchema: {
@@ -47,7 +47,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .describe('Use a random palette + font trio from an existing story instead of the house style.'),
         fixtureIds: z
           .array(z.string().min(1))
-          .max(12)
+          .max(40)
           .optional()
           .describe('footshorts only: fixture ids the story is about; their match context is appended to the brief.'),
         prompt: z
