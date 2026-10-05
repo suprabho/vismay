@@ -54,11 +54,47 @@ House style (use it unless the story clearly wants its own look):
   labels, axes and data (all on Google Fonts). Body 18–20px, line-height 1.6,
   measure 60–70 characters.
 - Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
-- Icons, if any: Phosphor (\`https://unpkg.com/@phosphor-icons/web\`).
 
-Scrollytelling is welcome when the data has a sequence: a sticky graphic with
-text steps that change it (IntersectionObserver is enough). Mark each step
-\`<section data-step>\`. Motion should explain something; never animate just to move.
+## Icons and flags
+
+Use both. They make a page scannable, but they support the words and never replace them.
+
+- **Icons: Phosphor.** Load
+  \`https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css\`
+  (swap \`regular\` for \`fill\` or \`duotone\` if you want those weights too), then
+  write \`<i class="ph ph-trend-up" aria-hidden="true"></i>\`. Use them for section
+  markers, stat cards, callouts and key-takeaway lists. Stick to one weight, and
+  size them to the text they sit next to. Use no other icon set and no emoji.
+- **Flags: flag-icons.** Whenever a country appears (a table row, a chart label,
+  a stat card, a map callout), show its flag next to its name. Load
+  \`https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css\` and write
+  \`<span class="fi fi-in"></span>\` (ISO 3166-1 alpha-2, lowercase; add \`fis\`
+  for a square flag). Inside SVG charts, use
+  \`<image href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/in.svg">\`
+  (or \`flags/1x1/\` for round markers). Never use emoji flags: Windows shows them
+  as two letters. A flag always sits beside the country name, never instead of it.
+
+## Motion and scroll animation
+
+Animate on scroll. The page should feel alive as the reader moves through it:
+- **Reveal**: text blocks, stat cards and charts fade in and rise 16–24px as they
+  enter the viewport (400–700ms, ease-out, once only). Stagger siblings by ~80ms.
+- **Charts build when seen**: bars grow from zero, lines draw from left to right,
+  points and labels follow. Start this when the chart scrolls into view, not on
+  page load.
+- **Big numbers count up** to their value when they appear.
+- **Scrollytelling** when the data has a sequence: a sticky graphic with text
+  steps that change it. Mark each step \`<section data-step>\`.
+
+How to build it:
+- IntersectionObserver is enough; GSAP ScrollTrigger is fine for richer sequences.
+  Animate only \`transform\` and \`opacity\`.
+- Content is visible by default. Hide elements for their reveal only after your
+  script runs (e.g. it adds \`class="js"\` to \`<html>\` and your CSS keys off
+  \`.js\`), so a script failure never leaves a blank page.
+- Under \`prefers-reduced-motion: reduce\`, show everything in its final state
+  with no movement.
+- Keep it calm: motion should guide the eye to the point, not decorate.
 
 ## Charts
 
