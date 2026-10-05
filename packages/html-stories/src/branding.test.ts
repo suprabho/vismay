@@ -14,7 +14,9 @@ assert.ok(out.indexOf('<h1>Story</h1>') > out.indexOf('</vizmaya-header>'))
 assert.ok(out.indexOf('<h1>Story</h1>') < out.indexOf('<vizmaya-footer>'))
 // Assets are absolute (the page runs in an opaque origin) with no double slash.
 assert.ok(out.includes('"https://vizmaya.fyi/vizmaya-logo.riv"'))
-assert.ok(out.includes('src="https://vizmaya.fyi/vizmaya-logo-01.svg"'))
+// The static mark is inline, in the home page's colours, so it never 404s/401s.
+assert.ok(!out.includes('<img'))
+assert.ok(out.includes('fill="#0BBFAB"') && out.includes('"textColor":"#111111"'))
 assert.ok(!out.includes('vizmaya.fyi//'))
 // The story itself is untouched.
 assert.equal(out.replace(/<vizmaya-header>[\s\S]*<\/vizmaya-header>/, '').replace(/<vizmaya-footer>[\s\S]*<\/script>/, ''), doc)
