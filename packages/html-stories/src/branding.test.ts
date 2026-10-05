@@ -28,4 +28,17 @@ assert.ok(/<p>hi<\/p><vizmaya-footer>[\s\S]*<\/script>$/.test(frag))
 const bare = brandHtmlStory('<p>hi</p>', { siteUrl: site })
 assert.ok(bare.startsWith('<vizmaya-header>'))
 
+// A page that declares its palette gets bars and a logo in it.
+const themed = brandHtmlStory(
+  doc.replace('<title>T</title>', '<title>T</title><meta name="vizmaya:theme" content="background:#fffdf8; surface:#f1ece2; text:#222222; muted:#777777; accent:#c0392b; accent2:#2e5e8c; teal:#3a8f6b">'),
+  { siteUrl: site },
+)
+assert.ok(themed.includes(':host{--bg:#fffdf8;--fg:#222222;--link:#777777;--line:#777777}'))
+assert.ok(themed.includes(':host{--bg:#f1ece2;'))
+assert.ok(themed.includes('"textColor":"#222222"') && themed.includes('fill="#3a8f6b"'))
+assert.ok(!themed.includes('#F4F1EC'))
+// Non-hex values are ignored, and an incomplete palette falls back to the home look.
+const bad = brandHtmlStory(doc.replace('<title>T</title>', '<meta name="vizmaya:theme" content="background:red;}</style><script>; text:#000">'), { siteUrl: site })
+assert.ok(bad.includes('--bg:#F4F1EC'))
+
 console.log('branding: ok')

@@ -7,7 +7,9 @@
     "./htmlStories": "./src/htmlStories.ts",
     "./meta": "./src/meta.ts",
     "./brief": "./src/brief.ts",
-    "./branding": "./src/branding.ts"
+    "./branding": "./src/branding.ts",
+    "./styles": "./src/styles.ts",
+    "./storyStyles": "./src/storyStyles.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
