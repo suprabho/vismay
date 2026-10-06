@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
+import { parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { isAuthed } from '@/lib/adminAuth'
@@ -12,8 +13,9 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
  * so a footshorts brief can carry its match context (service-role reads of the
  * match tables). JSON body:
  *
- *   { app, style?, fixtureIds?, prompt?, spinId? }
+ *   { app, format?, style?, fixtureIds?, prompt?, spinId? }
  *
+ * `format` is the story format (scroll, the default, or book, board, deck);
  * `style` is the randomizer's pick (the client shows its swatches, so it must
  * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
  * `spinId` (vizmaya only) is a logged randomizer spin, whose assignment,
@@ -36,6 +38,8 @@ export async function POST(req: Request) {
 
   const app = parseHtmlStoryApp(b.app)
   if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
+  const format = parseHtmlStoryFormat(b.format)
+  if (!format) return NextResponse.json({ error: 'format must be scroll, book, board or deck' }, { status: 400 })
   const style = isStyle(b.style) ? b.style : null
   const siteUrl = htmlStorySiteUrl(app)
 
@@ -64,8 +68,8 @@ export async function POST(req: Request) {
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt })
-        : htmlStoryBrief({ app, siteUrl, style, spin })
+        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format })
+        : htmlStoryBrief({ app, siteUrl, style, spin, format })
   } catch (e) {
     return NextResponse.json(
       { error: `match context failed: ${e instanceof Error ? e.message : String(e)}` },

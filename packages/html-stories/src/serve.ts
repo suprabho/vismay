@@ -16,11 +16,7 @@
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { brandHtmlStory } from './branding'
 import { getPublishedHtmlStory } from './htmlStories'
-import { isSafeSlug } from './meta'
-
-const SANDBOX =
-  'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms ' +
-  'allow-modals allow-downloads allow-presentation'
+import { HTML_STORY_SANDBOX_CSP, isSafeSlug } from './meta'
 
 const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: string; font: string }> = {
   'vizmaya-fyi': { bg: '#0a0e14', fg: '#e0ddd5', link: '#D85A30', font: "-apple-system,'Segoe UI',Inter,sans-serif" },
@@ -51,7 +47,7 @@ export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryA
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'content-security-policy': SANDBOX,
+      'content-security-policy': HTML_STORY_SANDBOX_CSP,
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'strict-origin-when-cross-origin',
       'last-modified': new Date(story.updatedAt).toUTCString(),

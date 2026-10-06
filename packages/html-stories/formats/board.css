@@ -1,0 +1,150 @@
+/*
+ * vizmaya board format, v1. Pair with board@1.js.
+ *
+ * html.board-on: a fixed-size world of pinned items that a camera flies
+ * between. Otherwise (no JS, or "Read as one page"): the items in reading
+ * order, as one column of cards.
+ *
+ * Tokens (set them in your own :root):
+ *   --board-felt, --board-felt-2, --board-edge   the board's surface and frame
+ *   --board-string, --board-pin, --board-label   strings, pins, zone labels
+ *   --board-paper, --board-card                  .paper sheets, other cards
+ *   --board-ink, --board-ink-muted               text on paper and cards
+ *   --sticky-gold, --sticky-rose, --sticky-blue, --sticky-sage
+ * The Whiteboard toggle sets data-surface="whiteboard" on the stage, which
+ * swaps the surface, string, pin and label tokens.
+ */
+:where(:root) {
+  --board-felt: color-mix(in srgb, var(--vz-surface, #111820) 92%, var(--vz-text, #e0ddd5));
+  --board-felt-2: color-mix(in srgb, var(--vz-surface, #111820) 86%, var(--vz-text, #e0ddd5));
+  --board-edge: color-mix(in srgb, var(--vz-surface, #111820) 78%, var(--vz-text, #e0ddd5));
+  --board-string: #b9465a; --board-pin: var(--vz-accent, #c9a24b);
+  --board-label: color-mix(in srgb, var(--vz-text, #e0ddd5) 78%, transparent);
+  --board-paper: #ebe2d0; --board-card: #f3eee4; --board-ink: #2b2127; --board-ink-muted: #6f6159;
+  --sticky-gold: #e9d494; --sticky-rose: #e8bcc4; --sticky-blue: #c6cbe9; --sticky-sage: #c9dccf;
+}
+:where(.stage[data-surface="whiteboard"]) {
+  --board-felt: #e9e7e2; --board-felt-2: #f4f3ef; --board-edge: #b9bcc2;
+  --board-string: #3b4a8c; --board-pin: #7c2438; --board-label: #3f3a44;
+}
+
+/* ── Things pinned to the board (both views) ─────────────────────────── */
+:where(.world .item) {
+  box-sizing: border-box; padding: 22px 22px 18px; color: var(--board-ink); background: var(--board-card);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 12px 24px rgba(0, 0, 0, .35);
+}
+:where(.world .item.paper) {
+  padding: 28px 30px 24px; background-color: var(--board-paper);
+  background-image: radial-gradient(circle at 15% 20%, rgba(120, 90, 50, .05), transparent 40%), radial-gradient(circle at 85% 80%, rgba(120, 90, 50, .06), transparent 45%);
+}
+:where(.world .item.index) {
+  background-color: var(--board-card);
+  background-image: linear-gradient(transparent 46px, rgba(192, 96, 58, .55) 46px, rgba(192, 96, 58, .55) 47.5px, transparent 47.5px),
+    repeating-linear-gradient(transparent 0 27px, rgba(59, 74, 140, .16) 27px 28px);
+  background-position: 0 0, 0 47px;
+}
+:where(.world .item.index p) { line-height: 28px; margin: 0 }
+:where(.world .item.sticky) { padding: 22px 22px 20px; box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 16px 22px -8px rgba(0, 0, 0, .45) }
+:where(.world .item.sticky.gold) { background: var(--sticky-gold) }
+:where(.world .item.sticky.rose) { background: var(--sticky-rose) }
+:where(.world .item.sticky.blue) { background: var(--sticky-blue) }
+:where(.world .item.sticky.sage) { background: var(--sticky-sage) }
+:where(.world .item.bare) { padding: 0; background: none; box-shadow: none; color: inherit }
+:where(.world .item .src, .world .item .meta) { color: var(--board-ink-muted) }
+:where(.world .item .chart) { width: 100% }
+
+/* ── The board ───────────────────────────────────────────────────────── */
+html.board-on .stage {
+  position: relative; box-sizing: border-box; height: calc(100svh - var(--vz-chrome-h)); min-height: 520px;
+  overflow: hidden; margin: 0; padding: 0; max-width: none;
+}
+html.board-on .stage:fullscreen { height: 100vh }
+html.vz-aura.board-on .stage { background: transparent !important }
+.vz-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y; cursor: grab }
+.vz-viewport.vz-grabbing { cursor: grabbing }
+html.board-on .vz-viewport::before { /* the felt */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .035) 1px, transparent 1.5px) 0 0 / 7px 7px,
+    radial-gradient(ellipse at 50% 40%, var(--board-felt-2), var(--board-felt) 75%);
+}
+html.vz-aura.board-on .vz-viewport::before { opacity: .85 }
+html.board-on .world {
+  position: absolute; left: 0; top: 0; margin: 0; padding: 0; box-sizing: border-box;
+  width: var(--vz-world-w, 3400px); height: var(--vz-world-h, 2240px);
+  transform-origin: 0 0; will-change: transform;
+}
+html.board-on .world::before { /* the board's frame */
+  content: ''; position: absolute; inset: -24px; border: 24px solid var(--board-edge); border-radius: 10px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .35), 0 30px 80px rgba(0, 0, 0, .5); pointer-events: none;
+}
+html.board-on .world .item {
+  position: absolute; margin: 0; z-index: 3; cursor: zoom-in;
+  left: calc(var(--x, 0) * 1px); top: calc(var(--y, 0) * 1px); width: calc(var(--w, 300) * 1px);
+  transform: rotate(calc(var(--r, 0) * 1deg));
+}
+html.board-on .world .item.paper { z-index: 1 }
+html.board-on .world .item.sticky { z-index: 4 }
+html.board-on .world .item.bare { cursor: default }
+html.board-on .world .item:focus-visible { outline: 3px solid var(--board-pin); outline-offset: 6px }
+html.board-on .world .item:not(.bare)::before { /* the pin */
+  content: ''; position: absolute; top: -9px; left: 50%; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; z-index: 2;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, .4) 0 2px, transparent 3px), var(--board-pin);
+  box-shadow: 0 4px 5px rgba(0, 0, 0, .45);
+}
+html.board-on .world .item.tape::before {
+  width: 90px; height: 26px; margin-left: -45px; top: -12px; border-radius: 2px;
+  background: rgba(232, 221, 201, .55); box-shadow: none; transform: rotate(-3deg);
+}
+html.board-on .world .zone-label {
+  position: absolute; left: calc(var(--x, 0) * 1px); top: calc(var(--y, 0) * 1px);
+  color: var(--board-label); white-space: nowrap; pointer-events: none;
+}
+.vz-strings { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2 }
+.vz-strings path { fill: none; stroke: var(--board-string); stroke-width: 2.2; stroke-linecap: round; opacity: .85; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .35)) }
+.vz-strings circle { fill: var(--board-string) }
+
+/* the tour panel */
+.vz-panel {
+  position: absolute; left: 20px; bottom: 20px; width: 380px; max-height: calc(100% - 40px); z-index: 10;
+  display: flex; flex-direction: column; box-sizing: border-box; border-radius: 14px;
+  background: color-mix(in srgb, var(--vz-surface, #111820) 94%, transparent); color: var(--vz-text, #e0ddd5);
+  border: 1px solid var(--vz-line, rgba(127, 127, 127, .35)); box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.vz-panel .tour { list-style: none; margin: 0; padding: 22px 24px 8px; overflow: auto }
+.vz-panel .tour > li { display: none }
+.vz-panel .tour > li.vz-cur { display: block }
+:where(.vz-panel .tour h2) { font-size: 26px; line-height: 1.1; margin: 0 0 10px }
+:where(.vz-panel .tour p) { font-size: 16px; line-height: 1.5; margin: 0 0 .6em }
+.vz-panel-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--vz-line, rgba(127, 127, 127, .35)) }
+.vz-count { flex: 1; font-size: 14px; color: var(--vz-muted, #5a6a70); font-variant-numeric: tabular-nums }
+.vz-tools { position: absolute; right: 16px; top: 16px; z-index: 10; display: flex; gap: 8px }
+.vz-tools .vz-btn { background: color-mix(in srgb, var(--vz-surface, #111820) 92%, transparent) }
+.vz-minimap {
+  position: absolute; right: 16px; bottom: 16px; z-index: 9; width: 180px; overflow: hidden; border-radius: 8px; cursor: pointer;
+  background: color-mix(in srgb, var(--vz-surface, #111820) 88%, transparent); border: 1px solid var(--vz-line, rgba(127, 127, 127, .35));
+}
+.vz-minimap i { position: absolute; background: color-mix(in srgb, var(--vz-text, #e0ddd5) 35%, transparent); border-radius: 1px }
+.vz-minimap .vz-view { position: absolute; border: 1.5px solid var(--vz-accent, #D85A30); border-radius: 2px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .25) }
+@media (max-width: 720px) {
+  .vz-panel { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 40% }
+  .vz-panel .tour { padding: 14px 16px 2px }
+  :where(.vz-panel .tour h2) { font-size: 22px; margin-bottom: 6px }
+  :where(.vz-panel .tour p) { font-size: 14.5px; line-height: 1.45 }
+  .vz-panel-bar { padding: 8px 10px 10px }
+  .vz-minimap { display: none }
+  .vz-tools { right: 8px; top: 8px; gap: 6px }
+  .vz-tools .vz-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+}
+
+/* ── One column: no JS, or "Read as one page" ────────────────────────── */
+html:not(.board-on) .vz-viewport { display: contents }
+html:not(.board-on) .world { transform: none !important }
+:where(html:not(.board-on)) :where(.stage > .world, .vz-viewport > .world) {
+  display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 32px 16px 48px;
+}
+:where(html:not(.board-on)) :where(.world > .item) { position: relative; width: min(100%, 680px) }
+html:not(.board-on) .board-only, html:not(.board-on) .zone-label, html:not(.board-on) .vz-strings { display: none !important }
+html.js:not(.board-on) .world .chart { height: auto !important; aspect-ratio: var(--chart-ratio, 4 / 3) }
+html.js:not(.board-on) .vz-tools { position: sticky; top: 8px; justify-content: flex-end; max-width: 680px; margin: 0 auto -48px; padding: 0 16px; right: auto }

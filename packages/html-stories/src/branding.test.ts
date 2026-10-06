@@ -6,9 +6,11 @@ import { brandHtmlStory } from './branding'
 const site = 'https://vizmaya.fyi/'
 const doc = `<!doctype html><html lang="en"><head><title>T</title></head><BODY class="x"><h1>Story</h1></BODY></html>`
 const out = brandHtmlStory(doc, { siteUrl: site })
+const CHROME_H = '<style>:root{--vizmaya-chrome-h:65px}@media (max-width:480px){:root{--vizmaya-chrome-h:57px}}</style>'
 
-// Header right after <body>, footer + script right before </body>.
-assert.ok(out.includes('<BODY class="x"><vizmaya-header>'))
+// The header's height for paged formats, then the header, right after <body>;
+// footer + script right before </body>.
+assert.ok(out.includes(`<BODY class="x">${CHROME_H}<vizmaya-header>`))
 assert.ok(/<\/vizmaya-footer><script>[\s\S]*<\/script><\/BODY><\/html>$/.test(out))
 assert.ok(out.indexOf('<h1>Story</h1>') > out.indexOf('</vizmaya-header>'))
 assert.ok(out.indexOf('<h1>Story</h1>') < out.indexOf('<vizmaya-footer>'))
@@ -19,14 +21,17 @@ assert.ok(!out.includes('<img'))
 assert.ok(out.includes('fill="#0BBFAB"') && out.includes('"textColor":"#111111"'))
 assert.ok(!out.includes('vizmaya.fyi//'))
 // The story itself is untouched.
-assert.equal(out.replace(/<vizmaya-header>[\s\S]*<\/vizmaya-header>/, '').replace(/<vizmaya-footer>[\s\S]*<\/script>/, ''), doc)
+assert.equal(
+  out.replace(CHROME_H, '').replace(/<vizmaya-header>[\s\S]*<\/vizmaya-header>/, '').replace(/<vizmaya-footer>[\s\S]*<\/script>/, ''),
+  doc,
+)
 
 // Fragments without <body>/<html> still get both bars, in order.
 const frag = brandHtmlStory('<head><title>x</title></head><p>hi</p>', { siteUrl: site })
-assert.ok(frag.startsWith('<head><title>x</title></head><vizmaya-header>'))
+assert.ok(frag.startsWith(`<head><title>x</title></head>${CHROME_H}<vizmaya-header>`))
 assert.ok(/<p>hi<\/p><vizmaya-footer>[\s\S]*<\/script>$/.test(frag))
 const bare = brandHtmlStory('<p>hi</p>', { siteUrl: site })
-assert.ok(bare.startsWith('<vizmaya-header>'))
+assert.ok(bare.startsWith(`${CHROME_H}<vizmaya-header>`))
 
 // A page that declares its palette gets bars and a logo in it.
 const themed = brandHtmlStory(
@@ -45,7 +50,7 @@ assert.ok(bad.includes('--bg:#F4F1EC'))
 assert.ok(!out.includes('vizmaya-aura') && !out.includes('aura.promad.design'))
 // An aura goes behind the page: still + live embed + a veil in the page background, body cleared.
 const aura = brandHtmlStory(themed.length ? doc.replace('<title>T</title>', '<title>T</title><meta name="vizmaya:theme" content="background:#fffdf8; surface:#f1ece2; text:#222222; muted:#777777; accent:#c0392b; accent2:#2e5e8c; teal:#3a8f6b">') : doc, { siteUrl: site, aura: 'gold-lines' })
-assert.ok(aura.includes('<BODY class="x"><style>html,body{background:transparent!important}</style><vizmaya-aura'))
+assert.ok(aura.includes(`<BODY class="x">${CHROME_H}<style>html,body{background:transparent!important}</style><vizmaya-aura`))
 assert.ok(aura.indexOf('</vizmaya-aura>') < aura.indexOf('<vizmaya-header>'))
 assert.ok(aura.includes('src="https://aura.promad.design/scenes/gold-lines/capture.png?w=1920&amp;h=1080&amp;dpr=1"'))
 assert.ok(aura.includes('src="https://aura.promad.design/embed/gold-lines?hideText=true&amp;'))
@@ -57,7 +62,8 @@ console.log('branding: ok')
 
 // Footshorts chrome: its own bars and mark, no Rive, links into the app.
 const fsOut = brandHtmlStory(doc, { siteUrl: 'https://footshorts.com/', app: 'footshorts' })
-assert.ok(fsOut.includes('<BODY class="x"><footshorts-header>'))
+// Footshorts' bar is 60px (52px on phones) plus its border.
+assert.ok(fsOut.includes('<BODY class="x"><style>:root{--vizmaya-chrome-h:61px}@media (max-width:480px){:root{--vizmaya-chrome-h:53px}}</style><footshorts-header>'))
 assert.ok(/<\/footshorts-footer><\/BODY><\/html>$/.test(fsOut))
 assert.ok(!fsOut.includes('vizmaya-header') && !fsOut.includes('rive'))
 assert.ok(fsOut.includes('href="https://footshorts.com/feed"'))

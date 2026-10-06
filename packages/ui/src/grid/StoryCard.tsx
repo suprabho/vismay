@@ -106,6 +106,7 @@ export function StoryCard({
         <div className="bcard-k">
           <span className="bcard-n">{String(n + 1).padStart(2, '0')}</span>
           {s.topic && <span className="bcard-topic">{s.topic}</span>}
+          {s.format && <span className="bcard-topic">{s.format}</span>}
           <span className="bcard-date">{fmtMonth(s.date)}</span>
         </div>
         <h3 className="bcard-h">{s.title}</h3>

@@ -16,6 +16,7 @@ import {
   Warning,
   X,
 } from '@phosphor-icons/react'
+import { suggestedFormatFor, type HtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { DeskHeatTableRow } from '@vismay/html-stories/randomizerApi'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
 import { reelPool } from '@vismay/randomizer/datasets'
@@ -31,6 +32,7 @@ import {
   type SpinRecord,
   type SpinStatus,
 } from '@vismay/randomizer/types'
+import { FormatPicker } from '@/components/html-stories/FormatPicker'
 
 const ITEM_H = 80
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
@@ -203,6 +205,7 @@ export function RandomizerClient({
   const [respinOpen, setRespinOpen] = useState(false)
   const [otherReason, setOtherReason] = useState('')
   const [style, setStyle] = useState<StoryStyle | null>(null)
+  const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
   const [built, setBuilt] = useState<{ request: string; brief: string | null; error: string | null } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
@@ -218,8 +221,8 @@ export function RandomizerClient({
 
   // The composed brief for the spin on screen, built server-side (it reads the spin).
   const request = useMemo(
-    () => (current ? JSON.stringify({ app: 'vizmaya-fyi', style, spinId: current.id, v: current.updatedAt }) : null),
-    [current, style],
+    () => (current ? JSON.stringify({ app: 'vizmaya-fyi', format, style, spinId: current.id, v: current.updatedAt }) : null),
+    [current, format, style],
   )
   const building = !!request && built?.request !== request
   const brief = request && !building ? built?.brief ?? null : null
@@ -563,7 +566,8 @@ export function RandomizerClient({
             <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden lg:sticky lg:top-4">
               <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-white/10 bg-neutral-900/60">
                 <span className="text-xs font-mono text-neutral-400 min-w-0 break-all">assignment · {researchFileName(current).replace('.md', '')}</span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <FormatPicker value={format} onChange={setFormat} suggested={suggestedFormatFor(current.randomizer)} />
                   <button
                     type="button"
                     className={btn}
@@ -587,8 +591,16 @@ export function RandomizerClient({
                 Agents with web access can read it at{' '}
                 <code className="text-neutral-400 break-all">
                   {siteUrl}/api/html-stories/brief?spin={current.id}
+                  {format !== 'scroll' ? `&format=${format}` : ''}
                 </code>
-                , or call <code className="text-neutral-400">get_html_story_brief</code> with this <code>spinId</code>.
+                , or call <code className="text-neutral-400">get_html_story_brief</code> with this <code>spinId</code>
+                {format !== 'scroll' ? (
+                  <>
+                    {' '}
+                    and <code>format: &quot;{format}&quot;</code>
+                  </>
+                ) : null}
+                .
               </p>
             </div>
           </section>

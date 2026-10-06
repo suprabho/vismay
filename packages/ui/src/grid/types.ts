@@ -16,6 +16,11 @@ export interface StoryCardData {
   theme?: Theme
   /** Optional editorial topic — drives the card pill. */
   topic?: string
+  /**
+   * Optional story-format label for an HTML story that isn't a scrolling page
+   * ("Book", "Board", "Deck"): a second pill beside the topic.
+   */
+  format?: string
   /** Optional cover image URL shown as the card thumbnail background. */
   thumbnail?: string
   /** Optional text colour when a thumbnail is shown — keeps title/READ legible. */

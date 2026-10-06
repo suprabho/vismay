@@ -1,16 +1,34 @@
 /**
  * Pure helpers for agent-authored HTML stories: slug rules, metadata
- * extraction (title / description / og:image straight from the document), and
- * a light lint that tells the posting agent what will break once hosted.
+ * extraction (title / description / og:image / palette / format straight from
+ * the document), and a light lint that tells the posting agent what will
+ * break once hosted.
  *
  * No Supabase / Node imports — safe for client components and the MCP server.
  */
+
+import {
+  FORMAT_META_NAME,
+  HTML_STORY_FORMAT_META,
+  PAGED_HTML_STORY_FORMATS,
+  isHtmlStoryFormat,
+  type HtmlStoryFormat,
+} from './formats'
 
 export const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 export const MAX_SLUG_LENGTH = 80
 
 /** Vercel functions reject request bodies over 4.5 MB; keep a margin. */
 export const MAX_HTML_BYTES = 4 * 1024 * 1024
+
+/**
+ * The CSP a story (and a format's reference page) is served under: scripts
+ * run, but in an opaque origin with no access to the site's cookies or
+ * storage. The brief tells authors to expect that.
+ */
+export const HTML_STORY_SANDBOX_CSP =
+  'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms ' +
+  'allow-modals allow-downloads allow-presentation'
 
 export type HtmlStoryStatus = 'draft' | 'published' | 'archived'
 export const HTML_STORY_STATUSES: HtmlStoryStatus[] = ['draft', 'published', 'archived']
@@ -136,6 +154,58 @@ export function parseThemeMetaContent(content: string): ThemeColors | null {
 }
 
 /**
+ * The page's format, as declared by `<meta name="vizmaya:format"
+ * content="book">` (./formats). A page without the tag, or with a value that
+ * isn't a format, is a scroll story (the lint flags the bad value).
+ */
+export function extractFormatMeta(html: string): HtmlStoryFormat {
+  const raw = metaContent(metaTags(html), FORMAT_META_NAME)?.trim().toLowerCase()
+  return isHtmlStoryFormat(raw) ? raw : 'scroll'
+}
+
+/** Does the document load a format's hosted runtime (…/formats/book@1.js)? */
+function loadsRuntime(html: string, format: HtmlStoryFormat): boolean {
+  return new RegExp(`/formats/${format}@\\d+\\.js`, 'i').test(html)
+}
+
+/** Format checks: the tag, the units, and the runtime the tag needs. */
+function lintFormat(html: string, tags: Record<string, string>[], warnings: string[]): void {
+  const raw = metaContent(tags, FORMAT_META_NAME)
+  if (raw !== null && !isHtmlStoryFormat(raw.trim().toLowerCase())) {
+    warnings.push(
+      `<meta name="${FORMAT_META_NAME}" content="${raw}"> isn't a format; use scroll, book, board or deck. The page is listed as a scroll story.`,
+    )
+  }
+  const format = extractFormatMeta(html)
+  if (format === 'scroll') {
+    const loaded = PAGED_HTML_STORY_FORMATS.find((f) => loadsRuntime(html, f))
+    if (loaded && raw === null) {
+      warnings.push(
+        `The page loads the ${loaded} runtime but doesn't declare its format; add <meta name="${FORMAT_META_NAME}" content="${loaded}"> so it's listed as a ${HTML_STORY_FORMAT_META[loaded].label.toLowerCase()}.`,
+      )
+    }
+    return
+  }
+  const unit = HTML_STORY_FORMAT_META[format].unit
+  // An inline runtime (the page carries its own) sets html.<format>-on.
+  if (!loadsRuntime(html, format) && !new RegExp(`\\b${format}-on\\b`).test(html)) {
+    warnings.push(
+      `The page declares the ${format} format but doesn't load its runtime: add <link rel="stylesheet" href="…/formats/${format}@1.css"> and <script src="…/formats/${format}@1.js"> (the brief has the URLs). Without it the page reads as one column.`,
+    )
+  }
+  if (!/\bdata-unit\b/i.test(html)) {
+    warnings.push(
+      `No [data-unit] elements: in a ${format}, mark each ${unit} with data-unit so the runtime can build its charts and count-ups when the reader reaches it.`,
+    )
+  }
+  if (/\bdata-step\b/i.test(html)) {
+    warnings.push(
+      `data-step is the scroll format's marker. In a ${format} nothing is scroll-triggered: mark each ${unit} with data-unit and let the runtime enter it.`,
+    )
+  }
+}
+
+/**
  * Aura scenes (aura.promad.design) are chosen per story after the HTML is
  * written, not by the agent: the slug lives in html_stories.aura and is laid
  * behind the page when it's served (./branding) and on its listing card.
@@ -202,6 +272,7 @@ export function lintHtml(html: string): HtmlLint {
   if (!meta.title) warnings.push('Missing <title>; the story will be listed under its slug.')
   if (!meta.description) warnings.push('Missing <meta name="description">; link previews will have no summary.')
   if (!meta.ogImageUrl) warnings.push('Missing <meta property="og:image">; link previews will have no image.')
+  lintFormat(html, metaTags(html), warnings)
   if (!extractThemeMeta(html)) {
     warnings.push(
       `Missing or incomplete <meta name="${THEME_META_NAME}">; the vizmaya header and footer won't match the page's colours. ` +

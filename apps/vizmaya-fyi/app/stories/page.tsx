@@ -23,6 +23,7 @@ export default async function AllStoriesPage() {
       subtitle: s.subtitle,
       date: s.date,
       byline: s.byline ?? '',
+      format: s.format,
     })),
     ...stories.map((s) => ({
       slug: s.slug,

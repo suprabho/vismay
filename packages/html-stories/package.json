@@ -2,7 +2,7 @@
   "name": "@vismay/html-stories",
   "version": "0.0.0",
   "private": true,
-  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, site chrome, the agent brief (per app: vizmaya-fyi, footshorts; a vizmaya brief can carry a randomizer spin), and the shared serve/publish/brief route handlers. Its own package so changes here only rebuild admin, vizmaya-fyi and footshorts web.",
+  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, site chrome, the agent brief (per app: vizmaya-fyi, footshorts; per story format: scroll, book, board, deck; a vizmaya brief can carry a randomizer spin), the hosted format runtimes (formats/), and the shared serve/publish/brief route handlers. Its own package so changes here only rebuild admin, vizmaya-fyi and footshorts web.",
   "exports": {
     "./apps": "./src/apps.ts",
     "./htmlStories": "./src/htmlStories.ts",
@@ -15,10 +15,13 @@
     "./branding": "./src/branding.ts",
     "./styles": "./src/styles.ts",
     "./storyStyles": "./src/storyStyles.ts",
-    "./randomizerApi": "./src/randomizerApi.ts"
+    "./randomizerApi": "./src/randomizerApi.ts",
+    "./formats": "./src/formats.ts",
+    "./formatsApi": "./src/formatsApi.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gen:formats": "tsx scripts/gen-format-assets.ts"
   },
   "dependencies": {
     "@vismay/content-source": "workspace:*",

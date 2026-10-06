@@ -17,7 +17,9 @@
 
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { DEFAULT_HTML_STORY_APP, type HtmlStoryApp } from './apps'
+import { DEFAULT_HTML_STORY_FORMAT, isHtmlStoryFormat, type HtmlStoryFormat } from './formats'
 import {
+  extractFormatMeta,
   extractHtmlMeta,
   extractThemeMeta,
   parseThemeMetaContent,
@@ -40,6 +42,8 @@ export interface HtmlStorySummary {
   createdAt: string
   /** Aura scene slug laid behind the page and its listing card (migration 087). */
   aura: string | null
+  /** The page's declared format (<meta name="vizmaya:format">; migration 089). */
+  format: HtmlStoryFormat
 }
 
 export interface HtmlStory extends HtmlStorySummary {
@@ -79,8 +83,14 @@ export interface HtmlStoryInput {
 
 const BASE_COLUMNS =
   'slug, app_slug, title, description, og_image_url, status, source, published_at, updated_at, created_at'
-const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura`
+const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura, format`
 const AURA_MIGRATION_HINT = 'Setting an aura needs migration 087_html_stories_aura.sql applied'
+/**
+ * Columns later migrations added, newest first: a database that predates one
+ * is read and written without it (format: 089, aura: 087, theme_meta: 086),
+ * so the code can ship before the migrations do.
+ */
+const LATER_COLUMNS = ['format', 'aura', 'theme_meta'] as const
 
 export function hasServiceEnv(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -99,6 +109,7 @@ function mapSummary(r: any): HtmlStorySummary {
     updatedAt: r.updated_at,
     createdAt: r.created_at,
     aura: r.aura ?? null,
+    format: isHtmlStoryFormat(r.format) ? r.format : DEFAULT_HTML_STORY_FORMAT,
   }
 }
 
@@ -111,18 +122,31 @@ function isMissingColumn(error: { code?: string } | null): boolean {
   return error?.code === '42703' || error?.code === 'PGRST204'
 }
 
+/** A column list without one of LATER_COLUMNS. */
+function withoutColumn(columns: string, column: string): string {
+  return columns
+    .split(',')
+    .map((c) => c.trim())
+    .filter((c) => c !== column)
+    .join(', ')
+}
+
 /**
- * Run a select with the current columns, and again without the ones later
- * migrations added (aura: 087, theme_meta: 086) if the database predates
- * them, so the code can ship before the migrations do.
+ * Run a select with the current columns, and again without each of
+ * LATER_COLUMNS in turn while the database says one is missing.
  */
 async function selectCompat<T>(
   run: (columns: string) => PromiseLike<{ data: T; error: { code?: string; message: string } | null }>,
   columns: string,
 ): Promise<{ data: T; error: { code?: string; message: string } | null }> {
   let res = await run(columns)
-  if (isMissingColumn(res.error)) res = await run(columns.replace(SUMMARY_COLUMNS, BASE_COLUMNS))
-  if (isMissingColumn(res.error)) res = await run(columns.replace(SUMMARY_COLUMNS, BASE_COLUMNS).replace(', theme_meta', ''))
+  let cols = columns
+  for (const column of LATER_COLUMNS) {
+    if (!isMissingColumn(res.error)) break
+    if (!cols.split(',').some((c) => c.trim() === column)) continue
+    cols = withoutColumn(cols, column)
+    res = await run(cols)
+  }
   return res
 }
 
@@ -237,6 +261,7 @@ export async function saveHtmlStory(
 
   const meta = extractHtmlMeta(input.html)
   const theme = extractThemeMeta(input.html)
+  const format = extractFormatMeta(input.html)
   const status: HtmlStoryStatus = input.status ?? existing?.status ?? 'draft'
   const now = new Date().toISOString()
   const row = {
@@ -246,8 +271,10 @@ export async function saveHtmlStory(
     description: input.description?.trim() || meta.description || existing?.description || null,
     og_image_url: input.ogImageUrl?.trim() || meta.ogImageUrl || existing?.og_image_url || null,
     html: input.html,
-    // Kept beside the document so listings can tint cards without reading it.
+    // Kept beside the document so listings can tint cards and badge the
+    // format without reading it.
     theme_meta: theme ? themeMetaContent(theme) : null,
+    format,
     status,
     source: input.source,
     // Omitted from the upsert when not given, so a re-post keeps the aura.
@@ -258,16 +285,18 @@ export async function saveHtmlStory(
 
   const upsert = (r: Record<string, unknown>, cols: string) =>
     sb.from('html_stories').upsert(r, { onConflict: 'slug' }).select(cols).single()
-  let { data, error } = await upsert(row, SUMMARY_COLUMNS)
-  if (isMissingColumn(error)) {
-    // Before migration 087 (aura) or 086 (palette; the backfill picks it up).
-    if (input.aura != null) throw new Error(`${AURA_MIGRATION_HINT} (${input.slug})`)
-    const { aura: _a, ...pre087 } = row as typeof row & { aura?: unknown }
-    ;({ data, error } = await upsert(pre087, BASE_COLUMNS))
-    if (isMissingColumn(error)) {
-      const { theme_meta: _t, ...pre086 } = pre087
-      ;({ data, error } = await upsert(pre086, BASE_COLUMNS))
-    }
+  let write: Record<string, unknown> = row
+  let cols = SUMMARY_COLUMNS
+  let { data, error } = await upsert(write, cols)
+  // Before migration 089 (format; its backfill picks it up), 087 (aura) or
+  // 086 (palette; likewise): drop the newest column and try again.
+  for (const column of LATER_COLUMNS) {
+    if (!isMissingColumn(error)) break
+    if (column === 'aura' && input.aura != null) throw new Error(`${AURA_MIGRATION_HINT} (${input.slug})`)
+    const { [column]: _dropped, ...rest } = write
+    write = rest
+    cols = withoutColumn(cols, column)
+    ;({ data, error } = await upsert(write, cols))
   }
   if (error) throw new Error(`saveHtmlStory ${input.slug}: ${error.message}`)
 
@@ -314,6 +343,7 @@ export async function updateHtmlStoryMeta(
   const run = (cols: string) =>
     sb.from('html_stories').update(update).eq('slug', slug).eq('app_slug', app).select(cols).maybeSingle()
   let { data, error } = await run(SUMMARY_COLUMNS)
+  if (isMissingColumn(error)) ({ data, error } = await run(withoutColumn(SUMMARY_COLUMNS, 'format')))
   if (isMissingColumn(error)) {
     if (patch.aura !== undefined) throw new Error(`${AURA_MIGRATION_HINT} (${slug})`)
     ;({ data, error } = await run(BASE_COLUMNS))

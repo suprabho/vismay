@@ -97,7 +97,11 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         content: [
           {
             type: 'text',
-            text: `${describeSpin(spin)}\n\n${body.assignment}\n\nNext: call get_html_story_brief with spinId "${spin.id}" for the full brief (research protocol, format, research stub). Research file: ${body.researchFile}.`,
+            text:
+              `${describeSpin(spin)}\n\n${body.assignment}\n\nNext: call get_html_story_brief with spinId "${spin.id}" for the full brief (research protocol, format, research stub). Research file: ${body.researchFile}.` +
+              (body.suggestedFormat
+                ? ` The brief is for a scrolling page; a story like this also suits a ${body.suggestedFormat} (add format: "${body.suggestedFormat}").`
+                : ''),
           },
         ],
       }

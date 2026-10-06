@@ -1,5 +1,6 @@
 import type { Theme } from '@vismay/viz-engine'
 import type { StoryCardData } from '@vismay/ui'
+import { HTML_STORY_FORMAT_META } from '@vismay/html-stories/formats'
 import { listPublishedHtmlStories } from '@vismay/html-stories/htmlStories'
 
 /**
@@ -45,6 +46,8 @@ export async function getHtmlStoryCards(): Promise<StoryCardData[]> {
       // og:image stays as the thumbnail for stories without one.
       aura: s.aura ?? undefined,
       thumbnail: s.ogImageUrl ?? undefined,
+      // A book, board or deck says so on its card; a scrolling page needs no badge.
+      format: s.format !== 'scroll' ? HTML_STORY_FORMAT_META[s.format].label : undefined,
     }
   })
 }

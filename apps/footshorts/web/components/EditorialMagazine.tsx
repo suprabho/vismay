@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEditorialEpics, useEditorialStories } from '@/lib/useEditorialStories';
 import { useHtmlStories } from '@/lib/useHtmlStories';
 import type { EditorialEpicSummary, EditorialStorySummary } from '@footshorts/shared';
+import { HTML_STORY_FORMAT_META, isPagedHtmlStoryFormat } from '@vismay/html-stories/formats';
 import type { PublishedHtmlStory } from '@vismay/html-stories/htmlStories';
 import { AuraBackground } from '@/components/AuraBackground';
 
@@ -23,6 +24,8 @@ interface MagazineCard {
   background: string;
   /** True for /s/<slug>: rendered with <a>, not <Link>. */
   external: boolean;
+  /** An HTML story's format when it isn't a scrolling page ("Book", "Board", "Deck"). */
+  format: string | null;
 }
 
 // Hash slug → HSL hue so each story has a distinct, deterministic accent
@@ -54,6 +57,7 @@ function editorialCard(story: EditorialStorySummary): MagazineCard {
     aura: story.aura,
     background: gradientFor(story.slug),
     external: false,
+    format: null,
   };
 }
 
@@ -72,6 +76,8 @@ function htmlStoryCard(story: PublishedHtmlStory): MagazineCard {
     aura: story.aura,
     background,
     external: true,
+    // The listing API's JSON may predate the field; only a known paged format gets a label.
+    format: isPagedHtmlStoryFormat(story.format) ? HTML_STORY_FORMAT_META[story.format].label : null,
   };
 }
 
@@ -112,6 +118,12 @@ function HeroCard({ card }: { card: MagazineCard }) {
       <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white">
         <div className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] opacity-80">
           <span>Editorial</span>
+          {card.format && (
+            <>
+              <span aria-hidden>·</span>
+              <span>{card.format}</span>
+            </>
+          )}
           <span aria-hidden>·</span>
           <time dateTime={card.date}>{formatDate(card.date)}</time>
         </div>
@@ -156,9 +168,10 @@ function GridCard({ card }: { card: MagazineCard }) {
     >
       {card.aura && <AuraBackground slug={card.aura} />}
       <div className="relative z-10 flex h-full flex-col justify-between p-4 text-white">
-        <time dateTime={card.date} className="text-[0.65rem] uppercase tracking-[0.18em] opacity-75">
-          {formatDate(card.date)}
-        </time>
+        <div className="text-[0.65rem] uppercase tracking-[0.18em] opacity-75">
+          {card.format && <span>{card.format} · </span>}
+          <time dateTime={card.date}>{formatDate(card.date)}</time>
+        </div>
         <h3 className="font-serif text-base leading-snug">{card.title}</h3>
       </div>
     </CardLink>

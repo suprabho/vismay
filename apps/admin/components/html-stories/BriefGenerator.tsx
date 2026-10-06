@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, Copy, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
+import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
 import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canvas/compose/useComposeFlow'
+import { FormatPicker } from './FormatPicker'
 
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
 
@@ -17,8 +19,10 @@ interface MatchContextPick {
 }
 
 /**
- * "Copy agent brief" plus a style randomizer: Shuffle swaps the brief's house
- * style for a palette and font trio drawn from the app's stories' themes.
+ * "Copy agent brief" plus a story format picker (a scrolling page, or a book,
+ * a pinned board or a deck on the site's hosted runtime) and a style
+ * randomizer: Shuffle swaps the brief's house style for a palette and font
+ * trio drawn from the app's stories' themes.
  *
  * For footshorts there is also a match picker — by competition, or by team
  * across every competition: tick up to MAX_CONTEXT_MATCHES (and
@@ -35,6 +39,7 @@ interface MatchContextPick {
  */
 export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePool | null }) {
   const [style, setStyle] = useState<StoryStyle | null>(null)
+  const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
   const [matches, setMatches] = useState<MatchContextPick | null>(null)
   const [picking, setPicking] = useState(false)
   // The last brief the server built, tagged with the request it answers; the
@@ -45,8 +50,8 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
   const isFootshorts = app === 'footshorts'
 
   const request = useMemo(
-    () => JSON.stringify({ app, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt }),
-    [app, style, matches],
+    () => JSON.stringify({ app, format, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt }),
+    [app, format, style, matches],
   )
   const building = built?.request !== request
   const brief = building ? null : built?.brief ?? null
@@ -183,6 +188,7 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           {matches ? 'Change matches' : 'Add matches'}
         </button>
       )}
+      <FormatPicker value={format} onChange={setFormat} />
       <button
         onClick={() => pool && setStyle((prev) => pickRandomStyle(pool, { previous: prev }))}
         disabled={!canShuffle}

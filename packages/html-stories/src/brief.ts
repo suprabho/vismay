@@ -21,6 +21,12 @@
  * hands the agent that token and the sticky-map pattern. Without one the brief
  * falls back to MapLibre and D3-geo.
  *
+ * A brief is for one story format (./formats): the scrolling page by default,
+ * or a book, a board or a deck. For those, the scroll-specific sections
+ * (motion and scroll animation, the Mapbox sticky map) give way to the
+ * format's own (./formatBrief): its hosted runtime, its authoring contract
+ * and frame, and charts that animate when their unit is entered.
+ *
  * Keep it about outcomes and constraints, not a component catalogue: the whole
  * point of this pipeline is that the agent designs the page itself.
  */
@@ -40,6 +46,8 @@ import {
   type BriefSpin,
 } from '@vismay/randomizer/spinBrief'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
+import { formatChecks, formatHeading, formatHintSection, storyFormatSection } from './formatBrief'
+import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 
@@ -73,6 +81,11 @@ export interface BriefOptions {
    * reach it.
    */
   mapboxToken?: string | null
+  /**
+   * The story format: 'scroll' (default) or a paged format ('book', 'board',
+   * 'deck') built on the site's hosted runtime.
+   */
+  format?: HtmlStoryFormat | null
 }
 
 /** Pinned with the repo's own mapbox-gl dependency. */
@@ -263,6 +276,39 @@ The pattern:
   screen and not under its card, and labels don't collide.`
 }
 
+/** The scroll format's motion section (a paged format has its own; see ./formatBrief). */
+function motionSection(app: HtmlStoryApp, mapbox: string | null): string {
+  return `## Motion and scroll animation
+
+Animate on scroll. The page should feel alive as the reader moves through it:
+- **Reveal**: text blocks, stat cards and charts fade in and rise 16–24px as they
+  enter the viewport (400–700ms, ease-out, once only). Stagger siblings by ~80ms.
+- **Charts build when seen**: bars grow from zero, lines draw from left to right,
+  points and labels follow. Start this when the chart scrolls into view, not on
+  page load.
+- **Big numbers count up** to their value when they appear.
+- **Scrollytelling** when the data has a sequence: a sticky graphic with text
+  steps that change it. Mark each step \`<section data-step>\`.${
+    mapbox ? ' When the sequence moves through places, the sticky graphic is a map (see Maps).' : ''
+  }${
+    app === 'footshorts'
+      ? `
+  A match timeline is exactly this: the scoreline, xG race or momentum graphic
+  stays put while the goals, cards and substitutions step past it.`
+      : ''
+  }
+
+How to build it:
+- IntersectionObserver is enough; GSAP ScrollTrigger is fine for richer sequences.
+  Animate only \`transform\` and \`opacity\`.
+- Content is visible by default. Hide elements for their reveal only after your
+  script runs (e.g. it adds \`class="js"\` to \`<html>\` and your CSS keys off
+  \`.js\`), so a script failure never leaves a blank page.
+- Under \`prefers-reduced-motion: reduce\`, show everything in its final state
+  with no movement.
+- Keep it calm: motion should guide the eye to the point, not decorate.`
+}
+
 function contentSection(app: HtmlStoryApp, hasContext: boolean): string {
   const meta = HTML_STORY_APP_META[app]
   if (app !== 'footshorts') {
@@ -308,9 +354,13 @@ export function htmlStoryBrief({
   context,
   spin,
   mapboxToken,
+  format,
 }: BriefOptions): string {
   const site = siteUrl.replace(/\/$/, '')
-  const mapbox = briefMapboxToken(mapboxToken)
+  const paged = format && format !== 'scroll' ? format : null
+  // A paged format draws its maps as charts; the Mapbox sticky map is the scroll format's.
+  const mapbox = paged ? null : briefMapboxToken(mapboxToken)
+  const hint = spin ? formatHintSection(spin.randomizer, format ?? 'scroll') : null
   const meta = HTML_STORY_APP_META[app]
   const siteName = site.replace(/^https?:\/\//, '')
   const hasContext = !!context?.trim()
@@ -323,7 +373,7 @@ ${researchProtocolSection(spin)}
 ${deliverablesSection(spin, site)}
 
 ${formatSection(spin)}
-`
+${hint ? `\n${hint}\n` : ''}`
     : ''
   const chrome =
     app === 'footshorts'
@@ -332,6 +382,28 @@ navigation) above your page and a Footshorts footer below it`
       : `The only thing added is a slim vizmaya header (logo) above
 your page and a vizmaya footer below it`
   const footshortsMcp = app === 'footshorts' ? ' and `app: "footshorts"`' : ''
+  const unit = paged ? HTML_STORY_FORMAT_META[paged].unit : 'screen'
+  const formatIntro = paged
+    ? `
+This story is ${paged === 'board' ? 'a pinned board' : `a ${paged}`}, not a scrolling page. The site
+hosts the runtime that makes it one; you write the content, its design and its
+charts. "${formatHeading(paged)}" below says how.
+`
+    : ''
+  const formatMeta = paged
+    ? `
+   - \`<meta name="${FORMAT_META_NAME}" content="${paged}">\` and the format's stylesheet
+     (see "${formatHeading(paged)}").`
+    : ''
+  const mapsLine = paged
+    ? `For maps, draw a chart with D3-geo and world-atlas/us-atlas TopoJSON
+  (see "${formatHeading(paged)}").`
+    : mapbox
+      ? `For maps, see Maps below; D3-geo with world-atlas/us-atlas TopoJSON is fine
+  for a small static choropleth or locator.`
+      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
+  with free tiles. Don't use Mapbox: this deployment has no token for it.`
+  const checks = paged ? formatChecks(paged).map((c) => `\n- ${c}`).join('') : ''
 
   return `# Writing a ${meta.name} HTML story
 
@@ -340,7 +412,7 @@ self-contained HTML file. It is hosted exactly as you write it at
 ${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
 charts, and the words.
-${assignment}
+${formatIntro}${assignment}
 ## The hosting contract (must)
 
 1. One complete document: \`<!doctype html>\`, \`<html lang="en">\`, \`<head>\`, \`<body>\`.
@@ -352,7 +424,7 @@ ${assignment}
    - \`og:title\`, \`og:description\`, \`og:image\` (absolute https URL, 1200×630) and \`twitter:card\` = \`summary_large_image\`.
    - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(style?.palette ?? HOUSE_PALETTES[app])}">\`:
      your page's colours, as hex. The ${meta.name} header, footer and logo are tinted
-     to match. Copy it as given, and update it if you change the palette.
+     to match. Copy it as given, and update it if you change the palette.${formatMeta}
 3. Every asset is inline or an absolute \`https://\` URL. There is no folder next
    to the page, so \`./chart.js\` or \`images/map.png\` will 404.
 4. Load libraries from a CDN (jsdelivr, unpkg, cdnjs) with pinned versions.
@@ -366,53 +438,19 @@ ${assignment}
 ## Design direction
 
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters
-Graphics, NYT Upshot${app === 'footshorts' ? ', The Athletic' : ''}): editorial, calm, confident. One idea per screen.
+Graphics, NYT Upshot${app === 'footshorts' ? ', The Athletic' : ''}): editorial, calm, confident. One idea per ${unit}.
 
 ${styleSection(app, style)}
 - Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
 
 ${iconsSection(app)}
 
-## Motion and scroll animation
-
-Animate on scroll. The page should feel alive as the reader moves through it:
-- **Reveal**: text blocks, stat cards and charts fade in and rise 16–24px as they
-  enter the viewport (400–700ms, ease-out, once only). Stagger siblings by ~80ms.
-- **Charts build when seen**: bars grow from zero, lines draw from left to right,
-  points and labels follow. Start this when the chart scrolls into view, not on
-  page load.
-- **Big numbers count up** to their value when they appear.
-- **Scrollytelling** when the data has a sequence: a sticky graphic with text
-  steps that change it. Mark each step \`<section data-step>\`.${
-    mapbox ? ' When the sequence moves through places, the sticky graphic is a map (see Maps).' : ''
-  }${
-    app === 'footshorts'
-      ? `
-  A match timeline is exactly this: the scoreline, xG race or momentum graphic
-  stays put while the goals, cards and substitutions step past it.`
-      : ''
-  }
-
-How to build it:
-- IntersectionObserver is enough; GSAP ScrollTrigger is fine for richer sequences.
-  Animate only \`transform\` and \`opacity\`.
-- Content is visible by default. Hide elements for their reveal only after your
-  script runs (e.g. it adds \`class="js"\` to \`<html>\` and your CSS keys off
-  \`.js\`), so a script failure never leaves a blank page.
-- Under \`prefers-reduced-motion: reduce\`, show everything in its final state
-  with no movement.
-- Keep it calm: motion should guide the eye to the point, not decorate.
+${paged ? storyFormatSection(paged, app) : motionSection(app, mapbox)}
 
 ## Charts
 
 - D3 v7 or Observable Plot for bespoke charts; ECharts is fine for standard
-  ones. ${
-    mapbox
-      ? `For maps, see Maps below; D3-geo with world-atlas/us-atlas TopoJSON is fine
-  for a small static choropleth or locator.`
-      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
-  with free tiles. Don't use Mapbox: this deployment has no token for it.`
-  }
+  ones. ${mapsLine}
 - Each chart makes one point, and its title states that point ("${
     app === 'footshorts' ? 'Arsenal had the ball, Chelsea had the chances' : 'Exports doubled after 2019'
   }", not "${app === 'footshorts' ? 'Possession and shots' : 'Exports 2015–2024'}").
@@ -432,7 +470,7 @@ the screenshots. Then fix:
 - text or labels overflowing, overlapping, or cut off
 - anything wider than the viewport
 - console errors, and charts that are empty or blank
-- low-contrast text
+- low-contrast text${checks}
 
 If you can't render it, re-read your chart code for these specific failures.
 ${spin ? `\n${checklistSection(spin)}\n` : ''}
