@@ -14,6 +14,7 @@ import {
   useEditorialEpics,
   useEditorialStories,
 } from '@/lib/useEditorialStories'
+import { useHtmlStories, type HtmlStoryCard } from '@/lib/useHtmlStories'
 import { AuraBackground } from '@/components/AuraBackground'
 
 // Each aura is a live embed; cap how many mount so a long magazine doesn't
@@ -41,21 +42,72 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/**
+ * One magazine card, whichever table it came from: a viz-engine editorial story
+ * (`/editorial/<slug>`) or an agent-authored HTML story (`/editorial/html/<slug>`,
+ * footshorts.com/s/<slug> in a WebView). Mirrors the web magazine.
+ */
+interface MagazineCard {
+  key: string
+  href: string
+  title: string
+  /** Sort key and the card's date: published_at, else created/updated. */
+  date: string
+  aura: string | null
+  /** The page's declared background when it has one; else the slug colour. */
+  backgroundColor: string
+}
+
+function editorialCard(story: EditorialStorySummary): MagazineCard {
+  return {
+    key: `editorial:${story.slug}`,
+    href: `/editorial/${story.slug}`,
+    title: story.title,
+    date: story.publishedAt ?? story.createdAt,
+    aura: story.aura,
+    backgroundColor: colorFor(story.slug),
+  }
+}
+
+/**
+ * True for a hex colour dark enough to carry the cards' white text. Story
+ * palettes are often light (cream paper); those cards keep the slug colour.
+ */
+function isDark(hex: string | undefined): hex is string {
+  if (!hex || !/^#?[0-9a-f]{6}$/i.test(hex)) return false
+  const n = parseInt(hex.slice(-6), 16)
+  const lum = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255
+  return lum < 0.4
+}
+
+/** An HTML story wears its own palette (its `vizmaya:theme` meta) when it declared a dark one. */
+function htmlStoryCard(story: HtmlStoryCard): MagazineCard {
+  const bg = story.theme?.surface ?? story.theme?.background
+  return {
+    key: `html:${story.slug}`,
+    href: `/editorial/html/${story.slug}`,
+    title: story.title,
+    date: story.publishedAt ?? story.updatedAt,
+    aura: story.aura,
+    backgroundColor: isDark(bg) ? bg : colorFor(story.slug),
+  }
+}
+
 // System serif so the editorial magazine has the same printed/longform feel
 // as the web app's `font-serif` cards without bundling a custom font.
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' })
 
-function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: () => void }) {
+function HeroCard({ card, onPress }: { card: MagazineCard; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={{ backgroundColor: colorFor(story.slug), aspectRatio: 5 / 4 }}
+      style={{ backgroundColor: card.backgroundColor, aspectRatio: 5 / 4 }}
       className="rounded-2xl overflow-hidden border border-border"
     >
-      {story.aura ? <AuraBackground slug={story.aura} /> : null}
+      {card.aura ? <AuraBackground slug={card.aura} /> : null}
       <View className="flex-1 p-5 justify-between">
         <Text className="text-white/80 text-[10px] tracking-[2px] uppercase">
-          Editorial · {formatDate(story.publishedAt ?? story.createdAt)}
+          Editorial · {formatDate(card.date)}
         </Text>
         <View>
           <Text
@@ -63,7 +115,7 @@ function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
             numberOfLines={3}
             style={{ lineHeight: 30, fontFamily: SERIF }}
           >
-            {story.title}
+            {card.title}
           </Text>
           <Text className="text-white/80 text-sm mt-2">Read story →</Text>
         </View>
@@ -73,31 +125,31 @@ function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
 }
 
 function GridCard({
-  story,
+  card,
   onPress,
   showAura,
 }: {
-  story: EditorialStorySummary
+  card: MagazineCard
   onPress: () => void
   showAura: boolean
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={{ backgroundColor: colorFor(story.slug), aspectRatio: 4 / 5 }}
+      style={{ backgroundColor: card.backgroundColor, aspectRatio: 4 / 5 }}
       className="rounded-xl overflow-hidden border border-border flex-1"
     >
-      {showAura && story.aura ? <AuraBackground slug={story.aura} /> : null}
+      {showAura && card.aura ? <AuraBackground slug={card.aura} /> : null}
       <View className="flex-1 p-3 justify-between">
         <Text className="text-white/70 text-[9px] tracking-[2px] uppercase">
-          {formatDate(story.publishedAt ?? story.createdAt)}
+          {formatDate(card.date)}
         </Text>
         <Text
           className="text-white text-sm"
           numberOfLines={4}
           style={{ fontFamily: SERIF }}
         >
-          {story.title}
+          {card.title}
         </Text>
       </View>
     </Pressable>
@@ -159,6 +211,10 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
   // shouldn't block the magazine from rendering when the stories query
   // returns first.
   const { data: epics } = useEditorialEpics()
+  // Agent-authored HTML stories (footshorts.com/s/<slug>) sit in the same
+  // magazine, newest first alongside the editorial stories. Also independent:
+  // a slow or failed read never blocks the rest.
+  const { data: htmlStories } = useHtmlStories()
 
   if (isLoading) {
     return (
@@ -177,10 +233,13 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
     )
   }
 
-  const safeStories = stories ?? []
+  const cards: MagazineCard[] = [
+    ...(stories ?? []).map(editorialCard),
+    ...(htmlStories ?? []).map(htmlStoryCard),
+  ].sort((a, b) => b.date.localeCompare(a.date))
   const safeEpics = epics ?? []
 
-  if (safeStories.length === 0 && safeEpics.length === 0) {
+  if (cards.length === 0 && safeEpics.length === 0) {
     return (
       <View className="flex-1 items-center justify-center px-6">
         <Text className="text-text text-lg mb-2">No stories yet</Text>
@@ -191,8 +250,7 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
     )
   }
 
-  const hero = safeStories[0]
-  const rest = safeStories.slice(1)
+  const [hero, ...rest] = cards
 
   // Mirror web's 78%-of-frame, max 320 sizing. When the parent doesn't pass
   // contentWidth we fall back to 280 so the strip still renders sensibly.
@@ -235,15 +293,15 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
       ) : null}
 
       {hero ? (
-        <HeroCard story={hero} onPress={() => router.push(`/editorial/${hero.slug}`)} />
+        <HeroCard card={hero} onPress={() => router.push(hero.href)} />
       ) : null}
       {rest.length > 0 && (
         <View className="mt-3 flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
-          {rest.map((s, i) => (
-            <View key={s.slug} className="w-1/2 p-1">
+          {rest.map((c, i) => (
+            <View key={c.key} className="w-1/2 p-1">
               <GridCard
-                story={s}
-                onPress={() => router.push(`/editorial/${s.slug}`)}
+                card={c}
+                onPress={() => router.push(c.href)}
                 // +1 for the hero card, which always gets an aura.
                 showAura={i + 1 < AURA_CAP}
               />

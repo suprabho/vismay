@@ -91,6 +91,12 @@ export interface BrandingOptions {
   app?: HtmlStoryApp
   /** Aura scene slug (html_stories.aura) to lay behind the page, if any. */
   aura?: string | null
+  /**
+   * False drops the header and footer and keeps only the aura: the page as a
+   * host app embeds it (`/s/<slug>?embed=1`, the footshorts app's WebView),
+   * under the host's own chrome. Default true.
+   */
+  chrome?: boolean
 }
 
 /** Shared by both bars; each passes its colours in as custom properties. */
@@ -272,12 +278,18 @@ function escapeAttr(s: string): string {
  * page declares (`<meta name="vizmaya:theme">`) or else the site's home look,
  * with the story's aura scene behind it when one is set.
  */
-export function brandHtmlStory(html: string, { siteUrl, aura, app = DEFAULT_HTML_STORY_APP }: BrandingOptions): string {
+export function brandHtmlStory(
+  html: string,
+  { siteUrl, aura, app = DEFAULT_HTML_STORY_APP, chrome = true }: BrandingOptions,
+): string {
   const site = siteUrl.replace(/\/$/, '')
   const theme = extractThemeMeta(html)
   let header: string
   let footer: string
-  if (app === 'footshorts') {
+  if (!chrome) {
+    header = aura ? auraHtml(aura, theme) : ''
+    footer = ''
+  } else if (app === 'footshorts') {
     const look = theme ? footshortsThemedLook(theme) : FOOTSHORTS_HOME_LOOK
     header = (aura ? auraHtml(aura, theme) : '') + footshortsHeaderHtml(site, look)
     footer = footshortsFooterHtml(site, look)
