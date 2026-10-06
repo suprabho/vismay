@@ -129,11 +129,15 @@
       .on('start', function (e) { if (e.sourceEvent && e.sourceEvent.type === 'mousedown') vp.classList.add('vz-grabbing') })
       .on('zoom', function (e) {
         var t = e.transform
-        if (root.classList.contains('board-on')) world.style.transform = 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.k + ')'
+        if (root.classList.contains('board-on')) {
+          world.style.transform = 'translate(' + t.x + 'px,' + t.y + 'px) scale(' + t.k + ')'
+          layer(t.k)
+        }
         drawMinimapView(t)
       })
       .on('end', function (e) {
         vp.classList.remove('vz-grabbing')
+        dropLayer()
         if (e.sourceEvent) enterVisible(e.transform)
       })
     var sel = d3.select(vp).call(zoom).on('dblclick.zoom', null)
@@ -153,6 +157,36 @@
       hint.classList.add('vz-show')
       clearTimeout(ht)
       ht = setTimeout(function () { hint.classList.remove('vz-show') }, 1400)
+    }
+
+    // ── layer ──────────────────────────────────────────────────────────────
+    // While the camera moves, the world is its own compositing layer
+    // (.vz-moving sets will-change: transform) so a frame only moves pixels
+    // already drawn. A layer keeps the resolution it was drawn at: Chrome
+    // draws it at max(k, 1) × the device pixel ratio (k: the camera scale)
+    // and won't redraw it coarser while it stays a layer. Left as a layer
+    // after a close-up, the world needs the whole board at close-up
+    // resolution once the camera pulls back: about 1 GB of tiles on a 3.5×
+    // phone, where Android Chrome has 256 MB, so most of the board (and parts
+    // of the page) never draw. So: no layer at rest, where the board draws at
+    // its own scale; none below k = 0.5, where even a new layer is 4 screens
+    // of tiles; and a layer is dropped once k leaves half to double the scale
+    // it was drawn at. A frame goes out between dropping one and making the
+    // next, so the next is drawn new at the scale of its moment.
+    var layerR = 0, layerWait = 0
+    function layer(k) {
+      if (layerR && (k < layerR / 2 || k > layerR * 2)) dropLayer()
+      else if (!layerR && !layerWait && k >= 0.5) {
+        world.classList.add('vz-moving')
+        layerR = Math.max(k, 1)
+      }
+    }
+    function dropLayer() {
+      if (!layerR) return
+      world.classList.remove('vz-moving')
+      layerR = 0
+      layerWait++
+      requestAnimationFrame(function () { requestAnimationFrame(function () { layerWait-- }) })
     }
 
     // the part of the screen the camera may use (the panel covers the rest)
