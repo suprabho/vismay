@@ -151,9 +151,29 @@
     }
     function maxCur() { return single ? sheets.length - 1 : sheets.length }
 
+    // ── rest ───────────────────────────────────────────────────────────────
+    // Only a turning sheet is 3D (.vz-turning: rotateY, preserve-3d and
+    // will-change: transform). At rest every sheet is flat and the ones that
+    // can't be seen are hidden: a permanent 3D sheet is a compositing layer,
+    // and Chrome keeps every face of every sheet as tiles at the book's scale
+    // × the device pixel ratio, about 0.5 GB for a 20-page book on a 3.5×
+    // phone, where Android Chrome has 256 MB, so pages (and parts of the
+    // page) never draw. At rest only the open spread is painted: sheet cur
+    // and, turned, sheet cur - 1 (.vz-left lays its back on the left page).
     function setTurn(sh, p) {
       sh.style.transform = 'rotateY(' + (-180 * p) + 'deg)'
       sh.style.setProperty('--vz-s', p)
+    }
+    function lift(sh) {
+      // a sheet starts to turn; the page it uncovers is shown beneath it
+      // (on phones a sheet turning back covers the page, uncovering nothing)
+      var i = sheets.indexOf(sh), turned = i < cur
+      var under = sheets[turned ? i - 1 : i + 1]
+      if (under && !(single && turned)) under.classList.remove('vz-gone')
+      sh.classList.remove('vz-gone', 'vz-left')
+      sh.classList.add('vz-turning')
+      sh.style.zIndex = sheets.length + 10
+      setTurn(sh, turned ? 1 : 0)
     }
     function centre(next) {
       // a closed book sits centred, and so does the back cover at the end
@@ -172,9 +192,12 @@
       var n = sheets.length
       sheets.forEach(function (sh, i) {
         var turned = i < cur
-        setTurn(sh, turned ? 1 : 0)
+        sh.classList.remove('vz-turning')
+        sh.classList.toggle('vz-left', turned)
+        sh.style.transform = ''
+        sh.style.setProperty('--vz-s', turned ? 1 : 0)
         sh.style.zIndex = turned ? i + 1 : n - i
-        sh.classList.toggle('vz-gone', single && turned)
+        sh.classList.toggle('vz-gone', single ? i !== cur : i !== cur && i !== cur - 1)
       })
       centre(cur)
     }
@@ -224,8 +247,7 @@
       if (dir < 0 && cur <= 0) return
       var sh = dir > 0 ? sheets[cur] : sheets[cur - 1]
       busy = true
-      sh.classList.remove('vz-gone')
-      sh.style.zIndex = sheets.length + 10
+      lift(sh)
       var from = fromP != null ? fromP : (dir > 0 ? 0 : 1)
       centre(cur + dir) // the book slides to centre while the cover or back cover turns
       tween(sh, from, dir > 0 ? 1 : 0, ms != null ? ms : 900 * Math.abs((dir > 0 ? 1 : 0) - from), function () {
@@ -266,8 +288,7 @@
         if ((drag.dir > 0 && cur >= maxCur()) || (drag.dir < 0 && cur <= 0)) { drag = null; return }
         drag.moved = true
         drag.sh = drag.dir > 0 ? sheets[cur] : sheets[cur - 1]
-        drag.sh.classList.remove('vz-gone')
-        drag.sh.style.zIndex = sheets.length + 10
+        lift(drag.sh)
         try { desk.setPointerCapture(e.pointerId) } catch (err) {}
       }
       var span = drag.w * (single ? 1.2 : 2)
