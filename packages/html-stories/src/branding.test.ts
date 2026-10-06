@@ -81,9 +81,17 @@ assert.ok(fsThemed.indexOf('<vizmaya-aura') < fsThemed.indexOf('<footshorts-head
 console.log('branding (footshorts): ok')
 
 // Embedded (chrome: false, /s/<slug>?embed=1): no bars, the aura stays, the story untouched.
+// With no header the chrome height is 0, so a paged stage fills the whole
+// screen instead of stopping short by the formats' 64px/56px fallback.
+const NO_CHROME_H = '<style>:root{--vizmaya-chrome-h:0px}</style>'
 const embedded = brandHtmlStory(doc, { siteUrl: 'https://footshorts.com', app: 'footshorts', chrome: false })
-assert.equal(embedded, doc)
+assert.equal(embedded, doc.replace('<BODY class="x">', `<BODY class="x">${NO_CHROME_H}`))
+assert.equal(brandHtmlStory(doc, { siteUrl: site, chrome: false }), embedded)
 const embeddedAura = brandHtmlStory(fsThemedDoc, { siteUrl: 'https://footshorts.com', app: 'footshorts', aura: 'some-scene', chrome: false })
-assert.ok(embeddedAura.includes('<vizmaya-aura'))
+assert.ok(embeddedAura.includes(`<body>${NO_CHROME_H}<style>html,body{background:transparent!important}</style><vizmaya-aura`))
 assert.ok(!embeddedAura.includes('footshorts-header') && !embeddedAura.includes('footshorts-footer'))
+assert.ok(!/--vizmaya-chrome-h:[1-9]/.test(embeddedAura))
+// The normal path still sets each site's real header height.
+assert.ok(out.includes(CHROME_H) && !out.includes(NO_CHROME_H))
+assert.ok(fsOut.includes('--vizmaya-chrome-h:61px') && !fsOut.includes(NO_CHROME_H))
 console.log('branding (embed): ok')

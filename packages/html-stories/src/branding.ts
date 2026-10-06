@@ -262,6 +262,9 @@ function chromeHeightStyle(app: HtmlStoryApp): string {
   return `<style>:root{--vizmaya-chrome-h:${h.wide}px}@media (max-width:480px){:root{--vizmaya-chrome-h:${h.narrow}px}}</style>`
 }
 
+/** Served chrome-less (embed), there's no header to leave room for. */
+const NO_CHROME_HEIGHT_STYLE = '<style>:root{--vizmaya-chrome-h:0px}</style>'
+
 /** How much of the page background washes over the aura, so text written for that background stays legible. */
 const AURA_VEIL_OPACITY = 0.35
 
@@ -295,7 +298,7 @@ function escapeAttr(s: string): string {
  * Wrap a story document in its site's header and footer, in the palette the
  * page declares (`<meta name="vizmaya:theme">`) or else the site's home look,
  * with the story's aura scene behind it when one is set, and the header's
- * height as --vizmaya-chrome-h.
+ * height as --vizmaya-chrome-h (0px when served without chrome).
  */
 export function brandHtmlStory(
   html: string,
@@ -306,7 +309,9 @@ export function brandHtmlStory(
   let header: string
   let footer: string
   if (!chrome) {
-    header = aura ? auraHtml(aura, theme) : ''
+    // No header, so a paged stage takes the whole screen rather than stopping
+    // short by the formats' 64px/56px fallback.
+    header = NO_CHROME_HEIGHT_STYLE + (aura ? auraHtml(aura, theme) : '')
     footer = ''
   } else if (app === 'footshorts') {
     const look = theme ? footshortsThemedLook(theme) : FOOTSHORTS_HOME_LOOK
