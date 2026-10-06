@@ -1,0 +1,90 @@
+/*
+ * vizmaya deck format, v1. Pair with deck@1.js.
+ *
+ * Every slide is a size container (container: slide / size), so its layout
+ * is written with container queries and the same markup works at three
+ * frames: 1280 × 720 (slides, landscape), 450 × 780 (slides, portrait:
+ * phones and narrow windows) and 460 × 680 (cards, on any screen). The deck
+ * is laid out at the frame size and scaled to fit.
+ *
+ * html.deck-on: one frame (slides), or a stack you deal through (cards).
+ * Otherwise (no JS, or "Read as one page"): the slides in one column.
+ *
+ * Helpers: .in (the slide's padded inner box, a flex column), .cols (text
+ * beside a chart; stacks in portrait), .hide-portrait.
+ * Tokens: --deck-table (behind the deck), --deck-folio (folio colour).
+ */
+:where(:root) {
+  --deck-table: radial-gradient(ellipse 80% 70% at 50% 40%, color-mix(in srgb, var(--vz-bg, #0a0e14) 90%, var(--vz-text, #e0ddd5)), var(--vz-bg, #0a0e14) 75%);
+}
+
+/* ── A slide, in every view ──────────────────────────────────────────── */
+:where(.deck .slide) { container: slide / size; position: relative; overflow: hidden; box-sizing: border-box }
+:where(.slide .in) { position: absolute; inset: 0; box-sizing: border-box; padding: 56px 64px 52px; display: flex; flex-direction: column }
+:where(.slide .cols) { display: grid; grid-template-columns: 34% 1fr; gap: 48px; flex: 1 1 auto; min-height: 0 }
+:where(.slide .cols > *) { display: flex; flex-direction: column; min-height: 0 }
+:where(.slide .chart) { width: 100%; flex: 1 1 auto; min-height: 0 }
+.vz-folio {
+  position: absolute; left: 64px; right: 64px; bottom: 22px; z-index: 1; pointer-events: none;
+  display: flex; justify-content: space-between; gap: 16px;
+  font: 12.5px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--deck-folio, var(--vz-muted, #5a6a70));
+}
+.vz-folio span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+@container slide (orientation: portrait) {
+  :where(.slide .in) { padding: 36px 28px 46px }
+  :where(.slide .cols) { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 14px }
+  .vz-folio { left: 28px; right: 28px; bottom: 18px; font-size: 11.5px }
+  .hide-portrait { display: none !important }
+}
+html:not(.js) .vz-folio { display: none }
+
+/* ── The deck ────────────────────────────────────────────────────────── */
+html.deck-on .stage {
+  position: relative; display: flex; flex-direction: column; box-sizing: border-box;
+  height: calc(100svh - var(--vz-chrome-h)); min-height: 520px; overflow: hidden;
+  margin: 0; padding: 0; max-width: none;
+}
+html.deck-on .stage:fullscreen { height: 100vh }
+html.vz-aura.deck-on .stage { background: transparent !important }
+.vz-table { position: absolute; inset: 0; pointer-events: none; background: var(--deck-table) }
+html.vz-aura .vz-table { opacity: .85 }
+html:not(.deck-on) .vz-table { display: none }
+html.deck-on .vz-desk { position: relative; flex: 1 1 auto; min-height: 0; touch-action: pan-y; user-select: none; -webkit-user-select: none }
+html.deck-on .vz-deck-fit { position: absolute; left: 50%; top: 50%; transform-origin: 0 0 }
+html.deck-on .stage .deck { position: relative; display: block; box-sizing: border-box; width: var(--vz-fw); height: var(--vz-fh); margin: 0; padding: 0; max-width: none; gap: 0 }
+html.deck-on .deck > .slide { position: absolute; inset: 0; width: var(--vz-fw); height: var(--vz-fh); margin: 0; max-width: none; aspect-ratio: auto }
+.vz-progress { position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 3; background: var(--vz-line, rgba(127, 127, 127, .35)) }
+.vz-progress i { display: block; height: 100%; width: 0; background: var(--vz-accent, #D85A30); transition: width .5s }
+
+/* slides: one frame; slides travel sideways */
+html.deck-on[data-vz-mode="slides"] .deck > .slide { transition: transform .6s cubic-bezier(.3, .1, .2, 1), opacity .6s; border-radius: 6px; box-shadow: 0 30px 80px rgba(0, 0, 0, .5) }
+html.deck-on[data-vz-mode="slides"] .deck > .slide.vz-before { transform: translateX(-30%); opacity: 0; pointer-events: none }
+html.deck-on[data-vz-mode="slides"] .deck > .slide.vz-after { transform: translateX(30%); opacity: 0; pointer-events: none }
+html.deck-on[data-vz-mode="slides"] .deck > .slide.vz-cur { transform: none; opacity: 1; z-index: 2 }
+/* cards: a stack you deal through */
+html.deck-on[data-vz-mode="cards"] .deck > .slide { border-radius: 22px; transition: transform .55s cubic-bezier(.3, .1, .2, 1), opacity .45s; box-shadow: 0 2px 0 rgba(255, 255, 255, .04) inset, 0 18px 40px rgba(0, 0, 0, .45) }
+html.deck-on[data-vz-mode="cards"] .deck > .slide.vz-before { opacity: 0; pointer-events: none }
+html.deck-on[data-vz-mode="cards"] .deck > .slide.vz-after { pointer-events: none }
+html.deck-on .deck > .slide.vz-dragging { transition: none !important }
+
+.vz-seg { display: inline-flex; padding: 3px; border-radius: 20px; border: 1px solid var(--vz-line, rgba(127, 127, 127, .35)); background: var(--vz-surface, #111820) }
+.vz-seg button {
+  appearance: none; -webkit-appearance: none; border: 0; margin: 0; background: transparent; color: var(--vz-muted, #5a6a70); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 16px; font: inherit; font-size: 14px;
+}
+.vz-seg button[aria-pressed="true"] { background: var(--vz-text, #e0ddd5); color: var(--vz-bg, #0a0e14) }
+@media (max-width: 560px) { .vz-controls .vz-sep, .vz-controls .vz-fs { display: none !important } }
+
+/* measuring a slide at another frame: charts step aside so only text can overflow */
+html.vz-measure .slide .chart > * { display: none !important }
+
+/* ── One column: no JS, or "Read as one page" ────────────────────────── */
+html:not(.deck-on) .vz-desk, html:not(.deck-on) .vz-deck-fit { display: contents }
+:where(html:not(.deck-on)) :where(.stage .deck) { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 32px 16px 48px }
+:where(html:not(.js)) :where(.deck .slide) { width: min(100%, 1040px); aspect-ratio: 16 / 9 }
+@media (max-width: 720px) { :where(html:not(.js)) :where(.deck .slide) { aspect-ratio: 9 / 15 } }
+/* with JS, each slide keeps its frame and is scaled into the column */
+html.js:not(.deck-on) .vz-slot { position: relative; flex: none; overflow: hidden; border-radius: 6px }
+html.js:not(.deck-on) .vz-slot > .slide { position: absolute; left: 0; top: 0; width: var(--vz-fw); height: var(--vz-fh); max-width: none; margin: 0; aspect-ratio: auto; transform-origin: 0 0 }
+
+@media (prefers-reduced-motion: reduce) { html.deck-on .deck > .slide { transition: opacity .01s !important } .vz-progress i { transition: none } }

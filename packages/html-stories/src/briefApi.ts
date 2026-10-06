@@ -5,6 +5,9 @@
  * the generic brief holds no secrets (the publish token is the user's).
  *
  * Query:
+ *   - `format=book|board|deck` writes the brief for that story format
+ *     (./formats; default `scroll`): its hosted runtime and authoring rules
+ *     replace the scroll format's motion and Mapbox sections.
  *   - `style=random` swaps the house style for a palette and font trio drawn
  *     from the app's published viz-engine stories (./styles); falls back to the
  *     house style if the stories can't be read.
@@ -25,6 +28,7 @@
 import type { HtmlStoryApp } from './apps'
 import { htmlStoryBrief } from './brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief'
+import { parseHtmlStoryFormat } from './formats'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import type { SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
@@ -46,6 +50,8 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   const random = url.searchParams.get('style') === 'random'
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
   const spinId = url.searchParams.get('spin')?.trim() || null
+  const format = parseHtmlStoryFormat(url.searchParams.get('format'))
+  if (!format) return new Response('format must be scroll, book, board or deck', { status: 400 })
 
   let spin: SpinRecord | null = null
   if (spinId) {
@@ -87,8 +93,9 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
             style,
             fixtureIds,
             prompt: url.searchParams.get('prompt')?.trim() || undefined,
+            format,
           })
-        : htmlStoryBrief({ app, siteUrl: url.origin, style, spin })
+        : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
   } catch (e) {
     return new Response(`match context failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
   }

@@ -18,12 +18,18 @@
  * `spin_randomizer` in ./randomizer): the assignment, research protocol,
  * output format and research file for that spin. Publishing with the same
  * `spinId` ties the page to the spin.
+ *
+ * Any brief can be for a STORY FORMAT (`format`): a scrolling page (the
+ * default), a book, a pinned board or a deck. The paged formats run on a
+ * runtime the site hosts (packages/html-stories/formats), so the brief says
+ * how to load it and write pages, board items or slides for it.
  */
 
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
+import { HTML_STORY_FORMATS } from '@vismay/html-stories/formats'
 import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
 
 const appSchema = z
@@ -44,7 +50,11 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
         'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
         'written from, plus an optional editorial prompt. For a vizmaya randomizer spin, pass spinId ' +
-        '(from spin_randomizer) to get its assignment, research protocol, output format and research file.',
+        '(from spin_randomizer) to get its assignment, research protocol, output format and research file. ' +
+        'Pass format to write something other than a scrolling page: "book" (pages the reader turns; ' +
+        'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
+        'case built from many connected pieces) or "deck" (slides or a stack of cards; suits an argument ' +
+        'made one point at a time).',
       inputSchema: {
         app: appSchema,
         randomStyle: z
@@ -65,11 +75,15 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .uuid()
           .optional()
           .describe('vizmaya only: a randomizer spin id; the brief carries that spin\'s assignment and research.'),
+        format: z
+          .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck'])
+          .default('scroll')
+          .describe('The story format: scroll (one long page, the default), book, board or deck.'),
       },
     },
-    async ({ app, randomStyle, fixtureIds, prompt, spinId }) => {
+    async ({ app, randomStyle, fixtureIds, prompt, spinId, format }) => {
       const site = htmlStoriesUrlFor(config, app)
-      const houseBrief = () => htmlStoryBrief({ app, siteUrl: site })
+      const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
       if (spinId && app !== 'vizmaya-fyi') throw new Error('Randomizer spins are vizmaya stories: use app "vizmaya-fyi".')
 
@@ -78,6 +92,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       // brief rather than building it here. The local build is the fallback.
       const url = new URL(`${site}/api/html-stories/brief`)
       if (randomStyle) url.searchParams.set('style', 'random')
+      if (format !== 'scroll') url.searchParams.set('format', format)
       if (spinId) url.searchParams.set('spin', spinId)
       if (ids.length) {
         url.searchParams.set('fixtures', ids.join(','))

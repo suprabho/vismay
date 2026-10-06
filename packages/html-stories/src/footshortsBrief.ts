@@ -11,6 +11,7 @@
 
 import { buildMatchContext, MAX_CONTEXT_MATCHES } from '@vismay/content-source/footshortsMatchBrief'
 import { htmlStoryBrief } from './brief'
+import type { HtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
 
 export { MAX_CONTEXT_MATCHES }
@@ -23,6 +24,8 @@ export interface FootshortsBriefOptions {
   fixtureIds?: string[]
   /** Editorial intent, surfaced at the top of the context. */
   prompt?: string
+  /** The story format (./formats). Default: scroll. */
+  format?: HtmlStoryFormat | null
 }
 
 export async function footshortsHtmlStoryBrief({
@@ -30,8 +33,9 @@ export async function footshortsHtmlStoryBrief({
   style,
   fixtureIds = [],
   prompt,
+  format,
 }: FootshortsBriefOptions): Promise<string> {
   const ids = fixtureIds.filter(Boolean)
   const context = ids.length ? await buildMatchContext(ids, { prompt, siteUrl }) : null
-  return htmlStoryBrief({ app: 'footshorts', siteUrl, style, context })
+  return htmlStoryBrief({ app: 'footshorts', siteUrl, style, context, format })
 }

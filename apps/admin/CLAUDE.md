@@ -170,14 +170,19 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
   [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
-  (paste/upload, lint, preview in that site's chrome, publish, history).
+  (paste/upload, lint, preview in that site's chrome, publish, history; a book
+  or deck in the preview reports pages/slides that overflow their frame, shown
+  with the lint). The list badges book, board and deck stories.
   [lib/htmlStoryApps.ts](lib/htmlStoryApps.ts) maps an app to its public site
   and admin base path.
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, style?, fixtureIds?, prompt?, spinId? }` → markdown) for the Copy-brief button.
+  (`{ app, format?, style?, fixtureIds?, prompt?, spinId? }` → markdown) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
+  the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
+  scroll, book, board, deck; also on the Randomizer tab, where it marks the
+  format the spin's kind of story suits), the
   style randomizer (palettes/fonts from the app's own stories) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
   Opta scrape and a team search, reused with its own labels and a 40-match cap) — whose picks make the brief carry

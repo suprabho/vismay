@@ -126,6 +126,33 @@ export default function HtmlStoryEditorClient({
     return () => clearTimeout(t)
   }, [html])
 
+  // A paged format's runtime (book, deck) measures its pages and slides in the
+  // preview and posts any that overflow their frame: a check the lint can't
+  // make without rendering. Only messages from this preview's frame count, and
+  // each report is kept with the document it came from, so a reload never
+  // shows the last document's.
+  const previewRef = useRef<HTMLIFrameElement>(null)
+  const previewKey = `${versionPreview?.id ?? 'draft'}|${aura}|${previewHtml}`
+  const previewKeyRef = useRef(previewKey)
+  useEffect(() => {
+    previewKeyRef.current = previewKey
+  }, [previewKey])
+  const [frameReport, setFrameReport] = useState<{ key: string; warnings: string[] } | null>(null)
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (!previewRef.current || e.source !== previewRef.current.contentWindow) return
+      const d = e.data as { type?: unknown; warnings?: unknown } | null
+      if (!d || d.type !== 'vizmaya:format-check' || !Array.isArray(d.warnings)) return
+      const warnings = d.warnings.filter((w): w is string => typeof w === 'string').slice(0, 20)
+      setFrameReport({ key: previewKeyRef.current, warnings })
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+  // Shown with the lint while the preview is of the draft being edited.
+  const frameWarnings =
+    frameReport && frameReport.key === previewKey && !versionPreview && html === previewHtml ? frameReport.warnings : []
+
   const auraSlug = aura.trim() ? parseAuraSlug(aura) : null
   const auraInvalid = aura.trim() !== '' && !auraSlug
   const auraChanged = (auraSlug ?? '') !== savedAura
@@ -314,13 +341,16 @@ export default function HtmlStoryEditorClient({
               </p>
             </div>
 
-            {html.trim() !== '' && (lint.errors.length > 0 || lint.warnings.length > 0) && (
+            {html.trim() !== '' && (lint.errors.length > 0 || lint.warnings.length > 0 || frameWarnings.length > 0) && (
               <ul className="text-xs space-y-1.5 border border-white/10 rounded-lg p-3">
                 {lint.errors.map((m) => (
                   <li key={m} className="text-red-400">✕ {m}</li>
                 ))}
                 {lint.warnings.map((m) => (
                   <li key={m} className="text-amber-300/90">! {m}</li>
+                ))}
+                {frameWarnings.map((m) => (
+                  <li key={`frame:${m}`} className="text-amber-300/90">! In the preview, {m}.</li>
                 ))}
               </ul>
             )}
@@ -509,6 +539,7 @@ export default function HtmlStoryEditorClient({
         <div className="flex-1 min-h-0 flex justify-center overflow-auto p-4">
           {shownHtml.trim() ? (
             <iframe
+              ref={previewRef}
               title="Story preview"
               srcDoc={brandedPreview}
               sandbox={PREVIEW_SANDBOX}

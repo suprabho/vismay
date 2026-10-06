@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A two-week voyage, ten years long</title>
+<meta name="description" content="Troy to Ithaca is 565 nautical miles. Odysseus takes ten years, and spends eight of them on two islands. A book you turn page by page.">
+<meta property="og:title" content="A two-week voyage, ten years long">
+<meta property="og:description" content="Troy to Ithaca is 565 nautical miles. Odysseus takes ten years, and spends eight of them on two islands.">
+<!-- TODO before publishing: a real 1200×630 share image. -->
+<meta property="og:image" content="https://vizmaya.fyi/og/odyssey-voyage.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="vizmaya:theme" content="background:#0a0910; surface:#100d18; text:#e8ddc9; muted:#9a8f86; line:#2a2636; accent:#c9a24b; accent2:#7c2438; teal:#3f8b7a">
+<meta name="vizmaya:format" content="book">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css">
+<!-- The book format: sheets, page turns, controls and the one-column view. -->
+<link rel="stylesheet" href="https://vizmaya.fyi/formats/book@1.css">
+<style>
+/* ── Tokens ──────────────────────────────────────────────────────────────
+   Page colours from vizmaya-data/odyssey-voyage/story.yaml (tokens).
+   The table is ink; the pages are bone paper; the cover is wine leather.
+   The book itself (sheets, turns, controls, the one-column view) is
+   book@1.css and book@1.js; everything here is this story's design. */
+:root {
+  --ink: #0a0910; --surface: #100d18; --bone: #e8ddc9; --muted: #9a8f86; --line: #2a2636;
+  --gold: #c9a24b; --wine: #7c2438; --burgundy: #5a1a2b; --indigo: #4c5fb0;
+  --paper: #e8ddc9; --paper-ink: #2b2127; --paper-muted: #6f6159; --paper-rule: rgba(43, 33, 39, .14);
+  --display: 'IM Fell English', 'EB Garamond', Georgia, serif;
+  --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  /* the format's tokens */
+  --book-paper: var(--paper);
+  --book-table: radial-gradient(ellipse 70% 60% at 50% 45%, #1a1424 0%, var(--ink) 70%);
+  --book-head: var(--paper-muted);
+  --vz-accent: var(--gold);
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--ink); color: var(--bone) }
+body { font-family: var(--serif); -webkit-font-smoothing: antialiased }
+a { color: inherit }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px }
+/* also in book@1.css; here too so a page that can't reach it still reads */
+.chart:empty::before { content: attr(data-alt); display: block; font-style: italic; font-size: 15px; line-height: 1.4; color: var(--paper-muted) }
+html:not(.book-on) .book-only { display: none }
+
+/* ── Pages (the book and the one-column view) ────────────────────────── */
+.page {
+  position: relative; color: var(--paper-ink); font-size: 18px; line-height: 1.5;
+  padding: 46px 42px 50px;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(120, 90, 50, .05), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(120, 90, 50, .06), transparent 45%);
+  --c-ink: var(--paper-ink); --c-muted: var(--paper-muted); --c-grid: var(--paper-rule);
+  --c-hi: #8a6214; --c-wine: #7c2438; --c-sea: #3b4a8c; --c-loss: #a34a28; --c-land: #d5c4a5;
+  --c-teal: #2f6f61; --c-slate: #4a6676; --c-paper: var(--paper); --c-halo: var(--paper);
+  --font-chart: var(--serif); --chart-fs: 15px; --chart-fs-sm: 13.5px;
+  font-variant-numeric: oldstyle-nums;
+}
+.page p { margin: 0 0 .7em; hyphens: auto; -webkit-hyphens: auto }
+.page h2 { font-family: var(--display); font-weight: 400; font-size: 34px; line-height: 1.05; margin: 0 0 18px; letter-spacing: -.01em }
+.page h3 { font-family: var(--display); font-weight: 400; font-style: italic; font-size: 25px; line-height: 1.12; margin: 0 0 14px }
+.chapter { font-family: var(--display); font-size: 22px; color: var(--wine); margin: 0 0 4px }
+.vz-head { font-family: var(--serif) }
+.dropcap::first-letter { font-family: var(--display); float: left; font-size: 64px; line-height: .8; padding: 6px 8px 0 0; color: var(--wine) }
+.big { font-family: var(--serif); font-weight: 500; font-size: 96px; line-height: .9; color: var(--wine); font-variant-numeric: lining-nums; margin: 6px 0 2px; display: block }
+.unit-note { font-style: italic; color: var(--paper-muted); margin-bottom: 18px !important }
+.chart { width: 100%; margin: 4px 0 10px }
+.src { font-size: 13px; line-height: 1.35; color: var(--paper-muted); margin-top: 6px !important }
+.src a { color: inherit }
+.margin-note { font-style: italic; color: var(--wine); border-left: 2px solid var(--wine); padding-left: 12px; font-size: 16px }
+blockquote { margin: 18px 0; font-family: var(--display); font-style: italic; font-size: 23px; line-height: 1.25 }
+blockquote footer { font-family: var(--serif); font-style: normal; font-size: 14px; color: var(--paper-muted); margin-top: 10px }
+.legend { list-style: none; padding: 0; margin: 4px 0 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 13.5px; line-height: 1.25 }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0 }
+
+/* the cover and back cover: wine leather, gold foil */
+.page.cover, .page.backcover {
+  color: var(--gold); text-align: center; padding: 40px 34px;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, .06), transparent 50%),
+    repeating-radial-gradient(circle at 40% 60%, rgba(0, 0, 0, .05) 0 2px, transparent 2px 5px),
+    linear-gradient(160deg, #6a1f32, #4a1424 60%, #3a0f1c);
+  --c-ink: #d8b65e; --c-muted: #b89a52; --c-grid: rgba(201, 162, 75, .55); --c-land: rgba(201, 162, 75, .1);
+  --c-hi: #e6c46c; --c-wine: #c9a24b; --c-slate: #c9a24b; --c-teal: #c9a24b; --c-paper: #4a1424; --c-halo: transparent;
+}
+.cover-frame { position: absolute; inset: 16px; border: 1px solid rgba(201, 162, 75, .55); box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 5px rgba(201, 162, 75, .35); pointer-events: none }
+.cover h1 { font-family: var(--display); font-weight: 400; font-size: 40px; line-height: 1.02; margin: 26px 0 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, .35) }
+.cover .cover-sub { font-style: italic; font-size: 17px; line-height: 1.35; color: #c8a75a; margin: 0 20px }
+.cover .chart { height: 200px; margin-top: 20px; --chart-ratio: 16 / 10 }
+.cover .imprint { position: absolute; left: 0; right: 0; bottom: 34px; font-size: 14px; letter-spacing: .04em; color: #b89a52 }
+html:not(.book-on) .cover .imprint { position: static; margin-top: 18px }
+.backcover { display: grid; place-items: center }
+.backcover p { font-style: italic; font-size: 16px; max-width: 240px; color: #c8a75a }
+
+/* endpapers */
+.page.endpaper {
+  background-color: #2a1a33;
+  background-image:
+    radial-gradient(circle at 0 0, transparent 14px, rgba(201, 162, 75, .25) 15px, transparent 16px),
+    radial-gradient(circle at 0 0, transparent 24px, rgba(201, 162, 75, .16) 25px, transparent 26px);
+  background-size: 34px 34px;
+  display: grid; place-items: center;
+}
+.bookplate { background: var(--paper); padding: 22px 24px; width: 82%; border: 1px solid #b89a52; box-shadow: 0 0 0 5px var(--paper), 0 0 0 6px #b89a52 }
+.bookplate h3 { text-align: center; margin-bottom: 12px }
+.bookplate ul { list-style: none; padding: 0; margin: 0; font-size: 15.5px; line-height: 1.35 }
+.bookplate li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; margin: 8px 0 }
+.bookplate .ph { font-size: 20px; color: var(--wine) }
+
+/* title page and the full-page quote */
+.titlepage { text-align: center; display: flex; flex-direction: column; justify-content: center }
+.titlepage h1 { font-family: var(--display); font-weight: 400; font-size: 40px; line-height: 1.05; margin: 0 0 18px }
+.titlepage .stand { font-style: italic; font-size: 19px; line-height: 1.4; margin: 0 8px 24px }
+.titlepage .rule { width: 60px; height: 1px; background: var(--paper-ink); opacity: .4; margin: 0 auto 22px }
+.titlepage .by { font-size: 15px; color: var(--paper-muted) }
+.quotepage { display: flex; flex-direction: column; justify-content: center }
+.quotepage blockquote { font-size: 30px; line-height: 1.22 }
+.quotepage blockquote::before { content: '“'; display: block; font-size: 90px; line-height: .6; color: var(--wine); margin-bottom: 10px }
+
+/* the ledger page */
+.ledger { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.3;
+  background-image: linear-gradient(90deg, transparent 40px, rgba(163, 74, 40, .45) 40px, rgba(163, 74, 40, .45) 41px, transparent 41px) }
+.ledger th { text-align: left; font-weight: 500; font-style: italic; color: var(--paper-muted); font-size: 13.5px; padding: 4px 6px; border-bottom: 1px solid var(--paper-rule) }
+.ledger td { padding: 9px 6px; border-bottom: 1px solid var(--paper-rule); vertical-align: top }
+.ledger td:first-child { width: 40px; color: var(--paper-muted); font-size: 13.5px; font-variant-numeric: lining-nums }
+.ledger .lost { font-weight: 600; color: #a34a28; white-space: nowrap; text-align: right; font-variant-numeric: lining-nums }
+
+/* anchors list and swatches */
+.anchors { list-style: none; padding: 0; margin: 0 0 12px; font-size: 16px; line-height: 1.3 }
+.anchors li { display: grid; grid-template-columns: 26px 1fr; gap: 4px 6px; padding: 7px 0; border-bottom: 1px solid var(--paper-rule) }
+.anchors .fi { margin-top: 3px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.1) }
+.anchors small { display: block; color: var(--paper-muted); font-size: 14px }
+.swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 12px }
+.swatch { font-size: 13px; line-height: 1.2; color: var(--paper-muted) }
+.swatch b { display: block; height: 46px; border-radius: 2px; margin-bottom: 5px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08) }
+.swatch span { display: block; color: var(--paper-ink); font-weight: 600 }
+.sources { font-size: 14.5px; line-height: 1.35; padding-left: 18px; margin: 0 }
+.sources li { margin-bottom: 7px }
+.endpage { display: flex; flex-direction: column; justify-content: center; text-align: center }
+.endpage .chart { height: 210px; --chart-ratio: 16 / 10 }
+.again { appearance: none; border: 1px solid var(--paper-ink); background: transparent; color: var(--paper-ink); font: inherit; font-size: 16px; border-radius: 20px; padding: 7px 16px; margin: 14px auto 0; cursor: pointer; display: inline-flex; align-items: center; gap: 8px }
+</style>
+</head>
+<body>
+
+<main class="stage" aria-label="A two-week voyage, ten years long, as a book">
+  <!-- The pages, in reading order. Without JS (or in "Read as one page") they
+       stack as one column; the book runtime binds them into sheets. -->
+  <div class="pages" data-title="A two-week voyage, ten years long">
+
+    <article class="page cover bare" data-unit data-label="Cover">
+      <div class="cover-frame" aria-hidden="true"></div>
+      <h1>A two-week voyage, ten years long</h1>
+      <p class="cover-sub">Odysseus’s way home from Troy, measured against the real Mediterranean</p>
+      <div class="chart" data-chart="map" data-labels="none" data-r="3.5" data-alt="The route from Troy to Ithaca, stamped in gold"></div>
+      <p class="imprint">Vizmaya</p>
+    </article>
+
+    <article class="page endpaper bare book-only" data-unit data-label="How to read">
+      <div class="bookplate">
+        <h3>How to read this book</h3>
+        <ul>
+          <li><i class="ph ph-hand-tap" aria-hidden="true"></i><span>Tap the right page to turn forward, the left page to go back.</span></li>
+          <li><i class="ph ph-hand-grabbing" aria-hidden="true"></i><span>Or take hold of a page and drag it across.</span></li>
+          <li><i class="ph ph-keyboard" aria-hidden="true"></i><span>The arrow keys work too.</span></li>
+          <li><i class="ph ph-rows" aria-hidden="true"></i><span>Prefer scrolling? “Read as one page” is below the book.</span></li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="page titlepage bare" data-unit data-label="Title page">
+      <h1>A two-week voyage, ten years long</h1>
+      <p class="stand">Troy to Ithaca is 565 nautical miles. Homer’s hero takes a decade to cover it, and spends eight of those years on two islands.</p>
+      <div class="rule"></div>
+      <p class="by">By Vizmaya, 6 October 2026<br>From the <i>Odyssey</i>, Books 5 and 9–13, and two thousand years of attempts to map it</p>
+    </article>
+
+    <article class="page" data-unit data-head="The distance" data-label="The distance">
+      <p class="chapter">I</p>
+      <h2>The distance</h2>
+      <span class="big"><span data-count="565">565</span></span>
+      <p class="unit-note">nautical miles, Troy to Ithaca as the crow flies</p>
+      <p class="dropcap">That is about 1,046 kilometres. A Bronze Age galley running before the wind at five knots could cover it in six days to two weeks. A modern cruise ship does it overnight.</p>
+      <p>Homer takes ten years.</p>
+    </article>
+
+    <article class="page" data-unit data-head="The distance" data-label="How long it should take">
+      <h3>A week by galley. Ten years by Homer.</h3>
+      <div class="chart" style="height:292px" data-chart="trip" data-alt="Time to sail Troy to Ithaca, on a log scale: a cruise ship under a day, a galley 6 to 14 days, a superyacht a week, Severin's replica 3 to 4 months, Hal Roth 2 years, Odysseus 10 years."></div>
+      <p class="unit-note" style="font-size:15px">Each gridline is a longer unit of time: a day, a week, a month, a year, a decade.</p>
+      <p class="src">Sources: Harry Mount in BOAT International; Tim Severin, <i>The Ulysses Voyage</i>; Hal Roth, <i>We Followed Odysseus</i>.</p>
+    </article>
+
+    <article class="page" data-unit data-head="Where the years went" data-label="Where the years went">
+      <p class="chapter">II</p>
+      <h2>Where the years went</h2>
+      <p class="dropcap">Open the <i>Odyssey</i> expecting a decade of storms and monsters and the arithmetic surprises you. Odysseus spends a year with the sorceress Circe, then seven with the nymph Calypso.</p>
+      <p>The adventures everyone remembers, the Cyclops and the Sirens and Scylla, fit inside one sailing season. Tim Severin showed it in 1985, taking a replica galley from Troy to Ithaca in three to four months.</p>
+    </article>
+
+    <article class="page" data-unit data-head="Where the years went" data-label="Eight years on two islands">
+      <h3>Eight of the ten years are two islands</h3>
+      <div class="chart" style="height:236px" data-chart="years" data-alt="120 squares, one per month: 84 with Calypso, 12 with Circe, about 4 at sea, 20 unaccounted for."></div>
+      <p style="font-size:16px">Each square is one month, grouped by where it went rather than in order.</p>
+      <p class="src">Source: durations as stated in the <i>Odyssey</i>; vizmaya-data, timeline allocation.</p>
+    </article>
+
+    <article class="page" data-unit data-head="Where the years went" data-label="Told out of order">
+      <h3>Told out of order</h3>
+      <p class="dropcap">Homer hides the arithmetic by telling the story backwards. The poem opens in year ten, with Odysseus already stuck on Calypso’s island.</p>
+      <p>The monster tales of Books 9 to 12 are a flashback, told by Odysseus himself at a banquet, to strangers he needs a ship from.</p>
+      <p class="margin-note">So the map every reader builds was drawn from memory, by the man who got lost.</p>
+    </article>
+
+    <article class="page" data-unit data-head="The route" data-label="The route">
+      <h3>The route, as tradition draws it</h3>
+      <div class="chart" style="height:300px" data-chart="map" data-labels="key" data-alt="Map of the traditional route: Troy, Cicones, Cape Malea, then a dashed loop through Tunisia, Sicily, Italy and Malta before Ithaca."></div>
+      <ul class="legend">
+        <li><i style="background:#8a6214"></i>Excavated anchor</li>
+        <li><i style="background:#4a6676"></i>Real, mappable place</li>
+        <li><i style="background:#7c2438"></i>Tradition only</li>
+        <li><i style="background:#6f6159"></i>Rival identifications</li>
+      </ul>
+      <p class="src">Solid line: places we can find. Dashed: everything after Cape Malea. Coordinates are traditional associations, not proven sites.</p>
+    </article>
+
+    <article class="page" data-unit data-head="The hinge" data-label="The hinge">
+      <p class="chapter">III</p>
+      <h2>The hinge</h2>
+      <p class="dropcap">Up to a point Odysseus is a real sailor on a real coast. He leaves Troy, the mound at Hisarlik, and raids Ismaros, almost certainly Maroneia in Thrace. Then a north wind catches him off Cape Malea and the map dissolves.</p>
+      <blockquote>These are the last clearly identifiable places in O.’s wanderings. After this he leaves the sphere of Geography and enters Wonderland.<footer>W. B. Stanford, commentary on the <i>Odyssey</i>, 1947</footer></blockquote>
+    </article>
+
+    <article class="page" data-unit data-head="The hinge" data-label="Rival maps">
+      <h3>Five schools, five Mediterraneans</h3>
+      <p style="font-size:16px">How far west each reconstruction carries him after Cape Malea.</p>
+      <div class="chart" style="height:260px" data-chart="routes" data-alt="Westernmost reach of five route theories: Severin 19.3°E, ancient geographers 12°E, Bradford 8°E, Bérard 5.6°W at Gibraltar, Atlantic fringe 15°W."></div>
+      <p style="font-size:16px">Severin keeps every landfall near Greece. Bérard sends him to Gibraltar. The fringe sails off the edge of the map.</p>
+      <p class="src">Sources: Strabo; Bérard, 1929; Bradford, 1963; Severin, 1987.</p>
+    </article>
+
+    <article class="page quotepage bare" data-unit data-label="Eratosthenes">
+      <blockquote>You will find the scene of the wanderings of Odysseus when you find the cobbler who sewed up the bag of the winds.<footer>Eratosthenes, as preserved by Strabo</footer></blockquote>
+    </article>
+
+    <article class="page" data-unit data-head="The cost" data-label="The cost">
+      <p class="chapter">IV</p>
+      <h2>The cost</h2>
+      <p class="dropcap">Twelve ships and about 720 men leave Troy.</p>
+      <span class="big"><span data-count="1">1</span></span>
+      <p class="unit-note">man comes home</p>
+      <p style="font-size:16px">Homer counts the losses, not the survivors, so the running headcount on the next page is a reconstruction at about 60 men a ship.</p>
+    </article>
+
+    <article class="page" data-unit data-head="The cost" data-label="One harbour">
+      <h3>One harbour cost more men than the rest of the voyage</h3>
+      <div class="chart" style="height:280px" data-chart="attrition" data-alt="Men aboard from Troy to Ithaca: 720, then 648 after the Cicones, then 48 after the Laestrygonians, then 1 after Thrinacia."></div>
+      <p style="font-size:16px">At the Laestrygonians’ harbour, cannibal giants sink eleven of the twelve ships.</p>
+      <p class="src">Source: loss events from <i>Odyssey</i> Books 9–12; headcount reconstructed.</p>
+    </article>
+
+    <article class="page" data-unit data-head="The cost" data-label="The ledger">
+      <h3>The losses Homer names</h3>
+      <table class="ledger">
+        <thead><tr><th>Book</th><th>Where</th><th style="text-align:right">Lost</th></tr></thead>
+        <tbody>
+          <tr><td>9</td><td>The Cicones, at Ismaros</td><td class="lost">72 men</td></tr>
+          <tr><td>9</td><td>The Cyclops’ cave</td><td class="lost">6 men</td></tr>
+          <tr><td>10</td><td>The Laestrygonians</td><td class="lost">11 ships</td></tr>
+          <tr><td>12</td><td>Scylla, one man per head</td><td class="lost">6 men</td></tr>
+          <tr><td>12</td><td>Thrinacia, after the Sun’s cattle</td><td class="lost">the last ship</td></tr>
+        </tbody>
+      </table>
+      <p class="margin-note" style="margin-top:18px">By the time he reaches Calypso he is alone, and he stays alone for seven years.</p>
+    </article>
+
+    <article class="page" data-unit data-head="Was it ever real?" data-label="Was it ever real?">
+      <p class="chapter">V</p>
+      <h2>Was it ever real?</h2>
+      <ul class="anchors">
+        <li><span class="fi fi-tr"></span><span>Troy, at Hisarlik in Turkey <small>Excavated; undisputed</small></span></li>
+        <li><span class="fi fi-gr"></span><span>Ismaros, at Maroneia in Greece <small>Excavated; a strong identification</small></span></li>
+        <li><span class="fi fi-gr"></span><span>Ithaca, at Ithaki in Greece <small>The anchor still under debate</small></span></li>
+      </ul>
+      <p style="font-size:16.5px">Robert Bittlestone argued in 2005 that Homer’s Ithaca is Paliki, once a separate island. In 2026 James Diggle and John Underhill answered that Paliki was no island in the Bronze Age, and that Homer never says Ithaca was one.</p>
+    </article>
+
+    <article class="page" data-unit data-head="The wine-dark sea" data-label="The wine-dark sea">
+      <p class="chapter">VI</p>
+      <h2>The wine-dark sea</h2>
+      <p class="dropcap"><i>Oînops póntos</i>, the wine-faced sea, appears seventeen times in the <i>Iliad</i> and <i>Odyssey</i>. In 1858 Gladstone asked why wine, and not blue.</p>
+      <div class="swatches" aria-label="The wine-dark palette">
+        <div class="swatch"><b style="background:#5a1a2b"></b><span>Wine</span>oînops</div>
+        <div class="swatch"><b style="background:#7c2438"></b><span>Burgundy</span>red or black</div>
+        <div class="swatch"><b style="background:#5b3a63"></b><span>Dusk</span>Gladstone’s puzzle</div>
+        <div class="swatch"><b style="background:#3b4a8c"></b><span>Indigo</span>kyanos, dark</div>
+        <div class="swatch"><b style="background:#4a5a6b"></b><span>Slate</span>the sea at depth</div>
+        <div class="swatch"><b style="background:#26303f"></b><span>Deep</span>night on the water</div>
+      </div>
+      <p style="font-size:16.5px">A colour we can all picture and none of us can quite name.</p>
+    </article>
+
+    <article class="page" data-unit data-head="Sources and method" data-label="Sources and method">
+      <h3>Sources and method</h3>
+      <ol class="sources">
+        <li>Homer, <i>Odyssey</i>, Books 5 and 9–13, for every duration, fleet number and loss.</li>
+        <li><a href="https://en.wikipedia.org/wiki/Geography_of_the_Odyssey" target="_blank" rel="noopener">Geography of the Odyssey</a>, for identifications and the history of the debate.</li>
+        <li>W. B. Stanford’s 1947 commentary; Strabo’s <i>Geography</i> for Eratosthenes.</li>
+        <li>Victor Bérard (1929), Ernle Bradford (1963), <a href="https://en.wikipedia.org/wiki/Tim_Severin" target="_blank" rel="noopener">Tim Severin</a> (1987).</li>
+        <li>Harry Mount in BOAT International and Hal Roth for sailing times.</li>
+      </ol>
+      <p class="src" style="margin-top:12px">Method: men aboard are reconstructed at about 60 per ship; Homer gives the loss events only. Places after Cape Malea are traditional associations, not proven sites.</p>
+    </article>
+
+    <article class="page endpage bare" data-unit data-label="The end">
+      <div class="chart" data-chart="map" data-labels="none" data-r="3" data-alt="The whole route, Troy to Ithaca"></div>
+      <h3 style="margin-top:14px">Home, twenty years after he left.</h3>
+      <p style="font-size:16px;color:var(--paper-muted)">Ten years at war. Ten years getting back.</p>
+      <button class="again book-only" type="button" data-goto="1"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Back to the cover</button>
+    </article>
+
+    <article class="page backcover bare book-only" data-unit data-label="Back cover">
+      <div class="cover-frame" aria-hidden="true"></div>
+      <p>A Vizmaya data story, set in IM Fell and EB Garamond.</p>
+    </article>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://vizmaya.fyi/formats/book@1.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   This story's charts. The format runtime above draws each [data-chart]
+   element with the function registered here under its name, the first time
+   its unit is entered, and plays it once. Each draws at Story.size(el) (the
+   element's layout size, so the format's scale doesn't matter) and takes
+   every duration through Story.dur(), which is 0 under reduced motion and
+   when a chart that already played is redrawn after a resize.
+   Colours come from CSS custom properties on an ancestor (--c-ink --c-muted
+   --c-grid --c-hi --c-wine --c-sea --c-loss --c-land --c-teal --c-slate
+   --font-chart), so the same chart sits on paper or on ink.
+   ───────────────────────────────────────────────────────────────────────── */
+(function () {
+  'use strict'
+  if (!window.Story) return // the runtime didn't load: the page reads as one column
+  var reduced = Story.reduced
+  var dur = Story.dur
+  var size = Story.size
+  var charts = Story.charts
+
+  // vizmaya-data/odyssey-voyage/voyage_stops.csv
+  var STOPS = [
+    { seq: 0, name: 'Troy', ep: 'Leaves the sacked city with 12 ships', place: 'Hisarlik, Turkey', cc: 'tr', lat: 39.9575, lon: 26.2389, status: 'anchor', men: 720, ships: 12, stay: 'Departure', lab: 'r' },
+    { seq: 1, name: 'Cicones', ep: 'Raids Ismaros; 72 men are killed', place: 'Maroneia, Thrace', cc: 'gr', lat: 40.96, lon: 25.37, status: 'anchor', men: 648, ships: 12, stay: 'A few days', lab: 't' },
+    { seq: 2, name: 'Cape Malea', ep: 'A north wind drives him off the map', place: 'Cape Malea, Peloponnese', cc: 'gr', lat: 36.43, lon: 23.19, status: 'real-navigation', men: 648, ships: 12, stay: 'The pivot', lab: 'b' },
+    { seq: 3, name: 'Lotus-Eaters', ep: 'The fruit that makes men forget home', place: 'Djerba, Tunisia (tradition)', cc: 'tn', lat: 33.8, lon: 10.9, status: 'contested', men: 648, ships: 12, stay: 'Brief, after a 9-day drift', lab: 'b' },
+    { seq: 4, name: 'Cyclops', ep: 'Polyphemus eats six men', place: 'Near Etna, Sicily (tradition)', cc: 'it', lat: 37.56, lon: 15.16, status: 'contested', men: 642, ships: 12, stay: '2–3 days', lab: 'r' },
+    { seq: 5, name: 'Aeolus', ep: 'The bag of winds, opened in sight of home', place: 'Lipari, Aeolian Islands (tradition)', cc: 'it', lat: 38.47, lon: 14.95, status: 'contested', men: 642, ships: 12, stay: 'One month', lab: 'l' },
+    { seq: 6, name: 'Laestrygonians', ep: 'Eleven of twelve ships destroyed', place: 'Mezapos, Mani (Severin)', cc: 'gr', lat: 36.34, lon: 22.38, status: 'contested', men: 48, ships: 1, stay: 'Brief', lab: 'l' },
+    { seq: 7, name: 'Circe', ep: 'A year on Aeaea', place: 'Monte Circeo, Lazio (tradition)', cc: 'it', lat: 41.24, lon: 13.09, status: 'traditional', men: 46, ships: 1, stay: 'One year', lab: 't' },
+    { seq: 8, name: 'Underworld', ep: 'Tiresias’s prophecy', place: 'Necromanteion, Acheron', cc: 'gr', lat: 39.24, lon: 20.53, status: 'archaeological-contested', men: 46, ships: 1, stay: 'A day', lab: 'r' },
+    { seq: 9, name: 'Sirens', ep: 'Bound to the mast to hear the song', place: 'Li Galli, off Sorrento (tradition)', cc: 'it', lat: 40.58, lon: 14.43, status: 'traditional', men: 46, ships: 1, stay: 'Brief', lab: 'r' },
+    { seq: 10, name: 'Scylla & Charybdis', ep: 'Six men, one for each head', place: 'Strait of Messina (tradition)', cc: 'it', lat: 38.25, lon: 15.63, status: 'traditional', men: 40, ships: 1, stay: 'Brief', lab: 'r' },
+    { seq: 11, name: 'Thrinacia', ep: 'The Sun’s cattle; the last ship is lost', place: 'Sicily (tradition)', cc: 'it', lat: 37.5, lon: 14.0, status: 'contested', men: 1, ships: 0, stay: 'Over a month', lab: 'l' },
+    { seq: 12, name: 'Calypso', ep: 'Seven years on Ogygia', place: 'Gozo, Malta (tradition)', cc: 'mt', lat: 36.06, lon: 14.28, status: 'traditional', men: 1, ships: 0, stay: 'Seven years', lab: 'b' },
+    { seq: 13, name: 'Phaeacians', ep: 'Tells the whole tale at Scheria', place: 'Corfu, Greece', cc: 'gr', lat: 39.62, lon: 19.92, status: 'traditional', men: 1, ships: 0, stay: 'A few days', lab: 'l' },
+    { seq: 14, name: 'Ithaca', ep: 'Home, twenty years after he left', place: 'Ithaki, Greece', cc: 'gr', lat: 38.42, lon: 20.71, status: 'anchor-contested', men: 1, ships: 0, stay: 'The end', lab: 'b' }
+  ]
+
+  var STATUS = {
+    'anchor': { label: 'Excavated anchor', color: 'var(--c-hi)' },
+    'anchor-contested': { label: 'Anchor, under debate', color: 'var(--c-hi)', ring: true },
+    'real-navigation': { label: 'Real, mappable place', color: 'var(--c-slate)' },
+    'archaeological-contested': { label: 'Excavated, Homeric link disputed', color: 'var(--c-teal)' },
+    'traditional': { label: 'Tradition only', color: 'var(--c-wine)' },
+    'contested': { label: 'Rival identifications', color: 'var(--c-muted)' }
+  }
+
+  // route_theories.csv — every school starts at Cape Malea (23.19°E).
+  var SCHOOLS = [
+    { id: 'severin', name: 'Severin', when: '1987', west: 19.3, region: 'the Greek coast' },
+    { id: 'traditional', name: 'Ancient geographers', when: 'c. 400 BCE on', west: 12.0, region: 'Sicily and southern Italy' },
+    { id: 'bradford', name: 'Bradford', when: '1963', west: 8.0, region: 'the western Med' },
+    { id: 'berard', name: 'Bérard', when: '1929', west: -5.6, region: 'out to Gibraltar' },
+    { id: 'atlantic', name: 'Atlantic fringe', when: 'ancient and modern', west: -15, region: 'the open ocean' }
+  ]
+
+  // distances.csv
+  var TRIPS = [
+    { name: 'Cruise ship, today', lo: 1, hi: 1, label: 'under a day' },
+    { name: 'Bronze Age galley, fair wind', lo: 6, hi: 14, label: '6–14 days' },
+    { name: 'Superyacht, today', lo: 7, hi: 7, label: 'about a week' },
+    { name: 'Severin’s replica galley', lo: 90, hi: 120, label: '3–4 months' },
+    { name: 'Hal Roth’s sloop', lo: 730, hi: 730, label: '2 years' },
+    { name: 'Odysseus', lo: 3650, hi: 3650, label: '10 years', hero: true }
+  ]
+
+  // timeline_allocation.csv, in months: 2,555 days with Calypso, 365 with
+  // Circe, 127 days moving; the poem doesn't account for the rest.
+  var YEARS = [
+    { k: 'calypso', n: 84, label: 'With Calypso', sub: 'seven years', fill: 'var(--c-wine)' },
+    { k: 'circe', n: 12, label: 'With Circe', sub: 'one year', fill: 'var(--c-wine)', op: 0.55 },
+    { k: 'sea', n: 4, label: 'Actually sailing', sub: 'about four months', fill: 'var(--c-hi)' },
+    { k: 'gap', n: 20, label: 'Not accounted for', sub: 'the poem doesn’t say', fill: 'none' }
+  ]
+
+  function svg(el, w, h) {
+    el.innerHTML = ''
+    return d3.select(el).append('svg')
+      .attr('viewBox', '0 0 ' + w + ' ' + h).attr('width', w).attr('height', h)
+      .attr('role', 'img').attr('aria-label', el.getAttribute('data-alt') || '')
+      .style('display', 'block').style('overflow', 'visible')
+      .style('font-family', 'var(--font-chart)')
+  }
+
+  charts.years = function (el) {
+    var s = size(el, 0.7), W = s[0], H = s[1]
+    var labelW = Math.max(140, W * 0.42)
+    var cell = Math.min((W - labelW - 12) / 12, (H - 4) / 10)
+    var gap = Math.max(1.5, cell * 0.14)
+    var g = svg(el, W, H).append('g').attr('transform', 'translate(0,' + Math.max(0, (H - 10 * cell) / 2 - 10) + ')')
+    var cells = [], i = 0
+    YEARS.forEach(function (grp) { for (var j = 0; j < grp.n; j++) cells.push({ grp: grp, i: i++ }) })
+    var sq = g.append('g').selectAll('rect').data(cells).join('rect')
+      .attr('x', function (d) { return (d.i % 12) * cell }).attr('y', function (d) { return Math.floor(d.i / 12) * cell })
+      .attr('width', cell - gap).attr('height', cell - gap).attr('rx', Math.min(2, cell * 0.12))
+      .style('fill', function (d) { return d.grp.fill }).style('fill-opacity', function (d) { return d.grp.op || 1 })
+      .style('stroke', function (d) { return d.grp.k === 'gap' ? 'var(--c-ink)' : 'none' })
+      .style('stroke-opacity', 0.45).style('stroke-dasharray', '2 2').style('stroke-width', 1.1)
+      .style('opacity', reduced ? 1 : 0)
+    // labels sit beside the rows each group occupies, pushed apart so the
+    // two-line labels never collide; a short leader ties each to its rows
+    var rows = { calypso: 3.5, circe: 7.5, sea: 8.5, gap: 9.5 }
+    var lx = 12 * cell + 22
+    var fs = parseFloat(getComputedStyle(el).getPropertyValue('--chart-fs')) || 13
+    var lineH = fs * 2.45, prev = -Infinity
+    var lab = g.append('g').style('opacity', reduced ? 1 : 0)
+    YEARS.forEach(function (grp) {
+      var want = rows[grp.k] * cell - gap / 2
+      var y = Math.max(want - 8, prev + lineH)
+      prev = y
+      lab.append('path').attr('d', 'M' + (12 * cell + 2) + ',' + want + 'L' + (lx - 6) + ',' + (y + 4))
+        .style('stroke', 'var(--c-muted)').style('fill', 'none').style('stroke-width', 1)
+      var t = lab.append('text').attr('x', lx).attr('y', y).style('fill', 'var(--c-ink)')
+        .style('font-size', 'var(--chart-fs, 13px)')
+      t.append('tspan').text(grp.label).style('font-weight', 600)
+      t.append('tspan').attr('x', lx).attr('dy', '1.15em').text(grp.sub).style('fill', 'var(--c-muted)')
+    })
+    return {
+      play: function () {
+        sq.transition().duration(dur(260)).delay(function (d) { return dur(d.i * 9) }).style('opacity', 1)
+        lab.transition().delay(dur(500)).duration(dur(500)).style('opacity', 1)
+      }
+    }
+  }
+
+  // How long Troy → Ithaca takes, on a log scale of days (dots, not bars).
+  charts.trip = function (el) {
+    var s = size(el, 0.62), W = s[0], H = s[1]
+    var narrow = W < 460
+    var top = 6, axisH = 26, rowH = (H - top - axisH) / TRIPS.length
+    var left = narrow ? 0 : Math.min(270, W * 0.4)
+    var right = 82
+    var x = d3.scaleLog().domain([1, 3650]).range([left + 6, W - right])
+    var g = svg(el, W, H)
+    var ticks = [[1, '1 day'], [7, '1 week'], [30, '1 month'], [365, '1 year'], [3650, '10 years']]
+    var ax = g.append('g').attr('transform', 'translate(0,' + (H - axisH + 6) + ')')
+    ticks.forEach(function (t, k) {
+      var xx = x(t[0])
+      g.append('line').attr('x1', xx).attr('x2', xx).attr('y1', top).attr('y2', H - axisH)
+        .style('stroke', 'var(--c-grid)').style('stroke-width', 1)
+      if (narrow && (k === 1 || k === 2)) return
+      ax.append('text').attr('x', xx).attr('y', 14).text(t[1])
+        .attr('text-anchor', k === 0 ? 'start' : k === ticks.length - 1 ? 'end' : 'middle')
+        .style('fill', 'var(--c-muted)').style('font-size', 'var(--chart-fs-sm, 11px)')
+    })
+    var rows = g.selectAll('g.row').data(TRIPS).join('g').attr('class', 'row')
+      .attr('transform', function (d, k) { return 'translate(0,' + (top + k * rowH + rowH / 2) + ')' })
+    rows.append('text').attr('x', narrow ? x(1) : left - 4).attr('y', narrow ? -rowH * 0.2 : 4)
+      .attr('text-anchor', narrow ? 'start' : 'end').text(function (d) { return d.name })
+      .style('fill', function (d) { return d.hero ? 'var(--c-ink)' : 'var(--c-muted)' })
+      .style('font-weight', function (d) { return d.hero ? 600 : 400 })
+      .style('font-size', 'var(--chart-fs, 13px)')
+    var cy = narrow ? rowH * 0.18 : 0
+    var mark = rows.append('line').attr('y1', cy).attr('y2', cy)
+      .attr('x1', x(1)).attr('x2', reduced ? function (d) { return x(d.hi) } : x(1))
+      .style('stroke', function (d) { return d.hero ? 'var(--c-hi)' : 'var(--c-ink)' })
+      .style('stroke-opacity', function (d) { return d.hero ? 1 : 0.35 })
+      .style('stroke-width', function (d) { return d.lo !== d.hi ? 7 : 1.5 }).style('stroke-linecap', 'round')
+    var lo = rows.filter(function (d) { return d.lo !== d.hi })
+    var dot = rows.append('circle').attr('cy', cy).attr('r', function (d) { return d.hero ? 7 : 5 })
+      .attr('cx', function (d) { return reduced ? x(d.hi) : x(1) })
+      .style('fill', function (d) { return d.hero ? 'var(--c-hi)' : 'var(--c-ink)' })
+    var val = rows.append('text').attr('y', cy + 4).attr('x', function (d) { return x(d.hi) + 12 })
+      .text(function (d) { return d.label }).style('opacity', reduced ? 1 : 0)
+      .style('fill', function (d) { return d.hero ? 'var(--c-hi)' : 'var(--c-ink)' })
+      .style('font-weight', function (d) { return d.hero ? 700 : 400 })
+      .style('font-size', 'var(--chart-fs, 13px)')
+    lo.select('line').attr('x1', function (d) { return x(d.lo) })
+    return {
+      play: function () {
+        dot.transition().duration(dur(900)).delay(function (d, k) { return dur(k * 90) }).ease(d3.easeCubicOut)
+          .attr('cx', function (d) { return x(d.hi) })
+        mark.transition().duration(dur(900)).delay(function (d, k) { return dur(k * 90) }).ease(d3.easeCubicOut)
+          .attr('x2', function (d) { return x(d.hi) })
+        val.transition().delay(function (d, k) { return dur(700 + k * 90) }).duration(dur(300)).style('opacity', 1)
+      }
+    }
+  }
+
+  // Men aboard, stop by stop (reconstructed at ~60 per ship).
+  charts.attrition = function (el) {
+    var s = size(el, 0.6), W = s[0], H = s[1]
+    var m = { t: 12, r: 10, b: 30, l: 40 }
+    var x = d3.scalePoint().domain(STOPS.map(function (d) { return d.seq })).range([m.l, W - m.r])
+    var y = d3.scaleLinear().domain([0, 720]).range([H - m.b, m.t])
+    var g = svg(el, W, H)
+    ;[0, 240, 480, 720].forEach(function (v) {
+      g.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(v)).attr('y2', y(v))
+        .style('stroke', 'var(--c-grid)')
+      g.append('text').attr('x', m.l - 6).attr('y', y(v) + 4).attr('text-anchor', 'end').text(v)
+        .style('fill', 'var(--c-muted)').style('font-size', 'var(--chart-fs-sm, 11px)')
+    })
+    var keys = W < 560 ? [0, 6, 14] : [0, 6, 11, 14]
+    keys.forEach(function (k, j) {
+      g.append('text').attr('x', x(k)).attr('y', H - 8).text(STOPS[k].name)
+        .attr('text-anchor', j === 0 ? 'start' : j === keys.length - 1 ? 'end' : 'middle')
+        .style('fill', 'var(--c-muted)').style('font-size', 'var(--chart-fs-sm, 11px)')
+    })
+    var id = 'clip' + Math.random().toString(36).slice(2)
+    var clip = g.append('clipPath').attr('id', id).append('rect').attr('x', 0).attr('y', 0)
+      .attr('height', H).attr('width', reduced ? W : 0)
+    var plot = g.append('g').attr('clip-path', 'url(#' + id + ')')
+    plot.append('path').datum(STOPS)
+      .attr('d', d3.area().curve(d3.curveStepAfter).x(function (d) { return x(d.seq) }).y0(y(0)).y1(function (d) { return y(d.men) }))
+      .style('fill', 'var(--c-loss)').style('fill-opacity', 0.14)
+    plot.append('path').datum(STOPS)
+      .attr('d', d3.line().curve(d3.curveStepAfter).x(function (d) { return x(d.seq) }).y(function (d) { return y(d.men) }))
+      .style('fill', 'none').style('stroke', 'var(--c-loss)').style('stroke-width', 2.5)
+    var notes = [
+      { k: 1, v: 648, t: '72 killed by the Cicones', a: 'start', dx: 6, dy: -10 },
+      { k: 6, v: 380, t: 'Eleven ships sunk', a: 'start', dx: 8, dy: 0 },
+      { k: 11, v: 40, t: 'The last ship goes down', a: 'end', dx: -8, dy: -12 }
+    ]
+    var ann = g.append('g').style('opacity', reduced ? 1 : 0)
+    notes.forEach(function (n) {
+      ann.append('text').attr('x', x(n.k) + n.dx).attr('y', y(n.v) + n.dy).attr('text-anchor', n.a).text(n.t)
+        .style('fill', 'var(--c-ink)').style('font-size', 'var(--chart-fs-sm, 11px)').style('font-weight', 600)
+    })
+    return {
+      play: function () {
+        clip.transition().duration(dur(1600)).ease(d3.easeCubicInOut).attr('width', W)
+        ann.transition().delay(dur(1300)).duration(dur(400)).style('opacity', 1)
+      }
+    }
+  }
+
+  // How far west each school of reconstruction sends him, from Cape Malea.
+  charts.routes = function (el) {
+    var s = size(el, 0.62), W = s[0], H = s[1]
+    var narrow = W < 460
+    var left = narrow ? 0 : Math.min(170, W * 0.3)
+    var top = 34, bottom = 24
+    var x = d3.scaleLinear().domain([-17, 25]).range([left + 4, W - 6])
+    var rowH = (H - top - bottom) / SCHOOLS.length
+    var g = svg(el, W, H)
+    var refs = [[23.19, 'Cape Malea', 'end'], [15.63, 'Messina', 'middle'], [-5.6, 'Gibraltar', 'middle']]
+    refs.forEach(function (r) {
+      g.append('line').attr('x1', x(r[0])).attr('x2', x(r[0])).attr('y1', top - 8).attr('y2', H - bottom + 4)
+        .style('stroke', r[0] > 23 ? 'var(--c-hi)' : 'var(--c-muted)').style('stroke-opacity', r[0] > 23 ? 1 : 0.4)
+        .style('stroke-dasharray', r[0] > 23 ? null : '3 3')
+      // Cape Malea is labelled above the rows, the two straits below them
+      g.append('text').attr('x', x(r[0])).attr('y', r[0] > 23 ? top - 14 : H - 6).attr('text-anchor', r[2]).text(r[1])
+        .style('fill', r[0] > 23 ? 'var(--c-hi)' : 'var(--c-muted)').style('font-size', 'var(--chart-fs-sm, 11px)')
+    })
+    var rows = g.selectAll('g.row').data(SCHOOLS).join('g').attr('class', 'row')
+      .attr('transform', function (d, k) { return 'translate(0,' + (top + k * rowH + rowH / 2) + ')' })
+    var barY = narrow ? rowH * 0.12 : -5
+    var bar = rows.append('rect').attr('y', barY).attr('height', 10).attr('rx', 5)
+      .attr('x', function (d) { return reduced ? x(d.west) : x(23.19) })
+      .attr('width', function (d) { return reduced ? x(23.19) - x(d.west) : 0 })
+      .style('fill', 'var(--c-sea)')
+    var t = rows.append('text').attr('x', narrow ? 0 : left - 4)
+      .attr('y', narrow ? barY - 5 : 4).attr('text-anchor', narrow ? 'start' : 'end')
+      .style('font-size', 'var(--chart-fs, 13px)')
+    t.append('tspan').text(function (d) { return d.name }).style('fill', 'var(--c-ink)').style('font-weight', 600)
+    t.append('tspan').text(function (d) { return ' ' + d.when }).style('fill', 'var(--c-muted)')
+    return {
+      play: function () {
+        bar.transition().duration(dur(1000)).delay(function (d, k) { return dur(k * 120) }).ease(d3.easeCubicOut)
+          .attr('x', function (d) { return x(d.west) }).attr('width', function (d) { return x(23.19) - x(d.west) })
+      }
+    }
+  }
+
+  // The route as tradition places it. opts is the element's dataset: data-labels (key, all, none), data-r.
+  var landPromise = null
+  function loadLand() {
+    if (!landPromise) {
+      landPromise = fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-50m.json')
+        .then(function (r) { return r.json() })
+        .then(function (t) {
+          var f = topojson.feature(t, t.objects.land)
+          var geom = f.features ? f.features[0].geometry : f.geometry
+          // keep only land north of 20°S: this story never leaves the Mediterranean
+          if (geom.type === 'MultiPolygon') geom.coordinates = geom.coordinates.filter(function (poly) {
+            return poly[0].some(function (pt) { return pt[1] > -20 })
+          })
+          return f
+        })
+        .catch(function () { return null })
+    }
+    return landPromise
+  }
+  var KEY_LABELS = { 0: 1, 2: 1, 3: 1, 7: 1, 12: 1, 14: 1 }
+  charts.map = function (el, opts) {
+    opts = opts || {}
+    var s = size(el, 0.72), W = s[0], H = s[1]
+    var mode = opts.labels || 'key'
+    var r = +(opts.r || 4.5)
+    var ext = [[7, 31.5], [29, 43]]
+    var proj = d3.geoMercator().fitExtent([[8, 8], [W - 8, H - 8]],
+      { type: 'MultiPoint', coordinates: [ext[0], ext[1]] })
+    // Clip in screen space: keeps the path small and stops Antarctica, which
+    // runs to infinity in Mercator, from flooding the whole frame.
+    proj.clipExtent([[-4, -4], [W + 4, H + 4]])
+    var path = d3.geoPath(proj)
+    var g = svg(el, W, H).style('overflow', 'hidden')
+    var landG = g.append('g')
+    loadLand().then(function (land) {
+      if (!land) return
+      landG.append('path').datum(land).attr('d', path)
+        .style('fill', 'var(--c-land)').style('stroke', 'var(--c-grid)').style('stroke-width', 0.8)
+    })
+    var pts = STOPS.map(function (d) { return proj([d.lon, d.lat]) })
+    var segs = []
+    for (var i = 0; i < pts.length - 1; i++) segs.push({ a: pts[i], b: pts[i + 1], known: i < 2, i: i })
+    var lines = g.append('g').selectAll('line').data(segs).join('line')
+      .attr('x1', function (d) { return d.a[0] }).attr('y1', function (d) { return d.a[1] })
+      .attr('x2', function (d) { return reduced ? d.b[0] : d.a[0] }).attr('y2', function (d) { return reduced ? d.b[1] : d.a[1] })
+      .style('stroke', function (d) { return d.known ? 'var(--c-hi)' : 'var(--c-ink)' })
+      .style('stroke-opacity', function (d) { return d.known ? 1 : 0.55 })
+      .style('stroke-width', function (d) { return d.known ? 2.2 : 1.3 })
+      .style('stroke-dasharray', function (d) { return d.known ? null : '4 4' })
+    var malea = pts[2]
+    g.append('circle').attr('cx', malea[0]).attr('cy', malea[1]).attr('r', r * 2.6)
+      .style('fill', 'none').style('stroke', 'var(--c-hi)').style('stroke-width', 1).style('stroke-dasharray', '2 3')
+    var dots = g.append('g').selectAll('circle').data(STOPS).join('circle')
+      .attr('cx', function (d, k) { return pts[k][0] }).attr('cy', function (d, k) { return pts[k][1] })
+      .attr('r', r).style('opacity', reduced ? 1 : 0)
+      .style('fill', function (d) { return STATUS[d.status].ring ? 'var(--c-paper, transparent)' : STATUS[d.status].color })
+      .style('stroke', function (d) { return STATUS[d.status].ring ? 'var(--c-hi)' : 'var(--c-paper, transparent)' })
+      .style('stroke-width', function (d) { return STATUS[d.status].ring ? 2 : 1 })
+    var labs = g.append('g').style('opacity', reduced ? 1 : 0)
+    STOPS.forEach(function (d, k) {
+      if (mode === 'none' || (mode === 'key' && !KEY_LABELS[k])) return
+      var p = pts[k], o = r + 5
+      var pos = { r: [o, 4, 'start'], l: [-o, 4, 'end'], t: [0, -o - 2, 'middle'], b: [0, o + 10, 'middle'] }[d.lab]
+      labs.append('text').attr('x', p[0] + pos[0]).attr('y', p[1] + pos[1]).attr('text-anchor', pos[2])
+        .text(d.name).style('font-size', 'var(--chart-fs-sm, 11px)')
+        .style('fill', 'var(--c-ink)').style('paint-order', 'stroke')
+        .style('stroke', 'var(--c-halo, transparent)').style('stroke-width', 3).style('stroke-linejoin', 'round')
+    })
+    return {
+      // the board pins strings to a landfall: data-pin-to="it-map:<seq>"
+      anchor: function (key) { return pts[+key] },
+      play: function () {
+        var step = dur(140)
+        lines.transition().delay(function (d) { return d.i * step }).duration(dur(160)).ease(d3.easeLinear)
+          .attr('x2', function (d) { return d.b[0] }).attr('y2', function (d) { return d.b[1] })
+        dots.transition().delay(function (d, k) { return k * step }).duration(dur(200)).style('opacity', 1)
+        labs.transition().delay(STOPS.length * step).duration(dur(400)).style('opacity', 1)
+      }
+    }
+  }
+
+})()
+</script>
+</body>
+</html>

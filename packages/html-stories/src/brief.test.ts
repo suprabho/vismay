@@ -106,4 +106,53 @@ for (const mapboxToken of [null, '', 'sk.secret-token', 'not-a-token']) {
 // No spin: none of it.
 assert.ok(!viz.includes('## Your assignment') && !viz.includes('Research stub'))
 
+// Story formats. The default (and an explicit 'scroll') is the scroll brief.
+assert.equal(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi/', format: 'scroll' }), viz)
+assert.ok(viz.includes('## Motion and scroll animation') && !viz.includes('## Story format'))
+const runtimes = { book: 'https://vizmaya.fyi/formats/book@1', board: 'https://vizmaya.fyi/formats/board@1', deck: 'https://vizmaya.fyi/formats/deck@1' }
+for (const format of ['book', 'board', 'deck'] as const) {
+  // From a preview deployment, with a Mapbox token: neither leaks into a paged brief.
+  const b = htmlStoryBrief({ siteUrl: 'https://vizmaya-git-x.vercel.app', format, mapboxToken: pk })
+  const at = (h: string) => b.indexOf(h)
+  assert.ok(at('## Story format:') > at('## Icons and flags') && at('## Story format:') < at('## Charts'), `${format}: section order`)
+  // The scroll format's sections give way to the format's own.
+  assert.ok(!b.includes('## Motion and scroll animation') && !b.includes('## Maps') && !b.includes('mapboxgl'), `${format}: no scroll sections`)
+  assert.ok(!b.includes('data-step'), `${format}: no data-step`)
+  // The hosting contract asks for the format tag; the runtime is always the production site's.
+  assert.ok(b.includes(`<meta name="vizmaya:format" content="${format}">`))
+  assert.ok(b.includes(`${runtimes[format]}.css`) && b.includes(`${runtimes[format]}.js`))
+  assert.ok(!b.includes('vercel.app/formats'))
+  assert.ok(b.includes('POST https://vizmaya-git-x.vercel.app/api/html-stories?slug=<slug>'))
+  assert.ok(b.includes(`https://vizmaya.fyi/formats/examples/odyssey-${format}.html`))
+  assert.ok(b.includes('### Charts and numbers: animate on enter') && b.includes('Story.charts.'))
+  assert.ok(b.includes('data-unit'))
+  assert.ok(b.includes('## Before you post') && b.indexOf('## Before you post') < at('## Posting'))
+}
+assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).includes('One idea per page.'))
+assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'deck' }).includes('One idea per slide.'))
+assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'board' }).includes('data-pin-to'))
+// footshorts runtimes come from footshorts.com.
+const fsBook = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', format: 'book' })
+assert.ok(fsBook.includes('https://footshorts.com/formats/book@1.js') && !fsBook.includes('vizmaya.fyi'))
+
+// A spin brief suggests the paged format its kind of story suits, unless it already is one.
+{
+  const now = new Date('2026-10-05T12:00:00Z')
+  const spin = {
+    ...draw({ randomizer: 'epics', seed: 7, now }),
+    id: '00000000-0000-4000-8000-0000000000ab',
+    seed: '00000007',
+    status: 'spun',
+    heroInsight: null,
+    researchMd: null,
+    createdAt: now.toISOString(),
+  } as Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'>
+  const scroll = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
+  assert.ok(scroll.includes('## Story format\n') && scroll.includes('format=book'))
+  assert.ok(scroll.indexOf('## Story format\n') < scroll.indexOf('## The hosting contract'))
+  const book = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, format: 'book' })
+  assert.ok(!book.includes('## Story format\n') && book.includes('## Story format: a book'))
+  assert.ok(book.indexOf('## Format:') < book.indexOf('## Story format: a book'))
+}
+
 console.log('brief: ok')

@@ -12,6 +12,8 @@ export interface ArchiveStory {
   byline: string
   /** Set for HTML stories (/s/<slug>), which aren't a Next route: plain <a>. */
   href?: string
+  /** An HTML story's format when it isn't a scrolling page ("Book", "Board", "Deck"). */
+  format?: string
 }
 
 const css = `
@@ -158,7 +160,7 @@ export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] 
               <div className="row-body">
                 <h2>{s.title}</h2>
                 <p>{s.subtitle}</p>
-                {s.byline && <div className="byline">{s.byline}</div>}
+                {(s.format || s.byline) && <div className="byline">{[s.format, s.byline].filter(Boolean).join(' · ')}</div>}
               </div>
               <div className="arrow">Read →</div>
             </Row>

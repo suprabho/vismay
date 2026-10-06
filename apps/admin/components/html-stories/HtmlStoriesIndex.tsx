@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowSquareOut } from '@phosphor-icons/react/dist/ssr'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from '@vismay/html-stories/apps'
+import { HTML_STORY_FORMAT_META } from '@vismay/html-stories/formats'
 import { listHtmlStoriesForAdmin, type HtmlStorySummary } from '@vismay/html-stories/htmlStories'
 import { loadStoryStylePool } from '@vismay/html-stories/storyStyles'
 import type { StylePool } from '@vismay/html-stories/styles'
@@ -52,7 +53,9 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
         <ol className="list-decimal ml-5 mt-2 space-y-1.5">
           <li>
             Give the agent the brief: <em>Copy agent brief</em> above, or point it at{' '}
-            <code className="text-neutral-300">{siteUrl}/api/html-stories/brief</code>. <em>Randomize style</em>{' '}
+            <code className="text-neutral-300">{siteUrl}/api/html-stories/brief</code>. Pick the story format first:
+            a scrolling page, or a <em>book</em>, <em>board</em> or <em>deck</em> built on the runtime the site hosts at{' '}
+            <code>/formats</code> (<code>?format=book</code> on that URL). <em>Randomize style</em>{' '}
             (or <code>?style=random</code> on that URL) swaps the house look for a palette and fonts from an existing{' '}
             {meta.name} story.
             {isFootshorts && (
@@ -102,6 +105,11 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
                 {s.title}
                 {s.status !== 'published' && (
                   <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400/80">{s.status}</span>
+                )}
+                {s.format !== 'scroll' && (
+                  <span className="ml-2 text-[10px] uppercase tracking-wider text-sky-300/80">
+                    {HTML_STORY_FORMAT_META[s.format].label}
+                  </span>
                 )}
               </div>
               <div className="text-xs text-neutral-500 truncate mt-0.5">

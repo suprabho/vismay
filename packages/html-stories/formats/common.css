@@ -1,0 +1,59 @@
+/*
+ * Shared by every format stylesheet (book@1.css, board@1.css, deck@1.css
+ * start with this). The runtime adds html.js and html.vz-on plus the
+ * format's own class (html.book-on, html.board-on, html.deck-on) when it
+ * takes the page over; without them, the same content reads as one column.
+ *
+ * Tokens the controls use, set from the page's vizmaya:theme by the runtime
+ * (override any of them in your own :root): --vz-bg --vz-surface --vz-text
+ * --vz-muted --vz-line --vz-accent. --vz-chrome-h is the site header's
+ * height, which the site sets as --vizmaya-chrome-h.
+ */
+:where(:root) { --vz-chrome-h: var(--vizmaya-chrome-h, 64px) }
+@media (max-width: 480px) { :where(:root) { --vz-chrome-h: var(--vizmaya-chrome-h, 56px) } }
+
+/* A chart that drew nothing (no JS, or it failed) shows its data-alt text. */
+:where(.chart:empty)::before { content: attr(data-alt); display: block; font-style: italic; font-size: 15px; line-height: 1.45; opacity: .75 }
+html:not(.js) .chart { height: auto !important; aspect-ratio: auto !important }
+html:not(.vz-on) .vz-only { display: none !important }
+
+.vz-btn {
+  appearance: none; -webkit-appearance: none; margin: 0; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 40px; min-width: 40px; padding: 0 12px; border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--vz-line, rgba(127, 127, 127, .35)); background: var(--vz-surface, #111820); color: var(--vz-text, #e0ddd5);
+  font: inherit; font-size: 14px; line-height: 1; white-space: nowrap;
+}
+.vz-btn:hover { border-color: var(--vz-muted, #5a6a70) }
+.vz-btn:disabled { opacity: .35; cursor: default }
+.vz-btn[hidden] { display: none }
+.vz-btn:focus-visible, .vz-seg button:focus-visible { outline: 2px solid var(--vz-accent, #D85A30); outline-offset: 2px }
+.vz-btn.vz-primary { background: var(--vz-accent, #D85A30); border-color: var(--vz-accent, #D85A30); color: var(--vz-bg, #0a0e14); font-weight: 600 }
+.vz-i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+
+.vz-controls {
+  position: relative; z-index: 5; flex: none; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px;
+  padding: 10px 16px 14px; font-size: 14px; color: var(--vz-muted, #5a6a70);
+}
+.vz-where { min-width: 132px; text-align: center; font-variant-numeric: tabular-nums; color: var(--vz-text, #e0ddd5); opacity: .8 }
+.vz-sep { flex: 0 0 1px; height: 22px; background: var(--vz-line, rgba(127, 127, 127, .35)); margin: 0 4px }
+.vz-hint {
+  position: absolute; left: 50%; top: 18px; z-index: 11; transform: translate(-50%, -8px); opacity: 0; pointer-events: none;
+  padding: 8px 14px; border-radius: 18px; font-size: 14px; white-space: nowrap;
+  background: var(--vz-surface, #111820); color: var(--vz-text, #e0ddd5); border: 1px solid var(--vz-line, rgba(127, 127, 127, .35));
+  transition: opacity .25s, transform .25s;
+}
+.vz-hint.vz-show { opacity: 1; transform: translate(-50%, 0) }
+/* Labels that fold away on phones stay readable to screen readers. */
+@media (max-width: 560px) {
+  .vz-controls { gap: 6px; padding-left: 8px; padding-right: 8px }
+  .vz-controls .vz-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+  .vz-where { min-width: 64px }
+}
+/* The one-page view keeps the controls at the bottom of the screen. */
+html.js:not(.vz-on) .vz-controls {
+  position: sticky; bottom: 0; padding-top: 24px;
+  background: linear-gradient(transparent, var(--vz-bg, #0a0e14) 40%);
+}
+@media (prefers-reduced-motion: reduce) { .vz-hint { transition: none } }

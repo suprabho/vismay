@@ -14,7 +14,8 @@
  *   POST /api/randomizer/heat                       { refreshed?: [{ subId, heat, topHeadlines? }],
  *                                                     failed?: [{ subId, error }], source? }
  *
- * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi).
+ * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi),
+ * with &format=book|board|deck for a paged story format.
  *
  * Server only.
  */
@@ -22,6 +23,7 @@
 import { DESK } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
 import { assignmentSection } from '@vismay/randomizer/spinBrief'
+import { suggestedFormatFor } from './formats'
 import {
   createSpin,
   getSpin,
@@ -71,13 +73,20 @@ function sourceOf(b: Record<string, unknown>): string {
   return s === 'mcp' ? 'mcp' : s ? `api:${s}` : 'api'
 }
 
-/** A spin as the agent endpoints return it: the record plus what to do with it. */
+/**
+ * A spin as the agent endpoints return it: the record plus what to do with
+ * it, including the story format its kind of story suits (./formats; the
+ * brief is for a scrolling page unless asked for that one).
+ */
 export function spinPayload(spin: SpinRecord, origin: string) {
+  const suggestedFormat = suggestedFormatFor(spin.randomizer)
   return {
     spin,
     assignment: assignmentSection(spin),
     researchFile: researchFileName(spin),
     briefUrl: `${origin}/api/html-stories/brief?spin=${spin.id}`,
+    suggestedFormat,
+    formatBriefUrl: `${origin}/api/html-stories/brief?spin=${spin.id}&format=${suggestedFormat}`,
   }
 }
 

@@ -1,7 +1,7 @@
 /** Checks for metadata extraction + the hosting lint.
  *  (run: npx tsx src/meta.test.ts) */
 import assert from 'node:assert/strict'
-import { extractHtmlMeta, extractThemeMeta, isSafeSlug, lintHtml, parseAuraSlug, slugify, themeMetaContent } from './meta'
+import { extractFormatMeta, extractHtmlMeta, extractThemeMeta, isSafeSlug, lintHtml, parseAuraSlug, slugify, themeMetaContent } from './meta'
 
 const good = `<!doctype html>
 <html lang="en"><head>
@@ -71,5 +71,31 @@ assert.equal(parseAuraSlug('https://aura.promad.design/embed/Blue-Lines?hideText
 assert.equal(parseAuraSlug('blue lines'), null)
 assert.equal(parseAuraSlug('"><script>'), null)
 assert.equal(parseAuraSlug('https://aura.promad.design/embed/%E0%A4%A'), null)
+
+// Formats: the tag, the runtime it needs, its units.
+assert.equal(extractFormatMeta(good), 'scroll')
+const book = good
+  .replace(
+    '</head>',
+    '<meta content=" Book " name="vizmaya:format"><link rel="stylesheet" href="https://vizmaya.fyi/formats/book@1.css"><script src="https://vizmaya.fyi/formats/book@1.js"></script></head>',
+  )
+  .replace('<body>', '<body><main class="stage"><div class="pages"><article class="page" data-unit>x</article></div></main>')
+assert.equal(extractFormatMeta(book), 'book')
+assert.deepEqual(lintHtml(book).warnings, [])
+const warns = (html: string) => lintHtml(html).warnings
+// No runtime (and no inline one setting html.book-on): it would read as one column.
+assert.ok(warns(book.replace(/<script src="https:\/\/vizmaya\.fyi\/formats\/book@1\.js"><\/script>/, '')).some((w) => w.includes("doesn't load its runtime")))
+assert.deepEqual(warns(book.replace(/<script src="[^"]*book@1\.js"><\/script>/, '<script>root.classList.add("book-on")</script>')), [])
+// No units; scroll-format markers.
+assert.ok(warns(book.replace(' data-unit', '')).some((w) => w.includes('No [data-unit]')))
+assert.ok(warns(book.replace('<article class="page" data-unit>', '<article class="page" data-unit data-step>')).some((w) => w.includes('data-step')))
+// A value that isn't a format: listed as scroll, and said so.
+const odd = book.replace('content=" Book "', 'content="slides"')
+assert.equal(extractFormatMeta(odd), 'scroll')
+assert.ok(warns(odd).some((w) => w.includes('isn\'t a format')))
+// A runtime without the tag.
+assert.ok(warns(book.replace(/<meta content=" Book " name="vizmaya:format">/, '')).some((w) => w.includes('add <meta name="vizmaya:format" content="book">')))
+// data-step is fine in a scroll story.
+assert.deepEqual(warns(good.replace('<body>', '<body><section data-step>x</section>')), [])
 
 console.log('meta: ok')

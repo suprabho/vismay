@@ -1,0 +1,96 @@
+/*
+ * vizmaya book format, v1. Pair with book@1.js.
+ *
+ * html.book-on: the pages are sheets in a book, two to a spread on wide
+ * screens and one at a time on phones, each laid out at a fixed page size
+ * and scaled to fit. Otherwise (no JS, or "Read as one page"): the same
+ * pages stacked as one column.
+ *
+ * Tokens (set them in your own :root):
+ *   --pw, --ph       the page size every page is designed at (400px × 580px)
+ *   --book-paper     the colour of blank page backs (match your pages' paper)
+ *   --book-table     what the book lies on: a colour or a gradient
+ *   --book-head      running heads and folios (default: the page's text colour)
+ */
+:where(:root) {
+  --pw: 400px; --ph: 580px;
+  --book-paper: #f3ede1;
+  --book-table: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--vz-bg, #0a0e14) 92%, var(--vz-text, #e0ddd5)), var(--vz-bg, #0a0e14) 70%);
+}
+
+/* ── The book ────────────────────────────────────────────────────────── */
+html.book-on .stage {
+  position: relative; display: flex; flex-direction: column; box-sizing: border-box;
+  height: calc(100svh - var(--vz-chrome-h)); min-height: 520px; overflow: hidden;
+  margin: 0; padding: 0; max-width: none;
+}
+html.book-on .stage:fullscreen { height: 100vh }
+html.book-on .stage > .pages { display: none }
+html.vz-aura.book-on .stage { background: transparent !important }
+.vz-table { position: absolute; inset: 0; pointer-events: none; background: var(--book-table) }
+html.vz-aura .vz-table { display: none }
+.vz-desk {
+  position: relative; flex: 1 1 auto; min-height: 0;
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab;
+}
+.vz-desk:active { cursor: grabbing }
+.vz-book-fit { position: absolute; left: 50%; top: 50%; transform-origin: 0 0 }
+.vz-book {
+  position: relative; width: calc(var(--pw) * 2); height: var(--ph);
+  perspective: 2400px; transform: translateX(var(--vz-shift, 0px));
+  transition: transform .7s cubic-bezier(.3, .1, .2, 1);
+}
+.vz-book.vz-single { width: var(--pw) }
+.vz-book::before { /* the shadow the book throws on the table */
+  content: ''; position: absolute; left: var(--vz-shadow-l, 50%); right: var(--vz-shadow-r, 0); top: 2%; bottom: -1.5%;
+  border-radius: 6px; background: #000; filter: blur(22px); opacity: .5; transition: left .7s, right .7s;
+}
+.vz-sheet {
+  position: absolute; top: 0; left: var(--pw); width: var(--pw); height: var(--ph);
+  transform-origin: left center; transform-style: preserve-3d; will-change: transform;
+}
+.vz-book.vz-single .vz-sheet { left: 0 }
+.vz-sheet.vz-gone { visibility: hidden }
+.vz-face {
+  position: absolute; inset: 0; overflow: hidden; background: var(--book-paper);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+.vz-face.vz-back { transform: rotateY(180deg) }
+.vz-blank { width: 100%; height: 100% }
+/* gutter: right-hand pages darken towards the spine on their left, left-hand pages on their right */
+.vz-face::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 5 }
+.vz-face.vz-front::before { background: linear-gradient(90deg, rgba(60, 40, 30, .26), rgba(60, 40, 30, 0) 9%), linear-gradient(270deg, rgba(0, 0, 0, .06), transparent 3%) }
+.vz-face.vz-back::before { background: linear-gradient(270deg, rgba(60, 40, 30, .26), rgba(60, 40, 30, 0) 9%), linear-gradient(90deg, rgba(0, 0, 0, .06), transparent 3%) }
+/* shading while a page turns: --vz-s is turn progress, 0 (flat right) to 1 (flat left) */
+.vz-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6; background: linear-gradient(90deg, rgba(20, 10, 15, 0), rgba(20, 10, 15, .5)) }
+.vz-face.vz-front::after { opacity: calc(var(--vz-s, 0) * .9) }
+.vz-face.vz-back::after { opacity: calc((1 - var(--vz-s, 1)) * .9); transform: scaleX(-1) }
+html.book-on .vz-face > .page {
+  position: relative; box-sizing: border-box; width: var(--pw); height: var(--ph);
+  margin: 0; max-width: none; min-height: 0; aspect-ratio: auto; overflow: hidden;
+  box-shadow: none; border-radius: 0;
+}
+
+/* running heads and folios, added by the runtime */
+.vz-head, .vz-folio {
+  position: absolute; left: 42px; right: 42px; z-index: 1; pointer-events: none;
+  font-size: 13px; line-height: 1.2; color: var(--book-head, currentColor); opacity: .62;
+}
+.vz-head { top: 18px; font-style: italic }
+.vz-folio { bottom: 18px; font-variant-numeric: lining-nums tabular-nums }
+.page[data-side="left"] > .vz-head, .page[data-side="left"] > .vz-folio { text-align: left }
+.page[data-side="right"] > .vz-head, .page[data-side="right"] > .vz-folio { text-align: right }
+html:not(.book-on) .vz-head, html:not(.book-on) .vz-folio { display: none }
+
+/* ── One column: no JS, or "Read as one page" ────────────────────────── */
+:where(html:not(.book-on)) :where(.stage > .pages) {
+  display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 32px 16px 48px;
+}
+:where(html:not(.book-on)) :where(.pages > .page) {
+  box-sizing: border-box; width: min(100%, 620px); position: relative; overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+html:not(.book-on) .book-only { display: none !important }
+html.js:not(.book-on) .pages .chart { height: auto !important; aspect-ratio: var(--chart-ratio, 4 / 3) }
+
+@media (prefers-reduced-motion: reduce) { .vz-book, .vz-book::before { transition: none } }

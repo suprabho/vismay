@@ -240,6 +240,22 @@ function footshortsFooterHtml(site: string, look: FootshortsLook): string {
 </style><div class="bar" role="contentinfo"><a class="brand" href="${site}/feed">${footshortsMark(look.mark)}<span><span class="name" style="display:block">Footshorts</span><span class="mono tag" style="display:block">Football, in short · © ${year} Footshorts</span></span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a><a class="link" href="${site}/privacy">Privacy</a></nav></div></template></footshorts-footer>`
 }
 
+/**
+ * Each site's header height, its 1px bottom border included, on wide screens
+ * and under 480px (the bars' own breakpoint). The page gets it as
+ * --vizmaya-chrome-h, so a paged story's stage (book, board, deck: ./formats)
+ * fills exactly the rest of the screen and the footer is one scroll away.
+ */
+export const CHROME_HEIGHT: Record<HtmlStoryApp, { wide: number; narrow: number }> = {
+  'vizmaya-fyi': { wide: 65, narrow: 57 },
+  footshorts: { wide: 61, narrow: 53 },
+}
+
+function chromeHeightStyle(app: HtmlStoryApp): string {
+  const h = CHROME_HEIGHT[app]
+  return `<style>:root{--vizmaya-chrome-h:${h.wide}px}@media (max-width:480px){:root{--vizmaya-chrome-h:${h.narrow}px}}</style>`
+}
+
 /** How much of the page background washes over the aura, so text written for that background stays legible. */
 const AURA_VEIL_OPACITY = 0.35
 
@@ -249,7 +265,9 @@ const AURA_VEIL_OPACITY = 0.35
  * (and stays if the live embed never loads, or for reduced-motion readers),
  * the animated embed goes over it, and a veil of the page background over
  * both. The page's own html/body backgrounds are cleared so it shows through;
- * sections that paint their own background still cover it.
+ * sections that paint their own background still cover it. A format runtime
+ * finds the <vizmaya-aura> element and clears its stage too (the board's felt
+ * and the deck's table stay at 85%).
  */
 function auraHtml(slug: string, theme: ThemeColors | null): string {
   const bg = theme?.background
@@ -270,7 +288,8 @@ function escapeAttr(s: string): string {
 /**
  * Wrap a story document in its site's header and footer, in the palette the
  * page declares (`<meta name="vizmaya:theme">`) or else the site's home look,
- * with the story's aura scene behind it when one is set.
+ * with the story's aura scene behind it when one is set, and the header's
+ * height as --vizmaya-chrome-h.
  */
 export function brandHtmlStory(html: string, { siteUrl, aura, app = DEFAULT_HTML_STORY_APP }: BrandingOptions): string {
   const site = siteUrl.replace(/\/$/, '')
@@ -279,11 +298,11 @@ export function brandHtmlStory(html: string, { siteUrl, aura, app = DEFAULT_HTML
   let footer: string
   if (app === 'footshorts') {
     const look = theme ? footshortsThemedLook(theme) : FOOTSHORTS_HOME_LOOK
-    header = (aura ? auraHtml(aura, theme) : '') + footshortsHeaderHtml(site, look)
+    header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + footshortsHeaderHtml(site, look)
     footer = footshortsFooterHtml(site, look)
   } else {
     const look = theme ? themedLook(theme) : HOME_LOOK
-    header = (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)
+    header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)
     footer = footerHtml(site, look) + riveScript(site, look)
   }
 
