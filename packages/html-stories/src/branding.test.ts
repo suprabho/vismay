@@ -79,3 +79,11 @@ assert.ok(fsThemed.includes('--bg:#FAF7F2'))
 assert.ok(fsThemed.includes('<vizmaya-aura'))
 assert.ok(fsThemed.indexOf('<vizmaya-aura') < fsThemed.indexOf('<footshorts-header>'))
 console.log('branding (footshorts): ok')
+
+// Embedded (chrome: false, /s/<slug>?embed=1): no bars, the aura stays, the story untouched.
+const embedded = brandHtmlStory(doc, { siteUrl: 'https://footshorts.com', app: 'footshorts', chrome: false })
+assert.equal(embedded, doc)
+const embeddedAura = brandHtmlStory(fsThemedDoc, { siteUrl: 'https://footshorts.com', app: 'footshorts', aura: 'some-scene', chrome: false })
+assert.ok(embeddedAura.includes('<vizmaya-aura'))
+assert.ok(!embeddedAura.includes('footshorts-header') && !embeddedAura.includes('footshorts-footer'))
+console.log('branding (embed): ok')

@@ -34,7 +34,11 @@ function notFoundHtml(app: HtmlStoryApp): string {
 </head><body><main><p>This story doesn't exist or isn't published yet.</p><p><a href="${home}">Back to ${meta.name}</a></p></main></body></html>`
 }
 
-/** GET /s/[slug] for one app. */
+/**
+ * GET /s/[slug] for one app. `?embed=1` serves it chrome-less (aura, no site
+ * header/footer) for a host app that frames it under its own back button,
+ * the same flag the render service's story view takes.
+ */
 export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryApp): Promise<Response> {
   const story = isSafeSlug(slug) ? await getPublishedHtmlStory(slug, app) : null
   if (!story) {
@@ -43,7 +47,13 @@ export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryA
       headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, s-maxage=30' },
     })
   }
-  const html = brandHtmlStory(story.html, { siteUrl: new URL(req.url).origin, aura: story.aura, app })
+  const url = new URL(req.url)
+  const html = brandHtmlStory(story.html, {
+    siteUrl: url.origin,
+    aura: story.aura,
+    app,
+    chrome: url.searchParams.get('embed') !== '1',
+  })
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',

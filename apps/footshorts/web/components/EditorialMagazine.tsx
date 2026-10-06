@@ -61,11 +61,22 @@ function editorialCard(story: EditorialStorySummary): MagazineCard {
   };
 }
 
-/** An HTML story wears its own palette (its `vizmaya:theme` meta) when it declared one. */
+/**
+ * True for a hex colour dark enough to carry the cards' white text. Story
+ * palettes are often light (cream paper); those cards keep the slug colour.
+ */
+function isDark(hex: string | undefined): hex is string {
+  if (!hex || !/^#?[0-9a-f]{6}$/i.test(hex)) return false;
+  const n = parseInt(hex.slice(-6), 16);
+  const lum = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return lum < 0.4;
+}
+
+/** An HTML story wears its own palette (its `vizmaya:theme` meta) when it declared a dark one. */
 function htmlStoryCard(story: PublishedHtmlStory): MagazineCard {
   const t = story.theme;
   const background =
-    t?.background && t.accent
+    isDark(t?.background) && t?.accent
       ? `linear-gradient(135deg, ${t.surface ?? t.background} 0%, ${t.background} 60%, ${t.accent}33 100%)`
       : gradientFor(story.slug);
   return {
