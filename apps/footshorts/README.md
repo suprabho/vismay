@@ -81,7 +81,9 @@ notes in [`apps/vizmaya-fyi/CLAUDE.md`](../vizmaya-fyi/CLAUDE.md#html-stories-ss
   `Authorization: Bearer $HTML_STORIES_TOKEN`; or the MCP `publish_html_story`
   tool with `app: "footshorts"`; or paste into the admin tab.
 - **Env (web):** `SUPABASE_SERVICE_ROLE_KEY` (the table is RLS-locked to the
-  service role) and `HTML_STORIES_TOKEN` (any long random string).
+  service role) and `HTML_STORIES_TOKEN` (any long random string). Optional:
+  `HTML_STORIES_MAPBOX_TOKEN` (a public `pk.` token for story maps; falls back
+  to `NEXT_PUBLIC_MAPBOX_TOKEN`), injected into served stories that use Mapbox.
 
 ## Phase status
 

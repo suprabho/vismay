@@ -102,8 +102,8 @@ const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
 for (const app of ['vizmaya-fyi', 'footshorts'] as const) {
   const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', app, mapboxToken: pk })
   assert.ok(m.includes('## Maps: Mapbox scrollytelling'), `${app}: maps section`)
-  assert.ok(m.includes(`mapboxgl.accessToken = '${pk}'`))
-  assert.ok(m.includes('access_token=' + pk))
+  // The served page's injected token first, the brief's literal for local previews.
+  assert.ok(m.includes(`mapboxgl.accessToken = window.MAPBOX_ACCESS_TOKEN || '${pk}'`))
   assert.ok(m.indexOf('## Maps') > m.indexOf('## Charts') && m.indexOf('## Maps') < m.indexOf('## Content'))
   assert.ok(m.includes('the sticky graphic is a map'))
   assert.ok(!m.includes("Don't use Mapbox"))

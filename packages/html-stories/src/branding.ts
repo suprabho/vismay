@@ -15,6 +15,7 @@
 
 import { auraCaptureUrl, auraEmbedUrl } from '@vismay/viz-engine/src/lib/aura'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
+import { mapboxTokenScript, storyMapboxToken } from './mapbox'
 import { extractThemeMeta, type ThemeColors } from './meta'
 
 /** Pinned to the version the apps' `@rive-app/canvas` resolves to. */
@@ -97,6 +98,11 @@ export interface BrandingOptions {
    * under the host's own chrome. Default true.
    */
   chrome?: boolean
+  /**
+   * The public Mapbox token to inject as `window.MAPBOX_ACCESS_TOKEN` (./mapbox)
+   * when the page uses Mapbox. Omit for the configured one; null for none.
+   */
+  mapboxToken?: string | null
 }
 
 /** Shared by both bars; each passes its colours in as custom properties. */
@@ -298,7 +304,7 @@ function escapeAttr(s: string): string {
  */
 export function brandHtmlStory(
   html: string,
-  { siteUrl, aura, app = DEFAULT_HTML_STORY_APP, chrome = true }: BrandingOptions,
+  { siteUrl, aura, app = DEFAULT_HTML_STORY_APP, chrome = true, mapboxToken }: BrandingOptions,
 ): string {
   const site = siteUrl.replace(/\/$/, '')
   const theme = extractThemeMeta(html)
@@ -335,5 +341,13 @@ export function brandHtmlStory(
   const bodyClose = out.toLowerCase().lastIndexOf('</body')
   const htmlClose = out.toLowerCase().lastIndexOf('</html')
   const at = bodyClose !== -1 ? bodyClose : htmlClose !== -1 ? htmlClose : out.length
-  return out.slice(0, at) + footer + out.slice(at)
+  out = out.slice(0, at) + footer + out.slice(at)
+
+  // The Mapbox token goes first in <head>, so it is set before any of the
+  // story's scripts read it.
+  const tokenScript = mapboxTokenScript(html, storyMapboxToken(mapboxToken))
+  if (!tokenScript) return out
+  const open = /<head\b[^>]*>/i.exec(out) ?? /<html\b[^>]*>/i.exec(out) ?? /<!doctype[^>]*>/i.exec(out)
+  const headAt = open ? open.index + open[0].length : 0
+  return out.slice(0, headAt) + tokenScript + out.slice(headAt)
 }
