@@ -169,22 +169,19 @@ document.head.appendChild(s);
 interface FootshortsLook {
   header: BarColors
   footer: BarColors
-  /** The F mark's fill. */
-  mark: string
 }
 
 /**
  * Used when the page doesn't declare its palette: the app's `classic` theme
  * (apps/footshorts/brand/src/themes/classic.ts) — the same near-black bar the
- * feed sits under, with the brand orange-red mark.
+ * feed sits under.
  */
 const FOOTSHORTS_HOME_LOOK: FootshortsLook = {
   header: { bg: '#0B0B0F', fg: '#F4F4F5', link: '#8E8E99', line: '#24242E' },
   footer: { bg: '#16161D', fg: '#F4F4F5', link: '#8E8E99', line: '#24242E' },
-  mark: '#F26A3C',
 }
 
-/** The bars in the page's own palette; the mark takes its accent. */
+/** The bars in the page's own palette. */
 function footshortsThemedLook(t: ThemeColors): FootshortsLook {
   const bg = t.background!
   const surface = t.surface ?? bg
@@ -192,17 +189,16 @@ function footshortsThemedLook(t: ThemeColors): FootshortsLook {
   return {
     header: { bg, fg: t.text!, link: t.muted!, line },
     footer: { bg: surface, fg: t.text!, link: t.muted!, line },
-    mark: t.accent!,
   }
 }
 
 /**
- * public/brand/mark-f.svg from the footshorts web app, inlined and recoloured
- * for the same reason the vizmaya mark is: the page's opaque origin can't load
- * it from a protected preview deployment.
+ * public/brand/logo-icon.svg from the footshorts web app — the icon the app's
+ * sidebar, feed and the mobile app use — inlined for the same reason the
+ * vizmaya mark is: the page's opaque origin can't load it from a protected
+ * preview deployment. It keeps its own colours whatever the page's palette.
  */
-const footshortsMark = (fill: string) =>
-  `<svg viewBox="0 0 215.073 260.428" aria-hidden="true"><path d="M 180.211 38.9 C 175.957 43.647 169.878 46.349 163.505 46.325 L 83.484 46.028 C 67.282 45.968 54.007 58.88 53.619 75.078 L 52.946 103.15 L 137.655 103.15 L 101.195 149.071 L 69.018 149.071 C 60.87 149.071 54.237 155.623 54.137 163.77 L 52.946 260.428 L 0 260.428 L 3.417 65.792 C 4.058 29.271 33.847 0 70.374 0 L 215.073 0 L 180.211 38.9 Z" fill="${fill}"/></svg>`
+const FOOTSHORTS_LOGO = `<svg viewBox="0 0 512 512" fill="none" aria-hidden="true"><path d="M0 204.8C0 108.256 0 59.9845 29.9923 29.9923C59.9845 0 108.256 0 204.8 0H307.2C403.744 0 452.015 0 482.008 29.9923C512 59.9845 512 108.256 512 204.8V307.2C512 403.744 512 452.015 482.008 482.008C452.015 512 403.744 512 307.2 512H204.8C108.256 512 59.9845 512 29.9923 482.008C0 452.015 0 403.744 0 307.2V204.8Z" fill="#F5845E"/><g clip-path="url(#clip0_51_203)"><path d="M-60.1999 -108.202L-113.941 -77.2022V-15.2022L-60.1999 15.7978M-60.1999 15.7978L-6.44031 -15.2022M-60.1999 15.7978V77.7978M47.301 -108.202L-6.44031 -77.2022V-15.2022M-6.44031 -15.2022L47.301 15.7978M47.301 15.7978L101.061 -15.2022M47.301 15.7978V77.7978M154.802 -108.202L101.061 -77.2022V-15.2022M101.061 -15.2022L154.802 15.7978M154.802 15.7978L208.543 -15.2022M154.802 15.7978V77.7978M262.303 -108.202L208.543 -77.2022V-15.2022M208.543 -15.2022L262.303 15.7978M262.303 15.7978L316.044 -15.2022M262.303 15.7978V77.7978M369.804 -108.202L316.044 -77.2022V-15.2022M316.044 -15.2022L369.804 15.7978M369.804 15.7978L423.545 -15.2022M369.804 15.7978V77.7978M477.305 -108.202L423.545 -77.2022V-15.2022M423.545 -15.2022L477.305 15.7978M477.305 15.7978L531.046 -15.2022M477.305 15.7978V77.7978M584.806 -108.202L531.046 -77.2022V-15.2022M531.046 -15.2022L584.806 15.7978M584.806 15.7978L638.547 -15.2022M584.806 15.7978V77.7978M-60.1999 77.7978L-6.44031 108.798M-60.1999 77.7978L-113.941 108.798V170.798L-60.1999 201.798M-6.44031 108.798L47.301 77.7978M-6.44031 108.798V170.798M47.301 77.7978L101.061 108.798M101.061 108.798L154.802 77.7978M101.061 108.798V170.798M154.802 77.7978L208.543 108.798M208.543 108.798L262.303 77.7978M208.543 108.798V170.798M262.303 77.7978L316.044 108.798M316.044 108.798L369.804 77.7978M316.044 108.798V170.798M369.804 77.7978L423.545 108.798M423.545 108.798L477.305 77.7978M423.545 108.798V170.798M477.305 77.7978L531.046 108.798M531.046 108.798L584.806 77.7978M531.046 108.798V170.798M584.806 77.7978L638.547 108.798M-60.1999 201.798L-6.44031 170.798M-60.1999 201.798V263.798M-6.44031 170.798L47.301 201.798M47.301 201.798L101.061 170.798M47.301 201.798V263.798M101.061 170.798L154.802 201.798M154.802 201.798L208.543 170.798M154.802 201.798V263.798M208.543 170.798L262.303 201.798M262.303 201.798L316.044 170.798M262.303 201.798V263.798M316.044 170.798L369.804 201.798M369.804 201.798L423.545 170.798M369.804 201.798V263.798M423.545 170.798L477.305 201.798M477.305 201.798L531.046 170.798M477.305 201.798V263.798M531.046 170.798L584.806 201.798M584.806 201.798L638.547 170.798M584.806 201.798V263.798M-60.1999 263.798L-6.44031 294.798M-60.1999 263.798L-113.941 294.798V356.798L-60.1999 387.798M-6.44031 294.798L47.301 263.798M-6.44031 294.798V356.798M47.301 263.798L101.061 294.798M101.061 294.798L154.802 263.798M101.061 294.798V356.798M154.802 263.798L208.543 294.798M208.543 294.798L262.303 263.798M208.543 294.798V356.798M262.303 263.798L316.044 294.798M316.044 294.798L369.804 263.798M316.044 294.798V356.798M369.804 263.798L423.545 294.798M423.545 294.798L477.305 263.798M423.545 294.798V356.798M477.305 263.798L531.046 294.798M531.046 294.798L584.806 263.798M531.046 294.798V356.798M584.806 263.798L638.547 294.798M-60.1999 387.798L-6.44031 356.798M-60.1999 387.798V449.798M-6.44031 356.798L47.301 387.798M47.301 387.798L101.061 356.798M47.301 387.798V449.798M101.061 356.798L154.802 387.798M154.802 387.798L208.543 356.798M154.802 387.798V449.798M208.543 356.798L262.303 387.798M262.303 387.798L316.044 356.798M262.303 387.798V449.798M316.044 356.798L369.804 387.798M369.804 387.798L423.545 356.798M369.804 387.798V449.798M423.545 356.798L477.305 387.798M477.305 387.798L531.046 356.798M477.305 387.798V449.798M531.046 356.798L584.806 387.798M584.806 387.798L638.547 356.798M584.806 387.798V449.798M-60.1999 449.798L-6.44031 480.798M-60.1999 449.798L-113.941 480.798V542.798L-60.1999 573.798M-6.44031 480.798L47.301 449.798M-6.44031 480.798V542.798M47.301 449.798L101.061 480.798M101.061 480.798L154.802 449.798M101.061 480.798V542.798M154.802 449.798L208.543 480.798M208.543 480.798L262.303 449.798M208.543 480.798V542.798M262.303 449.798L316.044 480.798M316.044 480.798L369.804 449.798M316.044 480.798V542.798M369.804 449.798L423.545 480.798M423.545 480.798L477.305 449.798M423.545 480.798V542.798M477.305 449.798L531.046 480.798M531.046 480.798L584.806 449.798M531.046 480.798V542.798M584.806 449.798L638.547 480.798M-60.1999 573.798L-6.44031 542.798M-60.1999 573.798V635.798M-6.44031 542.798L47.301 573.798M47.301 573.798L101.061 542.798M47.301 573.798V635.798M101.061 542.798L154.802 573.798M154.802 573.798L208.543 542.798M154.802 573.798V635.798M208.543 542.798L262.303 573.798M262.303 573.798L316.044 542.798M262.303 573.798V635.798M316.044 542.798L369.804 573.798M369.804 573.798L423.545 542.798M369.804 573.798V635.798M423.545 542.798L477.305 573.798M477.305 573.798L531.046 542.798M477.305 573.798V635.798M531.046 542.798L584.806 573.798M584.806 573.798L638.547 542.798M584.806 573.798V635.798M-60.1999 635.798L-6.44031 666.798M-60.1999 635.798L-113.941 666.798V728.798L-60.1999 759.798M-6.44031 666.798L47.301 635.798M-6.44031 666.798V728.798L47.301 759.798M47.301 635.798L101.061 666.798M101.061 666.798L154.802 635.798M101.061 666.798V728.798L154.802 759.798M154.802 635.798L208.543 666.798M208.543 666.798L262.303 635.798M208.543 666.798V728.798L262.303 759.798M262.303 635.798L316.044 666.798M316.044 666.798L369.804 635.798M316.044 666.798V728.798L369.804 759.798M369.804 635.798L423.545 666.798M423.545 666.798L477.305 635.798M423.545 666.798V728.798L477.305 759.798M477.305 635.798L531.046 666.798M531.046 666.798L584.806 635.798M531.046 666.798V728.798L584.806 759.798M584.806 635.798L638.547 666.798" stroke="url(#paint0_linear_51_203)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="269.671" cy="293.681" r="140.8" transform="rotate(21.3703 269.671 293.681)" fill="#FEB299"/><path d="M356.364 182.968C387.288 206.976 405.464 241.316 409.807 277.338L382.774 275.19C360.671 273.433 348.268 250.119 336.294 231.457C330.005 221.228 320.11 213.272 306.609 207.591C293.109 201.909 281.694 200.185 272.367 202.421C263.208 204.253 256.765 209.599 253.038 218.456C248.971 228.118 249.671 236.943 255.138 244.93C260.775 252.515 269.46 260.199 281.194 267.981L295.674 277.629C314.98 290.493 331.631 303.899 345.626 317.845C360.166 331.547 369.686 346.69 374.183 363.274C376.379 370.39 377.261 377.942 376.829 385.93C328.259 442.569 243.255 451.657 183.677 405.403C154.353 382.638 136.491 350.581 131.018 316.61L153.833 319.535C174.634 322.203 186.451 342.795 191.478 363.156C194.464 373.891 199.696 382.964 207.171 390.375C215.191 397.541 224.639 403.413 235.514 407.99C252.015 414.934 265.473 417.044 275.89 414.319C286.476 411.192 293.718 404.999 297.615 395.739C301.512 386.479 300.728 377.855 295.261 369.867C289.963 361.477 279.741 352.199 264.596 342.034L250.116 332.386C232.31 320.153 216.784 307.221 203.539 293.59C190.463 279.557 181.676 264.248 177.178 247.664C172.68 231.08 174.582 212.924 182.885 193.197C185.185 187.73 187.729 182.645 190.511 177.94C239.652 144.312 306.805 144.493 356.364 182.968Z" fill="url(#paint1_linear_51_203)"/><path d="M502.13 63.9999C508.49 83.6614 510.751 108.78 511.554 141.999C507.89 143.133 504.041 143.726 500.127 143.718L207.533 143.1C179.692 143.041 156.907 165.24 156.24 193.073L155.825 210.353C138.346 233.811 128 262.898 128 294.4C128 326.43 138.697 355.961 156.711 379.619L155.083 511.798C115.366 511.263 86.3141 509.31 64.1716 502.185L69.8776 177.178C70.9806 114.353 122.225 64.0002 185.059 63.9999H502.13Z" fill="#C2410C"/><path d="M154.802 68.534L167.853 188.719" stroke="url(#paint2_linear_51_203)" stroke-width="25.6" stroke-linecap="round"/><path d="M24.2549 268.97L105.933 260.615" stroke="url(#paint3_linear_51_203)" stroke-width="25.6" stroke-linecap="round"/><path d="M31.0766 194.156L142.903 228.968" stroke="url(#paint4_linear_51_203)" stroke-width="25.6" stroke-linecap="round"/><path d="M67.2461 104.97L145.062 208.362" stroke="url(#paint5_linear_51_203)" stroke-width="25.6" stroke-linecap="round"/><defs><linearGradient id="paint0_linear_51_203" x1="-1188.71" y1="-81.4069" x2="-1158.51" y2="723.846" gradientUnits="userSpaceOnUse"><stop stop-color="#FEB299"/><stop offset="1" stop-color="#FEB299" stop-opacity="0"/></linearGradient><linearGradient id="paint1_linear_51_203" x1="358.947" y1="184.973" x2="177.801" y2="416.118" gradientUnits="userSpaceOnUse"><stop stop-color="#06140C"/><stop offset="1" stop-color="#257A49"/></linearGradient><linearGradient id="paint2_linear_51_203" x1="136.161" y1="72.2441" x2="166.843" y2="174.711" gradientUnits="userSpaceOnUse"><stop stop-color="#FEB299"/><stop offset="1" stop-color="#FEB299" stop-opacity="0"/></linearGradient><linearGradient id="paint3_linear_51_203" x1="16.1502" y1="273.601" x2="116.301" y2="260.615" gradientUnits="userSpaceOnUse"><stop stop-color="#FEB299"/><stop offset="1" stop-color="#FEB299" stop-opacity="0"/></linearGradient><linearGradient id="paint4_linear_51_203" x1="41.613" y1="157.913" x2="108.01" y2="213.389" gradientUnits="userSpaceOnUse"><stop stop-color="#FEB299"/><stop offset="1" stop-color="#FEB299" stop-opacity="0"/></linearGradient><linearGradient id="paint5_linear_51_203" x1="69.3489" y1="126.457" x2="135.746" y2="181.933" gradientUnits="userSpaceOnUse"><stop stop-color="#FEB299"/><stop offset="1" stop-color="#FEB299" stop-opacity="0"/></linearGradient><clipPath id="clip0_51_203"><rect width="357" height="372" fill="white" transform="translate(154.955 139.351)"/></clipPath></defs></svg>`
 
 const FOOTSHORTS_BAR_STYLE = `
 :host{all:initial;display:block;position:relative;z-index:1;background:var(--bg);color:var(--fg);font:14px/1.4 'Space Grotesk',-apple-system,'Segoe UI',Roboto,sans-serif}
@@ -214,7 +210,7 @@ svg{display:block}
 .link{color:var(--link);transition:color .2s}
 .link:hover,.link:focus-visible{color:var(--fg)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
-.brand svg{width:22px;height:27px}
+.brand svg{width:28px;height:28px}
 a:focus-visible{outline:2px solid #00D26A;outline-offset:3px;border-radius:4px}
 `
 
@@ -230,7 +226,7 @@ function footshortsHeaderHtml(site: string, look: FootshortsLook): string {
 .brand{font-size:19px}
 .links{display:flex;gap:20px}
 @media (max-width:480px){.bar{height:52px}.brand{font-size:17px}}
-</style><div class="bar" role="banner"><a class="brand" href="${site}/feed" aria-label="Footshorts home">${footshortsMark(look.mark)}<span>Footshorts</span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></footshorts-header>`
+</style><div class="bar" role="banner"><a class="brand" href="${site}/feed" aria-label="Footshorts home">${FOOTSHORTS_LOGO}<span>Footshorts</span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></footshorts-header>`
 }
 
 function footshortsFooterHtml(site: string, look: FootshortsLook): string {
@@ -239,11 +235,11 @@ function footshortsFooterHtml(site: string, look: FootshortsLook): string {
   return `<footshorts-footer><template shadowrootmode="open"><style>${footshortsBarStyle(look.footer)}
 :host{border-top:1px solid var(--line)}
 .bar{flex-wrap:wrap;padding-top:28px;padding-bottom:28px}
-.brand svg{width:28px;height:34px}
+.brand svg{width:34px;height:34px}
 .name{font-size:18px;line-height:1.1}
 .tag{color:var(--link);margin-top:4px;font-weight:400}
 .links{display:flex;flex-wrap:wrap;gap:12px 20px}
-</style><div class="bar" role="contentinfo"><a class="brand" href="${site}/feed">${footshortsMark(look.mark)}<span><span class="name" style="display:block">Footshorts</span><span class="mono tag" style="display:block">Football, in short · © ${year} Footshorts</span></span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a><a class="link" href="${site}/privacy">Privacy</a></nav></div></template></footshorts-footer>`
+</style><div class="bar" role="contentinfo"><a class="brand" href="${site}/feed">${FOOTSHORTS_LOGO}<span><span class="name" style="display:block">Footshorts</span><span class="mono tag" style="display:block">Football, in short · © ${year} Footshorts</span></span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a><a class="link" href="${site}/privacy">Privacy</a></nav></div></template></footshorts-footer>`
 }
 
 /**
