@@ -24,14 +24,18 @@ export interface VismayMcpConfig {
   htmlStoriesUrl: string
   /** Site that hosts footshorts HTML stories, e.g. https://footshorts.com */
   footshortsHtmlStoriesUrl: string
+  /** Site that hosts vizf1 HTML stories, e.g. https://www.vizf1.com */
+  vizf1HtmlStoriesUrl: string
 }
 
 /** The apps whose sites host HTML stories (mirrors @vismay/html-stories/apps). */
-export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts'
+export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts' | 'vizf1'
 
 /** The hosting site for an app's HTML stories. */
 export function htmlStoriesUrlFor(config: VismayMcpConfig, app: HtmlStoryApp): string {
-  return app === 'footshorts' ? config.footshortsHtmlStoriesUrl : config.htmlStoriesUrl
+  if (app === 'footshorts') return config.footshortsHtmlStoriesUrl
+  if (app === 'vizf1') return config.vizf1HtmlStoriesUrl
+  return config.htmlStoriesUrl
 }
 
 function env(name: string): string | undefined {
@@ -50,16 +54,20 @@ export function loadConfig(): VismayMcpConfig {
     screenshotDir: env('SCREENSHOT_DIR') ?? '/tmp/vismay-mcp-screenshots',
     htmlStoriesUrl: (env('HTML_STORIES_URL') ?? 'https://vizmaya.fyi').replace(/\/$/, ''),
     footshortsHtmlStoriesUrl: (env('FOOTSHORTS_HTML_STORIES_URL') ?? 'https://footshorts.com').replace(/\/$/, ''),
+    // www is canonical: the apex redirects, and a redirected POST loses its body.
+    vizf1HtmlStoriesUrl: (env('VIZF1_HTML_STORIES_URL') ?? 'https://www.vizf1.com').replace(/\/$/, ''),
   }
 }
 
 /**
  * The publish token for an app's HTML stories, or null. Each deployment has its
- * own HTML_STORIES_TOKEN; footshorts' is FOOTSHORTS_HTML_STORIES_TOKEN here,
- * falling back to HTML_STORIES_TOKEN when both sites share one value.
+ * own HTML_STORIES_TOKEN; footshorts' is FOOTSHORTS_HTML_STORIES_TOKEN here and
+ * vizf1's VIZF1_HTML_STORIES_TOKEN, each falling back to HTML_STORIES_TOKEN when
+ * the sites share one value.
  */
 export function htmlStoriesToken(app: HtmlStoryApp): string | null {
   if (app === 'footshorts') return env('FOOTSHORTS_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
+  if (app === 'vizf1') return env('VIZF1_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
   return env('HTML_STORIES_TOKEN') ?? null
 }
 
@@ -71,7 +79,10 @@ export function requireHtmlStoriesEnv(app: HtmlStoryApp = 'vizmaya-fyi'): { toke
       app === 'footshorts'
         ? 'publish_html_story for footshorts needs FOOTSHORTS_HTML_STORIES_TOKEN (or HTML_STORIES_TOKEN) in ' +
             'the MCP server env (the same value as HTML_STORIES_TOKEN on the footshorts web deployment).'
-        : 'publish_html_story needs HTML_STORIES_TOKEN in the MCP server env ' +
+        : app === 'vizf1'
+          ? 'publish_html_story for vizf1 needs VIZF1_HTML_STORIES_TOKEN (or HTML_STORIES_TOKEN) in ' +
+              'the MCP server env (the same value as HTML_STORIES_TOKEN on the vizf1 web deployment).'
+          : 'publish_html_story needs HTML_STORIES_TOKEN in the MCP server env ' +
             '(the same value as HTML_STORIES_TOKEN on the vizmaya-fyi deployment).',
     )
   }

@@ -6,7 +6,7 @@ import { isAuthed } from '@/lib/adminAuth'
 
 /**
  * Admin's session-gated HTML stories API, for every hosting app: `?app=`
- * (vizmaya-fyi — the default — or footshorts) scopes the list and the save.
+ * (vizmaya-fyi — the default — footshorts or vizf1) scopes the list and the save.
  * Agents don't post here; they use each site's token-gated
  * /api/html-stories (packages/html-stories/src/publishApi.ts).
  */

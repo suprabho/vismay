@@ -13,6 +13,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@vismay/admin-core": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/html-stories": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vismay/story-embed": "workspace:*",

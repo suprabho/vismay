@@ -2,7 +2,8 @@
  * Site chrome for agent-authored HTML stories, wrapped around whatever the
  * agent posted: for vizmaya a header with the animated Rive logo and a footer
  * with the static logo mark; for footshorts the app's mark and navigation in
- * its dark bar. Applied when the page is served (`/s/<slug>`) and in the
+ * its dark bar; for vizf1 the chequered-flag mark and the app's navigation in
+ * its paddock-dark bar. Applied when the page is served (`/s/<slug>`) and in the
  * admin preview, never to the stored HTML, so every published story picks it
  * up without a re-post and the stored HTML stays exactly what the agent wrote.
  *
@@ -242,6 +243,88 @@ function footshortsFooterHtml(site: string, look: FootshortsLook): string {
 </style><div class="bar" role="contentinfo"><a class="brand" href="${site}/feed">${FOOTSHORTS_LOGO}<span><span class="name" style="display:block">Footshorts</span><span class="mono tag" style="display:block">Football, in short · © ${year} Footshorts</span></span></a><nav class="links mono" aria-label="footshorts"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a><a class="link" href="${site}/privacy">Privacy</a></nav></div></template></footshorts-footer>`
 }
 
+// ── VizF1 chrome ─────────────────────────────────────────────────────────────
+
+interface Vizf1Look {
+  header: BarColors
+  footer: BarColors
+  /** The flag mark's colour: the page's accent, else the brand coral red. */
+  mark: string
+}
+
+/**
+ * Used when the page doesn't declare its palette: the app's own bar
+ * (@vizf1/brand `F1_BRAND.colors`, the Paddock story theme) with the mark in
+ * the brand's coral red.
+ */
+const VIZF1_HOME_LOOK: Vizf1Look = {
+  header: { bg: '#0b0d12', fg: '#f5f5f5', link: '#8e8e99', line: '#1f2330' },
+  footer: { bg: '#13161d', fg: '#f5f5f5', link: '#8e8e99', line: '#1f2330' },
+  mark: '#ff4346',
+}
+
+/** The bars in the page's own palette. */
+function vizf1ThemedLook(t: ThemeColors): Vizf1Look {
+  const bg = t.background!
+  const surface = t.surface ?? bg
+  const line = t.line ?? t.muted!
+  return {
+    header: { bg, fg: t.text!, link: t.muted!, line },
+    footer: { bg: surface, fg: t.text!, link: t.muted!, line },
+    mark: t.accent ?? VIZF1_HOME_LOOK.mark,
+  }
+}
+
+/**
+ * The chequered-flag mark (@vizf1/brand `ChequeredFlagMark`, also
+ * public/brand/flag-mark.svg in the vizf1 web app) in `currentColor`, inlined
+ * for the same reason the other marks are: the page's opaque origin can't load
+ * it from a protected preview deployment.
+ */
+const VIZF1_MARK = `<svg viewBox="0 0 406.319 238.021" fill="none" aria-hidden="true"><path d="M12.0213 226L108.191 129.83" stroke="currentColor" stroke-width="24.0426" stroke-linecap="round"/><path d="M146.66 115.404H103.383L114.525 104.792C133.302 86.9103 158.237 76.9362 184.166 76.9362H204.362L176.505 103.466C168.459 111.13 157.772 115.404 146.66 115.404Z" fill="currentColor"/><path d="M242.83 76.9362H199.553L227.409 50.4065C235.456 42.7427 246.143 38.4681 257.255 38.4681H300.532L272.676 64.9978C264.629 72.6615 253.942 76.9362 242.83 76.9362Z" fill="currentColor"/><path d="M276.489 115.404H223.596L257.936 82.6995C261.82 78.9998 266.98 76.9362 272.345 76.9362H276.491C293.853 76.9362 302.327 98.124 289.754 110.098C286.178 113.504 281.428 115.404 276.489 115.404Z" fill="currentColor"/><path d="M222.634 38.4681H175.511C201.44 13.7738 235.874 0 271.681 0H276.489L245.848 29.1827C239.589 35.1434 231.277 38.4681 222.634 38.4681Z" fill="currentColor"/><path d="M165.405 153.872H163.873C148.976 153.872 141.705 135.693 152.492 125.42C159.243 118.99 168.208 115.404 177.531 115.404H223.596L196.094 141.597C187.819 149.477 176.831 153.872 165.405 153.872Z" fill="currentColor"/><path d="M344.77 38.4681H305.34L330.411 14.5913C340.246 5.22456 353.308 0 366.889 0H406.319L381.249 23.8767C371.413 33.2435 358.352 38.4681 344.77 38.4681Z" fill="currentColor"/></svg>`
+
+const VIZF1_BAR_STYLE = `
+:host{all:initial;display:block;position:relative;z-index:1;background:var(--bg);color:var(--fg);font:14px/1.4 Saira,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1600px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
+.mono{font-family:'Martian Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase}
+.link{color:var(--link);transition:color .2s}
+.link:hover,.link:focus-visible{color:var(--fg)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-style:italic;letter-spacing:-.01em}
+.brand svg{width:40px;height:24px;color:var(--mark)}
+a:focus-visible{outline:2px solid var(--mark);outline-offset:3px;border-radius:4px}
+`
+
+function vizf1BarStyle(c: BarColors, mark: string): string {
+  return `:host{--bg:${c.bg};--fg:${c.fg};--link:${c.link};--line:${c.line};--mark:${mark}}${VIZF1_BAR_STYLE}`
+}
+
+function vizf1HeaderHtml(site: string, look: Vizf1Look): string {
+  const meta = HTML_STORY_APP_META.vizf1
+  return `<vizf1-header><template shadowrootmode="open"><style>${vizf1BarStyle(look.header, look.mark)}
+:host{border-bottom:1px solid var(--line)}
+.bar{height:60px}
+.brand{font-size:20px}
+.links{display:flex;gap:20px}
+@media (max-width:480px){.bar{height:52px}.brand{font-size:18px}.brand svg{width:34px;height:20px}}
+</style><div class="bar" role="banner"><a class="brand" href="${site}/" aria-label="VizF1 home">${VIZF1_MARK}<span>VizF1</span></a><nav class="links mono" aria-label="vizf1"><a class="link" href="${site}/schedule">Schedule</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></vizf1-header>`
+}
+
+function vizf1FooterHtml(site: string, look: Vizf1Look): string {
+  const year = new Date().getUTCFullYear()
+  const meta = HTML_STORY_APP_META.vizf1
+  return `<vizf1-footer><template shadowrootmode="open"><style>${vizf1BarStyle(look.footer, look.mark)}
+:host{border-top:1px solid var(--line)}
+.bar{flex-wrap:wrap;padding-top:28px;padding-bottom:28px}
+.brand svg{width:48px;height:28px}
+.name{font-size:18px;line-height:1.1}
+.tag{color:var(--link);margin-top:4px;font-weight:400;font-style:normal}
+.links{display:flex;flex-wrap:wrap;gap:12px 20px}
+</style><div class="bar" role="contentinfo"><a class="brand" href="${site}/">${VIZF1_MARK}<span><span class="name" style="display:block">VizF1</span><span class="mono tag" style="display:block">Data journalism for Formula 1 · © ${year} VizF1</span></span></a><nav class="links mono" aria-label="vizf1"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}/schedule">Schedule</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a></nav></div></template></vizf1-footer>`
+}
+
 /**
  * Each site's header height, its 1px bottom border included, on wide screens
  * and under 480px (the bars' own breakpoint). The page gets it as
@@ -251,6 +334,7 @@ function footshortsFooterHtml(site: string, look: FootshortsLook): string {
 export const CHROME_HEIGHT: Record<HtmlStoryApp, { wide: number; narrow: number }> = {
   'vizmaya-fyi': { wide: 65, narrow: 57 },
   footshorts: { wide: 61, narrow: 53 },
+  vizf1: { wide: 61, narrow: 53 },
 }
 
 function chromeHeightStyle(app: HtmlStoryApp): string {
@@ -313,6 +397,10 @@ export function brandHtmlStory(
     const look = theme ? footshortsThemedLook(theme) : FOOTSHORTS_HOME_LOOK
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + footshortsHeaderHtml(site, look)
     footer = footshortsFooterHtml(site, look)
+  } else if (app === 'vizf1') {
+    const look = theme ? vizf1ThemedLook(theme) : VIZF1_HOME_LOOK
+    header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + vizf1HeaderHtml(site, look)
+    footer = vizf1FooterHtml(site, look)
   } else {
     const look = theme ? themedLook(theme) : HOME_LOOK
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)

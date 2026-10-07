@@ -19,6 +19,7 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
   const basePath = htmlStoriesBasePath(app)
   const meta = HTML_STORY_APP_META[app]
   const isFootshorts = app === 'footshorts'
+  const isVizf1 = app === 'vizf1'
 
   let stories: HtmlStorySummary[] = []
   let loadError: string | null = null
@@ -67,6 +68,17 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
                 <code>?fixtures=&lt;id&gt;,&lt;id&gt;&amp;prompt=…</code> with the publish token as a bearer.
               </>
             )}
+            {isVizf1 && (
+              <>
+                {' '}
+                <em>Add races</em> appends the race context — each session&rsquo;s classification, weather and
+                strategy, the picked drivers&rsquo; lap-by-lap times, positions, sectors and speed-trap telemetry,
+                a head-to-head across every picked session, and the championship standings round by round — so the
+                agent writes from real numbers. On the URL that is{' '}
+                <code>?sessions=&lt;key&gt;,&lt;key&gt;&amp;drivers=VER,NOR&amp;prompt=…</code> with the publish
+                token as a bearer.
+              </>
+            )}
           </li>
           <li>
             Agents that can make HTTP calls post directly:
@@ -75,10 +87,10 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
   -H "Content-Type: text/html" --data-binary @story.html`}</pre>
             Add <code>&amp;publish=1</code> to go live immediately. Claude Desktop/Code can use the{' '}
             <code>publish_html_story</code> tool from the Vismay MCP server
-            {isFootshorts ? (
+            {app !== 'vizmaya-fyi' ? (
               <>
                 {' '}
-                with <code>app: &quot;footshorts&quot;</code>
+                with <code>app: &quot;{app}&quot;</code>
               </>
             ) : null}
             .
