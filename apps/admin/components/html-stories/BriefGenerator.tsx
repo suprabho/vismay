@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Copy, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
+import { Check, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
@@ -9,6 +9,7 @@ import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-s
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
 import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canvas/compose/useComposeFlow'
 import { FormatPicker } from './FormatPicker'
+import { RaceContextPicker, type RaceContextPick } from './RaceContextPicker'
 
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
 
@@ -32,6 +33,12 @@ interface MatchContextPick {
  * Picking a match reuses the compose Sources-stage picker, badges and
  * on-demand scrape included.
  *
+ * For vizf1 there is a race picker instead (./RaceContextPicker): tick any
+ * ingested sessions across races and seasons and the drivers to follow, and
+ * the brief gains their race context — results, lap timing, sectors, speed
+ * traps, strategy, the head-to-head across the sessions and the standings
+ * round by round (@vismay/f1-viz/race-context).
+ *
  * The brief itself is built server-side (POST /api/html-stories/brief) so the
  * match context can be read with the service client; it is fetched whenever
  * the style or the matches change and copied synchronously on click, so the
@@ -42,16 +49,24 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
   const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
   const [matches, setMatches] = useState<MatchContextPick | null>(null)
   const [picking, setPicking] = useState(false)
+  const [race, setRace] = useState<RaceContextPick | null>(null)
+  const [pickingRace, setPickingRace] = useState(false)
   // The last brief the server built, tagged with the request it answers; the
   // button is "building" whenever the current request has no answer yet.
   const [built, setBuilt] = useState<{ request: string; brief: string | null; error: string | null } | null>(null)
   const [copied, setCopied] = useState(false)
   const canShuffle = !!pool?.palettes.length && !!pool.fonts.length
   const isFootshorts = app === 'footshorts'
+  const isVizf1 = app === 'vizf1'
 
   const request = useMemo(
-    () => JSON.stringify({ app, format, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt }),
-    [app, format, style, matches],
+    () =>
+      JSON.stringify(
+        isVizf1
+          ? { app, format, style, sessionKeys: race?.sessionKeys ?? [], drivers: race?.drivers ?? [], prompt: race?.prompt }
+          : { app, format, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt },
+      ),
+    [app, isVizf1, format, style, matches, race],
   )
   const building = built?.request !== request
   const brief = building ? null : built?.brief ?? null
@@ -182,6 +197,38 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           </button>
         </div>
       )}
+      {race && (
+        <div
+          className={chip}
+          title={[race.drivers.length ? `Drivers: ${race.drivers.join(', ')}` : 'Drivers: the top scorers', race.prompt && `Focus: ${race.prompt}`]
+            .filter(Boolean)
+            .join('\n')}
+        >
+          <FlagCheckered size={14} />
+          <span>
+            {race.sessionKeys.length} session{race.sessionKeys.length === 1 ? '' : 's'}
+            {race.drivers.length ? ` · ${race.drivers.join(', ')}` : ''} in the brief
+          </span>
+          <button
+            onClick={() => setRace(null)}
+            className="p-1 text-neutral-500 hover:text-white rounded"
+            aria-label="Drop the race context"
+            title="Drop the race context"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+      {isVizf1 && (
+        <button
+          onClick={() => setPickingRace(true)}
+          className={btn}
+          title="Add the sessions' results, lap timing, telemetry, strategy and standings to the brief"
+        >
+          <FlagCheckered size={14} />
+          {race ? 'Change races' : 'Add races'}
+        </button>
+      )}
       {isFootshorts && (
         <button onClick={() => setPicking(true)} className={btn} title="Add the matches' facts, timeline, insights, schedules and table to the brief">
           <SoccerBall size={14} />
@@ -213,6 +260,7 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
         {copied ? 'Copied' : building ? 'Building brief…' : 'Copy agent brief'}
       </button>
       {error && <span className="text-xs text-red-400 basis-full">{error}</span>}
+      {pickingRace && <RaceContextPicker initial={race} onClose={() => setPickingRace(false)} onPick={setRace} />}
       {picking && (
         <MatchPicker
           title="Match context"

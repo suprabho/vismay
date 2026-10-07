@@ -46,8 +46,9 @@ export function EditorialMagazine({ grid }: { grid: EditorialGrid | null }) {
             data={item.data}
             n={item.n}
             big={big}
-            href={`/editorial/${item.data.slug}`}
-            linkComponent={Link}
+            // An HTML story links to its /s/<slug> route handler: a plain <a>.
+            href={item.data.href ?? `/editorial/${item.data.slug}`}
+            linkComponent={item.data.href ? undefined : Link}
             background="cover"
           />
         )}

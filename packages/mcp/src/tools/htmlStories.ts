@@ -4,9 +4,9 @@
  *
  * The agent-authored HTML story pipeline (packages/html-stories): the agent
  * reads the brief, writes one self-contained HTML page, and publishes it to
- * <site>/s/<slug> through the token-gated publish API. Two sites host them —
- * vizmaya.fyi (the default) and footshorts.com — chosen with `app`. Pure HTTP
- * to the deployed site, so no dev server is needed.
+ * <site>/s/<slug> through the token-gated publish API. Three sites host them —
+ * vizmaya.fyi (the default), footshorts.com and vizf1.com — chosen with `app`.
+ * Pure HTTP to the deployed site, so no dev server is needed.
  *
  * A footshorts brief can carry a MATCH CONTEXT: pass `fixtureIds` (up to 40 footshorts
  * fixture uuids, from the admin HTML stories tab's match picker or a
@@ -14,6 +14,14 @@
  * tables know — Opta facts and the full stat set, the timeline, insights,
  * commentary, the build-up, both sides' form and schedule, the table and the
  * competition's next fixtures. That variant needs the publish token.
+ *
+ * A vizf1 brief can carry a RACE CONTEXT the same way: pass `sessionKeys` (up to
+ * 24 telemetry session keys — races, sprints, qualifying, practice, across
+ * weekends and seasons, e.g. `2026_australian_grand_prix_R`) and optionally
+ * `drivers` (up to 8 codes like VER, or car numbers) and the site appends the
+ * classifications, lap-by-lap timing, sectors and speed traps, strategy, key
+ * moments, the drivers' head-to-head across every session, and the
+ * championship standings round by round. Also token-gated.
  *
  * A vizmaya brief can carry a randomizer spin instead (`spinId`, from
  * `spin_randomizer` in ./randomizer): the assignment, research protocol,
@@ -35,12 +43,18 @@ import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { HTML_STORY_FORMATS } from '@vismay/html-stories/formats'
-import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
+import {
+  htmlStoriesToken,
+  htmlStoriesUrlFor,
+  requireHtmlStoriesEnv,
+  type HtmlStoryApp,
+  type VismayMcpConfig,
+} from '../config.js'
 
 const appSchema = z
-  .enum(['vizmaya-fyi', 'footshorts'])
+  .enum(['vizmaya-fyi', 'footshorts', 'vizf1'])
   .default('vizmaya-fyi')
-  .describe('Which site hosts the story: vizmaya.fyi (default) or footshorts.com.')
+  .describe('Which site hosts the story: vizmaya.fyi (default), footshorts.com or vizf1.com.')
 
 export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfig): void {
   server.registerTool(
@@ -48,13 +62,17 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
     {
       title: 'Get the HTML story brief',
       description:
-        'Read this before writing a vizmaya or footshorts HTML story. It covers the hosting ' +
+        'Read this before writing a vizmaya, footshorts or vizf1 HTML story. It covers the hosting ' +
         'contract (one self-contained HTML file), the site\'s house design direction, chart ' +
         'rules, a self-check list, and how to publish. Pass randomStyle=true to swap the house ' +
         'style for a palette and fonts drawn at random from the site\'s existing stories. For ' +
         'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
         'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
-        'written from, plus an optional editorial prompt. For a vizmaya randomizer spin, pass spinId ' +
+        'written from, plus an optional editorial prompt. For vizf1, pass sessionKeys (up to 24 telemetry ' +
+        'session keys, e.g. 2026_australian_grand_prix_R, across races and seasons) and optionally drivers ' +
+        '(up to 8 codes such as VER) to append the race context: classifications, lap-by-lap timing, sectors, ' +
+        'speed traps, strategy, the head-to-head across sessions and the standings round by round. ' +
+        'For a vizmaya randomizer spin, pass spinId ' +
         '(from spin_randomizer) to get its assignment, research protocol, output format and research file. ' +
         'Pass format to write something other than a scrolling page: "book" (pages the reader turns; ' +
         'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
@@ -71,10 +89,22 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .max(40)
           .optional()
           .describe('footshorts only: fixture ids the story is about; their match context is appended to the brief.'),
+        sessionKeys: z
+          .array(z.string().min(1))
+          .max(24)
+          .optional()
+          .describe(
+            'vizf1 only: telemetry session keys (<year>_<grand_prix_slug>_<R|S|Q|SQ|SS|FP1-3>) the story covers; their race context is appended.',
+          ),
+        drivers: z
+          .array(z.string().min(1))
+          .max(8)
+          .optional()
+          .describe('vizf1 only, with sessionKeys: the drivers to follow, by code (VER) or car number. Omitted: the top scorers.'),
         prompt: z
           .string()
           .optional()
-          .describe('footshorts only, with fixtureIds: the editorial angle, surfaced at the top of the match context.'),
+          .describe('footshorts (with fixtureIds) or vizf1 (with sessionKeys): the editorial angle, surfaced at the top of the context.'),
         spinId: z
           .string()
           .uuid()
@@ -86,10 +116,12 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .describe('The story format: scroll (one long page, the default), book, board or deck.'),
       },
     },
-    async ({ app, randomStyle, fixtureIds, prompt, spinId, format }) => {
+    async ({ app, randomStyle, fixtureIds, sessionKeys, drivers, prompt, spinId, format }) => {
       const site = htmlStoriesUrlFor(config, app)
       const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
+      const keys = app === 'vizf1' ? (sessionKeys ?? []).filter(Boolean) : []
+      if (drivers?.length && !keys.length) throw new Error('drivers need sessionKeys (vizf1 only).')
       if (spinId && app !== 'vizmaya-fyi') throw new Error('Randomizer spins are vizmaya stories: use app "vizmaya-fyi".')
 
       // Styles come from the site's stories, the match context from its tables
@@ -103,11 +135,22 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         url.searchParams.set('fixtures', ids.join(','))
         if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
       }
+      if (keys.length) {
+        url.searchParams.set('sessions', keys.join(','))
+        if (drivers?.length) url.searchParams.set('drivers', drivers.join(','))
+        if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
+      }
       const token = htmlStoriesToken(app)
       if (ids.length && !token) {
         throw new Error(
           'The match context needs the footshorts publish token in the MCP server env ' +
             '(FOOTSHORTS_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
+        )
+      }
+      if (keys.length && !token) {
+        throw new Error(
+          'The race context needs the vizf1 publish token in the MCP server env ' +
+            '(VIZF1_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
         )
       }
       try {
@@ -117,6 +160,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       } catch (e) {
         const reason = e instanceof Error ? e.message : String(e)
         if (ids.length) throw new Error(`Could not build the match context: ${reason}`)
+        if (keys.length) throw new Error(`Could not build the race context: ${reason}`)
         if (spinId) throw new Error(`Could not build the brief for spin ${spinId}: ${reason}`)
         if (!randomStyle) return { content: [{ type: 'text', text: houseBrief() }] }
         return {
@@ -133,8 +177,8 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
     {
       title: 'Publish an HTML story',
       description:
-        'Publish one complete, self-contained HTML document to vizmaya.fyi/s/<slug> or (app: ' +
-        '"footshorts") footshorts.com/s/<slug>. Pass the document as `html` or as a local ' +
+        'Publish one complete, self-contained HTML document to vizmaya.fyi/s/<slug>, (app: ' +
+        '"footshorts") footshorts.com/s/<slug> or (app: "vizf1") vizf1.com/s/<slug>. Pass the document as `html` or as a local ' +
         '`filePath`. Without publish=true it saves as a draft (re-posting an already published ' +
         'slug keeps it live). Posting to an existing slug replaces it; earlier versions stay ' +
         'restorable in admin. Returns the URL and lint warnings: fix them and post again to the ' +
@@ -196,7 +240,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
     .describe('The slug the story is (or will be) posted under; its images are filed with it.')
 
   /** POST to the site's assets endpoint (packages/html-stories/src/assetsApi.ts). */
-  async function postAsset(app: 'vizmaya-fyi' | 'footshorts', query: Record<string, string | undefined>, init: RequestInit) {
+  async function postAsset(app: HtmlStoryApp, query: Record<string, string | undefined>, init: RequestInit) {
     const { token } = requireHtmlStoriesEnv(app)
     const url = new URL(`${htmlStoriesUrlFor(config, app)}/api/html-stories/assets`)
     for (const [k, v] of Object.entries(query)) if (v) url.searchParams.set(k, v)

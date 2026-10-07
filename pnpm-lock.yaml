@@ -947,6 +947,9 @@ importers:
       '@vismay/f1-viz':
         specifier: workspace:*
         version: link:../../../verticals/f1-viz
+      '@vismay/html-stories':
+        specifier: workspace:*
+        version: link:../../../packages/html-stories
       '@vismay/story-embed':
         specifier: workspace:*
         version: link:../../../packages/story-embed
@@ -1423,6 +1426,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../content-source
+      '@vismay/f1-viz':
+        specifier: workspace:*
+        version: link:../../verticals/f1-viz
       '@vismay/randomizer':
         specifier: workspace:*
         version: link:../randomizer

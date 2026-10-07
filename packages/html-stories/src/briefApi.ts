@@ -16,6 +16,11 @@
  *     `prompt`. The context is read from the match tables with the service
  *     client, so this variant wants the same bearer token as publishing — the
  *     MCP server and admin send it; the plain brief stays public.
+ *   - vizf1 only: `sessions=<key>,<key>` (telemetry session keys, up to
+ *     MAX_RACE_CONTEXT_SESSIONS) appends the race context for those sessions
+ *     (./vizf1Brief), following `drivers=VER,NOR` (codes or car numbers, up to
+ *     MAX_RACE_CONTEXT_DRIVERS; omitted, the top scorers), with an optional
+ *     `prompt`. Token-gated like the match context.
  *   - vizmaya only: `spin=<id>` renders the brief for a logged randomizer spin
  *     (@vismay/randomizer): its assignment, research protocol, format and
  *     research file. Read-only on purpose: spins are created by the
@@ -28,6 +33,7 @@
 import type { HtmlStoryApp } from './apps'
 import { htmlStoryBrief } from './brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief'
+import { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS, vizf1HtmlStoryBrief } from './vizf1Brief'
 import { parseHtmlStoryFormat } from './formats'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import type { SpinRecord } from '@vismay/randomizer/types'
@@ -35,20 +41,27 @@ import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadStoryStylePool } from './storyStyles'
 import { pickRandomStyle, type StoryStyle } from './styles'
 
-/** Fixture ids as the picker sends them: a comma list, or repeated params. */
-export function parseFixtureIds(params: URLSearchParams): string[] {
+/** A list param as the pickers send it: a comma list, or repeated params. Deduplicated. */
+export function parseListParam(params: URLSearchParams, name: string): string[] {
   const ids = params
-    .getAll('fixtures')
+    .getAll(name)
     .flatMap((v) => v.split(','))
     .map((v) => v.trim())
     .filter(Boolean)
   return Array.from(new Set(ids))
 }
 
+/** Fixture ids as the picker sends them: a comma list, or repeated params. */
+export function parseFixtureIds(params: URLSearchParams): string[] {
+  return parseListParam(params, 'fixtures')
+}
+
 export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryApp): Promise<Response> {
   const url = new URL(req.url)
   const random = url.searchParams.get('style') === 'random'
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
+  const sessionKeys = app === 'vizf1' ? parseListParam(url.searchParams, 'sessions') : []
+  const drivers = app === 'vizf1' ? parseListParam(url.searchParams, 'drivers').map((d) => d.toUpperCase()) : []
   const spinId = url.searchParams.get('spin')?.trim() || null
   const format = parseHtmlStoryFormat(url.searchParams.get('format'))
   if (!format) return new Response('format must be scroll, book, board or deck', { status: 400 })
@@ -68,10 +81,20 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
     return new Response(`at most ${MAX_CONTEXT_MATCHES} matches per brief`, { status: 400 })
   }
-  if (fixtureIds.length && !isHtmlStoriesTokenRequest(req)) {
+  if (sessionKeys.length > MAX_RACE_CONTEXT_SESSIONS) {
+    return new Response(`at most ${MAX_RACE_CONTEXT_SESSIONS} sessions per brief`, { status: 400 })
+  }
+  if (drivers.length > MAX_RACE_CONTEXT_DRIVERS) {
+    return new Response(`at most ${MAX_RACE_CONTEXT_DRIVERS} drivers per brief`, { status: 400 })
+  }
+  if (drivers.length && !sessionKeys.length) {
+    return new Response('drivers need sessions: pass sessions=<key>,<key> too', { status: 400 })
+  }
+  const contextKind = fixtureIds.length ? 'match context' : sessionKeys.length ? 'race context' : null
+  if (contextKind && !isHtmlStoriesTokenRequest(req)) {
     const why = process.env[HTML_STORIES_TOKEN_ENV]
-      ? 'the match context needs Authorization: Bearer $HTML_STORIES_TOKEN'
-      : `the match context needs ${HTML_STORIES_TOKEN_ENV} configured on this deployment`
+      ? `the ${contextKind} needs Authorization: Bearer $HTML_STORIES_TOKEN`
+      : `the ${contextKind} needs ${HTML_STORIES_TOKEN_ENV} configured on this deployment`
     return new Response(why, { status: 401 })
   }
 
@@ -84,27 +107,25 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
     }
   }
 
+  const prompt = url.searchParams.get('prompt')?.trim() || undefined
   let brief: string
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({
-            siteUrl: url.origin,
-            style,
-            fixtureIds,
-            prompt: url.searchParams.get('prompt')?.trim() || undefined,
-            format,
-          })
-        : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
+        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format })
+        : app === 'vizf1'
+          ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format })
+          : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
   } catch (e) {
-    return new Response(`match context failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
+    const what = app === 'vizf1' ? 'race context' : 'match context'
+    return new Response(`${what} failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
   }
 
   return new Response(brief, {
     headers: {
       'content-type': 'text/markdown; charset=utf-8',
-      // A random, match-specific or spin brief must differ per request; the house brief is cacheable.
-      'cache-control': random || fixtureIds.length || spin ? 'no-store' : 'public, s-maxage=3600',
+      // A random, match-, race- or spin-specific brief must differ per request; the house brief is cacheable.
+      'cache-control': random || contextKind || spin ? 'no-store' : 'public, s-maxage=3600',
     },
   })
 }

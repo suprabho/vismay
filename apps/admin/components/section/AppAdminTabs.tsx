@@ -25,6 +25,11 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
   }
+  // Agent-authored pages hosted at vizf1.com/s/<slug> (packages/html-stories),
+  // briefed with a race context: sessions, drivers' telemetry and standings.
+  if (appSlug === 'vizf1') {
+    tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
+  }
   // Recipe-corpora coverage (migration 070) + the history review queue
   // (migration 071) are the food vertical's — umami-only. Social frames is the
   // umami compose-frames creator (vizmaya layer composer in umami mode).
