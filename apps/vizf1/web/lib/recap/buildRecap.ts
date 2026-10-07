@@ -505,7 +505,10 @@ function battleChapter(
         return out
       }
       const ta = series(ca)
-      const slowest = ta.reduce<TraceSample | null>((m, s) => (!m || s.v < m.v ? s : m), null)
+      // The corner the move happened in: a's slowest point near the pass.
+      const slowest = ta
+        .filter((s) => s.d >= passAt - 250 && s.d <= passAt + 150)
+        .reduce<TraceSample | null>((m, s) => (!m || s.v < m.v ? s : m), null)
       const apexCorner = slowest ? nearestCorner(inputs.corners, slowest.d, 150) : null
       corner = nearestCorner(inputs.corners, passAt, 300)
       trace = {
@@ -602,7 +605,22 @@ function finishChapter(race: Race): FinishChapter | null {
   let dek = `${W}${team ? ` (${team})` : ''} took the flag`
   dek += p2 ? (margin != null ? ` ${secs(margin, 3)} ahead of ${race.name(p2.driverNumber)}` : ` ahead of ${race.name(p2.driverNumber)}`) : ''
   dek += p3 ? `, with ${race.name(p3.driverNumber)} third.` : '.'
-  if (grid != null && grid > 0) dek += ` ${W} started P${grid}.`
+  // When the winner took the lead for good, and from whom.
+  const total = race.totalLaps
+  let leadFrom: number | null = null
+  if (race.pos(w.driverNumber, total) === 1) {
+    leadFrom = total
+    while (leadFrom > 1 && race.pos(w.driverNumber, leadFrom - 1) === 1) leadFrom--
+  }
+  const prevLeader = leadFrom != null && leadFrom > 1 ? [...race.laps.keys()].find((dn) => race.pos(dn, leadFrom! - 1) === 1) : undefined
+  const lead =
+    leadFrom === 1
+      ? 'led every lap'
+      : leadFrom != null
+        ? `took the lead${prevLeader != null ? ` from ${race.name(prevLeader)}` : ''} on lap ${leadFrom}`
+        : null
+  if (grid != null && grid > 0) dek += ` ${W} started P${grid}${lead ? ` and ${lead}` : ''}.`
+  else if (lead) dek += ` ${W} ${lead}.`
 
   return {
     kind: 'finish',

@@ -201,3 +201,51 @@ test('formatLapTime', () => {
   assert.equal(formatLapTime(91.447), '1:31.447')
   assert.equal(formatLapTime(65.0), '1:05.000')
 })
+
+/**
+ * The 2024 Austrian Grand Prix as the FastF1 ingest stores it (trimmed to the
+ * columns the recap reads), with OpenF1's pit and race-control feeds parsed
+ * by lib/raceControl, and the pass lap's channels for its two cars.
+ */
+test('2024 Austrian GP: the recap matches what happened', async () => {
+  const { readFileSync } = await import('node:fs')
+  const fx = JSON.parse(readFileSync(new URL('./__fixtures__/austria-2024.json', import.meta.url), 'utf8')) as {
+    inputs: RecapInputs
+    pass: ReturnType<typeof pickPass>
+    channels: { a: LapChannels | null; b: LapChannels | null } | null
+  }
+  const pass = pickPass(fx.inputs)
+  assert.deepEqual(pass, fx.pass)
+  const r = buildRecap(fx.inputs, pass, fx.channels)
+
+  assert.equal(r.totalLaps, 71)
+  assert.deepEqual(
+    r.chapters.map((c) => c.kind),
+    // The front-runners stopped on the same laps: no undercut worth a chapter.
+    ['start', 'battle', 'finish'],
+  )
+
+  const start = chapter(r, 'start') as StartChapter
+  assert.match(start.dek, /Verstappen kept the lead from pole\./)
+  // Leclerc pitted for a new front wing on lap 1.
+  assert.deepEqual(start.deltas.at(-1), { code: 'LEC', delta: -12 })
+
+  // After Verstappen and Norris collided on lap 64, Piastri took P2 from Sainz.
+  const battle = chapter(r, 'battle') as BattleChapter
+  assert.equal(battle.headline, 'Piastri passes Sainz for P2 into Turn 6')
+  assert.equal(battle.lap, 65)
+  assert.ok(battle.trace && battle.trace.a.length > 20 && battle.trace.b.length > 20)
+  assert.equal(battle.trace.apex?.label, 'Turn 6 apex')
+  assert.ok(battle.replay.atMs && battle.replay.atMs > 0)
+
+  const finish = chapter(r, 'finish') as FinishChapter
+  assert.equal(finish.headline, 'Russell holds on by 1.9 seconds')
+  assert.match(finish.dek, /took the lead from Verstappen on lap 64\./)
+  assert.deepEqual(
+    finish.results.map((x) => `${x.pos} ${x.code} ${x.gap} ${x.pts}`),
+    ['1 RUS Winner 25', '2 PIA +1.906s 18', '3 SAI +4.533s 15', '4 HAM +23.142s 12', '5 VER +37.253s 10'],
+  )
+  assert.deepEqual(finish.fastestLap, { code: 'ALO', time: '1:07.694', lap: 70 })
+
+  for (const ch of r.chapters) assert.doesNotMatch(`${ch.kicker} ${ch.headline} ${ch.dek}`, /NaN|undefined|null/)
+})
