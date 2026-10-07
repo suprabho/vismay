@@ -105,8 +105,8 @@ export function formatExampleUrl(app: HtmlStoryApp, format: PagedHtmlStoryFormat
 /**
  * Which format a randomizer spin's story tends to suit, for the brief's hint:
  * an epic is a journey told in order (a book), an Atlas spin a place built
- * from many pieces (a board), a Desk spin an argument (a deck).
+ * from many pieces (a board), a Desk or Football Desk spin an argument (a deck).
  */
-export function suggestedFormatFor(randomizer: 'desk' | 'atlas' | 'epics'): PagedHtmlStoryFormat {
+export function suggestedFormatFor(randomizer: 'desk' | 'atlas' | 'epics' | 'footshorts'): PagedHtmlStoryFormat {
   return randomizer === 'epics' ? 'book' : randomizer === 'atlas' ? 'board' : 'deck'
 }

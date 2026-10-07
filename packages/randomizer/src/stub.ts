@@ -2,12 +2,23 @@
  * The research file a spin starts (playbook 0.2, 0.3, 4): reel results
  * pre-filled, the right template (editorial, geography or epic), an empty
  * claims log, and the HERO INSIGHT section everything public is written from.
+ * Footshorts spins get a football template: the news, the match record from
+ * the snapshot, the table, the angle read and the data pull.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
 
+import { FOOTSHORTS } from './datasets'
 import { slugify } from './text'
-import { RANDOMIZER_META, type AtlasSubject, type DeskSubject, type EpicsSubject, type SpinRecord } from './types'
+import {
+  RANDOMIZER_META,
+  type AtlasSubject,
+  type DeskSubject,
+  type EpicsSubject,
+  type FootshortsFixtureRef,
+  type FootshortsSubject,
+  type SpinRecord,
+} from './types'
 
 export type StubSpin = Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels'>
 
@@ -18,6 +29,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   const s = spin.subject
   if (s.randomizer === 'desk') return s.sub.name
   if (s.randomizer === 'atlas') return s.pair ? `${s.country.name} and ${s.pair.name}` : s.country.name
+  if (s.randomizer === 'footshorts') return s.opponent ? `${s.team.name} v ${s.opponent.name}` : s.team.name
   return s.epic.title
 }
 
@@ -133,6 +145,84 @@ function epicsTemplate(s: EpicsSubject): string[] {
   ]
 }
 
+/** "Arsenal 2-1 Chelsea · Premier League · 2026-10-04 · FINISHED" */
+export function fixtureSummary(f: FootshortsFixtureRef): string {
+  const score = f.homeScore !== null && f.awayScore !== null ? ` ${f.homeScore}-${f.awayScore} ` : ' v '
+  return `${f.home}${score}${f.away} · ${f.kickoff.slice(0, 10)} · ${f.status}`
+}
+
+/** The angle's data pull: the numbers worth charting for it. */
+export const FOOTSHORTS_ANGLE_METRICS: Record<string, string[]> = {
+  Tactics: ['xG for and against per match', 'Possession and field tilt', 'Shots and big chances', 'PPDA or pressing actions'],
+  'Form vs numbers': ['Points per game, rolling', 'xG difference per match', 'Goals minus xG', 'Table position by matchday'],
+  Manager: ['Points per game by manager', 'Results since appointment', 'Starting XI changes per match', 'Substitution timing'],
+  'Squad and injuries': ['Players unavailable per match', 'Minutes by player', 'Results with and without key players', 'Squad age profile'],
+  'Money and transfers': ['Net spend by window', 'Wage bill and wages to revenue', 'Revenue by stream', 'Reported fees in and out'],
+  'Breakout player': ['Minutes, goals and assists', 'xG and xA per 90', 'Progressive actions per 90', 'Share of team output'],
+  'Rivalry and history': ['Head-to-head record', 'Goals in the fixture by era', 'Results at each ground', 'Points gap over time'],
+  'Fans and the city': ['Average attendance and capacity', 'Ticket and season-ticket prices', 'Ownership timeline', 'Home vs away record'],
+  Stakes: ['Table position by matchday', 'Points gap to the line that matters', 'Remaining fixtures and difficulty', 'Prize money at stake'],
+  'Discipline and officiating': ['Cards per match', 'Penalties for and against', 'VAR overturns', 'Suspensions and matches missed'],
+}
+
+export function footshortsAngleMetrics(angle: string): string[] {
+  return FOOTSHORTS_ANGLE_METRICS[angle] ?? ['Results', 'xG for and against', 'Table position']
+}
+
+function footshortsTemplate(s: FootshortsSubject): string[] {
+  const window = s.freshness.days === null ? 'any date (Evergreen)' : `the ${s.freshness.window}`
+  const fixtures = [...s.team.recent, ...s.team.upcoming, ...(s.opponent ? [...s.opponent.recent, ...s.opponent.upcoming] : [])]
+  const byId = new Map(fixtures.map((f) => [f.id, f]))
+  const attached = s.fixtureIds.map((id) => byId.get(id)).filter((f): f is FootshortsFixtureRef => !!f)
+  const subject = s.opponent ? `${s.team.name} and ${s.opponent.name}` : s.team.name
+  return [
+    '## Why Now',
+    '',
+    `The three most recent developments for ${subject}, inside ${window}. The angle goes on the newest.`,
+    s.freshness.name === 'Evergreen'
+      ? ''
+      : 'If nothing happened in that window, move to the next one (Matchday, then Running story, then Evergreen) and say so here.',
+    '',
+    '| # | Date | Development | Source |',
+    '|---|------|-------------|--------|',
+    '| 1 | | | |',
+    '| 2 | | | |',
+    '| 3 | | | |',
+    '',
+    '## Match record',
+    '',
+    attached.length
+      ? 'From the match context in the brief. Copy scores and minutes from it verbatim.'
+      : 'No fixtures were on file at spin time. Source every result.',
+    '',
+    '| Date | Competition | Match | Status | What it shows |',
+    '|------|-------------|-------|--------|---------------|',
+    ...(attached.length
+      ? attached.map((f) => `| ${f.kickoff.slice(0, 10)} | ${FOOTSHORTS.competitions.find((c) => c.slug === f.competition)?.name ?? f.competition} | ${f.home} v ${f.away}${f.homeScore !== null && f.awayScore !== null ? ` (${f.homeScore}-${f.awayScore})` : ''} | ${f.status} | |`)
+      : ['| | | | | |']),
+    '',
+    `## Where they stand (${s.competition.name})`,
+    '',
+    'Position, points, goal difference and the gap to the line that matters, from the table in the match context or the competition.',
+    '',
+    `## Angle read: ${s.angle.name}`,
+    '',
+    `${s.angle.description} Applied to the newest development, not to the club in general.`,
+    '',
+    '## Data pull',
+    '',
+    'At least 8 data points per series where possible: match data from the context, money from club accounts.',
+    '',
+    '| Metric | Period | Value | Unit | Source |',
+    '|--------|--------|-------|------|--------|',
+    ...footshortsAngleMetrics(s.angle.name).map((m) => `| ${m} | | | | |`),
+    '',
+    '## Counter-case',
+    '',
+    'The strongest argument against the thesis.',
+  ].filter((l, i, a) => !(l === '' && a[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -141,7 +231,14 @@ export function researchStub(spin: StubSpin): string {
     const label = meta.reels.find((d) => d.key === key)?.label ?? key
     return `- ${label}: ${r.value}${r.sub ? ` (${r.sub})` : ''}`
   })
-  const template = s.randomizer === 'desk' ? deskTemplate(s) : s.randomizer === 'atlas' ? atlasTemplate(s) : epicsTemplate(s)
+  const template =
+    s.randomizer === 'desk'
+      ? deskTemplate(s)
+      : s.randomizer === 'atlas'
+        ? atlasTemplate(s)
+        : s.randomizer === 'footshorts'
+          ? footshortsTemplate(s)
+          : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -151,7 +248,9 @@ export function researchStub(spin: StubSpin): string {
     ...reels,
     '',
     '> Build the claims log first. Any figure, date or causal claim needs two independent sources, or one primary source',
-    '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+    s.randomizer === 'footshorts'
+      ? '> (official match data, a club or league statement, club accounts). Mark each claim Verified, Contested or'
+      : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

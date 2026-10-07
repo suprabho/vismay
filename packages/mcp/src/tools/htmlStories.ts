@@ -23,10 +23,11 @@
  * moments, the drivers' head-to-head across every session, and the
  * championship standings round by round. Also token-gated.
  *
- * A vizmaya brief can carry a randomizer spin instead (`spinId`, from
- * `spin_randomizer` in ./randomizer): the assignment, research protocol,
- * output format and research file for that spin. Publishing with the same
- * `spinId` ties the page to the spin.
+ * A vizmaya or footshorts brief can carry a randomizer spin instead
+ * (`spinId`, from `spin_randomizer` in ./randomizer): the assignment,
+ * research protocol, output format and research file for that spin (a
+ * Football Desk spin's also carries its fixtures' match context). Publishing
+ * with the same `spinId` ties the page to the spin.
  *
  * Any brief can be for a STORY FORMAT (`format`): a scrolling page (the
  * default), a book, a pinned board or a deck. The paged formats run on a
@@ -72,8 +73,9 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'session keys, e.g. 2026_australian_grand_prix_R, across races and seasons) and optionally drivers ' +
         '(up to 8 codes such as VER) to append the race context: classifications, lap-by-lap timing, sectors, ' +
         'speed traps, strategy, the head-to-head across sessions and the standings round by round. ' +
-        'For a vizmaya randomizer spin, pass spinId ' +
-        '(from spin_randomizer) to get its assignment, research protocol, output format and research file. ' +
+        'For a randomizer spin, pass spinId (from spin_randomizer) with the spin\'s app (vizmaya-fyi for desk, ' +
+        'atlas and epics; footshorts for the Football Desk) to get its assignment, research protocol, output format ' +
+        'and research file; a Football Desk spin\'s brief also carries the match context of its fixtures. ' +
         'Pass format to write something other than a scrolling page: "book" (pages the reader turns; ' +
         'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
         'case built from many connected pieces) or "deck" (slides or a stack of cards; suits an argument ' +
@@ -109,7 +111,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .string()
           .uuid()
           .optional()
-          .describe('vizmaya only: a randomizer spin id; the brief carries that spin\'s assignment and research.'),
+          .describe('A randomizer spin id (vizmaya-fyi or footshorts, matching the spin); the brief carries its assignment and research.'),
         format: z
           .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck'])
           .default('scroll')
@@ -122,7 +124,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
       const keys = app === 'vizf1' ? (sessionKeys ?? []).filter(Boolean) : []
       if (drivers?.length && !keys.length) throw new Error('drivers need sessionKeys (vizf1 only).')
-      if (spinId && app !== 'vizmaya-fyi') throw new Error('Randomizer spins are vizmaya stories: use app "vizmaya-fyi".')
+      if (spinId && app === 'vizf1') throw new Error('vizf1 has no randomizer: use app "vizmaya-fyi" or "footshorts", whichever the spin is for.')
 
       // Styles come from the site's stories, the match context from its tables
       // and the Mapbox token from its env, so ask the deployed site for the
@@ -183,7 +185,8 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'slug keeps it live). Posting to an existing slug replaces it; earlier versions stay ' +
         'restorable in admin. Returns the URL and lint warnings: fix them and post again to the ' +
         'same slug. Pass spinId when the page answers a randomizer spin, so the spin log records ' +
-        'what shipped (an Atlas or Epics spin whose hero insight is not approved yet saves as a draft).',
+        'what shipped (an Atlas or Epics spin whose hero insight is not approved yet saves as a draft). A spin ' +
+        'publishes to its own app: vizmaya-fyi for desk, atlas and epics, footshorts for the Football Desk.',
       inputSchema: {
         app: appSchema,
         slug: z
@@ -204,7 +207,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
             'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its listing card ' +
               'background. Only when the user names one; omitted, a re-post keeps the current aura.',
           ),
-        spinId: z.string().uuid().optional().describe('vizmaya only: the randomizer spin this page answers.'),
+        spinId: z.string().uuid().optional().describe('The randomizer spin this page answers (vizmaya-fyi or footshorts, matching the spin).'),
       },
     },
     async ({ app, slug, html, filePath, publish, title, description, aura, spinId }) => {

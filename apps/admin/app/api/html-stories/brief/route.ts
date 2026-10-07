@@ -10,6 +10,7 @@ import {
 import { parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
+import { RANDOMIZER_META } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
 import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
 
@@ -24,8 +25,10 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
  * `style` is the randomizer's pick (the client shows its swatches, so it must
  * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
  * `sessionKeys` + `drivers` (codes) + `prompt` are vizf1-only;
- * `spinId` (vizmaya only) is a logged randomizer spin, whose assignment,
- * research protocol, format and research file the brief then carries.
+ * `spinId` is a logged randomizer spin for this app (Desk, Atlas, Epics on
+ * vizmaya; the Football Desk on footshorts), whose assignment, research
+ * protocol, format and research file the brief then carries (a Football
+ * Desk spin's also its fixtures' match context, unless matches are picked).
  * Answers text/markdown.
  */
 export const runtime = 'nodejs'
@@ -69,8 +72,8 @@ export async function POST(req: Request) {
 
   let spin = null
   if (b.spinId != null) {
-    if (app !== 'vizmaya-fyi' || !isSpinId(b.spinId)) {
-      return NextResponse.json({ error: 'spinId must be a vizmaya randomizer spin id' }, { status: 400 })
+    if (app === 'vizf1' || !isSpinId(b.spinId)) {
+      return NextResponse.json({ error: 'spinId must be a vizmaya or footshorts randomizer spin id' }, { status: 400 })
     }
     try {
       spin = await getSpin(b.spinId)
@@ -78,13 +81,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `spin lookup failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 })
     }
     if (!spin) return NextResponse.json({ error: `no spin ${b.spinId}` }, { status: 404 })
+    if (RANDOMIZER_META[spin.randomizer].app !== app) {
+      return NextResponse.json({ error: `spin ${spin.id} is a ${RANDOMIZER_META[spin.randomizer].name} spin, not a ${app} one` }, { status: 400 })
+    }
   }
 
   let brief: string
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format })
+        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format })
           : htmlStoryBrief({ app, siteUrl, style, spin, format })

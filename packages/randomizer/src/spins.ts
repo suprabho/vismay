@@ -1,6 +1,8 @@
 /**
  * Server-side reads and writes for the randomizer: the spin log
- * (randomizer_spins) and the Desk's live heat (desk_heat), migration 088.
+ * (randomizer_spins) and the Desk's live heat (desk_heat), migration 088,
+ * and the Football Desk's news snapshot (loadFootshortsNews), read from the
+ * footshorts tables in the same Supabase project.
  *
  * A spin is created only here, and only by an authenticated caller (admin's
  * session-gated routes, or the token-gated routes on vizmaya-fyi that the MCP
@@ -16,7 +18,7 @@
  */
 
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { DESK } from './datasets'
+import { DESK, FOOTSHORTS } from './datasets'
 import { draw } from './draw'
 import { randomSeed, seedHex } from './rng'
 import { extractHeroInsight } from './stub'
@@ -24,6 +26,11 @@ import {
   RANDOMIZER_META,
   type DeskHeadline,
   type DeskHeatRow,
+  type FootshortsCompetitionNews,
+  type FootshortsFixtureRef,
+  type FootshortsHeadline,
+  type FootshortsNews,
+  type FootshortsTeamNews,
   type RandomizerId,
   type SpinHistoryEntry,
   type SpinRecord,
@@ -50,6 +57,9 @@ export function hasRandomizerEnv(): boolean {
 function check(error: { code?: string; message: string } | null): void {
   if (!error) return
   if (error.code === '42P01' || error.code === 'PGRST205') throw new SpinError(MIGRATION_HINT, 503)
+  if (error.code === '23514' && /randomizer_check/.test(error.message)) {
+    throw new SpinError('Football Desk spins need migration 090_randomizer_footshorts.sql applied', 503)
+  }
   throw new SpinError(error.message, 500)
 }
 
@@ -93,13 +103,18 @@ export async function getSpin(id: string): Promise<SpinRecord | null> {
   return data ? mapSpin(data) : null
 }
 
-export async function listSpins({ randomizer, limit = 50 }: { randomizer?: RandomizerId; limit?: number } = {}): Promise<SpinRecord[]> {
+export async function listSpins({
+  randomizer,
+  randomizers,
+  limit = 50,
+}: { randomizer?: RandomizerId; randomizers?: RandomizerId[]; limit?: number } = {}): Promise<SpinRecord[]> {
   let q = createServiceClient()
     .from('randomizer_spins')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200))
   if (randomizer) q = q.eq('randomizer', randomizer)
+  else if (randomizers?.length) q = q.in('randomizer', randomizers)
   const { data, error } = await q
   check(error)
   return (data ?? []).map(mapSpin)
@@ -160,22 +175,30 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
   }
 
   const seed = input.seed ?? randomSeed()
-  const [past, heat] = await Promise.all([
+  const [past, heat, news] = await Promise.all([
     // The spin being re-spun is about to be rejected: it must not block its own replacement.
     history(input.randomizer, input.respin ? prev?.id : undefined),
     input.randomizer === 'desk' ? listDeskHeat() : Promise.resolve([] as DeskHeatRow[]),
+    input.randomizer === 'footshorts' ? loadFootshortsNews() : Promise.resolve(null),
   ])
   const reason = input.reason?.trim().slice(0, 200) || null
-  const result = draw({
-    randomizer: input.randomizer,
-    seed,
-    history: past,
-    prev,
-    locks: input.locks,
-    pair: input.pair,
-    sequence: input.sequence,
-    heat,
-  })
+  let result: ReturnType<typeof draw>
+  try {
+    result = draw({
+      randomizer: input.randomizer,
+      seed,
+      history: past,
+      prev,
+      locks: input.locks,
+      pair: input.pair,
+      sequence: input.sequence,
+      heat,
+      news,
+    })
+  } catch (e) {
+    // The draw only throws when there is nothing to draw from (an empty footshorts snapshot).
+    throw new SpinError(e instanceof Error ? e.message : String(e), 503)
+  }
   if (input.respin && prev) {
     result.rules.unshift({
       tag: 're-spin',
@@ -368,4 +391,219 @@ export async function refreshDeskHeat(
   const { error } = await db.from('desk_heat').upsert(rows, { onConflict: 'sub_id' })
   check(error)
   return listDeskHeat()
+}
+
+/* ---------- Footshorts news ---------- */
+
+/** The tunable windows behind the Football Desk's news snapshot. */
+export const FOOTSHORTS_NEWS_RULES = {
+  /** Heat counts the tagged stories in this many days. */
+  newsWindowDays: 14,
+  /** A team is in a tournament's draw when it has a fixture in it this far back… */
+  fixtureLookbackDays: 60,
+  /** …or this far ahead. */
+  fixtureLookaheadDays: 30,
+  /** Pages of 1000 rows read at most, per table. */
+  maxPages: 10,
+} as const
+
+const UPCOMING = new Set(['SCHEDULED', 'TIMED', 'IN_PLAY', 'PAUSED', 'LIVE'])
+
+async function readPages<T>(
+  read: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { code?: string; message: string } | null }>,
+): Promise<T[]> {
+  const out: T[] = []
+  for (let page = 0; page < FOOTSHORTS_NEWS_RULES.maxPages; page++) {
+    const { data, error } = await read(page * 1000, page * 1000 + 999)
+    check(error)
+    out.push(...((data ?? []) as T[]))
+    if (!data || data.length < 1000) break
+  }
+  return out
+}
+
+function chunks<T>(items: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
+
+/** 0 to 100 on a log scale, relative to the busiest. */
+function heatScale(score: number, max: number): number {
+  return max > 0 ? Math.round((100 * Math.log1p(score)) / Math.log1p(max)) : 0
+}
+
+interface FixtureRow {
+  id: string
+  competition_slug: string
+  kickoff_at: string
+  status: string
+  home_team_id: string | null
+  away_team_id: string | null
+  home_team_name: string | null
+  away_team_name: string | null
+  home_score: number | null
+  away_score: number | null
+}
+
+interface ArticleRow {
+  id: string
+  headline: string
+  url: string
+  publisher: string
+  published_at: string
+  article_entities: Array<{ entity_id: string; confidence: number | null }> | null
+}
+
+/**
+ * The live news the Football Desk draws from: every team with a fixture in a
+ * covered tournament in the window, with the stories tagged to it in the
+ * news window (heat, count, newest headlines) and its recent and next
+ * fixtures; and per tournament, the stories tagged to it or its teams.
+ * Read from the footshorts feed (articles, article_entities), so unlike the
+ * Desk's heat it needs no refresh job and is never stale.
+ */
+export async function loadFootshortsNews(now: Date = new Date()): Promise<FootshortsNews> {
+  const db = createServiceClient()
+  const t = now.getTime()
+  const slugs = FOOTSHORTS.competitions.map((c) => c.slug)
+  const fixtureFrom = new Date(t - FOOTSHORTS_NEWS_RULES.fixtureLookbackDays * DAY).toISOString()
+  const fixtureTo = new Date(t + FOOTSHORTS_NEWS_RULES.fixtureLookaheadDays * DAY).toISOString()
+  const newsSince = new Date(t - FOOTSHORTS_NEWS_RULES.newsWindowDays * DAY).toISOString()
+
+  const [fixtures, articles] = await Promise.all([
+    readPages<FixtureRow>((a, b) =>
+      db
+        .from('fixtures')
+        .select('id, competition_slug, kickoff_at, status, home_team_id, away_team_id, home_team_name, away_team_name, home_score, away_score')
+        .in('competition_slug', slugs)
+        .gte('kickoff_at', fixtureFrom)
+        .lte('kickoff_at', fixtureTo)
+        .order('kickoff_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(a, b),
+    ),
+    readPages<ArticleRow>((a, b) =>
+      db
+        .from('articles')
+        .select('id, headline, url, publisher, published_at, article_entities(entity_id, confidence)')
+        .eq('status', 'summarized')
+        .or('is_cluster_lead.eq.true,cluster_id.is.null')
+        .gte('published_at', newsSince)
+        .order('published_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(a, b),
+    ),
+  ])
+
+  // The teams: entity rows for every side with a fixture in the window.
+  const teamIds = Array.from(new Set(fixtures.flatMap((f) => [f.home_team_id, f.away_team_id]).filter((id): id is string => !!id)))
+  const entityRows: Array<{ id: string; slug: string; name: string; country: string | null; crest_url: string | null }> = []
+  for (const ids of chunks(teamIds, 150)) {
+    const { data, error } = await db.from('entities').select('id, slug, name, country, crest_url').eq('type', 'team').in('id', ids)
+    check(error)
+    entityRows.push(...((data ?? []) as typeof entityRows))
+  }
+  const entityById = new Map(entityRows.map((e) => [e.id, e]))
+  const { data: leagueRows, error: leagueError } = await db
+    .from('entities')
+    .select('id, slug')
+    .eq('type', 'league')
+    .in('slug', FOOTSHORTS.competitions.flatMap((c) => c.entity_slugs))
+  check(leagueError)
+  const leagueIdsFor = (entitySlugs: string[]) =>
+    new Set(((leagueRows ?? []) as Array<{ id: string; slug: string }>).filter((l) => entitySlugs.includes(l.slug)).map((l) => l.id))
+
+  // News per entity: a confidence-weighted score, the story count and the newest headlines.
+  const score = new Map<string, number>()
+  const count = new Map<string, number>()
+  const headlines = new Map<string, FootshortsHeadline[]>()
+  const headline = (a: ArticleRow): FootshortsHeadline => ({
+    title: a.headline.trim().slice(0, 300),
+    url: a.url,
+    publisher: a.publisher,
+    date: a.published_at.slice(0, 10),
+  })
+  for (const a of articles) {
+    for (const ae of a.article_entities ?? []) {
+      const c = Math.min(1, Math.max(0, ae.confidence ?? 1))
+      score.set(ae.entity_id, (score.get(ae.entity_id) ?? 0) + c)
+      count.set(ae.entity_id, (count.get(ae.entity_id) ?? 0) + 1)
+      const list = headlines.get(ae.entity_id) ?? []
+      if (list.length < 3) headlines.set(ae.entity_id, [...list, headline(a)])
+    }
+  }
+
+  // Fixtures per team, and which tournaments each team is in.
+  const ref = (f: FixtureRow): FootshortsFixtureRef => ({
+    id: f.id,
+    competition: f.competition_slug,
+    kickoff: f.kickoff_at,
+    status: f.status,
+    homeId: f.home_team_id,
+    awayId: f.away_team_id,
+    home: (f.home_team_id && entityById.get(f.home_team_id)?.name) || f.home_team_name || 'TBD',
+    away: (f.away_team_id && entityById.get(f.away_team_id)?.name) || f.away_team_name || 'TBD',
+    homeScore: f.home_score,
+    awayScore: f.away_score,
+  })
+  const byTeam = new Map<string, FixtureRow[]>()
+  for (const f of fixtures) {
+    for (const id of [f.home_team_id, f.away_team_id]) {
+      if (id && entityById.has(id)) byTeam.set(id, [...(byTeam.get(id) ?? []), f])
+    }
+  }
+  const maxTeam = Math.max(0, ...[...byTeam.keys()].map((id) => score.get(id) ?? 0))
+  const teams: FootshortsTeamNews[] = [...byTeam.entries()]
+    .map(([id, list]) => {
+      const e = entityById.get(id)!
+      return {
+        id,
+        slug: e.slug,
+        name: e.name,
+        country: e.country,
+        crestUrl: e.crest_url,
+        competitions: slugs.filter((s) => list.some((f) => f.competition_slug === s)),
+        heat: heatScale(score.get(id) ?? 0, maxTeam),
+        articles: count.get(id) ?? 0,
+        headlines: headlines.get(id) ?? [],
+        recent: list
+          .filter((f) => f.status === 'FINISHED')
+          .sort((a, b) => b.kickoff_at.localeCompare(a.kickoff_at))
+          .slice(0, 3)
+          .map(ref),
+        upcoming: list
+          .filter((f) => UPCOMING.has(f.status) && Date.parse(f.kickoff_at) >= t - 3 * 3600e3)
+          .sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at))
+          .slice(0, 2)
+          .map(ref),
+      }
+    })
+    .sort((a, b) => a.slug.localeCompare(b.slug))
+
+  // Tournaments: the stories tagged to the league entity or any of its teams.
+  const compScores = FOOTSHORTS.competitions.map((c) => {
+    const members = new Set([...leagueIdsFor(c.entity_slugs), ...teams.filter((tm) => tm.competitions.includes(c.slug)).map((tm) => tm.id)])
+    let total = 0
+    let n = 0
+    const top: FootshortsHeadline[] = []
+    for (const a of articles) {
+      const hits = (a.article_entities ?? []).filter((ae) => members.has(ae.entity_id))
+      if (!hits.length) continue
+      total += Math.max(...hits.map((ae) => Math.min(1, Math.max(0, ae.confidence ?? 1))))
+      n++
+      if (top.length < 3) top.push(headline(a))
+    }
+    return { slug: c.slug, total, n, top, teams: teams.filter((tm) => tm.competitions.includes(c.slug)).length }
+  })
+  const maxComp = Math.max(0, ...compScores.map((c) => c.total))
+  const competitions: FootshortsCompetitionNews[] = compScores.map((c) => ({
+    slug: c.slug,
+    heat: heatScale(c.total, maxComp),
+    articles: c.n,
+    headlines: c.top,
+    teams: c.teams,
+  }))
+
+  return { asOf: now.toISOString(), windowDays: FOOTSHORTS_NEWS_RULES.newsWindowDays, competitions, teams }
 }

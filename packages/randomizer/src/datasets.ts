@@ -1,16 +1,20 @@
 /**
- * The three randomizers' datasets (playbook 4: one JSON file per randomizer),
+ * The randomizers' datasets (playbook 4: one JSON file per randomizer),
  * typed. Pure, so the admin slot machine can fill its reel strips from them.
+ * Footshorts' teams aren't here: they come from the live news snapshot
+ * (FootshortsNews), so the reel only ever offers clubs with fixtures.
  */
 
-import type { AtlasDataset, DeskDataset, Epic, EpicPlace, EpicsDataset } from './types'
+import type { AtlasDataset, DeskDataset, Epic, EpicPlace, EpicsDataset, FootshortsDataset, RandomizerId } from './types'
 import deskJson from './data/desk.json'
 import atlasJson from './data/atlas.json'
 import epicsJson from './data/epics.json'
+import footshortsJson from './data/footshorts.json'
 
 export const DESK = deskJson as unknown as DeskDataset
 export const ATLAS = atlasJson as unknown as AtlasDataset
 export const EPICS = epicsJson as unknown as EpicsDataset
+export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
 
 /** Types that count toward the one-in-three quota (playbook 3.2). */
 export function isPhilosophical(types: readonly string[] | undefined): boolean {
@@ -22,8 +26,11 @@ export function epicRoute(epic: Epic): Array<{ episodeId: string; place: EpicPla
   return epic.episodes.flatMap((ep) => ep.places.map((place) => ({ episodeId: ep.id, place })))
 }
 
-/** Values a reel can show, for the spin animation's blur of candidates. */
-export function reelPool(randomizer: 'desk' | 'atlas' | 'epics', key: string): string[] {
+/**
+ * Values a reel can show, for the spin animation's blur of candidates.
+ * `teams` fills the Footshorts team and opponent reels (names from the news snapshot).
+ */
+export function reelPool(randomizer: RandomizerId, key: string, teams: readonly string[] = []): string[] {
   if (randomizer === 'desk') {
     if (key === 'industry') return DESK.industries.map((i) => i.name)
     if (key === 'sub') return DESK.sub_industries.map((s) => s.name)
@@ -42,6 +49,12 @@ export function reelPool(randomizer: 'desk' | 'atlas' | 'epics', key: string): s
     if (key === 'episode') return EPICS.epics.flatMap((e) => e.episodes.map((ep) => ep.name))
     if (key === 'place') return EPICS.epics.flatMap((e) => epicRoute(e).map((r) => r.place.name))
     if (key === 'lens') return EPICS.lenses.map((l) => l.name)
+  }
+  if (randomizer === 'footshorts') {
+    if (key === 'competition') return FOOTSHORTS.competitions.map((c) => c.name)
+    if (key === 'team' || key === 'pair') return [...teams]
+    if (key === 'angle') return FOOTSHORTS.angles.map((a) => a.name)
+    if (key === 'fresh') return FOOTSHORTS.freshness.map((f) => f.name)
   }
   return []
 }

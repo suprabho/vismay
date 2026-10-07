@@ -18,9 +18,11 @@
  *
  * `spin` (query) or `spinId` (JSON) ties the page to a randomizer spin
  * (@vismay/randomizer): the spin records the story's slug, and moves to
- * `published` when the story goes public. Atlas and Epics spins are gated on
- * an approved hero insight, so a publish request for one that isn't approved
- * yet saves a draft (with a warning) instead.
+ * `published` when the story goes public. A spin publishes only to the site
+ * its randomizer writes for (vizmaya for Desk, Atlas and Epics; footshorts
+ * for the Football Desk). Atlas and Epics spins are gated on an approved
+ * hero insight, so a publish request for one that isn't approved yet saves a
+ * draft (with a warning) instead.
  *
  * Without a slug, one is derived from the document's <title>. The response
  * carries lint `warnings` so the agent can fix and re-post to the same slug.
@@ -30,7 +32,7 @@
 
 import { timingSafeEqual } from 'node:crypto'
 import { getSpin, isSpinId, linkSpinStory, spinAllowsPublish } from '@vismay/randomizer/spins'
-import type { SpinRecord } from '@vismay/randomizer/types'
+import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import type { HtmlStoryApp } from './apps'
 import { HtmlStorySlugTakenError, saveHtmlStory } from './htmlStories'
 import {
@@ -139,7 +141,6 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
   let spin: SpinRecord | null = null
   let status = parsed.status
   if (parsed.spinId) {
-    if (app !== 'vizmaya-fyi') return json({ error: 'randomizer spins are vizmaya stories' }, 400)
     if (!isSpinId(parsed.spinId)) return json({ error: 'spinId must be a spin id' }, 400)
     try {
       spin = await getSpin(parsed.spinId)
@@ -147,6 +148,9 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
       return json({ error: `spin lookup failed: ${e instanceof Error ? e.message : String(e)}` }, 502)
     }
     if (!spin) return json({ error: `no spin ${parsed.spinId}` }, 404)
+    if (RANDOMIZER_META[spin.randomizer].app !== app) {
+      return json({ error: `spin ${spin.id} is a ${RANDOMIZER_META[spin.randomizer].name} spin; publish it to ${RANDOMIZER_META[spin.randomizer].app}` }, 400)
+    }
     if (spin.status === 'rejected') return json({ error: `spin ${spin.id} was rejected at re-spin` }, 409)
     if (status === 'published' && !spinAllowsPublish(spin)) {
       status = 'draft'

@@ -12,11 +12,13 @@
  * a race context (classifications, lap-by-lap timing, telemetry and standings
  * for the sessions and drivers the story is about — see ./vizf1Brief).
  *
- * A vizmaya brief can also carry a randomizer spin (@vismay/randomizer): the
- * topic the Desk, Atlas or Epics randomizer drew, with its research protocol,
- * deliverables, output format, reel script rules and quality checklist. The
- * spin's sections live in the randomizer package; this file only decides
- * where they go. Without a spin the brief is unchanged.
+ * A brief can also carry a randomizer spin (@vismay/randomizer): the topic
+ * the Desk, Atlas or Epics randomizer drew for vizmaya, or the Football Desk
+ * drew for footshorts, with its research protocol, deliverables, output
+ * format, reel script rules and quality checklist (a Football Desk spin's
+ * brief also carries the match context for its fixtures). The spin's
+ * sections live in the randomizer package; this file only decides where
+ * they go. Without a spin the brief is unchanged.
  *
  * Maps are Mapbox scrollytelling when the deployment has a public Mapbox token
  * (NEXT_PUBLIC_MAPBOX_TOKEN, the one the sites' own map pages use): the brief
@@ -76,8 +78,9 @@ export interface BriefOptions {
    */
   context?: string | null
   /**
-   * A logged randomizer spin (vizmaya only): the brief gains the assignment,
-   * research protocol, deliverables, output format, reel script and checklist
+   * A logged randomizer spin for this app (Desk, Atlas, Epics on vizmaya; the
+   * Football Desk on footshorts): the brief gains the assignment, research
+   * protocol, deliverables, output format, reel script and checklist
    * sections, and ends with the spin's research file (or its stub).
    */
   spin?: BriefSpin | null
@@ -530,6 +533,13 @@ ${contextRules}
   Lead with the finding.`
 }
 
+/** A Football Desk spin's brief carries match context: how the page uses it. */
+const FOOTSHORTS_SPIN_CONTEXT_RULES = [
+  'The match context at the end of this brief is primary data: every scoreline, minute, scorer, stat and table row comes from it verbatim. Never round a score or derive a season claim it does not make.',
+  'Paraphrase the commentary; never present it as someone\'s quoted words. Link each match to its footshorts match page (the URL is in the context).',
+  'Credit "Opta via theanalyst.com match centre" for the stats, insights and commentary, and "football-data.org" for fixtures and tables.',
+]
+
 /** Demote `# ` and `## ` headings so the appended context nests under the brief's own. */
 function demoteHeadings(markdown: string): string {
   return markdown.replace(/^(#{1,5}) /gm, (_m, hashes: string) => `${hashes}# `)
@@ -673,7 +683,7 @@ ${paged ? storyFormatSection(paged, app) : motionSection(app, mapbox)}
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
-${spin ? spinContentSection(meta.desk) : contentSection(app, hasContext)}
+${spin ? spinContentSection(meta.desk, app === 'footshorts' && hasContext ? FOOTSHORTS_SPIN_CONTEXT_RULES : []) : contentSection(app, hasContext)}
 ${spin ? `\n${reelScriptSection()}\n` : ''}
 ## Before you post: check your own work
 

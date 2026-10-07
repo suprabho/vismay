@@ -1,16 +1,25 @@
 /**
- * Types for the three Vizmaya story randomizers (the playbook's Desk, Atlas
- * and Epics), their datasets (./data/*.json) and the spins they produce.
+ * Types for the story randomizers: the three Vizmaya ones (the playbook's
+ * Desk, Atlas and Epics) and the Footshorts one (teams, tournaments and their
+ * news), their datasets (./data/*.json) and the spins they produce.
  *
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'footshorts'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'footshorts']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
+}
+
+/** The site a randomizer's stories are hosted on (an @vismay/html-stories app slug). */
+export type RandomizerApp = 'vizmaya-fyi' | 'footshorts'
+
+/** The randomizers one site's slot machine shows, in tab order. */
+export function randomizersFor(app: RandomizerApp): RandomizerId[] {
+  return RANDOMIZERS.filter((r) => RANDOMIZER_META[r].app === app)
 }
 
 export interface ReelDef {
@@ -18,23 +27,25 @@ export interface ReelDef {
   label: string
   /** Locking this reel also locks these (a sub-industry only makes sense inside its industry). */
   parents?: string[]
-  /** Shown only when an option is on (the Atlas pair reel). Never lockable. */
+  /** Shown only when an option is on (the Atlas pair reel, the Footshorts opponent). Never lockable. */
   option?: 'pair'
 }
 
 export interface RandomizerMeta {
   id: RandomizerId
+  /** The site its stories go to; a spin's brief and publish only work there. */
+  app: RandomizerApp
   name: string
   /** One line under the name: what it covers and its output format. */
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics sequence mode. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics sequence mode, Footshorts head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
    * built from it (decision D4: gated for Atlas and Epics because of the
-   * sensitivity rules, optional for the Desk).
+   * sensitivity rules, optional for the Desk and Footshorts).
    */
   gated: boolean
 }
@@ -42,6 +53,7 @@ export interface RandomizerMeta {
 export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
   desk: {
     id: 'desk',
+    app: 'vizmaya-fyi',
     name: 'Vizmaya Desk',
     hint: 'Industry · editorial',
     format: 'Editorial brief with charts',
@@ -56,6 +68,7 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
   },
   atlas: {
     id: 'atlas',
+    app: 'vizmaya-fyi',
     name: 'Atlas',
     hint: 'Countries · geography',
     format: 'Geography format (route table)',
@@ -72,6 +85,7 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
   },
   epics: {
     id: 'epics',
+    app: 'vizmaya-fyi',
     name: 'Epics',
     hint: 'Epics · geography',
     format: 'Geography format, epic variant',
@@ -83,6 +97,22 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     ],
     option: { key: 'sequence', label: 'Sequence mode (continue the route)' },
     gated: true,
+  },
+  footshorts: {
+    id: 'footshorts',
+    app: 'footshorts',
+    name: 'Football Desk',
+    hint: 'Teams · tournaments · news',
+    format: 'Football explainer with charts',
+    reels: [
+      { key: 'competition', label: 'Tournament' },
+      { key: 'team', label: 'Team', parents: ['competition'] },
+      { key: 'angle', label: 'Angle' },
+      { key: 'fresh', label: 'Freshness' },
+      { key: 'pair', label: 'Opponent', option: 'pair' },
+    ],
+    option: { key: 'pair', label: 'Head-to-head (draw an opponent)' },
+    gated: false,
   },
 }
 
@@ -242,6 +272,105 @@ export interface EpicsDataset {
   lenses: NamedOption[]
 }
 
+/* ---------- Footshorts ---------- */
+
+export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
+
+export interface FootshortsCompetition {
+  /** fixtures.competition_slug, the key the draw and the match tables use. */
+  slug: string
+  name: string
+  kind: FootshortsCompetitionKind
+  /** Country, or Europe / World for the continental and international ones. */
+  country: string
+  /** The league entity's slug(s) in `entities`, for its tagged news (the World Cup has two in the wild). */
+  entity_slugs: string[]
+}
+
+export interface FootshortsFreshness {
+  name: 'Matchday' | 'Running story' | 'Evergreen'
+  /** The news window in days; null for Evergreen. */
+  days: number | null
+  window: string
+}
+
+export interface FootshortsDataset {
+  competitions: FootshortsCompetition[]
+  angles: NamedOption[]
+  freshness: FootshortsFreshness[]
+}
+
+/** A tagged footshorts article, as the news snapshot keeps it. */
+export interface FootshortsHeadline {
+  title: string
+  url: string
+  publisher: string
+  /** ISO date, YYYY-MM-DD. */
+  date: string
+}
+
+/** One fixture a team played or will play, as the spin snapshots it. */
+export interface FootshortsFixtureRef {
+  /** fixtures.id: the brief appends its match context. */
+  id: string
+  competition: string
+  kickoff: string
+  /** football-data.org status: FINISHED, SCHEDULED, TIMED, IN_PLAY, POSTPONED… */
+  status: string
+  homeId: string | null
+  awayId: string | null
+  home: string
+  away: string
+  homeScore: number | null
+  awayScore: number | null
+}
+
+/**
+ * One team in the live news snapshot (spins.ts loadFootshortsNews): its
+ * entity, the competitions it has fixtures in, and its news heat.
+ */
+export interface FootshortsTeamNews {
+  /** entities.id */
+  id: string
+  /** entities.slug */
+  slug: string
+  name: string
+  country: string | null
+  crestUrl: string | null
+  /** Competition slugs (dataset keys) the team has fixtures in, in the window. */
+  competitions: string[]
+  /** 0 to 100, relative to the busiest team in the snapshot. */
+  heat: number
+  /** Distinct stories (cluster leads) tagged with the team in the news window. */
+  articles: number
+  /** Newest first, up to 3. */
+  headlines: FootshortsHeadline[]
+  /** The last finished fixtures (newest first) and the next ones (soonest first), across competitions. */
+  recent: FootshortsFixtureRef[]
+  upcoming: FootshortsFixtureRef[]
+}
+
+export interface FootshortsCompetitionNews {
+  slug: string
+  /** 0 to 100, relative to the busiest competition. */
+  heat: number
+  /** Distinct stories tagged with the competition or any of its teams. */
+  articles: number
+  headlines: FootshortsHeadline[]
+  /** Teams with fixtures in it, in the window. */
+  teams: number
+}
+
+/** The live news the Footshorts draw reads (the Desk's heat, computed from the footshorts feed). */
+export interface FootshortsNews {
+  /** ISO timestamp the snapshot was read. */
+  asOf: string
+  /** The news window heat is counted over, in days. */
+  windowDays: number
+  competitions: FootshortsCompetitionNews[]
+  teams: FootshortsTeamNews[]
+}
+
 /* ---------- Spins ---------- */
 
 export type RuleKind = 'block' | 'warn' | 'good' | 'info'
@@ -285,6 +414,17 @@ export interface EpicsPicks {
   lens: string
 }
 
+export interface FootshortsPicks {
+  competition: string
+  /** entities.slug of the team. */
+  team: string
+  angle: string
+  fresh: FootshortsFreshness['name']
+  freshDrawn: FootshortsFreshness['name']
+  /** entities.slug of the head-to-head opponent. */
+  opponent?: string
+}
+
 /**
  * What the draw saw, frozen into the spin so the brief and the research stub
  * read the same thing later even if the dataset changes.
@@ -323,12 +463,33 @@ export interface EpicsSubject {
   sequence: boolean
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks
+export interface FootshortsSubject {
+  randomizer: 'footshorts'
+  competition: FootshortsCompetition & { heat: number; articles: number }
+  team: FootshortsTeamNews
+  opponent: FootshortsTeamNews | null
+  angle: NamedOption
+  freshness: FootshortsFreshness
+  /** Days since the team's newest tagged story, or null when none is on file. */
+  lastDevelopmentDays: number | null
+  /** When the news snapshot was read, and its window. */
+  newsAsOf: string
+  newsWindowDays: number
+  /**
+   * The fixtures the brief appends match context for: the team's (or the
+   * head-to-head's) recent results and next match, ids from `fixtures`.
+   */
+  fixtureIds: string[]
+}
+
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | FootshortsSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | FootshortsPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
   region?: string
+  /** Footshorts: the competition slug, for the same-tournament-twice rule. */
+  competition?: string
   pair?: boolean
   tradition?: string
   types?: EpicType[]
@@ -340,7 +501,7 @@ export interface DrawResult {
   picks: SpinPicks
   subject: SpinSubject
   reels: Record<string, ReelValue>
-  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic). */
+  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, team). */
   primary: string
   /** The full combination the 90-day block keys on. */
   combo: string
