@@ -13,7 +13,8 @@ const good = `<!doctype html>
 <meta name="vizmaya:theme" content="background:#0a0e14; surface:#111820; text:#e0ddd5; muted:#5a6a70; accent:#D85A30; accent2:#534AB7; teal:#1D9E75">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-</head><body><a href="/">home</a><a href="#sources">sources</a><h1>Ignored</h1></body></html>`
+</head><body><a href="/">home</a><a href="#sources">sources</a><h1>Ignored</h1>
+<figure><img src="https://upload.wikimedia.org/a.jpg" alt="Panels at Bhadla"><figcaption>Photo: A. B. / Wikimedia Commons, CC BY-SA 4.0</figcaption></figure></body></html>`
 
 assert.deepEqual(extractHtmlMeta(good), {
   title: 'India’s solar boom & the grid',
@@ -43,7 +44,20 @@ assert.deepEqual(lintHtml(guarded).warnings, [])
 // Missing head bits warn.
 const bare = lintHtml('<html><body><p>x</p></body></html>')
 assert.equal(bare.errors.length, 0)
-assert.equal(bare.warnings.length, 6)
+assert.equal(bare.warnings.length, 7)
+
+// Media: a photo figure is expected, every <img> needs alt, every photo figure a caption.
+const noPhotos = good.replace(/<figure>[\s\S]*?<\/figure>/, '<figure><svg></svg><figcaption>Chart</figcaption></figure>')
+assert.ok(lintHtml(noPhotos).warnings.some((w) => w.startsWith('No photographs or video')))
+// A figure a script writes counts as media, but its markup isn't checked.
+const scripted = noPhotos.replace('</body>', '<script>el.innerHTML = `<figure><img src="${u}"></figure>`</script></body>')
+assert.deepEqual(lintHtml(scripted).warnings, [])
+const sloppy = good.replace('</body>', '<figure><img src="https://x.org/b.jpg"><img src="https://x.org/c.jpg" alt=""></figure><img src="https://x.org/crest.png" alt=""></body>')
+const sw = lintHtml(sloppy).warnings
+assert.equal(sw.length, 2)
+assert.ok(sw.some((w) => w.startsWith('1 <img> without an alt attribute')))
+assert.ok(sw.some((w) => w.startsWith('1 photo or video figure has no <figcaption>')))
+assert.ok(lintHtml(good.replace('<img src="https://upload.wikimedia.org/a.jpg"', '<video src="https://x.org/v.mp4"')).warnings.length === 0)
 
 // Size cap.
 assert.equal(lintHtml(good.replace('</body>', 'x'.repeat(4 * 1024 * 1024) + '</body>')).errors.length, 1)
