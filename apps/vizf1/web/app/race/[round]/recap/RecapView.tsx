@@ -6,7 +6,8 @@ import { useSchedule } from '@/lib/useSchedule'
 import { useTelemetrySession } from '@/lib/useTelemetrySession'
 import { RecapReplay } from '@/components/recap/RecapReplay'
 import { RecapChapters } from '@/components/recap/RecapChapters'
-import { RECAP_BEATS } from '@/lib/recap/sampleRecap'
+import { SAMPLE_RECAP } from '@/lib/recap/sampleRecap'
+import { useRaceRecap } from '@/lib/recap/useRaceRecap'
 
 /** Scroll events during a programmatic scroll are ignored for this long. */
 const SCROLL_LOCK_MS = 900
@@ -16,12 +17,14 @@ const SCROLL_LOCK_MS = 900
  * in a rail on the right (below on phones). Scrolling the rail moves the replay
  * to the chapter being read; the chapter nav and the timeline markers move the
  * rail. "Read as one page" drops the replay for a plain article column.
+ *
+ * The chapters come from the race's telemetry (/api/recap/<sessionKey>); a
+ * race with none ingested shows the sample story, badged as such, over the
+ * demo race.
  */
 export default function RecapView({ round }: { round: number }) {
   const q = useSchedule()
   const race = (q.data ?? []).find((r) => r.round === round)
-  const gpName = race?.raceName ?? 'Grand Prix'
-  const season = race?.season ?? ''
 
   // Same session lookup as the replay page: OpenF1 and FastF1 number rounds
   // differently, so the real session_key is resolved by GP name (a bare round
@@ -29,7 +32,16 @@ export default function RecapView({ round }: { round: number }) {
   const supabaseSource = process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase'
   const telem = useTelemetrySession(supabaseSource ? (race?.raceName ?? null) : null)
   const resolving = supabaseSource && (q.isLoading || (!!race && telem.isLoading))
-  const sessionRef = resolving ? null : supabaseSource ? (telem.data?.sessionKey ?? 'demo') : String(round)
+  const sessionKey = supabaseSource ? (telem.data?.sessionKey ?? null) : null
+  const recapQ = useRaceRecap(sessionKey)
+  const loading = resolving || (!!sessionKey && recapQ.isLoading)
+  const recap = recapQ.data ?? SAMPLE_RECAP
+  // The replay plays the recap's own race; the sample story plays the demo
+  // race (or, with the Supabase source off, whatever the round's fixture is).
+  const sessionRef = loading ? null : !recap.sample ? recap.sessionKey : supabaseSource ? 'demo' : String(round)
+  const chapters = recap.chapters
+  const gpName = race?.raceName ?? (recap.sample ? 'Grand Prix' : recap.gpName)
+  const season = race?.season ?? (recap.sample ? '' : (recap.season ?? ''))
 
   const [beat, setBeat] = useState(0)
   const [onePage, setOnePage] = useState(false)
@@ -40,6 +52,12 @@ export default function RecapView({ round }: { round: number }) {
   useEffect(() => {
     beatRef.current = beat
   }, [beat])
+
+  // A different story (the race's recap replacing the sample) starts at the top.
+  useEffect(() => {
+    setBeat(0)
+    railRef.current?.scrollTo({ top: 0 })
+  }, [recap])
 
   const goTo = useCallback((i: number) => {
     const rail = railRef.current
@@ -87,7 +105,7 @@ export default function RecapView({ round }: { round: number }) {
   }
 
   const beatNum = String(beat + 1).padStart(2, '0')
-  const total = String(RECAP_BEATS.length).padStart(2, '0')
+  const total = String(chapters.length).padStart(2, '0')
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-bg text-text">
@@ -102,7 +120,7 @@ export default function RecapView({ round }: { round: number }) {
 
         <div className="flex min-w-0 flex-1 flex-col gap-px lg:flex-none">
           <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-muted lg:text-[10px]">
-            Race recap<span className="lg:hidden"> · sample data</span>
+            Race recap{recap.sample ? <span className="lg:hidden"> · sample data</span> : null}
           </span>
           <Link
             href={`/race/${round}`}
@@ -114,7 +132,7 @@ export default function RecapView({ round }: { round: number }) {
         </div>
 
         <nav aria-label="Chapters" className={`hidden flex-1 justify-center gap-1 ${onePage ? '' : 'lg:flex'}`}>
-          {RECAP_BEATS.map((b, i) => {
+          {chapters.map((b, i) => {
             const on = i === beat
             return (
               <button
@@ -135,9 +153,11 @@ export default function RecapView({ round }: { round: number }) {
         {onePage ? <div className="hidden flex-1 lg:block" /> : null}
 
         <div className="flex flex-none items-center gap-3">
-          <span className="hidden rounded border border-dashed border-[#3a4154] px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-muted lg:inline">
-            SAMPLE DATA
-          </span>
+          {recap.sample && !loading ? (
+            <span className="hidden rounded border border-dashed border-[#3a4154] px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-muted lg:inline">
+              SAMPLE DATA
+            </span>
+          ) : null}
           <button
             type="button"
             onClick={toggleOnePage}
@@ -160,7 +180,14 @@ export default function RecapView({ round }: { round: number }) {
       {/* ===== Stage ===== */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {onePage ? null : (
-          <RecapReplay sessionRef={sessionRef} beat={beat} onPickBeat={goTo} />
+          <RecapReplay
+            sessionRef={sessionRef}
+            recapSessionKey={recap.sample ? null : recap.sessionKey}
+            chapters={chapters}
+            storyLaps={recap.totalLaps}
+            beat={beat}
+            onPickBeat={goTo}
+          />
         )}
 
         <div
@@ -171,13 +198,20 @@ export default function RecapView({ round }: { round: number }) {
           }`}
         >
           <div className={onePage ? 'mx-auto max-w-[720px] pb-16' : ''}>
-            <RecapChapters
-              beat={beat}
-              story={!onePage}
-              round={round}
-              onShare={share}
-              shared={shared}
-            />
+            {loading ? (
+              <div className="flex h-64 items-center justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              </div>
+            ) : (
+              <RecapChapters
+                recap={recap}
+                beat={beat}
+                story={!onePage}
+                round={round}
+                onShare={share}
+                shared={shared}
+              />
+            )}
           </div>
           {onePage ? null : <div className="h-[120px] lg:h-[220px]" />}
         </div>

@@ -10,7 +10,7 @@ import {
   useReplayData,
   type CarPositionTrack,
 } from '@vismay/f1-viz/web/replay'
-import { RECAP_BEATS, TOTAL_LAPS } from '@/lib/recap/sampleRecap'
+import type { RecapChapter } from '@/lib/recap/types'
 
 // three.js only loads with the replay, never on the server. Cars use the
 // default livery-free model, painted in team colours.
@@ -30,6 +30,11 @@ const UI_TICK_MS = 100
 interface RecapReplayProps {
   /** Session to replay (a session_key, else the round); null while it resolves. */
   sessionRef: string | null
+  /** The session the chapters were built from; null for the sample story. */
+  recapSessionKey: string | null
+  chapters: RecapChapter[]
+  /** The story's race length; chapter laps scale to a replay of another length. */
+  storyLaps: number
   beat: number
   onPickBeat: (i: number) => void
 }
@@ -37,11 +42,11 @@ interface RecapReplayProps {
 /**
  * The recap's replay: the 3D telemetry view (broadcast cameras, true-scale
  * cars) playing the race's position data. Each chapter seeks the race to its
- * lap, opens on its camera and follows its driver; the reader can still switch
- * camera, orbit, pause and scrub. Sessions with no ingested positions play the
- * demo fixture.
+ * moment (the exact second of a pass, else the start of its lap), opens on its
+ * camera and follows its driver; the reader can still switch camera, orbit,
+ * pause and scrub. Sessions with no ingested positions play the demo fixture.
  */
-export function RecapReplay({ sessionRef, beat, onPickBeat }: RecapReplayProps) {
+export function RecapReplay({ sessionRef, recapSessionKey, chapters, storyLaps, beat, onPickBeat }: RecapReplayProps) {
   const source = useMemo(
     () =>
       createFixtureDataSource(
@@ -55,24 +60,35 @@ export function RecapReplay({ sessionRef, beat, onPickBeat }: RecapReplayProps) 
   const drivers = useMemo(() => race.session?.drivers ?? [], [race.session])
   const visibleDrivers = useMemo(() => new Set(race.tracks.keys()), [race.tracks])
 
-  const b = RECAP_BEATS[beat]
-  const focusedDriver = useMemo(() => {
-    const code = b.focus[0]
-    return drivers.find((d) => d.abbreviation === code)?.driverNumber ?? null
-  }, [b, drivers])
+  const cue = (chapters[beat] ?? chapters[0]).replay
+  const focusedDriver = useMemo(
+    () => (cue.focus ? (drivers.find((d) => d.abbreviation === cue.focus)?.driverNumber ?? null) : null),
+    [cue, drivers],
+  )
 
   // The car whose laps define "lap N" on the timeline.
   const anchor = useMemo<CarPositionTrack | null>(() => race.tracks.values().next().value ?? null, [race.tracks])
 
-  // Each chapter's lap, scaled from the story's 57-lap race to this session.
+  // Where each chapter starts on the race clock. On the recap's own race: its
+  // exact moment, else its lap. On another race (the sample story over the
+  // demo): its lap, scaled to that race's length.
+  const sameRace = !!recapSessionKey && race.session?.sessionKey === recapSessionKey
   const chapterStarts = useMemo(() => {
-    if (!race.bounds || !anchor) return null
+    const bounds = race.bounds
+    if (!bounds || !anchor) return null
     const laps = Math.max(1, race.totalLaps)
-    return RECAP_BEATS.map((x) => {
-      const lap = x.lap <= 1 ? 1 : x.lap >= TOTAL_LAPS ? laps : Math.min(laps, Math.max(1, Math.round((x.lap / TOTAL_LAPS) * laps)))
-      return lap <= 1 ? race.bounds!.t0Ms : timeAtLapStart(anchor, lap) ?? race.bounds!.t0Ms
+    return chapters.map(({ replay: c }) => {
+      if (sameRace && c.atMs != null) return Math.min(bounds.tEndMs, Math.max(bounds.t0Ms, c.atMs))
+      const lap = sameRace
+        ? Math.min(laps, c.lap)
+        : c.lap <= 1
+          ? 1
+          : c.lap >= storyLaps
+            ? laps
+            : Math.min(laps, Math.max(1, Math.round((c.lap / storyLaps) * laps)))
+      return lap <= 1 ? bounds.t0Ms : (timeAtLapStart(anchor, lap) ?? bounds.t0Ms)
     })
-  }, [race.bounds, race.totalLaps, anchor])
+  }, [race.bounds, race.totalLaps, anchor, chapters, sameRace, storyLaps])
 
   const clock = useRaceClock(race.bounds)
 
@@ -116,7 +132,7 @@ export function RecapReplay({ sessionRef, beat, onPickBeat }: RecapReplayProps) 
         sectorBests={race.sectorBests}
         currentLap={currentLap}
         currentTimeRef={clock.timeRef}
-        cameraMode={b.cam}
+        cameraMode={cue.cam}
         interactive
       />
     )
@@ -157,10 +173,10 @@ export function RecapReplay({ sessionRef, beat, onPickBeat }: RecapReplayProps) 
           </div>
           {chapterStarts?.map((t, i) => (
             <button
-              key={RECAP_BEATS[i].label}
+              key={i}
               type="button"
               onClick={() => (i === beat ? (seek(t), play()) : onPickBeat(i))}
-              aria-label={`Jump to chapter ${i + 1}: ${RECAP_BEATS[i].label}`}
+              aria-label={`Jump to chapter ${i + 1}: ${chapters[i]?.label}`}
               className="absolute top-0 -ml-3.5 flex size-7 cursor-pointer items-center justify-center"
               style={{ left: `${pct(t)}%` }}
             >
