@@ -68,13 +68,13 @@ assert.ok(/<\/footshorts-footer><\/BODY><\/html>$/.test(fsOut))
 assert.ok(!fsOut.includes('vizmaya-header') && !fsOut.includes('rive'))
 assert.ok(fsOut.includes('href="https://footshorts.com/feed"'))
 assert.ok(fsOut.includes('href="https://footshorts.com/about-us"'))
-// The classic-theme mark colour when the page declares no palette…
-assert.ok(fsOut.includes('fill="#F26A3C"'))
+// The app's own logo icon (apps/footshorts/web/public/brand/logo-icon.svg)…
+assert.ok(fsOut.includes('fill="#F5845E"') && fsOut.includes('fill="#C2410C"'))
 assert.ok(!fsOut.includes('footshorts.com//'))
-// …and the page's accent when it does.
+// …in its own colours even when the page declares a palette.
 const fsThemedDoc = `<!doctype html><html><head><meta name="vizmaya:theme" content="background:#FAF7F2; surface:#FFFFFF; text:#1B1A17; muted:#6B675E; accent:#C2410C; accent2:#1B1A17; teal:#2F855A"></head><body><p>x</p></body></html>`
 const fsThemed = brandHtmlStory(fsThemedDoc, { siteUrl: 'https://footshorts.com', app: 'footshorts', aura: 'some-scene' })
-assert.ok(fsThemed.includes('fill="#C2410C"'))
+assert.ok(fsThemed.includes('fill="#F5845E"'))
 assert.ok(fsThemed.includes('--bg:#FAF7F2'))
 assert.ok(fsThemed.includes('<vizmaya-aura'))
 assert.ok(fsThemed.indexOf('<vizmaya-aura') < fsThemed.indexOf('<footshorts-header>'))
