@@ -11,7 +11,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { X } from '@phosphor-icons/react'
 import { AuthWidget, createSupabaseAuthClient } from '@vismay/ui'
 import { ChequeredFlagMark } from '@vizf1/brand/logos'
@@ -47,6 +47,16 @@ const AuthModalContext = createContext<AuthModalContextValue | null>(null)
  * visitor to /login or failing a write with "Not signed in".
  */
 export function AuthModalProvider({ children }: { children: ReactNode }) {
+  // /embed/* pages (framed in sandboxed stories) have no account features and
+  // can't use the auth client: see AuthProvider.
+  const pathname = usePathname()
+  if (pathname?.startsWith('/embed/')) return <AuthModalContext.Provider value={NO_MODAL}>{children}</AuthModalContext.Provider>
+  return <LiveAuthModalProvider>{children}</LiveAuthModalProvider>
+}
+
+const NO_MODAL: AuthModalContextValue = { requireAuth: () => {} }
+
+function LiveAuthModalProvider({ children }: { children: ReactNode }) {
   const { session, profile } = useAuth()
   const router = useRouter()
   const [requested, setRequested] = useState(false)
