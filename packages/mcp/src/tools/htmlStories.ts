@@ -1,5 +1,6 @@
 /**
- * Tools: `get_html_story_brief` and `publish_html_story`.
+ * Tools: `get_html_story_brief`, `publish_html_story`, and the story's media:
+ * `save_story_image` and `generate_story_image`.
  *
  * The agent-authored HTML story pipeline (packages/html-stories): the agent
  * reads the brief, writes one self-contained HTML page, and publishes it to
@@ -23,6 +24,10 @@
  * default), a book, a pinned board or a deck. The paged formats run on a
  * runtime the site hosts (packages/html-stories/formats), so the brief says
  * how to load it and write pages, board items or slides for it.
+ *
+ * Photos, video and AI illustrations go to the site's assets endpoint
+ * (packages/html-stories/src/assetsApi.ts) under the story's slug, with the
+ * same publish token, so the page links to files on our own storage.
  */
 
 import { readFile } from 'node:fs/promises'
@@ -183,5 +188,86 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         content: [{ type: 'text', text: res.ok ? body : `Publish failed (HTTP ${res.status}): ${body}` }],
       }
     },
+  )
+  const slugSchema = z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'lowercase words joined by single hyphens')
+    .max(80)
+    .describe('The slug the story is (or will be) posted under; its images are filed with it.')
+
+  /** POST to the site's assets endpoint (packages/html-stories/src/assetsApi.ts). */
+  async function postAsset(app: 'vizmaya-fyi' | 'footshorts', query: Record<string, string | undefined>, init: RequestInit) {
+    const { token } = requireHtmlStoriesEnv(app)
+    const url = new URL(`${htmlStoriesUrlFor(config, app)}/api/html-stories/assets`)
+    for (const [k, v] of Object.entries(query)) if (v) url.searchParams.set(k, v)
+    const res = await fetch(url, { ...init, method: 'POST', headers: { authorization: `Bearer ${token}`, ...init.headers } })
+    const body = await res.text()
+    return {
+      isError: !res.ok,
+      content: [{ type: 'text' as const, text: res.ok ? body : `Saving the image failed (HTTP ${res.status}): ${body}` }],
+    }
+  }
+
+  server.registerTool(
+    'save_story_image',
+    {
+      title: 'Save a photo or video for an HTML story',
+      description:
+        'Host an openly licensed photo or short mp4 for an HTML story on the site\'s own storage, so the page ' +
+        'never depends on the source keeping it. Pass `fromUrl` (the direct https file URL, e.g. a Wikimedia ' +
+        'Commons upload.wikimedia.org thumbnail or an Openverse result\'s url) or a local `filePath`, plus its ' +
+        '`credit` and `license` (CC0, PDM, CC BY or CC BY-SA only). Returns a permanent https `url` to use in ' +
+        'the page; the same file saved twice returns the same url. Credit it in the figure\'s figcaption too.',
+      inputSchema: {
+        app: appSchema,
+        slug: slugSchema,
+        fromUrl: z.string().url().optional().describe('Direct https URL of the image or mp4 file (not its web page).'),
+        filePath: z.string().optional().describe('Absolute path to a local image or mp4 (instead of fromUrl).'),
+        credit: z.string().max(500).optional().describe('Author and source, e.g. "Jane Doe / Wikimedia Commons".'),
+        license: z.string().max(100).optional().describe('e.g. "CC BY-SA 4.0", "CC0", "Public domain".'),
+        sourcePage: z.string().url().optional().describe('The file\'s page (Commons file page, Flickr page) for the credit link.'),
+        filename: z.string().max(80).optional().describe('A readable name; a content hash is appended.'),
+      },
+    },
+    async ({ app, slug, fromUrl, filePath, credit, license, sourcePage, filename }) => {
+      if (!fromUrl === !filePath) throw new Error('Pass exactly one of fromUrl or filePath.')
+      if (fromUrl) {
+        return postAsset(app, { slug }, {
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ fromUrl, credit, license, sourcePage, filename }),
+        })
+      }
+      const ext = filePath!.split('.').pop()?.toLowerCase() ?? ''
+      const type = ext === 'mp4' ? 'video/mp4' : `image/${ext === 'jpg' ? 'jpeg' : ext || 'jpeg'}`
+      return postAsset(
+        app,
+        { slug, credit, license, sourcePage, filename: filename ?? filePath!.split('/').pop() },
+        { headers: { 'content-type': type }, body: await readFile(filePath!) },
+      )
+    },
+  )
+
+  server.registerTool(
+    'generate_story_image',
+    {
+      title: 'Generate an AI illustration for an HTML story',
+      description:
+        'Generate an illustration through the Vismay AI gateway and host it with the story. For ideas, moods ' +
+        'and section openers only, when no real photo fits: never a photorealistic real person, event or ' +
+        'document. Write the prompt in the story\'s palette and one consistent style across the story. Returns ' +
+        'a permanent https `url`; caption it "Illustration: AI-generated". Costs credits on each call.',
+      inputSchema: {
+        app: appSchema,
+        slug: slugSchema,
+        prompt: z.string().min(1).max(4000).describe('What to draw, in what style and palette.'),
+        aspectRatio: z.enum(['16:9', '1:1', '9:16', '4:3', '3:4']).default('16:9'),
+        filename: z.string().max(80).optional().describe('A readable name; a content hash is appended.'),
+      },
+    },
+    async ({ app, slug, prompt, aspectRatio, filename }) =>
+      postAsset(app, { slug }, {
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ generate: { prompt, aspectRatio }, filename }),
+      }),
   )
 }
