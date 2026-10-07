@@ -82,7 +82,8 @@ from beside itself and waits for it.
 The site's header is injected above the page and its footer below it
 (`src/branding.ts`), and branding sets the header's height as
 `--vizmaya-chrome-h` (65px, 57px under 480px on vizmaya; 61px and 53px on
-footshorts: the bars' height plus their 1px border). The stage fills the rest:
+footshorts: the bars' height plus their 1px border; 0px when the page is
+served without chrome, `/s/<slug>?embed=1`). The stage fills the rest:
 `height: calc(100svh - var(--vizmaya-chrome-h))`, so header plus stage fill
 the screen exactly and the footer is one scroll away.
 
