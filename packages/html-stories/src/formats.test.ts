@@ -72,5 +72,6 @@ assert.equal(parseHtmlStoryFormat(undefined), 'scroll')
 assert.equal(parseHtmlStoryFormat(' Deck '), 'deck')
 assert.equal(parseHtmlStoryFormat('slides'), null)
 assert.equal(suggestedFormatFor('epics'), 'book')
+assert.equal(suggestedFormatFor('footshorts'), 'deck')
 
 console.log('formats: ok')

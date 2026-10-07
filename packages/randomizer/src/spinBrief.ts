@@ -9,8 +9,16 @@
  * playbook bans them in everything generated.
  */
 
-import { researchFileName, researchStub } from './stub'
-import { RANDOMIZER_META, type AtlasSubject, type DeskSubject, type EpicsSubject, type SpinRecord } from './types'
+import { fixtureSummary, footshortsAngleMetrics, researchFileName, researchStub } from './stub'
+import {
+  RANDOMIZER_META,
+  type AtlasSubject,
+  type DeskSubject,
+  type EpicsSubject,
+  type FootshortsFixtureRef,
+  type FootshortsSubject,
+  type SpinRecord,
+} from './types'
 
 export type BriefSpin = Pick<
   SpinRecord,
@@ -112,11 +120,60 @@ function epicsAssignment(s: EpicsSubject): string[] {
   return out
 }
 
+function footshortsAssignment(s: FootshortsSubject): string[] {
+  const subject = s.opponent ? `${s.team.name} and ${s.opponent.name}` : s.team.name
+  const window = s.freshness.days === null ? '' : ` inside the ${s.freshness.window}`
+  const out = [
+    `- Tournament: ${s.competition.name} (${s.competition.country}; news heat ${s.competition.heat})`,
+    `- Team: ${s.team.name}${s.team.country ? ` (${s.team.country})` : ''}. News heat ${s.team.heat}: ${s.team.articles} ${s.team.articles === 1 ? 'story' : 'stories'} tagged on footshorts in the ${s.newsWindowDays} days to ${s.newsAsOf.slice(0, 10)}.`,
+  ]
+  if (s.opponent) {
+    out.push(`- Head-to-head: ${s.opponent.name}${s.opponent.country ? ` (${s.opponent.country})` : ''}. The story is the matchup: what separates them, and what happens when they meet.`)
+  }
+  out.push(
+    `- Angle: ${s.angle.name}. ${s.angle.description}`,
+    `- Freshness: ${s.freshness.name} (${s.freshness.window})`,
+    '',
+    '### Do this first',
+    '',
+    `1. Why Now. Find the three most recent developments for ${subject}${window}, each dated and sourced. Start from the footshorts headlines below, then the clubs' and the competition's own channels.`,
+    `2. Apply the ${s.angle.name} angle to the newest development, not to a general description of the club.`,
+    '3. If nothing happened in that window, move to the next one (Matchday, then Running story, then Evergreen) and say so at the top of the research file.',
+    '4. Read the match context at the end of this brief before anything else: it is the match record (scores, timelines, stats, the table, the next fixtures) the page is built on.',
+  )
+  const headlines = [...s.team.headlines, ...(s.opponent?.headlines ?? [])].slice(0, 5)
+  if (headlines.length) {
+    out.push('', 'Latest tagged headlines on footshorts (check they are still the newest):')
+    for (const h of headlines) out.push(`- ${h.date}: [${h.title}](${h.url}) (${h.publisher})`)
+  }
+  const fixtures = new Map(
+    [...s.team.recent, ...s.team.upcoming, ...(s.opponent ? [...s.opponent.recent, ...s.opponent.upcoming] : [])].map((f) => [f.id, f]),
+  )
+  const attached = s.fixtureIds.map((id) => fixtures.get(id)).filter((f): f is FootshortsFixtureRef => !!f)
+  if (attached.length) {
+    out.push('', 'Fixtures in the match context:')
+    for (const f of attached) out.push(`- ${fixtureSummary(f)}`)
+  }
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${footshortsAngleMetrics(s.angle.name).join(', ')}.`,
+    'Start from: the match context (Opta via theanalyst.com, football-data.org), the clubs and the competition, club accounts for money.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
   const s = spin.subject
-  const body = s.randomizer === 'desk' ? deskAssignment(s) : s.randomizer === 'atlas' ? atlasAssignment(s) : epicsAssignment(s)
+  const body =
+    s.randomizer === 'desk'
+      ? deskAssignment(s)
+      : s.randomizer === 'atlas'
+        ? atlasAssignment(s)
+        : s.randomizer === 'footshorts'
+          ? footshortsAssignment(s)
+          : epicsAssignment(s)
   const ready = insightReady(spin)
   const lead = ready
     ? [
@@ -146,7 +203,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
       ? '\n8. Give every place a status: Verified (archaeology or documentary evidence), Claimed (promoted by a community, state or tourism body without strong outside evidence), Symbolic (not meant as literal geography), or Lost (once identified, now unlocatable).'
       : spin.randomizer === 'atlas'
         ? '\n8. Give every place a status: Documented, Contested or Inferred.'
-        : ''
+        : spin.randomizer === 'footshorts'
+          ? '\n8. Transfer talk, injury timelines and dressing-room stories are Unverified until the club, the league or the player confirms them, or two independent outlets with named sourcing report them. A rumour never goes on the page as fact.'
+          : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -172,7 +231,7 @@ export function deliverablesSection(spin: BriefSpin, siteUrl: string): string {
     ? ready
       ? 'The hero insight is approved, so the page can go public.'
       : `A human approves the hero insight for ${RANDOMIZER_META[spin.randomizer].name} spins before anything goes public. Save the research file, then post the page as a draft; it can be published once the insight is approved in admin.`
-    : 'The Desk has no approval gate: once the hero insight is in the research file you can publish.'
+    : `${RANDOMIZER_META[spin.randomizer].name} spins have no approval gate: once the hero insight is in the research file you can publish.`
   return `## Deliverables
 
 Make them in this order. Nothing public is written before the hero insight.
@@ -198,6 +257,24 @@ Structure it like a financial planner's report: skimmable, numbers first. These 
 7. **Lens read:** 150 words at most, applying the lens.
 8. **Risks and counter-case.**
 9. **What to watch next:** dated events or thresholds.
+10. **Sources and claims log summary.**`
+}
+
+function footshortsFormat(s: FootshortsSubject): string {
+  const subject = s.opponent ? `${s.team.name} and ${s.opponent.name}` : s.team.name
+  return `## Format: football explainer with charts
+
+Built like a good analysis piece: numbers first, skimmable, one argument. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the claim) and **dek** (one line, why it matters this week).
+2. **Key numbers strip:** 3 to 4 headline stats for ${subject}, each with its period and source.
+3. **Chart 1, the record:** results or the core metric over the recent matches (from the match context).
+4. **Chart 2, the comparison:** ${s.opponent ? `${s.team.name} against ${s.opponent.name}` : `${s.team.name} against the rest of the ${s.competition.name}`} on the metric that matters for the angle.
+5. **Chart 3, the turning point:** the match, minute or number where the story changes (annotated).
+6. **What happened this week:** the Why Now items in three short lines.
+7. **Angle read:** 150 words at most, applying the ${s.angle.name} angle.
+8. **Counter-case:** the strongest argument against the thesis.
+9. **What to watch next:** the next fixtures with dates, and the threshold that would prove the thesis wrong.
 10. **Sources and claims log summary.**`
 }
 
@@ -241,6 +318,7 @@ ${meaning}
 /** "## Format: …": the randomizer's output format, as required content. */
 export function formatSection(spin: BriefSpin): string {
   const s = spin.subject
+  if (s.randomizer === 'footshorts') return footshortsFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -252,6 +330,12 @@ export function chartRules(spin: BriefSpin): string[] {
       'Use the same palette for every chart on the page, in the same roles, so the series reads as one.',
     ]
   }
+  if (spin.randomizer === 'footshorts') {
+    return [
+      'Football series rules: one message per chart, the title states the takeaway, the competition and season on every chart, source in the footer.',
+      'Match numbers come from the match context verbatim. Give each club its own colour consistently (use its crest colour when it reads on the background), and grey for the rest of the league.',
+    ]
+  }
   return [
     'Render the route as a map with D3-geo: the places from your route table as ordered points, joined by the path type you chose.',
     spin.randomizer === 'epics'
@@ -260,8 +344,11 @@ export function chartRules(spin: BriefSpin): string[] {
   ]
 }
 
-/** The Content section, replacing the generic one: the claims log raises the bar. */
-export function contentSection(desk: string): string {
+/**
+ * The Content section, replacing the generic one: the claims log raises the
+ * bar. `extra` adds site rules (footshorts: how to use the match context).
+ */
+export function contentSection(desk: string, extra: string[] = []): string {
   return `## Content
 
 - Every claim on the page traces to a Verified row in your claims log. Unverified claims stay off the page.
@@ -269,7 +356,7 @@ export function contentSection(desk: string): string {
 - Keep fact, interpretation and speculation distinguishable on the page.
 - End with a "Sources and claims log" section: the sources as links, and the claims log summarised (how many claims, how many verified, what stayed contested, what you could not find).
 - Byline "${desk}" plus the date.
-- Write plainly. No hype. Lead with the finding. No em dashes anywhere in the page.`
+- Write plainly. No hype. Lead with the finding. No em dashes anywhere in the page.${extra.map((l) => `\n- ${l}`).join('')}`
 }
 
 /** "## Reel script": playbook 0.4. */
@@ -290,9 +377,10 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
+    ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
     'Contested claims are labelled and both sides stated fairly.',
     'The first 3 seconds of the script open on the surprising claim.',
     'No em dashes. No unverified claims on the page or in the script.',
@@ -302,7 +390,9 @@ export function checklistSection(spin: BriefSpin): string {
 
 /** Extra lines for the Posting section: tie the page to the spin. */
 export function postingLines(spin: BriefSpin): string {
-  return `Tie the page to this spin so the log knows what shipped: pass \`spinId: "${spin.id}"\` to \`publish_html_story\`, or add \`&spin=${spin.id}\` to the HTTP publish URL.${
+  const app = RANDOMIZER_META[spin.randomizer].app
+  const appArg = app === 'vizmaya-fyi' ? '' : ` with \`app: "${app}"\``
+  return `Tie the page to this spin so the log knows what shipped: pass \`spinId: "${spin.id}"\` to \`publish_html_story\`${appArg}, or add \`&spin=${spin.id}\` to the HTTP publish URL.${
     RANDOMIZER_META[spin.randomizer].gated && !insightReady(spin)
       ? ' Until the hero insight is approved, a publish request for this spin saves a draft.'
       : ''

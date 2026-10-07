@@ -22,9 +22,19 @@
  *   3.2  Epics: at least one in three spins philosophical or foundational;
  *        never the same tradition twice in a row. Sequence mode walks on from
  *        the previous spin's place.
+ *
+ * Footshorts (the Football Desk) follows the Desk's rules on a football
+ * shape: tournament first, then a team inside it, both weighted by news heat
+ * in the 60% branch. Heat is not a seed an agent refreshes but the live
+ * footshorts feed (articles tagged with each team in the news window, see
+ * spins.ts loadFootshortsNews), so it is never stale. Only tournaments with
+ * teams that have fixtures in the window are in the draw; the same
+ * tournament twice in a row is re-drawn once; no news inside the drawn
+ * window shifts Matchday to Running story to Evergreen; the head-to-head
+ * option prefers an opponent the team meets in the window.
  */
 
-import { ATLAS, DESK, EPICS, epicRoute, isPhilosophical } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, epicRoute, isPhilosophical } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
 import {
   GEO_STATUS_TEXT,
@@ -41,6 +51,13 @@ import {
   type Epic,
   type EpicsDataset,
   type EpicsPicks,
+  type FootshortsCompetition,
+  type FootshortsDataset,
+  type FootshortsFixtureRef,
+  type FootshortsFreshness,
+  type FootshortsNews,
+  type FootshortsPicks,
+  type FootshortsTeamNews,
   type RandomizerId,
   type RuleFired,
   type SpinHistoryEntry,
@@ -61,6 +78,13 @@ export const DRAW_RULES = {
   comboBlockDays: 90,
   heatStaleDays: 7,
   pairEveryDays: 7,
+  /**
+   * Footshorts: added to every tournament's heat in the weighted branch, so a
+   * quiet (or off-season) tournament keeps a small chance.
+   */
+  competitionHeatFloor: 5,
+  /** Footshorts: at most this many fixtures' match context in a spin's brief. */
+  maxSpinFixtures: 8,
 } as const
 
 const DAY = 864e5
@@ -74,14 +98,16 @@ export interface DrawInput {
   /** The spin the locks refer to (the one on screen when Spin was pressed). */
   prev?: { picks: SpinPicks } | null
   locks?: string[]
-  /** Atlas: draw a second country. */
+  /** Atlas: draw a second country. Footshorts: draw a head-to-head opponent. */
   pair?: boolean
   /** Epics: continue from the previous spin's place. */
   sequence?: boolean
   /** Desk: live heat from desk_heat, overriding the dataset's seed values. */
   heat?: DeskHeatRow[]
+  /** Footshorts: the live news snapshot (teams with fixtures, their heat and headlines). Required. */
+  news?: FootshortsNews | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; footshorts?: FootshortsDataset }
 }
 
 /**
@@ -143,6 +169,9 @@ export function draw(input: DrawInput): DrawResult {
 
   if (input.randomizer === 'desk') return drawDesk(ctx, input.datasets?.desk ?? DESK, prev?.picks as DeskPicks | undefined, input.heat ?? [])
   if (input.randomizer === 'atlas') return drawAtlas(ctx, input.datasets?.atlas ?? ATLAS, prev?.picks as AtlasPicks | undefined, !!input.pair)
+  if (input.randomizer === 'footshorts') {
+    return drawFootshorts(ctx, input.datasets?.footshorts ?? FOOTSHORTS, prev?.picks as FootshortsPicks | undefined, input.news ?? null, !!input.pair)
+  }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
 
@@ -525,5 +554,234 @@ function drawEpics(ctx: Ctx, data: EpicsDataset, prev: EpicsPicks | undefined, s
     summary: `${epic.title} · ${place.name}`,
     rules: ctx.rules,
     meta: { tradition: epic.tradition, types: epic.types },
+  }
+}
+
+/* ---------- Footshorts ---------- */
+
+function fixtureLine(f: FootshortsFixtureRef): string {
+  const score = f.homeScore !== null && f.awayScore !== null ? ` ${f.homeScore}-${f.awayScore} ` : ' v '
+  return `${f.home}${score}${f.away} (${f.kickoff.slice(0, 10)})`
+}
+
+function drawFootshorts(
+  ctx: Ctx,
+  data: FootshortsDataset,
+  prev: FootshortsPicks | undefined,
+  news: FootshortsNews | null,
+  pair: boolean,
+): DrawResult {
+  const { rng } = ctx
+  if (!news?.teams.length) {
+    throw new Error('The Football Desk draws from the footshorts news snapshot, and it has no teams with fixtures. Is the fixtures sync running?')
+  }
+  const compNews = new Map(news.competitions.map((c) => [c.slug, c]))
+  const teamBySlug = new Map(news.teams.map((t) => [t.slug, t]))
+  const teamsIn = (slug: string) => news.teams.filter((t) => t.competitions.includes(slug))
+  const compHeat = (c: FootshortsCompetition) => compNews.get(c.slug)?.heat ?? 0
+  const minTeams = pair ? 2 : 1
+  const live = data.competitions.filter((c) => teamsIn(c.slug).length >= minTeams)
+  if (!live.length) throw new Error(`No tournament has ${minTeams} or more teams with fixtures in the window.`)
+  const idle = data.competitions.filter((c) => !live.includes(c))
+  const last = ctx.kept[ctx.kept.length - 1]
+  // One branch per spin: the tournament and the team are both heat-weighted, or both pure random.
+  const heatBranch = rng() < DRAW_RULES.heatShare
+
+  let competition: FootshortsCompetition
+  const prevComp = prev ? data.competitions.find((c) => c.slug === prev.competition) : undefined
+  if (ctx.locked('competition') && prevComp && live.includes(prevComp)) {
+    competition = prevComp
+    rule(ctx, 'lock', 'info', `Tournament locked to ${competition.name}.`)
+  } else {
+    if (ctx.locked('competition') && prevComp) {
+      rule(ctx, 'lock', 'warn', `${prevComp.name} has no teams with fixtures in the window any more, so its lock is ignored.`)
+    }
+    const drawComp = () =>
+      heatBranch ? weighted(live, (c) => compHeat(c) + DRAW_RULES.competitionHeatFloor, rng) : pick(live, rng)
+    competition = drawComp()
+    if (last?.meta.competition === competition.slug && live.length > 1) {
+      const again = drawComp()
+      rule(
+        ctx,
+        'balance',
+        'warn',
+        again === competition
+          ? `${competition.name} came up twice in a row, so the tournament was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+          : `${competition.name} came up twice in a row, so the tournament was re-drawn once, now ${again.name}.`,
+      )
+      competition = again
+    }
+    if (heatBranch) {
+      const total = live.reduce((a, c) => a + compHeat(c) + DRAW_RULES.competitionHeatFloor, 0)
+      const pct = Math.round(((compHeat(competition) + DRAW_RULES.competitionHeatFloor) / total) * 100)
+      rule(ctx, 'weight', 'good', `Heat-weighted draw (the 60% branch). Tournament first: ${competition.name} had a ${pct}% chance among ${live.length} with fixtures, then a team inside it by its news.`)
+    } else {
+      rule(ctx, 'weight', 'info', `Pure random draw (the 40% branch). Tournament first (${competition.name}, 1 in ${live.length}), then a team inside it, every one equally likely.`)
+    }
+  }
+  if (idle.length) rule(ctx, 'season', 'info', `Out of the draw: ${list(idle.map((c) => c.name))}. No teams with fixtures in the window.`)
+
+  const inComp = teamsIn(competition.slug)
+  let team: FootshortsTeamNews
+  const prevTeam = prev ? teamBySlug.get(prev.team) : undefined
+  if (ctx.locked('team') && prevTeam && prevTeam.competitions.includes(competition.slug)) {
+    team = prevTeam
+    rule(ctx, 'lock', 'info', `Team locked to ${team.name}.`)
+  } else {
+    const r30 = recent(ctx, DRAW_RULES.primaryBlockDays, 'primary')
+    const left = inComp.filter((t) => r30.has(t.slug) && t.heat < DRAW_RULES.heatExempt)
+    const exempt = inComp.filter((t) => r30.has(t.slug) && t.heat >= DRAW_RULES.heatExempt)
+    let cands = inComp.filter((t) => !left.includes(t))
+    if (left.length) rule(ctx, '30 days', 'block', `Left out ${list(left.map((t) => t.name))}: spun in the last 30 days.`)
+    if (exempt.length) {
+      rule(ctx, '30 days', 'warn', `${list(exempt.map((t) => t.name))} allowed back in despite a recent spin: news heat ${DRAW_RULES.heatExempt} or above forces it.`)
+    }
+    if (!cands.length) {
+      cands = inComp
+      rule(ctx, '30 days', 'warn', `Every ${competition.name} team was spun in the last 30 days, so the block is lifted for this draw.`)
+    }
+    if (heatBranch) {
+      team = weighted(cands, (t) => t.heat + 1, rng)
+      const total = cands.reduce((a, t) => a + t.heat + 1, 0)
+      rule(ctx, 'heat', 'good', `${team.name} had a ${Math.round(((team.heat + 1) / total) * 100)}% chance among ${cands.length} eligible ${competition.name} teams.`)
+    } else {
+      team = pick(cands, rng)
+    }
+  }
+
+  const angleByName = (name: string) => data.angles.find((a) => a.name === name)
+  const freshByName = (name: string) => data.freshness.find((f) => f.name === name)
+  let angle = (ctx.locked('angle') && prev && angleByName(prev.angle)) || pick(data.angles, rng)
+  let freshDrawn = (ctx.locked('fresh') && prev && freshByName(prev.freshDrawn)) || pick(data.freshness, rng)
+
+  // The freshness fallback: no tagged story inside the drawn window shifts it on.
+  const newest = team.headlines.map((h) => Date.parse(h.date)).filter((t) => !Number.isNaN(t)).sort((a, b) => b - a)[0]
+  const lastDev = newest === undefined ? null : Math.max(0, Math.floor((ctx.now - newest) / DAY))
+  // Nothing in the snapshot means nothing in its window; past that, the agent's search decides.
+  const quietFor = lastDev ?? news.windowDays + 1
+  const resolve = (drawn: FootshortsFreshness): FootshortsFreshness => {
+    let i = data.freshness.indexOf(drawn)
+    while (i < data.freshness.length - 1 && data.freshness[i]!.days !== null && quietFor > data.freshness[i]!.days!) i++
+    return data.freshness[i]!
+  }
+  let fresh = resolve(freshDrawn)
+
+  // Head-to-head: prefer an opponent the team meets (or met) in the window.
+  let opponent: FootshortsTeamNews | null = null
+  if (pair) {
+    const others = inComp.filter((t) => t.slug !== team.slug)
+    const fixtures = [...team.recent, ...team.upcoming].filter((f) => f.competition === competition.slug)
+    const met = new Set(fixtures.flatMap((f) => [f.homeId, f.awayId]).filter((id): id is string => !!id && id !== team.id))
+    const meeting = others.filter((t) => met.has(t.id))
+    if (meeting.length) {
+      opponent = pick(meeting, rng)
+      rule(ctx, 'pair', 'good', `Head-to-head: ${team.name} and ${opponent.name} meet in the window, so the opponent came from their fixtures. The story is the matchup.`)
+    } else if (others.length) {
+      opponent = pick(others, rng)
+      rule(ctx, 'pair', 'info', `Head-to-head: no ${competition.name} meeting for ${team.name} in the window, so ${opponent.name} was drawn from the rest of the tournament. Compare them; don't invent a fixture.`)
+    }
+  }
+
+  // 90-day block on the full combination: re-draw the reels that are free.
+  const combo = () => [competition.slug, team.slug, angle.name, fresh.name, opponent?.slug].filter(Boolean).join('|')
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    let tries = 0
+    while (r90.has(combo()) && tries < 16) {
+      tries++
+      if (!ctx.locked('angle')) angle = pick(data.angles, rng)
+      else if (!ctx.locked('fresh')) {
+        freshDrawn = pick(data.freshness, rng)
+        fresh = resolve(freshDrawn)
+      } else break
+    }
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${team.name} with this angle and freshness ran in the last 90 days, and the reels that could change are locked. It repeats.`
+        : `The first draw repeated ${team.name}'s angle and freshness from the last 90 days. Re-drawn.`,
+    )
+  }
+
+  if (fresh !== freshDrawn) {
+    rule(
+      ctx,
+      'fallback',
+      'warn',
+      lastDev === null
+        ? `No story tagged with ${team.name} in the last ${news.windowDays} days, so nothing in the ${freshDrawn.name} window. Shifted to ${fresh.name}; the research file says so.`
+        : `No development in the ${freshDrawn.name} window (the newest tagged story is ${lastDev} days old). Shifted to ${fresh.name}; the research file says so.`,
+    )
+  }
+  rule(
+    ctx,
+    'news',
+    team.articles ? 'info' : 'warn',
+    team.articles
+      ? `${team.name}: ${team.articles} ${team.articles === 1 ? 'story' : 'stories'} tagged in the last ${news.windowDays} days (heat ${team.heat}), read ${news.asOf.slice(0, 10)}.`
+      : `${team.name} has no tagged stories in the last ${news.windowDays} days. The story starts from the match record and the table, not the news.`,
+  )
+
+  // The match context the brief appends: the meetings first, then recent results and the next match.
+  const h2h = opponent ? [...team.recent, ...team.upcoming].filter((f) => f.homeId === opponent!.id || f.awayId === opponent!.id) : []
+  const contextFixtures = uniq(
+    [...h2h, ...team.recent.slice(0, 3), ...(opponent?.recent.slice(0, 2) ?? []), ...team.upcoming.slice(0, 1)].map((f) => f.id),
+  ).slice(0, DRAW_RULES.maxSpinFixtures)
+  const byId = new Map([...team.recent, ...team.upcoming, ...(opponent ? [...opponent.recent, ...opponent.upcoming] : [])].map((f) => [f.id, f]))
+  rule(
+    ctx,
+    'matches',
+    contextFixtures.length ? 'info' : 'warn',
+    contextFixtures.length
+      ? `The brief carries match context for ${contextFixtures.length} ${contextFixtures.length === 1 ? 'fixture' : 'fixtures'}: ${contextFixtures.map((id) => fixtureLine(byId.get(id)!)).join('; ')}.`
+      : `No fixtures on file for ${team.name} to attach as match context. Cite every number to a source.`,
+  )
+  rule(ctx, 'why now', 'info', `Mandatory next step: pull the three newest developments for ${team.name} and apply the ${angle.name} angle to the newest one.`)
+
+  const cn = compNews.get(competition.slug)
+  const next = team.upcoming[0]
+  const picks: FootshortsPicks = {
+    competition: competition.slug,
+    team: team.slug,
+    angle: angle.name,
+    fresh: fresh.name,
+    freshDrawn: freshDrawn.name,
+    ...(opponent ? { opponent: opponent.slug } : {}),
+  }
+  const reels: DrawResult['reels'] = {
+    competition: { value: competition.name, sub: `heat ${cn?.heat ?? 0} · ${inComp.length} teams` },
+    team: { value: team.name, sub: `heat ${team.heat} · ${team.articles} ${team.articles === 1 ? 'story' : 'stories'} in ${news.windowDays}d` },
+    angle: { value: angle.name },
+    fresh: { value: fresh.name, sub: fresh !== freshDrawn ? `drew ${freshDrawn.name}, shifted` : fresh.window },
+  }
+  if (opponent) {
+    const meeting = h2h[0]
+    reels.pair = { value: opponent.name, sub: meeting ? fixtureLine(meeting) : `heat ${opponent.heat}` }
+  } else if (next) {
+    reels.team.sub = `${reels.team.sub} · next ${next.kickoff.slice(5, 10)}`
+  }
+  return {
+    randomizer: 'footshorts',
+    picks,
+    subject: {
+      randomizer: 'footshorts',
+      competition: { ...competition, heat: cn?.heat ?? 0, articles: cn?.articles ?? 0 },
+      team,
+      opponent,
+      angle,
+      freshness: fresh,
+      lastDevelopmentDays: lastDev,
+      newsAsOf: news.asOf,
+      newsWindowDays: news.windowDays,
+      fixtureIds: contextFixtures,
+    },
+    reels,
+    primary: team.slug,
+    combo: combo(),
+    summary: `${team.name}${opponent ? ` v ${opponent.name}` : ''} · ${angle.name}`,
+    rules: ctx.rules,
+    meta: { competition: competition.slug, heat: team.heat, pair: !!opponent },
   }
 }

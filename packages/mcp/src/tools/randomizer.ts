@@ -1,28 +1,40 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
- * `get_desk_heat` and `refresh_desk_heat`.
+ * `get_desk_heat`, `refresh_desk_heat` and `get_football_news`.
  *
- * The Vizmaya story randomizers (packages/randomizer): Desk (industry,
+ * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
  * editorial format), Atlas (countries and culture, geography format) and
- * Epics (epics place by place, geography format). A spin draws the topic
- * under the playbook's rules and is logged on vizmaya.fyi; the agent then
- * reads the spin's brief (`get_html_story_brief` with `spinId`), researches,
- * saves the research file here, and publishes the page with the same
- * `spinId`. Pure HTTP to the deployed site with the publish token, so the
- * draw always sees the real log.
+ * Epics (epics place by place, geography format); for footshorts, the
+ * Football Desk (a tournament, a team, an angle and a freshness, weighted by
+ * the team's news on footshorts; football explainer with match context). A
+ * spin draws the topic under the playbook's rules and is logged; the agent
+ * then reads the spin's brief (`get_html_story_brief` with `spinId` and the
+ * spin's app), researches, saves the research file here, and publishes the
+ * page with the same `spinId`. Pure HTTP to the deployed site with the
+ * publish token, so the draw always sees the real log (one log for both
+ * sites: a Football Desk spin is created on footshorts.com with the
+ * footshorts token, everything else on vizmaya.fyi).
  */
 
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { RuleFired, SpinRecord } from '@vismay/randomizer/types'
-import { htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
+import { RANDOMIZER_META, type RandomizerApp, type RuleFired, type SpinRecord } from '@vismay/randomizer/types'
+import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
 
 const spinIdSchema = z.string().uuid().describe('A spin id, as spin_randomizer returned it.')
 
-async function call(config: VismayMcpConfig, path: string, init: RequestInit = {}): Promise<any> {
-  const { token } = requireHtmlStoriesEnv('vizmaya-fyi')
-  const res = await fetch(`${htmlStoriesUrlFor(config, 'vizmaya-fyi')}${path}`, {
+/**
+ * Both sites serve every spin from the one log, so a call by spin id goes to
+ * whichever site this server holds a token for (vizmaya first).
+ */
+function anySite(): RandomizerApp {
+  return htmlStoriesToken('vizmaya-fyi') ? 'vizmaya-fyi' : htmlStoriesToken('footshorts') ? 'footshorts' : 'vizmaya-fyi'
+}
+
+async function call(config: VismayMcpConfig, path: string, init: RequestInit = {}, app: RandomizerApp = anySite()): Promise<any> {
+  const { token } = requireHtmlStoriesEnv(app)
+  const res = await fetch(`${htmlStoriesUrlFor(config, app)}${path}`, {
     ...init,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
   })
@@ -59,46 +71,61 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
   server.registerTool(
     'spin_randomizer',
     {
-      title: 'Spin a Vizmaya story randomizer',
+      title: 'Spin a story randomizer',
       description:
-        'Draw a story topic for vizmaya.fyi and log the spin. randomizer: "desk" (industry, sub-industry, lens and ' +
+        'Draw a story topic and log the spin. For vizmaya.fyi, randomizer: "desk" (industry, sub-industry, lens and ' +
         'news freshness, heat weighted; editorial brief with charts), "atlas" (a country, a cultural thread, a time ' +
         'depth, a geography frame and a lens; route table), or "epics" (an epic, an episode, a place and a lens; ' +
-        'route table with geography status). The draw applies the playbook rules: 30 and 90 day repeat blocks, ' +
-        'heat weighting, region and tradition balancing, the philosophical quota. To keep some reels, pass `from` ' +
+        'route table with geography status). For footshorts.com, "footshorts" (the Football Desk: a tournament, a ' +
+        'team in it, an angle and a news freshness, weighted by how much footshorts news each has; football ' +
+        'explainer whose brief carries the match context of the team\'s recent and next fixtures). The draw applies ' +
+        'the playbook rules: 30 and 90 day repeat blocks, heat weighting, region, tradition and tournament ' +
+        'balancing, the philosophical quota. To keep some reels, pass `from` ' +
         '(the spin on screen) and `locks`. To reject a spin and draw again, pass `from`, respin=true and a reason. ' +
-        'Next: get_html_story_brief with spinId, research, save_spin_research, then publish_html_story with spinId.',
+        'Next: get_html_story_brief with spinId (and app "footshorts" for a Football Desk spin), research, ' +
+        'save_spin_research, then publish_html_story with spinId (same app).',
       inputSchema: {
-        randomizer: z.enum(['desk', 'atlas', 'epics']),
+        randomizer: z.enum(['desk', 'atlas', 'epics', 'footshorts']),
         from: spinIdSchema.optional().describe('The spin the locks keep values from, or the one a re-spin rejects.'),
         locks: z
           .array(z.string())
           .optional()
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
-              'lens. epics: epic, episode, place, lens. A child lock implies its parents.',
+              'lens. epics: epic, episode, place, lens. footshorts: competition, team, angle, fresh. A child lock ' +
+              'implies its parents.',
           ),
         respin: z.boolean().default(false).describe('Reject `from` (logged) and draw again.'),
         reason: z
           .string()
           .optional()
           .describe('Why the re-spin: boring, too recent, no data, too sensitive, or other with a few words.'),
-        pair: z.boolean().default(false).describe('atlas only: draw a second country; the story is the relationship. About once a week.'),
+        pair: z
+          .boolean()
+          .default(false)
+          .describe(
+            'atlas: draw a second country; the story is the relationship (about once a week). footshorts: draw a ' +
+              'head-to-head opponent from the same tournament, preferring one the team meets in the window.',
+          ),
         sequence: z.boolean().default(false).describe('epics only: continue the previous spin\'s route to its next place.'),
       },
     },
     async ({ randomizer, from, locks, respin, reason, pair, sequence }) => {
-      const body = await call(config, '/api/randomizer/spins', {
-        method: 'POST',
-        body: JSON.stringify({ randomizer, from, locks, respin, reason, pair, sequence, source: 'mcp' }),
-      })
+      const app = RANDOMIZER_META[randomizer].app
+      const body = await call(
+        config,
+        '/api/randomizer/spins',
+        { method: 'POST', body: JSON.stringify({ randomizer, from, locks, respin, reason, pair, sequence, source: 'mcp' }) },
+        app,
+      )
       const spin = body.spin as SpinRecord
+      const appArg = app === 'vizmaya-fyi' ? '' : ` and app "${app}"`
       return {
         content: [
           {
             type: 'text',
             text:
-              `${describeSpin(spin)}\n\n${body.assignment}\n\nNext: call get_html_story_brief with spinId "${spin.id}" for the full brief (research protocol, format, research stub). Research file: ${body.researchFile}.` +
+              `${describeSpin(spin)}\n\n${body.assignment}\n\nNext: call get_html_story_brief with spinId "${spin.id}"${appArg} for the full brief (research protocol, format, research stub). Research file: ${body.researchFile}.` +
               (body.suggestedFormat
                 ? ` The brief is for a scrolling page; a story like this also suits a ${body.suggestedFormat} (add format: "${body.suggestedFormat}").`
                 : ''),
@@ -205,6 +232,23 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
           },
         ],
       }
+    },
+  )
+
+  server.registerTool(
+    'get_football_news',
+    {
+      title: 'Get the Football Desk news table',
+      description:
+        'The live footshorts news the Football Desk randomizer draws from: every covered tournament with its news ' +
+        'heat (0 to 100) and story count over the last 14 days, and every team with fixtures in the window, with ' +
+        'its tournaments, heat, story count, newest headlines and its recent and next fixtures. Computed from the ' +
+        'footshorts feed on each call, so there is nothing to refresh.',
+      inputSchema: {},
+    },
+    async () => {
+      const body = await call(config, '/api/randomizer/news', {}, htmlStoriesToken('footshorts') ? 'footshorts' : anySite())
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )
 }

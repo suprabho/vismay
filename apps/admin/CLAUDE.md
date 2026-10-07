@@ -178,7 +178,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }` → markdown) for the Copy-brief button.
+  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
   scroll, book, board, deck; also on the Randomizer tab, where it marks the
@@ -197,11 +197,15 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   the standings round by round). The brief is fetched whenever
   style, matches or races change and copied synchronously on click.
 
-## Randomizer tab (/vizmaya/randomizer)
+## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer)
 
-The slot machine for the Vizmaya story randomizers (Desk, Atlas, Epics;
-[packages/randomizer](../../packages/randomizer), migration 088; the pipeline
-is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)).
+The slot machine for the story randomizers
+([packages/randomizer](../../packages/randomizer), migrations 088 and 090;
+the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
+Desk, Atlas and Epics on `/vizmaya/randomizer`, the Football Desk on
+`/footshorts/randomizer`. One client, `RandomizerClient`, takes the `app`
+and shows that site's randomizers (`randomizersFor(app)`), its brief and its
+story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
@@ -211,8 +215,18 @@ is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)).
   with a note, paste research), the composed brief's assignment with Copy agent
   brief and Copy research stub, and the Desk heat table (stale and failed
   refreshes shown).
+- **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
+  (footshorts only, other apps 404): the same client with `app="footshorts"`,
+  one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel
+  when Head-to-head is on) and the **Football news heat** panel in place of
+  the Desk heat table: tournament chips (struck through when they have no
+  fixtures in the window, so they are out of the draw) and teams by heat with
+  story count, next fixture and newest headline. It reads
+  `loadFootshortsNews()` live; nothing to refresh. Its brief is a footshorts
+  brief carrying the spin and the match context of the spin's fixtures.
 - **API (`isAuthed()`-gated):** `GET|POST /api/randomizer/spins`,
   `PATCH /api/randomizer/spins/[id]` (`{ action: 'approve'|'send_back', note }`
-  or `{ research }`), `GET /api/randomizer/heat`. They call the same
+  or `{ research }`), `GET /api/randomizer/heat`; `POST /api/html-stories/brief`
+  takes a footshorts `spinId` with `app: 'footshorts'`. They call the same
   `@vismay/randomizer/spins` helpers as the token-gated agent routes on
   vizmaya-fyi, so the draw rules hold whoever spins.

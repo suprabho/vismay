@@ -21,6 +21,8 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/match-facts`, label: 'Match facts' })
     // Agent-authored pages hosted at footshorts.com/s/<slug> (packages/html-stories).
     tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
+    // The Football Desk randomizer: topics for those pages (packages/randomizer).
+    tabs.push({ href: `/${appSlug}/randomizer`, label: 'Randomizer' })
     tabs.push({ href: `/${appSlug}/cup-fixtures`, label: 'Cup fixtures' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
