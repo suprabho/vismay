@@ -7,7 +7,7 @@
  * Pure types (no runtime imports), so client and server share them.
  */
 
-import type { CameraMode } from '@vismay/f1-viz/web/replay'
+import type { CameraMode } from '../web/three/cameraModes'
 
 export interface RecapDriver {
   number: number

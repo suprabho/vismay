@@ -5,7 +5,7 @@ import { loadRecap } from '@/lib/recap/loadRecap.server'
 /**
  * GET /api/recap/<sessionKey>
  *
- * The race recap (lib/recap/types.ts) built from the session's stored
+ * The race recap (@vismay/f1-viz/recap) built from the session's stored
  * telemetry: lap 1, the pit-stop swing and the pass of the race when there was
  * one, and the result. 404 when the session isn't ingested; the recap page
  * then shows its sample story.

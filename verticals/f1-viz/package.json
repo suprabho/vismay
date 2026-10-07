@@ -14,6 +14,7 @@
     "./grands-prix": "./src/data/grands-prix.ts",
     "./telemetry-brief": "./src/telemetry/buildTelemetryBrief.ts",
     "./race-context": "./src/telemetry/buildRaceContext.ts",
+    "./recap": "./src/recap/index.ts",
     "./modules/*/sample": "./src/modules/*/sample.ts"
   },
   "peerDependencies": {

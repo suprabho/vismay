@@ -1,31 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import dynamic from 'next/dynamic'
-import { CircleNotch, Pause, Play } from '@phosphor-icons/react'
+import { useEffect, useMemo } from 'react'
+import { Pause, Play } from '@phosphor-icons/react'
+import { LazyTrackScene, ReplayStatus } from '@/components/replay3d/LazyTrackScene'
 import {
-  createFixtureDataSource,
   findFrameIndex,
   timeAtLapStart,
   useReplayData,
   type CarPositionTrack,
 } from '@vismay/f1-viz/web/replay'
-import type { RecapChapter } from '@/lib/recap/types'
-
-// three.js only loads with the replay, never on the server. Cars use the
-// default livery-free model, painted in team colours.
-const TrackScene3D = dynamic(
-  () =>
-    import('@vismay/f1-viz/web/three').then(({ TrackScene3D: Scene, DEFAULT_CAR_MODEL_URL }) => {
-      const WithCars = (props: React.ComponentProps<typeof Scene>) => <Scene carModelUrl={DEFAULT_CAR_MODEL_URL} {...props} />
-      return WithCars
-    }),
-  { ssr: false, loading: () => <Status>Loading 3D view…</Status> },
-)
+import type { RecapChapter } from '@vismay/f1-viz/recap'
+import { replaySource } from '@/lib/replay/replaySource'
+import { useRaceClock } from '@/lib/replay/useRaceClock'
 
 const NO_LAPS: never[] = []
-/** The UI readouts (scrubber, lap) follow the race clock at this rate. */
-const UI_TICK_MS = 100
 
 interface RecapReplayProps {
   /** Session to replay (a session_key, else the round); null while it resolves. */
@@ -47,15 +35,7 @@ interface RecapReplayProps {
  * pause and scrub. Sessions with no ingested positions play the demo fixture.
  */
 export function RecapReplay({ sessionRef, recapSessionKey, chapters, storyLaps, beat, onPickBeat }: RecapReplayProps) {
-  const source = useMemo(
-    () =>
-      createFixtureDataSource(
-        process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase'
-          ? { resolveUrl: (ref) => `/api/replay/${encodeURIComponent(ref)}`, fallbackRef: 'demo' }
-          : { fallbackRef: 'demo' },
-      ),
-    [],
-  )
+  const source = useMemo(replaySource, [])
   const race = useReplayData(source, sessionRef)
   const drivers = useMemo(() => race.session?.drivers ?? [], [race.session])
   const visibleDrivers = useMemo(() => new Set(race.tracks.keys()), [race.tracks])
@@ -117,12 +97,12 @@ export function RecapReplay({ sessionRef, recapSessionKey, chapters, storyLaps, 
   }
 
   let body: React.ReactNode
-  if (!sessionRef || race.loading) body = <Status>Loading race…</Status>
-  else if (race.error) body = <Status>{race.error}</Status>
-  else if (race.tracks.size === 0) body = <Status>No replay data for this race yet.</Status>
+  if (!sessionRef || race.loading) body = <ReplayStatus>Loading race…</ReplayStatus>
+  else if (race.error) body = <ReplayStatus>{race.error}</ReplayStatus>
+  else if (race.tracks.size === 0) body = <ReplayStatus>No replay data for this race yet.</ReplayStatus>
   else
     body = (
-      <TrackScene3D
+      <LazyTrackScene
         circuit={race.circuit}
         drivers={drivers}
         tracks={race.tracks}
@@ -194,71 +174,4 @@ export function RecapReplay({ sessionRef, recapSessionKey, chapters, storyLaps, 
       </div>
     </div>
   )
-}
-
-function Status({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex h-full w-full items-center justify-center gap-2 font-mono text-xs text-muted">
-      <CircleNotch size={16} className="animate-spin motion-reduce:animate-none" aria-hidden />
-      {children}
-    </div>
-  )
-}
-
-/**
- * The race clock the 3D view reads every frame (`timeRef`, ms of session time),
- * with a ~10 Hz copy in state for the scrubber and lap readout. Stops at the
- * end of the race.
- */
-function useRaceClock(bounds: { t0Ms: number; tEndMs: number } | null) {
-  const timeRef = useRef(0)
-  const [timeMs, setTimeMs] = useState(0)
-  const [playing, setPlaying] = useState(false)
-  const boundsRef = useRef(bounds)
-  useEffect(() => {
-    boundsRef.current = bounds
-    if (bounds) {
-      timeRef.current = bounds.t0Ms
-      setTimeMs(bounds.t0Ms)
-    }
-  }, [bounds])
-
-  useEffect(() => {
-    if (!playing) return
-    let raf = 0
-    let last: number | null = null
-    let lastEmit = 0
-    const tick = (ts: number) => {
-      const end = boundsRef.current?.tEndMs ?? 0
-      timeRef.current = Math.min(end, timeRef.current + (last == null ? 0 : ts - last))
-      last = ts
-      if (ts - lastEmit >= UI_TICK_MS || timeRef.current >= end) {
-        lastEmit = ts
-        setTimeMs(timeRef.current)
-      }
-      if (timeRef.current >= end) {
-        setPlaying(false)
-        return
-      }
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [playing])
-
-  const seek = useCallback((t: number) => {
-    const b = boundsRef.current
-    const clamped = b ? Math.min(b.tEndMs, Math.max(b.t0Ms, t)) : t
-    timeRef.current = clamped
-    setTimeMs(clamped)
-  }, [])
-  const play = useCallback(() => setPlaying(true), [])
-  const toggle = useCallback(() => {
-    const b = boundsRef.current
-    // Play from the end of the race starts it over.
-    if (!playing && b && timeRef.current >= b.tEndMs) seek(b.t0Ms)
-    setPlaying(!playing)
-  }, [playing, seek])
-
-  return { timeRef, timeMs, playing, seek, play, toggle }
 }

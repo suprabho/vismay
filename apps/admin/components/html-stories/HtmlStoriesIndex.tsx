@@ -55,7 +55,8 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
           <li>
             Give the agent the brief: <em>Copy agent brief</em> above, or point it at{' '}
             <code className="text-neutral-300">{siteUrl}/api/html-stories/brief</code>. Pick the story format first:
-            a scrolling page, or a <em>book</em>, <em>board</em> or <em>deck</em> built on the runtime the site hosts at{' '}
+            a scrolling page, or a <em>book</em>, <em>board</em> or <em>deck</em>
+            {isVizf1 ? <>, or a <em>race recap</em> beside the 3D replay,</> : null} built on the runtime the site hosts at{' '}
             <code>/formats</code> (<code>?format=book</code> on that URL). <em>Randomize style</em>{' '}
             (or <code>?style=random</code> on that URL) swaps the house look for a palette and fonts from an existing{' '}
             {meta.name} story.

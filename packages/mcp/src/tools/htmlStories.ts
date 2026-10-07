@@ -29,9 +29,10 @@
  * `spinId` ties the page to the spin.
  *
  * Any brief can be for a STORY FORMAT (`format`): a scrolling page (the
- * default), a book, a pinned board or a deck. The paged formats run on a
- * runtime the site hosts (packages/html-stories/formats), so the brief says
- * how to load it and write pages, board items or slides for it.
+ * default), a book, a pinned board, a deck, or (vizf1) a race recap. These
+ * run on a runtime the site hosts (packages/html-stories/formats), so the
+ * brief says how to load it and write pages, board items, slides or chapters
+ * for it.
  *
  * Photos, video and AI illustrations go to the site's assets endpoint
  * (packages/html-stories/src/assetsApi.ts) under the story's slug, with the
@@ -76,8 +77,9 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         '(from spin_randomizer) to get its assignment, research protocol, output format and research file. ' +
         'Pass format to write something other than a scrolling page: "book" (pages the reader turns; ' +
         'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
-        'case built from many connected pieces) or "deck" (slides or a stack of cards; suits an argument ' +
-        'made one point at a time).',
+        'case built from many connected pieces), "deck" (slides or a stack of cards; suits an argument ' +
+        'made one point at a time) or, for vizf1 with a race in sessionKeys, "recap" (chapters the reader ' +
+        'scrolls while the 3D race replay beside them jumps to each moment; suits a race told through its moments).',
       inputSchema: {
         app: appSchema,
         randomStyle: z
@@ -111,9 +113,9 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .optional()
           .describe('vizmaya only: a randomizer spin id; the brief carries that spin\'s assignment and research.'),
         format: z
-          .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck'])
+          .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck', 'recap'])
           .default('scroll')
-          .describe('The story format: scroll (one long page, the default), book, board or deck.'),
+          .describe('The story format: scroll (one long page, the default), book, board, deck, or recap (vizf1 only).'),
       },
     },
     async ({ app, randomStyle, fixtureIds, sessionKeys, drivers, prompt, spinId, format }) => {

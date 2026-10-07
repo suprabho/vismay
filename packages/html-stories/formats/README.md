@@ -1,19 +1,23 @@
-# Story formats: book, board, deck
+# Story formats: book, board, deck, recap
 
 Agent-authored HTML stories (`packages/html-stories`) are scrolling pages by
-default. This folder holds the runtimes for three formats that are **not**
-vertical scrollytelling, which each site hosts so an agent only writes the
-content, its design and its charts:
+default. This folder holds the runtimes for four formats, which each site
+hosts so an agent only writes the content, its design and its charts. Three
+are not vertical scrollytelling; the fourth, the recap, scrolls, but beside a
+3D race replay that its runtime drives:
 
 | Format | What the reader does | Runtime |
 |---|---|---|
 | **Book** | Turns pages: tap, drag a page across, or the arrow keys. A two-page spread on wide screens, one page at a time on phones. | `book@1.css` + `book@1.js` |
 | **Board** | Follows a guided tour while the camera flies between pinned items, or pans and zooms freely. Felt board or whiteboard. | `board@1.css` + `board@1.js` |
 | **Deck** | Steps through slides, or switches to a stack of cards and swipes them away. | `deck@1.css` + `deck@1.js` |
+| **Recap** (vizf1) | Scrolls chapters while the 3D race replay beside them jumps to each moment, camera and car. | `recap@1.css` + `recap@1.js` |
 
-`examples/` tells the same story (`vizmaya-data/odyssey-voyage`) in all three,
-so the only difference between them is the format. They are served at
-`<site>/formats/examples/odyssey-<format>.html` and the brief links to them.
+`examples/` tells the same story (`vizmaya-data/odyssey-voyage`) as a book, a
+board and a deck, so the only difference between them is the format, and the
+2024 Austrian Grand Prix as a recap. They are served at
+`<site>/formats/examples/<file>.html` (`FORMAT_EXAMPLES` in `src/formats.ts`)
+and the brief links to them.
 
 ## How it fits together
 
@@ -25,7 +29,7 @@ so the only difference between them is the format. They are served at
   script; `<format>@1.css` = `common.css` + the format's sheet; `story@1.js`
   alone; the examples). Run it after any change here: `src/formats.test.ts`
   fails while the bundle is stale.
-- **Serve:** `GET <site>/formats/<file>` on vizmaya.fyi and footshorts.com
+- **Serve:** `GET <site>/formats/<file>` on vizmaya.fyi, footshorts.com and vizf1.com
   (`apps/*/app/formats/[...path]/route.ts` → `src/formatsApi.ts`). Public,
   CORS-open, an hour in browsers and a day on the CDN (a deploy starts it
   fresh). The examples are served under the same CSP sandbox as a story.
@@ -263,6 +267,44 @@ portrait), `.hide-portrait`. `.bare` slides get no folio; `data-title` on
 **Known limits:** no slide-overview grid yet (a G key showing thumbnails
 would be a good next step), and no presenter notes.
 
+## Recap (`recap.css`, `recap.js`) — vizf1 only
+
+**Authoring:** `<main class="stage">` holds `<div class="replay"
+data-session="<session key>" data-laps="71">` and `<div class="chapters">` of
+`<section class="chapter" data-unit data-label="…">`. A chapter, or any
+element inside one, is a **cue** when it has `data-lap` (the start of that
+lap) or `data-at` (an exact session time, in seconds), with optional
+`data-cam` (`auto`, `pov`, `chase`, `tv`, `heli`, `orbit`) and `data-focus`
+(a three-letter driver code); an element without them takes its chapter's.
+`data-play="false"` holds the replay at the cue. Tokens: `--recap-rail-w`,
+`--recap-band-h`, `--recap-dim`, `--recap-cue`. The brief's race context lists
+each race's **replay moments** with ready-made cues
+(`@vismay/f1-viz/recap`'s `findMoments`: the start, duels, passes located to
+the second, undercuts, lead changes, safety cars, retirements, the fastest
+lap, the flag), so an agent never guesses a session key or a time.
+
+**Runtime:**
+- The replay is vizf1's `/embed/replay?session=<key>` (on the origin that
+  served `recap@1.js`; `data-src` overrides it for previews), framed sticky
+  beside the chapters on wide screens and as a band above them under 900px.
+  It runs inside the story's sandbox, so its own requests are cross-origin:
+  `/api/replay/*` sends CORS, and vizf1's `next.config.ts` adds it for
+  `/fixtures/*` and `/_next/static/media/*`.
+- The page scrolls as usual. The cue in charge is the last one whose top has
+  passed the reading line (40% down what the replay leaves of the screen); a
+  new one posts `{ type: 'vizf1:replay-cue', lap, at, cam, focus, play, laps }`
+  to the frame (resent when it says `vizf1:replay-ready`). A session the
+  replay doesn't have plays the demo race, with laps scaled by `data-laps`.
+- `Story.enter` runs on a chapter when it becomes the current one; the others
+  dim. The nav lists the chapters (a counter on phones); ←/→ jump between
+  them; `#c=3` deep-links.
+- "Read as one page" drops the replay (and pauses it): the chapters as one
+  column, entering as they come up the screen.
+
+**Known limits:** the replay needs the race's car positions ingested
+(`vizf1_car_positions`); without them it plays the demo. A cue that repeats
+the camera the reader has switched away from doesn't switch it back.
+
 ## Changing a runtime
 
 1. Edit the files here, then `pnpm --filter @vismay/html-stories gen:formats`.
@@ -276,6 +318,10 @@ would be a good next step), and no presenter notes.
 
 ## Content notes on the examples
 
+- **The recap example** (`austria-2024-recap.html`) uses the 2024 Austrian
+  Grand Prix as the FastF1 ingest stores it (lap times, positions, stints,
+  pit lane times from OpenF1, the lap-65 telemetry), inlined, so it reads
+  without the database; its replay needs the race's positions ingested.
 - **Data:** `vizmaya-data/odyssey-voyage/voyage_stops.csv` had row 6
   (Laestrygonians) with `ships_after` and `men_after` swapped; it now reads
   `1,48` at the source.

@@ -235,7 +235,7 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           {matches ? 'Change matches' : 'Add matches'}
         </button>
       )}
-      <FormatPicker value={format} onChange={setFormat} />
+      <FormatPicker app={app} value={format} onChange={setFormat} />
       <button
         onClick={() => pool && setStyle((prev) => pickRandomStyle(pool, { previous: prev }))}
         disabled={!canShuffle}

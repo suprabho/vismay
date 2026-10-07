@@ -5,7 +5,7 @@
  * demo race, which has the same five drivers.
  */
 
-import type { RaceRecap } from './types'
+import type { RaceRecap } from '@vismay/f1-viz/recap'
 
 export const SAMPLE_RECAP: RaceRecap = {
   sample: true,

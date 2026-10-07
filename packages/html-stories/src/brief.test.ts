@@ -168,6 +168,20 @@ for (const format of ['book', 'board', 'deck'] as const) {
   assert.ok(b.includes('## Before you post') && b.indexOf('## Before you post') < at('## Posting'))
 }
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).includes('One idea per page.'))
+
+// The recap (vizf1): the replay, cues, its own example; no scroll sections, no maps of its own.
+{
+  const r = htmlStoryBrief({ app: 'vizf1', siteUrl: 'https://vizf1.com', format: 'recap' })
+  assert.ok(r.includes('## Story format: a race recap') && r.includes('This story is a race recap'))
+  assert.ok(r.includes('<meta name="vizmaya:format" content="recap">'))
+  assert.ok(r.includes('https://www.vizf1.com/formats/recap@1.css') && r.includes('https://www.vizf1.com/formats/recap@1.js'))
+  assert.ok(r.includes('https://www.vizf1.com/formats/examples/austria-2024-recap.html'))
+  assert.ok(r.includes('data-session') && r.includes('data-lap') && r.includes('data-at') && r.includes('data-cam') && r.includes('data-focus'))
+  assert.ok(r.includes('Replay moments'))
+  assert.ok(!r.includes('## Motion and scroll animation') && !r.includes('mapboxgl'))
+  assert.ok(r.includes("The 3D replay is the race's map"))
+  assert.ok(!/\\`/.test(r), 'no double-escaped backticks')
+}
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'deck' }).includes('One idea per slide.'))
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'board' }).includes('data-pin-to'))
 // footshorts runtimes come from footshorts.com.

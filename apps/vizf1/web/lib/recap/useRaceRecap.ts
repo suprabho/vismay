@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import type { RaceRecap } from './types'
+import type { RaceRecap } from '@vismay/f1-viz/recap'
 
 /**
  * The recap for a telemetry session from /api/recap/<sessionKey>. Resolves to

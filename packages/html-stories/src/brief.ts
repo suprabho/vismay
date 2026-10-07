@@ -53,7 +53,7 @@ import {
   type BriefSpin,
 } from '@vismay/randomizer/spinBrief'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
-import { formatChecks, formatHeading, formatHintSection, storyFormatSection } from './formatBrief'
+import { formatChecks, formatHeading, formatHintSection, formatTitle, storyFormatSection } from './formatBrief'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
@@ -90,8 +90,8 @@ export interface BriefOptions {
    */
   mapboxToken?: string | null
   /**
-   * The story format: 'scroll' (default) or a paged format ('book', 'board',
-   * 'deck') built on the site's hosted runtime.
+   * The story format: 'scroll' (default) or a runtime-driven format ('book',
+   * 'board', 'deck', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
 }
@@ -596,7 +596,7 @@ your page and a vizmaya footer below it`
   const unit = paged ? HTML_STORY_FORMAT_META[paged].unit : 'screen'
   const formatIntro = paged
     ? `
-This story is ${paged === 'board' ? 'a pinned board' : `a ${paged}`}, not a scrolling page. The site
+This story is ${formatTitle(paged)}, not a plain scrolling page. The site
 hosts the runtime that makes it one; you write the content, its design and its
 charts. "${formatHeading(paged)}" below says how.
 `
@@ -606,7 +606,10 @@ charts. "${formatHeading(paged)}" below says how.
    - \`<meta name="${FORMAT_META_NAME}" content="${paged}">\` and the format's stylesheet
      (see "${formatHeading(paged)}").`
     : ''
-  const mapsLine = paged
+  const mapsLine =
+    paged === 'recap'
+      ? `The 3D replay is the race's map (see "${formatHeading(paged)}").`
+      : paged
     ? `For maps, draw a chart with D3-geo and world-atlas/us-atlas TopoJSON
   (see "${formatHeading(paged)}").`
     : mapbox

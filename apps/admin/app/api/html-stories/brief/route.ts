@@ -7,7 +7,7 @@ import {
   MAX_RACE_CONTEXT_SESSIONS,
   vizf1HtmlStoryBrief,
 } from '@vismay/html-stories/vizf1Brief'
-import { parseHtmlStoryFormat } from '@vismay/html-stories/formats'
+import { HTML_STORY_FORMATS, isFormatForApp, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { isAuthed } from '@/lib/adminAuth'
@@ -45,7 +45,10 @@ export async function POST(req: Request) {
   const app = parseHtmlStoryApp(b.app)
   if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
   const format = parseHtmlStoryFormat(b.format)
-  if (!format) return NextResponse.json({ error: 'format must be scroll, book, board or deck' }, { status: 400 })
+  if (!format) return NextResponse.json({ error: `format must be one of ${HTML_STORY_FORMATS.join(', ')}` }, { status: 400 })
+  if (!isFormatForApp(app, format)) {
+    return NextResponse.json({ error: `the ${format} format isn't available for ${app}` }, { status: 400 })
+  }
   const style = isStyle(b.style) ? b.style : null
   const siteUrl = htmlStorySiteUrl(app)
 

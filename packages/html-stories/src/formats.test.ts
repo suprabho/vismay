@@ -6,8 +6,11 @@ import { readFileSync } from 'node:fs'
 import { buildFormatAssets, GENERATED_PATH, renderGeneratedModule } from '../scripts/gen-format-assets'
 import { FORMAT_ASSETS } from './formatAssets.generated'
 import {
+  FORMAT_EXAMPLES,
   FORMAT_RUNTIME_MAJOR,
   PAGED_HTML_STORY_FORMATS,
+  formatsForApp,
+  isFormatForApp,
   formatExampleUrl,
   formatRuntimeUrls,
   parseHtmlStoryFormat,
@@ -50,16 +53,18 @@ for (const bad of ['book@2.js', 'book.js', 'nope', '', '__proto__', 'constructor
   assert.equal(serveFormatAsset(bad).status, 404, bad)
 }
 
-// The reference pages: served sandboxed, each a clean example of its format.
+// The reference pages: served sandboxed, each a clean example of its format,
+// loading its runtime from a site that can host it (recap: vizf1's).
 for (const f of PAGED_HTML_STORY_FORMATS) {
-  const path = `examples/odyssey-${f}.html`
+  const path = `examples/${FORMAT_EXAMPLES[f]}`
+  const app = isFormatForApp('vizmaya-fyi', f) ? 'vizmaya-fyi' : 'vizf1'
   assert.equal(formatExampleUrl('vizmaya-fyi', f), `https://vizmaya.fyi/formats/${path}`)
   const res = serveFormatAsset(path)
   assert.equal(res.status, 200)
   assert.equal(res.headers.get('content-security-policy'), HTML_STORY_SANDBOX_CSP)
   const html = FORMAT_ASSETS[path]!
   assert.equal(extractFormatMeta(html), f)
-  const { css, js } = formatRuntimeUrls('vizmaya-fyi', f)
+  const { css, js } = formatRuntimeUrls(app, f)
   assert.ok(html.includes(`href="${css}"`) && html.includes(`src="${js}"`), `${path}: loads its runtime`)
   // The examples show the formats with charts alone, so the "no photographs"
   // nudge is the one warning they're allowed.
@@ -72,5 +77,10 @@ assert.equal(parseHtmlStoryFormat(undefined), 'scroll')
 assert.equal(parseHtmlStoryFormat(' Deck '), 'deck')
 assert.equal(parseHtmlStoryFormat('slides'), null)
 assert.equal(suggestedFormatFor('epics'), 'book')
+
+// recap frames vizf1's race replay: vizf1 only.
+assert.deepEqual(formatsForApp('vizf1'), ['scroll', 'book', 'board', 'deck', 'recap'])
+assert.deepEqual(formatsForApp('vizmaya-fyi'), ['scroll', 'book', 'board', 'deck'])
+assert.equal(isFormatForApp('footshorts', 'recap'), false)
 
 console.log('formats: ok')

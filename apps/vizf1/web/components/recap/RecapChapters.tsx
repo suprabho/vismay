@@ -10,7 +10,7 @@ import type {
   RaceRecap,
   RecapChapter,
   StartChapter,
-} from '@/lib/recap/types'
+} from '@vismay/f1-viz/recap'
 
 const card = 'rounded-xl border border-border bg-surface'
 const tile = 'rounded-[10px] border border-border bg-surface'

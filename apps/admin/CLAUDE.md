@@ -172,7 +172,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
   (paste/upload, lint, preview in that site's chrome, publish, history; a book
   or deck in the preview reports pages/slides that overflow their frame, shown
-  with the lint). The list badges book, board and deck stories.
+  with the lint). The list badges book, board, deck and recap stories.
   [lib/htmlStoryApps.ts](lib/htmlStoryApps.ts) maps an app to its public site
   and admin base path.
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
@@ -181,7 +181,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }` → markdown) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
-  scroll, book, board, deck; also on the Randomizer tab, where it marks the
+  scroll, book, board, deck, and recap on vizf1 only; also on the Randomizer tab, where it marks the
   format the spin's kind of story suits), the
   style randomizer (palettes/fonts from the app's own stories) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand

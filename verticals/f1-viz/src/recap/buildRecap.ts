@@ -1,7 +1,8 @@
 /**
  * Builds a race recap (./types) from a session's stored telemetry. Pure: the
- * rows come in, the recap comes out, so it runs the same in the API route
- * (./loadRecap.server) and in tests against a captured race.
+ * rows come in, the recap comes out, so it runs the same in vizf1's
+ * /api/recap route, in the recap brief's replay moments (./moments) and in
+ * tests against a captured race.
  *
  * Chapters, in race order:
  *   - start      — always: places gained and lost on lap 1.
@@ -129,7 +130,8 @@ export interface PassPick {
 
 const OPEN_DRS = new Set([10, 12, 14])
 
-interface Race {
+/** A race's rows, indexed for the recap and the replay moments. */
+export interface Race {
   drivers: Map<number, RecapDriver>
   laps: Map<number, Map<number, RecapLapRow>>
   totalLaps: number
@@ -143,7 +145,7 @@ interface Race {
   name: (dn: number) => string
 }
 
-function indexRace(inputs: RecapInputs): Race {
+export function indexRace(inputs: RecapInputs): Race {
   const drivers = new Map<number, RecapDriver>()
   for (const d of inputs.session.drivers ?? []) {
     const hex = (d.teamColour ?? '').replace(/^#/, '')
@@ -294,9 +296,29 @@ function startChapter(race: Race): StartChapter {
 
 // ── The undercut / overcut ──────────────────────────────────────────────────
 
-function pitSwingChapter(race: Race, inputs: RecapInputs): PitSwingChapter | null {
-  type Cand = { a: number; b: number; sa: number; sb: number; before: number; after: number; gb: number; ga: number; score: number }
-  let best: Cand | null = null
+/** Two cars that swapped places through their stops: a gained on b. */
+export interface PitSwing {
+  a: number
+  b: number
+  /** Laps a and b pitted on. */
+  sa: number
+  sb: number
+  /** The lap before the first stop and the lap after the second. */
+  before: number
+  after: number
+  /** a's gap to b (s, + = behind) on those laps. */
+  gb: number
+  ga: number
+  score: number
+}
+
+/**
+ * Undercuts and overcuts, best first: b directly ahead before the stops
+ * (within 5 s), a ahead after them, no other stop by either car in between,
+ * neither stop under a safety car; nearer the front and bigger swings first.
+ */
+export function rankPitSwings(race: Race, limit = 3): PitSwing[] {
+  const found: PitSwing[] = []
   const dns = [...race.laps.keys()]
   for (const a of dns) {
     for (const sa of race.pitLaps(a)) {
@@ -323,11 +345,16 @@ function pitSwingChapter(race: Race, inputs: RecapInputs): PitSwingChapter | nul
           const ga = ca1 - cb1
           if (gb <= 0 || gb > 5 || ga >= 0) continue
           const score = 40 - Math.min(pa1, pb1) * 3 + Math.min(gb - ga, 8)
-          if (!best || score > best.score) best = { a, b, sa, sb, before, after, gb, ga, score }
+          found.push({ a, b, sa, sb, before, after, gb, ga, score })
         }
       }
     }
   }
+  return found.sort((x, y) => y.score - x.score).slice(0, limit)
+}
+
+function pitSwingChapter(race: Race, inputs: RecapInputs): PitSwingChapter | null {
+  const best = rankPitSwings(race, 1)[0]
   if (!best) return null
   const { a, b, sa, sb, before, after, gb, ga } = best
 
@@ -382,8 +409,17 @@ function pitSwingChapter(race: Race, inputs: RecapInputs): PitSwingChapter | nul
 
 /** The on-track pass worth a chapter: for the lead if any, else near the front and close beforehand. */
 export function pickPass(inputs: RecapInputs): PassPick | null {
-  const race = indexRace(inputs)
-  let best: (PassPick & { score: number }) | null = null
+  return rankPasses(indexRace(inputs), 1)[0] ?? null
+}
+
+/**
+ * On-track passes, best first: a directly behind b at the end of one lap and
+ * ahead at the end of the next, neither car pitting around it, not under a
+ * safety car, not on lap 1 and not a car about to retire. For the lead first,
+ * then nearer the front and closer beforehand.
+ */
+export function rankPasses(race: Race, limit = 6): PassPick[] {
+  const found: (PassPick & { score: number })[] = []
   const dns = [...race.laps.keys()]
   const pitNear = (dn: number, lap: number) => race.pitLaps(dn).some((l) => l >= lap - 1 && l <= lap)
   for (let lap = 2; lap <= race.totalLaps; lap++) {
@@ -403,13 +439,14 @@ export function pickPass(inputs: RecapInputs): PassPick | null {
         const gapBefore = ca != null && cb != null ? ca - cb : null
         const score =
           50 - pa1 * 4 + (pa1 === 1 ? 15 : 0) + (gapBefore != null ? Math.max(0, 8 - gapBefore * 4) : 0) + lap / race.totalLaps
-        if (!best || score > best.score) best = { lap, a, b, gapBefore, position: pa1, score }
+        found.push({ lap, a, b, gapBefore, position: pa1, score })
       }
     }
   }
-  if (!best) return null
-  const { score: _score, ...pick } = best
-  return pick
+  return found
+    .sort((x, y) => y.score - x.score)
+    .slice(0, limit)
+    .map(({ score: _score, ...pick }) => pick)
 }
 
 /** Interpolate y at x over ascending xs. */
@@ -450,7 +487,38 @@ function monotone(ch: LapChannels) {
   }
 }
 
-function cornerLabel(c: CornerRow) {
+/**
+ * Where on the lap a passed b: the last place a's time-at-distance goes from
+ * later than b's (a behind) to no later (a ahead). Null when it never does.
+ */
+function passPoint(ca: ReturnType<typeof monotone>, cb: ReturnType<typeof monotone>): number | null {
+  const d0 = Math.max(ca.d[0], cb.d[0])
+  const d1 = Math.min(ca.d[ca.d.length - 1], cb.d[cb.d.length - 1])
+  let passAt: number | null = null
+  let prev: { d: number; dt: number } | null = null
+  for (let d = d0; d <= d1; d += 5) {
+    const dt = interp(ca.d, ca.t, d) - interp(cb.d, cb.t, d)
+    if (prev && prev.dt > 0 && dt <= 0) passAt = prev.d + ((d - prev.d) * prev.dt) / (prev.dt - dt)
+    prev = { d, dt }
+  }
+  return passAt
+}
+
+/** A pass located on its lap: metres into the lap, the session time (s), the corner. */
+export function locatePass(
+  channels: { a: LapChannels | null; b: LapChannels | null },
+  corners: CornerRow[],
+): { passAt: number; at: number; corner: string | null } | null {
+  const ca = channels.a ? monotone(channels.a) : null
+  const cb = channels.b ? monotone(channels.b) : null
+  if (!ca || !cb || ca.d.length <= 10 || cb.d.length <= 10) return null
+  const passAt = passPoint(ca, cb)
+  if (passAt == null) return null
+  const c = nearestCorner(corners, passAt, 300)
+  return { passAt: Math.round(passAt), at: Math.round(interp(ca.d, ca.t, passAt) * 10) / 10, corner: c ? cornerLabel(c) : null }
+}
+
+export function cornerLabel(c: CornerRow) {
   return `Turn ${c.number}${c.letter ?? ''}`
 }
 
@@ -482,15 +550,7 @@ function battleChapter(
   if (ca && cb && ca.d.length > 10 && cb.d.length > 10) {
     const d0 = Math.max(ca.d[0], cb.d[0])
     const d1 = Math.min(ca.d[ca.d.length - 1], cb.d[cb.d.length - 1])
-    // Δ(d): how much later a reaches distance d than b. The pass is the last
-    // place it goes from positive (a behind) to ≤ 0 (a ahead).
-    let passAt: number | null = null
-    let prev: { d: number; dt: number } | null = null
-    for (let d = d0; d <= d1; d += 5) {
-      const dt = interp(ca.d, ca.t, d) - interp(cb.d, cb.t, d)
-      if (prev && prev.dt > 0 && dt <= 0) passAt = prev.d + ((d - prev.d) * prev.dt) / (prev.dt - dt)
-      prev = { d, dt }
-    }
+    const passAt = passPoint(ca, cb)
     if (passAt != null) {
       const w0 = Math.max(d0, passAt - 450)
       const w1 = Math.min(d1, passAt + 250)
