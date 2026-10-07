@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>We give the invisible its shape</title>
+<meta name="description" content="Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs. The whole studio, pinned to one board.">
+<meta property="og:title" content="We give the invisible its shape">
+<meta property="og:description" content="Pattern, then meaning, then form: a data-storytelling studio, pinned to one board.">
+<!-- TODO before publishing: a real 1200×630 share image. -->
+<meta property="og:image" content="https://vizmaya.fyi/og/vizmaya-studio.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="vizmaya:theme" content="background:#f5f1ea; surface:#fffdf8; text:#0f0e0c; muted:#6b665d; line:#d8d2c5; accent:#c4391c; accent2:#5c4ba0; teal:#2d6a4f">
+<meta name="vizmaya:format" content="board">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+<!-- The board format: the camera, the tour panel, strings, minimap and the one-column view. -->
+<link rel="stylesheet" href="https://vizmaya.fyi/formats/board@1.css">
+<style>
+/* ── Tokens ──────────────────────────────────────────────────────────────
+   Palette from content/stories/vizmaya-studio.md: bone white, near-black
+   ink, and the mark's three colours (green = Pattern, vermillion = Meaning,
+   indigo = Form). The board is a drafting table in the story's bone, with a
+   faint graph-paper grid; vermillion string, ink pins. The board itself
+   (camera, tour panel, strings, pins, whiteboard, the one-column view) is
+   board@1.css and board@1.js; everything here is this story's design. */
+:root {
+  --bone: #f5f1ea; --paper: #fffdf8; --ink: #0f0e0c; --muted: #6b665d; --line: #d8d2c5; --grid: #e6e0d4;
+  --green: #2d6a4f; --red: #c4391c; --indigo: #5c4ba0; --amber: #c79100;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'JetBrains Mono', Menlo, ui-monospace, monospace;
+  /* the format's tokens */
+  --board-felt: #e4ddd0; --board-felt-2: #eee8dd; --board-edge: #cfc7b8;
+  --board-string: #c4391c; --board-pin: #0f0e0c; --board-label: #6b665d;
+  --board-paper: #fffdf8; --board-card: #faf7f1; --board-ink: var(--ink); --board-ink-muted: var(--muted);
+  --sticky-gold: #f1dfa4; --sticky-rose: #f0c9bd; --sticky-blue: #d4cdeb; --sticky-sage: #c9dccf;
+  --vz-accent: var(--red);
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bone); color: var(--ink) }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased }
+a { color: inherit }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px }
+/* also in board@1.css; here too so a page that can't reach it still reads */
+.chart:empty::before { content: attr(data-alt); display: block; font-style: italic; font-size: 15px; line-height: 1.45; color: var(--muted); padding: 8px 0 }
+html:not(.board-on) .board-only { display: none }
+
+/* the drafting table: graph paper that travels with the camera */
+html.board-on .world {
+  background-image:
+    linear-gradient(rgba(15, 14, 12, .07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 14, 12, .07) 1px, transparent 1px),
+    linear-gradient(rgba(15, 14, 12, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 14, 12, .035) 1px, transparent 1px);
+  background-size: 200px 200px, 200px 200px, 40px 40px, 40px 40px;
+}
+.stage[data-surface="whiteboard"] .world { background-image: none }
+/* softer shadows than the felt default: this board is lit, not dark */
+html.board-on .world .item:not(.bare) { box-shadow: 0 1px 1px rgba(15, 14, 12, .12), 0 14px 26px -10px rgba(15, 14, 12, .28) }
+html.board-on .world .item.tape::before { background: rgba(214, 205, 186, .7) }
+
+/* ── Things pinned to the board ──────────────────────────────────────── */
+.item {
+  --c-ink: var(--ink); --c-muted: var(--muted); --c-grid: var(--grid); --c-line: var(--line);
+  --c-green: var(--green); --c-red: var(--red); --c-indigo: var(--indigo); --c-paper: var(--paper);
+  --font-chart: var(--mono); --chart-fs: 14px; --chart-fs-sm: 12.5px;
+}
+.item h2, .item h3 { font-family: var(--serif); font-weight: 400; line-height: 1.12; margin: 0 0 12px; letter-spacing: -.01em }
+.item h2 { font-size: 40px }
+.item h3 { font-size: 30px }
+.item p { margin: 0 0 .7em; font-size: 17px; line-height: 1.5 }
+.item p:last-child { margin-bottom: 0 }
+.item .src { font-family: var(--mono); font-size: 12.5px; line-height: 1.45; letter-spacing: .02em; margin: 10px 0 0 }
+.kicker { display: flex; align-items: center; gap: 8px; font: 600 14px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; margin: 0 0 14px }
+.kicker i { font-size: 18px }
+.k-green { color: var(--green) } .k-red { color: var(--red) } .k-indigo { color: var(--indigo) } .k-muted { color: var(--muted) }
+.index h3 { font-size: 26px; margin: 0 0 19px }
+.index p { font-size: 16px; line-height: 28px; margin: 0 0 28px }
+.index p:last-child { margin: 0 }
+.sticky { font-family: var(--serif) }
+.sticky p { font-size: 22px; line-height: 1.3 }
+.sticky .who { font: 500 12.5px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .75; margin: 6px 0 0 }
+.sticky .big { font-family: var(--serif); font-weight: 600; font-size: 84px; line-height: .9; display: block; margin-bottom: 8px }
+
+.title-card h1 { font-family: var(--serif); font-weight: 400; font-size: 96px; line-height: .98; letter-spacing: -.025em; margin: 0 0 26px }
+.title-card h1 em { font-style: italic; color: var(--red) }
+.title-card .dek { font-size: 22px; line-height: 1.5; color: var(--muted); margin: 0 0 18px; max-width: 40ch }
+.title-card .by { font: 500 14px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); margin: 0 }
+html:not(.board-on) .title-card h1 { font-size: clamp(44px, 10vw, 80px) }
+.quote-card p { font-family: var(--serif); font-size: 64px; line-height: 1.05; letter-spacing: -.02em; margin: 0 }
+.quote-card p em { color: var(--red) }
+html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
+.zone-label { font: 600 18px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase }
+
+/* fact sheets (the deck's key/value lists) */
+.facts { list-style: none; margin: 0; padding: 0 }
+.facts li { padding: 10px 0; border-top: 1px solid rgba(15, 14, 12, .14) }
+.facts li:first-child { border-top: 0; padding-top: 0 }
+.facts b { display: block; font: 600 12px/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 4px }
+.facts span { font-family: var(--serif); font-size: 21px; line-height: 1.25 }
+
+/* the two failure modes */
+.fail { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 3px }
+
+/* what we make: three formats from our own work */
+.formats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin: 22px 0 6px }
+.fmt { display: block; text-decoration: none; color: inherit }
+.fmt .art { height: 220px; display: flex; align-items: flex-end; justify-content: center; background: var(--bone); border-radius: 6px; padding: 18px; margin-bottom: 14px }
+.fmt .art svg { display: block; max-width: 100%; height: 100% }
+.fmt .kicker { font-size: 12px; margin: 0 0 8px; padding-top: 12px; border-top: 1.5px solid var(--line) }
+.fmt .t { font-family: var(--serif); font-size: 21px; line-height: 1.2; margin: 0 0 6px }
+.fmt .m { font: 500 11.5px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 }
+.fmt:hover .t { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px }
+@media (max-width: 720px) { html:not(.board-on) .formats { grid-template-columns: 1fr } }
+
+/* the tour panel */
+.vz-panel .tour h2 { font-family: var(--serif); font-weight: 400; font-size: 30px; line-height: 1.12; letter-spacing: -.01em }
+.vz-panel .tour p { color: #3d3a35; line-height: 1.5 }
+.vz-panel .tour .step-k { display: block; font: 600 11.5px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; margin: 0 0 10px }
+@media (max-width: 720px) { .vz-panel .tour h2 { font-size: 23px } }
+</style>
+</head>
+<body>
+
+<main class="stage" aria-label="We give the invisible its shape: the Vismaya studio, as a pinned board">
+  <div class="world" data-width="3600" data-height="3240">
+
+    <!-- Items are in reading order (that is the order of the linear view).
+         --x/--y/--w place them on the 3600×3240 board; --r tilts them. -->
+
+    <!-- ── Cover ─────────────────────────────────────────────────────── -->
+    <div class="item title-card bare" id="it-title" style="--x:150;--y:150;--w:960">
+      <p class="kicker k-green" style="margin-bottom:26px">Vismaya · a data-storytelling studio</p>
+      <h1>We give the <em>invisible</em> its shape.</h1>
+      <p class="dek">Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs.</p>
+      <p class="by">Vismaya · A studio for wonder</p>
+    </div>
+
+    <!-- ── Process ───────────────────────────────────────────────────── -->
+    <div class="item sticky gold" id="it-process" style="--x:200;--y:760;--w:420;--r:-2">
+      <p class="who" style="margin:0 0 10px">— Process</p>
+      <p style="font-size:30px;line-height:1.1;margin-bottom:12px">Three things. In order. Every time.</p>
+      <p style="font-size:18px;font-style:italic">Pattern, then meaning, then form. Below, our own 33 published stories go through all three.</p>
+    </div>
+
+    <div class="item paper tape" id="it-mark" style="--x:1230;--y:110;--w:700">
+      <p class="kicker k-muted">The three worlds</p>
+      <div class="chart" style="height:620px" data-chart="mark" data-variant="worlds" data-alt="The Vismaya mark: three circles labelled Pattern (the data), Meaning (the mind) and Form (the design), joined by tapering leaps."></div>
+    </div>
+
+    <div class="item index" id="it-penrose" style="--x:2020;--y:140;--w:560;--r:1.5">
+      <h3>Our mark</h3>
+      <p>Our mark borrows from Roger Penrose’s diagram of reality’s three mysteries: the leaps between pattern, mind, and form. None of them makes sense alone.</p>
+    </div>
+
+    <div class="item sticky blue" id="it-wonder" style="--x:2080;--y:560;--w:400;--r:-2.5">
+      <p><i>Vismaya</i> is Sanskrit for wonder: the feeling when something you couldn’t see becomes suddenly, undeniably visible.</p>
+      <p>We added the <b style="color:var(--red)">z</b> for viz. That’s the job.</p>
+    </div>
+
+    <!-- One dataset, three passes. Each card's string runs to its circle on the mark. -->
+    <div class="item paper" id="it-pattern" data-pin-to="it-mark:pattern" style="--x:150;--y:1240;--w:800;--r:-.8">
+      <p class="kicker k-green"><i class="ph ph-database"></i>01 — Data · Pattern</p>
+      <p>We start with the dataset, not the story. The pattern has to exist before we decide what it means. We find it, and we refuse to distort it.</p>
+      <div class="chart" style="height:400px" data-chart="pattern" data-alt="Our 33 published stories as dots, sections across and words up, all one colour and unlabelled. Most sit in a loose cloud; a few float high."></div>
+      <p class="src">Each dot is one published story: sections across, words up.</p>
+    </div>
+
+    <div class="item paper" id="it-meaning" data-pin-to="it-mark:meaning" style="--x:1050;--y:1270;--w:800;--r:.6">
+      <p class="kicker k-red"><i class="ph ph-lightbulb"></i>02 — Narrative · Meaning</p>
+      <p>We find the question the data answers: the thing a reader can carry away, repeat, and use to see the world differently.</p>
+      <div class="chart" style="height:400px" data-chart="meaning" data-alt="The same 33 dots. The five company decks, coloured vermillion, sit apart: few sections but many words. Adani and the State has 3,074 words in 8 sections; the SpaceX S-1 deck 2,584 in 14."></div>
+      <p class="src">Colour the five decks and a question appears: why do our company stories read so heavy?</p>
+    </div>
+
+    <div class="item paper" id="it-form" data-pin-to="it-mark:form" style="--x:1950;--y:1240;--w:820;--r:-.5">
+      <p class="kicker k-indigo"><i class="ph ph-pen-nib"></i>03 — Design · Form</p>
+      <p>We find the format the insight actually needs. Sometimes a fifteen-section scrollytelling piece. Sometimes a single annotated map and four sentences. The form serves the story, never the other way around.</p>
+      <div class="chart" style="height:330px" data-chart="form" data-alt="Words per section for each story, maps on one row and decks on another. Maps cluster around a median of about 54 words a section; decks around 185."></div>
+      <p class="src">Words per section, one dot per story. Source: Vismaya’s 33 listed stories, 29 September 2026.</p>
+    </div>
+
+    <div class="item sticky rose" id="it-ratio" style="--x:2880;--y:1330;--w:380;--r:2.5">
+      <span class="big" style="color:var(--indigo)">3.4×</span>
+      <p style="font-size:24px;margin-bottom:8px">Maps show. Decks explain.</p>
+      <p style="font-size:17px">Our five decks, all company stories, carry 3.4 times the words per screen of our 28 maps.</p>
+    </div>
+
+    <!-- ── Belief ────────────────────────────────────────────────────── -->
+    <div class="item paper" id="it-belief" style="--x:2730;--y:90;--w:700;--r:1">
+      <p class="kicker k-red">— What we believe</p>
+      <h2 style="margin-bottom:6px">Rigour and beauty are the same demand.</h2>
+      <p style="font-family:var(--serif);font-style:italic;font-size:19px;color:var(--muted)">A beautiful line is only allowed to pass through measured points.</p>
+      <div class="chart" style="height:640px" data-chart="belief" data-alt="All 33 of our published stories measured on a drafting grid by words per section, sorted from fewest to most, with one smooth vermillion line drawn through every point."></div>
+    </div>
+
+    <!-- ── What the world hides ─────────────────────────────────────── -->
+    <div class="item index" id="it-hides" style="--x:150;--y:2010;--w:640;--r:-1">
+      <h3>What the world hides</h3>
+      <p>The world is full of important things nobody can see: not because they’re hidden, but because nobody has bothered to make them legible.</p>
+      <p>The supply chain that keeps your phone alive runs through six countries and a chokepoint most people can’t name. The policy shift that will reshape your industry in five years is sitting in an appendix, unread. The slow variable that explains the fast headline is right there in the dataset, ignored.</p>
+    </div>
+    <div class="item sticky sage" id="it-supply" data-pin-to="it-hides" style="--x:880;--y:1990;--w:310;--r:2">
+      <p class="who" style="margin:0 0 8px;color:var(--green)">The supply chain</p>
+      <p>Six countries, one chokepoint most people can’t name.</p>
+    </div>
+    <div class="item sticky rose" id="it-policy" data-pin-to="it-hides" style="--x:900;--y:2330;--w:310;--r:-2">
+      <p class="who" style="margin:0 0 8px;color:var(--red)">The policy shift</p>
+      <p>In an appendix, unread.</p>
+    </div>
+    <div class="item sticky blue" id="it-slow" data-pin-to="it-hides" style="--x:1250;--y:2150;--w:310;--r:1.5">
+      <p class="who" style="margin:0 0 8px;color:var(--indigo)">The slow variable</p>
+      <p>In the dataset, ignored.</p>
+    </div>
+
+    <!-- ── Both fail the same way ───────────────────────────────────── -->
+    <div class="item index" id="it-either" style="--x:1680;--y:2000;--w:380;--r:-1.5">
+      <p class="kicker k-muted" style="margin-bottom:21px">Either</p>
+      <p style="font-family:var(--serif);font-size:26px;line-height:28px" class="fail">It stays buried in jargon.</p>
+    </div>
+    <div class="item index" id="it-or" style="--x:2130;--y:2030;--w:380;--r:1.5">
+      <p class="kicker k-muted" style="margin-bottom:21px">Or</p>
+      <p style="font-family:var(--serif);font-size:26px;line-height:28px" class="fail">It gets compressed into a hot take.</p>
+    </div>
+    <div class="item quote-card bare" id="it-fail" style="--x:1690;--y:2330;--w:820">
+      <p>Both fail <em>the same way.</em></p>
+    </div>
+
+    <!-- ── What we make ─────────────────────────────────────────────── -->
+    <div class="item paper" id="it-make" style="--x:2600;--y:1830;--w:860;--r:.8">
+      <h3>What we make</h3>
+      <p>We don’t start with a format. We start with a question: what does this insight actually need to land?</p>
+      <p>Sometimes it’s a ten-minute scrollytelling piece. Sometimes a single chart with a headline. Sometimes a forty-five-second reel. We’d rather kill a good story than publish a wrong one, and we’d rather make one person think differently than impress ten thousand who scroll past and feel nothing.</p>
+      <div class="formats">
+        <a class="fmt" href="https://vizmaya.fyi/story/korean-war-frontline" target="_blank" rel="noopener">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 160 130"><rect x="34" y="4" width="122" height="78" rx="4" fill="#d8d2c5"/><rect x="20" y="20" width="122" height="78" rx="4" fill="#c9c1b1"/><rect x="4" y="38" width="122" height="78" rx="4" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".15"/><path d="M18 96 L40 72 L58 82 L82 58 L110 66" fill="none" stroke="#2d6a4f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="58" r="4" fill="#2d6a4f"/><rect x="16" y="50" width="44" height="5" rx="2" fill="#0f0e0c" opacity=".7"/></svg>
+          </div>
+          <p class="kicker k-green">01 · Scrollytelling</p>
+          <p class="t">Up and down the peninsula</p>
+          <p class="m">Many sections, one scroll</p>
+        </a>
+        <a class="fmt" href="https://vizmaya.fyi/story/india-fuel-prices-2026" target="_blank" rel="noopener">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 160 130"><rect x="4" y="14" width="152" height="112" rx="4" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".15"/><rect x="16" y="24" width="70" height="5" rx="2" fill="#0f0e0c" opacity=".7"/><g fill="#c4391c"><rect x="16" y="40" width="118" height="10" rx="1"/><rect x="16" y="56" width="96" height="10" rx="1" opacity=".75"/><rect x="16" y="72" width="80" height="10" rx="1" opacity=".55"/><rect x="16" y="88" width="62" height="10" rx="1" opacity=".4"/><rect x="16" y="104" width="44" height="10" rx="1" opacity=".3"/></g></svg>
+          </div>
+          <p class="kicker k-red">02 · One chart</p>
+          <p class="t">What a Litre Costs in India</p>
+          <p class="m">One picture, one headline</p>
+        </a>
+        <a class="fmt" href="https://vizmaya.fyi/story/great-nicobar-project" target="_blank" rel="noopener">
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 160 130"><rect x="52" y="0" width="58" height="130" rx="10" fill="#0f0e0c"/><rect x="56" y="4" width="50" height="122" rx="7" fill="#2d6a4f"/><path d="M56 80 Q70 66 82 76 T106 70 V126 H56 Z" fill="#1f4d39"/><rect x="62" y="96" width="34" height="4" rx="2" fill="#fffdf8"/><rect x="62" y="104" width="24" height="4" rx="2" fill="#fffdf8" opacity=".7"/><rect x="72" y="7" width="18" height="4" rx="2" fill="#0f0e0c"/><circle cx="81" cy="44" r="10" fill="none" stroke="#fffdf8" stroke-width="2"/><path d="M78 40 L86 44 L78 48 Z" fill="#fffdf8"/></svg>
+          </div>
+          <p class="kicker k-indigo">03 · Vertical</p>
+          <p class="t">The Last Forest Before the Strait</p>
+          <p class="m">9:16, made to be watched</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Who we are ───────────────────────────────────────────────── -->
+    <div class="item paper tape" id="it-studio" style="--x:150;--y:2640;--w:500;--r:-1.2">
+      <p class="kicker k-muted">— Who we are</p>
+      <h3 style="margin-bottom:4px">A two-person studio.</h3>
+      <p style="font-family:var(--serif);font-style:italic;color:var(--muted)">A journalist who designs. A designer who codes.</p>
+      <div class="chart" style="height:380px" data-chart="mark" data-variant="studio" data-alt="The mark recast: Shashank (words, data) and Suprabho (design, code) as two circles, the story they make as the third."></div>
+    </div>
+
+    <div class="item index" id="it-shashank" data-pin-to="it-studio:shashank" style="--x:740;--y:2660;--w:640;--r:1">
+      <h3>Shashank A. Pandey</h3>
+      <p>He started as a journalist who couldn’t stop designing, and a designer who couldn’t stop researching. Nobody hired that combination, so he taught himself: not out of strategy, but because the obsession left no choice.</p>
+      <p>He believes clarity is an act of generosity: that every number is someone’s lived reality compressed into a digit, and most of the time life gets flattened into a chart no one reads. He exists to give it back its shape, to sit at the border between what is true and what is understood, and to refuse to let the distance between them be someone else’s problem.</p>
+    </div>
+    <div class="item sticky sage" id="it-shashank-facts" style="--x:1440;--y:2700;--w:330;--r:-2">
+      <ul class="facts">
+        <li><b style="color:var(--green)">Practice</b><span>Data storytelling, visual journalism</span></li>
+        <li><b>Path</b><span>Journalist → designer → researcher, self-taught</span></li>
+        <li><b style="color:var(--red)">Believes</b><span>Clarity is an act of generosity</span></li>
+      </ul>
+    </div>
+
+    <div class="item index" id="it-suprabho" data-pin-to="it-studio:suprabho" style="--x:1850;--y:2650;--w:640;--r:-1">
+      <h3>Suprabho Dhenki</h3>
+      <p>Product designer and creative technologist. Founder of Promad, where he builds design tools and workflows (Figma plugins, parametric systems, AI-assisted production pipelines) that address the fragmentation of modern creative work.</p>
+      <p>Previously designed at Microsoft, 1mg, ClearTax, Merkle Science, and Kidzovo; early work on interaction design at IIT Guwahati was featured in a CHI publication. Bridges design and code through motion, data visualization, and modular frameworks for creative production.</p>
+    </div>
+    <div class="item sticky blue" id="it-suprabho-facts" style="--x:2550;--y:2690;--w:340;--r:2">
+      <ul class="facts">
+        <li><b style="color:var(--indigo)">Practice</b><span>Product design, creative technology</span></li>
+        <li><b>Now</b><span>Founder, Promad</span></li>
+        <li><b>Before</b><span>Microsoft · 1mg · ClearTax · Merkle Science · Kidzovo</span></li>
+        <li><b>Research</b><span>CHI publication, IIT Guwahati</span></li>
+      </ul>
+    </div>
+
+    <!-- ── Closing ──────────────────────────────────────────────────── -->
+    <div class="item quote-card bare" id="it-close" style="--x:2960;--y:2760;--w:560">
+      <p style="font-size:76px">We added the <em>z</em> for viz. That’s the job.</p>
+    </div>
+
+    <span class="zone-label board-only" style="--x:1240;--y:60">Process</span>
+    <span class="zone-label board-only" style="--x:2740;--y:40">Belief</span>
+    <span class="zone-label board-only" style="--x:160;--y:1180">One dataset, three passes</span>
+    <span class="zone-label board-only" style="--x:160;--y:1940">What the world hides</span>
+    <span class="zone-label board-only" style="--x:2610;--y:1770">What we make</span>
+    <span class="zone-label board-only" style="--x:160;--y:2580">Who we are</span>
+  </div>
+
+  <!-- The guided tour. Each step frames one or more items (data-target);
+       the camera flies there and the step's charts play. -->
+  <ol class="tour board-only">
+    <li data-unit data-target="board">
+      <span class="step-k" style="color:var(--green)">Vismaya · a studio for wonder</span>
+      <h2>We give the invisible its shape</h2>
+      <p>Our studio, pinned to one board. Follow the tour, or drag the board and zoom in on anything.</p>
+    </li>
+    <li data-unit data-target="it-title it-process" data-target-sm="it-title">
+      <span class="step-k" style="color:var(--green)">Cover</span>
+      <h2>A two-person data-storytelling studio</h2>
+      <p>We start with the dataset, find the question it answers, and build the form that insight actually needs.</p>
+    </li>
+    <li data-unit data-target="it-mark it-process" data-target-sm="it-mark">
+      <span class="step-k" style="color:var(--muted)">Process</span>
+      <h2>Three things. In order. Every time.</h2>
+      <p>Pattern, then meaning, then form. Next, our own 33 published stories go through all three.</p>
+    </li>
+    <li data-unit data-target="it-pattern">
+      <span class="step-k" style="color:var(--green)">01 · Pattern</span>
+      <h2>Start with the dataset</h2>
+      <p>Thirty-three stories, one dot each, no labels yet. The pattern has to exist before we decide what it means.</p>
+    </li>
+    <li data-unit data-target="it-meaning">
+      <span class="step-k" style="color:var(--red)">02 · Meaning</span>
+      <h2>Find the question it answers</h2>
+      <p>Colour our five company decks and a question appears: why do they read so heavy?</p>
+    </li>
+    <li data-unit data-target="it-form it-ratio" data-target-sm="it-form">
+      <span class="step-k" style="color:var(--indigo)">03 · Form</span>
+      <h2>Draw the answer to be read in one glance</h2>
+      <p>Words per section: maps show, decks explain. Same data, three passes; only what we’ve understood changes.</p>
+    </li>
+    <li data-unit data-target="it-mark it-penrose it-wonder" data-target-sm="it-penrose it-wonder">
+      <span class="step-k" style="color:var(--muted)">The mark</span>
+      <h2>Three worlds and the leaps between them</h2>
+      <p>After Roger Penrose: pattern, mind and form. None of them makes sense alone.</p>
+    </li>
+    <li data-unit data-target="it-belief">
+      <span class="step-k" style="color:var(--red)">What we believe</span>
+      <h2>Rigour and beauty are the same demand</h2>
+      <p>Every story measured, all 33. Then one smooth line, allowed to pass only through measured points.</p>
+    </li>
+    <li data-unit data-target="it-hides it-supply it-policy it-slow" data-target-sm="it-hides">
+      <span class="step-k" style="color:var(--muted)">What the world hides</span>
+      <h2>Not hidden. Just never made legible.</h2>
+      <p>The supply chain, the policy shift, the slow variable: all in plain sight, and nobody can see them.</p>
+    </li>
+    <li data-unit data-target="it-either it-or it-fail">
+      <span class="step-k" style="color:var(--muted)">The problem</span>
+      <h2>Both fail the same way</h2>
+      <p>Either things stay buried in jargon, or they get compressed into hot takes.</p>
+    </li>
+    <li data-unit data-target="it-make">
+      <span class="step-k" style="color:var(--muted)">What we make</span>
+      <h2>The form the insight needs</h2>
+      <p>A ten-minute scroll, a single chart, a forty-five-second reel. Tap any of the three to read it.</p>
+    </li>
+    <li data-unit data-target="it-studio">
+      <span class="step-k" style="color:var(--muted)">Who we are</span>
+      <h2>A two-person studio</h2>
+      <p>The mark recast: two people, and the story they make as the third circle.</p>
+    </li>
+    <li data-unit data-target="it-shashank it-shashank-facts" data-target-sm="it-shashank">
+      <span class="step-k" style="color:var(--green)">Words · data</span>
+      <h2>Shashank A. Pandey</h2>
+      <p>A journalist who designs. Clarity, he believes, is an act of generosity.</p>
+    </li>
+    <li data-unit data-target="it-suprabho it-suprabho-facts" data-target-sm="it-suprabho">
+      <span class="step-k" style="color:var(--indigo)">Design · code</span>
+      <h2>Suprabho Dhenki</h2>
+      <p>A designer who codes. Founder of Promad.</p>
+    </li>
+    <li data-unit data-target="it-close">
+      <span class="step-k" style="color:var(--red)">Closing</span>
+      <h2>We added the z for viz</h2>
+      <p>That’s the job.</p>
+    </li>
+    <li data-unit data-target="board">
+      <span class="step-k" style="color:var(--muted)">The whole studio</span>
+      <h2>The board is yours</h2>
+      <p>That’s the tour. Drag the board, zoom into any card, or start again.</p>
+    </li>
+  </ol>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://vizmaya.fyi/formats/board@1.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   This story's charts. The format runtime draws each [data-chart] element
+   with the function registered here, the first time its unit is entered,
+   and plays it once. Each draws at Story.size(el) and passes every duration
+   through Story.dur() (0 under reduced motion and on a redraw).
+   Colours come from CSS custom properties on the item (--c-ink --c-muted
+   --c-grid --c-line --c-green --c-red --c-indigo --c-paper --font-chart).
+   ───────────────────────────────────────────────────────────────────────── */
+(function () {
+  'use strict'
+  if (!window.Story) return // the runtime didn't load: the page reads as one column
+  var reduced = Story.reduced
+  var dur = Story.dur
+  var size = Story.size
+  var charts = Story.charts
+
+  // Our 33 listed vizmaya-fyi stories (stories table, 2026-09-29):
+  // content/stories/vizmaya-studio/images/portfolio-2026-09-29.json.
+  // [slug, title, format, sections, words]
+  var PORTFOLIO = [
+    ['currency-rankings-2026', 'The Year the Dollar Lost', 'map', 14, 780],
+    ['delimitation-2011-census', 'India’s Redrawn Map', 'map', 12, 644],
+    ['gdp-growth-2026', 'The Growth That Moved East', 'map', 15, 696],
+    ['housing-trends-europe', 'The Shrinking European House', 'map', 18, 834],
+    ['projected-population-2050', 'Where the Next Billion Are Born', 'map', 15, 636],
+    ['south-korea-gpu-hour', 'The Quiet Inflation', 'map', 39, 1347],
+    ['stargate-real-constraint', 'Stargate’s Real Constraint', 'map', 15, 705],
+    ['great-nicobar-project', 'The Last Forest Before the Strait', 'map', 11, 592],
+    ['top-car-brand-2026', 'What the World Drives, What the World Burns', 'map', 12, 863],
+    ['iea-oil-may-2026', 'When the Strait Closed', 'map', 15, 838],
+    ['the-century-trade-story', 'The World Is Watching', 'map', 18, 453],
+    ['india-italy-meloni-era', 'Mapped: The Melodi Era', 'map', 15, 1064],
+    ['kashmir-1941-land-reform', 'A Kingdom on the Eve of Reform', 'map', 15, 813],
+    ['india-compounding-crises-2026', 'India 2026: Four Shocks at Once', 'map', 8, 927],
+    ['who-owns-americas-debt', 'Who Owns America’s $39 Trillion Debt?', 'map', 11, 715],
+    ['india-aviation-cut-2026', 'The Sky Closes for the Summer', 'map', 10, 895],
+    ['ebola-2026', 'A New Ebola is Moving Through a War', 'map', 11, 1249],
+    ['largest-armies-2026', 'The Army That Isn’t There', 'map', 16, 718],
+    ['spacex-ipo-2026', 'A Rocket Company That Became the Internet', 'deck', 14, 2584, 'SpaceX S-1'],
+    ['india-fuel-prices-2026', 'What a Litre Costs in India', 'map', 11, 1004],
+    ['american-cost-divide', 'The American Cost Divide', 'map', 16, 817],
+    ['adani-all-over-world', 'A Conglomerate’s Shadow Across India', 'map', 9, 1456],
+    ['zepto-ipo-filing', 'Zepto IPO Filing', 'deck', 7, 1011, 'Zepto IPO'],
+    ['adani-india-2026', 'Adani and the State', 'deck', 8, 3074, 'Adani and the State'],
+    ['us-strike-on-oil-tanker', 'US Strikes on Oil Tankers', 'map', 6, 907],
+    ['nse-ipo-2026', 'NSE IPO 2026', 'deck', 7, 1342, 'NSE IPO'],
+    ['jio-ipo-2026', 'Jio IPO', 'deck', 7, 337, 'Jio IPO'],
+    ['odyssey-voyage', 'A Two-Week Voyage, Ten Years Long', 'map', 19, 1718],
+    ['india-exam-leaks', 'A Leaky Future', 'map', 17, 1236],
+    ['ramayana-locations', 'The Ramayana, Mapped', 'map', 42, 939],
+    ['korean-war-frontline', 'Up and down the peninsula', 'map', 18, 985],
+    ['the-domestic-stack', 'The Domestic Stack', 'map', 18, 401],
+    ['22-09-26', 'The Site-Selection Race', 'map', 27, 706]
+  ].map(function (r, i) {
+    return { i: i, slug: r[0], title: r[1], deck: r[2] === 'deck', secs: r[3], words: r[4], label: r[5], wps: Math.round(r[4] / r[3]) }
+  })
+  var MAPS = PORTFOLIO.filter(function (d) { return !d.deck })
+  var DECKS = PORTFOLIO.filter(function (d) { return d.deck })
+  function wps(d) { return d.wps }
+  var MAP_MEDIAN = d3.median(MAPS, wps) // 54.5
+  var DECK_MEDIAN = d3.median(DECKS, wps) // 185
+
+  function svg(el, w, h) {
+    el.innerHTML = ''
+    return d3.select(el).append('svg')
+      .attr('viewBox', '0 0 ' + w + ' ' + h).attr('width', w).attr('height', h)
+      .attr('role', 'img').attr('aria-label', el.getAttribute('data-alt') || '')
+      .style('display', 'block').style('overflow', 'visible')
+      .style('font-family', 'var(--font-chart)')
+  }
+  function fs(sel) { return sel.style('font-size', 'var(--chart-fs, 13px)') }
+  function fsSm(sel) { return sel.style('font-size', 'var(--chart-fs-sm, 11px)') }
+
+  // ── Pattern and Meaning: the same scatter, sections × words ─────────────
+  // Meaning colours the decks and adds the axes; Pattern is the raw cloud.
+  function scatter(el, meaning) {
+    var s = size(el, 0.55), W = s[0], H = s[1]
+    var m = { t: 34, r: meaning ? 150 : 16, b: meaning ? 30 : 12, l: meaning ? 48 : 12 }
+    var x = d3.scaleLinear().domain([0, 45]).range([m.l, W - m.r])
+    var y = d3.scaleLinear().domain([0, 3200]).range([H - m.b, m.t])
+    var g = svg(el, W, H)
+    ;[0, 800, 1600, 2400, 3200].forEach(function (v) {
+      g.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(v)).attr('y2', y(v)).style('stroke', 'var(--c-grid)')
+      if (meaning) fsSm(g.append('text').attr('x', m.l - 8).attr('y', y(v) + 4).attr('text-anchor', 'end')
+        .text(d3.format(',')(v)).style('fill', 'var(--c-muted)'))
+    })
+    g.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--c-line)')
+    if (meaning) {
+      ;[0, 15, 30, 45].forEach(function (v) {
+        fsSm(g.append('text').attr('x', x(v)).attr('y', H - 8).attr('text-anchor', 'middle').text(v).style('fill', 'var(--c-muted)'))
+      })
+      fsSm(g.append('text').attr('x', W - m.r).attr('y', H - 8).attr('dx', 10).text('sections →').style('fill', 'var(--c-muted)'))
+      fsSm(g.append('text').attr('x', m.l - 8).attr('y', m.t - 14).attr('text-anchor', 'end').text('words').style('fill', 'var(--c-muted)'))
+    }
+    fs(g.append('text').attr('x', m.l).attr('y', 14)
+      .text(meaning ? 'Why do our five company stories read so heavy?' : '33 stories · one dot each · no labels yet')
+      .style('fill', meaning ? 'var(--c-red)' : 'var(--c-green)').style('font-weight', 600))
+
+    // maps first, decks on top
+    var data = MAPS.concat(DECKS)
+    var dots = g.append('g').selectAll('circle').data(data).join('circle')
+      .attr('cx', function (d) { return x(d.secs) }).attr('cy', function (d) { return y(d.words) })
+      .attr('r', function (d) { return reduced ? rOf(d) : 0 })
+      .style('fill', function (d) { return meaning ? (d.deck ? 'var(--c-red)' : 'var(--c-muted)') : 'var(--c-green)' })
+      .style('fill-opacity', function (d) { return meaning ? (d.deck ? 1 : 0.4) : 0.7 })
+    dots.append('title').text(function (d) { return d.title + ': ' + d.secs + ' sections, ' + d3.format(',')(d.words) + ' words' })
+    function rOf(d) { return meaning && d.deck ? 7 : 5.5 }
+    var labs = g.append('g').style('opacity', reduced ? 1 : 0)
+    if (meaning) {
+      DECKS.forEach(function (d) {
+        fsSm(labs.append('text').attr('x', x(d.secs) + 12).attr('y', y(d.words) + 4).text(d.label)
+          .style('fill', 'var(--c-red)').style('font-weight', 600)
+          .style('paint-order', 'stroke').style('stroke', 'var(--c-paper)').style('stroke-width', 3).style('stroke-linejoin', 'round'))
+      })
+    }
+    return {
+      play: function () {
+        dots.transition().duration(dur(420)).ease(d3.easeBackOut)
+          .delay(function (d, k) { return dur(meaning && d.deck ? 700 + k * 20 : k * 22) })
+          .attr('r', rOf)
+        labs.transition().delay(dur(1100)).duration(dur(400)).style('opacity', 1)
+      }
+    }
+  }
+  charts.pattern = function (el) { return scatter(el, false) }
+  charts.meaning = function (el) { return scatter(el, true) }
+
+  // ── Form: words per section, maps vs decks, with the two medians ────────
+  charts.form = function (el) {
+    var s = size(el, 0.42), W = s[0], H = s[1]
+    var m = { t: 28, r: 14, b: 32, l: 112 }
+    var x = d3.scaleLinear().domain([0, 400]).range([m.l, W - m.r])
+    var rowH = (H - m.t - m.b) / 2
+    var rows = [
+      { key: 'maps', label: 'MAP STORIES · ' + MAPS.length, data: MAPS, color: 'var(--c-muted)', med: MAP_MEDIAN, op: 0.55 },
+      { key: 'decks', label: 'DECKS · ' + DECKS.length, data: DECKS, color: 'var(--c-indigo)', med: DECK_MEDIAN, op: 1 }
+    ]
+    var g = svg(el, W, H)
+    ;[0, 100, 200, 300, 400].forEach(function (v) {
+      g.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--c-grid)')
+      fsSm(g.append('text').attr('x', x(v)).attr('y', H - m.b + 18).attr('text-anchor', 'middle').text(v).style('fill', 'var(--c-muted)'))
+    })
+    fsSm(g.append('text').attr('x', W - m.r).attr('y', H - 1).attr('text-anchor', 'end').text('words per section →').style('fill', 'var(--c-muted)'))
+    var meds = [], allDots = []
+    rows.forEach(function (row, k) {
+      var cy = m.t + rowH * k + rowH / 2
+      fsSm(g.append('text').attr('x', 0).attr('y', cy + 4).text(row.label).style('fill', row.color).style('font-weight', 600))
+      // a deterministic jitter, so the strip reads as a crowd
+      var dots = g.append('g').selectAll('circle').data(row.data).join('circle')
+        .attr('cx', function (d) { return reduced ? x(d.wps) : x(0) })
+        .attr('cy', function (d, j) { return cy + (((j * 37) % 11) - 5) * rowH / 26 })
+        .attr('r', row.key === 'decks' ? 7.5 : 6).style('fill', row.color).style('fill-opacity', row.op)
+      dots.append('title').text(function (d) { return d.title + ': ' + d.wps + ' words per section' })
+      allDots.push(dots)
+      var med = g.append('g').style('opacity', reduced ? 1 : 0)
+      med.append('line').attr('x1', x(row.med)).attr('x2', x(row.med)).attr('y1', cy - rowH * 0.42).attr('y2', cy + rowH * 0.42)
+        .style('stroke', row.color).style('stroke-width', 2)
+      fsSm(med.append('text').attr('x', x(row.med) + 8).attr('y', cy - rowH * 0.42 + 10)
+        .text((row.key === 'maps' ? 'map' : 'deck') + ' median · ' + d3.format('.3~')(row.med))
+        .style('fill', row.color).style('font-weight', 600))
+      meds.push(med)
+    })
+    return {
+      play: function () {
+        allDots.forEach(function (dots, k) {
+          dots.transition().duration(dur(900)).ease(d3.easeCubicOut)
+            .delay(function (d, j) { return dur(k * 350 + j * 18) })
+            .attr('cx', function (d) { return x(d.wps) })
+        })
+        meds.forEach(function (med, k) { med.transition().delay(dur(1300 + k * 250)).duration(dur(400)).style('opacity', 1) })
+      }
+    }
+  }
+
+  // ── Belief: every story measured, one line through every point ─────────
+  charts.belief = function (el) {
+    var s = size(el, 0.9), W = s[0], H = s[1]
+    var vals = PORTFOLIO.map(wps).sort(d3.ascending)
+    var m = { t: 52, r: 8, b: 64, l: 44 }
+    var x = d3.scaleLinear().domain([0, vals.length - 1]).range([m.l, W - m.r])
+    var y = d3.scaleLinear().domain([0, 400]).range([H - m.b, m.t])
+    var g = svg(el, W, H)
+    // the drafting grid
+    d3.range(0, 401, 20).forEach(function (v) {
+      g.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(v)).attr('y2', y(v))
+        .style('stroke', v % 100 ? 'var(--c-grid)' : 'var(--c-line)').style('stroke-width', v % 100 ? 1 : 1.5)
+      if (!(v % 100)) fsSm(g.append('text').attr('x', m.l - 8).attr('y', y(v) + 4).attr('text-anchor', 'end').text(v).style('fill', 'var(--c-muted)'))
+    })
+    vals.forEach(function (v, i) {
+      g.append('line').attr('x1', x(i)).attr('x2', x(i)).attr('y1', y(400)).attr('y2', y(0)).style('stroke', 'var(--c-grid)')
+    })
+    fsSm(g.append('text').attr('x', W - m.r).attr('y', m.t - 12).attr('text-anchor', 'end')
+      .text('words per section, our published stories').style('fill', 'var(--c-muted)'))
+    fs(g.append('text').attr('x', m.l).attr('y', 16).text('RIGOUR · every story measured. All ' + vals.length + '.')
+      .style('fill', 'var(--c-green)').style('font-weight', 600).style('letter-spacing', '.06em'))
+    var beauty = fs(g.append('text').attr('x', m.l).attr('y', H - 18).text('BEAUTY · one line through every point.')
+      .style('fill', 'var(--c-red)').style('font-weight', 600).style('letter-spacing', '.06em').style('opacity', reduced ? 1 : 0))
+    // rigour: a measured stem per story
+    var stems = g.append('g').selectAll('line').data(vals).join('line')
+      .attr('x1', function (d, i) { return x(i) }).attr('x2', function (d, i) { return x(i) })
+      .attr('y1', function (d) { return reduced ? y(d) : y(0) }).attr('y2', y(0))
+      .style('stroke', 'var(--c-green)').style('stroke-width', 2).style('stroke-dasharray', '3 5').style('opacity', 0.7)
+    // beauty: one smooth line through every point (monotone, so it never overshoots a measurement)
+    var path = g.append('path').datum(vals)
+      .attr('d', d3.line().curve(d3.curveMonotoneX).x(function (d, i) { return x(i) }).y(function (d) { return y(d) }))
+      .style('fill', 'none').style('stroke', 'var(--c-red)').style('stroke-width', 5)
+      .style('stroke-linecap', 'round').style('stroke-linejoin', 'round')
+    var len = path.node().getTotalLength ? path.node().getTotalLength() : 0
+    if (!reduced) path.style('stroke-dasharray', len + ' ' + len).style('stroke-dashoffset', len)
+    var pts = g.append('g').selectAll('circle').data(vals).join('circle')
+      .attr('cx', function (d, i) { return x(i) }).attr('cy', function (d) { return y(d) })
+      .attr('r', 4.5).style('fill', 'var(--c-paper)').style('stroke', 'var(--c-ink)').style('stroke-width', 2)
+      .style('opacity', reduced ? 1 : 0)
+    return {
+      play: function () {
+        stems.transition().duration(dur(500)).delay(function (d, i) { return dur(i * 25) }).attr('y1', function (d) { return y(d) })
+        pts.transition().duration(dur(200)).delay(function (d, i) { return dur(250 + i * 25) }).style('opacity', 1)
+        path.transition().delay(dur(1200)).duration(dur(1500)).ease(d3.easeCubicInOut).style('stroke-dashoffset', 0)
+        beauty.transition().delay(dur(2200)).duration(dur(400)).style('opacity', 1)
+      }
+    }
+  }
+
+  // ── The mark: three circles and the leaps between them ─────────────────
+  // Geometry from public/vizmaya-logo-01.svg (via images/make_marks.py),
+  // drawn in its own 1000 × 920 viewBox and fitted to the element.
+  var LEAPS = [
+    'M489.12,739.01c-2.77,1.18-5.65.77-6.72-.88-.08-.13-.15-.26-.21-.4l-17.12-32.04-144.06-269.68c24-1.05,47.71-10.47,66.39-28.24l94.39,290.79,11.2,34.5s.02.03.02.05l.13.41c.47,1.920-1.23,4.29-4.02,5.48Z',
+    'M778.76,444.05c-2.41-1.81-5.3-2.11-6.74-.76-.11.11-.21.22-.3.34l-24.32,26.99-204.64,227.16c23.050,6.79,43.79,21.63,57.65,43.37l161.51-259.59,19.16-30.8s.02-.03.04-.05l.23-.37c.92-1.75-.16-4.46-2.59-6.29Z',
+    'M378.48,340.7c.36-2.99,2.16-5.28,4.12-5.38.16,0,.3,0,.45.01l36.3,1.19,305.58,10.080c-11.09,21.31-14.79,46.55-8.74,71.61l-299.03-63.65-35.48-7.55s-.04,0-.06,0l-.42-.09c-1.9-.55-3.1-3.21-2.74-6.23Z'
+  ]
+  var CIRCLES = [[316.43, 333.11], [816.34, 394.1], [513.59, 796.53]]
+  var MARKS = {
+    worlds: [
+      { key: 'pattern', name: 'PATTERN', sub: 'the data', color: 'var(--c-green)', ty: 170 },
+      { key: 'meaning', name: 'MEANING', sub: 'the mind', color: 'var(--c-red)', ty: 232 },
+      { key: 'form', name: 'FORM', sub: 'the design', color: 'var(--c-indigo)', ty: 960 }
+    ],
+    studio: [
+      { key: 'shashank', name: 'SHASHANK', sub: 'words · data', color: 'var(--c-green)', ty: 170 },
+      { key: 'suprabho', name: 'SUPRABHO', sub: 'design · code', color: 'var(--c-indigo)', ty: 232 },
+      { key: 'story', name: 'THE STORY', sub: 'what we make together', color: 'var(--c-red)', ty: 960 }
+    ]
+  }
+  var VB = { x: 40, y: 110, w: 1000, h: 920 }
+  var uid = 0
+  charts.mark = function (el, opts) {
+    var spec = MARKS[(opts && opts.variant) || 'worlds'] || MARKS.worlds
+    var s = size(el, 0.9), W = s[0], H = s[1]
+    var k = Math.min(W / VB.w, H / VB.h)
+    var ox = (W - VB.w * k) / 2 - VB.x * k, oy = (H - VB.h * k) / 2 - VB.y * k
+    var root = svg(el, W, H)
+    var g = root.append('g').attr('transform', 'translate(' + ox + ',' + oy + ') scale(' + k + ')')
+    var id = 'mk' + (++uid)
+    var defs = g.append('defs')
+    ;[[489.08, 736.38, 340.35], [770.86, 454.6, 376.42], [388.07, 341.62, 350.66]].forEach(function (c, i) {
+      var rg = defs.append('radialGradient').attr('id', id + 'g' + i).attr('gradientUnits', 'userSpaceOnUse')
+        .attr('cx', c[0]).attr('cy', c[1]).attr('r', c[2])
+      rg.append('stop').attr('offset', 0).attr('stop-color', '#fffdf8')
+      rg.append('stop').attr('offset', 1).attr('stop-color', '#f5f1ea').attr('stop-opacity', 0)
+    })
+    var leaps = g.append('g').style('stroke', 'var(--c-ink)').style('stroke-width', 1.5)
+      .selectAll('path').data(LEAPS).join('path').attr('d', function (d) { return d })
+      .attr('fill', function (d, i) { return 'url(#' + id + 'g' + i + ')' }).style('opacity', reduced ? 1 : 0)
+    var dots = g.append('g').selectAll('circle').data(spec).join('circle')
+      .attr('cx', function (d, i) { return CIRCLES[i][0] }).attr('cy', function (d, i) { return CIRCLES[i][1] })
+      .attr('r', 103).style('fill', function (d) { return d.color })
+    var labs = g.append('g').style('opacity', reduced ? 1 : 0)
+    spec.forEach(function (d, i) {
+      labs.append('text').attr('x', CIRCLES[i][0]).attr('y', d.ty).attr('text-anchor', 'middle').text(d.name)
+        .style('font-family', 'var(--mono)').style('font-size', '30px').style('letter-spacing', '5px')
+        .style('font-weight', 600).style('fill', d.color)
+      labs.append('text').attr('x', CIRCLES[i][0]).attr('y', d.ty + 42).attr('text-anchor', 'middle').text(d.sub)
+        .style('font-family', 'var(--sans)').style('font-size', '28px').style('fill', 'var(--c-muted)')
+    })
+    return {
+      // strings pin to a circle: data-pin-to="it-mark:pattern"
+      anchor: function (key) {
+        var i = spec.findIndex(function (d) { return d.key === key })
+        if (i < 0) i = 0
+        return [ox + CIRCLES[i][0] * k, oy + CIRCLES[i][1] * k]
+      },
+      play: function () {
+        // each world pulses in turn, then the leaps between them appear
+        dots.transition().delay(function (d, i) { return dur(i * 260) }).duration(dur(260)).attr('r', 118)
+          .transition().duration(dur(500)).ease(d3.easeBackOut).attr('r', 103)
+        leaps.transition().delay(function (d, i) { return dur(700 + i * 200) }).duration(dur(500)).style('opacity', 1)
+        labs.transition().delay(dur(1100)).duration(dur(500)).style('opacity', 1)
+      }
+    }
+  }
+})()
+</script>
+</body>
+</html>
