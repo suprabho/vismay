@@ -1417,6 +1417,9 @@ importers:
 
   packages/html-stories:
     dependencies:
+      '@vismay/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../content-source

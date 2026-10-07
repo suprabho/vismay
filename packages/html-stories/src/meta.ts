@@ -205,6 +205,38 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
   }
 }
 
+const MEDIA_TAG = /<(?:img|picture|video)\b/i
+
+/**
+ * Media checks (the brief's "Photography and media"): the page has at least
+ * one photo or video figure, every <img> has alt text, and every figure that
+ * holds a photo or video has a caption for its credit. Charts drawn in SVG
+ * aren't media, so a <figure> without an <img>/<picture>/<video> is skipped.
+ * The alt and caption checks read the static markup only; the presence check
+ * also counts figures a script writes.
+ */
+function lintMedia(html: string, warnings: string[]): void {
+  const figures = (src: string) => [...src.matchAll(/<figure\b[^>]*>([\s\S]*?)<\/figure>/gi)].map((m) => m[1] ?? '')
+  if (!figures(html).some((f) => MEDIA_TAG.test(f))) {
+    warnings.push(
+      'No photographs or video: the page has no <figure> holding an <img>, <picture> or <video>. ' +
+        'Add a hero image and real photos where the story has places, people or objects (the brief\'s "Photography and media").',
+    )
+  }
+  const markup = html.replace(/<script\b[\s\S]*?<\/script>/gi, '').replace(/<!--[\s\S]*?-->/g, '')
+  const noAlt = (markup.match(/<img\b[^>]*>/gi) ?? []).filter((tag) => !('alt' in parseAttrs(tag))).length
+  if (noAlt) {
+    warnings.push(`${noAlt} <img> without an alt attribute. Describe what each image shows (alt="" only for a purely decorative one).`)
+  }
+  const uncredited = figures(markup).filter((f) => MEDIA_TAG.test(f) && !/<figcaption\b/i.test(f)).length
+  if (uncredited) {
+    warnings.push(
+      `${uncredited} photo or video figure${uncredited === 1 ? ' has' : 's have'} no <figcaption>. ` +
+        'Credit each one there: author, source and licence, or "Illustration: AI-generated".',
+    )
+  }
+}
+
 /**
  * Aura scenes (aura.promad.design) are chosen per story after the HTML is
  * written, not by the agent: the slug lives in html_stories.aura and is laid
@@ -295,6 +327,8 @@ export function lintHtml(html: string): HtmlLint {
     warnings.push(`"${url}" is a relative or local path and won't resolve once hosted. Inline it or use an absolute https URL.`)
   }
   if (relative.size > 5) warnings.push(`…and ${relative.size - 5} more relative paths.`)
+
+  lintMedia(html, warnings)
 
   // Coarse on purpose: any try/catch in the document is taken as the guard.
   if (/\b(?:localStorage|sessionStorage|indexedDB)\b/.test(html) && !/\bcatch\b/.test(html)) {

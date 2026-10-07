@@ -27,6 +27,11 @@
  * format's own (./formatBrief): its hosted runtime, its authoring contract
  * and frame, and charts that animate when their unit is entered.
  *
+ * Photography is asked for, not just allowed: openly licensed images first
+ * (Wikimedia Commons, Openverse, public-domain archives), AI illustration only
+ * where nothing real fits, every image credited, and hosted on the story-assets
+ * bucket through the token-gated assets endpoint (./assetsApi).
+ *
  * Keep it about outcomes and constraints, not a component catalogue: the whole
  * point of this pipeline is that the agent designs the page itself.
  */
@@ -206,6 +211,83 @@ Use ${app === 'footshorts' ? 'them' : 'both'}. They make a page scannable, but t
   \`<image href="https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/in.svg">\`
   (or \`flags/1x1/\` for round markers). Never use emoji flags: Windows shows them
   as two letters. A flag always sits beside the country name, never instead of it.`
+}
+
+/**
+ * The "Photography and media" section: real images under open licences first,
+ * AI illustration only where nothing real fits, every one credited, and the
+ * assets endpoint (./assetsApi) to host them on the story-assets bucket.
+ */
+function mediaSection(app: HtmlStoryApp, site: string, unit: string): string {
+  const subjects =
+    app === 'footshorts'
+      ? 'the ground, the players, the city, the trophy, the crowd'
+      : 'the place, the people, the object, the machine, the landscape'
+  const footshorts =
+    app === 'footshorts'
+      ? `
+- **Football photos.** Players, managers and grounds come from Wikimedia
+  Commons under CC BY or CC BY-SA only. Never take them from club sites,
+  broadcasters or agencies (Getty, AP, Reuters, PA, Shutterstock), even
+  "for illustration". Never generate an image of a real player, manager or
+  match moment. A good Commons photo of the ground beats a bad one of the player.`
+      : ''
+  return `## Photography and media
+
+A data story is not only charts. When it has real ${subjects}, show them.
+
+- **How many.** A hero image near the top, then roughly one image or short
+  video every two or three ${unit}s, interleaved with the charts rather than
+  bunched together. Each one shows something the words and charts don't; if it
+  only decorates, leave it out.
+- **Where they come from, in this order:**
+  1. **Wikimedia Commons.** Search with
+     \`https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrsearch=<terms>&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1600\`.
+     The licence is in \`extmetadata.LicenseShortName\`, the author in \`Artist\`.
+  2. **Openverse.** \`https://api.openverse.org/v1/images/?q=<terms>&license=cc0,pdm,by,by-sa\`
+     returns each image's licence, creator, source page and a ready-made attribution.
+  3. **Public-domain archives:** NASA, NOAA, USGS, ESA (CC BY-SA), the Library of
+     Congress, national archives and museums' open-access collections.
+  4. **AI-generated illustration**, only when nothing real fits (see below).
+- **Licences you may use:** CC0, Public Domain Mark, CC BY, CC BY-SA. Not NC
+  (non-commercial) or ND (no derivatives), and never Unsplash, Pexels, stock
+  libraries, news agencies, or an image you found through a search engine
+  without a licence on its source page.
+- **Credit every image** in its \`<figcaption>\`: title or subject, author,
+  source link, licence link, e.g. "Photo: Jane Doe / Wikimedia Commons,
+  <a href=\"https://creativecommons.org/licenses/by-sa/4.0/\">CC BY-SA 4.0</a>".
+  List them again under "Sources & method".
+- **AI images are illustration, never evidence.** Use them for ideas, moods
+  and section openers. Never draw a photorealistic image of a real person, a
+  real event, a real document or anything the reader could take for a record
+  of what happened. Caption each one "Illustration: AI-generated". Prompt in
+  the story's palette and one consistent style (e.g. "flat risograph print,
+  two inks, #D85A30 on #0a0e14") so every illustration in the story looks like
+  part of the same set.${footshorts}
+- **Host them on ${site.replace(/^https?:\/\//, '')}** so they never vanish from under the page:
+  - MCP: \`save_story_image\` copies an image from its https URL (pass the credit
+    and licence); \`generate_story_image\` makes an AI illustration.
+  - HTTP: \`POST ${site}/api/html-stories/assets?slug=<slug>\` with
+    \`Authorization: Bearer $HTML_STORIES_TOKEN\` and JSON
+    \`{"fromUrl": "https://…", "credit": "…", "license": "CC BY-SA 4.0"}\` or
+    \`{"generate": {"prompt": "…", "aspectRatio": "16:9"}}\` (1:1, 16:9, 9:16,
+    4:3 or 3:4), or the image bytes with their \`Content-Type\`.
+    \`GET\` the same URL lists what the slug already has.
+  - Both return a permanent https \`url\`: use it in the page. Use the slug
+    you will post the story under. If you can't call either, link the
+    original file URL directly (Commons \`upload.wikimedia.org\` URLs are fine
+    to link).
+- **Markup.** \`<figure><img src="https://…" alt="…" width="1600" height="900"
+  loading="lazy" decoding="async"><figcaption>…</figcaption></figure>\`. The
+  hero is not lazy. Alt text says what the image shows, not "image of".
+  Set \`width\`/\`height\` (or \`aspect-ratio\`) so nothing jumps as images load,
+  and \`object-fit: cover\` for crops. Video: \`<video autoplay muted loop
+  playsinline poster="…">\` with an mp4 \`<source>\`, under ~10 seconds, no
+  sound needed to follow it. Under reduced motion, don't autoplay: show the poster.
+- **Treatment.** Full-bleed for the hero and for big moments; inside the text
+  column otherwise. A slow scroll-linked zoom or a duotone in the palette is
+  fine; no filters that make a photo hard to read.
+- **Share card.** The hero (cropped to 1200×630) is usually the right \`og:image\`.`
 }
 
 /** The "Maps" section: Mapbox scrollytelling, given a public token. */
@@ -430,7 +512,8 @@ ${formatIntro}${assignment}
 4. Load libraries from a CDN (jsdelivr, unpkg, cdnjs) with pinned versions.
 5. The page runs in a sandbox: no cookies, and \`localStorage\`/\`sessionStorage\`
    throw. Wrap any storage use in try/catch, or don't use it.
-6. Stay under ${MAX_HTML_BYTES / 1024 / 1024} MB. Don't base64 big photos; link them.
+6. Stay under ${MAX_HTML_BYTES / 1024 / 1024} MB. Link photos and video by https URL (see
+   "Photography and media"); never base64 them into the page.
 7. It must work from 360px to 1600px wide with no horizontal scroll, and charts
    must redraw on resize.
 8. Respect \`prefers-reduced-motion\`. Content must never be hidden if a script fails.
@@ -444,6 +527,8 @@ ${styleSection(app, style)}
 - Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
 
 ${iconsSection(app)}
+
+${mediaSection(app, site, unit)}
 
 ${paged ? storyFormatSection(paged, app) : motionSection(app, mapbox)}
 
@@ -470,7 +555,8 @@ the screenshots. Then fix:
 - text or labels overflowing, overlapping, or cut off
 - anything wider than the viewport
 - console errors, and charts that are empty or blank
-- low-contrast text${checks}
+- low-contrast text
+- images that don't load, or have no alt text or no credit line${checks}
 
 If you can't render it, re-read your chart code for these specific failures.
 ${spin ? `\n${checklistSection(spin)}\n` : ''}

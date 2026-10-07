@@ -81,6 +81,8 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `render_story_video` | yes (vizmaya-fyi) | Render a story (or a section clip) to an MP4 URL. |
 | `get_html_story_brief` | no (calls the deployed site, falling back to a local house brief) | The brief to read before writing a vizmaya or footshorts HTML story (`app`). `randomStyle: true` swaps the house look for a palette + fonts from an existing story. For footshorts, `fixtureIds` (up to 40) appends the match context — Opta facts, timeline, insights, commentary, schedules, table — with an optional `prompt`. |
 | `publish_html_story` | no (calls the deployed site) | Publish a self-contained HTML story to `vizmaya.fyi/s/<slug>` or, with `app: "footshorts"`, `footshorts.com/s/<slug>`. `spinId` ties the page to a randomizer spin. |
+| `save_story_image` | no (calls the deployed site) | Host an openly licensed photo or mp4 for an HTML story (`slug`) on the site's storage, from its https URL (`fromUrl`) or a local `filePath`, with its `credit` and `license`. Returns the permanent `url` to use in the page. |
+| `generate_story_image` | no (calls the deployed site) | Generate an AI illustration for an HTML story (`slug`, `prompt`, `aspectRatio`) through the site's AI gateway and host it the same way. Spends gateway credits. |
 | `spin_randomizer` | no (calls vizmaya.fyi) | Draw and log a story topic from the Vizmaya randomizers (`desk`, `atlas`, `epics`; see `packages/randomizer`), with locks (`from` + `locks`), re-spins (`respin` + `reason`), Atlas pair spins and Epics sequence mode. Pass the returned id as `spinId` to `get_html_story_brief` for the spin's full brief. |
 | `get_randomizer_spin` | no (calls vizmaya.fyi) | One spin: reels, rules, status, hero insight, reviewer note and research stub. |
 | `save_spin_research` | no (calls vizmaya.fyi) | Save a spin's research MD (claims log, HERO INSIGHT). Atlas and Epics insights then wait for approval in admin. |
@@ -96,10 +98,10 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `SUPABASE_SERVICE_ROLE_KEY` | render_story_video | — (required) |
 | `SCREENSHOT_DIR` | render_module_image (`returnAs:'path'`) | `/tmp/vismay-mcp-screenshots` |
 | `VISMAY_REPO_ROOT` | render_story_video | auto-derived |
-| `HTML_STORIES_URL` | publish_html_story, get_html_story_brief | `https://vizmaya.fyi` |
-| `HTML_STORIES_TOKEN` | publish_html_story, the randomizer tools | — (required; same value as on the vizmaya-fyi deployment) |
+| `HTML_STORIES_URL` | publish_html_story, get_html_story_brief, save_story_image, generate_story_image | `https://vizmaya.fyi` |
+| `HTML_STORIES_TOKEN` | publish_html_story, save_story_image, generate_story_image, the randomizer tools | — (required; same value as on the vizmaya-fyi deployment) |
 | `FOOTSHORTS_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "footshorts"`) | `https://footshorts.com` |
-| `FOOTSHORTS_HTML_STORIES_TOKEN` | publish_html_story and the match-context brief for footshorts | falls back to `HTML_STORIES_TOKEN` (same value as on the footshorts web deployment) |
+| `FOOTSHORTS_HTML_STORIES_TOKEN` | publish_html_story, the image tools and the match-context brief for footshorts | falls back to `HTML_STORIES_TOKEN` (same value as on the footshorts web deployment) |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | get_html_story_brief, only when the site can't be reached (the brief is then built locally) | — (without it that brief has no Mapbox maps section) |
 
 The metadata tools (`list_verticals` / `list_modules`) need none of these.

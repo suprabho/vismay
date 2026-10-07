@@ -17,13 +17,15 @@
     "./storyStyles": "./src/storyStyles.ts",
     "./randomizerApi": "./src/randomizerApi.ts",
     "./formats": "./src/formats.ts",
-    "./formatsApi": "./src/formatsApi.ts"
+    "./formatsApi": "./src/formatsApi.ts",
+    "./assetsApi": "./src/assetsApi.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "gen:formats": "tsx scripts/gen-format-assets.ts"
   },
   "dependencies": {
+    "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/randomizer": "workspace:*",
     "@vismay/viz-engine": "workspace:*"

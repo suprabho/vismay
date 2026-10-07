@@ -61,7 +61,11 @@ for (const f of PAGED_HTML_STORY_FORMATS) {
   assert.equal(extractFormatMeta(html), f)
   const { css, js } = formatRuntimeUrls('vizmaya-fyi', f)
   assert.ok(html.includes(`href="${css}"`) && html.includes(`src="${js}"`), `${path}: loads its runtime`)
-  assert.deepEqual(lintHtml(html), { errors: [], warnings: [] }, `${path}: lint`)
+  // The examples show the formats with charts alone, so the "no photographs"
+  // nudge is the one warning they're allowed.
+  const lint = lintHtml(html)
+  assert.deepEqual(lint.errors, [], `${path}: lint errors`)
+  assert.deepEqual(lint.warnings.filter((w) => !w.startsWith('No photographs or video')), [], `${path}: lint`)
 }
 
 assert.equal(parseHtmlStoryFormat(undefined), 'scroll')

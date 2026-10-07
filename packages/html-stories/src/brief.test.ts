@@ -32,6 +32,18 @@ assert.ok(!fs.includes('vizmaya header'))
 assert.ok(fs.includes('carries no match context'))
 assert.ok(!fs.includes('Source material'))
 
+// Photography: asked for on both sites, hosted through each site's own assets endpoint.
+for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com']] as const) {
+  assert.ok(b.includes('## Photography and media'))
+  assert.ok(b.indexOf('## Photography and media') > b.indexOf('## Icons') && b.indexOf('## Photography and media') < b.indexOf('## Charts'))
+  assert.ok(b.includes(`POST ${site}/api/html-stories/assets?slug=<slug>`))
+  assert.ok(b.includes('`save_story_image`') && b.includes('`generate_story_image`'))
+  assert.ok(b.includes('every two or three screens'))
+  assert.ok(b.includes('no alt text or no credit line'))
+}
+assert.ok(fs.includes('Football photos') && !viz.includes('Football photos'))
+assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).includes('every two or three pages'))
+
 // With a context: appended last, headings demoted under the brief's own.
 const ctx = '# Match context — Arsenal 2 – 1 Chelsea (Premier League)\n\n## Arsenal 2 – 1 Chelsea\n\n### Match facts\n\n| Stat | A | C |\n'
 const withCtx = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', context: ctx })
