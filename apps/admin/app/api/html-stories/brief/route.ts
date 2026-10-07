@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
+import {
+  MAX_RACE_CONTEXT_DRIVERS,
+  MAX_RACE_CONTEXT_SESSIONS,
+  vizf1HtmlStoryBrief,
+} from '@vismay/html-stories/vizf1Brief'
 import { parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
@@ -10,14 +15,15 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
 
 /**
  * The agent brief for the admin "Copy agent brief" button, built server-side
- * so a footshorts brief can carry its match context (service-role reads of the
- * match tables). JSON body:
+ * so a footshorts brief can carry its match context and a vizf1 brief its race
+ * context (service-role reads of the match and telemetry tables). JSON body:
  *
- *   { app, format?, style?, fixtureIds?, prompt?, spinId? }
+ *   { app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }
  *
  * `format` is the story format (scroll, the default, or book, board, deck);
  * `style` is the randomizer's pick (the client shows its swatches, so it must
  * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
+ * `sessionKeys` + `drivers` (codes) + `prompt` are vizf1-only;
  * `spinId` (vizmaya only) is a logged randomizer spin, whose assignment,
  * research protocol, format and research file the brief then carries.
  * Answers text/markdown.
@@ -50,6 +56,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `at most ${MAX_CONTEXT_MATCHES} matches per brief` }, { status: 400 })
   }
   const prompt = typeof b.prompt === 'string' && b.prompt.trim() ? b.prompt.trim() : undefined
+  const strings = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim()) : []
+  const sessionKeys = app === 'vizf1' ? Array.from(new Set(strings(b.sessionKeys))) : []
+  const drivers = app === 'vizf1' ? Array.from(new Set(strings(b.drivers).map((d) => d.toUpperCase()))) : []
+  if (sessionKeys.length > MAX_RACE_CONTEXT_SESSIONS) {
+    return NextResponse.json({ error: `at most ${MAX_RACE_CONTEXT_SESSIONS} sessions per brief` }, { status: 400 })
+  }
+  if (drivers.length > MAX_RACE_CONTEXT_DRIVERS) {
+    return NextResponse.json({ error: `at most ${MAX_RACE_CONTEXT_DRIVERS} drivers per brief` }, { status: 400 })
+  }
 
   let spin = null
   if (b.spinId != null) {
@@ -69,10 +85,13 @@ export async function POST(req: Request) {
     brief =
       app === 'footshorts'
         ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format })
-        : htmlStoryBrief({ app, siteUrl, style, spin, format })
+        : app === 'vizf1'
+          ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format })
+          : htmlStoryBrief({ app, siteUrl, style, spin, format })
   } catch (e) {
+    const what = app === 'vizf1' ? 'race context' : 'match context'
     return NextResponse.json(
-      { error: `match context failed: ${e instanceof Error ? e.message : String(e)}` },
+      { error: `${what} failed: ${e instanceof Error ? e.message : String(e)}` },
       { status: 502 },
     )
   }

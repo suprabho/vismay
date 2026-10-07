@@ -32,7 +32,7 @@ const PREVIEW_SANDBOX = 'allow-scripts allow-popups allow-popups-to-escape-sandb
  * The HTML story editor for one hosting app: paste/upload, sandboxed preview
  * in that site's chrome, publish/unpublish, history with restore. `basePath`
  * is the admin section it lives under (/vizmaya/html-stories,
- * /footshorts/html-stories); every API call carries `app`.
+ * /footshorts/html-stories, /vizf1/html-stories); every API call carries `app`.
  */
 export default function HtmlStoryEditorClient({
   slug: initialSlug,
@@ -361,7 +361,13 @@ export default function HtmlStoryEditorClient({
                 className={field}
                 value={shownSlug}
                 disabled={!create}
-                placeholder={app === 'footshorts' ? 'arsenal-chelsea-xg-gap-2026' : 'india-solar-boom-2026'}
+                placeholder={
+                  app === 'footshorts'
+                    ? 'arsenal-chelsea-xg-gap-2026'
+                    : app === 'vizf1'
+                      ? 'norris-piastri-pit-wall-2026'
+                      : 'india-solar-boom-2026'
+                }
                 onChange={(e) => {
                   setSlug(e.target.value)
                   setSlugTouched(true)

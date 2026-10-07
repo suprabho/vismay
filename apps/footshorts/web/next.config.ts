@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   // transpile them. @vismay/viz-engine is consumed by the FIFA WC26 epic
   // landing (applyMapPalette + the Mapbox stack); @vismay/html-stories (and the
   // @vismay/content-source modules it reads through) by /s/[slug] and
-  // /api/html-stories.
+  // /api/html-stories (its shared brief handler reaches @vismay/f1-viz's race
+  // context builder too).
   transpilePackages: [
     '@footshorts/shared',
     '@vismay/footshorts-viz',
@@ -16,6 +17,7 @@ const nextConfig: NextConfig = {
     '@vismay/ai-gateway',
     '@vismay/randomizer',
     '@vismay/content-source',
+    '@vismay/f1-viz',
   ],
 };
 

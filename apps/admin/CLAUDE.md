@@ -157,7 +157,7 @@ stories from (falling back to the engine's `DEFAULT_THEME`).
   `appSlug` (`f1`); `CanvasClient` resolves it with `appSlugForVertical()` from
   `@vismay/verticals/data` before it reaches the presets strip (`vizf1`).
 
-## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories)
+## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories)
 
 Agent-authored, self-contained HTML pages hosted as-is at `<site>/s/<slug>`
 ([packages/html-stories](../../packages/html-stories); the pipeline is
@@ -165,7 +165,7 @@ documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)). One
 table, scoped by `app_slug`; one set of admin code for every hosting app:
 
 - **Pages:** `app/vizmaya/(tabbed)/html-stories` and
-  `app/[appSlug]/(tabbed)/html-stories` (footshorts; other apps 404) render
+  `app/[appSlug]/(tabbed)/html-stories` (footshorts and vizf1; other apps 404) render
   [components/html-stories/HtmlStoriesIndex.tsx](components/html-stories/HtmlStoriesIndex.tsx);
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
@@ -178,7 +178,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, format?, style?, fixtureIds?, prompt?, spinId? }` → markdown) for the Copy-brief button.
+  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }` → markdown) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
   scroll, book, board, deck; also on the Randomizer tab, where it marks the
@@ -187,8 +187,15 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
   Opta scrape and a team search, reused with its own labels and a 40-match cap) — whose picks make the brief carry
   the match context (`buildMatchContext` in
-  `@vismay/content-source/footshortsMatchBrief`). The brief is fetched whenever
-  style or matches change and copied synchronously on click.
+  `@vismay/content-source/footshortsMatchBrief`); for vizf1, **Add races**
+  ([RaceContextPicker.tsx](components/html-stories/RaceContextPicker.tsx)): any
+  ingested sessions by season and weekend (races, sprints, qualifying, practice;
+  up to 24, "Pick the whole season" ticks them all), the drivers to follow by
+  code (up to 8; a team chip adds both cars) and the angle — the brief then
+  carries the race context (`buildRaceContext` in `@vismay/f1-viz/race-context`:
+  results, lap timing, telemetry, strategy, the cross-session head-to-head and
+  the standings round by round). The brief is fetched whenever
+  style, matches or races change and copied synchronously on click.
 
 ## Randomizer tab (/vizmaya/randomizer)
 

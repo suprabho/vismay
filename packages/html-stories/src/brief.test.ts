@@ -32,8 +32,35 @@ assert.ok(!fs.includes('vizmaya header'))
 assert.ok(fs.includes('carries no match context'))
 assert.ok(!fs.includes('Source material'))
 
+// vizf1: its own look, chrome, byline, posting target, team-mark guidance.
+const f1 = htmlStoryBrief({ siteUrl: 'https://www.vizf1.com', app: 'vizf1' })
+assert.ok(f1.startsWith('# Writing a VizF1 HTML story'))
+assert.ok(f1.includes('Formula 1 data story for VizF1'))
+assert.ok(f1.includes('https://www.vizf1.com/s/<slug>'))
+assert.ok(f1.includes('slim VizF1 header'))
+assert.ok(f1.includes(`content="${themeMetaContent(HOUSE_PALETTES.vizf1)}"`))
+assert.ok(f1.includes('Saira for headlines') && f1.includes('Martian Mono'))
+assert.ok(f1.includes('soft `#E8002D`'))
+assert.ok(f1.includes('Byline "VizF1 desk"'))
+assert.ok(f1.includes('Team marks and headshots: from the race context'))
+assert.ok(f1.includes('## Icons, team marks and flags'))
+assert.ok(f1.includes('`app: "vizf1"`'))
+assert.ok(f1.includes('POST https://www.vizf1.com/api/html-stories?slug=<slug>'))
+assert.ok(f1.includes('F1 photos') && !f1.includes('Football photos'))
+assert.ok(f1.includes('carries no race context'))
+assert.ok(!f1.includes('match context') && !f1.includes('vizmaya header') && !f1.includes('Footshorts'))
+const f1Ctx = htmlStoryBrief({
+  siteUrl: 'https://www.vizf1.com',
+  app: 'vizf1',
+  context: '# Race context: VER, NOR across 2 sessions\n\n## Head-to-head across the picked sessions\n',
+})
+assert.ok(f1Ctx.includes('Everything below comes from the VizF1 timing and telemetry tables.'))
+assert.ok(f1Ctx.includes('\n## Race context: VER, NOR across 2 sessions\n'))
+assert.ok(f1Ctx.includes('**The race context at the end of this brief is your primary source.**'))
+assert.ok(f1Ctx.includes('never compare a lap time at one circuit'))
+
 // Photography: asked for on both sites, hosted through each site's own assets endpoint.
-for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com']] as const) {
+for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com'], [f1, 'https://www.vizf1.com']] as const) {
   assert.ok(b.includes('## Photography and media'))
   assert.ok(b.indexOf('## Photography and media') > b.indexOf('## Icons') && b.indexOf('## Photography and media') < b.indexOf('## Charts'))
   assert.ok(b.includes(`POST ${site}/api/html-stories/assets?slug=<slug>`))

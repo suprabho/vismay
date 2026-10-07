@@ -6,9 +6,11 @@
  *
  * One brief per app (./apps): the hosting contract and the craft rules are the
  * same everywhere, the house style, the chrome and the posting targets are the
- * site's own, and footshorts briefs can carry a match context (facts,
+ * site's own, footshorts briefs can carry a match context (facts,
  * timeline, insights, commentary, schedules and tables for the matches the
- * story is about — built server-side, see ./footshortsBrief).
+ * story is about — built server-side, see ./footshortsBrief), and vizf1 briefs
+ * a race context (classifications, lap-by-lap timing, telemetry and standings
+ * for the sessions and drivers the story is about — see ./vizf1Brief).
  *
  * A vizmaya brief can also carry a randomizer spin (@vismay/randomizer): the
  * topic the Desk, Atlas or Epics randomizer drew, with its research protocol,
@@ -71,7 +73,8 @@ export interface BriefOptions {
   /**
    * Source material appended to the brief as its last section — for footshorts
    * the match context (see @vismay/content-source/footshortsMatchBrief's
-   * buildMatchContext). Markdown; its headings are demoted under the brief's.
+   * buildMatchContext), for vizf1 the race context (@vismay/f1-viz's
+   * buildRaceContext). Markdown; its headings are demoted under the brief's.
    */
   context?: string | null
   /**
@@ -127,9 +130,26 @@ const FOOTSHORTS_PALETTE: ThemeColors = {
   teal: '#00D26A',
 }
 
+/**
+ * The vizf1 house palette: the app's own (@vizf1/brand `F1_BRAND.colors`) as
+ * the Paddock story theme carries it (packages/viz-engine themeDefaults). Coral
+ * red is the accent; purple and teal follow the timing screens' own meaning.
+ */
+const VIZF1_PALETTE: ThemeColors = {
+  background: '#0b0d12',
+  surface: '#13161d',
+  text: '#f5f5f5',
+  muted: '#8e8e99',
+  line: '#1f2330',
+  accent: '#ff4346',
+  accent2: '#A855F7',
+  teal: '#2DD4BF',
+}
+
 export const HOUSE_PALETTES: Record<HtmlStoryApp, ThemeColors> = {
   'vizmaya-fyi': VIZMAYA_PALETTE,
   footshorts: FOOTSHORTS_PALETTE,
+  vizf1: VIZF1_PALETTE,
 }
 
 const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
@@ -149,6 +169,22 @@ const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
 - Type: Forum for headlines and big numbers, Space Grotesk for body, Space Mono for
   labels, axes and data (all on Google Fonts:
   \`https://fonts.googleapis.com/css2?family=Forum&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap\`).
+  Body 18–20px, line-height 1.6, measure 60–70 characters.`,
+  vizf1: `House style (the VizF1 app's own "paddock" look; use it unless the story clearly wants its own):
+- A dark page. Background \`#0b0d12\`, surface \`#13161d\`, text \`#f5f5f5\`, muted \`#8e8e99\`, hairlines \`#1f2330\`.
+- Accent \`#ff4346\` (the brand coral red: the one colour that means "look here"),
+  secondary \`#A855F7\` (purple: on a timing screen it means the fastest of the
+  session, so keep it for fastest laps and sectors), teal \`#2DD4BF\`.
+- Team colours are allowed on top of these, but only for the drivers and teams
+  the story is about, and only where a line, bar or badge stands for that car.
+  Two drivers from one team share a colour: tell them apart with a dashed line
+  or a lighter tint, and label both.
+- Tyre compounds always wear their own colours: soft \`#E8002D\`, medium
+  \`#FFD12E\`, hard \`#F0F0EC\`, intermediate \`#43B02A\`, wet \`#0067AD\`.
+- Type: Saira for headlines, big numbers and body (it has a width axis: set
+  headlines condensed and heavy, italic for the big numbers), Martian Mono for
+  lap times, labels, axes and data (all on Google Fonts:
+  \`https://fonts.googleapis.com/css2?family=Saira:ital,wdth,wght@0,75..125,100..900;1,75..125,100..900&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=swap\`).
   Body 18–20px, line-height 1.6, measure 60–70 characters.`,
 }
 
@@ -176,10 +212,20 @@ so this page gets its own look. Use it instead of the house style:
   don't introduce new hues.`
 }
 
-/** The "icons and flags" section; footshorts adds club crests. */
+/** The "icons and flags" section; footshorts adds club crests, vizf1 team marks. */
 function iconsSection(app: HtmlStoryApp): string {
   const crests =
-    app === 'footshorts'
+    app === 'vizf1'
+      ? `
+- **Team marks and headshots: from the race context.** Each team in the race
+  context comes with its logo URL and colour, and each driver with a headshot
+  URL. The team marks are white glyphs: put them on a dark or team-coloured
+  surface, never on white. Show the mark beside the team name in tables, stat
+  cards and chart labels (\`<img src="…" alt="" width="20" height="20">\`, or an
+  SVG \`<image>\` inside charts), and a headshot (cropped round) beside a driver
+  where the story is about that driver. A mark or a face always sits beside the
+  name, never instead of it; a team with no logo URL just gets its name.`
+      : app === 'footshorts'
       ? `
 - **Crests: from the match context.** Each team in the match context comes with
   its crest URL. Show the crest beside the team name in stat cards, table rows
@@ -188,9 +234,10 @@ function iconsSection(app: HtmlStoryApp): string {
   sits beside the name, never instead of it, and a team with no crest URL just
   gets its name. For national teams use the flag instead of a crest.`
       : ''
-  return `## Icons${app === 'footshorts' ? ', crests' : ''} and flags
+  const marksHeading = app === 'footshorts' ? ', crests' : app === 'vizf1' ? ', team marks' : ''
+  return `## Icons${marksHeading} and flags
 
-Use ${app === 'footshorts' ? 'them' : 'both'}. They make a page scannable, but they support the words and never replace them.
+Use ${app === 'vizmaya-fyi' ? 'both' : 'them'}. They make a page scannable, but they support the words and never replace them.
 
 - **Icons: Phosphor.** Load
   \`https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css\`
@@ -199,7 +246,9 @@ Use ${app === 'footshorts' ? 'them' : 'both'}. They make a page scannable, but t
   markers, stat cards, callouts and key-takeaway lists. Stick to one weight, and
   size them to the text they sit next to. Use no other icon set and no emoji.${crests}
 - **Flags: flag-icons.** Whenever a country appears (a table row, a chart label,
-  a stat card, a map callout${app === 'footshorts' ? ', a national team' : ''}), show its flag next to its name. Load
+  a stat card, a map callout${
+    app === 'footshorts' ? ', a national team' : app === 'vizf1' ? ", a driver's nationality, a Grand Prix" : ''
+  }), show its flag next to its name. Load
   \`https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css\` and write
   \`<span class="fi fi-in"></span>\` (ISO 3166-1 alpha-2, lowercase; add \`fis\`
   for a square flag). Inside SVG charts, use
@@ -217,8 +266,10 @@ function mediaSection(app: HtmlStoryApp, site: string, unit: string): string {
   const subjects =
     app === 'footshorts'
       ? 'the ground, the players, the city, the trophy, the crowd'
-      : 'the place, the people, the object, the machine, the landscape'
-  const footshorts =
+      : app === 'vizf1'
+        ? 'the circuit, the cars, the drivers, the garage, the grandstands'
+        : 'the place, the people, the object, the machine, the landscape'
+  const photoRules =
     app === 'footshorts'
       ? `
 - **Football photos.** Players, managers and grounds come from Wikimedia
@@ -226,7 +277,15 @@ function mediaSection(app: HtmlStoryApp, site: string, unit: string): string {
   broadcasters or agencies (Getty, AP, Reuters, PA, Shutterstock), even
   "for illustration". Never generate an image of a real player, manager or
   match moment. A good Commons photo of the ground beats a bad one of the player.`
-      : ''
+      : app === 'vizf1'
+        ? `
+- **F1 photos.** Drivers, cars and circuits come from Wikimedia Commons under
+  CC BY or CC BY-SA only (the headshot URLs in the race context are fine for
+  small portraits). Never take images from formula1.com, team sites,
+  broadcasters or agencies (Getty, Motorsport Images, XPB, LAT), even "for
+  illustration". Never generate an image of a real driver, a real car livery
+  or a race moment. A good Commons photo of the circuit beats a bad one of the car.`
+        : ''
   return `## Photography and media
 
 A data story is not only charts. When it has real ${subjects}, show them.
@@ -244,6 +303,11 @@ A data story is not only charts. When it has real ${subjects}, show them.
   3. **Public-domain archives:** NASA, NOAA, USGS, ESA (CC BY-SA), the Library of
      Congress, national archives and museums' open-access collections.
   4. **AI-generated illustration**, only when nothing real fits (see below).
+- **Call these APIs from a shell** (\`curl\`, \`fetch\`), not a web-page reader:
+  page readers often refuse API hosts. Send a descriptive User-Agent such as
+  \`-A "vismay-html-stories/1.0 (+${site})"\`; Commons answers
+  429 to a bare one. If one source fails, try the next before deciding there
+  are no images, and say exactly what you tried and what each returned.
 - **Licences you may use:** CC0, Public Domain Mark, CC BY, CC BY-SA. Not NC
   (non-commercial) or ND (no derivatives), and never Unsplash, Pexels, stock
   libraries, news agencies, or an image you found through a search engine
@@ -258,7 +322,7 @@ A data story is not only charts. When it has real ${subjects}, show them.
   of what happened. Caption each one "Illustration: AI-generated". Prompt in
   the story's palette and one consistent style (e.g. "flat risograph print,
   two inks, #D85A30 on #0a0e14") so every illustration in the story looks like
-  part of the same set.${footshorts}
+  part of the same set.${photoRules}
 - **Host them on ${site.replace(/^https?:\/\//, '')}** so they never vanish from under the page:
   - MCP: \`save_story_image\` copies an image from its https URL (pass the credit
     and licence); \`generate_story_image\` makes an AI illustration.
@@ -290,7 +354,9 @@ function mapsSection(app: HtmlStoryApp, token: string): string {
   const places =
     app === 'footshorts'
       ? "a title race's away days, a club's scouting map, a tournament's host cities"
-      : 'a trade route, a river basin, where the plants or the outbreaks cluster'
+      : app === 'vizf1'
+        ? "a season's calendar across continents, the flyaway swing, where the circuits sit"
+        : 'a trade route, a river basin, where the plants or the outbreaks cluster'
   return `## Maps: Mapbox scrollytelling
 
 When the story happens somewhere (${places}), tell that part on a Mapbox map
@@ -377,7 +443,12 @@ Animate on scroll. The page should feel alive as the reader moves through it:
       ? `
   A match timeline is exactly this: the scoreline, xG race or momentum graphic
   stays put while the goals, cards and substitutions step past it.`
-      : ''
+      : app === 'vizf1'
+        ? `
+  A race is exactly this: the running-order chart (position by lap) or the gap
+  chart stays put while the start, the stops, the safety car and the overtakes
+  step past it, each step highlighting its laps.`
+        : ''
   }
 
 How to build it:
@@ -391,8 +462,43 @@ How to build it:
 - Keep it calm: motion should guide the eye to the point, not decorate.`
 }
 
+function vizf1ContentSection(hasContext: boolean): string {
+  const meta = HTML_STORY_APP_META.vizf1
+  const contextRules = hasContext
+    ? `- **The race context at the end of this brief is your primary source.** Every
+  position, lap time, gap, speed, stop and points total comes from it, verbatim:
+  never round a lap time to make two drivers level, move a stop to another lap,
+  or claim a record or a season trend the context does not show. If a figure you
+  want is not in the context, say so in the page rather than inventing it.
+- Lead with WHY the result happened (a faster car, a better strategy, a safety
+  car that fell kindly, a slow stop), then the laps in the order they happened,
+  then what it did to the standings.
+- Compare like with like. Pace comes from clean laps only (the context marks
+  them; out-laps, in-laps, the opening lap and safety-car laps are slow by
+  design), and only within one session: never compare a lap time at one circuit
+  with a lap time at another. Across races, compare positions, points, gaps to
+  the session's best and head-to-heads, which the context gives you.
+- Telemetry (speed traps, throttle, sectors) describes what the car did, not why.
+  Say "carried 6 km/h more through the speed trap", not "had a better engine".
+- A driver who changed team between the sessions is one person with two cars:
+  say which car each result came in.`
+    : `- Every number has a source. If the brief carries no race context, build the
+  page from the sources you are given and link every figure to one.`
+  return `## Content
+
+${contextRules}
+- Sources & method: end with a short section of links — the VizF1 pages for
+  the races, plus "Timing data: FastF1 (F1 live timing) and OpenF1" for laps,
+  telemetry and results, and say that the standings are computed from those
+  results when you show them.
+- Byline "${meta.desk}" plus the date.
+- Write like a good race report, not a press release: plain, specific, no hype.
+  Lead with the finding.`
+}
+
 function contentSection(app: HtmlStoryApp, hasContext: boolean): string {
   const meta = HTML_STORY_APP_META[app]
+  if (app === 'vizf1') return vizf1ContentSection(hasContext)
   if (app !== 'footshorts') {
     return `## Content
 
@@ -461,9 +567,32 @@ ${hint ? `\n${hint}\n` : ''}`
     app === 'footshorts'
       ? `The only thing added is a slim Footshorts header (the mark and the app's
 navigation) above your page and a Footshorts footer below it`
-      : `The only thing added is a slim vizmaya header (logo) above
+      : app === 'vizf1'
+        ? `The only thing added is a slim VizF1 header (the flag mark and the app's
+navigation) above your page and a VizF1 footer below it`
+        : `The only thing added is a slim vizmaya header (logo) above
 your page and a vizmaya footer below it`
-  const footshortsMcp = app === 'footshorts' ? ' and `app: "footshorts"`' : ''
+  const appMcp = app === 'vizmaya-fyi' ? '' : ` and \`app: "${app}"\``
+  const storyKind =
+    app === 'footshorts'
+      ? 'football data story for Footshorts'
+      : app === 'vizf1'
+        ? 'Formula 1 data story for VizF1'
+        : 'data story for vizmaya.fyi'
+  const newsrooms = app === 'footshorts' ? ', The Athletic' : app === 'vizf1' ? ', The Race' : ''
+  const [chartTitleGood, chartTitleBad] =
+    app === 'footshorts'
+      ? ['Arsenal had the ball, Chelsea had the chances', 'Possession and shots']
+      : app === 'vizf1'
+        ? ['Norris was faster on every stint but lost it in the pit lane', 'Lap times, laps 1–57']
+        : ['Exports doubled after 2019', 'Exports 2015–2024']
+  const slugExample =
+    app === 'footshorts'
+      ? 'arsenal-chelsea-xg-gap-2026'
+      : app === 'vizf1'
+        ? 'norris-piastri-pit-wall-2026'
+        : 'india-solar-boom-2026'
+  const sourceTables = app === 'vizf1' ? 'timing and telemetry tables' : 'match tables'
   const unit = paged ? HTML_STORY_FORMAT_META[paged].unit : 'screen'
   const formatIntro = paged
     ? `
@@ -489,7 +618,7 @@ charts. "${formatHeading(paged)}" below says how.
 
   return `# Writing a ${meta.name} HTML story
 
-You are writing one finished ${app === 'footshorts' ? 'football data story for Footshorts' : 'data story for vizmaya.fyi'} as a single,
+You are writing one finished ${storyKind} as a single,
 self-contained HTML file. It is hosted exactly as you write it at
 ${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
@@ -521,7 +650,7 @@ ${formatIntro}${assignment}
 ## Design direction
 
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters
-Graphics, NYT Upshot${app === 'footshorts' ? ', The Athletic' : ''}): editorial, calm, confident. One idea per ${unit}.
+Graphics, NYT Upshot${newsrooms}): editorial, calm, confident. One idea per ${unit}.
 
 ${styleSection(app, style)}
 - Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
@@ -536,9 +665,7 @@ ${paged ? storyFormatSection(paged, app) : motionSection(app, mapbox)}
 
 - D3 v7 or Observable Plot for bespoke charts; ECharts is fine for standard
   ones. ${mapsLine}
-- Each chart makes one point, and its title states that point ("${
-    app === 'footshorts' ? 'Arsenal had the ball, Chelsea had the chances' : 'Exports doubled after 2019'
-  }", not "${app === 'footshorts' ? 'Possession and shots' : 'Exports 2015–2024'}").
+- Each chart makes one point, and its title states that point ("${chartTitleGood}", not "${chartTitleBad}").
 - Label lines and bars directly instead of using legends. Use at most 5–6 colours,
   grey for context and the accent for the subject.
 - Bars start at zero. Show units. Use tabular numerals. Round sensibly.
@@ -563,7 +690,7 @@ ${spin ? `\n${checklistSection(spin)}\n` : ''}
 ## Posting
 
 Pick the first one you can do:
-- **MCP tool**: call \`publish_html_story\` with \`slug\` and \`html\`${footshortsMcp}.
+- **MCP tool**: call \`publish_html_story\` with \`slug\` and \`html\`${appMcp}.
 - **HTTP**: \`POST ${site}/api/html-stories?slug=<slug>\` with the HTML as the
   body (\`Content-Type: text/html\`) and \`Authorization: Bearer $HTML_STORIES_TOKEN\`.
   Add \`&publish=1\` to make it public right away; otherwise it saves as a draft.
@@ -571,9 +698,7 @@ Pick the first one you can do:
 - **Otherwise**: give the user the complete HTML file. They will paste it into
   the admin's HTML stories tab for ${siteName}.
 
-Slugs are lowercase words joined by hyphens, e.g. \`${
-    app === 'footshorts' ? 'arsenal-chelsea-xg-gap-2026' : 'india-solar-boom-2026'
-  }\`.
+Slugs are lowercase words joined by hyphens, e.g. \`${slugExample}\`.
 Posting to an existing slug replaces it; older versions stay restorable.
 ${spin ? `\n${postingLines(spin)}\n` : ''}${
   hasContext
@@ -582,7 +707,7 @@ ${spin ? `\n${postingLines(spin)}\n` : ''}${
 
 # Source material
 
-Everything below comes from the ${meta.name} match tables. It is the story's
+Everything below comes from the ${meta.name} ${sourceTables}. It is the story's
 evidence; the rules above say how to use it.
 
 ${demoteHeadings(context!.trim())}

@@ -80,6 +80,22 @@ assert.ok(fsThemed.includes('<vizmaya-aura'))
 assert.ok(fsThemed.indexOf('<vizmaya-aura') < fsThemed.indexOf('<footshorts-header>'))
 console.log('branding (footshorts): ok')
 
+// VizF1 chrome: the chequered-flag mark in the brand red, the app's links, no Rive.
+const f1Out = brandHtmlStory(doc, { siteUrl: 'https://www.vizf1.com/', app: 'vizf1' })
+assert.ok(f1Out.includes('<BODY class="x"><style>:root{--vizmaya-chrome-h:61px}@media (max-width:480px){:root{--vizmaya-chrome-h:53px}}</style><vizf1-header>'))
+assert.ok(/<\/vizf1-footer><\/BODY><\/html>$/.test(f1Out))
+assert.ok(!f1Out.includes('vizmaya-header') && !f1Out.includes('footshorts-header') && !f1Out.includes('rive'))
+assert.ok(f1Out.includes('href="https://www.vizf1.com/schedule"'))
+assert.ok(f1Out.includes('href="https://www.vizf1.com/editorial"'))
+assert.ok(f1Out.includes('--mark:#ff4346'))
+assert.ok(f1Out.includes('viewBox="0 0 406.319 238.021"'))
+assert.ok(!f1Out.includes('vizf1.com//'))
+// A declared palette tints the bars and the mark takes the page's accent.
+const f1Themed = brandHtmlStory(fsThemedDoc, { siteUrl: 'https://www.vizf1.com', app: 'vizf1', aura: 'some-scene' })
+assert.ok(f1Themed.includes('--bg:#FAF7F2') && f1Themed.includes('--mark:#C2410C'))
+assert.ok(f1Themed.indexOf('<vizmaya-aura') < f1Themed.indexOf('<vizf1-header>'))
+console.log('branding (vizf1): ok')
+
 // Embedded (chrome: false, /s/<slug>?embed=1): no bars, the aura stays, the story untouched.
 // With no header the chrome height is 0, so a paged stage fills the whole
 // screen instead of stopping short by the formats' 64px/56px fallback.
