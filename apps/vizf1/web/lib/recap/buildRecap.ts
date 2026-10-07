@@ -43,6 +43,8 @@ export interface ResultJson {
   abbreviation?: string | null
   gridPosition?: number | null
   position?: number | null
+  /** FastF1: the position as a string, or R (retired), D (disqualified), E, W, F, N. */
+  classifiedPosition?: string | null
   points?: number | null
   status?: string | null
   dnf?: boolean | null
@@ -557,11 +559,19 @@ function battleChapter(
 function finishChapter(race: Race): FinishChapter | null {
   const classified = race.results.filter((r) => r.position != null)
   if (!classified.length) return null
+  const winnerLaps = classified[0].laps ?? race.totalLaps
+  // FastF1 says "Lapped" for lapped finishers and some retirements alike, so
+  // go by the laps completed.
+  const lapsDown = (r: ResultJson) => (r.laps != null ? winnerLaps - r.laps : 0)
+  const finished = (r: ResultJson) => lapsDown(r) === 0 && r.timeSec != null
   const gapOf = (r: ResultJson): string => {
     if (r.position === 1) return 'Winner'
-    if (r.status && /lap/i.test(r.status)) return r.status
-    if (r.dnf) return 'DNF'
-    return r.timeSec != null ? `+${r.timeSec.toFixed(3)}s` : r.status || '—'
+    const cls = r.classifiedPosition
+    if (cls && !/^\d+$/.test(cls)) return cls === 'D' ? 'DSQ' : 'DNF'
+    if (finished(r)) return `+${r.timeSec!.toFixed(3)}s`
+    const n = lapsDown(r)
+    if (n > 0 && /lap|finished|\+/i.test(r.status ?? '')) return `+${n} lap${n > 1 ? 's' : ''}`
+    return r.status && !/lap/i.test(r.status) ? r.status : 'DNF'
   }
   const results = classified.slice(0, 5).map((r) => ({
     pos: r.position!,
@@ -581,7 +591,7 @@ function finishChapter(race: Race): FinishChapter | null {
 
   const [w, p2, p3] = classified
   const W = race.name(w.driverNumber)
-  const margin = p2?.timeSec != null && !/lap/i.test(p2.status ?? '') ? p2.timeSec : null
+  const margin = p2 && finished(p2) ? p2.timeSec! : null
   const grid = w.gridPosition ?? null
   let headline: string
   if (grid != null && grid >= 4) headline = `${W} wins from P${grid}`
