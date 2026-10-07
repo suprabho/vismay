@@ -3,31 +3,12 @@
  * "Sample data" until the recap is generated from a session's telemetry; the
  * shapes here are what that generator will have to fill.
  *
- * Coordinates live in the replay plane's own 640 × 420 space (the SVG track in
- * components/recap/RecapReplay.tsx), so a beat's car positions and a camera's
- * transform-origin are both in track pixels.
+ * The replay itself is real: the 3D track view plays the race's position data
+ * (or the demo fixture), and each chapter seeks it to its lap and picks the
+ * camera and the car to follow.
  */
 
-export type CameraKey = 'heli' | 'chase' | 'onboard' | 'top'
-
-export interface RecapCamera {
-  num: string
-  name: string
-  desc: string
-  /** CSS transform-origin on the plane, in track pixels. */
-  origin: string
-  /** CSS transform applied to the plane (inside a perspective parent). */
-  transform: string
-}
-
-export const RECAP_CAMERAS: Record<CameraKey, RecapCamera> = {
-  heli: { num: '01', name: 'Heli', desc: 'Full circuit', origin: '320px 210px', transform: 'translate(0px, 10px) rotateX(50deg) rotateZ(-14deg) scale(1)' },
-  chase: { num: '02', name: 'Chase', desc: 'Pit exit', origin: '250px 352px', transform: 'translate(70px, -142px) rotateX(60deg) rotateZ(22deg) scale(1.8)' },
-  onboard: { num: '03', name: 'Onboard', desc: 'Turn 4', origin: '391px 145px', transform: 'translate(-71px, 65px) rotateX(68deg) rotateZ(-48deg) scale(2.3)' },
-  top: { num: '04', name: 'Top', desc: 'Timing map', origin: '320px 210px', transform: 'translate(0px, 0px) rotateX(0deg) rotateZ(0deg) scale(1.05)' },
-}
-
-export const CAMERA_ORDER: CameraKey[] = ['heli', 'chase', 'onboard', 'top']
+import type { CameraMode } from '@vismay/f1-viz/web/replay'
 
 export interface RecapCar {
   code: string
@@ -48,55 +29,21 @@ export const carColor = (code: string) => RECAP_CARS.find((c) => c.code === code
 export interface RecapBeat {
   label: string
   kicker: string
+  /** The chapter's lap in a 57-lap race; scaled to the replayed session's length. */
   lap: number
-  /** Where the beat sits on the race timeline, 0–100. */
-  pct: number
-  cam: CameraKey
-  /** Cars the beat is about: lit, ringed and labelled in their colour. */
+  /** The 3D view's camera when the chapter opens (the reader can switch). */
+  cam: CameraMode
+  /** Cars the beat is about; the camera follows the first one. */
   focus: string[]
-  /** [x, y] per RECAP_CARS entry, in track pixels. */
-  positions: [number, number][]
 }
 
 export const TOTAL_LAPS = 57
 
 export const RECAP_BEATS: RecapBeat[] = [
-  {
-    label: 'Lights out',
-    kicker: 'Lights out · Lap 1',
-    lap: 1,
-    pct: 0,
-    cam: 'heli',
-    focus: ['NOR'],
-    positions: [[352, 336], [392, 324], [372, 336], [334, 324], [316, 336]],
-  },
-  {
-    label: 'The undercut',
-    kicker: 'The undercut · Laps 18–24',
-    lap: 18,
-    pct: 31,
-    cam: 'chase',
-    focus: ['VER'],
-    positions: [[250, 352], [525, 195], [395, 141], [141, 106], [140, 330]],
-  },
-  {
-    label: 'Wheel to wheel',
-    kicker: 'Wheel to wheel · Lap 34',
-    lap: 34,
-    pct: 59,
-    cam: 'onboard',
-    focus: ['VER', 'NOR'],
-    positions: [[395, 148], [387, 141], [257, 108], [101, 148], [180, 330]],
-  },
-  {
-    label: 'Chequered flag',
-    kicker: 'Chequered flag · Lap 57',
-    lap: 57,
-    pct: 100,
-    cam: 'top',
-    focus: ['NOR'],
-    positions: [[262, 330], [300, 330], [200, 330], [150, 330], [68, 250]],
-  },
+  { label: 'Lights out', kicker: 'Lights out · Lap 1', lap: 1, cam: 'heli', focus: ['NOR'] },
+  { label: 'The undercut', kicker: 'The undercut · Laps 18–24', lap: 18, cam: 'chase', focus: ['VER'] },
+  { label: 'Wheel to wheel', kicker: 'Wheel to wheel · Lap 34', lap: 34, cam: 'pov', focus: ['VER', 'NOR'] },
+  { label: 'Chequered flag', kicker: 'Chequered flag · Lap 57', lap: 57, cam: 'tv', focus: ['NOR'] },
 ]
 
 /** 01 — positions gained (+) or lost (−) between lights out and Turn 1. */

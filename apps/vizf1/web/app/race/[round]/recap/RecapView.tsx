@@ -3,20 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSchedule } from '@/lib/useSchedule'
+import { useTelemetrySession } from '@/lib/useTelemetrySession'
 import { RecapReplay } from '@/components/recap/RecapReplay'
 import { RecapChapters } from '@/components/recap/RecapChapters'
-import { RECAP_BEATS, type CameraKey } from '@/lib/recap/sampleRecap'
+import { RECAP_BEATS } from '@/lib/recap/sampleRecap'
 
-/** How long autoplay holds each chapter before flying to the next. */
-const PLAY_HOLD_MS = 4000
 /** Scroll events during a programmatic scroll are ignored for this long. */
 const SCROLL_LOCK_MS = 900
 
 /**
- * Race recap story: the replay on the left (top on phones) and the chapters in
- * a rail on the right (below on phones). Scrolling the rail moves the replay to
- * the chapter being read; the chapter nav, the timeline markers and Play move
- * the rail. "Read as one page" drops the replay for a plain article column.
+ * Race recap story: the 3D replay on the left (top on phones) and the chapters
+ * in a rail on the right (below on phones). Scrolling the rail moves the replay
+ * to the chapter being read; the chapter nav and the timeline markers move the
+ * rail. "Read as one page" drops the replay for a plain article column.
  */
 export default function RecapView({ round }: { round: number }) {
   const q = useSchedule()
@@ -24,9 +23,15 @@ export default function RecapView({ round }: { round: number }) {
   const gpName = race?.raceName ?? 'Grand Prix'
   const season = race?.season ?? ''
 
+  // Same session lookup as the replay page: OpenF1 and FastF1 number rounds
+  // differently, so the real session_key is resolved by GP name (a bare round
+  // would pull another race's telemetry). No ingested session → the demo race.
+  const supabaseSource = process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase'
+  const telem = useTelemetrySession(supabaseSource ? (race?.raceName ?? null) : null)
+  const resolving = supabaseSource && (q.isLoading || (!!race && telem.isLoading))
+  const sessionRef = resolving ? null : supabaseSource ? (telem.data?.sessionKey ?? 'demo') : String(round)
+
   const [beat, setBeat] = useState(0)
-  const [camOverride, setCamOverride] = useState<CameraKey | null>(null)
-  const [playing, setPlaying] = useState(false)
   const [onePage, setOnePage] = useState(false)
   const [shared, setShared] = useState(false)
   const railRef = useRef<HTMLDivElement>(null)
@@ -35,9 +40,6 @@ export default function RecapView({ round }: { round: number }) {
   useEffect(() => {
     beatRef.current = beat
   }, [beat])
-
-  const cam = camOverride ?? RECAP_BEATS[beat].cam
-  const last = RECAP_BEATS.length - 1
 
   const goTo = useCallback((i: number) => {
     const rail = railRef.current
@@ -48,7 +50,6 @@ export default function RecapView({ round }: { round: number }) {
       rail.scrollTo({ top: Math.max(0, sec.offsetTop - 8), behavior: reduce ? 'auto' : 'smooth' })
     }
     setBeat(i)
-    setCamOverride(null)
   }, [])
 
   const onRailScroll = useCallback(() => {
@@ -60,40 +61,13 @@ export default function RecapView({ round }: { round: number }) {
       if (s.offsetTop <= rail.scrollTop + rail.clientHeight * 0.4) active = i
     })
     if (rail.scrollTop + rail.clientHeight >= rail.scrollHeight - 4) active = secs.length - 1
-    if (active !== beatRef.current) {
-      setBeat(active)
-      setCamOverride(null)
-    }
+    if (active !== beatRef.current) setBeat(active)
   }, [onePage])
 
-  // Autoplay: hold each chapter, then fly on; stop at the flag.
-  useEffect(() => {
-    if (!playing || onePage) return
-    if (beat >= last) {
-      setPlaying(false)
-      return
-    }
-    const t = window.setTimeout(() => goTo(beat + 1), PLAY_HOLD_MS)
-    return () => window.clearTimeout(t)
-  }, [playing, onePage, beat, last, goTo])
-
-  const togglePlay = () => {
-    if (playing) return setPlaying(false)
-    if (beat >= last) goTo(0)
-    setPlaying(true)
-  }
-
-  const pickBeat = (i: number) => {
-    setPlaying(false)
-    goTo(i)
-  }
-
   const toggleOnePage = () => {
-    setPlaying(false)
     setOnePage((v) => !v)
     railRef.current?.scrollTo({ top: 0 })
     setBeat(0)
-    setCamOverride(null)
   }
 
   const share = async () => {
@@ -146,7 +120,7 @@ export default function RecapView({ round }: { round: number }) {
               <button
                 key={b.label}
                 type="button"
-                onClick={() => pickBeat(i)}
+                onClick={() => goTo(i)}
                 aria-current={on ? 'step' : undefined}
                 className={`flex h-14 cursor-pointer items-center gap-2 px-3.5 text-sm font-semibold transition-[color,box-shadow] duration-300 ${
                   on ? 'text-text shadow-[inset_0_-2px_0_var(--color-accent)]' : 'text-muted hover:text-text'
@@ -186,14 +160,7 @@ export default function RecapView({ round }: { round: number }) {
       {/* ===== Stage ===== */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {onePage ? null : (
-          <RecapReplay
-            beat={beat}
-            cam={cam}
-            playing={playing}
-            onPickBeat={pickBeat}
-            onPickCam={setCamOverride}
-            onTogglePlay={togglePlay}
-          />
+          <RecapReplay sessionRef={sessionRef} beat={beat} onPickBeat={goTo} />
         )}
 
         <div
