@@ -249,6 +249,11 @@ A data story is not only charts. When it has real ${subjects}, show them.
   3. **Public-domain archives:** NASA, NOAA, USGS, ESA (CC BY-SA), the Library of
      Congress, national archives and museums' open-access collections.
   4. **AI-generated illustration**, only when nothing real fits (see below).
+- **Call these APIs from a shell** (\`curl\`, \`fetch\`), not a web-page reader:
+  page readers often refuse API hosts. Send a descriptive User-Agent such as
+  \`-A "vismay-html-stories/1.0 (+${site})"\`; Commons answers
+  429 to a bare one. If one source fails, try the next before deciding there
+  are no images, and say exactly what you tried and what each returned.
 - **Licences you may use:** CC0, Public Domain Mark, CC BY, CC BY-SA. Not NC
   (non-commercial) or ND (no derivatives), and never Unsplash, Pexels, stock
   libraries, news agencies, or an image you found through a search engine
