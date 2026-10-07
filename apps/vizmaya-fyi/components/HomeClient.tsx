@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import { LiveRing } from '@/app/ai-daily/doom-v-boom/components/ScoreRing'
@@ -145,8 +145,7 @@ const css = `
 @media(max-width:900px){.vz .daily-row{grid-template-columns:1fr}.vz .dcard{min-height:0}}
 
 /* ── STORY EMBED — sticky scroll-sync ────────────── */
-.vz .story-embed{border-top:1px solid var(--line)}
-.vz .story-embed-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;padding:clamp(20px,4vh,48px) clamp(20px,5vw,56px)}
+.vz .story-embed{border-top:1px solid var(--line);padding:clamp(48px,8vh,96px) clamp(20px,5vw,56px)}
 .vz .story-embed-inner{max-width:1240px;margin:0 auto;width:100%}
 .vz .story-embed-head{margin-bottom:24px}
 .vz .story-embed-frame{border-radius:10px;overflow:hidden;box-shadow:0 32px 80px -20px rgba(12,12,16,.22),0 0 0 1px var(--line2)}
@@ -155,12 +154,8 @@ const css = `
 .vz .story-embed-dot:nth-child(1){background:#ff5f57}
 .vz .story-embed-dot:nth-child(2){background:#febc2e}
 .vz .story-embed-dot:nth-child(3){background:#28c840}
-.vz .story-embed-url{flex:1;margin:0 12px;height:22px;background:rgba(12,12,16,.12);border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--m);font-size:9px;letter-spacing:.5px;color:rgba(12,12,16,.35);overflow:hidden;white-space:nowrap}
-.vz .story-embed-iframe-wrap{position:relative}
-.vz .story-embed-iframe-wrap iframe{display:block;width:100%;height:clamp(400px,72vh,820px);border:0}
-/* Transparent overlay so wheel events bubble to the page scroller rather than
-   being captured by the iframe. Sits above the iframe, z-index keeps it on top. */
-.vz .story-embed-scroll-cap{position:absolute;inset:0;z-index:1}
+.vz .story-embed-url{flex:1;margin:0 12px;height:22px;background:rgba(12,12,16,.12);border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--m);font-size:9px;letter-spacing:.5px;color:rgba(12,12,16,.35);overflow:hidden;white-space:nowrap;text-decoration:none}
+.vz .story-embed-iframe-wrap iframe{display:block;width:100%;height:clamp(440px,78vh,860px);border:0}
 
 /* ── CONTACT ─────────────────────────────────────── */
 .vz .contact{padding:130px clamp(20px,5vw,56px);background:var(--ink);color:var(--cream);text-align:center;border-top:3px solid var(--teal)}
@@ -336,10 +331,6 @@ export default function HomeClient({
     trackTopicFiltered(topic)
   }, [])
 
-  const embedWrapperRef = useRef<HTMLElement>(null)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const sectionCountRef = useRef(10) // updated when story posts viz-story-ready
-
   // Topic chips are derived from whatever topics the stories actually carry —
   // empty until stories are tagged, at which point they light up automatically.
   const topics = useMemo(
@@ -380,98 +371,9 @@ export default function HomeClient({
     )
     document.querySelectorAll('.rv').forEach((el) => obs.observe(el))
 
-    // Story posts its section count once mounted so we can size the wrapper.
-    const onMessage = (e: MessageEvent) => {
-      if (e.data?.type !== 'viz-story-ready') return
-      const n = Number(e.data.sectionCount)
-      if (n > 0) {
-        sectionCountRef.current = n
-        const wrapper = embedWrapperRef.current
-        if (wrapper) wrapper.style.setProperty('--embed-sections', String(n))
-      }
-    }
-    window.addEventListener('message', onMessage)
-
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('message', onMessage)
       obs.disconnect()
-    }
-  }, [])
-
-  // Continuous scroll-sync (`viz-story-progress`).
-  // The page is the only scroller. As it scrolls through the tall wrapper the
-  // sticky frame stays pinned, and we mirror the page's progress through the
-  // pinned range (a 0..1 fraction) into the iframe, which maps it onto the
-  // story's own scroll range. Because it's plain native page scroll, wheel and
-  // touch behave identically — no hijacking, no locks, no per-device code — and
-  // the page owns its own boundaries: scrolling up continues up the page,
-  // scrolling past the wrapper releases the sticky into the contact section.
-  useEffect(() => {
-    let raf = 0
-    let snapTimer: ReturnType<typeof setTimeout> | undefined
-    let snapping = false // true while our own snap scroll is animating
-
-    // Geometry of the pinned range: how far the page scrolls while the frame
-    // stays pinned (wrapper height minus one viewport). null when not pinnable.
-    const pinnedRange = () => {
-      const wrapper = embedWrapperRef.current
-      if (!wrapper) return null
-      const { top, height } = wrapper.getBoundingClientRect()
-      const pinned = height - window.innerHeight
-      if (pinned <= 0) return null
-      return { top, pinned }
-    }
-
-    const compute = () => {
-      raf = 0
-      const r = pinnedRange()
-      if (!r) return
-      // Skip while the wrapper is entirely off-screen — no point streaming
-      // progress the reader can't see.
-      if (r.top > window.innerHeight || -r.top > r.pinned + window.innerHeight) return
-      const fraction = Math.max(0, Math.min(1, -r.top / r.pinned))
-      iframeRef.current?.contentWindow?.postMessage(
-        { type: 'viz-story-progress', value: fraction },
-        '*'
-      )
-    }
-
-    // After scrolling settles, rest on the nearest section. We nudge the PAGE
-    // (the single source of truth) and let the progress mirror above carry the
-    // story smoothly into place — no separate seek message, nothing to fight.
-    const snapToNearest = () => {
-      const r = pinnedRange()
-      if (!r) return
-      const count = sectionCountRef.current
-      if (count < 2) return
-      // Only snap while genuinely inside the pinned range — never yank the
-      // reader back when they've scrolled above or below the embed.
-      if (r.top > 0 || -r.top >= r.pinned) return
-      const fraction = -r.top / r.pinned
-      const idx = Math.round(fraction * (count - 1))
-      const wrapperTop = r.top + window.scrollY
-      const target = wrapperTop + (idx / (count - 1)) * r.pinned
-      if (Math.abs(target - window.scrollY) > 1) {
-        snapping = true
-        window.scrollTo({ top: target, behavior: 'smooth' })
-        setTimeout(() => { snapping = false }, 600)
-      }
-    }
-
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(compute)
-      if (snapping) return // ignore the scroll events our own snap produces
-      if (snapTimer) clearTimeout(snapTimer)
-      snapTimer = setTimeout(snapToNearest, 140)
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    compute() // sync once in case we mount already scrolled into the wrapper
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      if (raf) cancelAnimationFrame(raf)
-      if (snapTimer) clearTimeout(snapTimer)
     }
   }, [])
 
@@ -572,35 +474,25 @@ export default function HomeClient({
       {/* EPICS — running collections, as a row below the header */}
       <EpicsSection epics={epics} />
 
-      {/* STUDIO STORY EMBED — tall wrapper drives page scroll; frame is sticky */}
-      <section
-        ref={embedWrapperRef}
-        className="story-embed"
-        style={{ height: `calc(var(--embed-sections, 6) * 100svh)` }}
-      >
-        <div className="story-embed-sticky">
-          <div className="story-embed-inner">
-            <div className="story-embed-head">
-              <div className="kick">The Studio</div>
+      {/* STUDIO STORY EMBED — the vizmaya-studio board (an HTML story at
+          /s/vizmaya-studio), served chrome-less and left interactive: the board
+          leaves a plain wheel to the page and zooms on ⌘/Ctrl + wheel or pinch. */}
+      <section className="story-embed">
+        <div className="story-embed-inner">
+          <div className="story-embed-head">
+            <div className="kick">The Studio</div>
+          </div>
+          <div className="story-embed-frame">
+            <div className="story-embed-bar">
+              <span className="story-embed-dot" />
+              <span className="story-embed-dot" />
+              <span className="story-embed-dot" />
+              <a className="story-embed-url" href="/s/vizmaya-studio" target="_blank" rel="noreferrer">
+                vizmaya.fyi/s/vizmaya-studio
+              </a>
             </div>
-            <div className="story-embed-frame">
-              <div className="story-embed-bar">
-                <span className="story-embed-dot" />
-                <span className="story-embed-dot" />
-                <span className="story-embed-dot" />
-                <span className="story-embed-url">vizmaya.fyi/story/vizmaya-studio</span>
-              </div>
-              <div className="story-embed-iframe-wrap">
-                <iframe
-                  ref={iframeRef}
-                  src="/story/vizmaya-studio?embed=1"
-                  title="Vizmaya Studio"
-                  loading="lazy"
-                />
-                {/* Transparent overlay so wheel/touch land on the page (not the
-                    iframe's own scroller); native page scroll then drives the story. */}
-                <div className="story-embed-scroll-cap" aria-hidden />
-              </div>
+            <div className="story-embed-iframe-wrap">
+              <iframe src="/s/vizmaya-studio?embed=1" title="Vizmaya Studio" loading="lazy" />
             </div>
           </div>
         </div>
