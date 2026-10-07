@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>We give the invisible its shape</title>
-<meta name="description" content="Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs. The whole studio, pinned to one board.">
+<meta name="description" content="Vismaya is a two-person data-storytelling studio. Pattern, then meaning, then form; a randomizer that picks what to look for; and HTML stories any agent can write. The whole studio, pinned to one board.">
 <meta property="og:title" content="We give the invisible its shape">
-<meta property="og:description" content="Pattern, then meaning, then form: a data-storytelling studio, pinned to one board.">
+<meta property="og:description" content="Pattern, then meaning, then form. Spin first, then find the story. The Vismaya studio, pinned to one board.">
 <!-- TODO before publishing: a real 1200×630 share image. -->
 <meta property="og:image" content="https://vizmaya.fyi/og/vizmaya-studio.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -14,7 +14,7 @@
 <meta name="vizmaya:format" content="board">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
 <!-- The board format: the camera, the tour panel, strings, minimap and the one-column view. -->
 <link rel="stylesheet" href="https://vizmaya.fyi/formats/board@1.css">
@@ -32,6 +32,7 @@
   --serif: 'Fraunces', Georgia, serif;
   --sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   --mono: 'JetBrains Mono', Menlo, ui-monospace, monospace;
+  --hand: 'Caveat', 'Bradley Hand', cursive;
   /* the format's tokens */
   --board-felt: #e4ddd0; --board-felt-2: #eee8dd; --board-edge: #cfc7b8;
   --board-string: #c4391c; --board-pin: #0f0e0c; --board-label: #6b665d;
@@ -65,7 +66,7 @@ html.board-on .world .item.tape::before { background: rgba(214, 205, 186, .7) }
 /* ── Things pinned to the board ──────────────────────────────────────── */
 .item {
   --c-ink: var(--ink); --c-muted: var(--muted); --c-grid: var(--grid); --c-line: var(--line);
-  --c-green: var(--green); --c-red: var(--red); --c-indigo: var(--indigo); --c-paper: var(--paper);
+  --c-green: var(--green); --c-red: var(--red); --c-indigo: var(--indigo); --c-amber: var(--amber); --c-paper: var(--paper);
   --font-chart: var(--mono); --chart-fs: 14px; --chart-fs-sm: 12.5px;
 }
 .item h2, .item h3 { font-family: var(--serif); font-weight: 400; line-height: 1.12; margin: 0 0 12px; letter-spacing: -.01em }
@@ -76,7 +77,7 @@ html.board-on .world .item.tape::before { background: rgba(214, 205, 186, .7) }
 .item .src { font-family: var(--mono); font-size: 12.5px; line-height: 1.45; letter-spacing: .02em; margin: 10px 0 0 }
 .kicker { display: flex; align-items: center; gap: 8px; font: 600 14px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; margin: 0 0 14px }
 .kicker i { font-size: 18px }
-.k-green { color: var(--green) } .k-red { color: var(--red) } .k-indigo { color: var(--indigo) } .k-muted { color: var(--muted) }
+.k-green { color: var(--green) } .k-red { color: var(--red) } .k-indigo { color: var(--indigo) } .k-muted { color: var(--muted) } .k-amber { color: #8a6500 }
 .index h3 { font-size: 26px; margin: 0 0 19px }
 .index p { font-size: 16px; line-height: 28px; margin: 0 0 28px }
 .index p:last-child { margin: 0 }
@@ -84,20 +85,23 @@ html.board-on .world .item.tape::before { background: rgba(214, 205, 186, .7) }
 .sticky p { font-size: 22px; line-height: 1.3 }
 .sticky .who { font: 500 12.5px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .75; margin: 6px 0 0 }
 .sticky .big { font-family: var(--serif); font-weight: 600; font-size: 84px; line-height: .9; display: block; margin-bottom: 8px }
+.sticky ul { margin: 0; padding: 0 0 0 20px; font-size: 18px; line-height: 1.35 }
+.sticky li { margin-bottom: 8px }
+.sticky a { text-decoration-thickness: 1px; text-underline-offset: 3px }
 
 .title-card h1 { font-family: var(--serif); font-weight: 400; font-size: 96px; line-height: .98; letter-spacing: -.025em; margin: 0 0 26px }
 .title-card h1 em { font-style: italic; color: var(--red) }
-.title-card .dek { font-size: 22px; line-height: 1.5; color: var(--muted); margin: 0 0 18px; max-width: 40ch }
+.title-card .dek { font-size: 22px; line-height: 1.5; color: var(--muted); margin: 0 0 18px; max-width: 42ch }
 .title-card .by { font: 500 14px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); margin: 0 }
 html:not(.board-on) .title-card h1 { font-size: clamp(44px, 10vw, 80px) }
 .quote-card p { font-family: var(--serif); font-size: 64px; line-height: 1.05; letter-spacing: -.02em; margin: 0 }
 .quote-card p em { color: var(--red) }
-html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
+html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) !important }
 .zone-label { font: 600 18px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase }
 
 /* fact sheets (the deck's key/value lists) */
-.facts { list-style: none; margin: 0; padding: 0 }
-.facts li { padding: 10px 0; border-top: 1px solid rgba(15, 14, 12, .14) }
+.facts { list-style: none; margin: 0; padding: 0 !important }
+.facts li { padding: 10px 0; margin: 0 !important; border-top: 1px solid rgba(15, 14, 12, .14) }
 .facts li:first-child { border-top: 0; padding-top: 0 }
 .facts b { display: block; font: 600 12px/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 4px }
 .facts span { font-family: var(--serif); font-size: 21px; line-height: 1.25 }
@@ -105,16 +109,88 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
 /* the two failure modes */
 .fail { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 3px }
 
-/* what we make: three formats from our own work */
-.formats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin: 22px 0 6px }
+/* ── The randomizer: slot-machine reels ──────────────────────────────── */
+.machine { --m: var(--green) }
+.machine.atlas { --m: var(--indigo) }
+.machine.epics { --m: var(--red) }
+.machine .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 6px }
+.machine .head h3 { margin: 0 }
+.machine .hint { font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.machine .count { font: 500 12.5px/28px var(--mono); color: var(--muted); margin: 0 0 14px !important }
+.reels { display: flex; gap: 8px }
+.reel { flex: var(--f, 1) 1 0; min-width: 0 }
+.reel .lab { font: 600 10.5px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.reel .win {
+  position: relative; height: 84px; overflow: hidden; border-radius: 7px; background: #1b1916;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 1px 0 rgba(255, 255, 255, .6);
+}
+.reel .win::before, .reel .win::after { content: ''; position: absolute; left: 0; right: 0; height: 22px; z-index: 1; pointer-events: none }
+.reel .win::before { top: 0; background: linear-gradient(#1b1916, transparent) }
+.reel .win::after { bottom: 0; background: linear-gradient(transparent, #1b1916) }
+.reel .strip { will-change: transform }
+.reel .cell {
+  height: 84px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 8px;
+  color: #f5f1ea; font: 400 16px/1.15 var(--serif);
+}
+.reel .cell small { display: block; font: 500 10.5px/1.3 var(--mono); letter-spacing: .06em; color: rgba(245, 241, 234, .6); margin-top: 4px }
+.reel .bar { height: 3px; margin-top: 6px; border-radius: 2px; background: var(--m); opacity: .85 }
+.machine .result { font: 400 17px/1.4 var(--serif); margin: 14px 0 0 !important; min-height: 48px }
+.machine .result b { font-weight: 600; color: var(--m) }
+.spin {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 16px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--m); color: #fffdf8; font: 600 13px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+  box-shadow: 0 2px 0 rgba(15, 14, 12, .25);
+}
+.spin:active { transform: translateY(1px); box-shadow: none }
+.spin i { font-size: 16px }
+.status { font-weight: 600 }
+.st-verified { color: #7fc8a4 } .st-claimed { color: #f1c96b } .st-symbolic { color: #b3a7ec } .st-lost { color: #f19a86 }
+
+/* ── HTML stories: the four formats ──────────────────────────────────── */
+.formats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin: 18px 0 4px }
 .fmt { display: block; text-decoration: none; color: inherit }
-.fmt .art { height: 220px; display: flex; align-items: flex-end; justify-content: center; background: var(--bone); border-radius: 6px; padding: 18px; margin-bottom: 14px }
+.fmt .art { height: 170px; display: flex; align-items: center; justify-content: center; background: var(--bone); border-radius: 6px; padding: 16px; margin-bottom: 12px }
 .fmt .art svg { display: block; max-width: 100%; height: 100% }
 .fmt .kicker { font-size: 12px; margin: 0 0 8px; padding-top: 12px; border-top: 1.5px solid var(--line) }
 .fmt .t { font-family: var(--serif); font-size: 21px; line-height: 1.2; margin: 0 0 6px }
-.fmt .m { font: 500 11.5px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 }
-.fmt:hover .t { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px }
-@media (max-width: 720px) { html:not(.board-on) .formats { grid-template-columns: 1fr } }
+.fmt .m { font-size: 14.5px !important; line-height: 1.45 !important; color: var(--muted); margin: 0 }
+.fmt .go { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font: 600 11.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--red) }
+.fmt.here .art { outline: 2px solid var(--red); outline-offset: -2px }
+a.fmt:hover .t { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px }
+.works { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0 4px }
+.works .art { height: 190px; align-items: flex-end }
+.ticks { list-style: none; margin: 0; padding: 0 }
+.ticks li { display: flex; gap: 10px; font-size: 16px; line-height: 28px }
+.ticks li i { color: var(--green); font-size: 18px; line-height: 28px; flex: 0 0 auto }
+code { font-family: var(--mono); font-size: .88em; background: rgba(15, 14, 12, .06); padding: 1px 5px; border-radius: 4px }
+
+/* ── Who we are: founder cards ───────────────────────────────────────── */
+/* cards, not paper: they sit above the strings that run to them */
+.world .item.founder { background: var(--board-paper); padding: 28px 30px 24px }
+.founder .top { display: flex; gap: 26px; align-items: flex-start; margin-bottom: 20px }
+.polaroid {
+  flex: 0 0 auto; margin: 0; width: 214px; padding: 12px 12px 10px; background: #fff;
+  box-shadow: 0 1px 1px rgba(15, 14, 12, .14), 0 10px 18px -8px rgba(15, 14, 12, .35); transform: rotate(-2.5deg);
+}
+.polaroid img { display: block; width: 190px; height: 190px; object-fit: cover; background: var(--grid) }
+.polaroid.round img { border-radius: 50% }
+.polaroid figcaption { font: 700 26px/1 var(--hand); text-align: center; padding-top: 10px; color: #2a2723 }
+.founder .who-k { margin: 6px 0 10px }
+.founder h3 { font-size: 36px; margin: 0 0 8px }
+.founder .role { font-family: var(--serif); font-style: italic; font-size: 19px; color: var(--muted); margin: 0 0 16px }
+.li {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 11px; border-radius: 6px; text-decoration: none;
+  background: #0a66c2; color: #fff; font: 600 13px/1 var(--sans);
+}
+.li i { font-size: 18px }
+.li:hover { background: #004182 }
+@media (max-width: 720px) {
+  html:not(.board-on) .founder .top { flex-direction: column }
+  html:not(.board-on) .formats { grid-template-columns: 1fr 1fr }
+  html:not(.board-on) .works { grid-template-columns: 1fr }
+  html:not(.board-on) .reels { flex-wrap: wrap }
+  html:not(.board-on) .reel { flex: 1 1 40% }
+}
 
 /* the tour panel */
 .vz-panel .tour h2 { font-family: var(--serif); font-weight: 400; font-size: 30px; line-height: 1.12; letter-spacing: -.01em }
@@ -126,21 +202,24 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
 <body>
 
 <main class="stage" aria-label="We give the invisible its shape: the Vismaya studio, as a pinned board">
-  <div class="world" data-width="3600" data-height="3240">
+  <div class="world" data-width="4960" data-height="4000">
 
     <!-- Items are in reading order (that is the order of the linear view).
-         --x/--y/--w place them on the 3600×3240 board; --r tilts them. -->
+         --x/--y/--w place them on the 4960×4000 board; --r tilts them.
+         Zones: process and belief (top left), the randomizer (top right),
+         HTML stories and the problem (middle), what we make and who we are
+         (bottom). -->
 
     <!-- ── Cover ─────────────────────────────────────────────────────── -->
-    <div class="item title-card bare" id="it-title" style="--x:150;--y:150;--w:960">
+    <div class="item title-card bare" id="it-title" style="--x:150;--y:150;--w:980">
       <p class="kicker k-green" style="margin-bottom:26px">Vismaya · a data-storytelling studio</p>
       <h1>We give the <em>invisible</em> its shape.</h1>
-      <p class="dek">Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs.</p>
-      <p class="by">Vismaya · A studio for wonder</p>
+      <p class="dek">Vismaya is a two-person data-storytelling studio. We start with the dataset, find the question it answers, and build the form that insight actually needs: a scroll, a book, a board or a deck.</p>
+      <p class="by">Vismaya · A studio for wonder · October 2026</p>
     </div>
 
     <!-- ── Process ───────────────────────────────────────────────────── -->
-    <div class="item sticky gold" id="it-process" style="--x:200;--y:760;--w:420;--r:-2">
+    <div class="item sticky gold" id="it-process" style="--x:200;--y:800;--w:420;--r:-2">
       <p class="who" style="margin:0 0 10px">— Process</p>
       <p style="font-size:30px;line-height:1.1;margin-bottom:12px">Three things. In order. Every time.</p>
       <p style="font-size:18px;font-style:italic">Pattern, then meaning, then form. Below, our own 33 published stories go through all three.</p>
@@ -197,44 +276,164 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
       <div class="chart" style="height:640px" data-chart="belief" data-alt="All 33 of our published stories measured on a drafting grid by words per section, sorted from fewest to most, with one smooth vermillion line drawn through every point."></div>
     </div>
 
+    <!-- ── Where stories start: the randomizer ───────────────────────── -->
+    <div class="item index" id="it-rand" style="--x:3660;--y:110;--w:580;--r:-1">
+      <p class="kicker k-amber" style="margin-bottom:21px"><i class="ph ph-dice-five"></i>Where stories start</p>
+      <h3>Spin first. Then find the story.</h3>
+      <p>We don’t wait for a topic to arrive. Three randomizers pick one: the <b>Desk</b> for industries, <b>Atlas</b> for countries and cultures, <b>Epics</b> for the places in the great poems. A spin is an assignment, not a story: the research decides whether there is one.</p>
+    </div>
+
+    <div class="item sticky gold" id="it-rules" style="--x:4320;--y:120;--w:420;--r:2">
+      <p class="who" style="margin:0 0 10px">The draw has rules</p>
+      <ul>
+        <li>60% of Desk spins are weighted by heat; the rest are pure chance.</li>
+        <li>No segment twice in 30 days, no combination twice in 90.</li>
+        <li>Heat 85 or more gets back in anyway.</li>
+        <li>Nothing new? Breaking, then Developing, then Evergreen.</li>
+        <li>Atlas spreads across regions; Epics keeps one spin in three philosophical.</li>
+      </ul>
+    </div>
+
+    <div class="item index machine desk" id="it-desk" style="--x:3660;--y:690;--w:760;--r:.6">
+      <div class="head"><h3>Vizmaya Desk</h3><span class="hint">Industry · editorial</span></div>
+      <p class="count">7 industries · 23 sub-industries · 5 lenses · 3 freshness windows</p>
+      <div class="chart" style="height:118px" data-chart="reels" data-variant="desk" data-alt="Four slot-machine reels: industry, sub-industry, lens and freshness."></div>
+      <p class="result" data-result="desk"></p>
+      <button class="spin board-only" type="button" data-spin="desk"><i class="ph ph-arrows-clockwise"></i>Spin the Desk</button>
+    </div>
+
+    <div class="item index machine atlas" id="it-atlas" style="--x:3690;--y:1200;--w:760;--r:-.7">
+      <div class="head"><h3>Atlas</h3><span class="hint">Countries · geography</span></div>
+      <p class="count">202 countries · 15 cultural threads · 4 time depths · 4 frames · 5 lenses</p>
+      <div class="chart" style="height:118px" data-chart="reels" data-variant="atlas" data-alt="Five slot-machine reels: country, cultural thread, time depth, geography frame and lens."></div>
+      <p class="result" data-result="atlas"></p>
+      <button class="spin board-only" type="button" data-spin="atlas"><i class="ph ph-arrows-clockwise"></i>Spin Atlas</button>
+    </div>
+
+    <div class="item index machine epics" id="it-epics" style="--x:3660;--y:1710;--w:760;--r:.5">
+      <div class="head"><h3>Epics</h3><span class="hint">Epics · geography</span></div>
+      <p class="count">35 epics · 114 episodes · 124 places · 6 lenses</p>
+      <div class="chart" style="height:118px" data-chart="reels" data-variant="epics" data-alt="Four slot-machine reels: epic, episode, place and lens."></div>
+      <p class="result" data-result="epics"></p>
+      <button class="spin board-only" type="button" data-spin="epics"><i class="ph ph-arrows-clockwise"></i>Spin Epics</button>
+    </div>
+
+    <div class="item paper" id="it-heat" style="--x:4500;--y:640;--w:400;--r:1.2">
+      <p class="kicker k-amber" style="margin-bottom:8px">Desk heat</p>
+      <h3 style="font-size:24px">Hot segments get spun more</h3>
+      <div class="chart" style="height:560px" data-chart="heat" data-alt="The Desk's 23 sub-industries by heat, from Data center power (92) and HBM memory (88) down to Biosimilars (29)."></div>
+      <p class="src">Seed heat from the Desk dataset; the weekly refresh replaces it with live heat.</p>
+    </div>
+
+    <div class="item paper" id="it-gate" style="--x:4500;--y:1500;--w:400;--r:-1">
+      <p class="kicker k-amber" style="margin-bottom:8px">From spin to story</p>
+      <h3 style="font-size:24px">A human reads the insight first</h3>
+      <div class="chart" style="height:430px" data-chart="lifecycle" data-alt="The life of a spin: spun, researching, insight review, approved, published. Atlas and Epics stop at insight review until a person approves the hero insight; the Desk goes straight to approved. A rejected spin is re-spun with a reason."></div>
+    </div>
+
+    <!-- ── HTML stories: one page, any agent ─────────────────────────── -->
+    <div class="item paper" id="it-html" style="--x:150;--y:2120;--w:860;--r:-.6">
+      <p class="kicker k-red"><i class="ph ph-file-html"></i>HTML stories</p>
+      <h3>Any agent can write the page</h3>
+      <p>Claude, ChatGPT, Cursor: any agent reads our brief and writes one finished, self-contained HTML page. We serve it exactly as posted at <code>/s/&lt;slug&gt;</code>, inside our header and footer. No config, no render step.</p>
+      <div class="chart" style="height:160px" data-chart="pipeline" data-alt="The path of an HTML story: a spin and the brief, any agent writes the page, the lint checks the hosting contract, publish to /s/slug, and the reader gets it in the site's chrome."></div>
+    </div>
+
+    <div class="item paper" id="it-formats" style="--x:1100;--y:2100;--w:1160;--r:.5">
+      <p class="kicker k-indigo"><i class="ph ph-squares-four"></i>Four formats</p>
+      <h3>A scroll, a book, a board or a deck</h3>
+      <p>Stories scroll by default. Three formats aren’t vertical at all, and each runs on a small runtime the site hosts, so the agent writes only the content, its design and its charts.</p>
+      <div class="formats">
+        <div class="fmt">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 120 130"><rect x="30" y="4" width="60" height="122" rx="5" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".2"/><rect x="38" y="14" width="34" height="4" rx="2" fill="#0f0e0c" opacity=".7"/><rect x="38" y="24" width="44" height="3" rx="1.5" fill="#6b665d" opacity=".5"/><rect x="38" y="31" width="40" height="3" rx="1.5" fill="#6b665d" opacity=".5"/><rect x="38" y="42" width="44" height="34" rx="2" fill="#2d6a4f" opacity=".85"/><rect x="38" y="84" width="44" height="3" rx="1.5" fill="#6b665d" opacity=".5"/><rect x="38" y="91" width="36" height="3" rx="1.5" fill="#6b665d" opacity=".5"/><rect x="95" y="20" width="4" height="96" rx="2" fill="#d8d2c5"/><rect x="95" y="34" width="4" height="26" rx="2" fill="#0f0e0c"/></svg></div>
+          <p class="kicker k-green">Scroll</p>
+          <p class="t">The default</p>
+          <p class="m">One long page; charts and maps play as they come up the screen.</p>
+        </div>
+        <a class="fmt" href="https://vizmaya.fyi/formats/examples/odyssey-book.html" target="_blank" rel="noopener">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 140 110"><path d="M70 18 C52 8 26 8 8 14 V98 C26 92 52 92 70 102 Z" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".2"/><path d="M70 18 C88 8 114 8 132 14 V98 C114 92 88 92 70 102 Z" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".2"/><g fill="#6b665d" opacity=".5"><rect x="20" y="28" width="38" height="3" rx="1.5"/><rect x="20" y="36" width="34" height="3" rx="1.5"/><rect x="20" y="44" width="38" height="3" rx="1.5"/><rect x="20" y="52" width="30" height="3" rx="1.5"/></g><rect x="82" y="28" width="38" height="40" rx="2" fill="#c4391c" opacity=".8"/><path d="M70 18 V102" stroke="#0f0e0c" stroke-opacity=".25"/></svg></div>
+          <p class="kicker k-red">Book</p>
+          <p class="t">Pages you turn</p>
+          <p class="m">A two-page spread on a wide screen; tap, drag or use the arrow keys.</p>
+          <span class="go">Open the example <i class="ph ph-arrow-up-right"></i></span>
+        </a>
+        <a class="fmt here" href="https://vizmaya.fyi/formats/examples/odyssey-board.html" target="_blank" rel="noopener">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 140 110"><rect x="4" y="6" width="132" height="98" rx="4" fill="#e4ddd0" stroke="#cfc7b8" stroke-width="4"/><rect x="16" y="18" width="44" height="34" fill="#fffdf8" transform="rotate(-3 38 35)"/><rect x="78" y="22" width="44" height="30" fill="#f1dfa4" transform="rotate(4 100 37)"/><rect x="40" y="62" width="56" height="32" fill="#fffdf8" transform="rotate(2 68 78)"/><path d="M38 20 Q66 48 100 24 M100 24 Q86 52 68 64" stroke="#c4391c" stroke-width="1.6" fill="none"/><g fill="#0f0e0c"><circle cx="38" cy="20" r="3"/><circle cx="100" cy="24" r="3"/><circle cx="68" cy="64" r="3"/></g></svg></div>
+          <p class="kicker k-muted">Board · you are here</p>
+          <p class="t">A pinned board</p>
+          <p class="m">A guided tour while the camera flies between items, or pan and zoom freely.</p>
+          <span class="go">Open the example <i class="ph ph-arrow-up-right"></i></span>
+        </a>
+        <a class="fmt" href="https://vizmaya.fyi/formats/examples/odyssey-deck.html" target="_blank" rel="noopener">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 140 110"><rect x="40" y="10" width="86" height="58" rx="5" fill="#c9c1b1" transform="rotate(6 83 39)"/><rect x="30" y="20" width="86" height="58" rx="5" fill="#d8d2c5" transform="rotate(-3 73 49)"/><rect x="16" y="34" width="96" height="64" rx="5" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".2"/><rect x="28" y="46" width="36" height="5" rx="2" fill="#0f0e0c" opacity=".7"/><g fill="#5c4ba0"><rect x="72" y="76" width="8" height="12"/><rect x="83" y="66" width="8" height="22"/><rect x="94" y="56" width="8" height="32"/></g></svg></div>
+          <p class="kicker k-indigo">Deck</p>
+          <p class="t">Slides or cards</p>
+          <p class="m">Step through slides, or switch to a stack of cards and swipe them away.</p>
+          <span class="go">Open the example <i class="ph ph-arrow-up-right"></i></span>
+        </a>
+      </div>
+    </div>
+
+    <div class="item index" id="it-contract" style="--x:170;--y:2680;--w:620;--r:1">
+      <h3>The hosting contract</h3>
+      <ul class="ticks">
+        <li><i class="ph ph-check"></i>One complete HTML file, posted by the agent through our API or MCP tool.</li>
+        <li><i class="ph ph-check"></i>Served in a sandbox: scripts run, but with no cookies and no storage.</li>
+        <li><i class="ph ph-check"></i>A theme tag tints our header and footer to the story’s palette.</li>
+        <li><i class="ph ph-check"></i>A lint checks the page before it goes up, and reports what to fix.</li>
+        <li><i class="ph ph-check"></i>Photos: openly licensed first, AI only as illustration, every one credited.</li>
+        <li><i class="ph ph-check"></i>Two sites host them: vizmaya.fyi and footshorts.com.</li>
+      </ul>
+    </div>
+
+    <div class="item sticky blue" id="it-odyssey" style="--x:870;--y:2700;--w:380;--r:-2">
+      <p class="who" style="margin:0 0 8px;color:var(--indigo)">Same story, three formats</p>
+      <p style="font-size:21px">Homer’s <i>Odyssey</i>, told as a <a href="https://vizmaya.fyi/formats/examples/odyssey-book.html" target="_blank" rel="noopener">book</a>, a <a href="https://vizmaya.fyi/formats/examples/odyssey-board.html" target="_blank" rel="noopener">board</a> and a <a href="https://vizmaya.fyi/formats/examples/odyssey-deck.html" target="_blank" rel="noopener">deck</a>. The only difference is the format.</p>
+    </div>
+
+    <div class="item sticky sage" id="it-asis" style="--x:1340;--y:2760;--w:360;--r:2.5">
+      <p style="font-size:24px;margin-bottom:6px">Served exactly as posted.</p>
+      <p style="font-size:17px">Every save keeps a version, so any page can be rolled back.</p>
+    </div>
+
     <!-- ── What the world hides ─────────────────────────────────────── -->
-    <div class="item index" id="it-hides" style="--x:150;--y:2010;--w:640;--r:-1">
+    <div class="item index" id="it-hides" style="--x:2440;--y:2120;--w:640;--r:-1">
       <h3>What the world hides</h3>
       <p>The world is full of important things nobody can see: not because they’re hidden, but because nobody has bothered to make them legible.</p>
       <p>The supply chain that keeps your phone alive runs through six countries and a chokepoint most people can’t name. The policy shift that will reshape your industry in five years is sitting in an appendix, unread. The slow variable that explains the fast headline is right there in the dataset, ignored.</p>
     </div>
-    <div class="item sticky sage" id="it-supply" data-pin-to="it-hides" style="--x:880;--y:1990;--w:310;--r:2">
+    <div class="item sticky sage" id="it-supply" data-pin-to="it-hides" style="--x:3170;--y:2100;--w:310;--r:2">
       <p class="who" style="margin:0 0 8px;color:var(--green)">The supply chain</p>
       <p>Six countries, one chokepoint most people can’t name.</p>
     </div>
-    <div class="item sticky rose" id="it-policy" data-pin-to="it-hides" style="--x:900;--y:2330;--w:310;--r:-2">
+    <div class="item sticky rose" id="it-policy" data-pin-to="it-hides" style="--x:3190;--y:2420;--w:310;--r:-2">
       <p class="who" style="margin:0 0 8px;color:var(--red)">The policy shift</p>
       <p>In an appendix, unread.</p>
     </div>
-    <div class="item sticky blue" id="it-slow" data-pin-to="it-hides" style="--x:1250;--y:2150;--w:310;--r:1.5">
+    <div class="item sticky blue" id="it-slow" data-pin-to="it-hides" style="--x:3540;--y:2250;--w:310;--r:1.5">
       <p class="who" style="margin:0 0 8px;color:var(--indigo)">The slow variable</p>
       <p>In the dataset, ignored.</p>
     </div>
 
     <!-- ── Both fail the same way ───────────────────────────────────── -->
-    <div class="item index" id="it-either" style="--x:1680;--y:2000;--w:380;--r:-1.5">
+    <div class="item index" id="it-either" style="--x:3960;--y:2120;--w:380;--r:-1.5">
       <p class="kicker k-muted" style="margin-bottom:21px">Either</p>
       <p style="font-family:var(--serif);font-size:26px;line-height:28px" class="fail">It stays buried in jargon.</p>
     </div>
-    <div class="item index" id="it-or" style="--x:2130;--y:2030;--w:380;--r:1.5">
+    <div class="item index" id="it-or" style="--x:4420;--y:2150;--w:380;--r:1.5">
       <p class="kicker k-muted" style="margin-bottom:21px">Or</p>
       <p style="font-family:var(--serif);font-size:26px;line-height:28px" class="fail">It gets compressed into a hot take.</p>
     </div>
-    <div class="item quote-card bare" id="it-fail" style="--x:1690;--y:2330;--w:820">
+    <div class="item quote-card bare" id="it-fail" style="--x:3960;--y:2450;--w:860">
       <p>Both fail <em>the same way.</em></p>
     </div>
 
     <!-- ── What we make ─────────────────────────────────────────────── -->
-    <div class="item paper" id="it-make" style="--x:2600;--y:1830;--w:860;--r:.8">
+    <div class="item paper" id="it-make" style="--x:150;--y:3160;--w:900;--r:.8">
       <h3>What we make</h3>
       <p>We don’t start with a format. We start with a question: what does this insight actually need to land?</p>
       <p>Sometimes it’s a ten-minute scrollytelling piece. Sometimes a single chart with a headline. Sometimes a forty-five-second reel. We’d rather kill a good story than publish a wrong one, and we’d rather make one person think differently than impress ten thousand who scroll past and feel nothing.</p>
-      <div class="formats">
+      <div class="formats works">
         <a class="fmt" href="https://vizmaya.fyi/story/korean-war-frontline" target="_blank" rel="noopener">
           <div class="art" aria-hidden="true">
             <svg viewBox="0 0 160 130"><rect x="34" y="4" width="122" height="78" rx="4" fill="#d8d2c5"/><rect x="20" y="20" width="122" height="78" rx="4" fill="#c9c1b1"/><rect x="4" y="38" width="122" height="78" rx="4" fill="#fffdf8" stroke="#0f0e0c" stroke-opacity=".15"/><path d="M18 96 L40 72 L58 82 L82 58 L110 66" fill="none" stroke="#2d6a4f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="58" r="4" fill="#2d6a4f"/><rect x="16" y="50" width="44" height="5" rx="2" fill="#0f0e0c" opacity=".7"/></svg>
@@ -263,51 +462,72 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
     </div>
 
     <!-- ── Who we are ───────────────────────────────────────────────── -->
-    <div class="item paper tape" id="it-studio" style="--x:150;--y:2640;--w:500;--r:-1.2">
+    <div class="item paper tape" id="it-studio" style="--x:1160;--y:3170;--w:500;--r:-1.2">
       <p class="kicker k-muted">— Who we are</p>
       <h3 style="margin-bottom:4px">A two-person studio.</h3>
       <p style="font-family:var(--serif);font-style:italic;color:var(--muted)">A journalist who designs. A designer who codes.</p>
-      <div class="chart" style="height:380px" data-chart="mark" data-variant="studio" data-alt="The mark recast: Shashank (words, data) and Suprabho (design, code) as two circles, the story they make as the third."></div>
+      <div class="chart" style="height:400px" data-chart="mark" data-variant="studio" data-alt="The mark recast: Shashank (words, data) and Suprabho (design, code) as two circles, the story they make as the third."></div>
     </div>
 
-    <div class="item index" id="it-shashank" data-pin-to="it-studio:shashank" style="--x:740;--y:2660;--w:640;--r:1">
-      <h3>Shashank A. Pandey</h3>
+    <div class="item founder" id="it-shashank" data-pin-to="it-studio:shashank" style="--x:1760;--y:3130;--w:820;--r:.8">
+      <div class="top">
+        <figure class="polaroid round">
+          <img src="data:image/webp;base64,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" alt="Portrait of Shashank Vardhaan" width="190" height="190">
+          <figcaption>Shashank</figcaption>
+        </figure>
+        <div>
+          <p class="kicker k-green who-k">Words · data</p>
+          <h3>Shashank Vardhaan</h3>
+          <p class="role">Data storytelling, visual journalism</p>
+          <a class="li" href="https://www.linkedin.com/in/shashank-vardhaan-72a952144/" target="_blank" rel="noopener"><i class="ph ph-linkedin-logo"></i>Shashank on LinkedIn</a>
+        </div>
+      </div>
       <p>He started as a journalist who couldn’t stop designing, and a designer who couldn’t stop researching. Nobody hired that combination, so he taught himself: not out of strategy, but because the obsession left no choice.</p>
-      <p>He believes clarity is an act of generosity: that every number is someone’s lived reality compressed into a digit, and most of the time life gets flattened into a chart no one reads. He exists to give it back its shape, to sit at the border between what is true and what is understood, and to refuse to let the distance between them be someone else’s problem.</p>
+      <p>He believes clarity is an act of generosity: that every number is someone’s lived reality compressed into a digit, and most of the time life gets flattened into a chart no one reads. He exists to give it back its shape, and to refuse to let the distance between what is true and what is understood be someone else’s problem.</p>
     </div>
-    <div class="item sticky sage" id="it-shashank-facts" style="--x:1440;--y:2700;--w:330;--r:-2">
+    <div class="item sticky sage" id="it-shashank-facts" style="--x:1820;--y:3790;--w:330;--r:-2">
       <ul class="facts">
-        <li><b style="color:var(--green)">Practice</b><span>Data storytelling, visual journalism</span></li>
-        <li><b>Path</b><span>Journalist → designer → researcher, self-taught</span></li>
+        <li><b style="color:var(--green)">Path</b><span>Journalist → designer → researcher, self-taught</span></li>
         <li><b style="color:var(--red)">Believes</b><span>Clarity is an act of generosity</span></li>
       </ul>
     </div>
 
-    <div class="item index" id="it-suprabho" data-pin-to="it-studio:suprabho" style="--x:1850;--y:2650;--w:640;--r:-1">
-      <h3>Suprabho Dhenki</h3>
+    <div class="item founder" id="it-suprabho" data-pin-to="it-studio:suprabho" style="--x:2680;--y:3150;--w:820;--r:-.8">
+      <div class="top">
+        <figure class="polaroid" style="transform:rotate(2deg)">
+          <img src="data:image/webp;base64,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" alt="Portrait of Suprabho Dhenki" width="190" height="190">
+          <figcaption>Supro</figcaption>
+        </figure>
+        <div>
+          <p class="kicker k-indigo who-k">Design · code</p>
+          <h3>Suprabho Dhenki</h3>
+          <p class="role">Product design, creative technology</p>
+          <a class="li" href="https://www.linkedin.com/in/shuprobho/" target="_blank" rel="noopener"><i class="ph ph-linkedin-logo"></i>Suprabho on LinkedIn</a>
+        </div>
+      </div>
       <p>Product designer and creative technologist. Founder of Promad, where he builds design tools and workflows (Figma plugins, parametric systems, AI-assisted production pipelines) that address the fragmentation of modern creative work.</p>
-      <p>Previously designed at Microsoft, 1mg, ClearTax, Merkle Science, and Kidzovo; early work on interaction design at IIT Guwahati was featured in a CHI publication. Bridges design and code through motion, data visualization, and modular frameworks for creative production.</p>
+      <p>Previously designed at Microsoft, 1mg, ClearTax, Merkle Science, and Kidzovo; early work on interaction design at IIT Guwahati was featured in a CHI publication. At Vismaya he builds the engine: the formats, the randomizer and the pipelines under every story.</p>
     </div>
-    <div class="item sticky blue" id="it-suprabho-facts" style="--x:2550;--y:2690;--w:340;--r:2">
+    <div class="item sticky blue" id="it-suprabho-facts" style="--x:3330;--y:3780;--w:340;--r:2">
       <ul class="facts">
-        <li><b style="color:var(--indigo)">Practice</b><span>Product design, creative technology</span></li>
-        <li><b>Now</b><span>Founder, Promad</span></li>
+        <li><b style="color:var(--indigo)">Now</b><span>Founder, Promad</span></li>
         <li><b>Before</b><span>Microsoft · 1mg · ClearTax · Merkle Science · Kidzovo</span></li>
-        <li><b>Research</b><span>CHI publication, IIT Guwahati</span></li>
       </ul>
     </div>
 
     <!-- ── Closing ──────────────────────────────────────────────────── -->
-    <div class="item quote-card bare" id="it-close" style="--x:2960;--y:2760;--w:560">
-      <p style="font-size:76px">We added the <em>z</em> for viz. That’s the job.</p>
+    <div class="item quote-card bare" id="it-close" style="--x:3720;--y:3260;--w:1100">
+      <p style="font-size:84px">We added the <em>z</em> for viz. That’s the job.</p>
     </div>
 
     <span class="zone-label board-only" style="--x:1240;--y:60">Process</span>
     <span class="zone-label board-only" style="--x:2740;--y:40">Belief</span>
+    <span class="zone-label board-only" style="--x:3670;--y:50">The randomizer</span>
     <span class="zone-label board-only" style="--x:160;--y:1180">One dataset, three passes</span>
-    <span class="zone-label board-only" style="--x:160;--y:1940">What the world hides</span>
-    <span class="zone-label board-only" style="--x:2610;--y:1770">What we make</span>
-    <span class="zone-label board-only" style="--x:160;--y:2580">Who we are</span>
+    <span class="zone-label board-only" style="--x:160;--y:2050">One page, any agent</span>
+    <span class="zone-label board-only" style="--x:2450;--y:2050">What the world hides</span>
+    <span class="zone-label board-only" style="--x:160;--y:3090">What we make</span>
+    <span class="zone-label board-only" style="--x:1170;--y:3090">Who we are</span>
   </div>
 
   <!-- The guided tour. Each step frames one or more items (data-target);
@@ -353,6 +573,46 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
       <h2>Rigour and beauty are the same demand</h2>
       <p>Every story measured, all 33. Then one smooth line, allowed to pass only through measured points.</p>
     </li>
+    <li data-unit data-target="it-rand it-rules" data-target-sm="it-rand">
+      <span class="step-k" style="color:#8a6500">The randomizer</span>
+      <h2>Spin first. Then find the story.</h2>
+      <p>Three randomizers hand us an assignment. The research decides whether there’s a story in it.</p>
+    </li>
+    <li data-unit data-target="it-desk">
+      <span class="step-k" style="color:var(--green)">Vizmaya Desk</span>
+      <h2>An industry, a lens, a deadline</h2>
+      <p>Industry, sub-industry, lens and freshness. Press Spin to draw your own; the real draw also weighs heat and blocks repeats.</p>
+    </li>
+    <li data-unit data-target="it-atlas">
+      <span class="step-k" style="color:var(--indigo)">Atlas</span>
+      <h2>A country and a thread through it</h2>
+      <p>A cultural thread, a depth of time, a way of framing the map and a question to ask of it.</p>
+    </li>
+    <li data-unit data-target="it-epics">
+      <span class="step-k" style="color:var(--red)">Epics</span>
+      <h2>A place in a great poem</h2>
+      <p>An episode and a place, each marked Verified, Claimed, Symbolic or Lost until research checks it.</p>
+    </li>
+    <li data-unit data-target="it-heat it-gate" data-target-sm="it-gate">
+      <span class="step-k" style="color:#8a6500">From spin to story</span>
+      <h2>Heat in, a human check out</h2>
+      <p>Hot segments come up more often. And before an Atlas or Epics story goes out, a person approves its hero insight.</p>
+    </li>
+    <li data-unit data-target="it-html">
+      <span class="step-k" style="color:var(--red)">HTML stories</span>
+      <h2>Any agent can write the page</h2>
+      <p>The spin becomes a brief, an agent writes one finished page, a lint checks it, and it goes live at /s/&lt;slug&gt;.</p>
+    </li>
+    <li data-unit data-target="it-formats">
+      <span class="step-k" style="color:var(--indigo)">Four formats</span>
+      <h2>A scroll, a book, a board or a deck</h2>
+      <p>You’re reading a board. The same runtime contract serves all four.</p>
+    </li>
+    <li data-unit data-target="it-contract it-odyssey it-asis" data-target-sm="it-contract">
+      <span class="step-k" style="color:var(--muted)">The contract</span>
+      <h2>Served exactly as posted</h2>
+      <p>One file, in a sandbox, in our chrome, checked before it goes up.</p>
+    </li>
     <li data-unit data-target="it-hides it-supply it-policy it-slow" data-target-sm="it-hides">
       <span class="step-k" style="color:var(--muted)">What the world hides</span>
       <h2>Not hidden. Just never made legible.</h2>
@@ -375,13 +635,13 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
     </li>
     <li data-unit data-target="it-shashank it-shashank-facts" data-target-sm="it-shashank">
       <span class="step-k" style="color:var(--green)">Words · data</span>
-      <h2>Shashank A. Pandey</h2>
+      <h2>Shashank Vardhaan</h2>
       <p>A journalist who designs. Clarity, he believes, is an act of generosity.</p>
     </li>
     <li data-unit data-target="it-suprabho it-suprabho-facts" data-target-sm="it-suprabho">
       <span class="step-k" style="color:var(--indigo)">Design · code</span>
       <h2>Suprabho Dhenki</h2>
-      <p>A designer who codes. Founder of Promad.</p>
+      <p>A designer who codes. Founder of Promad, and the engine under every story here.</p>
     </li>
     <li data-unit data-target="it-close">
       <span class="step-k" style="color:var(--red)">Closing</span>
@@ -391,7 +651,7 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
     <li data-unit data-target="board">
       <span class="step-k" style="color:var(--muted)">The whole studio</span>
       <h2>The board is yours</h2>
-      <p>That’s the tour. Drag the board, zoom into any card, or start again.</p>
+      <p>That’s the tour. Drag the board, zoom into any card, spin a randomizer, or start again.</p>
     </li>
   </ol>
 
@@ -461,6 +721,10 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
   function wps(d) { return d.wps }
   var MAP_MEDIAN = d3.median(MAPS, wps) // 54.5
   var DECK_MEDIAN = d3.median(DECKS, wps) // 185
+
+  // The randomizers' reels, from packages/randomizer/src/data/{desk,atlas,epics}.json
+  // (names only; the Desk lists and heat are the dataset's seed values).
+  var REELS = {"desk":{"industries":[{"n":"Semiconductors","subs":[["HBM memory",88],["Advanced packaging",74],["Lithography equipment",61],["Mature-node foundry",38]]},{"n":"AI infrastructure","subs":[["Data center power",92],["GPU cloud",79],["Liquid cooling",45],["Subsea cables",52]]},{"n":"Energy","subs":[["Grid batteries",66],["Uranium and SMRs",58],["LNG shipping",49],["Rooftop solar",34]]},{"n":"Capital markets","subs":[["Prediction markets",71],["Private credit",63],["IPO pipeline",40]]},{"n":"Shipping","subs":[["Container rates",55],["Red Sea routing",60],["Shipbuilding",42]]},{"n":"Defense","subs":[["Drones",77],["Munitions supply chain",64]]},{"n":"Pharma","subs":[["GLP-1 drugs",81],["API supply chain",47],["Biosimilars",29]]}],"lenses":["Concealment","Market","Choke point","Who pays","Regulatory"],"fresh":["Breaking","Developing","Evergreen"]},"atlas":{"countries":["Algeria","Egypt","Libya","Morocco","Sudan","Tunisia","Burundi","Comoros","Djibouti","Eritrea","Ethiopia","Kenya","Madagascar","Malawi","Mauritius","Mozambique","Rwanda","Seychelles","Somalia","South Sudan","Uganda","Tanzania","Zambia","Zimbabwe","Angola","Cameroon","Central African Republic","Chad","Congo","DR Congo","Equatorial Guinea","Gabon","São Tomé and Príncipe","Botswana","Eswatini","Lesotho","Namibia","South Africa","Benin","Burkina Faso","Cabo Verde","Côte d'Ivoire","Gambia","Ghana","Guinea","Guinea-Bissau","Liberia","Mali","Mauritania","Niger","Nigeria","Senegal","Sierra Leone","Togo","Antigua and Barbuda","Bahamas","Barbados","Cuba","Dominica","Dominican Republic","Grenada","Haiti","Jamaica","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Trinidad and Tobago","Belize","Costa Rica","El Salvador","Guatemala","Honduras","Mexico","Nicaragua","Panama","Argentina","Bolivia","Brazil","Chile","Colombia","Ecuador","Guyana","Paraguay","Peru","Suriname","Uruguay","Venezuela","Canada","United States","Kazakhstan","Kyrgyzstan","Tajikistan","Turkmenistan","Uzbekistan","China","Japan","Mongolia","North Korea","South Korea","Brunei","Cambodia","Indonesia","Laos","Malaysia","Myanmar","Philippines","Singapore","Thailand","Timor-Leste","Vietnam","Afghanistan","Bangladesh","Bhutan","India","Iran","Maldives","Nepal","Pakistan","Sri Lanka","Armenia","Azerbaijan","Bahrain","Cyprus","Georgia","Iraq","Israel","Jordan","Kuwait","Lebanon","Oman","Qatar","Saudi Arabia","Syria","Türkiye","United Arab Emirates","Yemen","Belarus","Bulgaria","Czechia","Hungary","Poland","Moldova","Romania","Russia","Slovakia","Ukraine","Denmark","Estonia","Finland","Iceland","Ireland","Latvia","Lithuania","Norway","Sweden","United Kingdom","Albania","Andorra","Bosnia and Herzegovina","Croatia","Greece","Italy","Malta","Montenegro","North Macedonia","Portugal","San Marino","Serbia","Slovenia","Spain","Austria","Belgium","France","Germany","Liechtenstein","Luxembourg","Monaco","Netherlands","Switzerland","Australia","New Zealand","Fiji","Papua New Guinea","Solomon Islands","Vanuatu","Kiribati","Marshall Islands","Micronesia","Nauru","Palau","Samoa","Tonga","Tuvalu","Palestine","Holy See (Vatican City)","Kosovo","Taiwan","Western Sahara","Hong Kong","Greenland","Puerto Rico","New Caledonia"],"threads":["Language","Food and crops","Religion and ritual","Migration (in or out)","Trade route","Empire or colonial legacy","Borderlands","Festival and calendar","Architecture","Music and performance","Craft and technique","Kinship and social structure","Diaspora and remittances","Climate and land use","A sacred or contested landmark"],"time":["Deep past","Early modern","Colonial and independence","Now"],"frames":["Origin to Destination","Core and Edge","Corridor","Contact zone"],"lenses":["What shifted","Who carries it","What was lost","Who profits","Who controls the story"]},"epics":{"epics":[{"n":"Iliad","eps":[{"n":"Book 2: The Catalogue of Ships","pl":[["Aulis","Verified"],["Mycenae","Verified"]]},{"n":"Book 21: Achilles fights the river","pl":[["The Scamander","Claimed"]]},{"n":"Book 22: The death of Hector","pl":[["Troy","Verified"]]}]},{"n":"Odyssey","eps":[{"n":"Book 5: Calypso's island","pl":[["Ogygia","Claimed"]]},{"n":"Book 9: The Lotus-eaters and the Cyclops","pl":[["Land of the Lotus-eaters","Claimed"],["Land of the Cyclopes","Claimed"]]},{"n":"Book 10: Circe","pl":[["Aeaea","Claimed"]]},{"n":"Book 12: Scylla and Charybdis","pl":[["Scylla and Charybdis","Claimed"]]},{"n":"Book 13: The return to Ithaca","pl":[["Ithaca","Claimed"]]}]},{"n":"Aeneid","eps":[{"n":"Book 1: Carthage","pl":[["Carthage","Verified"]]},{"n":"Book 3: The wanderings","pl":[["Buthrotum","Verified"]]},{"n":"Book 6: The underworld","pl":[["Cumae","Verified"],["Lake Avernus","Verified"]]},{"n":"Book 7: Landing in Latium","pl":[["Lavinium","Verified"]]}]},{"n":"Theogony","eps":[{"n":"Proem: the Muses","pl":[["Mount Helicon","Verified"]]},{"n":"The birth of Zeus","pl":[["Lyktos, Crete","Claimed"]]},{"n":"The war with the Titans","pl":[["Mount Othrys","Verified"],["Tartarus","Symbolic"]]}]},{"n":"Mahabharata","eps":[{"n":"Adi Parva","pl":[["Hastinapura","Claimed"]]},{"n":"Sabha Parva","pl":[["Indraprastha","Claimed"]]},{"n":"Bhishma Parva","pl":[["Kurukshetra","Claimed"]]},{"n":"Mausala Parva","pl":[["Dvaraka","Claimed"]]}]},{"n":"Bhagavad Gita","eps":[{"n":"Chapter 1: Arjuna's despair","pl":[["Kurukshetra","Claimed"],["Jyotisar","Claimed"]]},{"n":"Chapter 13: The field and its knower","pl":[["The field (kshetra)","Symbolic"]]}]},{"n":"Mahabharata: Shanti Parva","eps":[{"n":"Opening: Yudhishthira's grief and coronation","pl":[["Hastinapura","Claimed"]]},{"n":"Rajadharma: Bhishma on the bed of arrows","pl":[["Bhishma's bed of arrows","Claimed"]]}]},{"n":"Ramayana","eps":[{"n":"Ayodhya Kanda","pl":[["Ayodhya","Claimed"],["Chitrakuta","Claimed"]]},{"n":"Aranya Kanda","pl":[["Panchavati","Claimed"]]},{"n":"Kishkindha Kanda","pl":[["Kishkindha","Claimed"]]},{"n":"Yuddha Kanda","pl":[["The bridge (Setu)","Claimed"],["Lanka","Claimed"]]}]},{"n":"Ramcharitmanas","eps":[{"n":"Bal Kand","pl":[["Ayodhya","Claimed"]]},{"n":"Ayodhya Kand","pl":[["Prayag (Bharadvaja's ashram)","Claimed"],["Chitrakoot","Claimed"]]},{"n":"Lanka Kand","pl":[["Rameswaram","Claimed"]]}]},{"n":"Yoga Vasistha","eps":[{"n":"Vairagya Prakarana: Rama's despondency","pl":[["Dasharatha's court, Ayodhya","Claimed"]]},{"n":"Utpatti Prakarana: the story of Lila","pl":[["The worlds inside the space of a room","Symbolic"]]},{"n":"Upashama Prakarana: King Janaka","pl":[["Mithila","Claimed"]]}]},{"n":"Buddhacarita","eps":[{"n":"Canto 1: The birth","pl":[["Lumbini","Verified"]]},{"n":"Canto 5: The departure","pl":[["Kapilavastu","Claimed"]]},{"n":"Canto 14: The awakening","pl":[["Bodh Gaya","Verified"]]},{"n":"Canto 15: The first sermon (Tibetan and Chinese only)","pl":[["Rishipatana (the deer park)","Verified"]]}]},{"n":"Manimekalai","eps":[{"n":"The festival of Indra at Puhar","pl":[["Puhar","Verified"]]},{"n":"The island of Manipallavam","pl":[["Manipallavam","Claimed"]]},{"n":"The final cantos at Kanchi","pl":[["Kanchi","Verified"]]}]},{"n":"Silappatikaram","eps":[{"n":"Puhar Kandam","pl":[["Puhar","Verified"]]},{"n":"Madurai Kandam","pl":[["Madurai","Verified"]]},{"n":"Vanji Kandam","pl":[["Vanji","Claimed"]]}]},{"n":"Shahnameh","eps":[{"n":"Zahhak and Fereydun","pl":[["Mount Damavand","Claimed"]]},{"n":"Rostam's Seven Labours","pl":[["Mazandaran","Claimed"]]},{"n":"Rostam and Sohrab","pl":[["Samangan","Claimed"]]}]},{"n":"Epic of Gilgamesh","eps":[{"n":"Tablet I","pl":[["Uruk","Verified"]]},{"n":"Tablet V","pl":[["The Cedar Forest","Claimed"]]},{"n":"Tablet XI","pl":[["Utnapishtim's home at the mouth of the rivers","Claimed"]]}]},{"n":"Enuma Elish","eps":[{"n":"Tablet I: Apsu and Tiamat","pl":[["The primordial waters","Symbolic"]]},{"n":"Tablet VI: Babylon and the Esagila","pl":[["Babylon","Verified"]]}]},{"n":"Thousand and One Nights","eps":[{"n":"The frame story","pl":[["Samarkand (Shahzaman's kingdom)","Claimed"]]},{"n":"Sinbad the Sailor","pl":[["Basra","Verified"]]},{"n":"Tales of Harun al-Rashid","pl":[["Baghdad","Verified"]]}]},{"n":"Journey to the West","eps":[{"n":"Chapters 1 to 7: The Monkey King","pl":[["Flower Fruit Mountain","Claimed"]]},{"n":"Chapters 11 to 13: Setting out","pl":[["Chang'an","Verified"]]},{"n":"Chapters 59 to 61: The Flaming Mountains","pl":[["The Flaming Mountains","Claimed"]]},{"n":"Chapter 98: Arrival","pl":[["Vulture Peak","Claimed"]]}]},{"n":"Romance of the Three Kingdoms","eps":[{"n":"Chapter 1: The oath in the peach garden","pl":[["Zhuo commandery","Claimed"]]},{"n":"Chapters 49 to 50: Red Cliffs","pl":[["Red Cliffs","Claimed"]]},{"n":"Chapter 104: Zhuge Liang's death","pl":[["Wuzhang Plains","Claimed"]]}]},{"n":"Water Margin","eps":[{"n":"Wu Song and the tiger","pl":[["Jingyang Ridge","Claimed"]]},{"n":"The gathering at Liangshan","pl":[["Liangshan Marsh","Claimed"]]},{"n":"The capital","pl":[["Dongjing","Verified"]]}]},{"n":"Tale of Genji","eps":[{"n":"Chapter 1: Kiritsubo","pl":[["The Heian palace","Verified"]]},{"n":"Chapter 12: Suma","pl":[["Suma","Claimed"]]},{"n":"Chapters 45 to 54: The Uji chapters","pl":[["Uji","Verified"]]}]},{"n":"Kojiki","eps":[{"n":"Book 1: Izanagi and Izanami","pl":[["Onogoro","Claimed"],["Yomotsu Hirasaka, the slope to Yomi","Claimed"]]},{"n":"Book 1: Okuninushi","pl":[["Izumo","Claimed"]]},{"n":"Book 1: The descent of Ninigi","pl":[["Takachiho","Claimed"]]}]},{"n":"Epic of Sundiata","eps":[{"n":"Childhood","pl":[["Niani","Claimed"]]},{"n":"Exile","pl":[["Mema","Claimed"]]},{"n":"The battle of Kirina","pl":[["Kirina","Claimed"]]},{"n":"The assembly of Kurukan Fuga","pl":[["Kurukan Fuga","Claimed"]]}]},{"n":"Popol Vuh","eps":[{"n":"Part 1: The creation","pl":[["The calm sea and the sky","Symbolic"]]},{"n":"Part 2: The Hero Twins","pl":[["Xibalba","Symbolic"]]},{"n":"Part 4: The K'iche' kingdom","pl":[["Q'umarkaj","Verified"]]}]},{"n":"Kalevala","eps":[{"n":"Poem 1: The creation","pl":[["The primordial sea","Symbolic"]]},{"n":"Poem 10: The forging of the Sampo","pl":[["Pohjola","Symbolic"]]},{"n":"Poem 16: Vainamoinen in Tuonela","pl":[["Tuonela","Symbolic"]]}]},{"n":"Divine Comedy","eps":[{"n":"Inferno, Canto 1","pl":[["The dark wood","Symbolic"]]},{"n":"Inferno, Canto 5: Francesca","pl":[["The city on the shore where the Po descends","Verified"]]},{"n":"Inferno, Canto 33: Ugolino","pl":[["Pisa and the tower of hunger","Verified"]]},{"n":"Purgatorio, Canto 1","pl":[["Mount Purgatory","Symbolic"]]},{"n":"Paradiso, Cantos 15 to 17: Cacciaguida","pl":[["Florence","Verified"]]}]},{"n":"Paradise Lost","eps":[{"n":"Book 1: Pandemonium","pl":[["Pandemonium","Symbolic"]]},{"n":"Book 3: Satan lands on earth","pl":[["Mount Niphates","Claimed"]]},{"n":"Book 4: Eden","pl":[["Eden","Symbolic"]]}]},{"n":"Faust","eps":[{"n":"Part One: Auerbach's Cellar","pl":[["Auerbach's Cellar","Verified"]]},{"n":"Part One: Walpurgis Night","pl":[["The Brocken","Verified"]]},{"n":"Part Two, Act 3: Helena","pl":[["Menelaus's palace at Sparta","Claimed"]]}]},{"n":"Lusiads","eps":[{"n":"Canto 1: Mozambique","pl":[["Mozambique Island","Verified"]]},{"n":"Canto 4: Departure","pl":[["Belem, Lisbon","Verified"]]},{"n":"Canto 5: Adamastor","pl":[["The Cape of Storms","Verified"]]},{"n":"Canto 7: Calicut","pl":[["Calicut","Verified"]]},{"n":"Canto 9: The Isle of Love","pl":[["The Isle of Love","Symbolic"]]}]},{"n":"Song of Roland","eps":[{"n":"Marsile's council","pl":[["Saragossa","Verified"]]},{"n":"The battle at Rencesvals","pl":[["Rencesvals","Verified"]]},{"n":"The trial at Aix","pl":[["Aix","Verified"]]}]},{"n":"Nibelungenlied","eps":[{"n":"The Burgundian court","pl":[["Worms","Verified"]]},{"n":"Siegfried's home","pl":[["Xanten","Claimed"]]},{"n":"The journey to the Huns","pl":[["Bechelaren","Claimed"],["Etzel's court","Claimed"]]}]},{"n":"Beowulf","eps":[{"n":"Grendel at Heorot","pl":[["Heorot","Claimed"]]},{"n":"Grendel's mother","pl":[["The mere","Symbolic"]]},{"n":"The dragon","pl":[["The land of the Geats","Claimed"]]}]},{"n":"Epic of Manas","eps":[{"n":"Manas's birth and youth","pl":[["The Altai","Claimed"]]},{"n":"Manas at Talas","pl":[["Manas's tomb","Claimed"]]},{"n":"The Great Campaign","pl":[["Beejin","Claimed"]]}]},{"n":"The Tale of Igor's Campaign","eps":[{"n":"Igor sets out","pl":[["Novgorod-Seversky","Verified"]]},{"n":"The battle on the Kayala","pl":[["The Kayala river","Lost"]]},{"n":"Yaroslavna's lament","pl":[["Putivl","Verified"]]}]},{"n":"Epic of King Gesar","eps":[{"n":"The birth of Gesar","pl":[["Ling","Claimed"]]},{"n":"The war with Hor","pl":[["Hor","Claimed"]]},{"n":"The war with Jang","pl":[["Jang (Sadam's kingdom)","Claimed"]]}]}],"lenses":["Is it real","Who claims it","What is there today","What it means in the argument","How retellings changed it","Money and politics on it today"]}}
 
   function svg(el, w, h) {
     el.innerHTML = ''
@@ -627,9 +891,9 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
   // Geometry from public/vizmaya-logo-01.svg (via images/make_marks.py),
   // drawn in its own 1000 × 920 viewBox and fitted to the element.
   var LEAPS = [
-    'M489.12,739.01c-2.77,1.18-5.65.77-6.72-.88-.08-.13-.15-.26-.21-.4l-17.12-32.04-144.06-269.68c24-1.05,47.71-10.47,66.39-28.24l94.39,290.79,11.2,34.5s.02.03.02.05l.13.41c.47,1.920-1.23,4.29-4.02,5.48Z',
-    'M778.76,444.05c-2.41-1.81-5.3-2.11-6.74-.76-.11.11-.21.22-.3.34l-24.32,26.99-204.64,227.16c23.050,6.79,43.79,21.63,57.65,43.37l161.51-259.59,19.16-30.8s.02-.03.04-.05l.23-.37c.92-1.75-.16-4.46-2.59-6.29Z',
-    'M378.48,340.7c.36-2.99,2.16-5.28,4.12-5.38.16,0,.3,0,.45.01l36.3,1.19,305.58,10.080c-11.09,21.31-14.79,46.55-8.74,71.61l-299.03-63.65-35.48-7.55s-.04,0-.06,0l-.42-.09c-1.9-.55-3.1-3.21-2.74-6.23Z'
+    'M489.12,739.01c-2.77,1.18-5.65.77-6.72-.88-.08-.13-.15-.26-.21-.4l-17.12-32.04-144.06-269.68c24-1.05,47.71-10.47,66.39-28.24l94.39,290.79,11.2,34.5s.02.03.02.05l.13.41c.47,1.92-1.23,4.29-4.02,5.48Z',
+    'M778.76,444.05c-2.41-1.81-5.3-2.11-6.74-.76-.11.11-.21.22-.3.34l-24.32,26.99-204.64,227.16c23.05,6.79,43.79,21.63,57.65,43.37l161.51-259.59,19.16-30.8s.02-.03.04-.05l.23-.37c.92-1.75-.16-4.46-2.59-6.29Z',
+    'M378.48,340.7c.36-2.99,2.16-5.28,4.12-5.38.16,0,.3,0,.45.01l36.3,1.19,305.58,10.08c-11.09,21.31-14.79,46.55-8.74,71.61l-299.03-63.65-35.48-7.55s-.04,0-.06,0l-.42-.09c-1.9-.55-3.1-3.21-2.74-6.23Z'
   ]
   var CIRCLES = [[316.43, 333.11], [816.34, 394.1], [513.59, 796.53]]
   var MARKS = {
@@ -688,6 +952,235 @@ html:not(.board-on) .quote-card p { font-size: clamp(34px, 8vw, 56px) }
           .transition().duration(dur(500)).ease(d3.easeBackOut).attr('r', 103)
         leaps.transition().delay(function (d, i) { return dur(700 + i * 200) }).duration(dur(500)).style('opacity', 1)
         labs.transition().delay(dur(1100)).duration(dur(500)).style('opacity', 1)
+      }
+    }
+  }
+
+  // ── The randomizers: slot-machine reels ────────────────────────────────
+  // A demo draw in the browser: uniform, with each reel conditioned on the
+  // one before (a sub-industry from its industry, a place from its episode).
+  // The real draw (packages/randomizer/src/draw.ts) also weighs heat, blocks
+  // repeats and stratifies by region and tradition.
+  function rng(seed) { // mulberry32
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed)
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+      return ((t ^ t >>> 14) >>> 0) / 4294967296
+    }
+  }
+  function pick(arr, r) { return arr[Math.floor(r() * arr.length)] }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  var DRAW = {
+    desk: {
+      reels: [['Industry', 1], ['Sub-industry', 1.25], ['Lens', 1], ['Freshness', 0.9]],
+      draw: function (r) {
+        var ind = pick(REELS.desk.industries, r), sub = pick(ind.subs, r)
+        var lens = pick(REELS.desk.lenses, r), fresh = pick(REELS.desk.fresh, r)
+        return {
+          cells: [esc(ind.n), esc(sub[0]) + '<small>heat ' + sub[1] + '</small>', esc(lens), esc(fresh)],
+          result: '<b>' + esc(sub[0]) + '</b> in ' + esc(ind.n) + ', through the <b>' + esc(lens) + '</b> lens. ' + esc(fresh) + '.'
+        }
+      },
+      filler: function (r, j) {
+        var ind = pick(REELS.desk.industries, r)
+        return [ind.n, pick(ind.subs, r)[0], pick(REELS.desk.lenses, r), pick(REELS.desk.fresh, r)][j]
+      }
+    },
+    atlas: {
+      reels: [['Country', 1], ['Thread', 1.1], ['Time', 1], ['Frame', 1], ['Lens', 1]],
+      draw: function (r) {
+        var A = REELS.atlas
+        var c = pick(A.countries, r), t = pick(A.threads, r), tm = pick(A.time, r), f = pick(A.frames, r), l = pick(A.lenses, r)
+        return {
+          cells: [esc(c), esc(t), esc(tm), esc(f), esc(l)],
+          result: '<b>' + esc(c) + '</b>: ' + esc(t.toLowerCase()) + ', ' + esc(tm.toLowerCase()) + ', framed as ' + esc(f.toLowerCase()) + '. Asking: <b>' + esc(l) + '?</b>'
+        }
+      },
+      filler: function (r, j) { var A = REELS.atlas; return pick([A.countries, A.threads, A.time, A.frames, A.lenses][j], r) }
+    },
+    epics: {
+      reels: [['Epic', 0.9], ['Episode', 1.35], ['Place', 1.1], ['Lens', 1]],
+      draw: function (r) {
+        var e = pick(REELS.epics.epics, r), ep = pick(e.eps, r), p = pick(ep.pl, r), l = pick(REELS.epics.lenses, r)
+        var st = (p[1] || '').toLowerCase()
+        return {
+          cells: [esc(e.n), esc(ep.n), esc(p[0]) + (st ? '<small class="status st-' + st + '">' + esc(p[1]) + '</small>' : ''), esc(l)],
+          result: '<b>' + esc(p[0]) + '</b> in the ' + esc(e.n) + ' (' + esc(ep.n) + '). Asking: <b>' + esc(l) + '?</b>'
+        }
+      },
+      filler: function (r, j) {
+        var e = pick(REELS.epics.epics, r), ep = pick(e.eps, r)
+        return [e.n, ep.n, pick(ep.pl, r)[0], pick(REELS.epics.lenses, r)][j]
+      }
+    }
+  }
+  var SEEDS = { desk: 20261007, atlas: 31415, epics: 2718 }
+  var machines = {}
+  charts.reels = function (el, opts) {
+    var v = (opts && opts.variant) || 'desk', M = DRAW[v]
+    var seeded = rng(SEEDS[v])
+    var first = M.draw(seeded)
+    var resultEl = el.parentNode.querySelector('[data-result]')
+    el.innerHTML = '<div class="reels">' + M.reels.map(function (rl, j) {
+      return '<div class="reel" style="--f:' + rl[1] + '"><p class="lab">' + rl[0] + '</p>' +
+        '<div class="win"><div class="strip"><div class="cell">' + first.cells[j] + '</div></div></div><div class="bar"></div></div>'
+    }).join('') + '</div>'
+    if (resultEl) resultEl.innerHTML = first.result
+    var strips = el.querySelectorAll('.strip')
+    var busy = false
+    function spin(r) {
+      if (busy) return
+      var next = M.draw(r), fill = rng(Math.floor(Math.random() * 1e9))
+      var CELL = strips[0].firstChild.offsetHeight || 84
+      var longest = 0
+      busy = true
+      if (resultEl) resultEl.style.opacity = 0.25
+      strips.forEach(function (strip, j) {
+        var n = 9 + j * 4
+        var html = strip.firstChild.outerHTML
+        for (var i = 0; i < n; i++) html += '<div class="cell">' + esc(M.filler(fill, j)) + '</div>'
+        html += '<div class="cell">' + next.cells[j] + '</div>'
+        var t = dur(900 + j * 320)
+        longest = Math.max(longest, t)
+        strip.style.transition = 'none'
+        strip.style.transform = 'translateY(0)'
+        strip.innerHTML = html
+        void strip.offsetHeight
+        strip.style.transition = 'transform ' + t + 'ms cubic-bezier(.12,.7,.18,1)'
+        strip.style.transform = 'translateY(' + (-(n + 1) * CELL) + 'px)'
+      })
+      setTimeout(function () {
+        strips.forEach(function (strip, j) {
+          strip.style.transition = 'none'
+          strip.style.transform = 'translateY(0)'
+          strip.innerHTML = '<div class="cell">' + next.cells[j] + '</div>'
+        })
+        if (resultEl) { resultEl.innerHTML = next.result; resultEl.style.opacity = 1 }
+        busy = false
+      }, longest + 60)
+    }
+    machines[v] = { spin: function () { spin(rng(Math.floor(Math.random() * 1e9))) } }
+    return { play: function () { spin(seeded) } }
+  }
+  // Spin buttons: a demo spin each press. The click also brings the card into
+  // view (and builds it on first press), which plays its first spin.
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-spin]')
+    if (b && machines[b.getAttribute('data-spin')]) machines[b.getAttribute('data-spin')].spin()
+  })
+
+  // ── Desk heat: the 23 sub-industries by seed heat ──────────────────────
+  charts.heat = function (el) {
+    var s = size(el, 1.4), W = s[0], H = s[1]
+    var rows = []
+    REELS.desk.industries.forEach(function (ind) { ind.subs.forEach(function (sb) { rows.push({ n: sb[0], h: sb[1], ind: ind.n }) }) })
+    rows.sort(function (a, b) { return b.h - a.h })
+    var m = { t: 8, r: 30, b: 22, l: 0 }
+    var rowH = (H - m.t - m.b) / rows.length
+    var labW = Math.min(170, W * 0.48)
+    var x = d3.scaleLinear().domain([0, 100]).range([labW + 8, W - m.r])
+    var g = svg(el, W, H)
+    ;[0, 50, 85, 100].forEach(function (v) {
+      g.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', m.t).attr('y2', H - m.b)
+        .style('stroke', v === 85 ? 'var(--c-amber)' : 'var(--c-grid)').style('stroke-dasharray', v === 85 ? '3 3' : null)
+    })
+    fsSm(g.append('text').attr('x', x(0)).attr('y', H - 6).attr('text-anchor', 'middle').text('0').style('fill', 'var(--c-muted)'))
+    fsSm(g.append('text').attr('x', x(85) + 4).attr('y', H - 6).attr('text-anchor', 'end').text('85+ returns early').style('fill', '#8a6500'))
+    var row = g.selectAll('g.r').data(rows).join('g').attr('class', 'r')
+      .attr('transform', function (d, i) { return 'translate(0,' + (m.t + i * rowH + rowH / 2) + ')' })
+    fsSm(row.append('text').attr('x', labW).attr('y', 4).attr('text-anchor', 'end').text(function (d) { return d.n })
+      .style('fill', function (d) { return d.h >= 85 ? 'var(--c-ink)' : 'var(--c-muted)' })
+      .style('font-weight', function (d) { return d.h >= 85 ? 600 : 400 }))
+    var stem = row.append('line').attr('x1', x(0)).attr('x2', function (d) { return reduced ? x(d.h) : x(0) })
+      .style('stroke', function (d) { return d.h >= 85 ? 'var(--c-red)' : 'var(--c-ink)' }).style('stroke-opacity', function (d) { return d.h >= 85 ? 1 : 0.3 }).style('stroke-width', 1.5)
+    var dot = row.append('circle').attr('r', 4.5).attr('cx', function (d) { return reduced ? x(d.h) : x(0) })
+      .style('fill', function (d) { return d.h >= 85 ? 'var(--c-red)' : 'var(--c-ink)' })
+    var val = fsSm(row.append('text').attr('x', function (d) { return x(d.h) + 8 }).attr('y', 4).text(function (d) { return d.h })
+      .style('fill', 'var(--c-muted)').style('opacity', reduced ? 1 : 0))
+    dot.append('title').text(function (d) { return d.n + ' (' + d.ind + '): heat ' + d.h })
+    return {
+      play: function () {
+        stem.transition().duration(dur(800)).delay(function (d, i) { return dur(i * 35) }).ease(d3.easeCubicOut).attr('x2', function (d) { return x(d.h) })
+        dot.transition().duration(dur(800)).delay(function (d, i) { return dur(i * 35) }).ease(d3.easeCubicOut).attr('cx', function (d) { return x(d.h) })
+        val.transition().delay(dur(1500)).duration(dur(300)).style('opacity', 1)
+      }
+    }
+  }
+
+  // ── The life of a spin ─────────────────────────────────────────────────
+  charts.lifecycle = function (el) {
+    var s = size(el, 1.1), W = s[0], H = s[1]
+    var steps = [
+      { n: 'Spun', d: 'The reels pick a topic', c: 'var(--c-ink)' },
+      { n: 'Researching', d: 'Why Now, sources, a hero insight', c: 'var(--c-ink)' },
+      { n: 'Insight review', d: 'Atlas and Epics: a person approves', c: 'var(--c-amber)', gate: true },
+      { n: 'Approved', d: 'The brief carries the insight', c: 'var(--c-green)' },
+      { n: 'Published', d: 'An HTML story, tied to its spin', c: 'var(--c-red)' }
+    ]
+    var cx = 74, top = 26, gap = (H - top - 30) / (steps.length - 1)
+    var g = svg(el, W, H)
+    g.append('line').attr('x1', cx).attr('x2', cx).attr('y1', top).attr('y2', top + gap * (steps.length - 1))
+      .style('stroke', 'var(--c-line)').style('stroke-width', 2)
+    // the Desk skips the gate
+    var by = g.append('path')
+      .attr('d', 'M' + (cx - 14) + ',' + (top + gap) + ' C' + (cx - 64) + ',' + (top + gap * 1.6) + ' ' + (cx - 64) + ',' + (top + gap * 2.4) + ' ' + (cx - 14) + ',' + (top + gap * 3))
+      .style('fill', 'none').style('stroke', 'var(--c-green)').style('stroke-width', 1.8).style('stroke-dasharray', '4 4')
+      .style('opacity', reduced ? 1 : 0)
+    var byLab = fsSm(g.append('text').attr('x', 6).attr('y', top + gap * 2 + 4).text('Desk').style('fill', 'var(--c-green)')
+      .style('font-weight', 600).style('opacity', reduced ? 1 : 0))
+    var node = g.selectAll('g.s').data(steps).join('g').attr('class', 's')
+      .attr('transform', function (d, i) { return 'translate(' + cx + ',' + (top + i * gap) + ')' })
+      .style('opacity', reduced ? 1 : 0.25)
+    node.append('circle').attr('r', function (d) { return d.gate ? 13 : 10 })
+      .style('fill', function (d) { return d.gate ? 'var(--c-paper)' : d.c }).style('stroke', function (d) { return d.c }).style('stroke-width', 3)
+    node.filter(function (d) { return d.gate }).append('path').attr('d', 'M-5,-1 h10 v7 h-10z M-3,-1 v-3 a3,3 0 0 1 6,0 v3')
+      .style('fill', 'none').style('stroke', 'var(--c-amber)').style('stroke-width', 1.6)
+    fs(node.append('text').attr('x', 26).attr('y', -2).text(function (d) { return d.n }).style('fill', 'var(--c-ink)').style('font-weight', 600))
+    fsSm(node.append('text').attr('x', 26).attr('y', 16).text(function (d) { return d.d }).style('fill', 'var(--c-muted)'))
+    return {
+      play: function () {
+        node.transition().delay(function (d, i) { return dur(i * 380) }).duration(dur(300)).style('opacity', 1)
+        by.transition().delay(dur(1700)).duration(dur(400)).style('opacity', 1)
+        byLab.transition().delay(dur(1700)).duration(dur(400)).style('opacity', 1)
+      }
+    }
+  }
+
+  // ── The path of an HTML story ──────────────────────────────────────────
+  charts.pipeline = function (el) {
+    var s = size(el, 0.3), W = s[0], H = s[1]
+    var steps = [
+      { n: 'Spin + brief', d: ['the assignment,', 'the house style'], icon: 'M-8,-8h16v16h-16z M-4,-3h8 M-4,1h8 M-4,5h5', c: 'var(--c-amber)' },
+      { n: 'Any agent', d: ['writes one', 'HTML file'], icon: 'M-6,-6l-5,6l5,6 M6,-6l5,6l-5,6 M2,-9l-4,18', c: 'var(--c-ink)' },
+      { n: 'Lint', d: ['checks the', 'hosting contract'], icon: 'M-8,0l5,6l11,-12', c: 'var(--c-green)' },
+      { n: 'Publish', d: ['/s/<slug>, one', 'version per save'], icon: 'M0,9v-17 M-7,-1l7,-8l7,8', c: 'var(--c-indigo)' },
+      { n: 'Read', d: ['in our header,', 'with an aura'], icon: 'M-11,0c5,-8 17,-8 22,0c-5,8 -17,8 -22,0z M0,0m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0', c: 'var(--c-red)' }
+    ]
+    var n = steps.length, pad = 46, step = (W - pad * 2) / (n - 1), cy = 58
+    var g = svg(el, W, H)
+    var rail = g.append('line').attr('x1', pad).attr('y1', cy).attr('y2', cy).attr('x2', reduced ? pad + step * (n - 1) : pad)
+      .style('stroke', 'var(--c-ink)').style('stroke-width', 2).style('stroke-dasharray', '2 6').style('stroke-linecap', 'round')
+    var node = g.selectAll('g.s').data(steps).join('g').attr('class', 's')
+      .attr('transform', function (d, i) { return 'translate(' + (pad + i * step) + ',' + cy + ')' })
+      .style('opacity', reduced ? 1 : 0)
+    node.append('circle').attr('r', 30).style('fill', 'var(--c-paper)').style('stroke', function (d) { return d.c }).style('stroke-width', 2.5)
+    node.append('path').attr('d', function (d) { return d.icon }).style('fill', 'none').style('stroke', function (d) { return d.c })
+      .style('stroke-width', 2).style('stroke-linecap', 'round').style('stroke-linejoin', 'round')
+    fs(node.append('text').attr('y', 56).attr('text-anchor', 'middle').text(function (d) { return d.n }).style('fill', 'var(--c-ink)').style('font-weight', 600))
+    node.each(function (d) {
+      var t = d3.select(this)
+      d.d.forEach(function (line, k) {
+        fsSm(t.append('text').attr('y', 78 + k * 17).attr('text-anchor', 'middle').text(line).style('fill', 'var(--c-muted)'))
+      })
+    })
+    var dot = g.append('circle').attr('r', 6).attr('cx', pad).attr('cy', cy).style('fill', 'var(--c-red)').style('opacity', 0)
+    return {
+      play: function () {
+        rail.transition().duration(dur(1600)).ease(d3.easeLinear).attr('x2', pad + step * (n - 1))
+        node.transition().delay(function (d, i) { return dur(i * 400) }).duration(dur(300)).style('opacity', 1)
+        if (!reduced) dot.style('opacity', 1).transition().delay(dur(1800)).duration(dur(1400)).ease(d3.easeCubicInOut)
+          .attr('cx', pad + step * (n - 1)).transition().duration(dur(300)).style('opacity', 0)
       }
     }
   }
