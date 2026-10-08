@@ -29,7 +29,15 @@ export type RssSource = {
   language?: 'es';
   /** ISO 3166-1 alpha-2 country of the outlet, for non-English sources. */
   country?: string;
+  /**
+   * Overrides the default `Footshorts/1.0` User-Agent for outlets whose CDN
+   * refuses non-browser clients on their own published feed. Keep it rare.
+   */
+  userAgent?: string;
 };
+
+export const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 export const RSS_SOURCES: RssSource[] = [
   // Tier 1 — major outlets
@@ -126,7 +134,8 @@ export const RSS_SOURCES: RssSource[] = [
   {
     id: 'marca-fichajes',
     publisher: 'Marca',
-    feedUrl: 'https://e00-marca.uecdn.es/rss/futbol/fichajes.xml',
+    // fichajes.xml 404s since at least 2026-10; the transfers feed moved here.
+    feedUrl: 'https://e00-marca.uecdn.es/rss/futbol/mercado-fichajes.xml',
     tier: 1,
     scope: 'global', // transfer market coverage spans leagues
     language: 'es',
@@ -165,6 +174,8 @@ export const RSS_SOURCES: RssSource[] = [
     // Last-news feed covers all sections; the football-only classifier hides
     // the non-football remainder.
     feedUrl: 'https://www.sport.es/es/rss/last-news/news.xml',
+    // 406s any non-browser User-Agent (verified 2026-10-08).
+    userAgent: BROWSER_USER_AGENT,
     tier: 1,
     scope: 'spanish',
     language: 'es',

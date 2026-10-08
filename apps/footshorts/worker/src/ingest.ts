@@ -43,18 +43,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-const parser = new Parser({
-  headers: {
-    'User-Agent': 'Footshorts/1.0 (+https://footshorts.app)',
-  },
-  timeout: 10000,
-  customFields: {
-    item: [
-      ['media:content', 'mediaContent', { keepArray: true }],
-      ['media:thumbnail', 'mediaThumbnail'],
-    ],
-  },
-});
+const DEFAULT_USER_AGENT = 'Footshorts/1.0 (+https://footshorts.app)';
+
+function makeParser(userAgent: string) {
+  return new Parser({
+    headers: { 'User-Agent': userAgent },
+    timeout: 10000,
+    customFields: {
+      item: [
+        ['media:content', 'mediaContent', { keepArray: true }],
+        ['media:thumbnail', 'mediaThumbnail'],
+      ],
+    },
+  });
+}
+
+const parser = makeParser(DEFAULT_USER_AGENT);
 
 function hashUrl(url: string): string {
   return crypto.createHash('sha256').update(url).digest('hex');
@@ -263,7 +267,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
 
   let feed;
   try {
-    feed = await parser.parseURL(source.feedUrl);
+    feed = await (source.userAgent ? makeParser(source.userAgent) : parser).parseURL(source.feedUrl);
   } catch (e: any) {
     console.error(`[${source.id}] feed fetch failed:`, e);
     // "Unable to parse XML." usually means the publisher served HTML (consent page,
@@ -272,7 +276,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
     if (typeof e?.message === 'string' && e.message.includes('parse XML')) {
       try {
         const res = await fetch(source.feedUrl, {
-          headers: { 'User-Agent': 'Footshorts/1.0 (+https://footshorts.app)' },
+          headers: { 'User-Agent': source.userAgent ?? DEFAULT_USER_AGENT },
         });
         const body = await res.text();
         console.error(
