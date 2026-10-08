@@ -11,7 +11,11 @@ import {
   recordGeneration,
   resolveModel,
 } from '@vismay/ai-gateway'
-import { aiSlotConfig, type AiSlotKind } from '@/components/canvas/aiSlots'
+import {
+  aiSlotConfig,
+  canonicalModelAlias,
+  type AiSlotKind,
+} from '@/components/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 import { buildSlotContext } from '@/lib/slotContext'
@@ -118,7 +122,8 @@ export async function POST(
 
   // Model: caller choice if it's in the allowed set, else the mapped feature
   // default (if it fits the slot), else the slot's first model.
-  const requested = typeof body.model === 'string' ? body.model : null
+  const requested =
+    typeof body.model === 'string' ? canonicalModelAlias(body.model) : null
   const featureDefault = await getFeatureModel(
     config.modality === 'image' ? 'generateImage' : 'generate',
   )

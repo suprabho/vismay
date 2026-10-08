@@ -18,8 +18,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-const PARSE_MODEL = 'text.fast'
-const SUGGEST_MODEL = 'text.claude'
+const PARSE_MODEL = 'text.haiku'
+const SUGGEST_MODEL = 'text.sonnet'
 const MAX_INSTRUCTIONS = 2000
 
 /** Tomorrow's date for the kitchen, not the server — plans are IST mornings. */

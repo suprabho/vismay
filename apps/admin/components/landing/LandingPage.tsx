@@ -48,7 +48,8 @@ const STACK = [
   'GSAP',
   'Rive',
   'Playwright',
-  'Gemini',
+  'Vercel AI Gateway',
+  'Claude',
 ]
 
 const STORIES = [

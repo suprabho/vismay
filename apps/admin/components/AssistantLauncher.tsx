@@ -52,10 +52,9 @@ const EXAMPLES = [
 /** Models offered in the Ask picker — keep in sync with ASSISTANT_MODELS. */
 const ASK_MODELS: { value: string; label: string }[] = [
   { value: 'text.deepseek', label: 'DeepSeek · cheap' },
-  { value: 'text.fast', label: 'Gemini Flash' },
-  { value: 'text.pro', label: 'Gemini Pro' },
-  { value: 'text.claude', label: 'Claude Sonnet' },
-  { value: 'text.opus', label: 'Claude Opus' },
+  { value: 'text.haiku', label: 'Claude Haiku 5.5' },
+  { value: 'text.sonnet', label: 'Claude Sonnet 5.5' },
+  { value: 'text.opus', label: 'Claude Opus 5.5' },
   { value: 'text.fable', label: 'Claude Fable · frontier' },
   { value: 'text.grok', label: 'Grok 4.5 · fast' },
 ]

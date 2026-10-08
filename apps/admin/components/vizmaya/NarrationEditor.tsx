@@ -30,7 +30,7 @@ export interface NarrationUnit {
   sectionId: string | undefined
   /** Display label in the panel ("§1.0.0 · text · 'Heading…'"). */
   label: string
-  /** The default text the audio script would send to Gemini. */
+  /** The default text the audio script would send to TTS. */
   defaultScript: string
   /** Heading + first paragraph snippet, for the in-card preview. */
   preview: string

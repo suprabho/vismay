@@ -9,6 +9,7 @@ import {
 } from '@vismay/ai-gateway'
 import {
   aiSlotConfig,
+  canonicalModelAlias,
   modelsForLanguage,
   type AiSlotKind,
 } from '@/components/canvas/aiSlots'
@@ -146,7 +147,8 @@ export async function POST(
     slotConfig?.modality === 'text'
       ? slotConfig.models
       : modelsForLanguage(language)
-  const requested = typeof body.model === 'string' ? body.model : null
+  const requested =
+    typeof body.model === 'string' ? canonicalModelAlias(body.model) : null
   const featureDefault = await getFeatureModel('transform')
   const modelAlias =
     requested && allowed.includes(requested)
