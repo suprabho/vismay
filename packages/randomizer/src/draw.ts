@@ -32,10 +32,19 @@
  * tournament twice in a row is re-drawn once; no news inside the drawn
  * window shifts Matchday to Running story to Evergreen; the head-to-head
  * option prefers an opponent the team meets in the window.
+ *
+ * VizNBA (the NBA Desk) has the same shape: a conference first, then a
+ * franchise in it, both weighted by the news tagged on VizNBA in the 60%
+ * branch (a story about a player or coach counts for his team). All 30
+ * franchises are always in the draw; the same conference twice in a row is
+ * re-drawn once; no news inside the drawn window shifts Last night to This
+ * week to Evergreen; the head-to-head option prefers an opponent from the
+ * team's games on ESPN's schedule.
  */
 
-import { ATLAS, DESK, EPICS, FOOTSHORTS, epicRoute, isPhilosophical } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, VIZNBA, epicRoute, isPhilosophical } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
+import { gameSummary } from './stub'
 import {
   GEO_STATUS_TEXT,
   RANDOMIZER_META,
@@ -62,6 +71,12 @@ import {
   type RuleFired,
   type SpinHistoryEntry,
   type SpinPicks,
+  type ViznbaConference,
+  type ViznbaDataset,
+  type ViznbaFreshness,
+  type ViznbaNews,
+  type ViznbaPicks,
+  type ViznbaTeamNews,
 } from './types'
 
 /** The tunable numbers behind the rules, in one place. */
@@ -85,6 +100,8 @@ export const DRAW_RULES = {
   competitionHeatFloor: 5,
   /** Footshorts: at most this many fixtures' match context in a spin's brief. */
   maxSpinFixtures: 8,
+  /** NBA Desk: at most this many games' box scores in a spin's brief. */
+  maxSpinGames: 6,
 } as const
 
 const DAY = 864e5
@@ -98,7 +115,7 @@ export interface DrawInput {
   /** The spin the locks refer to (the one on screen when Spin was pressed). */
   prev?: { picks: SpinPicks } | null
   locks?: string[]
-  /** Atlas: draw a second country. Footshorts: draw a head-to-head opponent. */
+  /** Atlas: draw a second country. Footshorts and the NBA Desk: draw a head-to-head opponent. */
   pair?: boolean
   /** Epics: continue from the previous spin's place. */
   sequence?: boolean
@@ -106,8 +123,10 @@ export interface DrawInput {
   heat?: DeskHeatRow[]
   /** Footshorts: the live news snapshot (teams with fixtures, their heat and headlines). Required. */
   news?: FootshortsNews | null
+  /** NBA Desk: the live news snapshot (franchises, their heat, headlines and games). Required. */
+  nbaNews?: ViznbaNews | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; footshorts?: FootshortsDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -171,6 +190,9 @@ export function draw(input: DrawInput): DrawResult {
   if (input.randomizer === 'atlas') return drawAtlas(ctx, input.datasets?.atlas ?? ATLAS, prev?.picks as AtlasPicks | undefined, !!input.pair)
   if (input.randomizer === 'footshorts') {
     return drawFootshorts(ctx, input.datasets?.footshorts ?? FOOTSHORTS, prev?.picks as FootshortsPicks | undefined, input.news ?? null, !!input.pair)
+  }
+  if (input.randomizer === 'viznba') {
+    return drawViznba(ctx, input.datasets?.viznba ?? VIZNBA, prev?.picks as ViznbaPicks | undefined, input.nbaNews ?? null, !!input.pair)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -783,5 +805,226 @@ function drawFootshorts(
     summary: `${team.name}${opponent ? ` v ${opponent.name}` : ''} · ${angle.name}`,
     rules: ctx.rules,
     meta: { competition: competition.slug, heat: team.heat, pair: !!opponent },
+  }
+}
+
+/* ---------- VizNBA ---------- */
+
+function drawViznba(
+  ctx: Ctx,
+  data: ViznbaDataset,
+  prev: ViznbaPicks | undefined,
+  news: ViznbaNews | null,
+  pair: boolean,
+): DrawResult {
+  const { rng } = ctx
+  if (!news?.teams.length) {
+    throw new Error('The NBA Desk draws from the VizNBA news snapshot, and it has no franchises. Has the roster seed (viznba-seed-roster.yml) run?')
+  }
+  const confNews = new Map(news.conferences.map((c) => [c.slug, c]))
+  const teamById = new Map(news.teams.map((t) => [t.id, t]))
+  const teamsIn = (slug: string) => news.teams.filter((t) => t.conference === slug)
+  const confHeat = (c: ViznbaConference) => confNews.get(c.slug)?.heat ?? 0
+  const live = data.conferences.filter((c) => teamsIn(c.slug).length > 0)
+  if (!live.length) throw new Error('No conference has a franchise in the news snapshot.')
+  const last = ctx.kept[ctx.kept.length - 1]
+  // One branch per spin: the conference and the team are both heat-weighted, or both pure random.
+  const heatBranch = rng() < DRAW_RULES.heatShare
+
+  let conference: ViznbaConference
+  const prevConf = prev ? data.conferences.find((c) => c.slug === prev.conference) : undefined
+  if (ctx.locked('conference') && prevConf && live.includes(prevConf)) {
+    conference = prevConf
+    rule(ctx, 'lock', 'info', `Conference locked to the ${conference.name}.`)
+  } else {
+    const drawConf = () =>
+      heatBranch ? weighted(live, (c) => confHeat(c) + DRAW_RULES.competitionHeatFloor, rng) : pick(live, rng)
+    conference = drawConf()
+    if (last?.meta.conference === conference.slug && live.length > 1) {
+      const again = drawConf()
+      rule(
+        ctx,
+        'balance',
+        'warn',
+        again === conference
+          ? `The ${conference.name} came up twice in a row, so the conference was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+          : `The ${conference.name} came up twice in a row, so the conference was re-drawn once, now the ${again.name}.`,
+      )
+      conference = again
+    }
+    if (heatBranch) {
+      const total = live.reduce((a, c) => a + confHeat(c) + DRAW_RULES.competitionHeatFloor, 0)
+      const pct = Math.round(((confHeat(conference) + DRAW_RULES.competitionHeatFloor) / total) * 100)
+      rule(ctx, 'weight', 'good', `Heat-weighted draw (the 60% branch). Conference first: the ${conference.name} had a ${pct}% chance, then a franchise inside it by its news.`)
+    } else {
+      rule(ctx, 'weight', 'info', `Pure random draw (the 40% branch). Conference first (the ${conference.name}, 1 in ${live.length}), then a franchise inside it, every one equally likely.`)
+    }
+  }
+
+  const inConf = teamsIn(conference.slug)
+  let team: ViznbaTeamNews
+  const prevTeam = prev ? teamById.get(prev.team) : undefined
+  if (ctx.locked('team') && prevTeam && prevTeam.conference === conference.slug) {
+    team = prevTeam
+    rule(ctx, 'lock', 'info', `Team locked to the ${team.name}.`)
+  } else {
+    const r30 = recent(ctx, DRAW_RULES.primaryBlockDays, 'primary')
+    const left = inConf.filter((t) => r30.has(t.id) && t.heat < DRAW_RULES.heatExempt)
+    const exempt = inConf.filter((t) => r30.has(t.id) && t.heat >= DRAW_RULES.heatExempt)
+    let cands = inConf.filter((t) => !left.includes(t))
+    if (left.length) rule(ctx, '30 days', 'block', `Left out the ${list(left.map((t) => t.name))}: spun in the last 30 days.`)
+    if (exempt.length) {
+      rule(ctx, '30 days', 'warn', `The ${list(exempt.map((t) => t.name))} allowed back in despite a recent spin: news heat ${DRAW_RULES.heatExempt} or above forces it.`)
+    }
+    if (!cands.length) {
+      cands = inConf
+      rule(ctx, '30 days', 'warn', `Every ${conference.name} franchise was spun in the last 30 days, so the block is lifted for this draw.`)
+    }
+    if (heatBranch) {
+      team = weighted(cands, (t) => t.heat + 1, rng)
+      const total = cands.reduce((a, t) => a + t.heat + 1, 0)
+      rule(ctx, 'heat', 'good', `The ${team.name} had a ${Math.round(((team.heat + 1) / total) * 100)}% chance among ${cands.length} eligible ${conference.name} franchises.`)
+    } else {
+      team = pick(cands, rng)
+    }
+  }
+
+  const angleByName = (name: string) => data.angles.find((a) => a.name === name)
+  const freshByName = (name: string) => data.freshness.find((f) => f.name === name)
+  let angle = (ctx.locked('angle') && prev && angleByName(prev.angle)) || pick(data.angles, rng)
+  let freshDrawn = (ctx.locked('fresh') && prev && freshByName(prev.freshDrawn)) || pick(data.freshness, rng)
+
+  // The freshness fallback: no tagged story inside the drawn window shifts it on.
+  const newest = team.headlines.map((h) => Date.parse(h.date)).filter((t) => !Number.isNaN(t)).sort((a, b) => b - a)[0]
+  const lastDev = newest === undefined ? null : Math.max(0, Math.floor((ctx.now - newest) / DAY))
+  const quietFor = lastDev ?? news.windowDays + 1
+  const resolve = (drawn: ViznbaFreshness): ViznbaFreshness => {
+    let i = data.freshness.indexOf(drawn)
+    while (i < data.freshness.length - 1 && data.freshness[i]!.days !== null && quietFor > data.freshness[i]!.days!) i++
+    return data.freshness[i]!
+  }
+  let fresh = resolve(freshDrawn)
+
+  // Head-to-head: prefer an opponent the team plays (or played) in the window. Every team meets every other, so it can come from either conference.
+  let opponent: ViznbaTeamNews | null = null
+  if (pair) {
+    const others = news.teams.filter((t) => t.id !== team.id)
+    const met = new Set([...team.recent, ...team.upcoming].flatMap((g) => [g.homeId, g.awayId]).filter((id): id is string => !!id && id !== team.id))
+    const meeting = others.filter((t) => met.has(t.id))
+    if (meeting.length) {
+      opponent = pick(meeting, rng)
+      rule(ctx, 'pair', 'good', `Head-to-head: the ${team.name} and the ${opponent.name} meet in the window, so the opponent came from their games. The story is the matchup.`)
+    } else if (others.length) {
+      opponent = pick(others, rng)
+      rule(ctx, 'pair', 'info', `Head-to-head: no game for the ${team.name} on the schedule in the window, so the ${opponent.name} were drawn from the rest of the league. Compare them; don't invent a game.`)
+    }
+  }
+
+  // 90-day block on the full combination: re-draw the reels that are free.
+  const combo = () => [conference.slug, team.id, angle.name, fresh.name, opponent?.id].filter(Boolean).join('|')
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    let tries = 0
+    while (r90.has(combo()) && tries < 16) {
+      tries++
+      if (!ctx.locked('angle')) angle = pick(data.angles, rng)
+      else if (!ctx.locked('fresh')) {
+        freshDrawn = pick(data.freshness, rng)
+        fresh = resolve(freshDrawn)
+      } else break
+    }
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `The ${team.name} with this angle and freshness ran in the last 90 days, and the reels that could change are locked. It repeats.`
+        : `The first draw repeated the ${team.name}'s angle and freshness from the last 90 days. Re-drawn.`,
+    )
+  }
+
+  if (fresh !== freshDrawn) {
+    rule(
+      ctx,
+      'fallback',
+      'warn',
+      lastDev === null
+        ? `No story tagged with the ${team.name} in the last ${news.windowDays} days, so nothing in the ${freshDrawn.name} window. Shifted to ${fresh.name}; the research file says so.`
+        : `No development in the ${freshDrawn.name} window (the newest tagged story is ${lastDev} days old). Shifted to ${fresh.name}; the research file says so.`,
+    )
+  }
+  rule(
+    ctx,
+    'news',
+    team.articles ? 'info' : 'warn',
+    team.articles
+      ? `The ${team.name}: ${team.articles} ${team.articles === 1 ? 'story' : 'stories'} tagged in the last ${news.windowDays} days (heat ${team.heat}), read ${news.asOf.slice(0, 10)}.`
+      : `The ${team.name} have no tagged stories in the last ${news.windowDays} days. The story starts from the box scores and the standings, not the news.`,
+  )
+  if (!news.schedule.ok) {
+    rule(ctx, 'schedule', 'warn', `ESPN's schedule could not be read (${news.schedule.error ?? 'unknown error'}), so the spin carries no games. Source every result.`)
+  }
+
+  // The games the brief appends box scores for: the meetings first, then recent results and the next game.
+  const h2h = opponent ? [...team.recent, ...team.upcoming].filter((g) => g.homeId === opponent!.id || g.awayId === opponent!.id) : []
+  const contextGames = uniq(
+    [...h2h, ...team.recent.slice(0, 3), ...(opponent?.recent.slice(0, 2) ?? []), ...team.upcoming.slice(0, 1)].map((g) => g.id),
+  ).slice(0, DRAW_RULES.maxSpinGames)
+  const byId = new Map([...team.recent, ...team.upcoming, ...(opponent ? [...opponent.recent, ...opponent.upcoming] : [])].map((g) => [g.id, g]))
+  if (news.schedule.ok) {
+    rule(
+      ctx,
+      'games',
+      contextGames.length ? 'info' : 'warn',
+      contextGames.length
+        ? `The brief carries the box score of ${contextGames.length} ${contextGames.length === 1 ? 'game' : 'games'}: ${contextGames.map((id) => gameSummary(byId.get(id)!)).join('; ')}.`
+        : `No games on ESPN's schedule for the ${team.name} in the window (the off-season?). Cite every number to a source.`,
+    )
+  }
+  rule(ctx, 'why now', 'info', `Mandatory next step: pull the three newest developments for the ${team.name} and apply the ${angle.name} angle to the newest one.`)
+
+  const cn = confNews.get(conference.slug)
+  const next = team.upcoming[0]
+  const picks: ViznbaPicks = {
+    conference: conference.slug,
+    team: team.id,
+    angle: angle.name,
+    fresh: fresh.name,
+    freshDrawn: freshDrawn.name,
+    ...(opponent ? { opponent: opponent.id } : {}),
+  }
+  const reels: DrawResult['reels'] = {
+    conference: { value: conference.name, sub: `heat ${cn?.heat ?? 0} · ${inConf.length} teams` },
+    team: { value: team.name, sub: `heat ${team.heat} · ${team.articles} ${team.articles === 1 ? 'story' : 'stories'} in ${news.windowDays}d` },
+    angle: { value: angle.name },
+    fresh: { value: fresh.name, sub: fresh !== freshDrawn ? `drew ${freshDrawn.name}, shifted` : fresh.window },
+  }
+  if (opponent) {
+    const meeting = h2h[0]
+    reels.pair = { value: opponent.name, sub: meeting ? gameSummary(meeting) : `heat ${opponent.heat}` }
+  } else if (next) {
+    reels.team.sub = `${reels.team.sub} · next ${next.date.slice(5, 10)}`
+  }
+  return {
+    randomizer: 'viznba',
+    picks,
+    subject: {
+      randomizer: 'viznba',
+      conference: { ...conference, heat: cn?.heat ?? 0, articles: cn?.articles ?? 0 },
+      team,
+      opponent,
+      angle,
+      freshness: fresh,
+      lastDevelopmentDays: lastDev,
+      newsAsOf: news.asOf,
+      newsWindowDays: news.windowDays,
+      gameIds: contextGames,
+    },
+    reels,
+    primary: team.id,
+    combo: combo(),
+    summary: `${team.name}${opponent ? ` v ${opponent.name}` : ''} · ${angle.name}`,
+    rules: ctx.rules,
+    meta: { conference: conference.slug, heat: team.heat, pair: !!opponent },
   }
 }

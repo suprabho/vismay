@@ -4,7 +4,8 @@
  * agent with the token can spin, save research and refresh the Desk's heat.
  * vizmaya-fyi serves them for every randomizer (the MCP server calls it);
  * footshorts serves the spin routes and the Football Desk's news table, so an
- * agent holding only the footshorts token can work a Football Desk spin. All
+ * agent holding only the footshorts token can work a Football Desk spin; viznba
+ * does the same for the NBA Desk. All
  * spins share one log (one Supabase project), so the draw rules hold
  * whichever site is asked. Admin has its own session-gated routes over the
  * same @vismay/randomizer/spins helpers.
@@ -19,6 +20,8 @@
  *                                                     failed?: [{ subId, error }], source? }
  *   GET  /api/randomizer/news                       the Football Desk's live news snapshot:
  *                                                     tournaments and teams with heat, headlines, fixtures
+ *                                                     (on viznba: the NBA Desk's, conferences and
+ *                                                     franchises with heat, headlines, games)
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -40,6 +43,7 @@ import {
   listDeskHeat,
   listSpins,
   loadFootshortsNews,
+  loadViznbaNews,
   refreshDeskHeat,
   saveSpinResearch,
   SpinError,
@@ -259,6 +263,23 @@ export async function handleFootshortsNewsRequest(req: Request): Promise<Respons
   if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
   try {
     return json(await loadFootshortsNews())
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+/**
+ * GET /api/randomizer/news on viznba: the NBA Desk's live news snapshot, the
+ * same one a spin draws from (conferences and all 30 franchises, their news
+ * heat, newest headlines, the people in the news, recent and next games).
+ * Read-only: computed from the viznba_ tables and ESPN's scoreboard.
+ */
+export async function handleViznbaNewsRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  try {
+    return json(await loadViznbaNews())
   } catch (e) {
     return fail(e)
   }

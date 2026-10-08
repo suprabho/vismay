@@ -12,6 +12,7 @@ import {
   LockSimple,
   Newspaper,
   LockSimpleOpen,
+  Basketball,
   PaperPlaneTilt,
   Shuffle,
   Warning,
@@ -23,13 +24,15 @@ import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-s
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { FOOTSHORTS } from '@vismay/randomizer/datasets'
+import { FOOTSHORTS, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
   RESPIN_REASONS,
   randomizersFor,
   type FootshortsNews,
+  type ViznbaGameRef,
+  type ViznbaNews,
   type RandomizerApp,
   type RandomizerId,
   type ReelDef,
@@ -189,13 +192,14 @@ const perRandomizer = <T,>(value: (r: RandomizerId) => T) =>
 /**
  * One slot machine for a site's randomizers: Desk, Atlas and Epics on
  * vizmaya (with the Desk heat table), the Football Desk on footshorts (with
- * its live news table).
+ * its live news table), the NBA Desk on viznba (with its news and games).
  */
 export function RandomizerClient({
   app = 'vizmaya-fyi',
   initialSpins,
   heat = null,
   news = null,
+  nbaNews = null,
   pool,
   loadError,
   siteUrl,
@@ -206,6 +210,8 @@ export function RandomizerClient({
   heat?: DeskHeatTableRow[] | null
   /** The Football Desk's live news snapshot (footshorts only). */
   news?: FootshortsNews | null
+  /** The NBA Desk's live news snapshot (viznba only). */
+  nbaNews?: ViznbaNews | null
   pool: StylePool | null
   loadError: string | null
   siteUrl: string
@@ -371,7 +377,14 @@ export function RandomizerClient({
           <div>
             <h1 className="text-lg font-semibold">Randomizer</h1>
             <p className="text-sm text-neutral-400 mt-0.5 max-w-2xl">
-              {app === 'footshorts' ? (
+              {app === 'viznba' ? (
+                <>
+                  The NBA Desk draws a conference, a franchise in it, an angle and a freshness, weighted by how much VizNBA news each has
+                  in the last {nbaNews?.windowDays ?? 14} days (a story about a player or coach counts for his team), under the
+                  playbook&rsquo;s rules (30 and 90 day repeat blocks, no conference twice in a row) and logs it. The agent brief then
+                  carries the spin and the box scores of its games.
+                </>
+              ) : app === 'footshorts' ? (
                 <>
                   The Football Desk draws a tournament, a team in it, an angle and a freshness, weighted by how much footshorts news each
                   has in the last {news?.windowDays ?? 14} days, under the playbook&rsquo;s rules (30 and 90 day repeat blocks, no
@@ -390,7 +403,8 @@ export function RandomizerClient({
 
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
-            {loadError}. Has migration 088_randomizer.sql{app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : ''} been applied?
+            {loadError}. Has migration 088_randomizer.sql
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ''} been applied?
           </div>
         )}
 
@@ -639,6 +653,7 @@ export function RandomizerClient({
         )}
 
         {tab === 'footshorts' && <FootballNews news={news} />}
+        {tab === 'viznba' && <NbaNews news={nbaNews} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -993,6 +1008,146 @@ function FootballNews({ news }: { news: FootshortsNews | null }) {
       {teams.length > 25 && (
         <button type="button" onClick={() => setAll((v) => !v)} className="w-full text-xs text-neutral-400 hover:text-white py-2 border-t border-white/5">
           {all ? 'Show the top 25' : `Show all ${teams.length} teams`}
+        </button>
+      )}
+    </section>
+  )
+}
+
+function gameLine(g: ViznbaGameRef, teamId: string): string {
+  const home = g.homeId === teamId
+  const opp = home ? g.away : g.home
+  const oppShort = VIZNBA.teams.find((t) => t.name === opp)?.abbreviation ?? opp
+  return `${home ? 'v' : '@'} ${oppShort}`
+}
+
+/** The NBA Desk's live news: what its 60% branch weights by, and the games a spin attaches. */
+function NbaNews({ news }: { news: ViznbaNews | null }) {
+  const [all, setAll] = useState(false)
+  if (!news) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500">
+        The VizNBA news could not be read, so the NBA Desk cannot spin. Check the viznba_ tables (migration supabase/viznba/001_init.sql).
+      </section>
+    )
+  }
+  const teams = [...news.teams].sort((a, b) => b.heat - a.heat || a.name.localeCompare(b.name))
+  const shown = all ? teams : teams.slice(0, 15)
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Basketball size={15} className="text-orange-400" />
+          NBA news heat
+        </h2>
+        <span className="text-xs text-neutral-500">
+          Stories tagged on VizNBA in the last {news.windowDays} days, read {new Date(news.asOf).toLocaleString()}. Live from the feed and
+          ESPN&rsquo;s schedule: nothing to refresh.
+        </span>
+        {!news.schedule.ok && (
+          <span
+            className="text-xs text-red-300 border border-red-400/40 bg-red-500/10 rounded-full px-2 py-0.5 inline-flex items-center gap-1"
+            title={news.schedule.error ?? undefined}
+          >
+            <Warning size={12} /> ESPN schedule unavailable
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 flex flex-wrap gap-2 border-b border-white/5">
+        {VIZNBA.conferences.map((c) => {
+          const n = news.conferences.find((x) => x.slug === c.slug)
+          return (
+            <span key={c.slug} className="text-xs rounded-full border border-white/15 text-neutral-200 px-2.5 py-1 inline-flex items-center gap-1.5" title={`${n?.articles ?? 0} stories`}>
+              {c.name}
+              <span className="font-mono tabular-nums text-orange-300/90">{n?.heat ?? 0}</span>
+            </span>
+          )
+        })}
+        <span className="text-xs text-neutral-500 self-center">{news.schedule.games} games on the schedule in the window</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">
+            <tr className="border-b border-white/5">
+              <th className="text-left font-medium px-4 py-2">Team</th>
+              <th className="text-left font-medium px-4 py-2 w-40">Heat</th>
+              <th className="text-left font-medium px-4 py-2">Stories</th>
+              <th className="text-left font-medium px-4 py-2">In the news</th>
+              <th className="text-left font-medium px-4 py-2">Last · next</th>
+              <th className="text-left font-medium px-4 py-2">Newest headline</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((t) => {
+              const last = t.recent[0]
+              const next = t.upcoming[0]
+              return (
+                <tr key={t.id} className="border-b border-white/5 last:border-0 align-top">
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      {t.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- ESPN logo CDN, 20px
+                        <img src={t.logoUrl} alt="" className="w-5 h-5 object-contain" />
+                      ) : (
+                        <span className="w-2.5 h-2.5 rounded-full mx-[5px]" style={{ background: t.color }} />
+                      )}
+                      <span className="text-neutral-200">{t.name}</span>
+                    </div>
+                    <div className="text-xs text-neutral-500 pl-7">
+                      {t.conference === 'east' ? 'East' : 'West'} · {t.division}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full bg-orange-500/80" style={{ width: `${t.heat}%` }} />
+                      </div>
+                      <span className="font-mono text-xs tabular-nums text-neutral-300 w-7 text-right">{t.heat}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs tabular-nums text-neutral-400">{t.articles}</td>
+                  <td className="px-4 py-2 text-xs text-neutral-400 max-w-[12rem]">
+                    {t.people.length ? t.people.map((p) => `${p.name} (${p.articles})`).join(', ') : <span className="text-neutral-600">none</span>}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-neutral-400 whitespace-nowrap font-mono">
+                    {last ? (
+                      <div>
+                        {gameLine(last, t.id)}{' '}
+                        {last.homeScore !== null && last.awayScore !== null
+                          ? (() => {
+                              const us = last.homeId === t.id ? last.homeScore : last.awayScore
+                              const them = last.homeId === t.id ? last.awayScore : last.homeScore
+                              return `${us > them ? 'W' : 'L'} ${us}-${them}`
+                            })()
+                          : ''}
+                      </div>
+                    ) : (
+                      <div className="text-neutral-600">no recent game</div>
+                    )}
+                    {next ? (
+                      <div className="text-neutral-500">
+                        {gameLine(next, t.id)} {next.date.slice(5, 10)}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-neutral-400 max-w-[22rem]">
+                    {t.headlines[0] ? (
+                      <a href={t.headlines[0].url} target="_blank" rel="noreferrer" className="hover:text-white">
+                        {t.headlines[0].date}: {t.headlines[0].title}
+                      </a>
+                    ) : (
+                      <span className="text-neutral-600">none in the window</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {teams.length > 15 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="w-full text-xs text-neutral-400 hover:text-white py-2 border-t border-white/5">
+          {all ? 'Show the top 15' : `Show all ${teams.length} teams`}
         </button>
       )}
     </section>

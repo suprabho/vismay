@@ -9,13 +9,14 @@
  */
 
 import { HTML_STORY_APPS, type HtmlStoryApp } from '@vismay/html-stories/apps'
-import { footshortsPublicUrl, vizf1PublicUrl, vizmayaPublicUrl } from '@/lib/publicSite'
+import { footshortsPublicUrl, vizf1PublicUrl, viznbaPublicUrl, vizmayaPublicUrl } from '@/lib/publicSite'
 
 export { HTML_STORY_APPS, type HtmlStoryApp }
 
 export function htmlStorySiteUrl(app: HtmlStoryApp): string {
   if (app === 'footshorts') return footshortsPublicUrl
   if (app === 'vizf1') return vizf1PublicUrl
+  if (app === 'viznba') return viznbaPublicUrl
   return vizmayaPublicUrl
 }
 
@@ -24,7 +25,7 @@ export function htmlStoriesBasePath(app: HtmlStoryApp): string {
   return app === 'vizmaya-fyi' ? '/vizmaya/html-stories' : `/${app}/html-stories`
 }
 
-/** The admin route slug (`/vizmaya`, `/footshorts`, `/vizf1`) → the hosting app, or null. */
+/** The admin route slug (`/vizmaya`, `/footshorts`, `/vizf1`, `/viznba`) → the hosting app, or null. */
 export function htmlStoryAppForSection(appSlug: string): HtmlStoryApp | null {
   if (appSlug === 'vizmaya') return 'vizmaya-fyi'
   return (HTML_STORY_APPS as readonly string[]).includes(appSlug) ? (appSlug as HtmlStoryApp) : null

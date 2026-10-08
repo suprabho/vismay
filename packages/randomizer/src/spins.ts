@@ -1,8 +1,9 @@
 /**
  * Server-side reads and writes for the randomizer: the spin log
  * (randomizer_spins) and the Desk's live heat (desk_heat), migration 088,
- * and the Football Desk's news snapshot (loadFootshortsNews), read from the
- * footshorts tables in the same Supabase project.
+ * the Football Desk's news snapshot (loadFootshortsNews), read from the
+ * footshorts tables in the same Supabase project, and the NBA Desk's
+ * (loadViznbaNews), read from the viznba_ tables there and ESPN's schedule.
  *
  * A spin is created only here, and only by an authenticated caller (admin's
  * session-gated routes, or the token-gated routes on vizmaya-fyi that the MCP
@@ -18,7 +19,7 @@
  */
 
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { DESK, FOOTSHORTS } from './datasets'
+import { DESK, FOOTSHORTS, VIZNBA } from './datasets'
 import { draw } from './draw'
 import { randomSeed, seedHex } from './rng'
 import { extractHeroInsight } from './stub'
@@ -35,6 +36,12 @@ import {
   type SpinHistoryEntry,
   type SpinRecord,
   type SpinStatus,
+  type ViznbaConferenceNews,
+  type ViznbaGameRef,
+  type ViznbaHeadline,
+  type ViznbaNews,
+  type ViznbaPersonNews,
+  type ViznbaTeamNews,
 } from './types'
 
 const DAY = 864e5
@@ -58,7 +65,10 @@ function check(error: { code?: string; message: string } | null): void {
   if (!error) return
   if (error.code === '42P01' || error.code === 'PGRST205') throw new SpinError(MIGRATION_HINT, 503)
   if (error.code === '23514' && /randomizer_check/.test(error.message)) {
-    throw new SpinError('Football Desk spins need migration 090_randomizer_footshorts.sql applied', 503)
+    throw new SpinError(
+      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk',
+      503,
+    )
   }
   throw new SpinError(error.message, 500)
 }
@@ -175,11 +185,12 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
   }
 
   const seed = input.seed ?? randomSeed()
-  const [past, heat, news] = await Promise.all([
+  const [past, heat, news, nbaNews] = await Promise.all([
     // The spin being re-spun is about to be rejected: it must not block its own replacement.
     history(input.randomizer, input.respin ? prev?.id : undefined),
     input.randomizer === 'desk' ? listDeskHeat() : Promise.resolve([] as DeskHeatRow[]),
     input.randomizer === 'footshorts' ? loadFootshortsNews() : Promise.resolve(null),
+    input.randomizer === 'viznba' ? loadViznbaNews() : Promise.resolve(null),
   ])
   const reason = input.reason?.trim().slice(0, 200) || null
   let result: ReturnType<typeof draw>
@@ -194,9 +205,10 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
       sequence: input.sequence,
       heat,
       news,
+      nbaNews,
     })
   } catch (e) {
-    // The draw only throws when there is nothing to draw from (an empty footshorts snapshot).
+    // The draw only throws when there is nothing to draw from (an empty footshorts or VizNBA snapshot).
     throw new SpinError(e instanceof Error ? e.message : String(e), 503)
   }
   if (input.respin && prev) {
@@ -606,4 +618,267 @@ export async function loadFootshortsNews(now: Date = new Date()): Promise<Footsh
   }))
 
   return { asOf: now.toISOString(), windowDays: FOOTSHORTS_NEWS_RULES.newsWindowDays, competitions, teams }
+}
+
+/* ---------- VizNBA news ---------- */
+
+/** The tunable windows behind the NBA Desk's news snapshot. */
+export const VIZNBA_NEWS_RULES = {
+  /** Heat counts the tagged stories in this many days. */
+  newsWindowDays: 14,
+  /** Games read from ESPN's scoreboard this far back… */
+  gameLookbackDays: 21,
+  /** …and this far ahead. */
+  gameLookaheadDays: 14,
+} as const
+
+const ESPN_NBA = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba'
+
+interface EspnScoreboardEvent {
+  id: string
+  date: string
+  season?: { slug?: string }
+  competitions?: Array<{
+    competitors?: Array<{ homeAway?: string; score?: string; team?: { id?: string; displayName?: string } }>
+    status?: { type?: { state?: string; name?: string } }
+  }>
+  status?: { type?: { state?: string; name?: string } }
+}
+
+const SEASON_LABEL: Record<string, string> = {
+  preseason: 'Preseason',
+  'regular-season': 'Regular Season',
+  'play-in-season': 'Play-In',
+  'post-season': 'Playoffs',
+}
+
+function ymd(t: number): string {
+  return new Date(t).toISOString().slice(0, 10).replaceAll('-', '')
+}
+
+/** ESPN's day scoreboards fetched at a time. */
+const ESPN_CONCURRENCY = 8
+
+async function scoreboardDay(day: string): Promise<EspnScoreboardEvent[]> {
+  const res = await fetch(`${ESPN_NBA}/scoreboard?dates=${day}&limit=100`, {
+    headers: { 'user-agent': 'Mozilla/5.0 (compatible; VizNBA/1.0)' },
+    signal: AbortSignal.timeout(10_000),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`ESPN scoreboard ${day}: HTTP ${res.status}`)
+  const body = (await res.json()) as { events?: EspnScoreboardEvent[] }
+  return body.events ?? []
+}
+
+/**
+ * Every game on ESPN's NBA scoreboard between two dates. ESPN refuses date
+ * ranges on this endpoint, so it is one request per (US-Eastern) day, a few
+ * at a time; a day that fails is skipped, and only a schedule where every day
+ * failed throws. ESPN ids are mapped onto viznba team ids; exhibition
+ * opponents (international clubs in the preseason) keep their ESPN name and a
+ * null id.
+ */
+export async function fetchNbaGames(fromMs: number, toMs: number, teamIdByEspn: Map<string, string>): Promise<ViznbaGameRef[]> {
+  const days: string[] = []
+  for (let t = fromMs; t <= toMs + DAY - 1; t += DAY) days.push(ymd(t))
+  const unique = Array.from(new Set(days))
+  const boards: Array<EspnScoreboardEvent[] | null> = new Array(unique.length).fill(null)
+  let failure: unknown = null
+  let next = 0
+  await Promise.all(
+    Array.from({ length: Math.min(ESPN_CONCURRENCY, unique.length) }, async () => {
+      while (next < unique.length) {
+        const i = next++
+        try {
+          boards[i] = await scoreboardDay(unique[i]!)
+        } catch (e) {
+          failure = e
+        }
+      }
+    }),
+  )
+  if (unique.length && boards.every((b) => b === null)) throw failure instanceof Error ? failure : new Error('ESPN scoreboard failed')
+
+  const seen = new Set<string>()
+  const out: ViznbaGameRef[] = []
+  for (const e of boards.flatMap((b) => b ?? [])) {
+    if (seen.has(e.id)) continue
+    seen.add(e.id)
+    const comp = e.competitions?.[0]
+    const home = comp?.competitors?.find((c) => c.homeAway === 'home')
+    const away = comp?.competitors?.find((c) => c.homeAway === 'away')
+    if (!home || !away) continue
+    const type = comp?.status?.type ?? e.status?.type
+    // Postponed and cancelled games carry state "post" with no result: keep them off the record.
+    if (type?.name === 'STATUS_POSTPONED' || type?.name === 'STATUS_CANCELED') continue
+    const state = type?.state === 'post' || type?.state === 'in' ? type.state : 'pre'
+    const score = (v: string | undefined) => (state !== 'pre' && v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null)
+    out.push({
+      id: e.id,
+      date: e.date,
+      state,
+      season: (e.season?.slug && SEASON_LABEL[e.season.slug]) ?? null,
+      homeId: (home.team?.id && teamIdByEspn.get(home.team.id)) || null,
+      awayId: (away.team?.id && teamIdByEspn.get(away.team.id)) || null,
+      home: home.team?.displayName ?? 'TBD',
+      away: away.team?.displayName ?? 'TBD',
+      homeScore: score(home.score),
+      awayScore: score(away.score),
+    })
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+interface ViznbaArticleRow {
+  id: string
+  headline: string
+  url: string
+  publisher: string
+  published_at: string
+  topic_category: string | null
+  viznba_article_entities: Array<{ entity_type: 'team' | 'player' | 'coach'; entity_id: string; confidence: number | null }> | null
+}
+
+/**
+ * The live news the NBA Desk draws from: all 30 franchises (the dataset's,
+ * with the logos viznba_teams carries), each with the stories tagged to it in
+ * the news window (a story tagged with a player or coach on the roster counts
+ * for the team), its newest headlines, the people driving its news, and its
+ * recent and next games from ESPN's scoreboard; and per conference, the
+ * stories tagged to any of its teams. Read live, so it needs no refresh job.
+ * A failed schedule read leaves the games empty and says so in `schedule`.
+ */
+export async function loadViznbaNews(now: Date = new Date()): Promise<ViznbaNews> {
+  const db = createServiceClient()
+  const t = now.getTime()
+  const newsSince = new Date(t - VIZNBA_NEWS_RULES.newsWindowDays * DAY).toISOString()
+  const teamIdByEspn = new Map(VIZNBA.teams.map((tm) => [tm.espn_id, tm.id]))
+
+  const [articles, players, coaches, teamRows, schedule] = await Promise.all([
+    readPages<ViznbaArticleRow>((a, b) =>
+      db
+        .from('viznba_articles')
+        .select('id, headline, url, publisher, published_at, topic_category, viznba_article_entities(entity_type, entity_id, confidence)')
+        .eq('status', 'summarized')
+        .gte('published_at', newsSince)
+        .order('published_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(a, b),
+    ),
+    readPages<{ player_id: string; display_name: string; team_id: string | null }>((a, b) =>
+      db.from('viznba_players').select('player_id, display_name, team_id').not('team_id', 'is', null).order('player_id').range(a, b),
+    ),
+    readPages<{ coach_id: string; display_name: string; team_id: string | null }>((a, b) =>
+      db.from('viznba_coaches').select('coach_id, display_name, team_id').not('team_id', 'is', null).order('coach_id').range(a, b),
+    ),
+    readPages<{ team_id: string; logo_url: string | null }>((a, b) => db.from('viznba_teams').select('team_id, logo_url').order('team_id').range(a, b)),
+    fetchNbaGames(t - VIZNBA_NEWS_RULES.gameLookbackDays * DAY, t + VIZNBA_NEWS_RULES.gameLookaheadDays * DAY, teamIdByEspn).then(
+      (games) => ({ ok: true as const, games, error: null }),
+      (e: unknown) => ({ ok: false as const, games: [] as ViznbaGameRef[], error: e instanceof Error ? e.message : String(e) }),
+    ),
+  ])
+
+  const people = new Map<string, { name: string; team: string; kind: 'player' | 'coach' }>()
+  for (const p of players) if (p.team_id) people.set(`player:${p.player_id}`, { name: p.display_name, team: p.team_id, kind: 'player' })
+  for (const c of coaches) if (c.team_id) people.set(`coach:${c.coach_id}`, { name: c.display_name, team: c.team_id, kind: 'coach' })
+  const logoById = new Map(teamRows.map((r) => [r.team_id, r.logo_url]))
+
+  // Per team: a confidence-weighted score, the story count, the newest headlines and who drove them.
+  const score = new Map<string, number>()
+  const count = new Map<string, number>()
+  const headlines = new Map<string, ViznbaHeadline[]>()
+  const personCount = new Map<string, Map<string, number>>()
+  const headline = (a: ViznbaArticleRow): ViznbaHeadline => ({
+    title: a.headline.trim().slice(0, 300),
+    url: a.url,
+    publisher: a.publisher,
+    date: a.published_at.slice(0, 10),
+    topic: a.topic_category,
+  })
+  const teamsOf = (a: ViznbaArticleRow): Map<string, number> => {
+    const hits = new Map<string, number>()
+    for (const ae of a.viznba_article_entities ?? []) {
+      const c = Math.min(1, Math.max(0, ae.confidence ?? 1))
+      const team = ae.entity_type === 'team' ? ae.entity_id : people.get(`${ae.entity_type}:${ae.entity_id}`)?.team
+      if (!team) continue
+      hits.set(team, Math.max(hits.get(team) ?? 0, c))
+      if (ae.entity_type !== 'team') {
+        const byPerson = personCount.get(team) ?? new Map<string, number>()
+        const key = `${ae.entity_type}:${ae.entity_id}`
+        byPerson.set(key, (byPerson.get(key) ?? 0) + 1)
+        personCount.set(team, byPerson)
+      }
+    }
+    return hits
+  }
+  const articleTeams = articles.map((a) => ({ a, hits: teamsOf(a) }))
+  for (const { a, hits } of articleTeams) {
+    for (const [team, c] of hits) {
+      score.set(team, (score.get(team) ?? 0) + c)
+      count.set(team, (count.get(team) ?? 0) + 1)
+      const list = headlines.get(team) ?? []
+      if (list.length < 3) headlines.set(team, [...list, headline(a)])
+    }
+  }
+
+  const finished = schedule.games.filter((g) => g.state === 'post')
+  const ahead = schedule.games.filter((g) => g.state !== 'post' && Date.parse(g.date) >= t - 3 * 3600e3)
+  const maxTeam = Math.max(0, ...VIZNBA.teams.map((tm) => score.get(tm.id) ?? 0))
+  const teams: ViznbaTeamNews[] = VIZNBA.teams.map((tm) => {
+    const plays = (g: ViznbaGameRef) => g.homeId === tm.id || g.awayId === tm.id
+    const topPeople: ViznbaPersonNews[] = [...(personCount.get(tm.id) ?? new Map<string, number>()).entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 3)
+      .map(([key, n]) => {
+        const p = people.get(key)!
+        return { id: key.slice(key.indexOf(':') + 1), name: p.name, kind: p.kind, articles: n }
+      })
+    return {
+      id: tm.id,
+      espnId: tm.espn_id,
+      abbreviation: tm.abbreviation,
+      name: tm.name,
+      conference: tm.conference,
+      division: tm.division,
+      logoUrl: logoById.get(tm.id) ?? null,
+      color: tm.color,
+      heat: heatScale(score.get(tm.id) ?? 0, maxTeam),
+      articles: count.get(tm.id) ?? 0,
+      headlines: headlines.get(tm.id) ?? [],
+      people: topPeople,
+      recent: finished.filter(plays).reverse().slice(0, 3),
+      upcoming: ahead.filter(plays).slice(0, 2),
+    }
+  })
+
+  // Conferences: the stories tagged to any of their teams.
+  const confScores = VIZNBA.conferences.map((c) => {
+    const members = new Set(VIZNBA.teams.filter((tm) => tm.conference === c.slug).map((tm) => tm.id))
+    let total = 0
+    let n = 0
+    const top: ViznbaHeadline[] = []
+    for (const { a, hits } of articleTeams) {
+      const inConf = [...hits.entries()].filter(([team]) => members.has(team))
+      if (!inConf.length) continue
+      total += Math.max(...inConf.map(([, c]) => c))
+      n++
+      if (top.length < 3) top.push(headline(a))
+    }
+    return { slug: c.slug, total, n, top }
+  })
+  const maxConf = Math.max(0, ...confScores.map((c) => c.total))
+  const conferences: ViznbaConferenceNews[] = confScores.map((c) => ({
+    slug: c.slug,
+    heat: heatScale(c.total, maxConf),
+    articles: c.n,
+    headlines: c.top,
+  }))
+
+  return {
+    asOf: now.toISOString(),
+    windowDays: VIZNBA_NEWS_RULES.newsWindowDays,
+    conferences,
+    teams,
+    schedule: { ok: schedule.ok, games: schedule.games.length, error: schedule.error },
+  }
 }

@@ -20,7 +20,7 @@
  * (@vismay/randomizer): the spin records the story's slug, and moves to
  * `published` when the story goes public. A spin publishes only to the site
  * its randomizer writes for (vizmaya for Desk, Atlas and Epics; footshorts
- * for the Football Desk). Atlas and Epics spins are gated on an approved
+ * for the Football Desk; viznba for the NBA Desk). Atlas and Epics spins are gated on an approved
  * hero insight, so a publish request for one that isn't approved yet saves a
  * draft (with a warning) instead.
  *

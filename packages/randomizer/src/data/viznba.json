@@ -1,0 +1,85 @@
+{
+  "conferences": [
+    { "slug": "east", "name": "Eastern Conference", "divisions": ["Atlantic", "Central", "Southeast"] },
+    { "slug": "west", "name": "Western Conference", "divisions": ["Northwest", "Pacific", "Southwest"] }
+  ],
+  "teams": [
+    { "id": "bos", "espn_id": "2", "abbreviation": "BOS", "name": "Boston Celtics", "conference": "east", "division": "Atlantic", "color": "#1f9d55" },
+    { "id": "bkn", "espn_id": "17", "abbreviation": "BKN", "name": "Brooklyn Nets", "conference": "east", "division": "Atlantic", "color": "#c9c9d1" },
+    { "id": "ny", "espn_id": "18", "abbreviation": "NYK", "name": "New York Knicks", "conference": "east", "division": "Atlantic", "color": "#F58426" },
+    { "id": "phi", "espn_id": "20", "abbreviation": "PHI", "name": "Philadelphia 76ers", "conference": "east", "division": "Atlantic", "color": "#ff4d73" },
+    { "id": "tor", "espn_id": "28", "abbreviation": "TOR", "name": "Toronto Raptors", "conference": "east", "division": "Atlantic", "color": "#ff4f6d" },
+    { "id": "chi", "espn_id": "4", "abbreviation": "CHI", "name": "Chicago Bulls", "conference": "east", "division": "Central", "color": "#ff5577" },
+    { "id": "cle", "espn_id": "5", "abbreviation": "CLE", "name": "Cleveland Cavaliers", "conference": "east", "division": "Central", "color": "#e0457b" },
+    { "id": "det", "espn_id": "8", "abbreviation": "DET", "name": "Detroit Pistons", "conference": "east", "division": "Central", "color": "#ef4b5f" },
+    { "id": "ind", "espn_id": "11", "abbreviation": "IND", "name": "Indiana Pacers", "conference": "east", "division": "Central", "color": "#FDBB30" },
+    { "id": "mil", "espn_id": "15", "abbreviation": "MIL", "name": "Milwaukee Bucks", "conference": "east", "division": "Central", "color": "#3fae6a" },
+    { "id": "atl", "espn_id": "1", "abbreviation": "ATL", "name": "Atlanta Hawks", "conference": "east", "division": "Southeast", "color": "#ff6b6b" },
+    { "id": "cha", "espn_id": "30", "abbreviation": "CHA", "name": "Charlotte Hornets", "conference": "east", "division": "Southeast", "color": "#2fb7c9" },
+    { "id": "mia", "espn_id": "14", "abbreviation": "MIA", "name": "Miami Heat", "conference": "east", "division": "Southeast", "color": "#F9A01B" },
+    { "id": "orl", "espn_id": "19", "abbreviation": "ORL", "name": "Orlando Magic", "conference": "east", "division": "Southeast", "color": "#4fb0ef" },
+    { "id": "wsh", "espn_id": "27", "abbreviation": "WAS", "name": "Washington Wizards", "conference": "east", "division": "Southeast", "color": "#ff5266" },
+    { "id": "den", "espn_id": "7", "abbreviation": "DEN", "name": "Denver Nuggets", "conference": "west", "division": "Northwest", "color": "#FEC524" },
+    { "id": "min", "espn_id": "16", "abbreviation": "MIN", "name": "Minnesota Timberwolves", "conference": "west", "division": "Northwest", "color": "#78BE20" },
+    { "id": "okc", "espn_id": "25", "abbreviation": "OKC", "name": "Oklahoma City Thunder", "conference": "west", "division": "Northwest", "color": "#38a8f0" },
+    { "id": "por", "espn_id": "22", "abbreviation": "POR", "name": "Portland Trail Blazers", "conference": "west", "division": "Northwest", "color": "#ff5c60" },
+    { "id": "utah", "espn_id": "26", "abbreviation": "UTA", "name": "Utah Jazz", "conference": "west", "division": "Northwest", "color": "#9d6bdc" },
+    { "id": "gs", "espn_id": "9", "abbreviation": "GSW", "name": "Golden State Warriors", "conference": "west", "division": "Pacific", "color": "#FFC72C" },
+    { "id": "lac", "espn_id": "12", "abbreviation": "LAC", "name": "LA Clippers", "conference": "west", "division": "Pacific", "color": "#5b8def" },
+    { "id": "lal", "espn_id": "13", "abbreviation": "LAL", "name": "Los Angeles Lakers", "conference": "west", "division": "Pacific", "color": "#a07ae0" },
+    { "id": "phx", "espn_id": "21", "abbreviation": "PHX", "name": "Phoenix Suns", "conference": "west", "division": "Pacific", "color": "#E56020" },
+    { "id": "sac", "espn_id": "23", "abbreviation": "SAC", "name": "Sacramento Kings", "conference": "west", "division": "Pacific", "color": "#9b6bd1" },
+    { "id": "dal", "espn_id": "6", "abbreviation": "DAL", "name": "Dallas Mavericks", "conference": "west", "division": "Southwest", "color": "#4aa3e8" },
+    { "id": "hou", "espn_id": "10", "abbreviation": "HOU", "name": "Houston Rockets", "conference": "west", "division": "Southwest", "color": "#ff4f6d" },
+    { "id": "mem", "espn_id": "29", "abbreviation": "MEM", "name": "Memphis Grizzlies", "conference": "west", "division": "Southwest", "color": "#8fa6d6" },
+    { "id": "no", "espn_id": "3", "abbreviation": "NOP", "name": "New Orleans Pelicans", "conference": "west", "division": "Southwest", "color": "#c9a96a" },
+    { "id": "sa", "espn_id": "24", "abbreviation": "SAS", "name": "San Antonio Spurs", "conference": "west", "division": "Southwest", "color": "#C4CED4" }
+  ],
+  "angles": [
+    {
+      "name": "Rotation and scheme",
+      "description": "How the team plays: the rotation, pace, shot diet and defensive scheme, and what changed, shown with box-score and play-by-play numbers, not adjectives."
+    },
+    {
+      "name": "Form vs numbers",
+      "description": "The run of results against the underlying numbers (point differential, net rating, the clutch record): is the form real, lucky, or about to turn?"
+    },
+    {
+      "name": "Star watch",
+      "description": "One player whose season explains the team right now, told in numbers: minutes, usage, efficiency, and the team with and without them."
+    },
+    {
+      "name": "Coach and front office",
+      "description": "The decisions of the coach and the front office and the pressure on them: rotations, tenure, trades, and what the results say."
+    },
+    {
+      "name": "Injuries and load",
+      "description": "Who is available, who is carrying the minutes, and how absences, back-to-backs and rest have changed the team."
+    },
+    {
+      "name": "Cap and trades",
+      "description": "The salary cap, the tax and the aprons, contracts, picks and trades: the business behind the roster. Figures only as reported by the team or two independent outlets."
+    },
+    {
+      "name": "Rookies and development",
+      "description": "The young core and the draft picks: who is playing, who is growing, and what the picks were spent on."
+    },
+    {
+      "name": "Rivalry and history",
+      "description": "The matchup or rival that defines this team, and what the record between them actually says."
+    },
+    {
+      "name": "Stakes",
+      "description": "What is on the line in the standings: seeding, the play-in line, tiebreakers, the lottery odds, and the paths still open."
+    },
+    {
+      "name": "Fans and the city",
+      "description": "The arena, the market and the place: attendance, ticket prices, ownership, local TV and identity."
+    }
+  ],
+  "freshness": [
+    { "name": "Last night", "days": 3, "window": "last 3 days" },
+    { "name": "This week", "days": 10, "window": "last 10 days" },
+    { "name": "Evergreen", "days": null, "window": "no news window" }
+  ]
+}

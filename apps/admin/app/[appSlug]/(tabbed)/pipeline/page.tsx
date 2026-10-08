@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { WorkersPanel } from '@/components/footshorts/WorkersPanel'
 import { MatchtimePanel } from '@/components/footshorts/MatchtimePanel'
+import { ViznbaPipeline } from '@/components/viznba/ViznbaPipeline'
 import {
   fetchFootshortsPipelineStats,
   type PipelineStats,
@@ -139,6 +140,8 @@ interface Props {
 export default async function AppPipelinePage({ params }: Props) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/pipeline`)
+  // VizNBA has its own news worker and tables; everything below is footshorts'.
+  if (appSlug === 'viznba') return <ViznbaPipeline />
 
   let data: PipelineStats
   try {

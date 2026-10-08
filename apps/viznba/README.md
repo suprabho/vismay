@@ -19,12 +19,24 @@ All sports data comes from ESPN's free public site API (no key); see
 | `/game/[id]` | Score, margin chart, linescore, team stats, leaders, recap, plays; auto-refreshes while live | `summary` |
 | `/teams` | Follow picker | — |
 | `/api/remind/[id]` | "Remind me": an `.ics` event with a 30-minute alarm | `summary` |
+| `/s/[slug]` | An agent-authored HTML story, served as posted in the VizNBA chrome (`@vismay/html-stories`) | — |
+| `/api/html-stories` (+ `/brief`, `/assets`), `/formats/*` | The token-gated publish, brief (with `?games=` box scores) and assets APIs, and the story format runtimes | `summary` (brief) |
+| `/api/randomizer/spins`, `/spins/[id]`, `/news` | The NBA Desk's token-gated spin routes and news snapshot (`@vismay/randomizer`) | `scoreboard` |
 
 ESPN buckets games by US-Eastern day; `gamesByLocalDay` re-buckets them into
 the viewer's zone. Followed teams and the browser's time zone live in cookies
 (`viznba_teams`, `viznba_tz`), so pages render server-side without an
 account. If `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` are
 set, the Feed also pulls the worker's summarised, team-tagged articles.
+
+HTML stories and the NBA Desk randomizer are managed in admin under `/viznba`
+(Pipeline, HTML stories, Randomizer; see
+[apps/admin/CLAUDE.md](../admin/CLAUDE.md)). The routes above need
+`SUPABASE_SERVICE_ROLE_KEY` (the `html_stories` and `randomizer_spins`
+tables are service-role only) and the deployment's own `HTML_STORIES_TOKEN`
+for publishing, briefs with game context and spins. Apply
+`supabase/vizmaya-fyi/migrations/092_viznba.sql` (the `apps` row and the
+randomizer check) before the first spin.
 
 ```sh
 pnpm --filter @viznba/web dev     # http://localhost:3000

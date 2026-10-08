@@ -1,21 +1,22 @@
 /**
  * Types for the story randomizers: the three Vizmaya ones (the playbook's
- * Desk, Atlas and Epics) and the Footshorts one (teams, tournaments and their
- * news), their datasets (./data/*.json) and the spins they produce.
+ * Desk, Atlas and Epics), the Footshorts one (teams, tournaments and their
+ * news) and the VizNBA one (franchises, conferences and their news), their
+ * datasets (./data/*.json) and the spins they produce.
  *
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'footshorts'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'footshorts']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
 }
 
 /** The site a randomizer's stories are hosted on (an @vismay/html-stories app slug). */
-export type RandomizerApp = 'vizmaya-fyi' | 'footshorts'
+export type RandomizerApp = 'vizmaya-fyi' | 'footshorts' | 'viznba'
 
 /** The randomizers one site's slot machine shows, in tab order. */
 export function randomizersFor(app: RandomizerApp): RandomizerId[] {
@@ -27,7 +28,7 @@ export interface ReelDef {
   label: string
   /** Locking this reel also locks these (a sub-industry only makes sense inside its industry). */
   parents?: string[]
-  /** Shown only when an option is on (the Atlas pair reel, the Footshorts opponent). Never lockable. */
+  /** Shown only when an option is on (the Atlas pair reel, the Footshorts and NBA opponents). Never lockable. */
   option?: 'pair'
 }
 
@@ -40,12 +41,12 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics sequence mode, Footshorts head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
    * built from it (decision D4: gated for Atlas and Epics because of the
-   * sensitivity rules, optional for the Desk and Footshorts).
+   * sensitivity rules, optional for the Desk, Footshorts and the NBA Desk).
    */
   gated: boolean
 }
@@ -107,6 +108,22 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     reels: [
       { key: 'competition', label: 'Tournament' },
       { key: 'team', label: 'Team', parents: ['competition'] },
+      { key: 'angle', label: 'Angle' },
+      { key: 'fresh', label: 'Freshness' },
+      { key: 'pair', label: 'Opponent', option: 'pair' },
+    ],
+    option: { key: 'pair', label: 'Head-to-head (draw an opponent)' },
+    gated: false,
+  },
+  viznba: {
+    id: 'viznba',
+    app: 'viznba',
+    name: 'NBA Desk',
+    hint: 'Franchises · conferences · news',
+    format: 'Basketball explainer with charts',
+    reels: [
+      { key: 'conference', label: 'Conference' },
+      { key: 'team', label: 'Team', parents: ['conference'] },
       { key: 'angle', label: 'Angle' },
       { key: 'fresh', label: 'Freshness' },
       { key: 'pair', label: 'Opponent', option: 'pair' },
@@ -371,6 +388,127 @@ export interface FootshortsNews {
   teams: FootshortsTeamNews[]
 }
 
+/* ---------- VizNBA ---------- */
+
+export type ViznbaConferenceSlug = 'east' | 'west'
+
+export interface ViznbaConference {
+  slug: ViznbaConferenceSlug
+  name: string
+  divisions: string[]
+}
+
+/** One franchise as the dataset fixes it (viznba_teams carries the rest). */
+export interface ViznbaTeam {
+  /** viznba_teams.team_id: ESPN's abbreviation lowercased ("lal", "gs", "utah"). */
+  id: string
+  /** ESPN team id: scoreboards and game summaries key on it. */
+  espn_id: string
+  /** The NBA abbreviation ("GSW"), as the league writes it. */
+  abbreviation: string
+  name: string
+  conference: ViznbaConferenceSlug
+  division: string
+  /** Team colour, hex. */
+  color: string
+}
+
+export interface ViznbaFreshness {
+  name: 'Last night' | 'This week' | 'Evergreen'
+  /** The news window in days; null for Evergreen. */
+  days: number | null
+  window: string
+}
+
+export interface ViznbaDataset {
+  conferences: ViznbaConference[]
+  teams: ViznbaTeam[]
+  angles: NamedOption[]
+  freshness: ViznbaFreshness[]
+}
+
+/** A tagged VizNBA article, as the news snapshot keeps it. */
+export interface ViznbaHeadline {
+  title: string
+  url: string
+  publisher: string
+  /** ISO date, YYYY-MM-DD. */
+  date: string
+  /** The worker's topic: game, transaction, injury, draft, front_office, league, analysis, off_court. */
+  topic: string | null
+}
+
+/** One game a team played or will play, from ESPN's scoreboard. */
+export interface ViznbaGameRef {
+  /** ESPN event id: the brief appends that game's box score. */
+  id: string
+  /** ISO timestamp of the tip-off. */
+  date: string
+  /** ESPN's state: pre, in or post. */
+  state: 'pre' | 'in' | 'post'
+  /** Preseason, Regular Season, Play-In, Postseason… as ESPN labels it. */
+  season: string | null
+  homeId: string | null
+  awayId: string | null
+  home: string
+  away: string
+  homeScore: number | null
+  awayScore: number | null
+}
+
+/** A player or coach whose stories put the team in the news. */
+export interface ViznbaPersonNews {
+  id: string
+  name: string
+  kind: 'player' | 'coach'
+  articles: number
+}
+
+/** One franchise in the live news snapshot (spins.ts loadViznbaNews). */
+export interface ViznbaTeamNews {
+  /** viznba_teams.team_id */
+  id: string
+  espnId: string
+  abbreviation: string
+  name: string
+  conference: ViznbaConferenceSlug
+  division: string
+  logoUrl: string | null
+  color: string
+  /** 0 to 100, relative to the busiest franchise in the snapshot. */
+  heat: number
+  /** Distinct stories tagged with the team, or a player or coach on it, in the news window. */
+  articles: number
+  /** Newest first, up to 3. */
+  headlines: ViznbaHeadline[]
+  /** The most-tagged people on the roster, up to 3. */
+  people: ViznbaPersonNews[]
+  /** The last finished games (newest first) and the next ones (soonest first). */
+  recent: ViznbaGameRef[]
+  upcoming: ViznbaGameRef[]
+}
+
+export interface ViznbaConferenceNews {
+  slug: ViznbaConferenceSlug
+  /** 0 to 100, relative to the busier conference. */
+  heat: number
+  /** Distinct stories tagged with any of its teams. */
+  articles: number
+  headlines: ViznbaHeadline[]
+}
+
+/** The live news the NBA Desk draws from, read from the viznba_ tables and ESPN's scoreboard. */
+export interface ViznbaNews {
+  /** ISO timestamp the snapshot was read. */
+  asOf: string
+  /** The news window heat is counted over, in days. */
+  windowDays: number
+  conferences: ViznbaConferenceNews[]
+  teams: ViznbaTeamNews[]
+  /** The schedule read from ESPN; when it failed, the draw runs on the news alone and says so. */
+  schedule: { ok: boolean; games: number; error: string | null }
+}
+
 /* ---------- Spins ---------- */
 
 export type RuleKind = 'block' | 'warn' | 'good' | 'info'
@@ -412,6 +550,17 @@ export interface EpicsPicks {
   episodeId: string
   placeId: string
   lens: string
+}
+
+export interface ViznbaPicks {
+  conference: ViznbaConferenceSlug
+  /** viznba_teams.team_id */
+  team: string
+  angle: string
+  fresh: ViznbaFreshness['name']
+  freshDrawn: ViznbaFreshness['name']
+  /** viznba_teams.team_id of the head-to-head opponent. */
+  opponent?: string
 }
 
 export interface FootshortsPicks {
@@ -482,14 +631,35 @@ export interface FootshortsSubject {
   fixtureIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | FootshortsSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | FootshortsPicks
+export interface ViznbaSubject {
+  randomizer: 'viznba'
+  conference: ViznbaConference & { heat: number; articles: number }
+  team: ViznbaTeamNews
+  opponent: ViznbaTeamNews | null
+  angle: NamedOption
+  freshness: ViznbaFreshness
+  /** Days since the team's newest tagged story, or null when none is on file. */
+  lastDevelopmentDays: number | null
+  /** When the news snapshot was read, and its window. */
+  newsAsOf: string
+  newsWindowDays: number
+  /**
+   * The games the brief appends box scores for: the team's (or the
+   * head-to-head's) recent results and next game, ESPN event ids.
+   */
+  gameIds: string[]
+}
+
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
   region?: string
   /** Footshorts: the competition slug, for the same-tournament-twice rule. */
   competition?: string
+  /** NBA Desk: the conference, for the same-conference-twice rule. */
+  conference?: string
   pair?: boolean
   tradition?: string
   types?: EpicType[]

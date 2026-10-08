@@ -46,6 +46,7 @@
     "./storyReorder": "./src/storyReorder.ts",
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
     "./footshortsData": "./src/footshortsData.ts",
+    "./viznbaData": "./src/viznbaData.ts",
     "./footshortsShareCards": "./src/footshortsShareCards.ts",
     "./footshortsPowerRankings": "./src/footshortsPowerRankings.ts",
     "./powerRankingsDispatch": "./src/powerRankingsDispatch.ts",

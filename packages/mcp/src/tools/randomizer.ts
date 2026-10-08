@@ -1,19 +1,23 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
- * `get_desk_heat`, `refresh_desk_heat` and `get_football_news`.
+ * `get_desk_heat`, `refresh_desk_heat`, `get_football_news` and `get_nba_news`.
  *
  * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
  * editorial format), Atlas (countries and culture, geography format) and
  * Epics (epics place by place, geography format); for footshorts, the
  * Football Desk (a tournament, a team, an angle and a freshness, weighted by
- * the team's news on footshorts; football explainer with match context). A
+ * the team's news on footshorts; football explainer with match context); for
+ * viznba, the NBA Desk (a conference, a franchise, an angle and a freshness,
+ * weighted by the team's news on VizNBA; basketball explainer with box
+ * scores). A
  * spin draws the topic under the playbook's rules and is logged; the agent
  * then reads the spin's brief (`get_html_story_brief` with `spinId` and the
  * spin's app), researches, saves the research file here, and publishes the
  * page with the same `spinId`. Pure HTTP to the deployed site with the
  * publish token, so the draw always sees the real log (one log for both
  * sites: a Football Desk spin is created on footshorts.com with the
- * footshorts token, everything else on vizmaya.fyi).
+ * footshorts token, an NBA Desk spin on viznba with the viznba token,
+ * everything else on vizmaya.fyi).
  */
 
 import { readFile } from 'node:fs/promises'
@@ -25,11 +29,14 @@ import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type Vismay
 const spinIdSchema = z.string().uuid().describe('A spin id, as spin_randomizer returned it.')
 
 /**
- * Both sites serve every spin from the one log, so a call by spin id goes to
+ * Every site serves every spin from the one log, so a call by spin id goes to
  * whichever site this server holds a token for (vizmaya first).
  */
 function anySite(): RandomizerApp {
-  return htmlStoriesToken('vizmaya-fyi') ? 'vizmaya-fyi' : htmlStoriesToken('footshorts') ? 'footshorts' : 'vizmaya-fyi'
+  if (htmlStoriesToken('vizmaya-fyi')) return 'vizmaya-fyi'
+  if (htmlStoriesToken('footshorts')) return 'footshorts'
+  if (htmlStoriesToken('viznba')) return 'viznba'
+  return 'vizmaya-fyi'
 }
 
 async function call(config: VismayMcpConfig, path: string, init: RequestInit = {}, app: RandomizerApp = anySite()): Promise<any> {
@@ -78,21 +85,26 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'depth, a geography frame and a lens; route table), or "epics" (an epic, an episode, a place and a lens; ' +
         'route table with geography status). For footshorts.com, "footshorts" (the Football Desk: a tournament, a ' +
         'team in it, an angle and a news freshness, weighted by how much footshorts news each has; football ' +
-        'explainer whose brief carries the match context of the team\'s recent and next fixtures). The draw applies ' +
+        'explainer whose brief carries the match context of the team\'s recent and next fixtures). For viznba, ' +
+        '"viznba" (the NBA Desk: a conference, a franchise in it, an angle and a news freshness, weighted by how much ' +
+        'VizNBA news each has, a player\'s or coach\'s stories counting for his team; basketball explainer whose brief ' +
+        'carries the box scores of the team\'s recent and next games from ESPN). The draw applies ' +
         'the playbook rules: 30 and 90 day repeat blocks, heat weighting, region, tradition and tournament ' +
         'balancing, the philosophical quota. To keep some reels, pass `from` ' +
         '(the spin on screen) and `locks`. To reject a spin and draw again, pass `from`, respin=true and a reason. ' +
-        'Next: get_html_story_brief with spinId (and app "footshorts" for a Football Desk spin), research, ' +
+        'Next: get_html_story_brief with spinId (and app "footshorts" for a Football Desk spin, "viznba" for an NBA ' +
+        'Desk spin), research, ' +
         'save_spin_research, then publish_html_story with spinId (same app).',
       inputSchema: {
-        randomizer: z.enum(['desk', 'atlas', 'epics', 'footshorts']),
+        randomizer: z.enum(['desk', 'atlas', 'epics', 'footshorts', 'viznba']),
         from: spinIdSchema.optional().describe('The spin the locks keep values from, or the one a re-spin rejects.'),
         locks: z
           .array(z.string())
           .optional()
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
-              'lens. epics: epic, episode, place, lens. footshorts: competition, team, angle, fresh. A child lock ' +
+              'lens. epics: epic, episode, place, lens. footshorts: competition, team, angle, fresh. viznba: ' +
+              'conference, team, angle, fresh. A child lock ' +
               'implies its parents.',
           ),
         respin: z.boolean().default(false).describe('Reject `from` (logged) and draw again.'),
@@ -105,7 +117,8 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
           .default(false)
           .describe(
             'atlas: draw a second country; the story is the relationship (about once a week). footshorts: draw a ' +
-              'head-to-head opponent from the same tournament, preferring one the team meets in the window.',
+              'head-to-head opponent from the same tournament, preferring one the team meets in the window. viznba: ' +
+              'draw a head-to-head opponent from the league, preferring one the team plays in the window.',
           ),
         sequence: z.boolean().default(false).describe('epics only: continue the previous spin\'s route to its next place.'),
       },
@@ -248,6 +261,24 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
     },
     async () => {
       const body = await call(config, '/api/randomizer/news', {}, htmlStoriesToken('footshorts') ? 'footshorts' : anySite())
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+
+  server.registerTool(
+    'get_nba_news',
+    {
+      title: 'Get the NBA Desk news table',
+      description:
+        'The live VizNBA news the NBA Desk randomizer draws from: both conferences with their news heat (0 to 100) ' +
+        'and story count over the last 14 days, and all 30 franchises with their heat, story count, newest ' +
+        'headlines, the players and coaches driving their news, and their recent and next games from ESPN\'s ' +
+        'schedule. Computed from the viznba_ tables and ESPN on each call, so there is nothing to refresh. Needs ' +
+        'the viznba publish token.',
+      inputSchema: {},
+    },
+    async () => {
+      const body = await call(config, '/api/randomizer/news', {}, 'viznba')
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )

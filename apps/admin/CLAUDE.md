@@ -157,7 +157,7 @@ stories from (falling back to the engine's `DEFAULT_THEME`).
   `appSlug` (`f1`); `CanvasClient` resolves it with `appSlugForVertical()` from
   `@vismay/verticals/data` before it reaches the presets strip (`vizf1`).
 
-## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories)
+## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories, /viznba/html-stories)
 
 Agent-authored, self-contained HTML pages hosted as-is at `<site>/s/<slug>`
 ([packages/html-stories](../../packages/html-stories); the pipeline is
@@ -165,7 +165,7 @@ documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)). One
 table, scoped by `app_slug`; one set of admin code for every hosting app:
 
 - **Pages:** `app/vizmaya/(tabbed)/html-stories` and
-  `app/[appSlug]/(tabbed)/html-stories` (footshorts and vizf1; other apps 404) render
+  `app/[appSlug]/(tabbed)/html-stories` (footshorts, vizf1 and viznba; other apps 404) render
   [components/html-stories/HtmlStoriesIndex.tsx](components/html-stories/HtmlStoriesIndex.tsx);
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
@@ -178,7 +178,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk) for the Copy-brief button.
+  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
   scroll, book, board, deck, and recap on vizf1 only; also on the Randomizer tab, where it marks the
@@ -194,16 +194,22 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   code (up to 8; a team chip adds both cars) and the angle — the brief then
   carries the race context (`buildRaceContext` in `@vismay/f1-viz/race-context`:
   results, lap timing, telemetry, strategy, the cross-session head-to-head and
-  the standings round by round). The brief is fetched whenever
-  style, matches or races change and copied synchronously on click.
+  the standings round by round); for viznba, **Add games**
+  ([GameContextPicker.tsx](components/html-stories/GameContextPicker.tsx)): games
+  off ESPN's scoreboard (`GET /api/viznba/games?back=&ahead=`, `fetchNbaGames`
+  from `@vismay/randomizer/spins`) by window and team, up to 12, and the angle —
+  the brief then carries their game context (`buildGameContext` in
+  `@vismay/html-stories/viznbaBrief`: ESPN box scores, quarters, team stats,
+  player lines, runs, leaders, recap). The brief is fetched whenever
+  style, matches, races or games change and copied synchronously on click.
 
-## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer)
+## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088 and 090;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090 and 092;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
 Desk, Atlas and Epics on `/vizmaya/randomizer`, the Football Desk on
-`/footshorts/randomizer`. One client, `RandomizerClient`, takes the `app`
+`/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
@@ -216,7 +222,7 @@ story links.
   brief and Copy research stub, and the Desk heat table (stale and failed
   refreshes shown).
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
-  (footshorts only, other apps 404): the same client with `app="footshorts"`,
+  (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel
   when Head-to-head is on) and the **Football news heat** panel in place of
   the Desk heat table: tournament chips (struck through when they have no
@@ -224,9 +230,48 @@ story links.
   story count, next fixture and newest headline. It reads
   `loadFootshortsNews()` live; nothing to refresh. Its brief is a footshorts
   brief carrying the spin and the match context of the spin's fixtures.
+- **NBA Desk page:** the same page for `viznba`: the client with `app="viznba"`
+  and `nbaNews`, one reel set (Conference, Team, Angle, Freshness, plus the
+  Opponent reel when Head-to-head is on) and the **NBA news heat** panel:
+  conference chips and all 30 franchises by heat with story count, the people
+  in the news, last result and next game, and newest headline, plus a badge
+  when ESPN's schedule could not be read. It reads `loadViznbaNews()` live.
+  Its brief is a viznba brief carrying the spin and the box scores of the
+  spin's games.
 - **API (`isAuthed()`-gated):** `GET|POST /api/randomizer/spins`,
   `PATCH /api/randomizer/spins/[id]` (`{ action: 'approve'|'send_back', note }`
   or `{ research }`), `GET /api/randomizer/heat`; `POST /api/html-stories/brief`
-  takes a footshorts `spinId` with `app: 'footshorts'`. They call the same
+  takes a footshorts `spinId` with `app: 'footshorts'` and a viznba one with
+  `app: 'viznba'`. They call the same
   `@vismay/randomizer/spins` helpers as the token-gated agent routes on
   vizmaya-fyi, so the draw rules hold whoever spins.
+
+## VizNBA Pipeline tab (/viznba/pipeline)
+
+The health of the VizNBA news worker ([apps/viznba/worker](../viznba/worker),
+tables in [supabase/viznba](../../supabase/viznba/migrations)). The
+`[appSlug]/(tabbed)/pipeline` page hands `viznba` to
+[components/viznba/ViznbaPipeline.tsx](components/viznba/ViznbaPipeline.tsx)
+(a server component; footshorts keeps the rest of the page):
+
+- **Workers:** the footshorts `WorkersPanel` with `endpoint="/api/viznba/workers"`
+  ([route](app/api/viznba/workers/route.ts), same contract as
+  `/api/footshorts/workers`) over `VIZNBA_WORKERS` in
+  `@vismay/content-source/workerDispatch` (news ingest every 4h, the weekly
+  roster seed): last run and a trigger, via the `GITHUB_DISPATCH_*` env.
+- **Stats:** `fetchViznbaPipelineStats()` in
+  [packages/content-source/src/viznbaData.ts](../../packages/content-source/src/viznbaData.ts):
+  freshness (last ingest, newest story the app's Feed shows), the last 24h by
+  status, all-time counts, the roster the tagger resolves against (teams,
+  active players, coaches, last seed), tagging coverage and tags per story,
+  14-day volume (summarized share in orange), topics (NBA topics vs the
+  hidden ones), per-source quality, grouped failure reasons, and the most
+  tagged teams and people. A diagnosis banner explains an empty day (no
+  roster, nothing ingested, every call failing, everything hidden).
+- **Registration:** the section needs the `viznba` row in `apps` (migration
+  [092_viznba.sql](../../supabase/vizmaya-fyi/migrations/092_viznba.sql)).
+  The tabs (Pipeline, HTML stories, Randomizer) are in
+  [components/section/AppAdminTabs.tsx](components/section/AppAdminTabs.tsx).
+  `NEXT_PUBLIC_VIZNBA_URL` sets the public site the "Live at" links and briefs
+  point at (default `https://viznba.com`, a placeholder).
+
