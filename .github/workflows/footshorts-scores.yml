@@ -8,7 +8,7 @@ name: Footshorts - scores refresh
 # They used to run on their own twice-daily schedule in footshorts-recap.yml;
 # that schedule has since been retired, so recaps are manual-only and the event
 # syncs have no scheduled writer at all. Either way this job stays scores-only:
-# a 3-hourly top-up never drags along the Gemini / API-Football / Sportradar
+# a 3-hourly top-up never drags along the AI gateway / API-Football / Sportradar
 # budgets a recap consumes.
 #
 # Required repo secrets (in `Production` — shared project-wide with vizmaya /

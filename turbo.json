@@ -14,7 +14,7 @@
         "SSG_STORY_LIMIT",
         "ADMIN_PASSWORD",
         "ADMIN_SESSION_SECRET",
-        "GEMINI_API_KEY",
+        "AI_GATEWAY_API_KEY",
         "ANTHROPIC_API_KEY",
         "GITHUB_DISPATCH_TOKEN",
         "GITHUB_DISPATCH_REPO",

@@ -3,17 +3,16 @@ name: Footshorts - hourly news ingest
 # Pulls football RSS feeds — plus theanalyst.com, the one approved scraped
 # source (SCRAPE_SOURCES in worker/src/sources.ts; policy + verification
 # checklist in apps/footshorts/docs/theanalyst-scraping.md) — hands each new
-# article to Gemini for summary + tagging, upserts into the footshorts
-# Supabase. Safe to re-run (idempotent on url_hash).
+# article to the AI gateway (Jev classifies, Claude Haiku summarises + tags,
+# Jev gates the tags), upserts into the footshorts Supabase. Safe to re-run
+# (idempotent on url_hash).
 #
 # Required repo secrets (in `Production` — shared project-wide with vizmaya /
 # vizf1 / energy-profile workflows):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
-#   GEMINI_API_KEY
+#   AI_GATEWAY_API_KEY           - Vercel AI Gateway key (Jev + Claude)
 #   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshorts-only)
-# Optional repo variable:
-#   GEMINI_MODEL                 - overrides default (gemini-2.5-flash)
 
 on:
   schedule:
@@ -55,7 +54,6 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
         run: pnpm ingest:ci

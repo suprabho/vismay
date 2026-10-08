@@ -15,7 +15,7 @@
  *       `Country: ${p.name}\nMix: ${p.mix}\n`,
  *   })
  *   const { user, system } = summarisePrompt.fill({ name: 'India', mix: 'coal 70%' })
- *   await generateText({ model: 'text.fast', system, prompt: user })
+ *   await generateText({ model: 'text.haiku', system, prompt: user })
  */
 
 export interface Prompt<P> {
