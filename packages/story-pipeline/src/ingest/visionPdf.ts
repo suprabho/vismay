@@ -1,6 +1,6 @@
 /**
  * Vision-based PDF extraction — rasterise each page and have a vision model
- * (Claude Sonnet, falling back to Gemini per page) transcribe it to clean
+ * (Claude Sonnet, falling back to GPT-5.6 Terra per page) transcribe it to clean
  * GitHub-flavored markdown.
  *
  * Why this exists: the deterministic `pdf-parse` text layer (see `extract.ts`)
@@ -30,12 +30,13 @@ const SCALE = 2
 /** Per-page output budget — a dense financial page can run long. */
 const MAX_TOKENS_PER_PAGE = 6000
 /** Primary transcription model — Claude Sonnet (vision-capable). */
-const PRIMARY_MODEL = 'text.claude'
+const PRIMARY_MODEL = 'text.sonnet'
 /**
- * Per-page fallback when the primary call fails — Gemini, a different provider
- * lineage, so a Claude outage or refusal doesn't sink the whole extraction.
+ * Per-page fallback when the primary call fails — GPT-5.6 Terra, a different
+ * provider lineage, so a Claude outage or refusal doesn't sink the whole
+ * extraction.
  */
-const FALLBACK_MODEL = 'text.pro'
+const FALLBACK_MODEL = 'text.terra'
 
 const PAGE_PROMPT =
   'Transcribe this single document page to clean GitHub-flavored markdown. ' +
@@ -68,7 +69,7 @@ export interface VisionPdfOptions {
   label?: string
   /**
    * Model alias or gateway id. Defaults to Claude Sonnet with a per-page
-   * Gemini fallback; passing an explicit model disables the fallback.
+   * GPT-5.6 Terra fallback; passing an explicit model disables the fallback.
    */
   model?: string
 }

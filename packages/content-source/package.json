@@ -92,6 +92,7 @@
   },
   "dependencies": {
     "@footshorts/shared": "workspace:*",
+    "@vismay/ai-gateway": "workspace:*",
     "gray-matter": "^4.0.3",
     "yaml": "^2.8.3"
   },
