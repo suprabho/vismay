@@ -1,8 +1,35 @@
 # VizNBA
 
-NBA vertical of Vismay. Today it is the news pipeline only — no `web` app
-yet. Tables live in the project-wide Supabase under the `viznba_` prefix
+NBA vertical of Vismay: a mobile-first `web` app and the `worker` news
+pipeline. Tables live in the project-wide Supabase under the `viznba_` prefix
 ([`supabase/viznba/migrations`](../../supabase/viznba/migrations)).
+
+## `web/` — `@viznba/web`
+
+Next.js 16 + Tailwind v4 + Phosphor icons, dark theme, Saira / Martian Mono.
+All sports data comes from ESPN's free public site API (no key); see
+`lib/espn.ts`, which normalises every payload at the boundary.
+
+| Route | What it shows | ESPN source |
+| --- | --- | --- |
+| `/` Feed | Full-screen swipe cards: game recaps with a score-margin hero and the decisive run (`lib/margin.ts`), plus league headlines | `scoreboard`, `summary`, `news` |
+| `/for-you` | Followed teams: live card with margin sparkline, preview (win probability, last five, back-to-back, last meeting), finals with linescore and stat bars | `scoreboard` × 11 days, `summary` |
+| `/calendar?view=day\|week\|month&date=` | Day list with NOW rule and "My teams" switch; week block chart and team summaries; month grid with per-team dots | `scoreboard` per day |
+| `/editorial`, `/editorial/standings` | Epics (Season Tracker, conference races), recaps, boards and ESPN features with filter chips | `standings`, `summary`, `news` |
+| `/game/[id]` | Score, margin chart, linescore, team stats, leaders, recap, plays; auto-refreshes while live | `summary` |
+| `/teams` | Follow picker | — |
+| `/api/remind/[id]` | "Remind me": an `.ics` event with a 30-minute alarm | `summary` |
+
+ESPN buckets games by US-Eastern day; `gamesByLocalDay` re-buckets them into
+the viewer's zone. Followed teams and the browser's time zone live in cookies
+(`viznba_teams`, `viznba_tz`), so pages render server-side without an
+account. If `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` are
+set, the Feed also pulls the worker's summarised, team-tagged articles.
+
+```sh
+pnpm --filter @viznba/web dev     # http://localhost:3000
+pnpm --filter @viznba/web test    # margin / time-zone unit tests
+```
 
 ## `worker/` — `@viznba/worker`
 
