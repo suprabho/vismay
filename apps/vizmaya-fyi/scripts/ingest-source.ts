@@ -11,9 +11,9 @@
  *
  * What it does:
  *   1. Extracts clean text from the input (pdf/eml/html/md/txt).
- *   2. Calls Gemini with the south-korea-gpu-hour story as a few-shot
- *      example, asking it to emit .md + .config.yaml + .share.yaml +
- *      one or more chart JSONs.
+ *   2. Calls Claude Opus (via the AI Gateway) with the south-korea-gpu-hour
+ *      story as a few-shot example, asking it to emit .md + .config.yaml +
+ *      .share.yaml + one or more chart JSONs.
  *   3. Writes everything into content/stories/<slug>/ (refuses to
  *      overwrite unless --overwrite is passed).
  *
@@ -29,7 +29,7 @@ import { structure } from './ingest/structure'
 const ROOT = path.resolve(__dirname, '..')
 const STORIES_DIR = path.join(ROOT, 'content/stories')
 
-// Load .env so GEMINI_API_KEY is picked up (same pattern as generate-audio).
+// Load .env so AI_GATEWAY_API_KEY is picked up (same pattern as generate-audio).
 const envPath = path.resolve(ROOT, '.env')
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
@@ -109,7 +109,7 @@ async function main() {
   console.log(`[ingest] byline: ${source.byline ?? '(none)'}`)
   console.log(`[ingest] body:   ${source.body.length} chars`)
 
-  console.log(`[ingest] calling Gemini (this takes ~30-60s)`)
+  console.log(`[ingest] calling Claude Opus (this takes ~1-2 min)`)
   const story = await structure(source, args.slug)
   if (story.suggestedSlug && story.suggestedSlug !== args.slug) {
     console.log(`[ingest] model suggested slug: ${story.suggestedSlug} (you used: ${args.slug})`)

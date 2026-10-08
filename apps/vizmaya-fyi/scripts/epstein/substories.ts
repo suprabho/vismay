@@ -4,18 +4,20 @@
  * Reads epstein_mentions to build a co-occurrence graph across people,
  * locations, and events that appear in the same document. Runs a simple
  * community detection (greedy modularity via union-find) to cluster
- * entities into substories, then uses Claude to generate a title + summary
- * for each cluster.
+ * entities into substories, then uses Claude Sonnet (via the AI Gateway) to
+ * write a title + summary for each cluster.
  *
  * Usage:
  *   npx tsx scripts/epstein/substories.ts [--min-edge-weight 2]
  *
  * Environment:
- *   ANTHROPIC_API_KEY
+ *   AI_GATEWAY_API_KEY
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  */
 
+import { z } from "zod";
+import { generateText, hasGatewayCredentials } from "@vismay/ai-gateway";
 import { createServiceClient } from "@vismay/content-source/supabase";
 
 // ---------------------------------------------------------------------------
@@ -82,37 +84,32 @@ class UnionFind {
 // Claude substory titling
 // ---------------------------------------------------------------------------
 
+const SubstorySchema = z.object({ title: z.string(), summary: z.string() });
+
+// Sub-story writing is editorial prose → standard Claude tier.
 async function generateSubstoryTitle(
   people: string[],
   locations: string[],
   events: string[]
 ): Promise<{ title: string; summary: string }> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
-
   const prompt = `Given this cluster of entities from Epstein-related documents, generate a concise substory title and 1-sentence summary.
 
 People: ${people.slice(0, 15).join(", ") || "none"}
 Locations: ${locations.slice(0, 10).join(", ") || "none"}
 Events: ${events.slice(0, 10).join(", ") || "none"}
 
-Respond ONLY with JSON, no markdown: {"title": "...", "summary": "..."}
 Title must be under 60 chars. Summary is 1 sentence describing the connection.`;
 
   try {
-    const { GoogleGenAI } = await import("@google/genai");
-    const genai = new GoogleGenAI({ apiKey });
-    const res = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
+    const { result } = await generateText({
+      model: "text.sonnet",
+      prompt,
+      schema: SubstorySchema,
+      metadata: { feature: "epstein-substories" },
     });
-    const text = res.text ?? "{}";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { title: "Untitled Cluster", summary: "" };
-    const parsed = JSON.parse(match[0]);
     return {
-      title: parsed.title ?? "Untitled Cluster",
-      summary: parsed.summary ?? "",
+      title: result.title.trim() || "Untitled Cluster",
+      summary: result.summary.trim(),
     };
   } catch {
     return { title: "Untitled Cluster", summary: "" };
@@ -129,6 +126,9 @@ async function main() {
     args.find((a) => a.startsWith("--min-edge-weight="))?.split("=")[1] ?? "2",
     10
   );
+
+  // Fail fast — step 5 deletes the old generated substories before titling.
+  if (!hasGatewayCredentials()) throw new Error("AI_GATEWAY_API_KEY not set");
 
   const supabase = createServiceClient();
 

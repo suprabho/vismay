@@ -4,7 +4,7 @@
  * Flow:
  *   Notification arrives at social-ingest@<your-subdomain> →
  *   Cloudflare Email Worker forwards raw RFC822 here →
- *   we parse with mailparser → extract fields with Gemini →
+ *   we parse with mailparser → extract fields with Claude Haiku (AI Gateway) →
  *   upsert into engagement_event.
  *
  * Auth: shared secret in `Authorization: Bearer <SOCIAL_INGEST_SECRET>`.

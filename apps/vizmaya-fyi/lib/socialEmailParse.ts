@@ -2,17 +2,24 @@
  * Parse a raw notification email from LinkedIn or X into a NormalizedEvent.
  *
  * LinkedIn's and X's web APIs are locked down or paid, so we route their
- * native notification emails through Gemini for extraction. mailparser
- * pulls out subject + text/html body; Gemini turns the body into a
- * structured event.
+ * native notification emails through Claude (Haiku, via the AI Gateway) for
+ * extraction. mailparser pulls out subject + text/html body; Haiku turns the
+ * body into a structured event.
  *
- * Why Gemini and not regex: their email templates change often. An LLM
- * with a strict JSON schema prompt is more durable than a regex per
- * template version. We log parse failures so a misfire is recoverable.
+ * Why an LLM and not regex: their email templates change often. An LLM
+ * with a strict zod schema is more durable than a regex per template
+ * version. We log parse failures so a misfire is recoverable.
+ *
+ * The event `type` enum stays inside the same Haiku call rather than going
+ * to Jev: it falls straight out of reading the email (who did what to which
+ * post), so splitting it into a separate decide() round trip would double the
+ * latency of a live route for no gain. Platform is decided by the From:
+ * header below, not by a model.
  */
 
 import { type ParsedMail, simpleParser } from 'mailparser'
-import { GoogleGenAI } from '@google/genai'
+import { z } from 'zod'
+import { generateText } from '@vismay/ai-gateway'
 import type { NormalizedEvent, Platform } from '@vismay/content-source/socialEngagement'
 
 export interface ParsedEmail {
@@ -84,62 +91,51 @@ async function sha256(s: string): Promise<string> {
 
 const SYSTEM_PROMPT = `You extract engagement signals from social-network notification emails (LinkedIn or X).
 
-Given the email body, return a single JSON object with these fields:
+Given the email body, fill in these fields:
 
-{
-  "type": "mention" | "reply" | "comment" | "dm",
-  "author_handle": "the person whose action triggered this email, e.g. @jane or Jane Doe",
-  "content": "verbatim text of their reply/comment/mention/DM",
-  "parent_content": "verbatim snippet of MY post they engaged with, if quoted in the email, else null",
-  "source_url": "the deep link to view this on the platform, usually under a 'View' or 'Reply' button"
-}
+- type: "mention" | "reply" | "comment" | "dm"
+- author_handle: the person whose action triggered this email, e.g. @jane or Jane Doe
+- content: verbatim text of their reply/comment/mention/DM
+- parent_content: verbatim snippet of MY post they engaged with, if quoted in the email, else null
+- source_url: the deep link to view this on the platform, usually under a 'View' or 'Reply' button
 
 Rules:
-- Return ONLY the JSON object, no markdown fences, no commentary.
 - If a field can't be determined, use null.
 - author_handle is the OTHER person, never me.
 - For reactions/likes/follows with no text, use type:"mention" and content:null.
 - source_url must be an https URL, not a tracking redirect summary like "Click here".`
 
-export interface LlmExtract {
-  type: 'mention' | 'reply' | 'comment' | 'dm'
-  author_handle: string | null
-  content: string | null
-  parent_content: string | null
-  source_url: string | null
-}
+const ExtractSchema = z.object({
+  type: z.enum(['mention', 'reply', 'comment', 'dm']),
+  author_handle: z.string().nullable(),
+  content: z.string().nullable(),
+  parent_content: z.string().nullable(),
+  source_url: z.string().nullable(),
+})
 
-export async function extractWithGemini(
-  email: ParsedEmail,
-  apiKey: string = process.env.GEMINI_API_KEY ?? ''
-): Promise<LlmExtract> {
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set')
-  const genai = new GoogleGenAI({ apiKey })
+export type LlmExtract = z.infer<typeof ExtractSchema>
+
+/**
+ * Text extraction on the light Claude tier. The gateway client reads
+ * AI_GATEWAY_API_KEY (or Vercel's OIDC token) itself; a missing credential
+ * surfaces as a thrown error the route turns into a 500.
+ */
+export async function extractWithLlm(email: ParsedEmail): Promise<LlmExtract> {
   const userText = `Platform: ${email.platform}
 Subject: ${email.subject}
 From: ${email.from}
 
 Body:
 ${email.bodyText.slice(0, 8000)}`
-  const response = await genai.models.generateContent({
-    model: 'gemma-4-26b-a4b-it',
-    contents: `${SYSTEM_PROMPT}\n\n${userText}`,
+  const { result } = await generateText({
+    model: 'text.haiku',
+    system: SYSTEM_PROMPT,
+    prompt: userText,
+    schema: ExtractSchema,
+    temperature: 0,
+    metadata: { feature: 'social-email-ingest' },
   })
-  const text = response.text ?? ''
-  // Same idiom as scripts/energy-profile/scrape-news.ts — Gemma doesn't
-  // honour responseSchema, so scrape the first JSON object.
-  const match = text.match(/\{[\s\S]*\}/)
-  if (!match) {
-    throw new Error(`LLM returned no JSON: ${text.slice(0, 200)}`)
-  }
-  const parsed = JSON.parse(match[0]) as Partial<LlmExtract>
-  return {
-    type: (parsed.type as LlmExtract['type']) ?? 'mention',
-    author_handle: parsed.author_handle ?? null,
-    content: parsed.content ?? null,
-    parent_content: parsed.parent_content ?? null,
-    source_url: parsed.source_url ?? null,
-  }
+  return result
 }
 
 /**
@@ -150,7 +146,7 @@ ${email.bodyText.slice(0, 8000)}`
 export async function emailToEvent(raw: string | Buffer): Promise<NormalizedEvent | null> {
   const email = await parseRawEmail(raw)
   if (!email.platform) return null
-  const llm = await extractWithGemini(email)
+  const llm = await extractWithLlm(email)
   return {
     platform: email.platform,
     external_id: email.messageId,

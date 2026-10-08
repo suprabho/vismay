@@ -53,7 +53,7 @@ scripts/            # CLI utilities (audio gen, data ingestion, migrations)
 | Animations | GSAP (ScrollTrigger), Rive |
 | Backend | Supabase (Postgres + Storage + Auth) |
 | Rendering | Playwright (PDF/video), ffmpeg (video mux) |
-| TTS | Gemini API |
+| TTS | Gemini TTS via Vercel AI Gateway |
 | Analytics | Vercel Analytics, Google Analytics |
 
 ---
@@ -84,7 +84,7 @@ npm run build
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase public auth |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server | Server-side Supabase operations |
 | `CONTENT_SOURCE` | No | `fs` (default, local files) or `db` (Supabase) |
-| `GEMINI_API_KEY` | No | TTS audio generation |
+| `AI_GATEWAY_API_KEY` | Server | Vercel AI Gateway (Claude + Jev + Gemini TTS) — LinkedIn/X email ingest, `ingest`, epic scripts, TTS audio |
 | `GITHUB_DISPATCH_TOKEN` | Prod | Fine-grained PAT for render dispatch (Actions: write) |
 | `GITHUB_DISPATCH_REPO` | Prod | `owner/repo` for the dispatch target |
 | `GITHUB_DISPATCH_REF` | No | Branch the workflow runs from (defaults to `main`) |
@@ -102,7 +102,7 @@ npm run build
 | `npm run build` | Static generation build |
 | `npm run start` | Production server |
 | `npm run lint` | ESLint checks |
-| `npm run generate-audio` | Generate TTS audio via Gemini API |
+| `npm run generate-audio` | Generate TTS audio (Gemini TTS via the AI gateway) |
 | `npm run migrate-content` | Sync filesystem stories into Supabase |
 | `npm run energy-profile:scrape` | Scrape IEA-related news for `/energy-profile` |
 | `npm run energy-profile:import-owid` | Import OWID country energy data |
@@ -117,7 +117,7 @@ Three async pipelines run via GitHub Actions in production and sync in local dev
 |----------|----------|----------|-------|
 | Autoplay video (MP4) | `/api/story-video/[slug]?aspect=9:16\|16:9` | [render-video.yml](.github/workflows/render-video.yml) | Needs Playwright + ffmpeg |
 | Story PDF (report/slides) | `/api/story-pdf/[slug]?format=report\|slides` | [render-pdf.yml](.github/workflows/render-pdf.yml) | Chromium only |
-| TTS audio | (regen button in admin) | [render-audio.yml](.github/workflows/render-audio.yml) | Needs `GEMINI_API_KEY` |
+| TTS audio | (regen button in admin) | [render-audio.yml](.github/workflows/render-audio.yml) | Needs `AI_GATEWAY_API_KEY` |
 
 All three follow the same `{ status: 'ready' \| 'rendering', public_url? }` poll shape. See [CLAUDE.md](CLAUDE.md) for required GitHub repo secrets and Vercel env vars. For how to trigger each from the admin UI, see [instructions.md](./instructions.md).
 

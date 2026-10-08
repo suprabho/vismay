@@ -6,9 +6,9 @@
  *   en.wikipedia.org (MediaWiki API)   →  LLM event extraction  →  food_history_events
  *
  * Per subject (50 dishes + ~50 curated ingredients): resolve the Wikipedia
- * article (one call: full plain-text extract + revision id), have
- * gemini-2.5-flash extract 3–12 dated/placed events as paraphrased one-line
- * claims, validate hard, geocode places (curated overrides → Mapbox), and
+ * article (one call: full plain-text extract + revision id), have Claude
+ * Haiku (via the AI Gateway; TEXT_MODEL overrides) extract 3–12 dated/placed
+ * events as paraphrased one-line claims, validate hard, geocode places (curated overrides → Mapbox), and
  * insert as status='ai-draft' rows for human review in the admin.
  *
  * Run locally:  pnpm searching-for-umami:enrich-history [flags]
@@ -22,8 +22,9 @@
  *                       print ready-to-paste historyPlaceCoords.ts suggestions
  *
  * Required env (apps/vizmaya-fyi/.env.local / .env): NEXT_PUBLIC_SUPABASE_URL,
- * SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY. Optional: MAPBOX_TOKEN ??
- * NEXT_PUBLIC_MAPBOX_TOKEN (absent → coords stay null, place text kept).
+ * SUPABASE_SERVICE_ROLE_KEY, AI_GATEWAY_API_KEY. Optional: TEXT_MODEL (alias
+ * or gateway id, default text.haiku), MAPBOX_TOKEN ?? NEXT_PUBLIC_MAPBOX_TOKEN
+ * (absent → coords stay null, place text kept).
  *
  * Rights: Wikipedia text is CC BY-SA. Claims must be PARAPHRASED (the prompt
  * demands it and a verbatim guard rejects ≥60-char exact substrings);
@@ -38,7 +39,8 @@ import { resolve } from 'node:path'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config as loadEnv } from 'dotenv'
-import { GoogleGenAI } from '@google/genai'
+import { z } from 'zod'
+import { generateText, hasGatewayCredentials, resolveModel } from '@vismay/ai-gateway'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { INGREDIENT_SUBJECTS, EXCLUDED_INGREDIENTS, DISH_WIKI_TITLES } from './history-subjects'
 import { HISTORY_PLACE_COORDS } from '../../lib/searching-for-umami/historyPlaceCoords'
@@ -51,7 +53,10 @@ loadEnv({ path: resolve(PKG_DIR, '.env') })
 const EPIC_SLUG = 'searching-for-umami'
 const WP_API = 'https://en.wikipedia.org/w/api.php'
 const UA = 'Vizmaya-Umami/1.0 (food history enrich; hello@promad.design)'
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'
+// Per-article event extraction is high-volume structured work → light tier.
+const TEXT_MODEL = process.env.TEXT_MODEL || 'text.haiku'
+/** Concrete gateway id, recorded on every event row for provenance. */
+const TEXT_MODEL_ID = resolveModel(TEXT_MODEL)
 const MAX_EXTRACT_CHARS = 60_000
 const EVENT_KINDS = new Set(['origin', 'spread', 'introduction', 'etymology', 'cultivation', 'other'])
 
@@ -231,31 +236,40 @@ Extract 3-12 events. Rules:
 - place is the location as the source names it ("Fujian", "Persia", "Punjab"). country_code is the MODERN ISO-2 country containing that place, when clear (else null).
 - confidence: high = explicit in the text; medium = lightly inferred framing; low = the text itself hedges ("possibly", "disputed").
 
-Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"events": [{"kind": "origin", "date_text": "16th century", "year": 1500, "year_end": null, "place": "Punjab", "country_code": "IN", "claim": "...", "confidence": "high"}]}
-
 ARTICLE TEXT:
 ${text}`
 }
 
-async function extractEvents(genai: GoogleGenAI, subject: Subject, page: WikiPage): Promise<RawEvent[]> {
+// Shape is enforced by tool-calling structured output; the loop below still
+// re-validates every field (verbatim guard, year bounds, ISO code shape).
+const EventsSchema = z.object({
+  events: z.array(
+    z.object({
+      kind: z.enum(['origin', 'spread', 'introduction', 'etymology', 'cultivation', 'other']),
+      date_text: z.string(),
+      year: z.number().int().nullable(),
+      year_end: z.number().int().nullable(),
+      place: z.string().nullable(),
+      country_code: z.string().nullable(),
+      claim: z.string(),
+      confidence: z.enum(['high', 'medium', 'low']),
+    })
+  ),
+})
+
+async function extractEvents(subject: Subject, page: WikiPage): Promise<RawEvent[]> {
   const text = page.extract.slice(0, MAX_EXTRACT_CHARS)
-  const res = await genai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: extractionPrompt(subject, page, text),
-    config: { responseMimeType: 'application/json', temperature: 0.3 },
+  const { result } = await generateText({
+    model: TEXT_MODEL,
+    prompt: extractionPrompt(subject, page, text),
+    schema: EventsSchema,
+    temperature: 0.3,
+    metadata: { feature: 'umami-history-enrich' },
   })
-  let raw = (res.text ?? '').trim()
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fenced) raw = fenced[1]
-  const obj = raw.match(/\{[\s\S]*\}/)
-  if (!obj) throw new Error('no JSON object in model output')
-  const parsed = JSON.parse(obj[0]) as { events?: unknown }
-  if (!Array.isArray(parsed.events)) throw new Error('events missing/not array')
 
   const normText = page.extract.replace(/\s+/g, ' ')
   const out: RawEvent[] = []
-  for (const e of parsed.events as Array<Record<string, unknown>>) {
+  for (const e of result.events as Array<Record<string, unknown>>) {
     if (!e || typeof e !== 'object') continue
     const claim = typeof e.claim === 'string' ? e.claim.replace(/\s+/g, ' ').trim() : ''
     const dateText = typeof e.date_text === 'string' ? e.date_text.trim() : ''
@@ -387,9 +401,8 @@ async function main(): Promise<void> {
     return
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY
-  if (!geminiKey && !DRY_RUN) throw new Error('missing GEMINI_API_KEY (use --dry-run to test without it)')
-  const genai = geminiKey ? new GoogleGenAI({ apiKey: geminiKey }) : null
+  const canExtract = hasGatewayCredentials()
+  if (!canExtract && !DRY_RUN) throw new Error('missing AI_GATEWAY_API_KEY (use --dry-run to test without it)')
 
   const { subjects: all, unmatched } = await loadSubjects(sb)
   if (unmatched.length > 0) {
@@ -435,12 +448,12 @@ async function main(): Promise<void> {
       }
 
       let events: RawEvent[] = []
-      if (genai) {
+      if (canExtract) {
         try {
-          events = await extractEvents(genai, subject, page)
+          events = await extractEvents(subject, page)
         } catch (err) {
-          await sleep(5000) // free-tier RPM brush — retry once
-          events = await extractEvents(genai, subject, page)
+          await sleep(5000) // transient gateway/rate-limit blip — retry once
+          events = await extractEvents(subject, page)
         }
       }
 
@@ -495,7 +508,7 @@ async function main(): Promise<void> {
           source_url: page.url,
           source_title: page.title,
           wiki_oldid: page.oldid,
-          model: GEMINI_MODEL,
+          model: TEXT_MODEL_ID,
           confidence: e.confidence,
         }))
         const { error } = await sb
@@ -523,7 +536,7 @@ async function main(): Promise<void> {
       console.warn(`  ✗ ${label} failed: ${err instanceof Error ? err.message : err}`)
       failed++
     }
-    await sleep(400) // politeness: Wikipedia + Gemini free tier
+    await sleep(400) // politeness: Wikipedia + gateway rate limits
   }
 
   console.log(

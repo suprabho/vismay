@@ -132,7 +132,7 @@ The Narration tab in `/admin/[slug]` is where you fine-tune what the autoplay vi
    - An **override textarea** — type here to change what gets spoken without editing the displayed markdown.
 2. **Save** persists to `stories.tts_yaml` / `<slug>.tts.yaml`.
 3. **Regenerate audio** kicks off rendering:
-   - In production: fires `.github/workflows/render-audio.yml` (needs `GEMINI_API_KEY` in repo secrets).
+   - In production: fires `.github/workflows/render-audio.yml` (needs `AI_GATEWAY_API_KEY` in repo secrets).
    - Locally: if dispatch envs aren't set, the button returns a hint to run `npx tsx scripts/generate-audio.ts <slug> --force` from your terminal.
 
 Methodology units listed in `TTS_SKIP_IDS` (see [lib/storyTts.ts](lib/storyTts.ts)) are intentionally silent; their override input is disabled.

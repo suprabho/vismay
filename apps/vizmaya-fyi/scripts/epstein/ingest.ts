@@ -11,9 +11,11 @@
  * Environment:
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
+ *   AI_GATEWAY_API_KEY        (only needed for OCR of scanned PDFs)
  */
 
 import { createHash } from "crypto";
+import { generateText, hasGatewayCredentials } from "@vismay/ai-gateway";
 import { createServiceClient } from "@vismay/content-source/supabase";
 
 // Rough token estimate: 1 token ≈ 4 chars
@@ -21,20 +23,26 @@ const TARGET_TOKENS = 2000;
 const CHARS_PER_CHUNK = TARGET_TOKENS * 4;
 const CHUNK_OVERLAP_CHARS = 200;
 
-// Below this, assume pdf-parse failed (scanned PDF) and try Gemini OCR.
+// Below this, assume pdf-parse failed (scanned PDF) and try Claude OCR.
 const EMPTY_TEXT_THRESHOLD = 500;
 
 // DOJ bates-stamp-only scans look like "EFTA00000036\n-- 1 of 1 --" (~30 chars).
 // Anything above this from OCR has real labels/content worth keeping.
 const OCR_KEEP_THRESHOLD = 40;
 
-// Gemini inline-data cap is ~20MB; above this we'd need the File API.
-const GEMINI_INLINE_MAX_BYTES = 18 * 1024 * 1024;
+// Claude's PDF input caps out at ~32MB per request and 100 pages. The PDF goes
+// inline as base64 (+33%), so 22MB raw keeps the request under the limit.
+const PDF_INLINE_MAX_BYTES = 22 * 1024 * 1024;
+const PDF_MAX_PAGES = 100;
 
-// Minimum spacing between Gemini OCR requests. Free-tier limits are stingy
-// (~5 RPM in practice for gemini-2.0-flash with PDF inline data), so pace
-// conservatively to avoid tripping 429s.
-const OCR_MIN_INTERVAL_MS = 12_000;
+// text_source value recorded for OCR'd docs. The name predates the move off
+// Gemini; it's pinned by the check constraint in migration 004, so it stays —
+// read it as "LLM OCR".
+const OCR_TEXT_SOURCE = "gemini_ocr" as const;
+
+// Minimum spacing between OCR requests. Whole-PDF requests are token-heavy, so
+// pace modestly to stay clear of gateway / provider rate limits (429s).
+const OCR_MIN_INTERVAL_MS = 2_000;
 let lastOcrCallAt = 0;
 
 // ---------------------------------------------------------------------------
@@ -60,16 +68,18 @@ async function extractPdfText(buffer: Buffer): Promise<{ text: string; pages?: n
 
 const OCR_PROMPT = `Transcribe every legible word from this document, top-to-bottom, left-to-right. Preserve paragraph breaks. Include hand-written notes, letterheads, and stamps when readable. Do not summarize, explain, or add commentary. If a page is blank or unreadable, output "[blank page]". Output raw text only.`;
 
-async function ocrPdfWithGemini(buffer: Buffer): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
-  if (buffer.byteLength > GEMINI_INLINE_MAX_BYTES) {
-    throw new Error(`PDF too large for inline Gemini OCR (${buffer.byteLength} bytes)`);
+// Per-PDF transcription is high-volume per-item work → light Claude tier.
+// Claude reads the PDF natively (text layer + page images), so scans work.
+async function ocrPdf(buffer: Buffer, pages?: number): Promise<string> {
+  if (!hasGatewayCredentials()) throw new Error("AI_GATEWAY_API_KEY not set");
+  if (buffer.byteLength > PDF_INLINE_MAX_BYTES) {
+    throw new Error(`PDF too large for inline OCR (${buffer.byteLength} bytes)`);
   }
-  const { GoogleGenAI } = await import("@google/genai");
-  const genai = new GoogleGenAI({ apiKey });
+  if (pages != null && pages > PDF_MAX_PAGES) {
+    throw new Error(`PDF has too many pages for inline OCR (${pages} > ${PDF_MAX_PAGES})`);
+  }
 
-  // Pace global OCR traffic to stay under Gemini's RPM quota.
+  // Pace global OCR traffic to stay under the rate limit.
   const waitMs = OCR_MIN_INTERVAL_MS - (Date.now() - lastOcrCallAt);
   if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
   lastOcrCallAt = Date.now();
@@ -79,19 +89,14 @@ async function ocrPdfWithGemini(buffer: Buffer): Promise<string> {
   let lastErr: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await genai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { mimeType: "application/pdf", data: buffer.toString("base64") } },
-              { text: OCR_PROMPT },
-            ],
-          },
-        ],
+      const { result } = await generateText({
+        model: "text.haiku",
+        prompt: OCR_PROMPT,
+        files: [{ data: buffer.toString("base64"), mimeType: "application/pdf" }],
+        maxOutputTokens: 32_000,
+        metadata: { feature: "epstein-ocr" },
       });
-      return (res.text ?? "").trim();
+      return result.trim();
     } catch (err) {
       lastErr = err as Error;
       const msg = lastErr.message || "";
@@ -100,7 +105,7 @@ async function ocrPdfWithGemini(buffer: Buffer): Promise<string> {
       if (!isTransient || attempt === maxAttempts) throw lastErr;
       const base = isRateLimit ? 8000 : 2000;
       const delay = base * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 1000);
-      console.warn(`    Gemini ${isRateLimit ? "rate-limited" : "transient error"}, retry ${attempt}/${maxAttempts} in ${delay}ms`);
+      console.warn(`    OCR ${isRateLimit ? "rate-limited" : "transient error"}, retry ${attempt}/${maxAttempts} in ${delay}ms`);
       await new Promise((r) => setTimeout(r, delay));
     }
   }
@@ -176,7 +181,7 @@ async function processDocument(
 
   let rawText: string;
   let pageCount: number | undefined;
-  let textSource: "pdf_parse" | "gemini_ocr" | "empty" = "empty";
+  let textSource: "pdf_parse" | typeof OCR_TEXT_SOURCE | "empty" = "empty";
   let buffer: Buffer | null = null;
 
   try {
@@ -202,13 +207,13 @@ async function processDocument(
     return;
   }
 
-  // Fallback: if pdf-parse yielded near-nothing, try Gemini OCR.
+  // Fallback: if pdf-parse yielded near-nothing, try Claude OCR.
   if (textSource === "empty" && buffer && (doc.file_type === "pdf" || doc.source_url.endsWith(".pdf"))) {
     try {
-      const ocrText = await ocrPdfWithGemini(buffer);
+      const ocrText = await ocrPdf(buffer, pageCount);
       if (ocrText.length >= OCR_KEEP_THRESHOLD) {
         rawText = ocrText;
-        textSource = "gemini_ocr";
+        textSource = OCR_TEXT_SOURCE;
         console.log(`    OCR recovered ${ocrText.length} chars`);
       } else {
         console.log(`    OCR too short (${ocrText.length} chars) — likely blank/bates-only scan`);
