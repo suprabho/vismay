@@ -5,7 +5,7 @@
  * The agent-authored HTML story pipeline (packages/html-stories): the agent
  * reads the brief, writes one self-contained HTML page, and publishes it to
  * <site>/s/<slug> through the token-gated publish API. Three sites host them —
- * vizmaya.fyi (the default), footshorts.com and vizf1.com — chosen with `app`.
+ * vizmaya.fyi (the default), footshorts.com, vizf1.com and viznba — chosen with `app`.
  * Pure HTTP to the deployed site, so no dev server is needed.
  *
  * A footshorts brief can carry a MATCH CONTEXT: pass `fixtureIds` (up to 40 footshorts
@@ -23,10 +23,14 @@
  * moments, the drivers' head-to-head across every session, and the
  * championship standings round by round. Also token-gated.
  *
- * A vizmaya or footshorts brief can carry a randomizer spin instead
+ * A viznba brief can carry a GAME CONTEXT: pass `gameIds` (up to 12 ESPN event
+ * ids) and the site appends each game's box score from ESPN. Also token-gated.
+ *
+ * A vizmaya, footshorts or viznba brief can carry a randomizer spin instead
  * (`spinId`, from `spin_randomizer` in ./randomizer): the assignment,
  * research protocol, output format and research file for that spin (a
- * Football Desk spin's also carries its fixtures' match context). Publishing
+ * Football Desk spin's also carries its fixtures' match context, an NBA Desk
+ * spin's its games' box scores). Publishing
  * with the same `spinId` ties the page to the spin.
  *
  * Any brief can be for a STORY FORMAT (`format`): a scrolling page (the
@@ -54,9 +58,9 @@ import {
 } from '../config.js'
 
 const appSchema = z
-  .enum(['vizmaya-fyi', 'footshorts', 'vizf1'])
+  .enum(['vizmaya-fyi', 'footshorts', 'vizf1', 'viznba'])
   .default('vizmaya-fyi')
-  .describe('Which site hosts the story: vizmaya.fyi (default), footshorts.com or vizf1.com.')
+  .describe('Which site hosts the story: vizmaya.fyi (default), footshorts.com, vizf1.com or viznba.')
 
 export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfig): void {
   server.registerTool(
@@ -64,7 +68,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
     {
       title: 'Get the HTML story brief',
       description:
-        'Read this before writing a vizmaya, footshorts or vizf1 HTML story. It covers the hosting ' +
+        'Read this before writing a vizmaya, footshorts, vizf1 or viznba HTML story. It covers the hosting ' +
         'contract (one self-contained HTML file), the site\'s house design direction, chart ' +
         'rules, a self-check list, and how to publish. Pass randomStyle=true to swap the house ' +
         'style for a palette and fonts drawn at random from the site\'s existing stories. For ' +
@@ -74,9 +78,13 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'session keys, e.g. 2026_australian_grand_prix_R, across races and seasons) and optionally drivers ' +
         '(up to 8 codes such as VER) to append the race context: classifications, lap-by-lap timing, sectors, ' +
         'speed traps, strategy, the head-to-head across sessions and the standings round by round. ' +
+        'For viznba, pass gameIds (up to 12 ESPN event ids, as in viznba\'s /game/<id> URLs) to append the game ' +
+        'context: each game\'s box score from ESPN (quarters, team stats, every player\'s line, runs, leaders, recap; ' +
+        'for a game ahead the records, form, injury report and win probability). ' +
         'For a randomizer spin, pass spinId (from spin_randomizer) with the spin\'s app (vizmaya-fyi for desk, ' +
-        'atlas and epics; footshorts for the Football Desk) to get its assignment, research protocol, output format ' +
-        'and research file; a Football Desk spin\'s brief also carries the match context of its fixtures. ' +
+        'atlas and epics; footshorts for the Football Desk; viznba for the NBA Desk) to get its assignment, research ' +
+        'protocol, output format and research file; a Football Desk spin\'s brief also carries the match context of ' +
+        'its fixtures, an NBA Desk spin\'s the box scores of its games. ' +
         'Pass format to write something other than a scrolling page: "book" (pages the reader turns; ' +
         'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
         'case built from many connected pieces), "deck" (slides or a stack of cards; suits an argument ' +
@@ -105,28 +113,38 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .max(8)
           .optional()
           .describe('vizf1 only, with sessionKeys: the drivers to follow, by code (VER) or car number. Omitted: the top scorers.'),
+        gameIds: z
+          .array(z.string().regex(/^\d{6,12}$/, 'an ESPN event id'))
+          .max(12)
+          .optional()
+          .describe('viznba only: ESPN event ids of the games the story covers; their box scores are appended.'),
         prompt: z
           .string()
           .optional()
-          .describe('footshorts (with fixtureIds) or vizf1 (with sessionKeys): the editorial angle, surfaced at the top of the context.'),
+          .describe(
+            'footshorts (with fixtureIds), vizf1 (with sessionKeys) or viznba (with gameIds): the editorial angle, surfaced at the top of the context.',
+          ),
         spinId: z
           .string()
           .uuid()
           .optional()
-          .describe('A randomizer spin id (vizmaya-fyi or footshorts, matching the spin); the brief carries its assignment and research.'),
+          .describe('A randomizer spin id (vizmaya-fyi, footshorts or viznba, matching the spin); the brief carries its assignment and research.'),
         format: z
           .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck', 'recap'])
           .default('scroll')
           .describe('The story format: scroll (one long page, the default), book, board, deck, or recap (vizf1 only).'),
       },
     },
-    async ({ app, randomStyle, fixtureIds, sessionKeys, drivers, prompt, spinId, format }) => {
+    async ({ app, randomStyle, fixtureIds, sessionKeys, drivers, gameIds, prompt, spinId, format }) => {
       const site = htmlStoriesUrlFor(config, app)
       const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
       const keys = app === 'vizf1' ? (sessionKeys ?? []).filter(Boolean) : []
+      const games = app === 'viznba' ? (gameIds ?? []).filter(Boolean) : []
       if (drivers?.length && !keys.length) throw new Error('drivers need sessionKeys (vizf1 only).')
-      if (spinId && app === 'vizf1') throw new Error('vizf1 has no randomizer: use app "vizmaya-fyi" or "footshorts", whichever the spin is for.')
+      if (spinId && app === 'vizf1') {
+        throw new Error('vizf1 has no randomizer: use app "vizmaya-fyi", "footshorts" or "viznba", whichever the spin is for.')
+      }
 
       // Styles come from the site's stories, the match context from its tables
       // and the Mapbox token from its env, so ask the deployed site for the
@@ -144,6 +162,10 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         if (drivers?.length) url.searchParams.set('drivers', drivers.join(','))
         if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
       }
+      if (games.length) {
+        url.searchParams.set('games', games.join(','))
+        if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
+      }
       const token = htmlStoriesToken(app)
       if (ids.length && !token) {
         throw new Error(
@@ -157,6 +179,12 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
             '(VIZF1_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
         )
       }
+      if (games.length && !token) {
+        throw new Error(
+          'The game context needs the viznba publish token in the MCP server env ' +
+            '(VIZNBA_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
+        )
+      }
       try {
         const res = await fetch(url, token ? { headers: { authorization: `Bearer ${token}` } } : undefined)
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
@@ -165,6 +193,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         const reason = e instanceof Error ? e.message : String(e)
         if (ids.length) throw new Error(`Could not build the match context: ${reason}`)
         if (keys.length) throw new Error(`Could not build the race context: ${reason}`)
+        if (games.length) throw new Error(`Could not build the game context: ${reason}`)
         if (spinId) throw new Error(`Could not build the brief for spin ${spinId}: ${reason}`)
         if (!randomStyle) return { content: [{ type: 'text', text: houseBrief() }] }
         return {
@@ -182,13 +211,15 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       title: 'Publish an HTML story',
       description:
         'Publish one complete, self-contained HTML document to vizmaya.fyi/s/<slug>, (app: ' +
-        '"footshorts") footshorts.com/s/<slug> or (app: "vizf1") vizf1.com/s/<slug>. Pass the document as `html` or as a local ' +
+        '"footshorts") footshorts.com/s/<slug>, (app: "vizf1") vizf1.com/s/<slug> or (app: "viznba") the VizNBA ' +
+        'site\'s /s/<slug>. Pass the document as `html` or as a local ' +
         '`filePath`. Without publish=true it saves as a draft (re-posting an already published ' +
         'slug keeps it live). Posting to an existing slug replaces it; earlier versions stay ' +
         'restorable in admin. Returns the URL and lint warnings: fix them and post again to the ' +
         'same slug. Pass spinId when the page answers a randomizer spin, so the spin log records ' +
         'what shipped (an Atlas or Epics spin whose hero insight is not approved yet saves as a draft). A spin ' +
-        'publishes to its own app: vizmaya-fyi for desk, atlas and epics, footshorts for the Football Desk.',
+        'publishes to its own app: vizmaya-fyi for desk, atlas and epics, footshorts for the Football Desk, viznba for ' +
+        'the NBA Desk.',
       inputSchema: {
         app: appSchema,
         slug: z
@@ -209,7 +240,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
             'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its listing card ' +
               'background. Only when the user names one; omitted, a re-post keeps the current aura.',
           ),
-        spinId: z.string().uuid().optional().describe('The randomizer spin this page answers (vizmaya-fyi or footshorts, matching the spin).'),
+        spinId: z.string().uuid().optional().describe('The randomizer spin this page answers (vizmaya-fyi, footshorts or viznba, matching the spin).'),
       },
     },
     async ({ app, slug, html, filePath, publish, title, description, aura, spinId }) => {

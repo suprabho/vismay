@@ -3,12 +3,13 @@
  * pre-filled, the right template (editorial, geography or epic), an empty
  * claims log, and the HERO INSIGHT section everything public is written from.
  * Footshorts spins get a football template: the news, the match record from
- * the snapshot, the table, the angle read and the data pull.
+ * the snapshot, the table, the angle read and the data pull. NBA Desk spins
+ * get the same in basketball terms: the game log and the standings.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
 
-import { FOOTSHORTS } from './datasets'
+import { FOOTSHORTS, VIZNBA } from './datasets'
 import { slugify } from './text'
 import {
   RANDOMIZER_META,
@@ -18,6 +19,8 @@ import {
   type FootshortsFixtureRef,
   type FootshortsSubject,
   type SpinRecord,
+  type ViznbaGameRef,
+  type ViznbaSubject,
 } from './types'
 
 export type StubSpin = Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels'>
@@ -29,7 +32,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   const s = spin.subject
   if (s.randomizer === 'desk') return s.sub.name
   if (s.randomizer === 'atlas') return s.pair ? `${s.country.name} and ${s.pair.name}` : s.country.name
-  if (s.randomizer === 'footshorts') return s.opponent ? `${s.team.name} v ${s.opponent.name}` : s.team.name
+  if (s.randomizer === 'footshorts' || s.randomizer === 'viznba') return s.opponent ? `${s.team.name} v ${s.opponent.name}` : s.team.name
   return s.epic.title
 }
 
@@ -223,6 +226,87 @@ function footshortsTemplate(s: FootshortsSubject): string[] {
   ].filter((l, i, a) => !(l === '' && a[i - 1] === ''))
 }
 
+/** "Boston Celtics 112 @ New York Knicks 108 · 2026-10-04 · final", or "… @ … · 2026-10-30 · scheduled". */
+export function gameSummary(g: ViznbaGameRef): string {
+  const played = g.homeScore !== null && g.awayScore !== null && g.state !== 'pre'
+  const match = played ? `${g.away} ${g.awayScore} @ ${g.home} ${g.homeScore}` : `${g.away} @ ${g.home}`
+  const state = g.state === 'post' ? 'final' : g.state === 'in' ? 'live' : 'scheduled'
+  return `${match} · ${g.date.slice(0, 10)} · ${g.season ? `${g.season}, ` : ''}${state}`
+}
+
+/** The angle's data pull: the numbers worth charting for it. */
+export const VIZNBA_ANGLE_METRICS: Record<string, string[]> = {
+  'Rotation and scheme': ['Minutes by player per game', 'Pace and possessions', 'Shot diet: rim, mid-range, three', 'Defensive rating by lineup'],
+  'Form vs numbers': ['Point differential per game', 'Net rating, rolling 10 games', 'Clutch record', 'Win percentage vs expected from point differential'],
+  'Star watch': ['Points, rebounds and assists per game', 'Usage rate and true shooting', 'Minutes per game', 'Net rating on and off the floor'],
+  'Coach and front office': ['Record by coach', 'Rotation changes per game', 'Trades and signings with dates', 'Draft picks owned and owed'],
+  'Injuries and load': ['Games missed by player', 'Minutes per game for the top six', 'Record on back-to-backs', 'Record with and without the star'],
+  'Cap and trades': ['Payroll against the cap, the tax and the aprons', 'Contracts by year', 'Picks owned and owed', 'Reported trade terms'],
+  'Rookies and development': ['Minutes by rookies and second-years', 'Per-36 production', 'Draft position against output', 'G League assignments'],
+  'Rivalry and history': ['Head-to-head record', 'Playoff series between them', 'Point differential in the matchup', 'Results by era'],
+  Stakes: ['Standings position by date', 'Games back of the line that matters', 'Remaining schedule strength', 'Lottery or seeding odds'],
+  'Fans and the city': ['Average attendance and capacity', 'Ticket prices', 'Ownership timeline', 'Home and road record'],
+}
+
+export function viznbaAngleMetrics(angle: string): string[] {
+  return VIZNBA_ANGLE_METRICS[angle] ?? ['Results', 'Point differential', 'Standings position']
+}
+
+function viznbaTemplate(s: ViznbaSubject): string[] {
+  const window = s.freshness.days === null ? 'any date (Evergreen)' : `the ${s.freshness.window}`
+  const games = [...s.team.recent, ...s.team.upcoming, ...(s.opponent ? [...s.opponent.recent, ...s.opponent.upcoming] : [])]
+  const byId = new Map(games.map((g) => [g.id, g]))
+  const attached = s.gameIds.map((id) => byId.get(id)).filter((g): g is ViznbaGameRef => !!g)
+  const subject = s.opponent ? `the ${s.team.name} and the ${s.opponent.name}` : `the ${s.team.name}`
+  const conference = VIZNBA.conferences.find((c) => c.slug === s.conference.slug)?.name ?? s.conference.name
+  return [
+    '## Why Now',
+    '',
+    `The three most recent developments for ${subject}, inside ${window}. The angle goes on the newest.`,
+    s.freshness.name === 'Evergreen'
+      ? ''
+      : 'If nothing happened in that window, move to the next one (Last night, then This week, then Evergreen) and say so here.',
+    '',
+    '| # | Date | Development | Source |',
+    '|---|------|-------------|--------|',
+    '| 1 | | | |',
+    '| 2 | | | |',
+    '| 3 | | | |',
+    '',
+    '## Game log',
+    '',
+    attached.length
+      ? 'From the box scores in the brief. Copy scores and stat lines from them verbatim.'
+      : 'No games were on the schedule at spin time. Source every result.',
+    '',
+    '| Date | Game | Result | What it shows |',
+    '|------|------|--------|---------------|',
+    ...(attached.length
+      ? attached.map((g) => `| ${g.date.slice(0, 10)} | ${g.away} @ ${g.home} | ${g.state === 'pre' ? 'scheduled' : `${g.awayScore}-${g.homeScore}`} | |`)
+      : ['| | | | |']),
+    '',
+    `## Where they stand (${conference}, ${s.team.division} division)`,
+    '',
+    'Record, conference seed, games back of the line that matters (the top six, the play-in, the lottery) and the remaining schedule, from NBA.com or ESPN standings.',
+    '',
+    `## Angle read: ${s.angle.name}`,
+    '',
+    `${s.angle.description} Applied to the newest development, not to the franchise in general.`,
+    '',
+    '## Data pull',
+    '',
+    'At least 8 data points per series where possible: game data from the box scores and NBA.com stats, money from team announcements and the reported cap sheet.',
+    '',
+    '| Metric | Period | Value | Unit | Source |',
+    '|--------|--------|-------|------|--------|',
+    ...viznbaAngleMetrics(s.angle.name).map((m) => `| ${m} | | | | |`),
+    '',
+    '## Counter-case',
+    '',
+    'The strongest argument against the thesis.',
+  ].filter((l, i, a) => !(l === '' && a[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -238,7 +322,9 @@ export function researchStub(spin: StubSpin): string {
         ? atlasTemplate(s)
         : s.randomizer === 'footshorts'
           ? footshortsTemplate(s)
-          : epicsTemplate(s)
+          : s.randomizer === 'viznba'
+            ? viznbaTemplate(s)
+            : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -250,7 +336,9 @@ export function researchStub(spin: StubSpin): string {
     '> Build the claims log first. Any figure, date or causal claim needs two independent sources, or one primary source',
     s.randomizer === 'footshorts'
       ? '> (official match data, a club or league statement, club accounts). Mark each claim Verified, Contested or'
-      : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+      : s.randomizer === 'viznba'
+        ? '> (an official box score, NBA.com stats, a team or league statement). Mark each claim Verified, Contested or'
+        : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

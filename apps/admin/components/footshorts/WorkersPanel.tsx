@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * Pipeline-tab panel for the footshorts data workers (the scheduled GitHub
- * Actions: ingest, scores, fixtures, recap). Shows each worker's last run
+ * Pipeline-tab panel for an app's data workers (the scheduled GitHub Actions:
+ * footshorts' ingest, scores, fixtures and recap by default; VizNBA's ingest
+ * and roster seed with `endpoint="/api/viznba/workers"`). Shows each worker's last run
  * ("last deployed") and lets the operator fire one — or all of them — on demand
  * via /api/footshorts/workers. Feedback is inline, matching the admin app's
  * toast-free convention (see TriggerRecapButton).
@@ -22,7 +23,7 @@ interface Worker {
 type Mode = 'configured' | 'unconfigured'
 type Status = { type: 'idle' | 'ok' | 'err' | 'info'; msg?: string }
 
-export function WorkersPanel() {
+export function WorkersPanel({ endpoint = '/api/footshorts/workers' }: { endpoint?: string } = {}) {
   const [workers, setWorkers] = useState<Worker[]>([])
   const [mode, setMode] = useState<Mode | null>(null)
   const [loading, setLoading] = useState(true)
@@ -32,11 +33,11 @@ export function WorkersPanel() {
   // Pure fetch (no setState) so it's safe to await from a mount effect without
   // tripping react-hooks/set-state-in-effect; callers own the loading flag.
   const fetchWorkers = useCallback(async () => {
-    const res = await fetch('/api/footshorts/workers', { cache: 'no-store' })
+    const res = await fetch(endpoint, { cache: 'no-store' })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
     return body as { workers?: Worker[]; mode?: Mode }
-  }, [])
+  }, [endpoint])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -76,7 +77,7 @@ export function WorkersPanel() {
       setRunning(worker)
       setStatus({ type: 'idle' })
       try {
-        const res = await fetch('/api/footshorts/workers', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ worker }),
@@ -109,7 +110,7 @@ export function WorkersPanel() {
         setRunning(null)
       }
     },
-    [load],
+    [endpoint, load],
   )
 
   const busy = running !== null

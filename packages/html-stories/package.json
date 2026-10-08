@@ -2,7 +2,7 @@
   "name": "@vismay/html-stories",
   "version": "0.0.0",
   "private": true,
-  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, site chrome, the agent brief (per app: vizmaya-fyi, footshorts, vizf1; per story format: scroll, book, board, deck, and recap on vizf1; a vizmaya brief can carry a randomizer spin), the hosted format runtimes (formats/), and the shared serve/publish/brief route handlers. Its own package so changes here only rebuild admin, vizmaya-fyi, footshorts web and vizf1 web.",
+  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, site chrome, the agent brief (per app: vizmaya-fyi, footshorts, vizf1, viznba; per story format: scroll, book, board, deck, and recap on vizf1; a vizmaya, footshorts or viznba brief can carry a randomizer spin), the hosted format runtimes (formats/), and the shared serve/publish/brief route handlers. Its own package so changes here only rebuild admin, vizmaya-fyi, footshorts web, vizf1 web and viznba web.",
   "exports": {
     "./apps": "./src/apps.ts",
     "./htmlStories": "./src/htmlStories.ts",
@@ -10,6 +10,7 @@
     "./brief": "./src/brief.ts",
     "./footshortsBrief": "./src/footshortsBrief.ts",
     "./vizf1Brief": "./src/vizf1Brief.ts",
+    "./viznbaBrief": "./src/viznbaBrief.ts",
     "./briefApi": "./src/briefApi.ts",
     "./publishApi": "./src/publishApi.ts",
     "./serve": "./src/serve.ts",

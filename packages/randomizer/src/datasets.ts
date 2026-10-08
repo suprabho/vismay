@@ -2,19 +2,32 @@
  * The randomizers' datasets (playbook 4: one JSON file per randomizer),
  * typed. Pure, so the admin slot machine can fill its reel strips from them.
  * Footshorts' teams aren't here: they come from the live news snapshot
- * (FootshortsNews), so the reel only ever offers clubs with fixtures.
+ * (FootshortsNews), so the reel only ever offers clubs with fixtures. The NBA
+ * Desk's 30 franchises are fixed, so they are (with their conference and
+ * division); the snapshot (ViznbaNews) adds their news and games.
  */
 
-import type { AtlasDataset, DeskDataset, Epic, EpicPlace, EpicsDataset, FootshortsDataset, RandomizerId } from './types'
+import type {
+  AtlasDataset,
+  DeskDataset,
+  Epic,
+  EpicPlace,
+  EpicsDataset,
+  FootshortsDataset,
+  RandomizerId,
+  ViznbaDataset,
+} from './types'
 import deskJson from './data/desk.json'
 import atlasJson from './data/atlas.json'
 import epicsJson from './data/epics.json'
 import footshortsJson from './data/footshorts.json'
+import viznbaJson from './data/viznba.json'
 
 export const DESK = deskJson as unknown as DeskDataset
 export const ATLAS = atlasJson as unknown as AtlasDataset
 export const EPICS = epicsJson as unknown as EpicsDataset
 export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
+export const VIZNBA = viznbaJson as unknown as ViznbaDataset
 
 /** Types that count toward the one-in-three quota (playbook 3.2). */
 export function isPhilosophical(types: readonly string[] | undefined): boolean {
@@ -55,6 +68,12 @@ export function reelPool(randomizer: RandomizerId, key: string, teams: readonly 
     if (key === 'team' || key === 'pair') return [...teams]
     if (key === 'angle') return FOOTSHORTS.angles.map((a) => a.name)
     if (key === 'fresh') return FOOTSHORTS.freshness.map((f) => f.name)
+  }
+  if (randomizer === 'viznba') {
+    if (key === 'conference') return VIZNBA.conferences.map((c) => c.name)
+    if (key === 'team' || key === 'pair') return VIZNBA.teams.map((t) => t.name)
+    if (key === 'angle') return VIZNBA.angles.map((a) => a.name)
+    if (key === 'fresh') return VIZNBA.freshness.map((f) => f.name)
   }
   return []
 }

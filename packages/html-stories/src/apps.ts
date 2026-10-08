@@ -1,6 +1,6 @@
 /**
  * The apps that host agent-authored HTML stories. One `html_stories` table
- * serves them all (footshorts, vizf1 and vizmaya.fyi share a Supabase project); the
+ * serves them all (footshorts, vizf1, viznba and vizmaya.fyi share a Supabase project); the
  * `app_slug` column (migration 085) says which site a row belongs to, and
  * every reader/writer in ./htmlStories scopes by it.
  *
@@ -8,9 +8,9 @@
  * and the brief can all use it.
  */
 
-export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts' | 'vizf1'
+export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts' | 'vizf1' | 'viznba'
 
-export const HTML_STORY_APPS: readonly HtmlStoryApp[] = ['vizmaya-fyi', 'footshorts', 'vizf1']
+export const HTML_STORY_APPS: readonly HtmlStoryApp[] = ['vizmaya-fyi', 'footshorts', 'vizf1', 'viznba']
 
 /** Rows written before app scoping existed carry this (the column default). */
 export const DEFAULT_HTML_STORY_APP: HtmlStoryApp = 'vizmaya-fyi'
@@ -52,6 +52,16 @@ export const HTML_STORY_APP_META: Record<HtmlStoryApp, HtmlStoryAppMeta> = {
     // www is canonical: the apex redirects without CORS headers.
     siteUrl: 'https://www.vizf1.com',
     desk: 'VizF1 desk',
+    storiesPath: '/editorial',
+    storiesLabel: 'Editorial',
+  },
+  viznba: {
+    slug: 'viznba',
+    name: 'VizNBA',
+    // Placeholder until the domain is live: deployments answer with their own
+    // origin, and admin overrides it with NEXT_PUBLIC_VIZNBA_URL.
+    siteUrl: 'https://viznba.com',
+    desk: 'VizNBA desk',
     storiesPath: '/editorial',
     storiesLabel: 'Editorial',
   },

@@ -7,6 +7,7 @@ import {
   MAX_RACE_CONTEXT_SESSIONS,
   vizf1HtmlStoryBrief,
 } from '@vismay/html-stories/vizf1Brief'
+import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from '@vismay/html-stories/viznbaBrief'
 import { HTML_STORY_FORMATS, isFormatForApp, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
@@ -16,19 +17,22 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
 
 /**
  * The agent brief for the admin "Copy agent brief" button, built server-side
- * so a footshorts brief can carry its match context and a vizf1 brief its race
- * context (service-role reads of the match and telemetry tables). JSON body:
+ * so a footshorts brief can carry its match context, a vizf1 brief its race
+ * context (service-role reads of the match and telemetry tables) and a viznba
+ * brief its game context (ESPN box scores). JSON body:
  *
- *   { app, format?, style?, fixtureIds?, sessionKeys?, drivers?, prompt?, spinId? }
+ *   { app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, prompt?, spinId? }
  *
  * `format` is the story format (scroll, the default, or book, board, deck);
  * `style` is the randomizer's pick (the client shows its swatches, so it must
  * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
  * `sessionKeys` + `drivers` (codes) + `prompt` are vizf1-only;
+ * `gameIds` (ESPN event ids) + `prompt` are viznba-only;
  * `spinId` is a logged randomizer spin for this app (Desk, Atlas, Epics on
- * vizmaya; the Football Desk on footshorts), whose assignment, research
- * protocol, format and research file the brief then carries (a Football
- * Desk spin's also its fixtures' match context, unless matches are picked).
+ * vizmaya; the Football Desk on footshorts; the NBA Desk on viznba), whose
+ * assignment, research protocol, format and research file the brief then
+ * carries (a Football Desk spin's also its fixtures' match context, an NBA
+ * Desk spin's its games' box scores, unless matches or games are picked).
  * Answers text/markdown.
  */
 export const runtime = 'nodejs'
@@ -72,11 +76,16 @@ export async function POST(req: Request) {
   if (drivers.length > MAX_RACE_CONTEXT_DRIVERS) {
     return NextResponse.json({ error: `at most ${MAX_RACE_CONTEXT_DRIVERS} drivers per brief` }, { status: 400 })
   }
+  const gameIds = app === 'viznba' ? Array.from(new Set(strings(b.gameIds))) : []
+  if (gameIds.length > MAX_GAME_CONTEXT) {
+    return NextResponse.json({ error: `at most ${MAX_GAME_CONTEXT} games per brief` }, { status: 400 })
+  }
+  if (!gameIds.every(isGameId)) return NextResponse.json({ error: 'gameIds must be ESPN event ids' }, { status: 400 })
 
   let spin = null
   if (b.spinId != null) {
     if (app === 'vizf1' || !isSpinId(b.spinId)) {
-      return NextResponse.json({ error: 'spinId must be a vizmaya or footshorts randomizer spin id' }, { status: 400 })
+      return NextResponse.json({ error: 'spinId must be a vizmaya, footshorts or viznba randomizer spin id' }, { status: 400 })
     }
     try {
       spin = await getSpin(b.spinId)
@@ -96,9 +105,11 @@ export async function POST(req: Request) {
         ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format })
-          : htmlStoryBrief({ app, siteUrl, style, spin, format })
+          : app === 'viznba'
+            ? await viznbaHtmlStoryBrief({ siteUrl, style, gameIds, prompt, format, spin })
+            : htmlStoryBrief({ app, siteUrl, style, spin, format })
   } catch (e) {
-    const what = app === 'vizf1' ? 'race context' : 'match context'
+    const what = app === 'vizf1' ? 'race context' : app === 'viznba' ? 'game context' : 'match context'
     return NextResponse.json(
       { error: `${what} failed: ${e instanceof Error ? e.message : String(e)}` },
       { status: 502 },
