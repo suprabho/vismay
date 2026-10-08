@@ -124,6 +124,30 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(!b.includes('Every number has a source. End with a "Sources & method"'))
   assert.equal(b.includes('saves a draft'), randomizer !== 'desk', `${randomizer}: gate note`)
 }
+// A Football Desk spin on footshorts: its sections, the footshorts posting target, and the match-context rules.
+{
+  const now = new Date('2026-10-05T12:00:00Z')
+  const fixture = { id: 'fx-1', competition: 'premier-league', kickoff: '2026-10-02T15:00:00Z', status: 'FINISHED', homeId: 't1', awayId: 't2', home: 'Arsenal', away: 'Everton', homeScore: 2, awayScore: 0 }
+  const team = { id: 't1', slug: 'arsenal', name: 'Arsenal', country: 'England', crestUrl: null, competitions: ['premier-league'], heat: 80, articles: 5, headlines: [], recent: [fixture], upcoming: [] }
+  const news = { asOf: now.toISOString(), windowDays: 14, competitions: [{ slug: 'premier-league', heat: 100, articles: 9, headlines: [], teams: 1 }], teams: [team] }
+  const spin = {
+    ...draw({ randomizer: 'footshorts', seed: 4, now, news }),
+    id: '00000000-0000-4000-8000-0000000000bb',
+    seed: '00000004',
+    status: 'spun',
+    heroInsight: null,
+    researchMd: null,
+    createdAt: now.toISOString(),
+  } as Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'>
+  const b = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', spin, context: '# Match context\n\n## Arsenal 2 – 0 Everton\n' })
+  for (const h of ['## Your assignment', '## Format: football explainer', '## Reel script', '# Source material', '# Research stub']) assert.ok(b.includes(h), `footshorts spin: missing ${h}`)
+  assert.ok(b.includes('Randomizer: Football Desk'))
+  assert.ok(b.includes('Arsenal 2-0 Everton'))
+  assert.ok(b.includes(`spinId: "${spin.id}"\` to \`publish_html_story\` with \`app: "footshorts"\``))
+  assert.ok(b.includes('The match context at the end of this brief is primary data'))
+  assert.ok(b.includes('Byline "footshorts desk"'))
+  assert.ok(!b.includes('saves a draft'), 'the Football Desk has no gate')
+}
 // Maps: Mapbox scrollytelling only with a public token; MapLibre otherwise.
 const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
 for (const app of ['vizmaya-fyi', 'footshorts'] as const) {
