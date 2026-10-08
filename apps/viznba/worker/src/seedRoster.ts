@@ -7,6 +7,8 @@
  *      (+ PLAYER_ALIASES), pointing team_id at the team they're on today
  *   3. Players / coaches no longer on any roster are flagged active=false —
  *      never deleted, so tags on older articles keep resolving
+ *   4. Notable former players / coaches (formerEntities.ts) not on a roster
+ *      today are looked up on ESPN and upserted as active=false
  *
  * Step 3 only runs when every roster fetched: a partial run must not mark a
  * whole team's players inactive because ESPN timed out on that team.
@@ -20,8 +22,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabase } from './supabase'
-import { fetchRoster, fetchTeams, type EspnAthlete, type EspnCoach } from './espn'
+import { findAthlete, fetchRoster, fetchTeams, type EspnAthlete, type EspnCoach } from './espn'
 import { PLAYER_ALIASES, TEAM_ALIASES } from './aliases'
+import { FORMER_COACHES, FORMER_PLAYERS } from './formerEntities'
 import { norm } from './entityResolver'
 
 const UPSERT_CHUNK = 500
@@ -63,7 +66,7 @@ async function deactivateMissing(
 
 const playerAliases = new Map(Object.entries(PLAYER_ALIASES).map(([name, a]) => [norm(name), a]))
 
-function playerRow(a: EspnAthlete, teamId: string, now: string) {
+function playerRow(a: EspnAthlete, teamId: string | null, now: string, active = true) {
   return {
     player_id: a.id,
     first_name: a.firstName,
@@ -75,12 +78,12 @@ function playerRow(a: EspnAthlete, teamId: string, now: string) {
     headshot_url: a.headshot?.href ?? null,
     date_of_birth: a.dateOfBirth ? a.dateOfBirth.slice(0, 10) : null,
     aliases: playerAliases.get(norm(a.displayName)) ?? [],
-    active: true,
+    active,
     updated_at: now,
   }
 }
 
-function coachRow(c: EspnCoach, teamId: string, now: string) {
+function coachRow(c: EspnCoach, teamId: string | null, now: string, active = true) {
   return {
     coach_id: c.id,
     first_name: c.firstName,
@@ -88,9 +91,50 @@ function coachRow(c: EspnCoach, teamId: string, now: string) {
     display_name: `${c.firstName} ${c.lastName}`,
     team_id: teamId,
     aliases: [],
-    active: true,
+    active,
     updated_at: now,
   }
+}
+
+/**
+ * Step 4. Former coaches are ESPN *athlete* ids, a different number space from
+ * roster coach ids, hence the `athlete-` prefix. Lookup misses only warn: a
+ * renamed or missing legend must not fail the weekly roster refresh.
+ */
+async function seedFormer(
+  sb: SupabaseClient,
+  rosterPlayerNames: Set<string>,
+  rosterCoachNames: Set<string>,
+  now: string,
+) {
+  const lookup = async (name: string) => {
+    try {
+      const a = await findAthlete(name)
+      if (!a) console.warn(`[seed:roster] former entity not found on ESPN: ${JSON.stringify(name)}`)
+      return a
+    } catch (e) {
+      console.warn(`[seed:roster] former entity lookup failed for ${JSON.stringify(name)}:`, e instanceof Error ? e.message : e)
+      return null
+    }
+  }
+
+  const players: ReturnType<typeof playerRow>[] = []
+  for (const name of FORMER_PLAYERS) {
+    if (rosterPlayerNames.has(norm(name))) continue
+    const a = await lookup(name)
+    if (a) players.push(playerRow(a, null, now, false))
+  }
+
+  const coaches: ReturnType<typeof coachRow>[] = []
+  for (const name of FORMER_COACHES) {
+    if (rosterCoachNames.has(norm(name))) continue
+    const a = await lookup(name)
+    if (a) coaches.push(coachRow({ ...a, id: `athlete-${a.id}` }, null, now, false))
+  }
+
+  await upsert(sb, 'viznba_players', players, 'player_id')
+  await upsert(sb, 'viznba_coaches', coaches, 'coach_id')
+  console.log(`[seed:roster] former players=${players.length} coaches=${coaches.length}`)
 }
 
 export async function seedRoster() {
@@ -158,6 +202,13 @@ export async function seedRoster() {
   const goneP = await deactivateMissing(sb, 'viznba_players', 'player_id', new Set(players.keys()))
   const goneC = await deactivateMissing(sb, 'viznba_coaches', 'coach_id', new Set(coaches.keys()))
   console.log(`[seed:roster] deactivated players=${goneP} coaches=${goneC}`)
+
+  await seedFormer(
+    sb,
+    new Set([...players.values()].map((p) => norm(p.display_name))),
+    new Set([...coaches.values()].map((c) => norm(c.display_name))),
+    now,
+  )
 }
 
 if (require.main === module) {

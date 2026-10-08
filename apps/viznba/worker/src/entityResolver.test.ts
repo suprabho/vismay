@@ -48,6 +48,9 @@ const idx = buildIndex({
     person('3', 'Joel', 'Embiid'),
     person('4', 'Old', 'Embiid', { active: false }),
     person('5', 'Kevin', 'Durant', { aliases: ['KD'] }),
+    // Former player seeded from formerEntities.ts, alongside an active Smith.
+    person('2444', 'JR', 'Smith', { active: false }),
+    person('4432639', 'Jabari', 'Smith Jr.', { display_name: 'Jabari Smith Jr.' }),
   ],
   coaches: [person('3024', 'JJ', 'Redick')],
 })
@@ -121,4 +124,10 @@ test('hits carry the canonical name and the source surface form', () => {
   const [hit] = resolve({ teams: ['Sixers'] }).hits
   assert.equal(hit.name, 'Philadelphia 76ers')
   assert.equal(hit.sourceName, 'Sixers')
+})
+
+test('an inactive former player resolves by full name but not by a shared last name', () => {
+  assert.deepEqual(resolve({ players: ['J.R. Smith'] }).ids, ['player:2444'])
+  assert.deepEqual(resolve({ players: ['Jabari Smith'] }).ids, ['player:4432639'])
+  assert.deepEqual(resolve({ players: ['Smith'] }).ids, ['player:4432639'])
 })

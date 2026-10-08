@@ -244,7 +244,9 @@ async function ingestSource(sb: SupabaseClient, source: RssSource): Promise<Stat
 
   for (const item of feed.items) {
     const url = item.link?.trim()
-    const headline = item.title ? clean(item.title) : ''
+    // Titles arrive entity-encoded ("Dundon: &#39;My intention…") and are
+    // stored + rendered as-is, so decode them like the body.
+    const headline = item.title ? htmlToText(item.title) : ''
     if (!url || !headline) continue
     const urlHash = hashUrl(url)
 
@@ -270,7 +272,7 @@ async function ingestSource(sb: SupabaseClient, source: RssSource): Promise<Stat
       continue
     }
 
-    const snippet = item.contentSnippet ? clean(item.contentSnippet).slice(0, 1000) : null
+    const snippet = item.contentSnippet ? htmlToText(item.contentSnippet).slice(0, 1000) : null
     const { data: inserted, error: insertError } = await sb
       .from('viznba_articles')
       .insert({
