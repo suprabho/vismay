@@ -124,6 +124,7 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
         temperature: opts.temperature,
         maxOutputTokens: opts.maxOutputTokens,
         headers: opts.metadata,
+        ...schemaProviderOptions(id),
       }),
     )
     return {
@@ -151,6 +152,18 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
     modelUsed,
     usage: normaliseUsage(res.usage),
   }
+}
+
+/**
+ * Claude 5.x thinks by default, and thinking tokens count against
+ * `maxOutputTokens`. On a structured call with a tight budget the model can
+ * spend all of it reasoning and return no object (finishReason `length`,
+ * AI_NoObjectGeneratedError). Schema calls are extraction, not reasoning, so
+ * turn thinking off for Anthropic models.
+ */
+function schemaProviderOptions(modelId: string) {
+  if (!modelId.startsWith('anthropic/')) return {}
+  return { providerOptions: { anthropic: { thinking: { type: 'disabled' as const } } } }
 }
 
 /**
