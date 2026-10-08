@@ -1,0 +1,26 @@
+{
+  "name": "@viznba/worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "seed:roster": "tsx --env-file=.env src/seedRoster.ts",
+    "seed:roster:ci": "tsx src/seedRoster.ts",
+    "ingest:news": "tsx --env-file=.env src/ingestNews.ts",
+    "ingest:news:ci": "tsx src/ingestNews.ts",
+    "eval": "tsx --env-file=.env src/eval/run.ts",
+    "test": "tsx --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "@vismay/ai-gateway": "workspace:*",
+    "@vismay/eval-entities": "workspace:*",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}

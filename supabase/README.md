@@ -22,5 +22,5 @@ it at the project folder with `--workdir`:
 supabase --workdir supabase/footshorts db push
 ```
 
-(Only `footshorts/` currently has a `config.toml`. `vizmaya-fyi/` and `vizf1/`
+(Only `footshorts/` currently has a `config.toml`. `vizmaya-fyi/`, `vizf1/` and `viznba/`
 hold migrations applied via the Supabase dashboard / direct connection.)
