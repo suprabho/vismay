@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Star } from '@phosphor-icons/react/ssr'
-import type { Team } from '@/lib/teams'
+import { teamLogo, type Team } from '@/lib/teams'
 import type { Game, Side } from '@/lib/espn'
 
 const BADGE: Record<number, string> = {
@@ -19,6 +19,21 @@ export function TeamBadge({
   size?: 22 | 26 | 32 | 48
   outlined?: boolean
 }) {
+  const logo = teamLogo(team, size)
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt=""
+        width={size}
+        height={size}
+        loading="lazy"
+        className="flex-none object-contain"
+        style={{ width: size, height: size }}
+        aria-hidden="true"
+      />
+    )
+  }
   return (
     <span
       className={`flex flex-none items-center justify-center rounded-full font-extrabold wdth-80 ${BADGE[size]} ${

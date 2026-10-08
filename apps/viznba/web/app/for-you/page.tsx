@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Plus } from '@phosphor-icons/react/ssr'
+import { TeamBadge } from '@/components/ui'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { CompactRow, FinalCard, FinalMedium, LiveCard, PreviewCard, UpcomingMedium } from '@/components/ForYouCards'
 import { gameDetail, gamesByLocalDay, type Game } from '@/lib/espn'
@@ -117,11 +118,8 @@ export default async function ForYouPage({ searchParams }: { searchParams: Promi
                 className="flex size-[58px] items-center justify-center rounded-full border-[2.5px]"
                 style={{ borderColor: active || !focus ? t.dot : '#2a2f3d' }}
               >
-                <span
-                  className="flex size-12 items-center justify-center rounded-full text-[13px] font-extrabold wdth-80"
-                  style={{ background: t.bg, color: t.fg }}
-                >
-                  {t.abbr}
+                <span className="flex size-12 items-center justify-center rounded-full bg-surface">
+                  <TeamBadge team={t} size={32} />
                 </span>
               </span>
               <span className={`text-[11px] font-medium ${active ? 'text-text' : 'text-muted'}`}>{t.name}</span>
