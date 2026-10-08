@@ -1,6 +1,6 @@
 /**
- * The brief's sections for the paged story formats (./formats): book, board
- * and deck. In a brief for one of them, the scroll format's "Motion and
+ * The brief's sections for the runtime-driven story formats (./formats): book,
+ * board, deck and recap. In a brief for one of them, the scroll format's "Motion and
  * scroll animation" section and its Mapbox sticky-map pattern are replaced by
  * the format's section here: what the reader does, what the hosted runtime
  * does, the page skeleton with the runtime's URLs, the authoring rules and
@@ -24,6 +24,12 @@ const TITLES: Record<PagedHtmlStoryFormat, string> = {
   book: 'a book',
   board: 'a pinned board',
   deck: 'a deck',
+  recap: 'a race recap',
+}
+
+/** "a book", "a race recap": what the story is, for the brief's intro. */
+export function formatTitle(format: PagedHtmlStoryFormat): string {
+  return TITLES[format]
 }
 
 /** The format section's heading, for cross-references from the rest of the brief. */
@@ -225,7 +231,8 @@ ${skeleton(
 
 function enterSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
   const unit = HTML_STORY_FORMAT_META[format].unit
-  const verb = format === 'book' ? 'turned to' : format === 'board' ? 'flown to' : 'shown'
+  const verb =
+    format === 'book' ? 'turned to' : format === 'board' ? 'flown to' : format === 'recap' ? 'scrolled to' : 'shown'
   const board =
     format === 'board'
       ? `
@@ -235,10 +242,26 @@ function enterSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
 - A chart can also return \`anchor: function (key) { return [x, y] }\` in its
   own pixels (a map projects place \`key\`), for strings to pin to.`
       : ''
+  const trigger =
+    format === 'recap'
+      ? `Charts aren't tied to scroll position. A chart builds and plays once, when its
+chapter becomes the one being read`
+      : `Nothing here is scroll-triggered. A chart builds and plays once, when its
+${unit} is ${verb}`
+  const maps =
+    format === 'recap'
+      ? `- The replay is the race's map: don't add a Mapbox or MapLibre map of the
+  circuit. A map of somewhere else (the calendar, a driver's home) is a D3-geo
+  chart.`
+      : `- Maps are charts too: D3-geo with world-atlas or us-atlas TopoJSON. A Mapbox
+  or MapLibre canvas doesn't belong inside a scaled ${unit}.`
+  const example =
+    format === 'recap'
+      ? `A complete example, the 2024 Austrian Grand Prix told as a race recap:`
+      : `A complete example, the Odyssey voyage told as ${TITLES[format]}:`
   return `### Charts and numbers: animate on enter
 
-Nothing here is scroll-triggered. A chart builds and plays once, when its
-${unit} is ${verb}; after a resize or a switch to the one-column view it is
+${trigger}; after a resize or a switch to the one-column view it is
 redrawn in its final state. The runtime does that for the charts you register,
 so don't draw them on load yourself:
 
@@ -271,20 +294,105 @@ Story.charts.attrition = function (el, opts) {
   \`<span data-count="565">565</span>\`. The final value stays in the markup.
 - For anything else on arrival (a highlight, a video), listen for
   \`story:enter\` on the ${unit}.
-- Maps are charts too: D3-geo with world-atlas or us-atlas TopoJSON. A Mapbox
-  or MapLibre canvas doesn't belong inside a scaled ${unit}.${board}
+${maps}${board}
 
 The runtime's controls take your \`vizmaya:theme\` colours. To restyle them,
 set \`--vz-bg\`, \`--vz-surface\`, \`--vz-text\`, \`--vz-muted\`, \`--vz-line\` and
 \`--vz-accent\` in your \`:root\`.
 
-A complete example, the Odyssey voyage told as ${TITLES[format]}:
+${example}
 ${formatExampleUrl(app, format)} (read its source).`
+}
+
+function recapSection(app: HtmlStoryApp): string {
+  return `The story is a race told through its moments. The reader scrolls the
+chapters as on any page; beside them (above them on phones) the site's 3D race
+replay plays the real race, with true-scale cars and broadcast cameras, and
+jumps to each moment as the reader reaches it: the lap, the camera and the car
+to follow. The reader can still pause, scrub, switch camera and orbit.
+
+A hosted runtime does the recap: the replay and its controls, the chapter nav,
+dimming the chapters you aren't reading, "Read as one page" (the chapters as
+one column without the replay, which is also what readers without JavaScript
+get), keys (←/→ between chapters) and deep links (\`#c=3\`). You write the
+chapters, their design, their charts and the cues that drive the replay.
+
+${skeleton(
+  'recap',
+  app,
+  `<main class="stage" aria-label="<headline>, a race recap">
+  <div class="replay" data-session="<session key>" data-laps="<race laps>"
+       data-alt="3D replay of the <year> <Grand Prix>"></div>
+  <div class="chapters">
+    <section class="chapter" data-unit data-label="Lights out"
+             data-lap="1" data-cam="heli" data-focus="VER">
+      <p class="kicker">Lap 1</p>
+      <h2>…the chapter's point, as a headline…</h2>
+      <p>…</p>
+      <p data-lap="3" data-cam="tv" data-focus="LEC">…a beat: the replay moves when this paragraph reaches the reading line…</p>
+      <div class="chart" data-chart="lapOne" data-alt="…" style="height:260px"></div>
+    </section>
+    …
+  </div>
+</main>`,
+)}
+
+- **The race.** \`data-session\` on \`.replay\` is the race's session key, copied
+  exactly from "Replay moments" in the race context, and \`data-laps\` its lap
+  count. Never invent or guess a session key: a wrong one plays another race,
+  or the demo. Only a race (not a qualifying or practice session) has a replay
+  worth framing.
+- **Cues.** A chapter, or any element inside one, moves the replay:
+  - \`data-lap="34"\`: the start of lap 34, or \`data-at="7929.9"\`: an exact
+    moment, in seconds of session time. Use a \`data-at\` only when "Replay
+    moments" gives one; never estimate it.
+  - \`data-cam\`: \`heli\` (aerial, follows a car: starts, a gap opening
+    up), \`chase\` (behind a car: a car hunting the one ahead), \`pov\`
+    (onboard: a move from the driver's seat), \`tv\` (trackside: a pass, the
+    flag), \`orbit\` (the whole circuit: strategy, the order), \`auto\` (a
+    director that cuts to the action).
+  - \`data-focus\`: the three-letter code of the car to follow.
+  An element without \`data-cam\` or \`data-focus\` takes its chapter's. The
+  cue in charge is the last one whose top has passed the reading line (40% down
+  what the replay leaves of the screen), so cues on paragraphs a few lines
+  apart move the replay as the reader reads.
+- **Chapters, not cards.** Plan 6 to 10 chapters, each built around one moment
+  and one point, and give each a different shape: a big number, a chart, a
+  table, a quote, a timeline, small multiples, a duel told in three beats. Put
+  2 to 4 beats in the chapters that carry the race (a fight that builds over
+  laps; a strategy call and its payoff), so the replay walks through them.
+  Open with a title chapter on the whole race (orbit or heli) and end with the
+  result and what it changes in the championship.
+- **Size.** On a laptop the chapter column is about 44% of the screen (560–
+  640px of content), on phones the full width under the replay band. Design
+  charts for about 520px wide; they can be as tall as they need: the page
+  scrolls. A chapter needs at least a screenful of reading so its cues get
+  time on screen.
+- **The replay is the race's map.** Don't draw the circuit or embed another
+  map or video of the race; draw the numbers: gaps, lap times, positions,
+  speed traces, stints.
+- **No controls of your own.** The replay brings play/pause, a scrubber,
+  cameras and the lap; the runtime brings the chapter nav.
+- **Read it without the replay.** In the one-column view the replay is gone,
+  so every chapter has to make its point in words and charts, not "watch
+  this".
+- **Tokens** for your \`:root\`: \`--recap-rail-w\` (the chapter column on
+  wide screens, 44%), \`--recap-band-h\` (the replay above the chapters on
+  phones, 40svh), \`--recap-dim\` (the chapters you aren't reading, .32),
+  \`--recap-cue\` (the mark beside the cue in charge). A dark page sits best
+  beside the replay.`
 }
 
 /** "## Story format: …": replaces the scroll format's motion and Mapbox sections. */
 export function storyFormatSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
-  const body = format === 'book' ? bookSection(app) : format === 'board' ? boardSection(app) : deckSection(app)
+  const body =
+    format === 'book'
+      ? bookSection(app)
+      : format === 'board'
+        ? boardSection(app)
+        : format === 'recap'
+          ? recapSection(app)
+          : deckSection(app)
   return `## ${formatHeading(format)}
 
 ${body}
@@ -298,6 +406,13 @@ export function formatChecks(format: PagedHtmlStoryFormat): string[] {
     return [
       'any page the console says overflows its frame: split it',
       'pages you haven\'t turned to at both sizes, and the one-column view ("Read as one page") you haven\'t read',
+    ]
+  }
+  if (format === 'recap') {
+    return [
+      'a data-session, data-at or lap that isn\'t copied from "Replay moments" (open the page and check the replay shows the moment each chapter describes)',
+      'a chapter with no cue, or a big moment with a single cue where two or three beats would walk the reader through it',
+      'the one-column view ("Read as one page") you haven\'t read: every chapter must stand without the replay',
     ]
   }
   if (format === 'board') {
