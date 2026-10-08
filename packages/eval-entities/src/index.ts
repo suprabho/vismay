@@ -1,5 +1,5 @@
 export { runEval } from './runner';
-export { createJudge } from './judge';
+export { createJudge, DEFAULT_JUDGE_MODEL } from './judge';
 export { computeMetrics } from './metrics';
 export { renderHtml } from './report';
 export type {

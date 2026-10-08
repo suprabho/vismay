@@ -8,11 +8,12 @@
  *      (kept fresh by scores.ts / fixtures.ts).
  *   2. In-match events (goals/cards/subs) from `fixture_events` (kept fresh by
  *      events.ts), surfaced as a per-match fs:match-timeline and goals line.
- *   3. Scraped, Gemini-summarized stories from `articles` published in the window,
+ *   3. Scraped, summarized stories from `articles` published in the window,
  *      matched to the matches via shared team entities.
  *
- * Output is HYBRID: deterministic results/stats tables + a Gemini-written narrative
- * (an overview plus one short paragraph per match). Each run INSERTS a new snapshot
+ * Output is HYBRID: deterministic results/stats tables + a Claude-written narrative
+ * (an overview plus one short paragraph per match; Claude Sonnet via the AI Gateway,
+ * `text.sonnet`, overridable with TEXT_MODEL). Each run INSERTS a new snapshot
  * row into the `daily_recaps` table (surrogate `id` key), so the admin keeps a
  * timeline of recaps rather than one-per-day.
  *
@@ -39,12 +40,13 @@
 
 import { writeFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { z } from 'zod';
+import { generateText, hasGatewayCredentials } from '@vismay/ai-gateway';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+// Editorial prose over a whole day's matches — the standard Claude tier.
+const TEXT_MODEL = process.env.TEXT_MODEL || 'text.sonnet';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
@@ -363,7 +365,7 @@ async function loadKnockoutFixtures(compSlug: string, season: string): Promise<F
 // ---------------------------------------------------------------------------
 
 type MatchView = {
-  idx: number; // stable index used to map Gemini narratives back
+  idx: number; // stable index used to map model-written narratives back
   fixture: Fixture;
   home: string;
   away: string;
@@ -387,7 +389,7 @@ function teamName(id: string | null, fallback: string | null, entities: Map<stri
 }
 
 // ---------------------------------------------------------------------------
-// Gemini narrative (hybrid layer)
+// Claude narrative (hybrid layer)
 // ---------------------------------------------------------------------------
 
 type Narrative = {
@@ -395,33 +397,25 @@ type Narrative = {
   matchNarratives: { idx: number; narrative: string }[];
 };
 
-const NARRATIVE_SCHEMA = {
-  type: SchemaType.OBJECT,
-  properties: {
-    dayOverview: {
-      type: SchemaType.STRING,
-      description:
-        '3–4 sentence editorial overview of the day across all competitions: the headline results, the standout performances, the through-lines a writer could pursue. Factual, no invented detail.',
-    },
-    matchNarratives: {
-      type: SchemaType.ARRAY,
-      description: 'One entry per match provided in the input, keyed by its idx.',
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          idx: { type: SchemaType.NUMBER, description: 'The match idx from the input.' },
-          narrative: {
-            type: SchemaType.STRING,
-            description:
-              '2–3 sentence factual recap of this match: the result, how it unfolded (use the score, half-time score, stats and the goals/red cards provided), and any angle the linked stories surface. Do not invent goalscorers or events not present in the inputs.',
-          },
-        },
-        required: ['idx', 'narrative'],
-      },
-    },
-  },
-  required: ['dayOverview', 'matchNarratives'],
-};
+const NarrativeSchema = z.object({
+  dayOverview: z
+    .string()
+    .describe(
+      '3–4 sentence editorial overview of the day across all competitions: the headline results, the standout performances, the through-lines a writer could pursue. Factual, no invented detail.',
+    ),
+  matchNarratives: z
+    .array(
+      z.object({
+        idx: z.number().int().describe('The match idx from the input.'),
+        narrative: z
+          .string()
+          .describe(
+            '2–3 sentence factual recap of this match: the result, how it unfolded (use the score, half-time score, stats and the goals/red cards provided), and any angle the linked stories surface. Do not invent goalscorers or events not present in the inputs.',
+          ),
+      }),
+    )
+    .describe('One entry per match provided in the input, keyed by its idx.'),
+});
 
 const NARRATIVE_SYSTEM = `You are a football sports-desk editor writing an internal brief.
 The brief feeds a downstream story-generation pipeline, so be factual and concise — no opinion, no hype, no invented facts.
@@ -478,35 +472,31 @@ function buildNarrativeInput(windowLabel: string, comps: CompetitionView[]): unk
   };
 }
 
-async function generateNarrative(windowLabel: string, comps: CompetitionView[]): Promise<Narrative | null> {
-  if (!GEMINI_API_KEY) {
-    console.warn('[recap] GEMINI_API_KEY not set — emitting deterministic-only recap (no narrative).');
+async function generateNarrative(
+  windowLabel: string,
+  comps: CompetitionView[],
+): Promise<{ narrative: Narrative; modelUsed: string } | null> {
+  if (!hasGatewayCredentials()) {
+    console.warn('[recap] no AI Gateway credentials (AI_GATEWAY_API_KEY) — emitting deterministic-only recap (no narrative).');
     return null;
   }
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction: NARRATIVE_SYSTEM,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: NARRATIVE_SCHEMA as any,
-      temperature: 0.4,
-      maxOutputTokens: 8000,
-    },
-  });
 
   const input = buildNarrativeInput(windowLabel, comps);
   const prompt = `Write the recap brief for the matches below.\n\n${JSON.stringify(input, null, 2)}`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const parsed = JSON.parse(text) as Narrative;
-    if (!parsed || typeof parsed.dayOverview !== 'string' || !Array.isArray(parsed.matchNarratives)) {
-      console.warn('[recap] Gemini output missing expected shape — falling back to deterministic-only.');
-      return null;
-    }
-    return parsed;
+    // The schema is enforced by the gateway call (tool-calling on Claude), so a
+    // result that comes back is already the right shape.
+    const { result, modelUsed } = await generateText({
+      model: TEXT_MODEL,
+      system: NARRATIVE_SYSTEM,
+      prompt,
+      schema: NarrativeSchema,
+      temperature: 0.4,
+      maxOutputTokens: 8000,
+      metadata: { feature: 'footshorts-recap' },
+    });
+    return { narrative: result, modelUsed };
   } catch (e) {
     console.warn(`[recap] narrative generation failed (${(e as Error).message}) — deterministic-only recap.`);
     return null;
@@ -939,8 +929,9 @@ async function main() {
     for (const [id, e] of more) entities.set(id, e);
   }
 
-  // Hybrid: Gemini narrative over the structured window.
-  const narrative = await generateNarrative(windowLabel, comps);
+  // Hybrid: Claude narrative over the structured window.
+  const generated = await generateNarrative(windowLabel, comps);
+  const narrative = generated?.narrative ?? null;
 
   const markdown = assembleMarkdown(
     windowLabel,
@@ -973,7 +964,7 @@ async function main() {
     window_start: timeWindow.lo,
     window_end: timeWindow.hi,
     markdown,
-    model: narrative ? GEMINI_MODEL : null,
+    model: generated?.modelUsed ?? null,
     fixture_count: finished.length,
     article_count: articleCount,
     generated_at: timeWindow.hi,

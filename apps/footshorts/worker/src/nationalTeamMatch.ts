@@ -5,7 +5,7 @@
  * `[entity-miss]` and shipped untagged).
  *
  * This is a backfill heuristic, not the ingest path: live ingest still goes
- * through Gemini + the resolver, which understand context. So it is tuned for
+ * through the LLM extractor + the resolver, which understand context. So it is tuned for
  * precision and the backfill only feeds it headlines — a country in the
  * headline is nearly always what the story is about, whereas summaries are
  * full of passing "England midfielder …" mentions.
@@ -22,7 +22,7 @@ import { NATIONAL_TEAMS } from '@footshorts/shared/nationalTeams';
 
 /** Team names that are just as often something else in football copy —
  *  a player's first name (Jordan Pickford, Jordan Henderson; Chad), or a club
- *  (FC Andorra in Segunda). Left to Gemini at ingest; skipped here. */
+ *  (FC Andorra in Segunda). Left to the LLM extractor at ingest; skipped here. */
 const AMBIGUOUS_SLUGS = new Set(['jordan', 'chad', 'andorra']);
 
 /** Phrases that contain a team name but aren't that team — consumed so the

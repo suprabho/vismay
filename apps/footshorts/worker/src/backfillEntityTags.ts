@@ -8,7 +8,7 @@
  * For each target slug we word-boundary-match the team's common name (the
  * slug, de-hyphenated) against headlines and summaries, then insert the
  * missing (article_id, entity_id) rows. ignoreDuplicates on the composite PK
- * makes repeat runs cheap and leaves Gemini-tagged articles untouched;
+ * makes repeat runs cheap and leaves ingest-tagged articles untouched;
  * confidence keeps its 1.0 default, same as an exact resolver hit.
  *
  * Run via: npm run backfill:entity-tags [-- slug ...]

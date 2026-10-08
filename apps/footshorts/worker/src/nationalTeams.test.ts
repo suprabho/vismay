@@ -145,7 +145,7 @@ test('resolver skips WC26 squad players', async () => {
   assert.deepEqual(resolved.map((e) => e.id), ['id-ARG']);
 });
 
-test('resolver strips Gemini\'s "National Team" suffix', async () => {
+test('resolver strips the extractor\'s "National Team" suffix', async () => {
   clearEntityCache();
   const supabase = fakeSupabase({
     entities: NATIONAL_TEAMS.map((t) => ({ id: `id-${t.fifaCode}`, name: t.name, slug: t.slug, type: 'team' })),

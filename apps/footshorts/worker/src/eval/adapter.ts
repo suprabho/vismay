@@ -6,15 +6,16 @@
  * table.
  *
  * `extractLive` (EVAL_RERUN_EXTRACTION=1) runs the WHOLE current pipeline —
- * Gemini extraction, the resolver, and the Jev precision gate — so the
- * precision/recall numbers reflect what ingest would actually write today.
+ * Jev classification + Claude Haiku extraction (summarize.ts), the resolver,
+ * and the Jev precision gate — so the precision/recall numbers reflect what
+ * ingest would actually write today.
  * Without the gate here the eval would keep scoring the pre-gate tag set and
  * a threshold change would look like a no-op.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { EntityEvalAdapter, EvalArticle, TaggedEntity } from '@vismay/eval-entities';
-import { summarizeAndTag } from '../gemini';
+import { summarizeAndTag } from '../summarize';
 import { resolveEntitiesDetailed } from '../entityResolver';
 import { gateEntityTags } from '../jevEntityGate';
 

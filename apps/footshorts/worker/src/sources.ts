@@ -23,8 +23,8 @@ export type RssSource = {
   /**
    * ISO 639-1 language the feed publishes in. Omit for English.
    * Non-English items are translated to English at the summarization step
-   * (see gemini.ts): the summary is always written in English and the stored
-   * headline is replaced with Gemini's English translation.
+   * (see summarize.ts): the summary is always written in English and the stored
+   * headline is replaced with Claude's English translation.
    */
   language?: 'es';
   /** ISO 3166-1 alpha-2 country of the outlet, for non-English sources. */
@@ -86,7 +86,7 @@ export const RSS_SOURCES: RssSource[] = [
 
   // ---------------------------------------------------------------
   // Spanish-language outlets (added 2026-08). All publish official RSS.
-  // Items arrive in Spanish; gemini.ts translates headline + summary
+  // Items arrive in Spanish; summarize.ts translates headline + summary
   // to English during summarization.
   // TODO(verify): these feed URLs could not be probed from the sandbox
   // they were added in (network egress blocked) — hit each once before
