@@ -60,28 +60,28 @@ assert.ok(f1Ctx.includes('**The race context at the end of this brief is your pr
 assert.ok(f1Ctx.includes('never compare a lap time at one circuit'))
 
 // viznba: its own look, chrome, byline, posting target, team-logo guidance.
-const nba = htmlStoryBrief({ siteUrl: 'https://viznba.com', app: 'viznba' })
+const nba = htmlStoryBrief({ siteUrl: 'https://nba.vizmaya.fyi', app: 'viznba' })
 assert.ok(nba.startsWith('# Writing a VizNBA HTML story'))
 assert.ok(nba.includes('basketball data story for VizNBA'))
-assert.ok(nba.includes('https://viznba.com/s/<slug>'))
+assert.ok(nba.includes('https://nba.vizmaya.fyi/s/<slug>'))
 assert.ok(nba.includes('slim VizNBA header'))
 assert.ok(nba.includes(`content="${themeMetaContent(HOUSE_PALETTES.viznba)}"`))
 assert.ok(nba.includes('Accent `#ff8a3d`'))
 assert.ok(nba.includes('Byline "VizNBA desk"'))
 assert.ok(nba.includes('## Icons, team logos and flags'))
 assert.ok(nba.includes('`app: "viznba"`'))
-assert.ok(nba.includes('POST https://viznba.com/api/html-stories?slug=<slug>'))
+assert.ok(nba.includes('POST https://nba.vizmaya.fyi/api/html-stories?slug=<slug>'))
 assert.ok(nba.includes('NBA photos') && !nba.includes('F1 photos') && !nba.includes('Football photos'))
 assert.ok(nba.includes('score-margin chart'))
 assert.ok(nba.includes('carries no game context'))
 assert.ok(!nba.includes('match context') && !nba.includes('race context') && !nba.includes('Footshorts') && !nba.includes('VizF1'))
-const nbaCtx = htmlStoryBrief({ siteUrl: 'https://viznba.com', app: 'viznba', context: '## Game context\n\n### Celtics 112 @ Knicks 108\n' })
+const nbaCtx = htmlStoryBrief({ siteUrl: 'https://nba.vizmaya.fyi', app: 'viznba', context: '## Game context\n\n### Celtics 112 @ Knicks 108\n' })
 assert.ok(nbaCtx.includes('Everything below comes from the VizNBA box scores (ESPN).'))
 assert.ok(nbaCtx.includes('\n### Game context\n'))
 assert.ok(nbaCtx.includes('**The game context at the end of this brief is your primary source.**'))
 
 // Photography: asked for on both sites, hosted through each site's own assets endpoint.
-for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com'], [f1, 'https://www.vizf1.com'], [nba, 'https://viznba.com']] as const) {
+for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com'], [f1, 'https://www.vizf1.com'], [nba, 'https://nba.vizmaya.fyi']] as const) {
   assert.ok(b.includes('## Photography and media'))
   assert.ok(b.indexOf('## Photography and media') > b.indexOf('## Icons') && b.indexOf('## Photography and media') < b.indexOf('## Charts'))
   assert.ok(b.includes(`POST ${site}/api/html-stories/assets?slug=<slug>`))

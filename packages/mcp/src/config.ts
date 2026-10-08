@@ -26,7 +26,7 @@ export interface VismayMcpConfig {
   footshortsHtmlStoriesUrl: string
   /** Site that hosts vizf1 HTML stories, e.g. https://www.vizf1.com */
   vizf1HtmlStoriesUrl: string
-  /** Site that hosts viznba HTML stories, e.g. https://viznba.com */
+  /** Site that hosts viznba HTML stories, e.g. https://nba.vizmaya.fyi */
   viznbaHtmlStoriesUrl: string
 }
 
@@ -60,7 +60,7 @@ export function loadConfig(): VismayMcpConfig {
     // www is canonical: the apex redirects, and a redirected POST loses its body.
     vizf1HtmlStoriesUrl: (env('VIZF1_HTML_STORIES_URL') ?? 'https://www.vizf1.com').replace(/\/$/, ''),
     // Placeholder until the VizNBA domain is live: set VIZNBA_HTML_STORIES_URL.
-    viznbaHtmlStoriesUrl: (env('VIZNBA_HTML_STORIES_URL') ?? 'https://viznba.com').replace(/\/$/, ''),
+    viznbaHtmlStoriesUrl: (env('VIZNBA_HTML_STORIES_URL') ?? 'https://nba.vizmaya.fyi').replace(/\/$/, ''),
   }
 }
 

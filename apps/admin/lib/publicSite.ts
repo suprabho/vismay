@@ -41,7 +41,7 @@ export const footshortsPublicUrl: string = normalize(
 // Placeholder default until the VizNBA domain is live — set the env var to the
 // Vercel project's real hostname.
 export const viznbaPublicUrl: string = normalize(
-  process.env.NEXT_PUBLIC_VIZNBA_URL || 'https://viznba.com'
+  process.env.NEXT_PUBLIC_VIZNBA_URL || 'https://nba.vizmaya.fyi'
 )
 // Placeholder default until the domain is purchased — override with the env
 // var once the Vercel project has a real hostname.

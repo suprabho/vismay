@@ -70,11 +70,11 @@ globalThis.fetch = (async (input: string | URL | Request) => {
 async function main() {
   assert.ok(isGameId('401000001') && !isGameId('abc') && !isGameId('12'))
   assert.deepEqual(spinGameIds(null), [])
-  const ctx = await buildGameContext(['401000001', '401000002', 'junk'], { siteUrl: 'https://viznba.com/', prompt: 'The Celtics run' })
+  const ctx = await buildGameContext(['401000001', '401000002', 'junk'], { siteUrl: 'https://nba.vizmaya.fyi/', prompt: 'The Celtics run' })
   assert.ok(ctx.startsWith('## Game context'))
   assert.ok(ctx.includes('Angle: The Celtics run'))
   assert.ok(ctx.includes('### Boston Celtics 112 @ New York Knicks 108 (2026-10-04, Final)'))
-  assert.ok(ctx.includes('- Game page: https://viznba.com/game/401000001'))
+  assert.ok(ctx.includes('- Game page: https://nba.vizmaya.fyi/game/401000001'))
   assert.ok(ctx.includes('Madison Square Garden, New York, NY (attendance 19,812)'))
   assert.ok(ctx.includes('| Boston Celtics | 4-0 | #1f9d55 |'), 'the dataset colour')
   assert.ok(ctx.includes('| Boston Celtics | 25 | 35 | 22 | 30 | 112 |'))
