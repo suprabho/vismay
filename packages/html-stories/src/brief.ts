@@ -24,9 +24,10 @@
  * they go. Without a spin the brief is unchanged.
  *
  * Maps are Mapbox scrollytelling when the deployment has a public Mapbox token
- * (NEXT_PUBLIC_MAPBOX_TOKEN, the one the sites' own map pages use): the brief
- * hands the agent that token and the sticky-map pattern. Without one the brief
- * falls back to MapLibre and D3-geo.
+ * (./mapbox: HTML_STORIES_MAPBOX_TOKEN, else NEXT_PUBLIC_MAPBOX_TOKEN): the
+ * brief hands the agent that token and the sticky-map pattern, and the served
+ * page gets the same token injected (./branding), which the story prefers.
+ * Without one the brief falls back to MapLibre and D3-geo.
  *
  * A brief is for one story format (./formats): the scrolling page by default,
  * or a book, a board or a deck. For those, the scroll-specific sections
@@ -59,6 +60,7 @@ import {
 } from '@vismay/randomizer/spinBrief'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { formatChecks, formatHeading, formatHintSection, formatTitle, storyFormatSection } from './formatBrief'
+import { MAPBOX_TOKEN_GLOBAL, storyMapboxToken } from './mapbox'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
@@ -90,7 +92,7 @@ export interface BriefOptions {
   spin?: BriefSpin | null
   /**
    * A public Mapbox token (`pk.…`) to hand the agent for scrollytelling maps.
-   * Omit to use the deployment's NEXT_PUBLIC_MAPBOX_TOKEN; null for no Mapbox
+   * Omit to use the configured one (./mapbox); null for no Mapbox
    * (the brief then points at MapLibre). Anything that isn't a public token is
    * ignored: the brief is served publicly, so a secret `sk.` token must never
    * reach it.
@@ -105,13 +107,6 @@ export interface BriefOptions {
 
 /** Pinned with the repo's own mapbox-gl dependency. */
 const MAPBOX_GL_VERSION = '3.21.0'
-
-/** The token to put in the brief, or null for none (see BriefOptions.mapboxToken). */
-export function briefMapboxToken(option?: string | null): string | null {
-  const raw = option === undefined ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : option
-  const token = raw?.trim()
-  return token && token.startsWith('pk.') ? token : null
-}
 
 /** The vizmaya house palette: the story reader's defaults. */
 const VIZMAYA_PALETTE: ThemeColors = {
@@ -440,9 +435,13 @@ that only shows where a country is doesn't earn a screen.
 Setup:
 - Load \`https://api.mapbox.com/mapbox-gl-js/v${MAPBOX_GL_VERSION}/mapbox-gl.js\` and
   \`https://api.mapbox.com/mapbox-gl-js/v${MAPBOX_GL_VERSION}/mapbox-gl.css\`.
-- Token: \`mapboxgl.accessToken = '${token}'\`. It is a public token, made to sit
-  in page source. If tiles don't load in a local preview, check the posted
-  draft before changing anything: the token may only allow the site.
+- Token: \`mapboxgl.accessToken = window.${MAPBOX_TOKEN_GLOBAL} || '${token}'\`,
+  exactly like that. The site sets \`window.${MAPBOX_TOKEN_GLOBAL}\` on the posted page
+  before your scripts run, so a rotated token reaches your map without a
+  re-post; the literal is the same public token, for your local preview. Read
+  the token this way everywhere you need it (the fallback image below too). If
+  tiles don't load in a local preview, check the posted draft before changing
+  anything: the token may only allow the site.
 - Basemap: \`mapbox://styles/mapbox/dark-v11\` on a dark page, \`light-v11\` on a
   light one. On \`style.load\`, pull it toward your palette with
   \`setPaintProperty\` (land and background to your background and surface,
@@ -486,8 +485,9 @@ The pattern:
 - **Reduced motion.** \`jumpTo\` instead of \`flyTo\`, and routes appear whole.
 - **Fallback.** Give the map container a background image from the Static
   Images API at the first chapter's camera
-  (\`https://api.mapbox.com/styles/v1/mapbox/<your basemap>/static/<lng>,<lat>,<zoom>,<bearing>,<pitch>/1280x1280@2x?access_token=${token}\`),
-  so a failed script or no WebGL still shows the place, and write each step so
+  (\`https://api.mapbox.com/styles/v1/mapbox/<your basemap>/static/<lng>,<lat>,<zoom>,<bearing>,<pitch>/1280x1280@2x?access_token=<token>\`,
+  set from a small inline script before mapbox-gl.js loads, with the token read
+  as above), so a failed map script or no WebGL still shows the place, and write each step so
   it reads on its own.
 - **Check it.** At 375×812, scroll through every step: the step's subject is on
   screen and not under its card, and labels don't collide.`
@@ -670,7 +670,7 @@ export function htmlStoryBrief({
   const site = siteUrl.replace(/\/$/, '')
   const paged = format && format !== 'scroll' ? format : null
   // A paged format draws its maps as charts; the Mapbox sticky map is the scroll format's.
-  const mapbox = paged ? null : briefMapboxToken(mapboxToken)
+  const mapbox = paged ? null : storyMapboxToken(mapboxToken)
   const hint = spin ? formatHintSection(spin.randomizer, format ?? 'scroll') : null
   const meta = HTML_STORY_APP_META[app]
   const siteName = site.replace(/^https?:\/\//, '')

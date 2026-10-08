@@ -125,3 +125,16 @@ assert.ok(!/--vizmaya-chrome-h:[1-9]/.test(embeddedAura))
 assert.ok(out.includes(CHROME_H) && !out.includes(NO_CHROME_H))
 assert.ok(fsOut.includes('--vizmaya-chrome-h:61px') && !fsOut.includes(NO_CHROME_H))
 console.log('branding (embed): ok')
+
+// Mapbox: a page that uses it gets the public token first in <head>, before its own scripts.
+const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
+const mapDoc = `<!doctype html><html><head><script src="https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js"></script></head><body><p>map</p></body></html>`
+const mapOut = brandHtmlStory(mapDoc, { siteUrl: site, mapboxToken: pk })
+assert.ok(mapOut.startsWith(`<!doctype html><html><head><script>window.MAPBOX_ACCESS_TOKEN="${pk}"</script><script src=`))
+assert.ok(brandHtmlStory('<p>mapbox</p>', { siteUrl: site, mapboxToken: pk }).startsWith('<script>window.MAPBOX_ACCESS_TOKEN'))
+// Never for a page without Mapbox, without a token, or with anything but a public token.
+assert.ok(!brandHtmlStory(doc, { siteUrl: site, mapboxToken: pk }).includes('MAPBOX_ACCESS_TOKEN'))
+for (const mapboxToken of [null, '', 'sk.secret-token', 'pk.x"</script>']) {
+  assert.ok(!brandHtmlStory(mapDoc, { siteUrl: site, mapboxToken }).includes('MAPBOX_ACCESS_TOKEN'), `no token for ${mapboxToken}`)
+}
+console.log('branding (mapbox token): ok')
