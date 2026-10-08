@@ -32,7 +32,7 @@ export function isGameId(value: unknown): value is string {
 }
 
 export interface ViznbaBriefOptions {
-  /** e.g. https://viznba.com — the hosting site; game links point at it. */
+  /** e.g. https://nba.vizmaya.fyi — the hosting site; game links point at it. */
   siteUrl: string
   style?: StoryStyle | null
   /** ESPN event ids (up to {@link MAX_GAME_CONTEXT}). Empty: a brief with no game context (unless a spin brings its own). */

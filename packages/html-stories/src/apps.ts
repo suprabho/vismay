@@ -58,9 +58,7 @@ export const HTML_STORY_APP_META: Record<HtmlStoryApp, HtmlStoryAppMeta> = {
   viznba: {
     slug: 'viznba',
     name: 'VizNBA',
-    // Placeholder until the domain is live: deployments answer with their own
-    // origin, and admin overrides it with NEXT_PUBLIC_VIZNBA_URL.
-    siteUrl: 'https://viznba.com',
+    siteUrl: 'https://nba.vizmaya.fyi',
     desk: 'VizNBA desk',
     storiesPath: '/editorial',
     storiesLabel: 'Editorial',

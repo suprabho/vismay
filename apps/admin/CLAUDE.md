@@ -273,5 +273,5 @@ tables in [supabase/viznba](../../supabase/viznba/migrations)). The
   The tabs (Pipeline, HTML stories, Randomizer) are in
   [components/section/AppAdminTabs.tsx](components/section/AppAdminTabs.tsx).
   `NEXT_PUBLIC_VIZNBA_URL` sets the public site the "Live at" links and briefs
-  point at (default `https://viznba.com`, a placeholder).
+  point at (default `https://nba.vizmaya.fyi`).
 

@@ -106,7 +106,7 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `FOOTSHORTS_HTML_STORIES_TOKEN` | publish_html_story, the image tools and the match-context brief for footshorts | falls back to `HTML_STORIES_TOKEN` (same value as on the footshorts web deployment) |
 | `VIZF1_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "vizf1"`) | `https://www.vizf1.com` |
 | `VIZF1_HTML_STORIES_TOKEN` | publish_html_story, the image tools and the race-context brief for vizf1 | falls back to `HTML_STORIES_TOKEN` (same value as on the vizf1 web deployment) |
-| `VIZNBA_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "viznba"`), the NBA Desk tools | `https://viznba.com` (placeholder until the domain is live) |
+| `VIZNBA_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "viznba"`), the NBA Desk tools | `https://nba.vizmaya.fyi` |
 | `VIZNBA_HTML_STORIES_TOKEN` | publish_html_story, the image tools, the game-context brief and the NBA Desk for viznba | falls back to `HTML_STORIES_TOKEN` (same value as on the viznba web deployment) |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | get_html_story_brief, only when the site can't be reached (the brief is then built locally) | — (without it that brief has no Mapbox maps section) |
 
