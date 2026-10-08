@@ -15,7 +15,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-const SHOPPING_MODEL = 'text.claude'
+const SHOPPING_MODEL = 'text.sonnet'
 
 // POST { comboIndex } → shopping list + Hindi YouTube videos for the chosen
 // combo; flips the plan to 'finalized'.

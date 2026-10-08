@@ -3,7 +3,7 @@ name: Extract compose source
 # Triggered by the compose upload route's `workflow_dispatch` POST when a PDF,
 # Office doc (Word/PowerPoint/Excel) or EPub is added to a story. markitdown (a
 # Python CLI) converts the file to Markdown; scanned/graphical PDFs fall back to
-# a vision model (Claude Sonnet, Gemini fallback). Neither runs in the Next
+# a vision model (Claude Sonnet, GPT-5.6 Terra fallback). Neither runs in the Next
 # runtime — markitdown is Python, and a long PDF's vision pass can't fit a
 # serverless function's time limit — but a GitHub runner installs markitdown and
 # has no such cap. The worker writes the extracted text straight back onto the

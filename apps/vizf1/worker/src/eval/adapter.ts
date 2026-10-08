@@ -8,7 +8,7 @@
 
 import type { EntityEvalAdapter, EvalArticle, TaggedEntity } from '@vismay/eval-entities'
 import { getSupabase } from '../supabase'
-import { summariseAndTag } from '../gemini'
+import { summariseAndTag } from '../summarise'
 import { resolveEntities } from '../entityResolver'
 
 type EntityType = 'driver' | 'constructor' | 'circuit'

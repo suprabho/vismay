@@ -3,7 +3,8 @@
  * refer to the same real-world entity under different names (misspellings,
  * partial names, OCR misreads).
  *
- * Uses Gemini to cluster rows, then merges duplicates into a canonical row:
+ * Uses Claude Sonnet (via the AI Gateway) to cluster rows, then merges
+ * duplicates into a canonical row:
  *   - Sums mention_count
  *   - Repoints epstein_mentions.entity_id → canonical id
  *   - Deletes duplicate rows
@@ -13,11 +14,18 @@
  * places like "Southern District of New York" vs "New York". That kind of
  * coarse rollup is the geocoder's job via ALIASES.
  *
- * Usage:
+ * Why Sonnet clustering and not Jev pair decisions: the model sees the whole
+ * table at once and emits free-form merge groups plus a canonical name. Asking
+ * Jev "same entity?" per candidate pair would be O(n²) over thousands of rows
+ * and still need a separate step to pick the canonical spelling.
+ *
+ * Usage (needs AI_GATEWAY_API_KEY in .env, even for the dry run):
  *   npx tsx --env-file=.env scripts/epstein/dedupe-entities.ts           # dry run
  *   npx tsx --env-file=.env scripts/epstein/dedupe-entities.ts --apply   # write changes
  */
 
+import { z } from "zod";
+import { generateText, hasGatewayCredentials } from "@vismay/ai-gateway";
 import { createServiceClient } from "@vismay/content-source/supabase";
 
 type EntityKind = "person" | "location" | "event";
@@ -37,13 +45,9 @@ const PERSON_PROMPT = `You are cleaning a messy extracted-entity list of PEOPLE 
 
 Group rows that clearly refer to the same real person. Pick a canonical name — prefer the most complete/correctly-spelled form. Skip singletons.
 
-Output ONLY valid JSON (no markdown fences) in this exact shape:
-{
-  "clusters": [
-    { "canonical_name": "Ghislaine Maxwell", "members": ["Ghislane Maxwell", "Ghislaine Maxwell"] },
-    { "canonical_name": "Jeffrey Epstein", "members": ["Epstein", "Jeffrey Epstein"] }
-  ]
-}
+Example clusters:
+- { "canonical_name": "Ghislaine Maxwell", "members": ["Ghislane Maxwell", "Ghislaine Maxwell"] }
+- { "canonical_name": "Jeffrey Epstein", "members": ["Epstein", "Jeffrey Epstein"] }
 
 Be conservative: do NOT merge different real people even if their names are similar. Only merge rows you are confident refer to the same person.`;
 
@@ -53,51 +57,38 @@ IMPORTANT: Do NOT merge places that are semantically different even if related. 
 - Any SPECIFIC STREET ADDRESS is its own entity — do NOT merge with the city/country it sits in (e.g. "935 Pennsylvania Ave NW, Washington D.C." is NOT a duplicate of "Washington, D.C.")
 - Judicial districts stand alone (e.g. "Southern District of New York" is NOT "New York")
 - Different granularities are different entities ("Manhattan" vs "New York", "Palm Beach" vs "Florida")
-Only merge true duplicates: spelling variants, casing differences, or formatting-only differences of the exact same place.
+Only merge true duplicates: spelling variants, casing differences, or formatting-only differences of the exact same place. Skip singletons.`;
 
-Output ONLY valid JSON (no markdown fences):
-{
-  "clusters": [
-    { "canonical_name": "...", "members": ["...", "..."] }
-  ]
-}`;
-
-const EVENT_PROMPT = `You are cleaning a messy extracted-entity list of EVENTS from Jeffrey Epstein case documents. Merge rows that refer to the same event under different phrasings (e.g. "2008 plea deal" vs "Epstein plea agreement 2008").
-
-Output ONLY valid JSON (no markdown fences):
-{
-  "clusters": [
-    { "canonical_name": "...", "members": ["...", "..."] }
-  ]
-}
+const EVENT_PROMPT = `You are cleaning a messy extracted-entity list of EVENTS from Jeffrey Epstein case documents. Merge rows that refer to the same event under different phrasings (e.g. "2008 plea deal" vs "Epstein plea agreement 2008"). Skip singletons.
 
 Be conservative: only merge when clearly the same event.`;
 
-async function clusterWithGemini(prompt: string, rows: EntityRow[]): Promise<Cluster[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
+const ClustersSchema = z.object({
+  clusters: z.array(z.object({ canonical_name: z.string(), members: z.array(z.string()) })),
+});
 
-  const { GoogleGenAI } = await import("@google/genai");
-  const genai = new GoogleGenAI({ apiKey });
-
+// Whole-table clustering is multi-step judgement over a long list → standard
+// Claude tier. Output is structured via tool calling.
+async function clusterWithLlm(prompt: string, rows: EntityRow[]): Promise<Cluster[]> {
   const rowsJson = JSON.stringify(
     rows.map((r) => ({ name: r.name, mention_count: r.mention_count })),
     null,
     2
   );
 
-  const res = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: `${prompt}\n\nHere are the rows:\n\n${rowsJson}`,
-  });
-  const text = res.text ?? "";
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return [];
   try {
-    const parsed = JSON.parse(match[0]) as { clusters: Cluster[] };
-    return parsed.clusters ?? [];
+    const { result } = await generateText({
+      model: "text.sonnet",
+      system: prompt,
+      prompt: `Here are the rows:\n\n${rowsJson}`,
+      schema: ClustersSchema,
+      temperature: 0,
+      maxOutputTokens: 16_000,
+      metadata: { feature: "epstein-dedupe" },
+    });
+    return result.clusters;
   } catch (err) {
-    console.warn(`  Failed to parse Gemini response: ${(err as Error).message}`);
+    console.warn(`  Clustering call failed: ${(err as Error).message}`);
     return [];
   }
 }
@@ -129,8 +120,8 @@ async function dedupeTable(
   if (error) { console.error(error.message); return; }
   if (!rows?.length) { console.log("  (no rows)"); return; }
 
-  console.log(`  ${rows.length} rows → asking Gemini to cluster`);
-  const clusters = await clusterWithGemini(prompt, rows as EntityRow[]);
+  console.log(`  ${rows.length} rows → asking Claude to cluster`);
+  const clusters = await clusterWithLlm(prompt, rows as EntityRow[]);
 
   if (!clusters.length) { console.log("  No duplicates found."); return; }
 
@@ -197,6 +188,7 @@ async function dedupeTable(
 
 async function main() {
   const apply = process.argv.includes("--apply");
+  if (!hasGatewayCredentials()) throw new Error("AI_GATEWAY_API_KEY not set");
   const onlyArg = process.argv.find((a) => a.startsWith("--only="))?.split("=")[1];
   const only = onlyArg ? new Set(onlyArg.split(",")) : null;
 

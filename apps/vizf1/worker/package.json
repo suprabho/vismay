@@ -20,8 +20,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.50.1",
     "@supabase/supabase-js": "^2.45.4",
+    "@vismay/ai-gateway": "workspace:*",
     "@vismay/eval-entities": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vizf1/brand": "workspace:*",

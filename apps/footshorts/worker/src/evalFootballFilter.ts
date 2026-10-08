@@ -1,23 +1,25 @@
 /**
- * One-off eval: would an `is_football_news` Gemini guard correctly filter
- * non-football articles that currently leak into the feed?
+ * Eval: how does the ingest football filter treat articles already in the feed?
  *
- * Pulls a stratified sample of recent `status='summarized'` articles, runs each
- * through a fresh Gemini call with an extended schema, and writes results to
- * eval-football-filter.html at the repo root for human review.
+ * Pulls recent `status='summarized'` articles and re-runs each through the
+ * exact classifier ingest uses — Jev's topic_category decision, exported from
+ * summarize.ts as classifyTopic() — then writes results to
+ * eval-football-filter.html at the repo root for human review. Anything it
+ * would now FILTER is a leak (or a classifier regression) worth a look.
  *
  * Run via: `npx tsx --env-file=.env src/evalFootballFilter.ts`
+ * Needs AI_GATEWAY_API_KEY (or a Vercel OIDC token) + Supabase creds.
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { classifyTopic } from './summarize';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+// Label only — decide() resolves the same default/override itself.
+const MODEL = process.env.JEV_MODEL || 'typesafe-ai/jev';
 
 const SINCE = process.env.EVAL_SINCE ?? '2026-05-01T00:00:00Z';
 const MAX_ARTICLES = Number(process.env.EVAL_MAX ?? 3000);
@@ -29,50 +31,6 @@ const OUTPUT_PATH = resolve(__dirname, '../../../eval-football-filter.html');
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-const TOPIC_CATEGORIES = [
-  'on_pitch',           // match reports, goals, tactics, injuries-from-play
-  'transfer',           // transfers, contracts, signings
-  'club_business',      // ownership, sackings, finances tied to a club
-  'off_pitch_personal', // footballer's personal/legal/charity life
-  'other_sport',        // tennis, F1, NFL, cricket, etc.
-  'betting_odds',       // odds roundups, betting tips
-  'listicle',           // generic top-N lists, often cross-sport
-  'unrelated',          // genuinely off-topic
-] as const;
-
-const responseSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    is_football_news: {
-      type: SchemaType.BOOLEAN,
-      description:
-        'True only if the PRIMARY subject of the article is football (the sport itself, its players, clubs, matches, transfers, or competitions). False if football is merely mentioned in passing, or the article is primarily about another sport, generic listicles, betting promos, or a footballer\'s purely off-pitch life.',
-    },
-    topic_category: {
-      type: SchemaType.STRING,
-      enum: [...TOPIC_CATEGORIES] as unknown as string[],
-      description: 'Best-fit category for the article.',
-    },
-    reason: {
-      type: SchemaType.STRING,
-      description: 'One short sentence (under 25 words) explaining the verdict.',
-    },
-  },
-  required: ['is_football_news', 'topic_category', 'reason'],
-};
-
-const SYSTEM_INSTRUCTION = `You are classifying football news for a strict football-only feed.
-
-For each article, decide whether the article's PRIMARY subject is football. Be strict:
-- An article that mentions a footballer or club but is primarily about another sport, business, lifestyle, or law: is_football_news = false.
-- A betting-tips roundup or generic "top N athletes" listicle: is_football_news = false.
-- An article about another sport: is_football_news = false.
-- Match reports, transfers, club business decisions, manager moves, on-pitch incidents: is_football_news = true.
-- Borderline: a footballer's off-pitch personal news (e.g. legal trouble, charity) — is_football_news = false unless it directly affects their playing status.
-
-Pick the best topic_category. Give a one-sentence reason.`;
 
 type Article = {
   id: string;
@@ -88,7 +46,8 @@ type Article = {
 type Verdict = {
   is_football_news: boolean;
   topic_category: string;
-  reason: string;
+  /** Jev's probability for the chosen category, when reported. */
+  confidence: number | null;
 };
 
 async function fetchSample(): Promise<Article[]> {
@@ -155,28 +114,20 @@ async function fetchSample(): Promise<Article[]> {
 }
 
 async function classify(article: Article): Promise<Verdict | { error: string }> {
-  const model = genAI.getGenerativeModel({
-    model: MODEL,
-    systemInstruction: SYSTEM_INSTRUCTION,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: responseSchema as any,
-      temperature: 0.1,
-      maxOutputTokens: 2000,
-    },
-  });
-
+  // Same text ingest classified from is gone (we never store full bodies), so
+  // judge the stored summary, falling back to the RSS snippet.
   const body = article.summary ?? article.original_snippet ?? '';
-  const prompt = `Publisher: ${article.publisher}
-Headline: ${article.headline}
-
-Article excerpt:
-${body}`;
-
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return JSON.parse(text) as Verdict;
+    const v = await classifyTopic({
+      headline: article.headline,
+      body,
+      publisher: article.publisher,
+    });
+    return {
+      is_football_news: v.is_football_news,
+      topic_category: v.topic_category,
+      confidence: v.confidence,
+    };
   } catch (e: any) {
     return { error: e.message ?? String(e) };
   }
@@ -194,7 +145,8 @@ async function runConcurrent<T, R>(
       while (true) {
         const i = next++;
         if (i >= items.length) return;
-        results[i] = await worker(items[i]);
+        // bounds-checked above; items[i] is defined.
+        results[i] = await worker(items[i] as T);
         process.stdout.write('.');
       }
     })
@@ -251,10 +203,11 @@ function renderHtml(
     .map(([cat, n]) => `<tr><td>${escape(cat)}</td><td>${n}</td></tr>`)
     .join('');
 
-  // Render filtered first so reviewer sees them at the top
-  const sorted = [
+  // Render filtered first so reviewer sees them at the top, errors last.
+  const sorted: Array<{ article: Article; verdict: Verdict | { error: string } }> = [
     ...filtered.sort((a, b) => a.article.publisher.localeCompare(b.article.publisher)),
     ...passed,
+    ...rows.filter((r) => 'error' in r.verdict),
   ];
 
   const articleCards = sorted
@@ -286,7 +239,9 @@ function renderHtml(
       )}</a>
       <div class="snippet">${escape(r.article.summary ?? r.article.original_snippet ?? '')}</div>
       ${entityHtml}
-      <div class="reason"><b>Verdict reason:</b> ${escape(v.reason)}</div>
+      <div class="reason"><b>Confidence:</b> ${
+        v.confidence == null ? 'n/a' : `${(v.confidence * 100).toFixed(0)}% ${escape(v.topic_category)}`
+      }</div>
     </div>`;
     })
     .join('\n');
@@ -377,7 +332,11 @@ async function main() {
   console.log(`[eval] classifying with ${MODEL} (concurrency=${CONCURRENCY})…`);
   const verdicts = await runConcurrent(articles, classify, CONCURRENCY);
 
-  const rows = articles.map((article, i) => ({ article, verdict: verdicts[i] }));
+  // verdicts[i] is set for every i by runConcurrent.
+  const rows = articles.map((article, i) => ({
+    article,
+    verdict: verdicts[i] as Verdict | { error: string },
+  }));
   const html = renderHtml(rows);
   writeFileSync(OUTPUT_PATH, html, 'utf8');
   console.log(`[eval] wrote ${OUTPUT_PATH}`);

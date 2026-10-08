@@ -2,7 +2,7 @@
 
 /**
  * Power rankings review UI: snapshot timeline on the left (newest first,
- * draft/published badge), detail on the right — the ranked table, the Gemini
+ * draft/published badge), detail on the right — the ranked table, the LLM
  * narrative (editable), and publish / unpublish / delete actions. A header
  * "Run scrape" button fires footshorts-theanalyst-power-rankings.yml via
  * /api/footshorts/power-rankings/trigger (TriggerRecapButton pattern).
@@ -522,7 +522,7 @@ export function PowerRankingsClient({ initial }: { initial: PowerRankingSummary[
                     value={narrative}
                     onChange={(e) => setNarrative(e.target.value)}
                     rows={5}
-                    placeholder="No narrative — Gemini was unavailable during the scrape. Write one, or leave blank."
+                    placeholder="No narrative — the AI gateway was unavailable during the scrape. Write one, or leave blank."
                     className="mt-1 w-full rounded border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-sky-500/60"
                   />
                 </label>

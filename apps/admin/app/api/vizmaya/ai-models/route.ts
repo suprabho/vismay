@@ -6,16 +6,21 @@ import {
   getFeatureModelMap,
   setFeatureModel,
 } from '@/lib/aiModelSettings'
+import {
+  LEGACY_TEXT_ALIASES,
+  canonicalModelAlias,
+} from '@/components/canvas/aiSlots'
 
 /**
  * Read / write the per-feature AI model mapping (the admin "AI models" page).
  */
 
+/** Aliases to offer in the picker. Legacy text aliases (`text.pro` …) are
+ *  hidden — they duplicate a Claude tier — but still accepted on PUT. */
 function aliasList(group: 'text' | 'image') {
-  return Object.entries(MODELS[group]).map(([k, id]) => ({
-    alias: `${group}.${k}`,
-    id: id as string,
-  }))
+  return Object.entries(MODELS[group])
+    .map(([k, id]) => ({ alias: `${group}.${k}`, id: id as string }))
+    .filter((a) => !(a.alias in LEGACY_TEXT_ALIASES))
 }
 
 export async function GET() {
@@ -45,7 +50,8 @@ export async function PUT(req: Request) {
   if (!feature) {
     return NextResponse.json({ error: 'unknown feature' }, { status: 400 })
   }
-  const model = typeof body.model === 'string' ? body.model : ''
+  const model =
+    typeof body.model === 'string' ? canonicalModelAlias(body.model) : ''
   const allowed = feature.choices ?? aliasList(feature.modality).map((a) => a.alias)
   const valid = allowed.includes(model)
   if (!valid) {

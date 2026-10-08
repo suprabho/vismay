@@ -8,7 +8,7 @@
 | Platform | Android-first (iOS later) |
 | Auth | Email + OAuth (Google, Apple) |
 | Backend | Supabase (Postgres + Auth + Edge Functions) |
-| Summarization | Gemini 2.5 Flash |
+| Summarization | Jev (classify) + Claude Haiku 5.5 (summary + entities), via Vercel AI Gateway |
 | Stats API | football-data.org (MVP) → api-football (growth) — see [`football-data-api.md`](./football-data-api.md) |
 | News source | RSS from 10+ publishers (commercially sound). One approved exception: theanalyst.com (Opta) is scraped — no public feed exists — with the same mitigations (attribute + link back, summarize only, never reproduce full text); see [`theanalyst-scraping.md`](./theanalyst-scraping.md) |
 | Monetization | Deferred — revisit post-launch |
@@ -19,8 +19,8 @@
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...      # service_role key, server-only
-GEMINI_API_KEY=...                    # Google AI Studio → API keys
-GEMINI_MODEL=gemini-2.5-flash         # optional override
+AI_GATEWAY_API_KEY=...                # Vercel dashboard → AI → API Keys
+TEXT_MODEL=text.haiku                 # optional summarizer override
 FOOTBALL_DATA_TOKEN=...               # football-data.org dashboard
 ```
 
@@ -41,7 +41,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...  # anon key, safe to ship
   - Apple: requires paid Apple Developer account ($99/yr) — skip for Android-first
 
 ### 2. Get API keys
-- **Gemini:** aistudio.google.com → Get API key (free tier, no card required)
+- **AI Gateway:** Vercel dashboard → AI → API Keys (Jev + Claude share the one key)
 - **football-data.org:** register at football-data.org/client/register
   - Free tier: 12 competitions, 10 req/min, **personal/educational only**
   - For commercial launch: upgrade to Standard (€29–49/mo)
@@ -58,7 +58,7 @@ This pulls leagues + teams from football-data.org into your `entities` table. Ta
 ```bash
 npm run ingest
 ```
-Expect ~100–200 articles on the first run from the default RSS sources. Watch the logs for `[entity-miss]` — those are entities Gemini found that aren't in your canonical list. Add aliases in `entityResolver.ts` or manually add to `entities` table.
+Expect ~100–200 articles on the first run from the default RSS sources. Watch the logs for `[entity-miss]` — those are entities the summarizer found that aren't in your canonical list. Add aliases in `entityResolver.ts` or manually add to `entities` table.
 
 ### 5. Schedule ingestion
 Options (pick one):

@@ -7,14 +7,15 @@ goes through one seam.
 
 ## Why a gateway
 
-Today the repo has direct `@google/genai` + `@anthropic-ai/sdk` calls in a
-dozen places: [judge.ts](../../packages/eval-entities/src/judge.ts), the energy
-profile + epstein scripts, the audio render workflow, the CF workers. Each one
-reads `GEMINI_API_KEY` directly, has its own retry shape, no shared logging.
+Every model call in the repo — the footshorts / vizf1 ingest workers, the
+entity judge, the energy-profile + epstein scripts, story narration TTS, the
+admin canvas — goes through this package. Nothing reads a provider key
+(`GEMINI_API_KEY` is gone); `@anthropic-ai/sdk` survives only in
+story-pipeline's opt-in direct path for quota-bound eval runs.
 
 Routing through the gateway gives us:
 
-- Provider-agnostic call sites (swap Gemini Flash → Claude Sonnet in one line).
+- Provider-agnostic call sites (swap Haiku → Sonnet in one line).
 - One billing surface + per-feature spend (via the `metadata` headers).
 - Built-in fallbacks, caching, rate-limit retries — no DIY.
 - Same code path works from Vercel apps, Node scripts, and CF workers.
@@ -29,6 +30,21 @@ picks up automatically — no key rotation, no secret management.
 
 CF workers: set `AI_GATEWAY_API_KEY` as a worker secret.
 
+## Which call do I want?
+
+| The job | Call | Model |
+|---|---|---|
+| Decide something about content that exists — yes/no, pick one of N, a score | `decide()` | `decision.jev` |
+| High-volume per-item writing/extraction — summaries, tags, NER, OCR of one doc | `generateText()` | `text.haiku` |
+| Editorial prose, complex extraction, vision, nested/union schemas (default) | `generateText()` | `text.sonnet` |
+| Whole-document restructuring, judges grading other models, long-horizon reasoning | `generateText()` | `text.opus` |
+| Images | `generateImage()` | `image.*` (still Google by default) |
+| Speech | `generateSpeech()` | `speech.default` (Gemini TTS) |
+
+If one prompt today does both — "is this football? then summarise it" — split
+it: the decision to Jev, the writing to Claude. Jev returns calibrated
+probabilities you can threshold; a text model's yes/no is just a token.
+
 ## Usage
 
 ### Text
@@ -37,7 +53,7 @@ CF workers: set `AI_GATEWAY_API_KEY` as a worker secret.
 import { generateText } from '@vismay/ai-gateway'
 
 const { result, usage } = await generateText({
-  model: 'text.fast',
+  model: 'text.haiku',
   system: 'You write short editorial blurbs.',
   prompt: 'Country: India\nMix: coal 70%, solar 20%',
 })
@@ -52,11 +68,57 @@ import { z } from 'zod'
 const Schema = z.object({ summary: z.string(), tags: z.array(z.string()) })
 
 const { result } = await generateText({
-  model: 'text.pro',
+  model: 'text.sonnet',
   prompt: '…',
   schema: Schema,
 })
 // result is typed as { summary: string; tags: string[] }
+```
+
+### Text with documents (PDF)
+
+```ts
+const { result } = await generateText({
+  model: 'text.haiku',
+  prompt: 'Transcribe this document verbatim.',
+  files: [{ data: pdfBuffer.toString('base64'), mimeType: 'application/pdf' }],
+})
+```
+
+### Decisions (Jev)
+
+```ts
+import { decide } from '@vismay/ai-gateway'
+
+const { answers } = await decide({
+  state: { headline, article },
+  questions: {
+    topic: {
+      type: 'choice',
+      instructions: 'What is this article primarily about?',
+      criteria: { on_pitch: 'Matches, goals, tactics…', transfer: 'Signings, contracts…', unrelated: 'Anything else.' },
+    },
+    subject: {
+      type: 'boolean',
+      instructions: 'Is "Arsenal" a subject of this article rather than a passing mention?',
+      criteria: { true: 'Primary or substantive secondary subject.', false: 'Mentioned in passing.' },
+    },
+  },
+})
+answers.topic.choice        // 'on_pitch' | 'transfer' | 'unrelated'
+answers.subject.probability // P(true), 0..1
+```
+
+All questions share one `state` and are answered in a single round trip —
+keep a call to a couple of dozen. `decide()` throws on failure or refusal;
+precision gates catch that and fail open. `JEV_MODEL` overrides the model id.
+
+### Speech
+
+```ts
+import { generateSpeech } from '@vismay/ai-gateway'
+
+const { bytes, mimeType } = await generateSpeech({ text, voice: 'Orus', outputFormat: 'wav' })
 ```
 
 ### Image
@@ -111,11 +173,14 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 
 | Alias | Gateway ID |
 |---|---|
-| `text.fast` | `google/gemini-3-flash` |
-| `text.pro` | `google/gemini-3.1-pro-preview` |
-| `text.proPlus` | `openai/gpt-5.5` (cross-provider frontier) |
-| `text.claude` | `anthropic/claude-sonnet-4.6` |
-| `text.opus` | `anthropic/claude-opus-4.8` (frontier editorial/agentic) |
+| `text.haiku` | `anthropic/claude-haiku-5.5` (light tier) |
+| `text.sonnet` | `anthropic/claude-sonnet-5.5` (standard tier, default) |
+| `text.opus` | `anthropic/claude-opus-5.5` (heavy tier) |
+| `text.fast` / `text.pro` / `text.claude` | legacy → Haiku 5.5 / Sonnet 5.5 / Sonnet 5.5 |
+| `text.fable` | `anthropic/claude-fable-5` |
+| `text.proPlus` | `openai/gpt-5.6-sol` (cross-provider frontier) |
+| `text.terra` / `text.luna` | `openai/gpt-5.6-terra` / `openai/gpt-5.6-luna` |
+| `text.grok` | `xai/grok-4.5` |
 | `text.code` | `openai/gpt-5.3-codex` (code/YAML/JSON default) |
 | `text.codeLong` | `alibaba/qwen3-coder-plus` (1M ctx coder) |
 | `text.codeBuild` | `xai/grok-build-0.1` (code-focused) |
@@ -135,6 +200,8 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 | `image.grokImage` | `xai/grok-imagine-image` |
 | `image.gptImage` | `openai/gpt-image-2.5-sunburst` |
 | `image.gptImageFlare` | `openai/gpt-image-2.5-flare` |
+| `decision.jev` | `typesafe-ai/jev` (typed decisions via `decide()`) |
+| `speech.default` / `speech.lite` | `google/gemini-3.8-flash-tts` / `google/gemini-3.8-flash-lite-tts` |
 
 `generateImage` auto-detects whether a model id is a dedicated image model or
 a multimodal LLM (Gemini nano-banana, Gemini Flash Image) and picks the

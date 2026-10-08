@@ -45,8 +45,11 @@ export async function runEval(
   adapter: EntityEvalAdapter,
   opts: RunOpts
 ): Promise<{ htmlPath: string; jsonPath: string }> {
+  // Per-tag verdicts come from Jev, the missing list from opts.judgeModel —
+  // name both in logs and reports so runs stay comparable.
+  const judgeLabel = `${process.env.JEV_MODEL || 'decision.jev'} + ${opts.judgeModel}`;
   console.log(
-    `[eval-entities] app=${adapter.appName} judge=${opts.judgeModel} since=${opts.since} max=${opts.max}`
+    `[eval-entities] app=${adapter.appName} judge=${judgeLabel} since=${opts.since} max=${opts.max}`
   );
 
   console.log('[eval-entities] fetching sample…');
@@ -85,7 +88,7 @@ export async function runEval(
     entityTypes: adapter.entityTypes,
   });
 
-  console.log(`[eval-entities] judging with ${opts.judgeModel} (concurrency=${opts.concurrency})…`);
+  console.log(`[eval-entities] judging with ${judgeLabel} (concurrency=${opts.concurrency})…`);
   const verdicts = await runConcurrent(articles, judge, opts.concurrency);
   // verdicts[i] is set for every i in [0, articles.length) by runConcurrent.
   const results: ArticleResult[] = articles.map((article, i) => ({
@@ -104,7 +107,7 @@ export async function runEval(
 
   const html = renderHtml({
     appName: adapter.appName,
-    judgeModel: opts.judgeModel,
+    judgeModel: judgeLabel,
     since: opts.since,
     results,
     metrics,
@@ -116,7 +119,7 @@ export async function runEval(
     JSON.stringify(
       {
         appName: adapter.appName,
-        judgeModel: opts.judgeModel,
+        judgeModel: judgeLabel,
         since: opts.since,
         rerunExtraction: !!opts.rerunExtraction,
         generatedAt: new Date().toISOString(),

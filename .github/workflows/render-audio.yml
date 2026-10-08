@@ -9,7 +9,7 @@ name: Render story audio
 # secrets work for the PDF / video workflows):
 #   NEXT_PUBLIC_SUPABASE_URL    — same value as in Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY   — service role key for storage writes
-#   GEMINI_API_KEY              — Google Generative Language API key for TTS
+#   AI_GATEWAY_API_KEY          — Vercel AI Gateway key for TTS (Gemini TTS via the gateway)
 
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
           CONTENT_SOURCE: db
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         # `--force` because the dispatch is triggered by an explicit admin
         # action; we want every chunk re-checked against current overrides
         # rather than relying on the chunk-hash cache.

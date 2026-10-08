@@ -1,6 +1,6 @@
 # Social Engagement Dashboard — Implementation Plan
 
-A unified dashboard for tracking mentions, replies, and engagement across Reddit, YouTube, LinkedIn, and X. Built on Next.js + Supabase + Gemini.
+A unified dashboard for tracking mentions, replies, and engagement across Reddit, YouTube, LinkedIn, and X. Built on Next.js + Supabase + Claude/Jev via the AI Gateway (`@vismay/ai-gateway`).
 
 > **Status (2026-05-15):** v1 landed inside the existing `/admin` (Social tab). Reddit deferred. YouTube + LinkedIn/X (email) ingesting. AI scoring + digest + trends deferred — see "v1 as shipped" below.
 
@@ -16,7 +16,7 @@ A unified dashboard for tracking mentions, replies, and engagement across Reddit
 
 **Ingest paths**
 - **YouTube:** [scripts/social/ingest-youtube.ts](../scripts/social/ingest-youtube.ts) — pulls comments + replies on the channel's last 50 uploads via Data API v3. Runs every 30 min via [.github/workflows/social-ingest-youtube.yml](../.github/workflows/social-ingest-youtube.yml). Idempotent on `(youtube, comment_id)`.
-- **LinkedIn + X:** [lib/socialEmailParse.ts](../lib/socialEmailParse.ts) → [app/api/ingest/email/route.ts](../app/api/ingest/email/route.ts). Notification emails arrive at a subdomain, get forwarded by a Cloudflare Email Worker ([scripts/social/cloudflare-email-worker.js](../scripts/social/cloudflare-email-worker.js)) to the route, which parses with `mailparser` and extracts fields via Gemini.
+- **LinkedIn + X:** [lib/socialEmailParse.ts](../lib/socialEmailParse.ts) → [app/api/ingest/email/route.ts](../app/api/ingest/email/route.ts). Notification emails arrive at a subdomain, get forwarded by a Cloudflare Email Worker ([scripts/social/cloudflare-email-worker.js](../scripts/social/cloudflare-email-worker.js)) to the route, which parses with `mailparser` and extracts fields via Claude Haiku (`text.haiku`, zod schema) through `@vismay/ai-gateway`.
 
 **Status flow:** every row starts `status='new'`. Inbox row dropdown switches to `seen / replied / dismissed` via `PUT /api/admin/social/:id`.
 
@@ -24,7 +24,7 @@ A unified dashboard for tracking mentions, replies, and engagement across Reddit
 
 **Vercel (Production):**
 - `SOCIAL_INGEST_SECRET` — random 32+ char string; same value goes into the Cloudflare Worker as `INGEST_SECRET`.
-- `GEMINI_API_KEY` — already set for energy-profile / render-audio; reused here.
+- `AI_GATEWAY_API_KEY` — Vercel AI Gateway key (on Vercel the runtime's OIDC token also works); shared with the other gateway call sites.
 - (Supabase vars already configured.)
 
 **GitHub repo secrets (Production environment):**
@@ -84,8 +84,8 @@ Replace the daily ritual of opening four apps to check notifications with a sing
 │  Email parser   │──┤    (Vercel cron)      (Postgres)    (Tailwind + Phosphor)
 │  (LinkedIn/X)   │  │           │
 └─────────────────┘──┘           ↓
-                          Gemini 2.5 Flash
-                          (priority + digest)
+                     Claude / Jev (AI Gateway)
+                     (extract, priority, digest)
 ```
 
 **Single unified schema** — every platform's events normalize into one `engagement_event` table so the dashboard is platform-agnostic.
@@ -197,7 +197,7 @@ The pragmatic workaround for LinkedIn's locked API.
 - [ ] **Option B — Resend/Postmark inbound:** Configure inbound parse to webhook your Next.js endpoint
 - [ ] Build `/api/ingest/email/route.ts`:
   - Identify sender pattern (LinkedIn vs X)
-  - Pass email body to Gemini 2.5 Flash with a strict JSON schema prompt:
+  - Pass email body to Claude Haiku (`text.haiku`) with a strict zod schema:
     ```
     Extract: type, author_handle, content, parent_content, source_url
     Return ONLY valid JSON matching this schema.
@@ -215,7 +215,7 @@ Same mechanism as LinkedIn, different prompt.
 
 - [ ] Configure X notification email settings: instant emails for mentions, replies, quotes only (skip likes/follows for v1)
 - [ ] Forward to `social-ingest@`
-- [ ] Extend email parser to detect X emails and use an X-specific Gemini prompt
+- [ ] Extend email parser to detect X emails and use an X-specific extraction prompt
 - [ ] Test, tune
 
 **Deliverable:** All four platforms ingesting.
@@ -229,7 +229,7 @@ Same mechanism as LinkedIn, different prompt.
 Make the dashboard actually intelligent instead of just a feed.
 
 - [ ] On every `engagement_event` insert, trigger a background job (Supabase Edge Function or Vercel queue)
-- [ ] Call Gemini 2.5 Flash with the event + context:
+- [ ] Score `needs_reply` (boolean) and `priority` (choice) with Jev via `decide()`, and write `summary` with Claude Haiku — the event + context:
   ```
   Score this engagement on three axes:
   1. needs_reply: bool — Does this contain a direct question to me, or a clear conversational opening?
@@ -254,7 +254,7 @@ The original ask: a morning digest.
 - [ ] Create `/api/cron/digest/route.ts`, runs daily at 7:30am IST
 - [ ] Query all `engagement_event` from last 24h
 - [ ] Group by platform, count by priority
-- [ ] Pass top 10 high-priority items to Gemini with prompt:
+- [ ] Pass top 10 high-priority items to Claude (`text.sonnet`) with prompt:
   ```
   Write a 5-bullet morning digest of yesterday's social engagement.
   Lead with anything that needs a reply.
@@ -288,7 +288,7 @@ The original ask: a morning digest.
 | Icons | Phosphor | Your preference |
 | Database | Supabase (Postgres) | You've used it across projects |
 | Cron | Vercel Cron | Free tier covers this easily |
-| AI | Gemini 2.5 Flash | Cheap, fast, you already use it |
+| AI | Claude Haiku/Sonnet + Jev via `@vismay/ai-gateway` | One gateway key; Jev for decisions, Claude for text |
 | Email ingest | Cloudflare Email Workers or Resend Inbound | Both work; Cloudflare is free |
 | Email send | Resend | Clean DX |
 | Charts | Recharts | Standard, works with Tailwind |
@@ -325,7 +325,7 @@ Before starting Phase 0, lock these:
 
 | Risk | Mitigation |
 |---|---|
-| Email template changes break LinkedIn/X parsing | Gemini parsing is more resilient than regex; log parse failures to a "needs manual review" table |
+| Email template changes break LinkedIn/X parsing | LLM parsing is more resilient than regex; log parse failures to a "needs manual review" table |
 | YouTube API quota exceeded | Cache aggressively, only poll videos from last 90 days |
 | Reddit refresh token expires | Token refresh on 401; alert via digest email if refresh fails |
 | Dashboard becomes another thing to check | Daily digest email is the primary surface; dashboard is for triage sessions, not constant monitoring |

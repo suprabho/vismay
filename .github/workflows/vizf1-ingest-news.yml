@@ -1,7 +1,8 @@
 name: VizF1 - daily news ingest
 
-# Pulls F1 RSS feeds, hands each new article to Gemini for a 55-60 word summary
-# + driver/team/circuit tagging, upserts into the vizf1 Supabase. Then refreshes
+# Pulls F1 RSS feeds, has Jev decide whether each new article is F1 news, then
+# Claude Haiku writes a 55-60 word summary + driver/team/circuit tags (both via
+# the AI gateway), upserts into the vizf1 Supabase. Then refreshes
 # story_segments so the StoryRings on /feed reflect the day's news.
 #
 # Idempotent on url_hash, safe to re-run.
@@ -10,7 +11,7 @@ name: VizF1 - daily news ingest
 # with vizmaya / energy-profile workflows):
 #   NEXT_PUBLIC_SUPABASE_URL    - Supabase project URL
 #   SUPABASE_SERVICE_ROLE_KEY   - service role key
-#   GEMINI_API_KEY              - Gemini API key
+#   AI_GATEWAY_API_KEY          - Vercel AI Gateway key (Jev + Claude)
 
 on:
   schedule:
@@ -52,7 +53,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: pnpm ingest:news:ci
 
       - name: Rebuild story segments

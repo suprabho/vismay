@@ -41,7 +41,7 @@
  * cover) gets a minimal fixtures row created from the scoreboard so its
  * facts have somewhere to land. Writes stats + full timeline (gap-fill).
  *
- * Deterministic parsing throughout — no Gemini. Runs every 3h, 30min after
+ * Deterministic parsing throughout — no LLM. Runs every 3h, 30min after
  * the scores refresh flips fixtures to 'finished'
  * (.github/workflows/footshorts-theanalyst-match-facts.yml).
  *

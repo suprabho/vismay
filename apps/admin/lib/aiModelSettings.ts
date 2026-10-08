@@ -1,5 +1,6 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { TEXT_MODEL_CHOICES } from '@vismay/story-pipeline'
+import { canonicalModelAlias } from '@/components/canvas/aiSlots'
 
 /**
  * Per-feature AI model mapping.
@@ -11,6 +12,11 @@ import { TEXT_MODEL_CHOICES } from '@vismay/story-pipeline'
  * The model the user picks live in a per-request picker (Ask, selection edit)
  * still wins — this mapping is the DEFAULT that picker falls back to, and the
  * sole model for features with no picker (evaluate, section generate).
+ *
+ * Stored rows may still hold a legacy alias (`text.pro`, `text.fast`,
+ * `text.claude` — the pre-tier names, now resolving to Claude tiers). They're
+ * canonicalised to the tier name on read so slot-set / choices checks keep
+ * matching.
  */
 
 export type Modality = 'text' | 'image'
@@ -31,7 +37,7 @@ export interface AiFeature {
 }
 
 /**
- * The 6 schema-safe text models the compose flow supports. Kept in sync with
+ * The schema-safe text models the compose flow supports. Kept in sync with
  * `packages/story-pipeline/src/models.ts` so the compose pickers can't offer a
  * model that `resolveModel`'s `isAllowedTextModel` guard would silently discard.
  */
@@ -49,42 +55,42 @@ export const AI_FEATURES: AiFeature[] = [
     key: 'generate',
     label: 'Slot generate (text / YAML)',
     modality: 'text',
-    default: 'text.pro',
+    default: 'text.sonnet',
     description: 'Per-slot ✨ generation default, when it fits the slot’s model set.',
   },
   {
     key: 'generateSection',
     label: 'Section generate',
     modality: 'text',
-    default: 'text.pro',
+    default: 'text.sonnet',
     description: 'Generate a whole new section from a brief.',
   },
   {
     key: 'generateChart',
     label: 'Chart data generate',
     modality: 'text',
-    default: 'text.pro',
+    default: 'text.sonnet',
     description: 'Generate a chart’s categories + numeric series, grounded in the story’s sources.',
   },
   {
     key: 'transform',
     label: 'Selection edit',
     modality: 'text',
-    default: 'text.pro',
+    default: 'text.sonnet',
     description: 'In-editor ✨ Edit on a selection (when it fits the slot’s model set).',
   },
   {
     key: 'fix',
     label: 'Schema fix',
     modality: 'text',
-    default: 'text.pro',
+    default: 'text.sonnet',
     description: 'The ✨ Fix with AI button — repairs a slot to match its schema (valid layout, layer types, required fields).',
   },
   {
     key: 'evaluate',
     label: 'Evaluator (vision)',
     modality: 'text',
-    default: 'text.pro',
+    default: 'text.sonnet',
     description: 'Vision critique of a rendered section — needs a vision-capable model.',
   },
   {
@@ -98,7 +104,7 @@ export const AI_FEATURES: AiFeature[] = [
     key: 'composeAngles',
     label: 'Compose · angle generation',
     modality: 'text',
-    default: 'text.claude',
+    default: 'text.sonnet',
     description: 'Compose flow — proposes story angles from the sources.',
     choices: COMPOSE_ALIASES,
   },
@@ -106,7 +112,7 @@ export const AI_FEATURES: AiFeature[] = [
     key: 'composeOutline',
     label: 'Compose · outline',
     modality: 'text',
-    default: 'text.claude',
+    default: 'text.sonnet',
     description: 'Compose flow — turns the chosen angle into a section outline.',
     choices: COMPOSE_ALIASES,
   },
@@ -114,7 +120,7 @@ export const AI_FEATURES: AiFeature[] = [
     key: 'composeSection',
     label: 'Compose · draft (sections)',
     modality: 'text',
-    default: 'text.claude',
+    default: 'text.sonnet',
     description:
       'Compose flow — writes each section’s prose + visual config. Schema-heavy; prefer Claude/GPT.',
     choices: COMPOSE_ALIASES,
@@ -135,7 +141,7 @@ export async function getFeatureModelMap(): Promise<Record<string, string>> {
       .select('feature, model_alias')
     for (const row of data ?? []) {
       if (typeof row.model_alias === 'string' && row.model_alias) {
-        map[row.feature as string] = row.model_alias
+        map[row.feature as string] = canonicalModelAlias(row.model_alias)
       }
     }
   } catch {
@@ -147,7 +153,7 @@ export async function getFeatureModelMap(): Promise<Record<string, string>> {
 /** The resolved model alias for one feature (override or code default). */
 export async function getFeatureModel(key: string): Promise<string> {
   const map = await getFeatureModelMap()
-  return map[key] ?? DEFAULTS[key] ?? 'text.pro'
+  return map[key] ?? DEFAULTS[key] ?? 'text.sonnet'
 }
 
 /** Upsert a feature's model override. */

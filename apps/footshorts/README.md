@@ -8,7 +8,7 @@ InShorts-style football news app. Swipe 60-word AI-summarized cards, follow leag
 - **Web:** Next.js (App Router) + Tailwind — admin tools, onboarding, public story/league/team pages
 - **Backend:** Supabase (Postgres + Auth + Realtime)
 - **Ingestion worker:** Node/TS, run on GitHub Actions cron
-- **AI:** Gemini 2.5 Flash for summarization + entity extraction
+- **AI:** Vercel AI Gateway — Jev decides what's football and which tags are real subjects; Claude Haiku 5.5 summarises + extracts entities
 - **Stats:** football-data.org (fixtures, standings, scores)
 - **Analytics:** Amplitude on web + mobile. One shared event taxonomy in `packages/shared/src/analytics.ts`; per-app SDK wrappers in `web/lib/analytics.ts` (Browser SDK, autocaptured page views) and `mobile/src/lib/analytics.ts` (React Native SDK, explicit `screen_viewed`). No-ops without `NEXT_PUBLIC_AMPLITUDE_API_KEY` / `EXPO_PUBLIC_AMPLITUDE_API_KEY`.
 - **News source:** RSS from 15–20 publishers (BBC, Guardian, ESPN FC, OneFootball, Goal, etc.)
@@ -20,7 +20,7 @@ footshorts/
 ├── apps/
 │   ├── mobile/          # Expo RN app
 │   ├── web/             # Next.js app (admin + public pages + onboarding)
-│   └── worker/          # RSS ingest, Gemini pipeline, fixtures + scores refresh
+│   └── worker/          # RSS ingest, AI pipeline (Jev + Claude), fixtures + scores refresh
 ├── packages/
 │   ├── shared/          # Shared types, zod schemas, Supabase client
 │   └── brand/           # Shared brand tokens (colors, logos)
@@ -35,7 +35,7 @@ footshorts/
 Run from repo root:
 
 - `npm run worker:seed` — seed competitions/teams/players
-- `npm run worker:ingest` — pull RSS, summarize via Gemini, resolve entities, write articles
+- `npm run worker:ingest` — pull RSS, classify via Jev, summarize via Claude Haiku, resolve + gate entities, write articles
 
 Worker also includes `scores.ts` (live + recent results refresh), `fixtures.ts` (upcoming fixtures + standings), `entityResolver.ts`, and `backfillColors.ts` / `backfillImages.ts` one-shots.
 
@@ -51,11 +51,11 @@ Worker also includes `scores.ts` (live + recent results refresh), `fixtures.ts` 
 ## Data flow
 
 ```
-RSS feeds ─▶ worker (hourly via GH Actions) ─▶ Gemini ─▶ Supabase
-                                                            │
-football-data.org ─▶ scores worker (every 12h) ─────────────┤
-                                                            ▼
-                                  RN + web ◀── follow graph queries
+RSS feeds ─▶ worker (hourly via GH Actions) ─▶ Jev + Claude ─▶ Supabase
+                                                                  │
+football-data.org ─▶ scores worker (every 12h) ───────────────────┤
+                                                                  ▼
+                                        RN + web ◀── follow graph queries
 ```
 
 ## HTML stories (`footshorts.com/s/<slug>`)

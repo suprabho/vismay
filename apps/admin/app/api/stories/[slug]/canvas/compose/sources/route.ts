@@ -35,7 +35,7 @@ import { extractLibraryItem } from '@/lib/libraryProviders'
  * Extraction (see `extractFileRow`) routes by format:
  *   - PDFs → LiteParse first — local, fast, free, markdown-preserving. Only
  *     scanned/graphical PDFs with no usable text layer escalate to the async
- *     worker (markitdown's text layer → Claude/Gemini vision fallback).
+ *     worker (markitdown's text layer → Claude/GPT vision fallback).
  *   - Office (Word/PowerPoint/Excel) + EPub → straight to the worker, because
  *     markitdown (a Python CLI, not installable in the Next runtime) is the only
  *     thing that reads them; the sync TS path and LiteParse can't.

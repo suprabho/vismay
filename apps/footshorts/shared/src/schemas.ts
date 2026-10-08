@@ -83,7 +83,7 @@ export const FeedCardSchema = z.object({
 export type FeedCard = z.infer<typeof FeedCardSchema>;
 
 // =====================================================
-// Gemini output schemas (structured output)
+// Summarizer output schemas (worker/src/summarize.ts)
 // =====================================================
 
 export const TopicCategorySchema = z.enum([
@@ -98,17 +98,24 @@ export const TopicCategorySchema = z.enum([
 ]);
 export type TopicCategory = z.infer<typeof TopicCategorySchema>;
 
-export const GeminiSummarySchema = z.object({
+// is_football_news + topic_category are decided by Jev; summary, headline_en
+// and entities are written by Claude (only for football articles).
+export const ArticleSummarySchema = z.object({
   is_football_news: z.boolean(),
   topic_category: TopicCategorySchema,
   summary: z.string(),
   // English headline (translated for non-English sources, verbatim otherwise).
-  // Optional so pre-existing rows / older prompts without it still validate.
+  // Optional: absent for non-football articles and pre-existing rows.
   headline_en: z.string().optional(),
   entities: z.object({
-    leagues: z.array(z.string()),  // league names/slugs Gemini spotted
+    leagues: z.array(z.string()),  // league names/slugs the extractor spotted
     teams: z.array(z.string()),
     players: z.array(z.string()),
   }),
 });
-export type GeminiSummary = z.infer<typeof GeminiSummarySchema>;
+export type ArticleSummary = z.infer<typeof ArticleSummarySchema>;
+
+/** @deprecated Provider-specific name kept for existing importers — use ArticleSummarySchema. */
+export const GeminiSummarySchema = ArticleSummarySchema;
+/** @deprecated Provider-specific name kept for existing importers — use ArticleSummary. */
+export type GeminiSummary = ArticleSummary;

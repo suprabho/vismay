@@ -38,7 +38,7 @@ export const FOOTSHORTS_WORKERS: WorkerDef[] = [
     id: 'footshorts-ingest',
     workflowFile: 'footshorts-ingest.yml',
     label: 'News ingest',
-    description: 'Pulls RSS feeds, summarizes + tags each article via Gemini.',
+    description: 'Pulls RSS feeds; Jev classifies each article, Claude Haiku summarises + tags it.',
     schedule: 'Hourly',
   },
   {

@@ -1,18 +1,21 @@
 /**
- * Epstein NER pipeline: chunk → Gemini extraction → entity upsert
+ * Epstein NER pipeline: chunk → Claude extraction → entity upsert
  *
- * Picks up chunks with ner_done=false, runs structured extraction via Gemini,
- * and upserts locations/people/events + mention records into Supabase.
+ * Picks up chunks with ner_done=false, runs structured extraction via Claude
+ * Haiku (through the AI Gateway), and upserts locations/people/events +
+ * mention records into Supabase.
  *
  * Usage:
  *   npx tsx scripts/epstein/ner.ts [--limit 50] [--concurrency 5]
  *
  * Environment:
- *   GEMINI_API_KEY
+ *   AI_GATEWAY_API_KEY
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  */
 
+import { z } from "zod";
+import { generateText, hasGatewayCredentials } from "@vismay/ai-gateway";
 import { createServiceClient } from "@vismay/content-source/supabase";
 
 // ---------------------------------------------------------------------------
@@ -56,34 +59,40 @@ For locations: Extract any place names (cities, countries, islands, addresses, p
 For people: Extract any named individuals. Map each person to their primary associated location/country (e.g., "Donald Trump" → "United States", "Mohammed bin Salman" → "Saudi Arabia").
 For events: Extract named events, incidents, legal actions, or notable occurrences. Map each to where it happened.
 
-Be conservative — only include entities with sufficient evidence in the text. Skip vague references.
+Be conservative — only include entities with sufficient evidence in the text. Skip vague references.`;
 
-Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{
-  "locations": [{ "name": "...", "context": "...", "mentioned_by": "..." }],
-  "people": [{ "name": "...", "role": "...", "associated_location": "..." }],
-  "events": [{ "name": "...", "date": "...", "location": "...", "description": "..." }]
-}`;
+const NERSchema = z.object({
+  locations: z.array(
+    z.object({ name: z.string(), context: z.string(), mentioned_by: z.string().optional() })
+  ),
+  people: z.array(
+    z.object({ name: z.string(), role: z.string().optional(), associated_location: z.string().optional() })
+  ),
+  events: z.array(
+    z.object({
+      name: z.string(),
+      date: z.string().optional(),
+      location: z.string().optional(),
+      description: z.string().optional(),
+    })
+  ),
+});
 
+// Per-chunk NER is high-volume extraction → light Claude tier. The zod schema
+// is enforced via tool calling, so there's no JSON to scrape out of prose.
 async function extractEntities(chunkText: string): Promise<NERResult | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
-
   try {
-    const { GoogleGenAI } = await import("@google/genai");
-    const genai = new GoogleGenAI({ apiKey });
-
-    const res = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `${NER_PROMPT}\n\nDocument chunk:\n\n${chunkText}`,
+    const { result } = await generateText({
+      model: "text.haiku",
+      system: NER_PROMPT,
+      prompt: `Document chunk:\n\n${chunkText}`,
+      schema: NERSchema,
+      temperature: 0,
+      metadata: { feature: "epstein-ner" },
     });
-
-    const text = res.text ?? "";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    return JSON.parse(match[0]) as NERResult;
+    return result;
   } catch (err) {
-    console.warn(`    Gemini error: ${(err as Error).message}`);
+    console.warn(`    LLM error: ${(err as Error).message}`);
     return null;
   }
 }
@@ -299,6 +308,8 @@ async function main() {
     args.find((a) => a.startsWith("--concurrency="))?.split("=")[1] ?? "5",
     10
   );
+
+  if (!hasGatewayCredentials()) throw new Error("AI_GATEWAY_API_KEY not set");
 
   const supabase = createServiceClient();
 

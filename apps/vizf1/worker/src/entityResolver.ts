@@ -1,5 +1,5 @@
 /**
- * Maps Gemini's free-text entity names (e.g. "Max Verstappen", "Red Bull",
+ * Maps the summariser's free-text entity names (e.g. "Max Verstappen", "Red Bull",
  * "Silverstone") to canonical IDs in the drivers / constructors / circuits
  * tables. Pure normalisation — no fuzzy ML, just lowercased substring matching
  * against name + given_name+family_name + locality + circuit_id slug.
@@ -109,7 +109,7 @@ function matchCircuit(needle: string, circuits: CircuitRow[]): string | null {
 
 export async function resolveEntities(
   sb: SupabaseClient,
-  gemini: { drivers: string[]; teams: string[]; circuits: string[] },
+  extracted: { drivers: string[]; teams: string[]; circuits: string[] },
 ): Promise<EntityRef[]> {
   const { drivers, constructors, circuits } = await loadCache(sb)
   const out: EntityRef[] = []
@@ -121,15 +121,15 @@ export async function resolveEntities(
       out.push({ entity_type, entity_id })
     }
   }
-  for (const name of gemini.drivers) {
+  for (const name of extracted.drivers) {
     const id = matchDriver(name, drivers)
     if (id) push('driver', id)
   }
-  for (const name of gemini.teams) {
+  for (const name of extracted.teams) {
     const id = matchConstructor(name, constructors)
     if (id) push('constructor', id)
   }
-  for (const name of gemini.circuits) {
+  for (const name of extracted.circuits) {
     const id = matchCircuit(name, circuits)
     if (id) push('circuit', id)
   }

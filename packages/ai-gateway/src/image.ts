@@ -1,5 +1,5 @@
 import {
-  experimental_generateImage as aiGenerateImage,
+  generateImage as aiGenerateImage,
   generateText as aiGenerateText,
   type ModelMessage,
 } from 'ai'

@@ -1,9 +1,10 @@
 import 'dotenv/config';
-import { GoogleGenAI } from '@google/genai';
+import { generateText, hasGatewayCredentials } from '@vismay/ai-gateway';
 
 async function main() {
   const url = process.argv[2];
   if (!url) { console.error('usage: debug-ocr.ts <pdf-url>'); process.exit(1); }
+  if (!hasGatewayCredentials()) { console.error('AI_GATEWAY_API_KEY not set'); process.exit(1); }
 
   const res = await fetch(url, {
     headers: {
@@ -17,21 +18,15 @@ async function main() {
   const buffer = Buffer.from(ab);
   console.log(`PDF size: ${buffer.byteLength} bytes`);
 
-  const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-  const out = await genai.models.generateContent({
-    model: 'gemini-2.0-flash',
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: 'application/pdf', data: buffer.toString('base64') } },
-          { text: 'Transcribe every legible word from this document, top-to-bottom, left-to-right. Preserve paragraph breaks. Include hand-written notes, letterheads, and stamps when readable. Do not summarize, explain, or add commentary. If a page is blank or unreadable, output "[blank page]". Output raw text only.' },
-        ],
-      },
-    ],
+  // Same OCR path as ingest.ts: Claude Haiku reading the PDF natively.
+  const { result, modelUsed } = await generateText({
+    model: 'text.haiku',
+    prompt: 'Transcribe every legible word from this document, top-to-bottom, left-to-right. Preserve paragraph breaks. Include hand-written notes, letterheads, and stamps when readable. Do not summarize, explain, or add commentary. If a page is blank or unreadable, output "[blank page]". Output raw text only.',
+    files: [{ data: buffer.toString('base64'), mimeType: 'application/pdf' }],
+    maxOutputTokens: 32_000,
   });
-  console.log('--- OCR OUTPUT ---');
-  console.log(out.text ?? '(empty)');
-  console.log('--- length:', (out.text ?? '').length);
+  console.log(`--- OCR OUTPUT (${modelUsed}) ---`);
+  console.log(result || '(empty)');
+  console.log('--- length:', result.length);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

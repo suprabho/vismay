@@ -5,7 +5,8 @@
  *   1. For each RSS source, fetch + parse
  *   2. For each item, compute url_hash; skip if already in DB
  *   3. Insert row with status='pending'
- *   4. Call Gemini for summary + entities
+ *   4. Ask Jev whether it's F1 news + its topic; for F1 news, call Claude
+ *      Haiku for the summary + entity names (summarise.ts)
  *   5. Resolve free-text entities to canonical IDs
  *   6. Update row with summary + link article_entities
  *
@@ -17,7 +18,7 @@ import crypto from 'node:crypto'
 import Parser from 'rss-parser'
 import { getSupabase } from './supabase'
 import { RSS_SOURCES, type RssSource } from './sources'
-import { summariseAndTag, GEMINI_MODEL } from './gemini'
+import { summariseAndTag } from './summarise'
 import { resolveEntities } from './entityResolver'
 
 const parser = new Parser({
@@ -78,41 +79,42 @@ async function summariseArticle(
   payload: { headline: string; body: string; url: string },
 ): Promise<'summarized' | 'hidden' | 'failed'> {
   try {
-    const gemini = await summariseAndTag({
+    const result = await summariseAndTag({
       headline: payload.headline,
       body: payload.body,
       publisher: source.publisher,
     })
 
     const summaryAt = new Date().toISOString()
-    const summaryModel = GEMINI_MODEL
+    // `<decision model>+<text model>` — whichever models actually answered.
+    const summaryModel = result.summary_model
 
-    if (!gemini.is_f1_news) {
+    if (!result.is_f1_news) {
       await sb
         .from('vizf1_articles')
         .update({
-          summary: gemini.summary,
+          summary: result.summary,
           summary_model: summaryModel,
           summary_at: summaryAt,
           status: 'hidden',
-          failure_reason: `not_f1:${gemini.topic_category}`,
-          topic_category: gemini.topic_category,
+          failure_reason: `not_f1:${result.topic_category}`,
+          topic_category: result.topic_category,
         })
         .eq('id', articleId)
       return 'hidden'
     }
 
-    const entities = await resolveEntities(sb, gemini.entities)
+    const entities = await resolveEntities(sb, result.entities)
 
     await sb
       .from('vizf1_articles')
       .update({
-        summary: gemini.summary,
+        summary: result.summary,
         summary_model: summaryModel,
         summary_at: summaryAt,
         status: 'summarized',
         failure_reason: null,
-        topic_category: gemini.topic_category,
+        topic_category: result.topic_category,
       })
       .eq('id', articleId)
 

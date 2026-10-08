@@ -2,9 +2,10 @@
  * Dispatch an audio-regeneration job to GitHub Actions.
  *
  * Mirrors storyPdfDispatch.ts. The audio render is `scripts/generate-audio.ts`
- * which calls Gemini TTS and writes WAV chunks to Supabase storage. Vercel-style
- * serverless can run the script in principle (no Chromium / ffmpeg needed) but
- * Gemini's per-request rate limit + per-day quota means a single regen can
+ * which calls TTS (Gemini TTS via the AI gateway) and writes WAV chunks to
+ * Supabase storage. Vercel-style serverless can run the script in principle
+ * (no Chromium / ffmpeg needed) but the TTS model's per-request rate limit +
+ * per-day quota means a single regen can
  * stretch past serverless time limits. Pushing it to Actions also avoids
  * burning a request slot on the Vercel function.
  *

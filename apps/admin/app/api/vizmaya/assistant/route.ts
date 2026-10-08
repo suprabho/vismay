@@ -4,6 +4,7 @@ import { generateText } from '@vismay/ai-gateway'
 import { buildAssistantSystemPrompt } from '@/lib/assistantKnowledge'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { getFeatureModel } from '@/lib/aiModelSettings'
+import { canonicalModelAlias } from '@/components/canvas/aiSlots'
 
 /**
  * Vizmaya platform Q&A assistant.
@@ -19,12 +20,13 @@ import { getFeatureModel } from '@/lib/aiModelSettings'
 
 // Models the Ask picker may choose from. DeepSeek (cheap, grounded) is the
 // default; the others trade up for harder questions. Keep in sync with the
-// dropdown in AssistantLauncher.
+// dropdown in AssistantLauncher. Legacy aliases a client may have persisted
+// (`text.fast` / `text.pro` / `text.claude`) are canonicalised to their Claude
+// tier before the check, so they're still honoured.
 export const ASSISTANT_MODELS = [
   'text.deepseek',
-  'text.fast',
-  'text.pro',
-  'text.claude',
+  'text.haiku',
+  'text.sonnet',
   'text.opus',
   'text.fable',
   'text.grok',
@@ -147,10 +149,9 @@ export async function POST(req: Request) {
   let answer: string
   let modelUsed: string
   try {
-    const model = (ASSISTANT_MODELS as readonly string[]).includes(
-      body.model ?? '',
-    )
-      ? body.model!
+    const requested = canonicalModelAlias(body.model ?? '')
+    const model = (ASSISTANT_MODELS as readonly string[]).includes(requested)
+      ? requested
       : await getFeatureModel('assistant')
     const out = await generateText({
       model,

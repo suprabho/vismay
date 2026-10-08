@@ -24,11 +24,10 @@ name: Footshorts - theanalyst power rankings
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
-#   GEMINI_API_KEY               - for the narrative summary (optional at
-#                                  runtime: without it the draft lands with
-#                                  narrative=null for the editor to write)
-# Optional repo variable:
-#   GEMINI_MODEL                 - overrides default (gemini-2.5-flash)
+#   AI_GATEWAY_API_KEY           - for the narrative summary, Claude Sonnet
+#                                  (optional at runtime: without it the draft
+#                                  lands with narrative=null for the editor
+#                                  to write)
 
 on:
   schedule:
@@ -87,8 +86,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
           INPUT_URL: ${{ inputs.url }}
         run: |

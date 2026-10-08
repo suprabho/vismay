@@ -91,7 +91,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   let text: string
   try {
     const { result } = await generateText({
-      model: 'text.claude',
+      model: 'text.sonnet',
       system: SYSTEM,
       prompt,
       tools,

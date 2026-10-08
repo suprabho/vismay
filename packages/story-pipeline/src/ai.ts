@@ -1,4 +1,4 @@
-import { generateText } from '@vismay/ai-gateway'
+import { generateText, resolveModel } from '@vismay/ai-gateway'
 import Anthropic from '@anthropic-ai/sdk'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { z } from 'zod'
@@ -9,7 +9,7 @@ import { DEFAULT_TEXT_MODEL } from './models'
 // Opt in with STORY_PIPELINE_ANTHROPIC_DIRECT=1 (and ANTHROPIC_API_KEY set):
 // every structured call then hits api.anthropic.com directly, using its own
 // quota instead of the shared gateway budget. Only Claude models are reachable
-// this way; the pipeline default (`text.claude`) maps to Sonnet 5 so the
+// this way; the pipeline default (`text.sonnet`) maps to Sonnet 5.5 so the
 // output matches the gateway path it replaces. Production (the gateway) is
 // untouched — this is for offline harnesses and quota-bound eval runs.
 // STORY_PIPELINE_ANTHROPIC_MODEL optionally pins the exact model id.
@@ -24,8 +24,9 @@ function anthropicModelId(alias: string): string {
   const pinned = process.env.STORY_PIPELINE_ANTHROPIC_MODEL?.trim()
   if (pinned) return pinned
   if (alias === 'text.fable') return 'claude-fable-5'
-  if (alias === 'text.opus') return 'claude-opus-4-8'
-  return 'claude-sonnet-5' // text.claude (the default) and any other alias
+  if (alias === 'text.opus') return 'claude-opus-5-5'
+  if (alias === 'text.haiku' || alias === 'text.fast') return 'claude-haiku-5-5'
+  return 'claude-sonnet-5-5' // text.sonnet (the default) and any other alias
 }
 
 function useAnthropicDirect(): boolean {
@@ -128,12 +129,13 @@ const EMIT_INSTRUCTION =
 /**
  * Robust structured generation.
  *
- * Some models — notably Gemini in JSON structured-output mode — cannot satisfy
- * schemas containing discriminated unions (our section `body` has two, via
+ * Some models — notably JSON-mode structured output — cannot satisfy schemas
+ * containing discriminated unions (our section `body` has two, via
  * viz-engine's genSchema). The failure surfaces as "No object generated:
  * response did not match schema" or an opaque gateway error. Models that do
  * structured output via tool-calling (Claude, GPT) handle the full JSON schema,
- * so on any failure we retry ONCE with such a model.
+ * so on any failure we retry ONCE with such a model — from a different lineage
+ * than the primary, so a provider outage doesn't take out both attempts.
  *
  * The thrown error includes the underlying detail (finishReason, cause) from
  * BOTH attempts so a genuine schema/content problem is diagnosable.
@@ -157,7 +159,7 @@ export async function generateStructured<S extends z.ZodType>(opts: {
     })
     return result
   } catch (primaryErr) {
-    const fallback = primary.includes('claude') ? 'text.proPlus' : 'text.claude'
+    const fallback = resolveModel(primary).startsWith('anthropic/') ? 'text.proPlus' : 'text.sonnet'
     try {
       const { result } = await generateText({
         model: fallback,

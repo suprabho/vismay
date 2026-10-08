@@ -17,19 +17,21 @@
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write iea_countries
- *   GEMINI_API_KEY                                       — Gemini model
+ *   AI_GATEWAY_API_KEY                                   — Claude via AI Gateway
  */
 
-import { GoogleGenAI } from '@google/genai'
 import { config as loadEnv } from 'dotenv'
+import { z } from 'zod'
+import { generateText, hasGatewayCredentials } from '@vismay/ai-gateway'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
 
-const MODEL = 'gemini-2.5-flash'
-// Pace requests so we stay under Gemini's free-tier RPM. ~600ms between calls
-// keeps us at ~100 req/min headroom even when generating ~200 countries.
+// Editorial prose → standard Claude tier.
+const MODEL = 'text.sonnet'
+// Light pacing so a full ~200-country run doesn't burst the gateway / provider
+// rate limits. ~600ms between calls caps us at ~100 req/min.
 const REQUEST_DELAY_MS = 600
 
 interface Flags {
@@ -182,8 +184,9 @@ Output a single line — one or two sentences, ideally under 25 words total. Mat
 
 ${STYLE_EXAMPLES}
 
-Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"summary": "..."}`
+Put the blurb in the \`summary\` field.`
+
+const SummarySchema = z.object({ summary: z.string() })
 
 function formatMix(mix: { source: string; share: number }[]): string {
   if (mix.length === 0) return 'no data'
@@ -225,36 +228,24 @@ function buildUserPrompt(name: string, snap: Snapshot): string {
   return lines.join('\n')
 }
 
-async function generateSummary(
-  genai: GoogleGenAI,
-  name: string,
-  snap: Snapshot,
-): Promise<string | null> {
+async function generateSummary(name: string, snap: Snapshot): Promise<string | null> {
   const userPrompt = buildUserPrompt(name, snap)
-  const res = await genai.models.generateContent({
+  const { result } = await generateText({
     model: MODEL,
-    contents: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
+    system: SYSTEM_PROMPT,
+    prompt: userPrompt,
+    schema: SummarySchema,
+    metadata: { feature: 'energy-profile-summaries' },
   })
-  const text = res.text ?? ''
-  const match = text.match(/\{[\s\S]*\}/)
-  if (!match) return null
-  try {
-    const parsed = JSON.parse(match[0]) as { summary?: unknown }
-    if (typeof parsed.summary !== 'string') return null
-    const trimmed = parsed.summary.trim().replace(/\s+/g, ' ')
-    return trimmed.length > 0 ? trimmed : null
-  } catch {
-    return null
-  }
+  const trimmed = result.summary.trim().replace(/\s+/g, ' ')
+  return trimmed.length > 0 ? trimmed : null
 }
 
 async function main(): Promise<void> {
   const flags = parseFlags(process.argv.slice(2))
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set')
+  if (!hasGatewayCredentials()) throw new Error('AI_GATEWAY_API_KEY not set')
 
   const sb = createServiceClient()
-  const genai = new GoogleGenAI({ apiKey })
 
   let q = sb.from('iea_countries').select('code, name, summary').order('code')
   if (flags.code) q = q.eq('code', flags.code)
@@ -292,7 +283,7 @@ async function main(): Promise<void> {
     }
 
     try {
-      const summary = await generateSummary(genai, c.name, snap)
+      const summary = await generateSummary(c.name, snap)
       if (!summary) {
         console.warn(`  ✗ ${c.code} ${c.name}: model returned no summary`)
         failed++
