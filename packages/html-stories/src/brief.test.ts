@@ -123,6 +123,11 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(b.includes('traces to a Verified row in your claims log'))
   assert.ok(!b.includes('Every number has a source. End with a "Sources & method"'))
   assert.equal(b.includes('saves a draft'), randomizer !== 'desk', `${randomizer}: gate note`)
+  assert.ok(!b.includes('## Trending today'), 'no trends section unless the caller passes the snapshot')
+  const trends = { day: '2026-10-05', asOf: now.toISOString(), status: 'ok' as const, searches: 0, refreshedBy: null, beats: [] }
+  const t = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, trends })
+  assert.ok(t.indexOf('## Your assignment') < t.indexOf('## Trending today') && t.indexOf('## Trending today') < t.indexOf('## Research protocol'))
+  assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, trends: null }).includes('No trend snapshot is on file'))
 }
 // A Football Desk spin on footshorts: its sections, the footshorts posting target, and the match-context rules.
 {

@@ -1,0 +1,57 @@
+name: Randomizer - trending today (Xpoz)
+
+# Daily snapshot of what is trending, for the story randomizers: Reddit's top
+# threads of the day and the most-engaged X posts per beat (world news,
+# business and tech, culture and history, football), read from Xpoz
+# (xpoz.ai) and kept in randomizer_trends (migration 092). Every spin's brief
+# carries the beats its randomizer reads, so the agent has today's context
+# before it writes anything; the admin slot machine shows them too.
+#
+# Beats live in packages/randomizer/src/trends.ts (TREND_BEATS). About 20
+# Xpoz credits a run (2 per search), so roughly 600 a month: more than the
+# free tier's one-time 500, so the key needs a paid plan. A re-run on the same
+# day replaces that day's row; use workflow_dispatch to refresh on demand.
+#
+# Required repo secrets (in the `Production` environment so secrets.X resolves):
+#   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY  — service role key for randomizer_trends writes
+#   XPOZ_API_KEY               — Xpoz access key (xpoz.ai dashboard → access keys)
+
+on:
+  schedule:
+    # 05:40 UTC daily: after the overnight news cycle, before EU and US desks
+    # start spinning. The :40 offset avoids the top-of-hour Actions queue spike.
+    - cron: '40 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: randomizer-trends
+  cancel-in-progress: false
+
+jobs:
+  trends:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: Production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --filter @vismay/randomizer...
+
+      - name: Read today's trends
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          XPOZ_API_KEY: ${{ secrets.XPOZ_API_KEY }}
+        run: pnpm --filter @vismay/randomizer trends:refresh

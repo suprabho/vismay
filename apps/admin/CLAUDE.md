@@ -213,8 +213,11 @@ story links.
   with a one-tap reason, the Atlas pair / Epics sequence toggle, the style die,
   the rules that fired, the spin log, the hero insight gate (approve / send back
   with a note, paste research), the composed brief's assignment with Copy agent
-  brief and Copy research stub, and the Desk heat table (stale and failed
-  refreshes shown).
+  brief and Copy research stub, the **Trending today** panel
+  ([TrendsPanel.tsx](components/randomizer/TrendsPanel.tsx): the daily Xpoz
+  snapshot's beats for the tab, posts naming the spin on screen highlighted,
+  failed sources and staleness shown; the spin's brief carries the same
+  beats), and the Desk heat table (stale and failed refreshes shown).
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts only, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel

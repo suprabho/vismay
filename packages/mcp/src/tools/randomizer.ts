@@ -1,6 +1,7 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
- * `get_desk_heat`, `refresh_desk_heat` and `get_football_news`.
+ * `get_desk_heat`, `refresh_desk_heat`, `get_football_news` and
+ * `get_trending_today`.
  *
  * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
  * editorial format), Atlas (countries and culture, geography format) and
@@ -19,7 +20,7 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { RANDOMIZER_META, type RandomizerApp, type RuleFired, type SpinRecord } from '@vismay/randomizer/types'
+import { RANDOMIZER_META, RANDOMIZERS, type RandomizerApp, type RuleFired, type SpinRecord } from '@vismay/randomizer/types'
 import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
 
 const spinIdSchema = z.string().uuid().describe('A spin id, as spin_randomizer returned it.')
@@ -248,6 +249,27 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
     },
     async () => {
       const body = await call(config, '/api/randomizer/news', {}, htmlStoriesToken('footshorts') ? 'footshorts' : anySite())
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+  server.registerTool(
+    'get_trending_today',
+    {
+      title: 'Get what is trending today',
+      description:
+        'The daily trend snapshot the randomizers read (from Xpoz): Reddit\'s top threads of the day and the ' +
+        'most-engaged X posts, per beat (world news; business, markets and tech; culture, history and travel; ' +
+        'football), with the day, when it was read and any source that failed. A spin\'s brief already carries ' +
+        'the beats its randomizer reads under "Trending today"; call this to look before spinning or to see every ' +
+        'beat. Signals, not sources: verify anything you use.',
+      inputSchema: {
+        randomizer: z.enum(RANDOMIZERS as [string, ...string[]]).optional().describe('Only the beats this randomizer reads.'),
+      },
+    },
+    async ({ randomizer }) => {
+      const query = randomizer ? `?randomizer=${randomizer}` : ''
+      const app = randomizer === 'footshorts' && htmlStoriesToken('footshorts') ? 'footshorts' : anySite()
+      const body = await call(config, `/api/randomizer/trends${query}`, {}, app)
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )

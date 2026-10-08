@@ -2,7 +2,7 @@
   "name": "@vismay/randomizer",
   "version": "0.0.0",
   "private": true,
-  "description": "The Vizmaya story randomizers (Desk, Atlas, Epics): datasets, the one shared draw (heat weighting, region and tradition balancing, quotas, repeat blocks, locks), the spin's agent-brief sections and research stub, and the randomizer_spins / desk_heat readers and writers. Pure modules are client-safe; ./spins is server only.",
+  "description": "The Vizmaya story randomizers (Desk, Atlas, Epics): datasets, the one shared draw (heat weighting, region and tradition balancing, quotas, repeat blocks, locks), the spin's agent-brief sections and research stub, the randomizer_spins / desk_heat readers and writers, and the daily trend snapshot (Xpoz) every spin's brief reads. Pure modules are client-safe; ./spins and ./trendsServer are server only.",
   "exports": {
     "./types": "./src/types.ts",
     "./datasets": "./src/datasets.ts",
@@ -10,16 +10,20 @@
     "./spinBrief": "./src/spinBrief.ts",
     "./stub": "./src/stub.ts",
     "./text": "./src/text.ts",
-    "./spins": "./src/spins.ts"
+    "./spins": "./src/spins.ts",
+    "./trends": "./src/trends.ts",
+    "./trendsServer": "./src/trendsServer.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "trends:refresh": "tsx scripts/refresh-trends.ts"
   },
   "dependencies": {
     "@vismay/content-source": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }

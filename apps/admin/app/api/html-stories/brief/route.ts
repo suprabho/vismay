@@ -10,6 +10,7 @@ import {
 import { HTML_STORY_FORMATS, isFormatForApp, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
+import { latestTrendsOrNull } from '@vismay/randomizer/trendsServer'
 import { RANDOMIZER_META } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
 import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
@@ -89,14 +90,16 @@ export async function POST(req: Request) {
     }
   }
 
+  // A spin's brief opens with what is trending today (the daily Xpoz snapshot).
+  const trends = spin ? await latestTrendsOrNull() : undefined
   let brief: string
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin })
+        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin, trends })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format })
-          : htmlStoryBrief({ app, siteUrl, style, spin, format })
+          : htmlStoryBrief({ app, siteUrl, style, spin, trends, format })
   } catch (e) {
     const what = app === 'vizf1' ? 'race context' : 'match context'
     return NextResponse.json(

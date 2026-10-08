@@ -54,6 +54,7 @@ import {
   researchProtocolSection,
   type BriefSpin,
 } from '@vismay/randomizer/spinBrief'
+import { trendsSection, type TrendSnapshot } from '@vismay/randomizer/trends'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { formatChecks, formatHeading, formatHintSection, formatTitle, storyFormatSection } from './formatBrief'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
@@ -84,6 +85,12 @@ export interface BriefOptions {
    * sections, and ends with the spin's research file (or its stub).
    */
   spin?: BriefSpin | null
+  /**
+   * With a spin: the newest daily trend snapshot (@vismay/randomizer/trends,
+   * read from Xpoz), which adds a "Trending today" section after the
+   * assignment. null says none is on file; omit to leave the section out.
+   */
+  trends?: TrendSnapshot | null
   /**
    * A public Mapbox token (`pk.…`) to hand the agent for scrollytelling maps.
    * Omit to use the deployment's NEXT_PUBLIC_MAPBOX_TOKEN; null for no Mapbox
@@ -551,6 +558,7 @@ export function htmlStoryBrief({
   style,
   context,
   spin,
+  trends,
   mapboxToken,
   format,
 }: BriefOptions): string {
@@ -565,7 +573,7 @@ export function htmlStoryBrief({
   const assignment = spin
     ? `
 ${assignmentSection(spin)}
-
+${trends !== undefined ? `\n${trendsSection(trends, spin)}\n` : ''}
 ${researchProtocolSection(spin)}
 
 ${deliverablesSection(spin, site)}

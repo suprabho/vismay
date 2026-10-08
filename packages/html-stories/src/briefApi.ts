@@ -42,6 +42,7 @@ import { HTML_STORY_APP_META } from './apps'
 import { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS, vizf1HtmlStoryBrief } from './vizf1Brief'
 import { HTML_STORY_FORMATS, formatsForApp, isFormatForApp, parseHtmlStoryFormat } from './formats'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
+import { latestTrendsOrNull } from '@vismay/randomizer/trendsServer'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadStoryStylePool } from './storyStyles'
@@ -123,14 +124,16 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   }
 
   const prompt = url.searchParams.get('prompt')?.trim() || undefined
+  // A spin's brief opens with what is trending today (the daily Xpoz snapshot).
+  const trends = spin ? await latestTrendsOrNull() : undefined
   let brief: string
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format, spin })
+        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format, spin, trends })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format })
-          : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
+          : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, trends, format })
   } catch (e) {
     const what = app === 'vizf1' ? 'race context' : 'match context'
     return new Response(`${what} failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })

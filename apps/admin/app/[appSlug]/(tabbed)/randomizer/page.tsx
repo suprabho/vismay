@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { loadStoryStylePool } from '@vismay/html-stories/storyStyles'
 import type { StylePool } from '@vismay/html-stories/styles'
+import { latestTrendsOrNull } from '@vismay/randomizer/trendsServer'
 import { listSpins, loadFootshortsNews } from '@vismay/randomizer/spins'
 import { randomizersFor, type FootshortsNews, type SpinRecord } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
@@ -21,10 +22,11 @@ export default async function FootballRandomizerPage({ params }: { params: Promi
   if (appSlug !== 'footshorts') notFound()
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/randomizer`)
 
-  const [spinsResult, newsResult, poolResult] = await Promise.allSettled([
+  const [spinsResult, newsResult, poolResult, trendsResult] = await Promise.allSettled([
     listSpins({ randomizers: randomizersFor('footshorts'), limit: 150 }),
     loadFootshortsNews(),
     loadStoryStylePool('footshorts'),
+    latestTrendsOrNull(),
   ])
   const spins: SpinRecord[] = spinsResult.status === 'fulfilled' ? spinsResult.value : []
   const loadError =
@@ -36,12 +38,14 @@ export default async function FootballRandomizerPage({ params }: { params: Promi
   const news: FootshortsNews | null = newsResult.status === 'fulfilled' ? newsResult.value : null
   if (newsResult.status === 'rejected') console.error('[randomizer] footshorts news failed', newsResult.reason)
   const pool: StylePool | null = poolResult.status === 'fulfilled' ? poolResult.value : null
+  const trends = trendsResult.status === 'fulfilled' ? trendsResult.value : null
 
   return (
     <RandomizerClient
       app="footshorts"
       initialSpins={spins}
       news={news}
+      trends={trends}
       pool={pool}
       loadError={loadError}
       siteUrl={footshortsPublicUrl}

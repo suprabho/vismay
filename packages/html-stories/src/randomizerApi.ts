@@ -19,6 +19,8 @@
  *                                                     failed?: [{ subId, error }], source? }
  *   GET  /api/randomizer/news                       the Football Desk's live news snapshot:
  *                                                     tournaments and teams with heat, headlines, fixtures
+ *   GET  /api/randomizer/trends?randomizer=         what is trending today (the daily Xpoz snapshot),
+ *                                                     optionally only the beats one randomizer reads
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -47,6 +49,8 @@ import {
   type HeatRefresh,
 } from '@vismay/randomizer/spins'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { trendBeatsFor } from '@vismay/randomizer/trends'
+import { latestTrends } from '@vismay/randomizer/trendsServer'
 import { isRandomizerId, RANDOMIZER_META, RANDOMIZERS, RESPIN_REASONS, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 
@@ -259,6 +263,29 @@ export async function handleFootshortsNewsRequest(req: Request): Promise<Respons
   if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
   try {
     return json(await loadFootshortsNews())
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+/**
+ * GET /api/randomizer/trends: the newest daily trend snapshot (Reddit's top
+ * threads and the most-engaged X posts per beat, read from Xpoz by the daily
+ * job), the same one a spin's brief carries. `?randomizer=` keeps only the
+ * beats that randomizer reads. Read-only: the job writes it.
+ */
+export async function handleTrendsRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const r = new URL(req.url).searchParams.get('randomizer')
+  if (r && !isRandomizerId(r)) return json({ error: `randomizer must be one of ${RANDOMIZER_LIST}` }, 400)
+  try {
+    const snapshot = await latestTrends()
+    if (!snapshot) return json({ snapshot: null, note: 'no trend snapshot yet: the daily randomizer-trends job has not run' })
+    if (!r || !isRandomizerId(r)) return json({ snapshot })
+    const ids = new Set(trendBeatsFor(r).map((b) => b.id))
+    return json({ snapshot: { ...snapshot, beats: snapshot.beats.filter((b) => ids.has(b.id)) } })
   } catch (e) {
     return fail(e)
   }

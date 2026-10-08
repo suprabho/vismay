@@ -24,6 +24,7 @@ import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
 import { FOOTSHORTS } from '@vismay/randomizer/datasets'
+import type { TrendSnapshot } from '@vismay/randomizer/trends'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
@@ -37,6 +38,7 @@ import {
   type SpinRecord,
   type SpinStatus,
 } from '@vismay/randomizer/types'
+import { TrendsPanel } from './TrendsPanel'
 import { FormatPicker } from '@/components/html-stories/FormatPicker'
 
 const ITEM_H = 80
@@ -189,13 +191,14 @@ const perRandomizer = <T,>(value: (r: RandomizerId) => T) =>
 /**
  * One slot machine for a site's randomizers: Desk, Atlas and Epics on
  * vizmaya (with the Desk heat table), the Football Desk on footshorts (with
- * its live news table).
+ * its live news table). Every tab shows what is trending today for its beats.
  */
 export function RandomizerClient({
   app = 'vizmaya-fyi',
   initialSpins,
   heat = null,
   news = null,
+  trends = null,
   pool,
   loadError,
   siteUrl,
@@ -206,6 +209,8 @@ export function RandomizerClient({
   heat?: DeskHeatTableRow[] | null
   /** The Football Desk's live news snapshot (footshorts only). */
   news?: FootshortsNews | null
+  /** The newest daily trend snapshot (Xpoz), null when none is on file. */
+  trends?: TrendSnapshot | null
   pool: StylePool | null
   loadError: string | null
   siteUrl: string
@@ -637,6 +642,8 @@ export function RandomizerClient({
             </div>
           </section>
         )}
+
+        <TrendsPanel trends={trends} randomizer={tab} subject={current?.subject ?? null} />
 
         {tab === 'footshorts' && <FootballNews news={news} />}
 

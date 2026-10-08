@@ -88,6 +88,7 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `save_spin_research` | no (same) | Save a spin's research MD (claims log, HERO INSIGHT). Atlas and Epics insights then wait for approval in admin. |
 | `get_football_news` | no (calls footshorts.com) | The Football Desk's live news table: tournaments and teams with fixtures, their news heat over 14 days, headlines and fixtures. Computed from the footshorts feed, nothing to refresh. |
 | `get_desk_heat` / `refresh_desk_heat` | no (calls vizmaya.fyi) | Read every Desk segment's heat and staleness, and write a refresh (heat, headlines, failures). Run it weekly. |
+| `get_trending_today` | no (calls vizmaya.fyi, or footshorts.com for `randomizer: "footshorts"`) | What is trending today: the daily Xpoz snapshot (Reddit's top threads of the day, the most-engaged X posts) per beat, optionally only one randomizer's beats. A spin's brief already carries it under "Trending today". |
 
 ## Environment
 
