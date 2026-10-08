@@ -27,7 +27,9 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Runs normally finish in ~10 min; headroom for a backlog hour (capped per
+    # source in ingest.ts) so a slow gateway doesn't kill a run mid-batch.
+    timeout-minutes: 30
     environment: Production
     defaults:
       run:

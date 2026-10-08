@@ -248,6 +248,16 @@ async function processCandidateArticle(
   }
 }
 
+// Cap on new articles summarized per RSS source per run. Each one costs several
+// gateway calls (~5-10s), so one firehose feed (infobae dumps ~100 at once) used
+// to eat the whole job timeout and starve every source after it. Feeds list
+// newest first, so the cap keeps the freshest; the hourly cron drains the rest.
+const MAX_NEW_RSS_ARTICLES_PER_RUN = 25;
+
+// RSS sources processed in parallel. Kept low: each worker does a JSONB write
+// per article and bursts against the shared Supabase instance are what wedge it.
+const RSS_SOURCE_CONCURRENCY = 3;
+
 async function ingestSource(source: RssSource): Promise<IngestStats> {
   const stats = emptyStats();
 
@@ -279,6 +289,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
   stats.fetched = feed.items.length;
 
   for (const item of feed.items) {
+    if (stats.new >= MAX_NEW_RSS_ARTICLES_PER_RUN) break;
     if (!item.link || !item.title) continue;
     await processCandidateArticle(
       source.id,
@@ -432,9 +443,14 @@ export async function runIngestion() {
     totals.sourceFailures += stats.sourceFailures;
   };
 
-  for (const source of RSS_SOURCES) {
-    addTotals(source.id, await ingestSource(source));
-  }
+  const queue = [...RSS_SOURCES];
+  await Promise.all(
+    Array.from({ length: RSS_SOURCE_CONCURRENCY }, async () => {
+      for (let source = queue.shift(); source; source = queue.shift()) {
+        addTotals(source.id, await ingestSource(source));
+      }
+    })
+  );
   for (const source of SCRAPE_SOURCES) {
     addTotals(source.id, await ingestScrapeSource(source));
   }
