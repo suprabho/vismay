@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 
-export type StoryKind = 'recap' | 'feature' | 'news' | 'board'
+export type StoryKind = 'story' | 'recap' | 'feature' | 'news' | 'board'
 
 export type Story = {
   id: string
@@ -14,6 +14,8 @@ export type Story = {
   byline: string | null
   href: string
   external: boolean
+  /** A route handler (an HTML story at /s/<slug>), not a page: plain <a>, same tab. */
+  document?: boolean
   /** Server-rendered thumbnail (chart SVG or image). */
   thumb: ReactNode
   /** Border tint for recap rows (the winner's colour). */
@@ -22,6 +24,7 @@ export type Story = {
 
 const FILTERS: Array<{ id: 'all' | StoryKind; label: string }> = [
   { id: 'all', label: 'All' },
+  { id: 'story', label: 'Stories' },
   { id: 'recap', label: 'Recaps' },
   { id: 'feature', label: 'Features' },
   { id: 'news', label: 'News' },
@@ -44,6 +47,13 @@ function StoryLink({
   if (story.external) {
     return (
       <a href={story.href} target="_blank" rel="noreferrer" className={className} style={style}>
+        {children}
+      </a>
+    )
+  }
+  if (story.document) {
+    return (
+      <a href={story.href} className={className} style={style}>
         {children}
       </a>
     )

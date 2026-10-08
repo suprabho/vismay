@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HTML_STORY_FORMAT_META } from '@vismay/html-stories/formats'
 import { EditorialGrid, type Story } from '@/components/EditorialGrid'
 import { MarginHero, MarginSpark } from '@/components/MarginChart'
 import { DiffBars, WinsBars } from '@/components/StandingsCharts'
 import { espnNews, standings } from '@/lib/espn'
 import { recentRecaps } from '@/lib/feed'
+import { htmlStories } from '@/lib/htmlStories'
 import { getPrefs } from '@/lib/prefs'
 import { ago, dayMonth, dayKey, ET, todayKey } from '@/lib/time'
 
@@ -26,7 +28,12 @@ function Img({ src }: { src: string }) {
 
 export default async function EditorialPage() {
   const { followed, tz } = await getPrefs()
-  const [table, recaps, news] = await Promise.all([standings(), recentRecaps(12), espnNews(50)])
+  const [table, recaps, news, published] = await Promise.all([
+    standings(),
+    recentRecaps(12),
+    espnNews(50),
+    htmlStories(),
+  ])
   const all = table?.conferences.flatMap((c) => c.rows) ?? []
   const mine = new Set(followed.map((t) => t.id))
 
@@ -48,6 +55,34 @@ export default async function EditorialPage() {
     : []
 
   const stories: Story[] = []
+  for (const h of published) {
+    const at = h.publishedAt ?? h.updatedAt
+    // A book, board or deck says so in its kicker; a scrolling page needs no badge.
+    const format = h.format !== 'scroll' ? ` · ${HTML_STORY_FORMAT_META[h.format].label.toUpperCase()}` : ''
+    const t = h.theme
+    stories.push({
+      id: `html:${h.slug}`,
+      kind: 'story',
+      kicker: `STORY${format}`,
+      title: h.title,
+      dek: h.description,
+      byline: `VizNBA · ${dayMonth(dayKey(at, tz))}`,
+      href: `/s/${h.slug}`,
+      external: false,
+      document: true,
+      // Its og:image, else a wash of the story's own palette.
+      thumb: h.ogImageUrl ? (
+        <Img src={h.ogImageUrl} />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, ${t?.surface ?? t?.background ?? 'var(--color-surface-raised)'} 0%, ${t?.background ?? 'var(--color-well)'} 60%, color-mix(in srgb, ${t?.accent ?? 'var(--color-accent)'} 30%, transparent) 100%)`,
+          }}
+        />
+      ),
+    })
+  }
   for (const r of recaps) {
     const d = r.game!.detail
     const g = d.game
@@ -108,9 +143,10 @@ export default async function EditorialPage() {
       thumb: n.image ? <Img src={n.image} /> : null,
     })
   }
-  // Features lead the grid when there's no recap to open on.
+  // Our own stories lead, then recaps; features lead when there's neither.
   stories.sort((a, b) => {
-    const rank = (s: Story) => (s.kind === 'recap' ? 0 : s.kind === 'feature' ? 1 : s.kind === 'board' ? 2 : 3)
+    const rank = (s: Story) =>
+      s.kind === 'story' ? 0 : s.kind === 'recap' ? 1 : s.kind === 'feature' ? 2 : s.kind === 'board' ? 3 : 4
     return rank(a) - rank(b)
   })
 
@@ -121,7 +157,7 @@ export default async function EditorialPage() {
         <h1 className="mt-2 text-4xl leading-[0.98] font-bold tracking-[-0.025em] [font-stretch:72%]">
           The season, read through its numbers.
         </h1>
-        <p className="mt-2.5 text-[13.5px] leading-normal text-dim">Recaps, boards and features from around the league.</p>
+        <p className="mt-2.5 text-[13.5px] leading-normal text-dim">Stories, recaps, boards and features from around the league.</p>
       </div>
 
       {epics.length > 0 && (
