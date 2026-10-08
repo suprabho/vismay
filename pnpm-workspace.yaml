@@ -2,6 +2,7 @@ packages:
   - 'apps/*'
   - 'apps/footshorts/*'
   - 'apps/vizf1/*'
+  - 'apps/viznba/*'
   - 'apps/kidzovo/*'
   - 'apps/umami/*'
   - 'apps/travel/*'

@@ -19,6 +19,12 @@
   - changed-files:
       - any-glob-to-any-file: "apps/vizf1/**"
 
+"area:viznba":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/viznba/**"
+          - "supabase/viznba/**"
+
 "area:catalog":
   - changed-files:
       - any-glob-to-any-file: "apps/catalog/**"

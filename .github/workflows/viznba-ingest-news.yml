@@ -1,0 +1,60 @@
+name: VizNBA - news ingest
+
+# Pulls NBA RSS feeds, has Jev decide whether each new article is NBA news
+# (and its topic), then Claude Haiku writes a 55-60 word summary + team /
+# player / coach names (both via the AI gateway). Names are resolved against
+# the ESPN-seeded roster tables and passed through the Jev precision gate
+# before landing in viznba_article_entities.
+#
+# Idempotent on url_hash, safe to re-run. Needs the roster seeded first
+# (viznba-seed-roster.yml).
+#
+# Required repo secrets (in the `Production` environment — shared project-wide
+# with vizmaya / vizf1 workflows):
+#   NEXT_PUBLIC_SUPABASE_URL    - Supabase project URL
+#   SUPABASE_SERVICE_ROLE_KEY   - service role key
+#   AI_GATEWAY_API_KEY          - Vercel AI Gateway key (Jev + Claude)
+
+on:
+  schedule:
+    # Every 4 hours at :20 — NBA news breaks around the clock (US evenings for
+    # games, mornings for transactions).
+    - cron: '20 */4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: viznba-ingest-news
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/viznba/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Ingest news
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: pnpm ingest:news:ci

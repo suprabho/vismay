@@ -9,6 +9,7 @@ Monorepo for the Vismay viz engine and the apps it powers.
 - `apps/vizmaya-fyi/` — the vizmaya.fyi app (geopolitics, economics, tech): scroll-synced maps, charts, and prose. Currently the only app with the full story layer (`fs|db` content via `@vismay/content-source`) and the offline render pipeline (PDF / video / audio / share-card).
 - `apps/admin/` — the central admin console (vismay.xyz) for composing and managing content across apps and verticals; routes per app/epic (`vizmaya`, `coke-studio`, `energy-profile`, `epstein`, `fifa-wc26`, …). All AI generation routes through `@vismay/ai-gateway`.
 - `apps/vizf1/` — VizF1: `web` + ingestion `worker` + `brand` tokens. Driver/team stories built from F1 race data.
+- `apps/viznba/` — VizNBA: `worker` only so far — NBA news ingestion (RSS → Jev topic classification → Claude summary → team / player / coach tagging against an ESPN-seeded roster). See [`apps/viznba/README.md`](apps/viznba/README.md).
 - `apps/footshorts/` — Footshorts, an InShorts-style football news app: `web` + `mobile` + ingestion `worker`. Swipe AI-summarized cards, follow leagues/teams/players.
 - `apps/catalog/` — `@vismay/catalog`: browses every registered `VizModule` across verticals with a live preview and its `adminForm` schema, for editors composing stories.
 
@@ -39,7 +40,7 @@ pnpm --filter vizmaya-fyi typecheck
 pnpm --filter vizmaya-fyi lint
 ```
 
-Swap `vizmaya-fyi` for any app name to target a different app. The workspace also nests app sub-packages (`apps/vizf1/*`, `apps/footshorts/*`) — see [`pnpm-workspace.yaml`](pnpm-workspace.yaml).
+Swap `vizmaya-fyi` for any app name to target a different app. The workspace also nests app sub-packages (`apps/vizf1/*`, `apps/viznba/*`, `apps/footshorts/*`) — see [`pnpm-workspace.yaml`](pnpm-workspace.yaml).
 
 ### Vercel builds
 
