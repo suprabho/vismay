@@ -1,0 +1,64 @@
+{
+  "competitions": [
+    { "slug": "premier-league", "name": "Premier League", "kind": "domestic", "country": "England", "entity_slugs": ["premier-league"] },
+    { "slug": "primera-division", "name": "La Liga", "kind": "domestic", "country": "Spain", "entity_slugs": ["primera-division"] },
+    { "slug": "bundesliga", "name": "Bundesliga", "kind": "domestic", "country": "Germany", "entity_slugs": ["bundesliga"] },
+    { "slug": "serie-a", "name": "Serie A", "kind": "domestic", "country": "Italy", "entity_slugs": ["serie-a"] },
+    { "slug": "ligue-1", "name": "Ligue 1", "kind": "domestic", "country": "France", "entity_slugs": ["ligue-1"] },
+    { "slug": "eredivisie", "name": "Eredivisie", "kind": "domestic", "country": "Netherlands", "entity_slugs": ["eredivisie"] },
+    { "slug": "primeira-liga", "name": "Primeira Liga", "kind": "domestic", "country": "Portugal", "entity_slugs": ["primeira-liga"] },
+    { "slug": "championship", "name": "Championship", "kind": "domestic", "country": "England", "entity_slugs": ["championship"] },
+    { "slug": "campeonato-brasileiro-serie-a", "name": "Brasileirão", "kind": "domestic", "country": "Brazil", "entity_slugs": ["campeonato-brasileiro-serie-a"] },
+    { "slug": "champions-league", "name": "Champions League", "kind": "continental", "country": "Europe", "entity_slugs": ["champions-league"] },
+    { "slug": "europa-league", "name": "Europa League", "kind": "continental", "country": "Europe", "entity_slugs": ["europa-league"] },
+    { "slug": "world-cup", "name": "World Cup", "kind": "international", "country": "World", "entity_slugs": ["world-cup", "fifa-world-cup"] },
+    { "slug": "european-championship", "name": "Euros", "kind": "international", "country": "Europe", "entity_slugs": ["european-championship"] }
+  ],
+  "angles": [
+    {
+      "name": "Tactics",
+      "description": "How the side plays: shape, pressing, build-up and what changed on the pitch, shown with the match stats (xG, shots, possession, field tilt), not adjectives."
+    },
+    {
+      "name": "Form vs numbers",
+      "description": "The run of results against the underlying numbers: is the form real, lucky, or about to turn?"
+    },
+    {
+      "name": "Manager",
+      "description": "The manager's decisions and the pressure on them: selections, substitutions, tenure, and what the results and the board say."
+    },
+    {
+      "name": "Squad and injuries",
+      "description": "Who is available, who is overplayed, and how absences or rotation have changed the side."
+    },
+    {
+      "name": "Money and transfers",
+      "description": "Spending, wages, sales and the business model behind the squad. Fees only as reported by the clubs or two independent outlets."
+    },
+    {
+      "name": "Breakout player",
+      "description": "One player whose rise or fall explains the team right now, told in numbers."
+    },
+    {
+      "name": "Rivalry and history",
+      "description": "The fixture or rival that defines this side, and what the record between them actually says."
+    },
+    {
+      "name": "Fans and the city",
+      "description": "The supporters, the ground and the place: attendances, ticket prices, ownership, protest and identity."
+    },
+    {
+      "name": "Stakes",
+      "description": "What is on the line in the table or the draw: the title, qualification, relegation, prize money, and the paths still open."
+    },
+    {
+      "name": "Discipline and officiating",
+      "description": "Cards, penalties, VAR calls and suspensions: what the record shows, not the grievances."
+    }
+  ],
+  "freshness": [
+    { "name": "Matchday", "days": 4, "window": "last 4 days" },
+    { "name": "Running story", "days": 30, "window": "last 30 days" },
+    { "name": "Evergreen", "days": null, "window": "no news window" }
+  ]
+}

@@ -9,7 +9,7 @@
  * origin with no access to the site's cookies or storage. The agent brief
  * tells authors to expect that.
  *
- * Shared by vizmaya-fyi, footshorts and vizf1, whose route handlers are one line each.
+ * Shared by vizmaya-fyi, footshorts, vizf1 and viznba, whose route handlers are one line each.
  * Server only.
  */
 
@@ -22,6 +22,7 @@ const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: strin
   'vizmaya-fyi': { bg: '#0a0e14', fg: '#e0ddd5', link: '#D85A30', font: "-apple-system,'Segoe UI',Inter,sans-serif" },
   footshorts: { bg: '#0B0B0F', fg: '#F4F4F5', link: '#F26A3C', font: "'Space Grotesk',-apple-system,'Segoe UI',sans-serif" },
   vizf1: { bg: '#0b0d12', fg: '#f5f5f5', link: '#ff4346', font: "Saira,-apple-system,'Segoe UI',sans-serif" },
+  viznba: { bg: '#0b0d12', fg: '#f5f5f5', link: '#ff8a3d', font: "Saira,-apple-system,'Segoe UI',sans-serif" },
 }
 
 function notFoundHtml(app: HtmlStoryApp): string {

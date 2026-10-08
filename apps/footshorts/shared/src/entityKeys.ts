@@ -2,7 +2,7 @@
  * Entity-name keys shared by everything that has to match a club/league label
  * from one provider against our `entities` rows:
  *
- *   - the worker's entity resolver (Gemini article tags, theanalyst labels),
+ *   - the worker's entity resolver (LLM article tags, theanalyst labels),
  *   - the admin's ESPN cup fixtures (ESPN display names → entity crest/color),
  *   - the story hydrator (author-typed YAML like `home: Spurs`).
  *
@@ -56,7 +56,7 @@ export const ENTITY_ALIASES: Record<string, string> = {
   'inter': 'internazionale-milano',
   'inter-milan': 'internazionale-milano',
   'verona': 'hellas-verona',
-  // official forms with glued acronyms, in case Gemini echoes them verbatim
+  // official forms with glued acronyms, in case the summarizer echoes them verbatim
   'acf-fiorentina': 'fiorentina',
   'atalanta-bc': 'atalanta',
   'genoa-cfc': 'genoa',
@@ -78,7 +78,7 @@ export const ENTITY_ALIASES: Record<string, string> = {
   'sporting': 'sporting-clube-de-portugal',   // theanalyst.com's "Sporting"; "sporting" alone is a noise token in teamKeyVariants
   'newcastle': 'newcastle-united',
   'real-betis': 'real-betis-balompie',
-  // leagues — renames Gemini uses vs official seed names
+  // leagues — renames the summarizer uses vs official seed names
   'epl': 'premier-league',
   'ucl': 'champions-league',
   'uel': 'europa-league',
@@ -86,7 +86,7 @@ export const ENTITY_ALIASES: Record<string, string> = {
   'laliga': 'primera-division',
   'euros': 'european-championship',
   'euro': 'european-championship',
-  'world-cup': 'fifa-world-cup',     // seed stores "FIFA World Cup"; Gemini says "World Cup"
+  'world-cup': 'fifa-world-cup',     // seed stores "FIFA World Cup"; the summarizer says "World Cup"
   'brasileirao': 'campeonato-brasileiro-serie-a',
   'serie-a': 'serie-a',
   'ligue-1': 'ligue-1',

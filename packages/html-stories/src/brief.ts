@@ -10,13 +10,18 @@
  * timeline, insights, commentary, schedules and tables for the matches the
  * story is about — built server-side, see ./footshortsBrief), and vizf1 briefs
  * a race context (classifications, lap-by-lap timing, telemetry and standings
- * for the sessions and drivers the story is about — see ./vizf1Brief).
+ * for the sessions and drivers the story is about — see ./vizf1Brief), and
+ * viznba briefs a game context (box scores from ESPN for the games the story
+ * is about — see ./viznbaBrief).
  *
- * A vizmaya brief can also carry a randomizer spin (@vismay/randomizer): the
- * topic the Desk, Atlas or Epics randomizer drew, with its research protocol,
- * deliverables, output format, reel script rules and quality checklist. The
- * spin's sections live in the randomizer package; this file only decides
- * where they go. Without a spin the brief is unchanged.
+ * A brief can also carry a randomizer spin (@vismay/randomizer): the topic
+ * the Desk, Atlas or Epics randomizer drew for vizmaya, the Football Desk
+ * drew for footshorts or the NBA Desk drew for viznba, with its research
+ * protocol, deliverables, output format, reel script rules and quality
+ * checklist (a Football Desk spin's brief also carries the match context for
+ * its fixtures, an NBA Desk spin's the box scores of its games). The spin's
+ * sections live in the randomizer package; this file only decides where
+ * they go. Without a spin the brief is unchanged.
  *
  * Maps are Mapbox scrollytelling when the deployment has a public Mapbox token
  * (./mapbox: HTML_STORIES_MAPBOX_TOKEN, else NEXT_PUBLIC_MAPBOX_TOKEN): the
@@ -54,7 +59,7 @@ import {
   type BriefSpin,
 } from '@vismay/randomizer/spinBrief'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
-import { formatChecks, formatHeading, formatHintSection, storyFormatSection } from './formatBrief'
+import { formatChecks, formatHeading, formatHintSection, formatTitle, storyFormatSection } from './formatBrief'
 import { MAPBOX_TOKEN_GLOBAL, storyMapboxToken } from './mapbox'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
@@ -74,12 +79,14 @@ export interface BriefOptions {
    * Source material appended to the brief as its last section — for footshorts
    * the match context (see @vismay/content-source/footshortsMatchBrief's
    * buildMatchContext), for vizf1 the race context (@vismay/f1-viz's
-   * buildRaceContext). Markdown; its headings are demoted under the brief's.
+   * buildRaceContext), for viznba the game context (./viznbaBrief's
+   * buildGameContext). Markdown; its headings are demoted under the brief's.
    */
   context?: string | null
   /**
-   * A logged randomizer spin (vizmaya only): the brief gains the assignment,
-   * research protocol, deliverables, output format, reel script and checklist
+   * A logged randomizer spin for this app (Desk, Atlas, Epics on vizmaya; the
+   * Football Desk on footshorts; the NBA Desk on viznba): the brief gains the assignment, research
+   * protocol, deliverables, output format, reel script and checklist
    * sections, and ends with the spin's research file (or its stub).
    */
   spin?: BriefSpin | null
@@ -92,8 +99,8 @@ export interface BriefOptions {
    */
   mapboxToken?: string | null
   /**
-   * The story format: 'scroll' (default) or a paged format ('book', 'board',
-   * 'deck') built on the site's hosted runtime.
+   * The story format: 'scroll' (default) or a runtime-driven format ('book',
+   * 'board', 'deck', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
 }
@@ -146,10 +153,28 @@ const VIZF1_PALETTE: ThemeColors = {
   teal: '#2DD4BF',
 }
 
+/**
+ * The viznba house palette: the app's own (apps/viznba/web/app/globals.css).
+ * The brand orange is the accent; the live red (the app's score bug) the
+ * secondary, kept for what is happening now or went wrong; a court teal the
+ * tertiary.
+ */
+const VIZNBA_PALETTE: ThemeColors = {
+  background: '#0b0d12',
+  surface: '#13161d',
+  text: '#f5f5f5',
+  muted: '#8e8e99',
+  line: '#1f2330',
+  accent: '#ff8a3d',
+  accent2: '#ff4d4f',
+  teal: '#2DD4BF',
+}
+
 export const HOUSE_PALETTES: Record<HtmlStoryApp, ThemeColors> = {
   'vizmaya-fyi': VIZMAYA_PALETTE,
   footshorts: FOOTSHORTS_PALETTE,
   vizf1: VIZF1_PALETTE,
+  viznba: VIZNBA_PALETTE,
 }
 
 const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
@@ -186,6 +211,21 @@ const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
   lap times, labels, axes and data (all on Google Fonts:
   \`https://fonts.googleapis.com/css2?family=Saira:ital,wdth,wght@0,75..125,100..900;1,75..125,100..900&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=swap\`).
   Body 18–20px, line-height 1.6, measure 60–70 characters.`,
+  viznba: `House style (the VizNBA app's own look; use it unless the story clearly wants its own):
+- A dark page. Background \`#0b0d12\`, surface \`#13161d\`, text \`#f5f5f5\`, muted \`#8e8e99\`, hairlines \`#1f2330\`.
+- Accent \`#ff8a3d\` (the brand orange: the one colour that means "look here"),
+  secondary \`#ff4d4f\` (the app's live red: keep it for what is happening now, a
+  run against, a loss), teal \`#2DD4BF\`.
+- Team colours are allowed on top of these, but only for the two or three teams
+  the story is about, and only where a line, bar or badge stands for that team.
+  Use the team colour the game context gives (it is tinted to read on the dark
+  background), and grey for the rest of the league.
+- Type: Saira for headlines, big numbers and body (it has a width axis: set
+  headlines condensed and heavy, scores and big numbers condensed), Martian Mono
+  for scores, clocks, labels, axes and data, always with tabular numerals (all on
+  Google Fonts:
+  \`https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,100..900&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=swap\`).
+  Body 18–20px, line-height 1.6, measure 60–70 characters.`,
 }
 
 function styleSection(app: HtmlStoryApp, style: StoryStyle | null | undefined): string {
@@ -212,10 +252,21 @@ so this page gets its own look. Use it instead of the house style:
   don't introduce new hues.`
 }
 
-/** The "icons and flags" section; footshorts adds club crests, vizf1 team marks. */
+/** The "icons and flags" section; footshorts adds club crests, vizf1 and viznba team marks. */
 function iconsSection(app: HtmlStoryApp): string {
   const crests =
-    app === 'vizf1'
+    app === 'viznba'
+      ? `
+- **Team logos and headshots: from the game context.** Each team in the game
+  context comes with its logo URL and colour, and each leader with a headshot
+  URL. Show the logo beside the team name in score lines, tables, stat cards and
+  chart labels (\`<img src="…" alt="" width="20" height="20">\`, or an SVG
+  \`<image>\` inside charts), and a headshot (cropped round) beside a player
+  where the story is about that player. A logo or a face always sits beside the
+  name, never instead of it; a team with no logo URL just gets its name. ESPN's
+  logo URLs follow \`https://a.espncdn.com/i/teamlogos/nba/500/<abbr>.png\` if
+  you need one the context doesn't carry.`
+      : app === 'vizf1'
       ? `
 - **Team marks and headshots: from the race context.** Each team in the race
   context comes with its logo URL and colour, and each driver with a headshot
@@ -234,7 +285,7 @@ function iconsSection(app: HtmlStoryApp): string {
   sits beside the name, never instead of it, and a team with no crest URL just
   gets its name. For national teams use the flag instead of a crest.`
       : ''
-  const marksHeading = app === 'footshorts' ? ', crests' : app === 'vizf1' ? ', team marks' : ''
+  const marksHeading = app === 'footshorts' ? ', crests' : app === 'vizf1' ? ', team marks' : app === 'viznba' ? ', team logos' : ''
   return `## Icons${marksHeading} and flags
 
 Use ${app === 'vizmaya-fyi' ? 'both' : 'them'}. They make a page scannable, but they support the words and never replace them.
@@ -247,7 +298,13 @@ Use ${app === 'vizmaya-fyi' ? 'both' : 'them'}. They make a page scannable, but 
   size them to the text they sit next to. Use no other icon set and no emoji.${crests}
 - **Flags: flag-icons.** Whenever a country appears (a table row, a chart label,
   a stat card, a map callout${
-    app === 'footshorts' ? ', a national team' : app === 'vizf1' ? ", a driver's nationality, a Grand Prix" : ''
+    app === 'footshorts'
+      ? ', a national team'
+      : app === 'vizf1'
+        ? ", a driver's nationality, a Grand Prix"
+        : app === 'viznba'
+          ? ", a player's home country, an international game"
+          : ''
   }), show its flag next to its name. Load
   \`https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css\` and write
   \`<span class="fi fi-in"></span>\` (ISO 3166-1 alpha-2, lowercase; add \`fis\`
@@ -268,7 +325,9 @@ function mediaSection(app: HtmlStoryApp, site: string, unit: string): string {
       ? 'the ground, the players, the city, the trophy, the crowd'
       : app === 'vizf1'
         ? 'the circuit, the cars, the drivers, the garage, the grandstands'
-        : 'the place, the people, the object, the machine, the landscape'
+        : app === 'viznba'
+          ? 'the arena, the players, the coaches, the city, the crowd'
+          : 'the place, the people, the object, the machine, the landscape'
   const photoRules =
     app === 'footshorts'
       ? `
@@ -285,7 +344,15 @@ function mediaSection(app: HtmlStoryApp, site: string, unit: string): string {
   broadcasters or agencies (Getty, Motorsport Images, XPB, LAT), even "for
   illustration". Never generate an image of a real driver, a real car livery
   or a race moment. A good Commons photo of the circuit beats a bad one of the car.`
-        : ''
+        : app === 'viznba'
+          ? `
+- **NBA photos.** Players, coaches and arenas come from Wikimedia Commons under
+  CC BY or CC BY-SA only (the headshot URLs in the game context are fine for
+  small portraits). Never take images from nba.com, team sites, broadcasters or
+  agencies (Getty, AP, NBAE, USA Today), even "for illustration". Never generate
+  an image of a real player, a real jersey or a game moment. A good Commons
+  photo of the arena beats a bad one of the player.`
+          : ''
   return `## Photography and media
 
 A data story is not only charts. When it has real ${subjects}, show them.
@@ -356,7 +423,9 @@ function mapsSection(app: HtmlStoryApp, token: string): string {
       ? "a title race's away days, a club's scouting map, a tournament's host cities"
       : app === 'vizf1'
         ? "a season's calendar across continents, the flyaway swing, where the circuits sit"
-        : 'a trade route, a river basin, where the plants or the outbreaks cluster'
+        : app === 'viznba'
+          ? "a road trip across time zones, where a roster's players come from, the league's map of markets"
+          : 'a trade route, a river basin, where the plants or the outbreaks cluster'
   return `## Maps: Mapbox scrollytelling
 
 When the story happens somewhere (${places}), tell that part on a Mapbox map
@@ -448,7 +517,12 @@ Animate on scroll. The page should feel alive as the reader moves through it:
   A race is exactly this: the running-order chart (position by lap) or the gap
   chart stays put while the start, the stops, the safety car and the overtakes
   step past it, each step highlighting its laps.`
-        : ''
+        : app === 'viznba'
+          ? `
+  A game is exactly this: the score-margin chart (the lead by minute) stays put
+  while the runs, the quarters, the timeouts and the closing possessions step
+  past it, each step highlighting its stretch of the clock.`
+          : ''
   }
 
 How to build it:
@@ -496,9 +570,38 @@ ${contextRules}
   Lead with the finding.`
 }
 
+function viznbaContentSection(hasContext: boolean): string {
+  const meta = HTML_STORY_APP_META.viznba
+  const contextRules = hasContext
+    ? `- **The game context at the end of this brief is your primary source.** Every
+  score, quarter, stat line and record comes from it, verbatim: never round a
+  shooting percentage to make a point, move a run to another quarter, or claim a
+  record or a season trend the context does not show. If a figure you want is
+  not in the context, say so in the page rather than inventing it.
+- Lead with WHY the result happened (a 14-0 run, a shooting night, the
+  turnovers, the minutes a star sat), then the game in the order it happened,
+  then what it does to the standings.
+- Compare like with like: per game or per 100 possessions, regular season with
+  regular season, playoffs with playoffs. One game is a sample of one; say so
+  before you build a trend on it.
+- Box scores describe what happened, not why. Say "shot 4 of 19 from three",
+  not "went cold because of the travel".`
+    : `- Every number has a source. If the brief carries no game context, build the
+  page from the sources you are given and link every figure to one.`
+  return `## Content
+
+${contextRules}
+- Sources & method: end with a short section of links — the VizNBA game pages
+  for the games, plus "Box scores: ESPN" and NBA.com for stats and standings.
+- Byline "${meta.desk}" plus the date.
+- Write like a good game story, not a press release: plain, specific, no hype.
+  Lead with the finding.`
+}
+
 function contentSection(app: HtmlStoryApp, hasContext: boolean): string {
   const meta = HTML_STORY_APP_META[app]
   if (app === 'vizf1') return vizf1ContentSection(hasContext)
+  if (app === 'viznba') return viznbaContentSection(hasContext)
   if (app !== 'footshorts') {
     return `## Content
 
@@ -528,6 +631,26 @@ ${contextRules}
 - Byline "${meta.desk}" plus the date.
 - Write like a good match report, not a press release: plain, specific, no hype.
   Lead with the finding.`
+}
+
+/** A Football Desk spin's brief carries match context: how the page uses it. */
+const FOOTSHORTS_SPIN_CONTEXT_RULES = [
+  'The match context at the end of this brief is primary data: every scoreline, minute, scorer, stat and table row comes from it verbatim. Never round a score or derive a season claim it does not make.',
+  'Paraphrase the commentary; never present it as someone\'s quoted words. Link each match to its footshorts match page (the URL is in the context).',
+  'Credit "Opta via theanalyst.com match centre" for the stats, insights and commentary, and "football-data.org" for fixtures and tables.',
+]
+
+/** An NBA Desk spin's brief carries box scores: how the page uses them. */
+const VIZNBA_SPIN_CONTEXT_RULES = [
+  'The game context at the end of this brief is primary data: every score, quarter and stat line comes from it verbatim. Never round a percentage or derive a season claim it does not make.',
+  'Link each game to its VizNBA game page (the URL is in the context).',
+  'Credit "Box scores: ESPN" for the games, and NBA.com for any stat or standing you add.',
+]
+
+/** The rules a spin's appended context brings, per site. */
+const SPIN_CONTEXT_RULES: Partial<Record<HtmlStoryApp, string[]>> = {
+  footshorts: FOOTSHORTS_SPIN_CONTEXT_RULES,
+  viznba: VIZNBA_SPIN_CONTEXT_RULES,
 }
 
 /** Demote `# ` and `## ` headings so the appended context nests under the brief's own. */
@@ -570,7 +693,10 @@ navigation) above your page and a Footshorts footer below it`
       : app === 'vizf1'
         ? `The only thing added is a slim VizF1 header (the flag mark and the app's
 navigation) above your page and a VizF1 footer below it`
-        : `The only thing added is a slim vizmaya header (logo) above
+        : app === 'viznba'
+          ? `The only thing added is a slim VizNBA header (the ball mark and the app's
+navigation) above your page and a VizNBA footer below it`
+          : `The only thing added is a slim vizmaya header (logo) above
 your page and a vizmaya footer below it`
   const appMcp = app === 'vizmaya-fyi' ? '' : ` and \`app: "${app}"\``
   const storyKind =
@@ -578,25 +704,32 @@ your page and a vizmaya footer below it`
       ? 'football data story for Footshorts'
       : app === 'vizf1'
         ? 'Formula 1 data story for VizF1'
-        : 'data story for vizmaya.fyi'
-  const newsrooms = app === 'footshorts' ? ', The Athletic' : app === 'vizf1' ? ', The Race' : ''
+        : app === 'viznba'
+          ? 'basketball data story for VizNBA'
+          : 'data story for vizmaya.fyi'
+  const newsrooms = app === 'footshorts' ? ', The Athletic' : app === 'vizf1' ? ', The Race' : app === 'viznba' ? ', The Ringer' : ''
   const [chartTitleGood, chartTitleBad] =
     app === 'footshorts'
       ? ['Arsenal had the ball, Chelsea had the chances', 'Possession and shots']
       : app === 'vizf1'
         ? ['Norris was faster on every stint but lost it in the pit lane', 'Lap times, laps 1–57']
-        : ['Exports doubled after 2019', 'Exports 2015–2024']
+        : app === 'viznba'
+          ? ['The Knicks won the minutes Brunson sat', 'Score margin by minute']
+          : ['Exports doubled after 2019', 'Exports 2015–2024']
   const slugExample =
     app === 'footshorts'
       ? 'arsenal-chelsea-xg-gap-2026'
       : app === 'vizf1'
         ? 'norris-piastri-pit-wall-2026'
-        : 'india-solar-boom-2026'
-  const sourceTables = app === 'vizf1' ? 'timing and telemetry tables' : 'match tables'
+        : app === 'viznba'
+          ? 'knicks-bench-minutes-2026'
+          : 'india-solar-boom-2026'
+  const sourceTables =
+    app === 'vizf1' ? 'timing and telemetry tables' : app === 'viznba' ? 'box scores (ESPN)' : 'match tables'
   const unit = paged ? HTML_STORY_FORMAT_META[paged].unit : 'screen'
   const formatIntro = paged
     ? `
-This story is ${paged === 'board' ? 'a pinned board' : `a ${paged}`}, not a scrolling page. The site
+This story is ${formatTitle(paged)}, not a plain scrolling page. The site
 hosts the runtime that makes it one; you write the content, its design and its
 charts. "${formatHeading(paged)}" below says how.
 `
@@ -606,7 +739,10 @@ charts. "${formatHeading(paged)}" below says how.
    - \`<meta name="${FORMAT_META_NAME}" content="${paged}">\` and the format's stylesheet
      (see "${formatHeading(paged)}").`
     : ''
-  const mapsLine = paged
+  const mapsLine =
+    paged === 'recap'
+      ? `The 3D replay is the race's map (see "${formatHeading(paged)}").`
+      : paged
     ? `For maps, draw a chart with D3-geo and world-atlas/us-atlas TopoJSON
   (see "${formatHeading(paged)}").`
     : mapbox
@@ -673,7 +809,7 @@ ${paged ? storyFormatSection(paged, app) : motionSection(app, mapbox)}
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
-${spin ? spinContentSection(meta.desk) : contentSection(app, hasContext)}
+${spin ? spinContentSection(meta.desk, hasContext ? SPIN_CONTEXT_RULES[app] ?? [] : []) : contentSection(app, hasContext)}
 ${spin ? `\n${reelScriptSection()}\n` : ''}
 ## Before you post: check your own work
 

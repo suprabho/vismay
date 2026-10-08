@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ten laps in DRS range, and then Russell</title>
+<meta name="description" content="The 2024 Austrian Grand Prix as a race recap: Verstappen led 62 of the first 63 laps, Norris spent ten of them inside a second of him, and George Russell won.">
+<meta property="og:title" content="Ten laps in DRS range, and then Russell">
+<meta property="og:description" content="Verstappen led 62 of the first 63 laps, Norris spent ten of them inside a second of him, and George Russell won the 2024 Austrian Grand Prix.">
+<!-- TODO before publishing: a real 1200×630 share image. -->
+<meta property="og:image" content="https://www.vizf1.com/og/austria-2024-recap.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="vizmaya:theme" content="background:#0b0d12; surface:#13161d; text:#f5f5f5; muted:#8e8e99; line:#1f2330; accent:#ff4346; accent2:#ff8000; teal:#27f4d2">
+<meta name="vizmaya:format" content="recap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@50..125,400..800&family=Martian+Mono:wdth,wght@75..112.5,400..700&display=swap">
+<!-- The recap format: the race replay beside the chapters, the chapter nav and the one-column view. -->
+<link rel="stylesheet" href="https://www.vizf1.com/formats/recap@1.css">
+<style>
+/* ── Tokens ──────────────────────────────────────────────────────────────
+   VizF1's dark palette and type (Saira, Martian Mono). The recap itself
+   (the replay frame, the chapter column, dimming, the nav, the one-column
+   view) is recap@1.css and recap@1.js; everything here is this story's. */
+:root {
+  --bg: #0b0d12; --surface: #13161d; --surface-2: #191d26; --text: #f5f5f5; --soft: #b9b9c3; --muted: #8e8e99; --line: #1f2330;
+  --accent: #ff4346; --mercedes: #27f4d2; --redbull: #3671c6; --mclaren: #ff8000; --ferrari: #e8002d;
+  --sans: 'Saira', ui-sans-serif, system-ui, sans-serif; --mono: 'Martian Mono', ui-monospace, monospace;
+  --c-ink: var(--text); --c-muted: var(--muted); --c-grid: rgba(245, 245, 245, .08); --c-hi: var(--accent);
+  /* the format's tokens */
+  --recap-rail-w: 46%;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--text) }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }
+.chart:empty::before { content: attr(data-alt); display: block; font-style: italic; font-size: 16px; line-height: 1.5; color: var(--muted) }
+
+/* ── Type ────────────────────────────────────────────────────────────── */
+.kicker { font: 600 11px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px }
+h1, h2 { font-weight: 700; font-stretch: 68%; text-transform: uppercase; letter-spacing: .005em; margin: 0 }
+h1 { font-size: clamp(44px, 6vw, 76px); line-height: .94 }
+h2 { font-size: clamp(32px, 3.6vw, 50px); line-height: .98; margin-bottom: 18px }
+p { font-size: 18px; line-height: 1.6; color: var(--soft); margin: 0 0 1em; max-width: 58ch }
+p b { color: var(--text); font-weight: 600 }
+.lede { font-size: 21px; color: var(--text) }
+.src { font: 11px/1.5 var(--mono); color: var(--muted); margin: 10px 0 0; letter-spacing: .02em }
+.code { font: 600 .82em var(--mono); letter-spacing: .02em }
+.ver { color: #6f9cf0 } .nor { color: var(--mclaren) } .rus { color: var(--mercedes) } .pia { color: #ffa24d } .sai, .lec { color: #ff4d6a }
+
+/* ── Pieces ──────────────────────────────────────────────────────────── */
+.chapter { padding-bottom: 8svh }
+.beat { position: relative; padding-left: 0; transition: color .3s }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 14px; margin: 22px 0 18px }
+.card h3 { font: 600 15px/1.35 var(--sans); margin: 0 0 10px; color: var(--text) }
+.chart { width: 100%; font-family: var(--mono) }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 26px 0 }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 14px }
+.stat .n { font-size: clamp(34px, 3.6vw, 48px); font-weight: 700; font-stretch: 62%; line-height: .9; color: var(--text); font-variant-numeric: tabular-nums }
+.stat .l { font-size: 13px; line-height: 1.35; color: var(--muted); margin-top: 8px }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 18px }
+.pair div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12px/1.4 var(--mono); color: var(--muted) }
+.pair b { display: block; font: 600 26px/1.1 var(--mono); color: var(--text); margin-top: 4px }
+blockquote { margin: 26px 0; padding: 0 0 0 18px; border-left: 3px solid var(--accent); font-size: 24px; line-height: 1.35; font-weight: 600; font-stretch: 80%; color: var(--text) }
+table.result { width: 100%; border-collapse: collapse; font-size: 15px; margin: 18px 0 }
+table.result th { font: 500 10px/1 var(--mono); letter-spacing: .1em; color: var(--muted); text-align: left; padding: 10px 8px }
+table.result td { padding: 10px 8px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums }
+table.result td.n, table.result th.n { text-align: right; font-family: var(--mono); font-size: 13px }
+table.result .sw { display: inline-block; width: 3px; height: 15px; border-radius: 2px; vertical-align: -2px; margin-right: 9px }
+table.result tr.win td { background: var(--surface-2) }
+.up { color: #5fd38d } .down { color: var(--accent) }
+.title-chapter h1 + p { margin-top: 20px }
+.end { font: 12px/1.6 var(--mono); color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; margin-top: 32px }
+@media (max-width: 900px) {
+  p { font-size: 17px }
+  .stats { grid-template-columns: 1fr 1fr 1fr; gap: 8px }
+  .stat .l { font-size: 12px }
+}
+</style>
+</head>
+<body>
+<main class="stage" aria-label="Ten laps in DRS range, and then Russell: the 2024 Austrian Grand Prix, a race recap">
+  <div class="replay" data-session="2024_austrian_grand_prix_R" data-laps="71" data-alt="3D replay of the 2024 Austrian Grand Prix"></div>
+
+  <div class="chapters">
+
+    <section class="chapter title-chapter" data-unit data-label="Austria" data-lap="1" data-cam="orbit" data-focus="VER">
+      <p class="kicker">2024 Austrian Grand Prix · Spielberg · 71 laps</p>
+      <h1>Ten laps in DRS range, and then Russell</h1>
+      <p class="lede">Max Verstappen led 62 of the first 63 laps. Lando Norris spent ten of them less than a second behind him. Neither won.</p>
+      <div class="stats">
+        <div class="stat"><div class="n" data-count="62">62</div><div class="l">laps Verstappen led before lap 64</div></div>
+        <div class="stat"><div class="n">0.49s</div><div class="l">Norris's closest, at the end of lap 63</div></div>
+        <div class="stat"><div class="n">1.906s</div><div class="l">Russell's winning margin, from third on the grid</div></div>
+      </div>
+      <p>Scroll, and the replay beside the story goes where it is: the lap, the camera and the car. Every number comes from the race's timing and telemetry.</p>
+    </section>
+
+    <section class="chapter" data-unit data-label="Lights out" data-lap="1" data-cam="heli" data-focus="VER">
+      <p class="kicker">Lap 1</p>
+      <h2>The front row holds. Leclerc falls to 18th</h2>
+      <p>Verstappen led away from pole and Norris kept second, so the first lap changed nothing at the front. Behind them <b>Hamilton</b> took fourth from <b>Sainz</b>, and <b>Perez</b> gained two places to sixth.</p>
+      <p class="beat" data-lap="1" data-cam="chase" data-focus="LEC"><b class="lec">Leclerc</b> started sixth. He pitted at the end of the opening lap and rejoined 18th, the only driver to lose more than one place.</p>
+      <div class="card">
+        <h3>Grid slot against position after lap 1</h3>
+        <div class="chart" data-chart="lapOne" style="height:300px" data-alt="Positions on the grid and after lap 1: Verstappen 1 to 1, Norris 2 to 2, Russell 3 to 3, Sainz 4 to 5, Hamilton 5 to 4, Leclerc 6 to 18, Piastri 7 to 7, Perez 8 to 6."></div>
+        <p class="src">Grid positions and lap-1 order, FastF1 timing.</p>
+      </div>
+    </section>
+
+    <section class="chapter" data-unit data-label="The escape" data-lap="10" data-cam="heli" data-focus="VER">
+      <p class="kicker">Laps 1–50</p>
+      <h2>Verstappen's lead grows to eight seconds</h2>
+      <p>Norris was 1.3 seconds behind after the first lap and 4.4 seconds behind after ten. By lap 20 it was 5.8.</p>
+      <p class="beat" data-lap="23" data-cam="tv" data-focus="VER">Both stopped on lap 23 and spent almost the same time in the pit lane: <b>21.8 seconds</b> for Verstappen, <b>21.6</b> for Norris. The stops changed nothing between them.</p>
+      <p class="beat" data-lap="24" data-cam="tv" data-focus="PIA">For one lap <b class="pia">Piastri</b>, who stayed out two laps longer, led the race. He stopped on lap 25 and Verstappen was back in front.</p>
+      <p class="beat" data-lap="40" data-cam="heli" data-focus="VER">On hard tyres the gap kept growing, to <b>8.1 seconds</b> on lap 40.</p>
+      <div class="card">
+        <h3>Norris's gap to Verstappen, seconds, end of each lap</h3>
+        <div class="chart" data-chart="escape" style="height:260px" data-alt="Norris's gap to Verstappen grows from 1.3 seconds after lap 1 to 8.1 seconds on lap 40, and is 7.6 seconds on lap 51."></div>
+        <p class="src">Gap from cumulative lap times, FastF1.</p>
+      </div>
+    </section>
+
+    <section class="chapter" data-unit data-label="Lap 51" data-lap="51" data-cam="tv" data-focus="VER">
+      <p class="kicker">Lap 51</p>
+      <h2>A slow stop hands Norris almost six seconds</h2>
+      <p>Both leaders stopped again on lap 51. Norris was through the pit lane in <b>21.4 seconds</b>. Verstappen took <b>25.8</b>.</p>
+      <div class="card">
+        <h3>Time in the pit lane, seconds</h3>
+        <div class="chart" data-chart="pitLane" style="height:190px" data-alt="Pit lane times: Verstappen 21.8 seconds on lap 23 and 25.8 on lap 51; Norris 21.6 on lap 23 and 21.4 on lap 51."></div>
+        <p class="src">Pit lane times, OpenF1.</p>
+      </div>
+      <p class="beat" data-lap="52" data-cam="chase" data-focus="NOR">A lap later the gap was <b>1.8 seconds</b>, down from 7.6. For the first time since the start, Norris could see the Red Bull.</p>
+    </section>
+
+    <section class="chapter" data-unit data-label="The hunt" data-lap="54" data-cam="chase" data-focus="NOR">
+      <p class="kicker">Laps 53–63</p>
+      <h2>Ten laps inside a second</h2>
+      <p>From lap 54 Norris crossed the line less than a second behind Verstappen every lap: close enough for DRS, not close enough to stay past.</p>
+      <div class="card">
+        <h3>Norris's gap to Verstappen, laps 52–63</h3>
+        <div class="chart" data-chart="hunt" style="height:250px" data-alt="Norris's gap to Verstappen: 1.79 seconds on lap 52, 1.04 on lap 53, then under a second every lap from 54 to 63, closest 0.49 seconds on lap 63."></div>
+        <p class="src">Gap at the line from cumulative lap times, FastF1. Dashed: one second.</p>
+      </div>
+      <p class="beat" data-lap="58" data-cam="pov" data-focus="NOR">Their lap times were all but the same. On lap 58 Verstappen did a 1:09.183 and Norris a 1:09.161; on lap 62, 1:09.528 and 1:09.509.</p>
+      <p class="beat" data-lap="63" data-cam="chase" data-focus="NOR">By the end of lap 63 the gap was <b>0.49 seconds</b>, the closest it had been.</p>
+      <blockquote>Two cars, ten laps, never more than a second apart.</blockquote>
+    </section>
+
+    <section class="chapter" data-unit data-label="Lap 64" data-lap="64" data-cam="tv" data-focus="NOR">
+      <p class="kicker">Lap 64</p>
+      <h2>The lap it came apart</h2>
+      <p>Lap 64 took Verstappen <b>1:38.0</b>, 28 seconds slower than the lap before, and Norris <b>2:00.3</b>. Both came into the pits at the end of it. Norris never came back out.</p>
+      <p class="beat" data-lap="64" data-cam="tv" data-focus="RUS"><b class="rus">Russell</b> had been third and 15.8 seconds behind after lap 63. One lap later he was leading the race.</p>
+      <div class="card">
+        <h3>Running order, laps 60–67</h3>
+        <div class="chart" data-chart="order" style="height:270px" data-alt="Running order laps 60 to 67: Verstappen first until lap 63, then fourth and fifth; Norris second until 63, sixth on 64, then out; Russell third until 63, then first."></div>
+        <p class="src">Position at the end of each lap, FastF1.</p>
+      </div>
+      <p>Verstappen rejoined fourth, on soft tyres, and finished fifth.</p>
+    </section>
+
+    <section class="chapter" data-unit data-label="Turn 6" data-at="7929.9" data-cam="chase" data-focus="PIA">
+      <p class="kicker">Lap 65</p>
+      <h2>Piastri takes second into Turn 6</h2>
+      <p>The fight for second was the race's last pass at the front. <b class="pia">Piastri</b> was 0.7 seconds behind <b class="sai">Sainz</b> at the end of lap 64, and ahead of him before the end of lap 65.</p>
+      <div class="card">
+        <h3>Speed through the pass, lap 65, km/h</h3>
+        <div class="chart" data-chart="trace" style="height:250px" data-alt="Speed traces on lap 65: Piastri and Sainz both slow to around 135 km/h at Turn 4, then Piastri is quicker on the run to Turn 6 and the order flips at about 2,690 metres into the lap."></div>
+        <p class="src">Car telemetry, FastF1; metres from the start of lap 65.</p>
+      </div>
+      <div class="pair">
+        <div>Piastri at the pass<b>174 km/h</b></div>
+        <div>Sainz at the pass<b>164 km/h</b></div>
+      </div>
+      <p class="beat" data-lap="66" data-cam="orbit" data-focus="RUS">A virtual safety car on lap 66 slowed the field for a lap, then three cars were left to settle the podium.</p>
+    </section>
+
+    <section class="chapter" data-unit data-label="The chase" data-lap="68" data-cam="chase" data-focus="PIA">
+      <p class="kicker">Laps 64–71</p>
+      <h2>Piastri gets within two seconds, and no closer</h2>
+      <p>Piastri was 2.9 seconds behind Russell when Russell took the lead. He took a second out of that in the last seven laps.</p>
+      <div class="card">
+        <h3>Piastri's gap to Russell, seconds</h3>
+        <div class="chart" data-chart="chase" style="height:220px" data-alt="Piastri's gap to Russell: 2.92 seconds on lap 64, 2.07 on lap 69, 1.91 at the flag on lap 71."></div>
+        <p class="src">Gap from cumulative lap times, FastF1.</p>
+      </div>
+      <p class="beat" data-lap="70" data-cam="pov" data-focus="ALO">The fastest lap of the race came from further back: <b>Alonso</b>, 1:07.694 on lap 70.</p>
+    </section>
+
+    <section class="chapter" data-unit data-label="Result" data-lap="71" data-cam="tv" data-focus="RUS">
+      <p class="kicker">Lap 71 · Result</p>
+      <h2>Russell by 1.906 seconds</h2>
+      <p>Russell won from third on the grid. Piastri finished second from seventh and Sainz third. Verstappen, on pole, was fifth, 37 seconds behind.</p>
+      <table class="result">
+        <thead><tr><th>Pos</th><th>Driver</th><th class="n">Grid</th><th class="n">Gap</th><th class="n">Pts</th></tr></thead>
+        <tbody id="result"></tbody>
+      </table>
+      <p class="end">2024 Austrian Grand Prix, Red Bull Ring, 30 June 2024. Timing, telemetry and positions: FastF1; pit lane times: OpenF1. The replay is the race's position data in 3D.</p>
+    </section>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://www.vizf1.com/formats/recap@1.js"></script>
+<script>
+var DATA = {"drivers":{"RUS":{"name":"Russell","team":"Mercedes","color":"#27F4D2"},"PIA":{"name":"Piastri","team":"McLaren","color":"#FF8000"},"SAI":{"name":"Sainz","team":"Ferrari","color":"#E80020"},"HAM":{"name":"Hamilton","team":"Mercedes","color":"#27F4D2"},"VER":{"name":"Verstappen","team":"Red Bull Racing","color":"#3671C6"},"HUL":{"name":"Hulkenberg","team":"Haas F1 Team","color":"#B6BABD"},"PER":{"name":"Perez","team":"Red Bull Racing","color":"#3671C6"},"MAG":{"name":"Magnussen","team":"Haas F1 Team","color":"#B6BABD"},"RIC":{"name":"Ricciardo","team":"RB","color":"#6692FF"},"GAS":{"name":"Gasly","team":"Alpine","color":"#0093cc"},"LEC":{"name":"Leclerc","team":"Ferrari","color":"#E80020"},"ALO":{"name":"Alonso","team":"Aston Martin","color":"#229971"},"NOR":{"name":"Norris","team":"McLaren","color":"#FF8000"}},"lap1":[{"code":"RUS","grid":3,"lap1":3},{"code":"PIA","grid":7,"lap1":7},{"code":"SAI","grid":4,"lap1":5},{"code":"HAM","grid":5,"lap1":4},{"code":"VER","grid":1,"lap1":1},{"code":"HUL","grid":9,"lap1":9},{"code":"PER","grid":8,"lap1":6},{"code":"MAG","grid":12,"lap1":10},{"code":"RIC","grid":11,"lap1":12},{"code":"GAS","grid":13,"lap1":11},{"code":"NOR","grid":2,"lap1":2},{"code":"LEC","grid":6,"lap1":18}],"leadGap":[{"lap":1,"gap":1.32},{"lap":2,"gap":1.2},{"lap":3,"gap":1.87},{"lap":4,"gap":2.35},{"lap":5,"gap":2.77},{"lap":6,"gap":2.86},{"lap":7,"gap":3.18},{"lap":8,"gap":3.36},{"lap":9,"gap":3.21},{"lap":10,"gap":4.36},{"lap":11,"gap":4.65},{"lap":12,"gap":5.02},{"lap":13,"gap":5.13},{"lap":14,"gap":5.52},{"lap":15,"gap":5.5},{"lap":16,"gap":5.88},{"lap":17,"gap":6.04},{"lap":18,"gap":5.94},{"lap":19,"gap":6.08},{"lap":20,"gap":5.82},{"lap":21,"gap":5.93},{"lap":22,"gap":5.61},{"lap":23,"gap":5.97},{"lap":24,"gap":6.83},{"lap":25,"gap":6.5},{"lap":26,"gap":6.68},{"lap":27,"gap":6.91},{"lap":28,"gap":7.05},{"lap":29,"gap":6.96},{"lap":30,"gap":7.15},{"lap":31,"gap":7.55},{"lap":32,"gap":7.89},{"lap":33,"gap":7.84},{"lap":34,"gap":8.11},{"lap":35,"gap":8.06},{"lap":36,"gap":8.26},{"lap":37,"gap":8.02},{"lap":38,"gap":8.04},{"lap":39,"gap":8.17},{"lap":40,"gap":8.06},{"lap":41,"gap":7.38},{"lap":42,"gap":7.23},{"lap":43,"gap":6.46},{"lap":44,"gap":6.76},{"lap":45,"gap":6.58},{"lap":46,"gap":6.71},{"lap":47,"gap":6.78},{"lap":48,"gap":7.19},{"lap":49,"gap":7.09},{"lap":50,"gap":6.9},{"lap":51,"gap":7.61},{"lap":52,"gap":1.79},{"lap":53,"gap":1.04},{"lap":54,"gap":0.68},{"lap":55,"gap":0.81},{"lap":56,"gap":0.96},{"lap":57,"gap":0.73},{"lap":58,"gap":0.71},{"lap":59,"gap":0.69},{"lap":60,"gap":0.65},{"lap":61,"gap":0.68},{"lap":62,"gap":0.66},{"lap":63,"gap":0.49}],"pitLane":[{"code":"HAM","lap":21,"lane":21.5},{"code":"RUS","lap":22,"lane":21.6},{"code":"SAI","lap":22,"lane":21.2},{"code":"VER","lap":23,"lane":21.8},{"code":"NOR","lap":23,"lane":21.6},{"code":"PIA","lap":25,"lane":20.9},{"code":"RUS","lap":46,"lane":21.2},{"code":"SAI","lap":47,"lane":21.2},{"code":"VER","lap":51,"lane":25.8},{"code":"NOR","lap":51,"lane":21.4},{"code":"PIA","lap":51,"lane":20.7},{"code":"HAM","lap":53,"lane":27.2},{"code":"VER","lap":64,"lane":22.7}],"order":{"VER":[{"lap":60,"pos":1},{"lap":61,"pos":1},{"lap":62,"pos":1},{"lap":63,"pos":1},{"lap":64,"pos":4},{"lap":65,"pos":5},{"lap":66,"pos":5},{"lap":67,"pos":5}],"NOR":[{"lap":60,"pos":2},{"lap":61,"pos":2},{"lap":62,"pos":2},{"lap":63,"pos":2},{"lap":64,"pos":6},{"lap":65,"pos":null},{"lap":66,"pos":null},{"lap":67,"pos":null}],"RUS":[{"lap":60,"pos":3},{"lap":61,"pos":3},{"lap":62,"pos":3},{"lap":63,"pos":3},{"lap":64,"pos":1},{"lap":65,"pos":1},{"lap":66,"pos":1},{"lap":67,"pos":1}],"PIA":[{"lap":60,"pos":5},{"lap":61,"pos":5},{"lap":62,"pos":5},{"lap":63,"pos":5},{"lap":64,"pos":3},{"lap":65,"pos":2},{"lap":66,"pos":2},{"lap":67,"pos":2}],"SAI":[{"lap":60,"pos":4},{"lap":61,"pos":4},{"lap":62,"pos":4},{"lap":63,"pos":4},{"lap":64,"pos":2},{"lap":65,"pos":3},{"lap":66,"pos":3},{"lap":67,"pos":3}],"HAM":[{"lap":60,"pos":6},{"lap":61,"pos":6},{"lap":62,"pos":6},{"lap":63,"pos":6},{"lap":64,"pos":5},{"lap":65,"pos":4},{"lap":66,"pos":4},{"lap":67,"pos":4}]},"results":[{"pos":1,"code":"RUS","grid":3,"pts":25.0,"time":5062.798,"laps":71,"status":"Finished"},{"pos":2,"code":"PIA","grid":7,"pts":18.0,"time":1.9060000000000001,"laps":71,"status":"Finished"},{"pos":3,"code":"SAI","grid":4,"pts":15.0,"time":4.533,"laps":71,"status":"Finished"},{"pos":4,"code":"HAM","grid":5,"pts":12.0,"time":23.142,"laps":71,"status":"Finished"},{"pos":5,"code":"VER","grid":1,"pts":10.0,"time":37.253,"laps":71,"status":"Finished"},{"pos":6,"code":"HUL","grid":9,"pts":8.0,"time":54.088,"laps":71,"status":"Finished"},{"pos":7,"code":"PER","grid":8,"pts":6.0,"time":54.672,"laps":71,"status":"Finished"},{"pos":8,"code":"MAG","grid":12,"pts":4.0,"time":60.355,"laps":71,"status":"Finished"},{"pos":9,"code":"RIC","grid":11,"pts":2.0,"time":61.169,"laps":71,"status":"Finished"},{"pos":10,"code":"GAS","grid":13,"pts":1.0,"time":61.766,"laps":71,"status":"Finished"}],"chase":[{"lap":64,"gap":2.92},{"lap":65,"gap":2.78},{"lap":66,"gap":2.88},{"lap":67,"gap":3.06},{"lap":68,"gap":2.66},{"lap":69,"gap":2.07},{"lap":70,"gap":2.43},{"lap":71,"gap":1.91}]};
+var TRACE = {"a":[{"d":2244,"v":134},{"d":2257,"v":148},{"d":2259,"v":150},{"d":2263,"v":155},{"d":2271,"v":165},{"d":2280,"v":174},{"d":2291,"v":179},{"d":2299,"v":186},{"d":2303,"v":190},{"d":2308,"v":194},{"d":2319,"v":198},{"d":2340,"v":211},{"d":2351,"v":220},{"d":2366,"v":225},{"d":2372,"v":227},{"d":2383,"v":232},{"d":2393,"v":235},{"d":2406,"v":238},{"d":2417,"v":242},{"d":2422,"v":244},{"d":2432,"v":245},{"d":2444,"v":249},{"d":2450,"v":250},{"d":2461,"v":252},{"d":2477,"v":256},{"d":2481,"v":257},{"d":2493,"v":259},{"d":2512,"v":262},{"d":2525,"v":264},{"d":2555,"v":268},{"d":2566,"v":259},{"d":2583,"v":240},{"d":2587,"v":236},{"d":2598,"v":229},{"d":2636,"v":198},{"d":2643,"v":192},{"d":2651,"v":188},{"d":2661,"v":182},{"d":2667,"v":178},{"d":2672,"v":177},{"d":2685,"v":174},{"d":2694,"v":173},{"d":2705,"v":174},{"d":2710,"v":174},{"d":2720,"v":174},{"d":2727,"v":174},{"d":2733,"v":176},{"d":2737,"v":178},{"d":2741,"v":180},{"d":2749,"v":184},{"d":2758,"v":186},{"d":2763,"v":189},{"d":2768,"v":191},{"d":2772,"v":192},{"d":2787,"v":197},{"d":2796,"v":197},{"d":2804,"v":203},{"d":2813,"v":210},{"d":2820,"v":216},{"d":2834,"v":221},{"d":2839,"v":223},{"d":2848,"v":226},{"d":2868,"v":234},{"d":2878,"v":236},{"d":2896,"v":238},{"d":2907,"v":239},{"d":2932,"v":224}],"b":[{"d":2241,"v":111},{"d":2247,"v":123},{"d":2251,"v":130},{"d":2264,"v":146},{"d":2266,"v":149},{"d":2269,"v":152},{"d":2278,"v":159},{"d":2287,"v":168},{"d":2297,"v":178},{"d":2305,"v":185},{"d":2309,"v":189},{"d":2314,"v":193},{"d":2325,"v":200},{"d":2346,"v":210},{"d":2357,"v":215},{"d":2372,"v":221},{"d":2377,"v":223},{"d":2388,"v":227},{"d":2398,"v":232},{"d":2411,"v":236},{"d":2422,"v":240},{"d":2427,"v":241},{"d":2437,"v":244},{"d":2449,"v":245},{"d":2455,"v":247},{"d":2465,"v":251},{"d":2481,"v":253},{"d":2485,"v":253},{"d":2497,"v":257},{"d":2517,"v":262},{"d":2529,"v":265},{"d":2559,"v":266},{"d":2570,"v":258},{"d":2588,"v":243},{"d":2591,"v":240},{"d":2602,"v":230},{"d":2639,"v":190},{"d":2645,"v":182},{"d":2653,"v":178},{"d":2662,"v":173},{"d":2669,"v":170},{"d":2673,"v":169},{"d":2686,"v":165},{"d":2694,"v":163},{"d":2704,"v":162},{"d":2709,"v":161},{"d":2718,"v":162},{"d":2725,"v":163},{"d":2730,"v":164},{"d":2734,"v":165},{"d":2737,"v":166},{"d":2745,"v":169},{"d":2753,"v":171},{"d":2758,"v":173},{"d":2762,"v":175},{"d":2766,"v":177},{"d":2780,"v":186},{"d":2789,"v":191},{"d":2796,"v":194},{"d":2804,"v":197},{"d":2812,"v":203},{"d":2825,"v":209},{"d":2830,"v":211},{"d":2838,"v":215},{"d":2857,"v":226},{"d":2867,"v":227},{"d":2884,"v":229},{"d":2895,"v":230},{"d":2919,"v":211},{"d":2935,"v":207}],"passAt":2690};
+
+(function () {
+  // The result table is markup, so it reads without the runtime and without d3.
+  var body = document.getElementById('result')
+  if (body) {
+    body.innerHTML = DATA.results.map(function (r) {
+      var d = DATA.drivers[r.code] || {}
+      var gap = r.pos === 1 ? 'Winner' : '+' + r.time.toFixed(3) + 's'
+      var moved = r.grid - r.pos
+      var mv = moved > 0 ? ' <span class="up">▲' + moved + '</span>' : moved < 0 ? ' <span class="down">▼' + -moved + '</span>' : ''
+      return '<tr' + (r.pos === 1 ? ' class="win"' : '') + '><td class="code">' + r.pos + '</td><td><span class="sw" style="background:' + d.color + '"></span><span class="code">' + r.code + '</span> ' + d.name + '</td><td class="n">' + r.grid + mv + '</td><td class="n">' + gap + '</td><td class="n">' + r.pts + '</td></tr>'
+    }).join('')
+  }
+})()
+
+if (window.Story && window.d3) {
+  var S = window.Story
+  var css = function (el, v, fb) { return getComputedStyle(el).getPropertyValue(v).trim() || fb }
+  var colorOf = function (code) { return (DATA.drivers[code] || {}).color || '#8e8e99' }
+  var M = { t: 16, r: 46, b: 30, l: 34 }
+
+  function frame(el) {
+    var s = S.size(el), W = s[0], H = s[1]
+    var svg = d3.select(el).append('svg').attr('viewBox', [0, 0, W, H]).attr('width', W).attr('height', H)
+      .style('font-size', '11px').style('overflow', 'visible')
+    return { svg: svg, W: W, H: H, ink: css(el, '--c-ink', '#f5f5f5'), muted: css(el, '--c-muted', '#8e8e99'), grid: css(el, '--c-grid', 'rgba(255,255,255,.08)'), hi: css(el, '--c-hi', '#ff4346') }
+  }
+  function drawIn(path) {
+    var n = path.node(), len = n.getTotalLength()
+    path.attr('stroke-dasharray', len + ' ' + len).attr('stroke-dashoffset', len)
+    return function (ms, delay) { path.transition().delay(S.dur(delay || 0)).duration(S.dur(ms)).ease(d3.easeCubicInOut).attr('stroke-dashoffset', 0) }
+  }
+  function yGrid(f, y, ticks, fmt, x0, x1) {
+    var g = f.svg.append('g')
+    ticks.forEach(function (t) {
+      g.append('line').attr('x1', x0).attr('x2', x1).attr('y1', y(t)).attr('y2', y(t)).attr('stroke', f.grid)
+      g.append('text').attr('x', x0 - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').attr('fill', f.muted).text(fmt(t))
+    })
+  }
+
+  // Lap 1: grid slot → position after lap 1.
+  S.charts.lapOne = function (el) {
+    var f = frame(el), rows = DATA.lap1
+    var y = d3.scaleLinear().domain([1, 18]).range([M.t + 4, f.H - M.b + 6])
+    var x0 = 70, x1 = f.W - 70
+    f.svg.append('text').attr('x', x0).attr('y', 10).attr('text-anchor', 'middle').attr('fill', f.muted).text('GRID')
+    f.svg.append('text').attr('x', x1).attr('y', 10).attr('text-anchor', 'middle').attr('fill', f.muted).text('LAP 1')
+    var lines = rows.map(function (r) {
+      var hot = r.code === 'LEC', lead = r.code === 'VER' || r.code === 'NOR'
+      var c = hot ? f.hi : lead ? colorOf(r.code) : f.muted
+      var g = f.svg.append('g').attr('opacity', hot || lead ? 1 : .7)
+      var line = g.append('line').attr('x1', x0).attr('x2', x0).attr('y1', y(r.grid)).attr('y2', y(r.grid)).attr('stroke', c).attr('stroke-width', hot ? 2.5 : 1.5)
+      g.append('circle').attr('cx', x0).attr('cy', y(r.grid)).attr('r', 3.5).attr('fill', c)
+      g.append('text').attr('x', x0 - 10).attr('y', y(r.grid) + 4).attr('text-anchor', 'end').attr('fill', hot ? f.hi : f.ink).text(r.code + ' ' + r.grid)
+      var end = g.append('text').attr('x', x1 + 10).attr('y', y(r.lap1) + 4).attr('fill', hot ? f.hi : f.ink).attr('opacity', 0).text(r.lap1 + ' ' + r.code)
+      return { r: r, line: line, end: end }
+    })
+    return { play: function () {
+      lines.forEach(function (l, i) {
+        l.line.transition().delay(S.dur(i * 40)).duration(S.dur(900)).ease(d3.easeCubicOut).attr('x2', x1).attr('y2', y(l.r.lap1))
+        l.end.transition().delay(S.dur(700 + i * 40)).duration(S.dur(300)).attr('opacity', 1)
+      })
+    } }
+  }
+
+  // Laps 1–51: Norris's gap to Verstappen.
+  S.charts.escape = function (el) {
+    var f = frame(el), pts = DATA.leadGap.filter(function (d) { return d.lap <= 51 && d.gap != null })
+    var x = d3.scaleLinear().domain([1, 51]).range([M.l, f.W - M.r])
+    var y = d3.scaleLinear().domain([0, 9]).range([f.H - M.b, M.t])
+    yGrid(f, y, [0, 3, 6, 9], function (t) { return t + 's' }, M.l, f.W - M.r)
+    ;[1, 10, 20, 30, 40, 51].forEach(function (l) { f.svg.append('text').attr('x', x(l)).attr('y', f.H - 8).attr('text-anchor', 'middle').attr('fill', f.muted).text('L' + l) })
+    ;[23, 51].forEach(function (l) {
+      f.svg.append('line').attr('x1', x(l)).attr('x2', x(l)).attr('y1', M.t).attr('y2', f.H - M.b).attr('stroke', f.muted).attr('stroke-dasharray', '3 4')
+      f.svg.append('text').attr('x', x(l) + 4).attr('y', M.t + 8).attr('fill', f.muted).text('STOPS')
+    })
+    var area = f.svg.append('path').datum(pts).attr('fill', colorOf('NOR')).attr('opacity', 0)
+      .attr('d', d3.area().x(function (d) { return x(d.lap) }).y0(y(0)).y1(function (d) { return y(d.gap) }))
+    var path = f.svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', colorOf('NOR')).attr('stroke-width', 2.5)
+      .attr('d', d3.line().x(function (d) { return x(d.lap) }).y(function (d) { return y(d.gap) }))
+    var go = drawIn(path)
+    var p40 = pts.find(function (d) { return d.lap === 40 })
+    var lab = f.svg.append('text').attr('x', x(40)).attr('y', y(p40.gap) - 10).attr('text-anchor', 'middle').attr('fill', f.ink).attr('opacity', 0).text('8.1s, lap 40')
+    return { play: function () {
+      go(1400)
+      area.transition().delay(S.dur(600)).duration(S.dur(800)).attr('opacity', .12)
+      lab.transition().delay(S.dur(1200)).duration(S.dur(300)).attr('opacity', 1)
+    } }
+  }
+
+  // Pit lane times, both stops.
+  S.charts.pitLane = function (el) {
+    var f = frame(el)
+    var rows = [['VER', 23], ['NOR', 23], ['VER', 51], ['NOR', 51]].map(function (k) {
+      var p = DATA.pitLane.find(function (d) { return d.code === k[0] && d.lap === k[1] })
+      return { label: k[0] + ' · lap ' + k[1], code: k[0], lap: k[1], v: p.lane }
+    })
+    var x = d3.scaleLinear().domain([0, 27]).range([110, f.W - 50])
+    var band = (f.H - 10) / rows.length
+    var bars = rows.map(function (r, i) {
+      var yy = 4 + i * band
+      var slow = r.code === 'VER' && r.lap === 51
+      f.svg.append('text').attr('x', 0).attr('y', yy + band / 2 + 4).attr('fill', f.ink).text(r.label)
+      var b = f.svg.append('rect').attr('x', x(0)).attr('y', yy + 6).attr('height', band - 14).attr('width', 0).attr('rx', 3)
+        .attr('fill', slow ? f.hi : colorOf(r.code)).attr('opacity', slow ? 1 : .7)
+      var t = f.svg.append('text').attr('x', x(r.v) + 6).attr('y', yy + band / 2 + 4).attr('fill', slow ? f.hi : f.ink).attr('opacity', 0).text(r.v.toFixed(1) + 's')
+      return { b: b, t: t, v: r.v }
+    })
+    return { play: function () {
+      bars.forEach(function (o, i) {
+        o.b.transition().delay(S.dur(i * 120)).duration(S.dur(700)).attr('width', x(o.v) - x(0))
+        o.t.transition().delay(S.dur(500 + i * 120)).duration(S.dur(250)).attr('opacity', 1)
+      })
+    } }
+  }
+
+  // Laps 52–63: inside a second.
+  S.charts.hunt = function (el) {
+    var f = frame(el), pts = DATA.leadGap.filter(function (d) { return d.lap >= 52 && d.lap <= 63 })
+    var x = d3.scaleBand().domain(pts.map(function (d) { return d.lap })).range([M.l, f.W - 8]).padding(.28)
+    var y = d3.scaleLinear().domain([0, 2]).range([f.H - M.b, M.t])
+    yGrid(f, y, [0, .5, 1, 1.5, 2], function (t) { return t.toFixed(1) + 's' }, M.l, f.W - 8)
+    f.svg.append('line').attr('x1', M.l).attr('x2', f.W - 8).attr('y1', y(1)).attr('y2', y(1)).attr('stroke', f.hi).attr('stroke-dasharray', '5 4')
+    var bars = pts.map(function (d) {
+      var inside = d.gap < 1
+      f.svg.append('text').attr('x', x(d.lap) + x.bandwidth() / 2).attr('y', f.H - 10).attr('text-anchor', 'middle').attr('fill', f.muted).text(d.lap)
+      var r = f.svg.append('rect').attr('x', x(d.lap)).attr('width', x.bandwidth()).attr('y', y(0)).attr('height', 0).attr('rx', 2)
+        .attr('fill', inside ? colorOf('NOR') : f.muted)
+      return { r: r, d: d }
+    })
+    var last = pts[pts.length - 1]
+    var lab = f.svg.append('text').attr('x', x(last.lap) + x.bandwidth() / 2).attr('y', y(last.gap) - 8).attr('text-anchor', 'middle').attr('fill', f.ink).attr('opacity', 0).text('0.49')
+    return { play: function () {
+      bars.forEach(function (o, i) { o.r.transition().delay(S.dur(i * 70)).duration(S.dur(500)).attr('y', y(o.d.gap)).attr('height', y(0) - y(o.d.gap)) })
+      lab.transition().delay(S.dur(1200)).duration(S.dur(300)).attr('opacity', 1)
+    } }
+  }
+
+  // Laps 60–67: the running order.
+  S.charts.order = function (el) {
+    var f = frame(el), codes = ['VER', 'NOR', 'RUS', 'PIA', 'SAI', 'HAM']
+    var x = d3.scaleLinear().domain([60, 67]).range([M.l, f.W - 54])
+    var y = d3.scaleLinear().domain([1, 6]).range([M.t + 6, f.H - M.b])
+    for (var l = 60; l <= 67; l++) f.svg.append('text').attr('x', x(l)).attr('y', f.H - 8).attr('text-anchor', 'middle').attr('fill', f.muted).text('L' + l)
+    ;[1, 2, 3, 4, 5, 6].forEach(function (p) { f.svg.append('text').attr('x', M.l - 14).attr('y', y(p) + 4).attr('text-anchor', 'end').attr('fill', f.muted).text('P' + p) })
+    f.svg.append('line').attr('x1', x(64)).attr('x2', x(64)).attr('y1', M.t - 4).attr('y2', f.H - M.b + 8).attr('stroke', f.hi).attr('stroke-dasharray', '3 4')
+    var paths = codes.map(function (c) {
+      var pts = DATA.order[c].filter(function (d) { return d.pos != null })
+      var key = c === 'VER' || c === 'NOR' || c === 'RUS'
+      var p = f.svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', colorOf(c)).attr('stroke-width', key ? 3 : 1.6).attr('opacity', key ? 1 : .55)
+        .attr('d', d3.line().x(function (d) { return x(d.lap) }).y(function (d) { return y(d.pos) }))
+      var end = pts[pts.length - 1]
+      var t = f.svg.append('text').attr('x', x(end.lap) + 8).attr('y', y(end.pos) + 4).attr('fill', colorOf(c)).attr('opacity', 0)
+        .text(c + (end.lap < 67 ? ' ×' : ''))
+      return { go: drawIn(p), t: t }
+    })
+    return { play: function () {
+      paths.forEach(function (o, i) { o.go(1100, i * 80); o.t.transition().delay(S.dur(1000 + i * 80)).duration(S.dur(250)).attr('opacity', 1) })
+    } }
+  }
+
+  // Lap 65: speed through the pass.
+  S.charts.trace = function (el) {
+    var f = frame(el), a = TRACE.a, b = TRACE.b
+    var all = a.concat(b)
+    var x = d3.scaleLinear().domain(d3.extent(all, function (s) { return s.d })).range([M.l, f.W - 12])
+    var y = d3.scaleLinear().domain([100, 300]).range([f.H - M.b, M.t])
+    yGrid(f, y, [100, 200, 300], String, M.l, f.W - 12)
+    var line = d3.line().x(function (s) { return x(s.d) }).y(function (s) { return y(s.v) })
+    var pb = f.svg.append('path').datum(b).attr('fill', 'none').attr('stroke', colorOf('SAI')).attr('stroke-width', 2.2).attr('d', line)
+    var pa = f.svg.append('path').datum(a).attr('fill', 'none').attr('stroke', colorOf('PIA')).attr('stroke-width', 2.2).attr('d', line)
+    var m = f.svg.append('g').attr('opacity', 0)
+    m.append('line').attr('x1', x(TRACE.passAt)).attr('x2', x(TRACE.passAt)).attr('y1', M.t).attr('y2', f.H - M.b).attr('stroke', f.ink).attr('stroke-opacity', .7)
+    m.append('text').attr('x', x(TRACE.passAt)).attr('y', M.t - 4).attr('text-anchor', 'middle').attr('fill', f.ink).attr('font-weight', 700).text('PASS · TURN 6')
+    f.svg.append('text').attr('x', f.W - 12).attr('y', M.t + 4).attr('text-anchor', 'end').attr('fill', colorOf('PIA')).text('PIA')
+    f.svg.append('text').attr('x', f.W - 12).attr('y', M.t + 18).attr('text-anchor', 'end').attr('fill', colorOf('SAI')).text('SAI')
+    f.svg.append('text').attr('x', M.l).attr('y', f.H - 8).attr('fill', f.muted).text(Math.round(x.domain()[0]) + ' m')
+    f.svg.append('text').attr('x', f.W - 12).attr('y', f.H - 8).attr('text-anchor', 'end').attr('fill', f.muted).text(Math.round(x.domain()[1]) + ' m')
+    var ga = drawIn(pa), gb = drawIn(pb)
+    return { play: function () { gb(1300); ga(1300, 150); m.transition().delay(S.dur(1300)).duration(S.dur(300)).attr('opacity', 1) } }
+  }
+
+  // Laps 64–71: Piastri's gap to Russell.
+  S.charts.chase = function (el) {
+    var f = frame(el), pts = DATA.chase
+    var x = d3.scaleLinear().domain([64, 71]).range([M.l, f.W - M.r])
+    var y = d3.scaleLinear().domain([0, 3.5]).range([f.H - M.b, M.t])
+    yGrid(f, y, [0, 1, 2, 3], function (t) { return t + 's' }, M.l, f.W - M.r)
+    for (var l = 64; l <= 71; l++) f.svg.append('text').attr('x', x(l)).attr('y', f.H - 8).attr('text-anchor', 'middle').attr('fill', f.muted).text('L' + l)
+    var p = f.svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', colorOf('PIA')).attr('stroke-width', 2.5)
+      .attr('d', d3.line().x(function (d) { return x(d.lap) }).y(function (d) { return y(d.gap) }))
+    var end = pts[pts.length - 1]
+    var lab = f.svg.append('text').attr('x', x(end.lap) + 6).attr('y', y(end.gap) + 4).attr('fill', f.ink).attr('opacity', 0).text(end.gap.toFixed(2) + 's')
+    var go = drawIn(p)
+    return { play: function () { go(1200); lab.transition().delay(S.dur(1100)).duration(S.dur(300)).attr('opacity', 1) } }
+  }
+}
+</script>
+</body>
+</html>

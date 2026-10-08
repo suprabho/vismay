@@ -38,7 +38,7 @@ export const FOOTSHORTS_WORKERS: WorkerDef[] = [
     id: 'footshorts-ingest',
     workflowFile: 'footshorts-ingest.yml',
     label: 'News ingest',
-    description: 'Pulls RSS feeds, summarizes + tags each article via Gemini.',
+    description: 'Pulls RSS feeds; Jev classifies each article, Claude Haiku summarises + tags it.',
     schedule: 'Hourly',
   },
   {
@@ -62,6 +62,28 @@ export const FOOTSHORTS_WORKERS: WorkerDef[] = [
     description:
       'Generates the editorial recap over a trailing window, from the match events already stored.',
     schedule: 'Manual only',
+  },
+]
+
+/**
+ * The VizNBA workers (apps/viznba/worker): the roster seed the tagger
+ * resolves names against, then the news ingest. Keep in sync with
+ * .github/workflows/viznba-*.yml.
+ */
+export const VIZNBA_WORKERS: WorkerDef[] = [
+  {
+    id: 'viznba-ingest-news',
+    workflowFile: 'viznba-ingest-news.yml',
+    label: 'News ingest',
+    description: 'Pulls NBA RSS feeds; Jev classifies each article, Claude Haiku summarises it and names the teams, players and coaches.',
+    schedule: 'Every 4h',
+  },
+  {
+    id: 'viznba-seed-roster',
+    workflowFile: 'viznba-seed-roster.yml',
+    label: 'Roster seed',
+    description: 'Upserts the 30 teams, every rostered player and head coach from ESPN, so trades move tags.',
+    schedule: 'Weekly, Mondays',
   },
 ]
 
@@ -136,9 +158,9 @@ function ghHeaders(token: string): HeadersInit {
   }
 }
 
-/** Look up a worker by its id, or undefined if unknown. */
-export function findWorker(id: string): WorkerDef | undefined {
-  return FOOTSHORTS_WORKERS.find((w) => w.id === id)
+/** Look up a worker by its id in a worker set (footshorts by default), or undefined if unknown. */
+export function findWorker(id: string, workers: WorkerDef[] = FOOTSHORTS_WORKERS): WorkerDef | undefined {
+  return workers.find((w) => w.id === id)
 }
 
 /**
@@ -176,13 +198,13 @@ export interface DispatchAllResult {
 }
 
 /**
- * Trigger every footshorts worker. Each dispatch is independent — one failure
- * doesn't abort the rest — and the per-worker outcome is returned so the UI can
- * show which ones actually fired.
+ * Trigger every worker in a set (footshorts by default). Each dispatch is
+ * independent — one failure doesn't abort the rest — and the per-worker
+ * outcome is returned so the UI can show which ones actually fired.
  */
-export async function dispatchAllWorkers(): Promise<DispatchAllResult[]> {
+export async function dispatchAllWorkers(workers: WorkerDef[] = FOOTSHORTS_WORKERS): Promise<DispatchAllResult[]> {
   return Promise.all(
-    FOOTSHORTS_WORKERS.map(async (w) => {
+    workers.map(async (w) => {
       try {
         await dispatchWorker(w)
         return { id: w.id, ok: true }
@@ -247,14 +269,15 @@ export async function fetchWorkerStatus(worker: WorkerDef): Promise<WorkerStatus
 }
 
 /**
- * Status (definition + last run) for every footshorts worker. The last-run read
- * is best-effort per worker: if one workflow's runs can't be fetched its
- * `lastRun` is null rather than failing the whole call.
+ * Status (definition + last run) for every worker in a set (footshorts by
+ * default). The last-run read is best-effort per worker: if one workflow's
+ * runs can't be fetched its `lastRun` is null rather than failing the whole
+ * call.
  */
-export async function fetchWorkerStatuses(): Promise<WorkerStatus[]> {
+export async function fetchWorkerStatuses(workers: WorkerDef[] = FOOTSHORTS_WORKERS): Promise<WorkerStatus[]> {
   const { token, repo } = dispatchEnv()
   return Promise.all(
-    FOOTSHORTS_WORKERS.map(async (w) => {
+    workers.map(async (w) => {
       let lastRun: WorkerLastRun | null = null
       try {
         lastRun = await fetchLastRun(token, repo, w)

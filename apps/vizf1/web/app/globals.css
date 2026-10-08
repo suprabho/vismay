@@ -57,3 +57,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .vf-bar-grow { animation: none !important; }
 }
+
+/* Race recap (/race/[round]/recap): the REPLAY and live-telemetry dots. */
+@keyframes vf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}

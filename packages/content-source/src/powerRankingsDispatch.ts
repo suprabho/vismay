@@ -2,9 +2,9 @@
  * Dispatch a Power Rankings scrape to GitHub Actions.
  *
  * Mirrors recapDispatch.ts. The scraper (`worker/src/theanalystPowerRankings.ts`)
- * needs Supabase + Gemini, so it lives behind the
- * `footshorts-theanalyst-power-rankings.yml` workflow rather than running
- * inline in a serverless function. This is the manual entry point used by the
+ * needs Supabase + the AI gateway (Claude writes the narrative), so it lives
+ * behind the `footshorts-theanalyst-power-rankings.yml` workflow rather than
+ * running inline in a serverless function. This is the manual entry point used by the
  * admin Power rankings tab's "Run scrape" button; the workflow also runs on a
  * weekly cron.
  *

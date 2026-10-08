@@ -5,9 +5,10 @@
  * the generic brief holds no secrets (the publish token is the user's).
  *
  * Query:
- *   - `format=book|board|deck` writes the brief for that story format
+ *   - `format=book|board|deck|recap` writes the brief for that story format
  *     (./formats; default `scroll`): its hosted runtime and authoring rules
- *     replace the scroll format's motion and Mapbox sections.
+ *     replace the scroll format's motion and Mapbox sections. `recap` is
+ *     vizf1 only (it frames the race replay); other sites answer 400.
  *   - `style=random` swaps the house style for a palette and font trio drawn
  *     from the app's published viz-engine stories (./styles); falls back to the
  *     house style if the stories can't be read.
@@ -21,11 +22,21 @@
  *     (./vizf1Brief), following `drivers=VER,NOR` (codes or car numbers, up to
  *     MAX_RACE_CONTEXT_DRIVERS; omitted, the top scorers), with an optional
  *     `prompt`. Token-gated like the match context.
- *   - vizmaya only: `spin=<id>` renders the brief for a logged randomizer spin
- *     (@vismay/randomizer): its assignment, research protocol, format and
- *     research file. Read-only on purpose: spins are created by the
- *     authenticated spin endpoint, never here, so the public URL cannot fill
- *     the log the repeat blocks read. Spin ids are random uuids.
+ *   - viznba only: `games=<espn event id>,<id>` (up to MAX_GAME_CONTEXT)
+ *     appends the game context for those games (./viznbaBrief: box scores
+ *     from ESPN's public API), with an optional `prompt`. Token-gated like
+ *     the match context.
+ *   - `spin=<id>` renders the brief for a logged randomizer spin
+ *     (@vismay/randomizer) on the site its randomizer writes for (Desk,
+ *     Atlas and Epics on vizmaya, the Football Desk on footshorts, the NBA
+ *     Desk on viznba): its
+ *     assignment, research protocol, format and research file. Read-only on
+ *     purpose: spins are created by the authenticated spin endpoint, never
+ *     here, so the public URL cannot fill the log the repeat blocks read.
+ *     Spin ids are random uuids. A Football Desk spin's brief carries the
+ *     match context for the fixtures the spin drew without the bearer token:
+ *     the spin id is the capability, as it is for the spin's research. An
+ *     NBA Desk spin's brief carries the box scores of its games the same way.
  *
  * Server only.
  */
@@ -33,10 +44,12 @@
 import type { HtmlStoryApp } from './apps'
 import { htmlStoryBrief } from './brief'
 import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief'
+import { HTML_STORY_APP_META } from './apps'
 import { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS, vizf1HtmlStoryBrief } from './vizf1Brief'
-import { parseHtmlStoryFormat } from './formats'
+import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from './viznbaBrief'
+import { HTML_STORY_FORMATS, formatsForApp, isFormatForApp, parseHtmlStoryFormat } from './formats'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
-import type { SpinRecord } from '@vismay/randomizer/types'
+import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadStoryStylePool } from './storyStyles'
 import { pickRandomStyle, type StoryStyle } from './styles'
@@ -62,13 +75,17 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
   const sessionKeys = app === 'vizf1' ? parseListParam(url.searchParams, 'sessions') : []
   const drivers = app === 'vizf1' ? parseListParam(url.searchParams, 'drivers').map((d) => d.toUpperCase()) : []
+  const gameIds = app === 'viznba' ? parseListParam(url.searchParams, 'games') : []
   const spinId = url.searchParams.get('spin')?.trim() || null
   const format = parseHtmlStoryFormat(url.searchParams.get('format'))
-  if (!format) return new Response('format must be scroll, book, board or deck', { status: 400 })
+  if (!format) return new Response(`format must be one of ${HTML_STORY_FORMATS.join(', ')}`, { status: 400 })
+  if (!isFormatForApp(app, format)) {
+    return new Response(`the ${format} format isn't available on this site; use one of ${formatsForApp(app).join(', ')}`, { status: 400 })
+  }
 
   let spin: SpinRecord | null = null
   if (spinId) {
-    if (app !== 'vizmaya-fyi') return new Response('randomizer spins are vizmaya stories', { status: 400 })
+    if (app === 'vizf1') return new Response('vizf1 has no randomizer', { status: 400 })
     if (!isSpinId(spinId)) return new Response('spin must be a spin id', { status: 400 })
     try {
       spin = await getSpin(spinId)
@@ -76,6 +93,12 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
       return new Response(`spin lookup failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
     }
     if (!spin) return new Response(`no spin ${spinId}`, { status: 404 })
+    const home = RANDOMIZER_META[spin.randomizer].app
+    if (home !== app) {
+      return new Response(`spin ${spin.id} is a ${RANDOMIZER_META[spin.randomizer].name} spin: read its brief on ${HTML_STORY_APP_META[home].siteUrl}`, {
+        status: 400,
+      })
+    }
   }
 
   if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
@@ -90,7 +113,19 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   if (drivers.length && !sessionKeys.length) {
     return new Response('drivers need sessions: pass sessions=<key>,<key> too', { status: 400 })
   }
-  const contextKind = fixtureIds.length ? 'match context' : sessionKeys.length ? 'race context' : null
+  if (gameIds.length > MAX_GAME_CONTEXT) {
+    return new Response(`at most ${MAX_GAME_CONTEXT} games per brief`, { status: 400 })
+  }
+  if (gameIds.some((id) => !isGameId(id))) {
+    return new Response('games must be ESPN event ids (digits)', { status: 400 })
+  }
+  const contextKind = fixtureIds.length
+    ? 'match context'
+    : sessionKeys.length
+      ? 'race context'
+      : gameIds.length
+        ? 'game context'
+        : null
   if (contextKind && !isHtmlStoriesTokenRequest(req)) {
     const why = process.env[HTML_STORIES_TOKEN_ENV]
       ? `the ${contextKind} needs Authorization: Bearer $HTML_STORIES_TOKEN`
@@ -112,12 +147,14 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format })
+        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format, spin })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format })
-          : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
+          : app === 'viznba'
+            ? await viznbaHtmlStoryBrief({ siteUrl: url.origin, style, gameIds, prompt, format, spin })
+            : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
   } catch (e) {
-    const what = app === 'vizf1' ? 'race context' : 'match context'
+    const what = app === 'vizf1' ? 'race context' : app === 'viznba' ? 'game context' : 'match context'
     return new Response(`${what} failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
   }
 

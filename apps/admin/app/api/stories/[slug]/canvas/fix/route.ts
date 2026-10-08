@@ -11,7 +11,11 @@ import {
   listForegroundLayouts,
   listModulesForSlot,
 } from '@vismay/viz-engine'
-import { aiSlotConfig, type AiSlotKind } from '@/components/canvas/aiSlots'
+import {
+  aiSlotConfig,
+  canonicalModelAlias,
+  type AiSlotKind,
+} from '@/components/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 
@@ -122,7 +126,8 @@ export async function POST(
   // Allowed models: the slot's own set. The picker override wins when valid;
   // else the feature default; else the slot's first model.
   const allowed = config.models
-  const requested = typeof body.model === 'string' ? body.model : null
+  const requested =
+    typeof body.model === 'string' ? canonicalModelAlias(body.model) : null
   const featureDefault = await getFeatureModel('fix')
   const modelAlias =
     requested && allowed.includes(requested)

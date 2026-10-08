@@ -87,7 +87,7 @@ export function findTtsOverride(
 /**
  * Compute the default narration text for a mobile unit. Mirrors the logic in
  * `scripts/generate-audio.ts` so the admin Narration tab can show the exact
- * string that would be sent to Gemini if no override is set.
+ * string that would be sent to TTS if no override is set.
  *
  * Hero: dek + byline (no heading — the title half is silent / display-only).
  * Stat: the big number (paragraphs) followed by its caption (`subheading`,
@@ -133,7 +133,7 @@ export function defaultNarrationText(unit: {
     const body = unit.paragraphs.join(' ').trim()
     if (body) parts.push(body)
     // `subheading` is the caption resolveUnits pulled out of the *italic*
-    // paragraph; strip any residual inline emphasis so Gemini doesn't read
+    // paragraph; strip any residual inline emphasis so the TTS voice doesn't read
     // asterisks aloud.
     const caption = unit.subheading
       ?.replace(/\*\*([^*]+)\*\*/g, '$1')

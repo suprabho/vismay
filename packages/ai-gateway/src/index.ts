@@ -7,16 +7,34 @@
  *
  * See README.md for the full surface; the most common imports are:
  *
- *   import { generateText, generateImage, MODELS } from '@vismay/ai-gateway'
+ *   import { generateText, generateImage, decide, MODELS } from '@vismay/ai-gateway'
  */
 
 export { getGatewayClient } from './client'
-export { MODELS, resolveModel, type ModelAlias, type ImageModelAlias } from './models'
+export {
+  MODELS,
+  resolveModel,
+  type ModelAlias,
+  type TextModelAlias,
+  type ImageModelAlias,
+  type DecisionModelAlias,
+  type SpeechModelAlias,
+} from './models'
 export {
   generateText,
   type GenerateTextOptions,
   type GenerateImageInput,
+  type GenerateFileInput,
 } from './text'
+export {
+  decide,
+  hasGatewayCredentials,
+  type DecideOptions,
+  type DecideResult,
+  type DecisionQuestion,
+  type DecisionState,
+} from './decide'
+export { generateSpeech, type GenerateSpeechOptions, type SpeechResult } from './speech'
 // Agentic tool helpers — re-exported so call sites define tools without taking a
 // direct dependency on the `ai` SDK (keeps that dependency centralised here).
 export { tool, type ToolSet } from 'ai'

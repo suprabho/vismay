@@ -20,7 +20,7 @@ export type EvalArticle = {
   url: string;
   publisher: string;
   headline: string;
-  /** Same text the extractor saw — Gemini summary if present, else RSS snippet. */
+  /** Same text the extractor saw — stored summary if present, else RSS snippet. */
   body: string;
   publishedAt: string;
   taggedEntities: TaggedEntity[];
@@ -52,9 +52,9 @@ export interface EntityEvalAdapter {
  *
  * The judge sees the article body + the list of (name, type) the pipeline
  * tagged, and produces:
- *  - correct: tags that are genuinely about-subject of the article
- *  - spurious: tags that shouldn't be there (hallucination, wrong canonical, weak mention)
- *  - missing: entities the article IS about that weren't tagged (recall gap)
+ *  - correct: tags that are genuinely about-subject of the article (Jev)
+ *  - spurious: tags that shouldn't be there (hallucination, wrong canonical, weak mention) (Jev)
+ *  - missing: entities the article IS about that weren't tagged (recall gap) (Claude)
  */
 export type JudgeVerdict = {
   correct: Array<{ type: string; name: string }>;
@@ -73,7 +73,11 @@ export type RunOpts = {
   max: number;
   /** Parallel judge calls. */
   concurrency: number;
-  /** Gemini model name passed to @google/genai. */
+  /**
+   * Text model that lists MISSING entities and writes the notes — an alias
+   * (`text.opus`, the default via DEFAULT_JUDGE_MODEL) or a raw gateway id.
+   * Per-tag CORRECT/SPURIOUS verdicts come from Jev (JEV_MODEL overrides).
+   */
   judgeModel: string;
   /** Output directory for the HTML + JSON reports. Defaults to monorepo root. */
   outputDir?: string;

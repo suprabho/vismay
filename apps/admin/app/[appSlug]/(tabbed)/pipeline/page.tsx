@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { WorkersPanel } from '@/components/footshorts/WorkersPanel'
 import { MatchtimePanel } from '@/components/footshorts/MatchtimePanel'
+import { ViznbaPipeline } from '@/components/viznba/ViznbaPipeline'
 import {
   fetchFootshortsPipelineStats,
   type PipelineStats,
@@ -112,7 +113,7 @@ function FeedDiagnosis({ feed }: { feed: PipelineStats['feed'] }) {
     line =
       'No articles were ingested in the last 24h at all — the ingest worker is running but not landing rows (every candidate already known, or every feed fetch failing). Check the worker logs.'
   } else if (d.summarized === 0 && d.failed > 0) {
-    line = `${d.failed} of ${d.ingested} articles ingested in the last 24h failed summarization and none succeeded — Gemini is rejecting every call. Check GEMINI_API_KEY / quota and the worker logs.`
+    line = `${d.failed} of ${d.ingested} articles ingested in the last 24h failed summarization and none succeeded — the AI gateway (Jev classify + Claude Haiku summarise) is rejecting every call. Check AI_GATEWAY_API_KEY / gateway credits and the worker logs.`
   } else if (d.summarized === 0 && d.hidden > 0) {
     line = `${d.hidden} of ${d.ingested} articles ingested in the last 24h were hidden by the "is this football?" filter and none were summarized — the classifier is rejecting everything.`
   } else if (d.summarized === 0 && d.pending > 0) {
@@ -139,6 +140,8 @@ interface Props {
 export default async function AppPipelinePage({ params }: Props) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/pipeline`)
+  // VizNBA has its own news worker and tables; everything below is footshorts'.
+  if (appSlug === 'viznba') return <ViznbaPipeline />
 
   let data: PipelineStats
   try {

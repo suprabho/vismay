@@ -26,7 +26,8 @@ name: Footshorts - ad-hoc recap
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
-#   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
+#   AI_GATEWAY_API_KEY           - Vercel AI Gateway key, for the recap narrative
+#                                  (Claude Sonnet)
 #
 # (API_FOOTBALL_TOKEN / SPORTRADAR_API_KEY are no longer read by this workflow.)
 
@@ -86,7 +87,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
           INPUT_HOURS: ${{ inputs.hours }}
           INPUT_COMPETITION: ${{ inputs.competition }}

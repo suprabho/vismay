@@ -5,13 +5,13 @@
  * Env (all optional): EVAL_SINCE EVAL_MAX EVAL_CONCURRENCY EVAL_JUDGE_MODEL EVAL_OUTPUT_DIR
  */
 
-import { runEval } from '@vismay/eval-entities'
+import { runEval, DEFAULT_JUDGE_MODEL } from '@vismay/eval-entities'
 import { vizf1Adapter } from './adapter'
 
 const since = process.env.EVAL_SINCE ?? '2026-05-01T00:00:00Z'
 const max = Number(process.env.EVAL_MAX ?? 100)
 const concurrency = Number(process.env.EVAL_CONCURRENCY ?? 10)
-const judgeModel = process.env.EVAL_JUDGE_MODEL ?? 'gemini-3.1-pro-preview'
+const judgeModel = process.env.EVAL_JUDGE_MODEL || DEFAULT_JUDGE_MODEL // text.opus
 const outputDir = process.env.EVAL_OUTPUT_DIR
 const rerunExtraction = process.env.EVAL_RERUN_EXTRACTION === '1'
 

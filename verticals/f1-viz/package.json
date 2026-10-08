@@ -8,10 +8,13 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./web": "./src/web/index.ts",
+    "./web/replay": "./src/web/replay/index.ts",
+    "./web/three": "./src/web/three/index.ts",
     "./native": "./src/native/index.ts",
     "./grands-prix": "./src/data/grands-prix.ts",
     "./telemetry-brief": "./src/telemetry/buildTelemetryBrief.ts",
     "./race-context": "./src/telemetry/buildRaceContext.ts",
+    "./recap": "./src/recap/index.ts",
     "./modules/*/sample": "./src/modules/*/sample.ts"
   },
   "peerDependencies": {

@@ -5,7 +5,7 @@
  *   1. listArticleLinks — collect article URLs from a listing/index page.
  *   2. fetchArticleBody — extract the visible text of one article, which then
  *      flows into the SAME summarize/entity-tag pipeline as RSS items
- *      (ingest.ts). We never store or republish the full text — it's Gemini
+ *      (ingest.ts). We never store or republish the full text — it's LLM
  *      input only, and the stored summary always links back to the source.
  *
  * VERIFIED LIVE (2026-09-09) against the per-competition article listings

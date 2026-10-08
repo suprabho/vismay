@@ -1,7 +1,13 @@
 /**
  * IEA news scraper — consumes Google News' RSS search for "International
- * Energy Agency", tags each new article with ISO country codes via Gemini,
- * and upserts into iea_news.
+ * Energy Agency", tags each new article with ISO country codes via Claude
+ * Haiku (through the AI Gateway), and upserts into iea_news.
+ *
+ * Why Haiku extraction and not a Jev decision per country: the candidate set
+ * is every ISO 3166-1 code (~250, plus "EU"), far past the couple of dozen
+ * questions a decide() call takes. Asking "is this about country X?" for each
+ * would mean ~10 batched Jev calls per headline to tag one or two countries;
+ * a single extraction call that names the countries is cheaper and simpler.
  *
  * Why Google News and not iea.org directly? IEA's site fronts a JS-driven
  * SPA behind Cloudflare bot detection — Playwright in CI either 403s or
@@ -14,14 +20,16 @@
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write to iea_news
- *   GEMINI_API_KEY                                       — country tagging
+ *   AI_GATEWAY_API_KEY                                   — country tagging
+ *                                                          (or Vercel OIDC)
  *
  * Idempotency: source_url is the natural key (unique in migration 015).
  * Google News redirect URLs are stable per-article, so re-runs are no-ops.
  */
 
-import { GoogleGenAI } from '@google/genai'
 import { JSDOM } from 'jsdom'
+import { z } from 'zod'
+import { generateText, hasGatewayCredentials } from '@vismay/ai-gateway'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 const FEED_URL =
@@ -80,46 +88,33 @@ Empty array if the article is about:
 - Global aggregates ("global emissions", "world coal demand")
 - Multi-region groupings with no specific country focus
 
-Use the special code "EU" only when the European Union is explicitly named as a bloc; otherwise drop down to specific member-state codes.
+Use the special code "EU" only when the European Union is explicitly named as a bloc; otherwise drop down to specific member-state codes.`
 
-Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"country_codes": ["XX", "YY"]}`
+const CountryCodesSchema = z.object({ country_codes: z.array(z.string()) })
 
-async function extractCountryCodes(
-  genai: GoogleGenAI,
-  item: NewsItem
-): Promise<string[]> {
+async function extractCountryCodes(item: NewsItem): Promise<string[]> {
   const userText = `Headline: ${item.title}\n\n${
     item.summary ? `Summary: ${item.summary}` : '(no summary available)'
   }`
 
-  const response = await genai.models.generateContent({
-    model: 'gemma-4-26b-a4b-it',
-    contents: `${COUNTRY_TAGGING_SYSTEM}\n\n${userText}`,
+  // Per-article tagging is high-volume extraction → light Claude tier. The
+  // zod schema is enforced via tool calling, so no JSON scraping needed.
+  const { result } = await generateText({
+    model: 'text.haiku',
+    system: COUNTRY_TAGGING_SYSTEM,
+    prompt: userText,
+    schema: CountryCodesSchema,
+    temperature: 0,
+    metadata: { feature: 'energy-profile-news-tagging' },
   })
-
-  const text = response.text ?? ''
-  // Gemma doesn't honour responseSchema, so scrape the first JSON object out
-  // of the free-form text (same idiom as scripts/epstein/ner.ts).
-  const match = text.match(/\{[\s\S]*\}/)
-  if (!match) return []
-  try {
-    const parsed = JSON.parse(match[0]) as { country_codes?: unknown }
-    const raw = Array.isArray(parsed.country_codes) ? parsed.country_codes : []
-    return raw
-      .filter((c): c is string => typeof c === 'string')
-      .map((c) => c.toUpperCase().trim())
-      .filter((c) => /^[A-Z]{2}$/.test(c))
-  } catch {
-    return []
-  }
+  return result.country_codes
+    .map((c) => c.toUpperCase().trim())
+    .filter((c) => /^[A-Z]{2}$/.test(c))
 }
 
 async function main() {
   const sb = createServiceClient()
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set')
-  const genai = new GoogleGenAI({ apiKey })
+  if (!hasGatewayCredentials()) throw new Error('AI_GATEWAY_API_KEY not set')
 
   console.log('Fetching Google News RSS for "International Energy Agency"...')
   const items = await fetchFeed()
@@ -156,7 +151,7 @@ async function main() {
   let inserted = 0
   for (const item of newItems) {
     try {
-      const countryCodes = await extractCountryCodes(genai, item)
+      const countryCodes = await extractCountryCodes(item)
       // Outlet name (Reuters, Bloomberg, …) goes into topics so the UI can
       // surface it as a chip without a schema change.
       const topics = item.source ? [item.source] : []

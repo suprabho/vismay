@@ -23,13 +23,21 @@ export type RssSource = {
   /**
    * ISO 639-1 language the feed publishes in. Omit for English.
    * Non-English items are translated to English at the summarization step
-   * (see gemini.ts): the summary is always written in English and the stored
-   * headline is replaced with Gemini's English translation.
+   * (see summarize.ts): the summary is always written in English and the stored
+   * headline is replaced with Claude's English translation.
    */
   language?: 'es';
   /** ISO 3166-1 alpha-2 country of the outlet, for non-English sources. */
   country?: string;
+  /**
+   * Overrides the default `Footshorts/1.0` User-Agent for outlets whose CDN
+   * refuses non-browser clients on their own published feed. Keep it rare.
+   */
+  userAgent?: string;
 };
+
+export const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 export const RSS_SOURCES: RssSource[] = [
   // Tier 1 — major outlets
@@ -86,7 +94,7 @@ export const RSS_SOURCES: RssSource[] = [
 
   // ---------------------------------------------------------------
   // Spanish-language outlets (added 2026-08). All publish official RSS.
-  // Items arrive in Spanish; gemini.ts translates headline + summary
+  // Items arrive in Spanish; summarize.ts translates headline + summary
   // to English during summarization.
   // TODO(verify): these feed URLs could not be probed from the sandbox
   // they were added in (network egress blocked) — hit each once before
@@ -126,7 +134,8 @@ export const RSS_SOURCES: RssSource[] = [
   {
     id: 'marca-fichajes',
     publisher: 'Marca',
-    feedUrl: 'https://e00-marca.uecdn.es/rss/futbol/fichajes.xml',
+    // fichajes.xml 404s since at least 2026-10; the transfers feed moved here.
+    feedUrl: 'https://e00-marca.uecdn.es/rss/futbol/mercado-fichajes.xml',
     tier: 1,
     scope: 'global', // transfer market coverage spans leagues
     language: 'es',
@@ -165,6 +174,8 @@ export const RSS_SOURCES: RssSource[] = [
     // Last-news feed covers all sections; the football-only classifier hides
     // the non-football remainder.
     feedUrl: 'https://www.sport.es/es/rss/last-news/news.xml',
+    // 406s any non-browser User-Agent (verified 2026-10-08).
+    userAgent: BROWSER_USER_AGENT,
     tier: 1,
     scope: 'spanish',
     language: 'es',

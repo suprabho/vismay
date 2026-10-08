@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import { parse as parseYaml } from 'yaml'
+import { z } from 'zod'
+import { generateText, hasGatewayCredentials } from '@vismay/ai-gateway'
 import type { ExtractedSource } from '@vismay/story-pipeline/ingest'
 
 const ROOT = path.resolve(__dirname, '..', '..')
@@ -27,15 +29,24 @@ export interface StructuredStory {
   notes: string
 }
 
-export async function structure(source: ExtractedSource, slug: string): Promise<StructuredStory> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not set — add it to .env or export it.')
-  }
+/**
+ * Output schema for the structured-output call. Claude fills it via tool
+ * calling, so there's no free-form JSON to scrape. Chart bodies are arbitrary
+ * ECharts options, hence `unknown`.
+ */
+const StructuredStorySchema = z.object({
+  suggestedSlug: z.string().optional(),
+  markdown: z.string(),
+  configYaml: z.string(),
+  shareYaml: z.string(),
+  charts: z.array(z.object({ id: z.string(), json: z.unknown() })),
+  notes: z.string(),
+})
 
-  // Lazy import so the script can run without the SDK when only extracting.
-  const { GoogleGenAI } = await import('@google/genai')
-  const genai = new GoogleGenAI({ apiKey })
+export async function structure(source: ExtractedSource, slug: string): Promise<StructuredStory> {
+  if (!hasGatewayCredentials()) {
+    throw new Error('AI_GATEWAY_API_KEY not set — add it to .env or export it.')
+  }
 
   const exampleMd = fs.readFileSync(path.join(STORIES_DIR, `${EXAMPLE_SLUG}.md`), 'utf8')
   const exampleConfig = fs.readFileSync(
@@ -55,17 +66,18 @@ export async function structure(source: ExtractedSource, slug: string): Promise<
     exampleShare,
   })
 
-  const res = await genai.models.generateContent({
-    model: 'gemini-2.5-pro',
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: 'application/json',
-      temperature: 0.4,
-    },
+  // Whole-document → structured story is the hardest text job we have, so it
+  // runs on the heavy Claude tier. The scaffold is long (four files' worth of
+  // text), hence the generous output budget.
+  const { result } = await generateText({
+    model: 'text.opus',
+    prompt,
+    schema: StructuredStorySchema,
+    temperature: 0.4,
+    maxOutputTokens: 32_000,
+    metadata: { feature: 'story-ingest-structure' },
   })
-
-  const text = res.text ?? ''
-  const parsed = parseJsonResponse(text)
+  const parsed = normalise(result)
 
   // Validate YAML parseability of both config files. If the model emits
   // invalid YAML we abort here rather than writing a broken scaffold.
@@ -83,26 +95,25 @@ export async function structure(source: ExtractedSource, slug: string): Promise<
   return parsed
 }
 
-function parseJsonResponse(text: string): StructuredStory {
-  // Gemini with responseMimeType: 'application/json' usually returns clean
-  // JSON, but occasionally wraps it in ```json fences. Handle both.
-  let body = text.trim()
-  const fence = body.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fence) body = fence[1].trim()
-  const obj = JSON.parse(body) as Partial<StructuredStory>
-
-  if (typeof obj.markdown !== 'string') throw new Error('structurer: missing markdown')
-  if (typeof obj.configYaml !== 'string') throw new Error('structurer: missing configYaml')
-  if (typeof obj.shareYaml !== 'string') throw new Error('structurer: missing shareYaml')
-  if (!Array.isArray(obj.charts)) throw new Error('structurer: charts must be an array')
-
+function normalise(obj: z.infer<typeof StructuredStorySchema>): StructuredStory {
   return {
     suggestedSlug: obj.suggestedSlug,
     markdown: obj.markdown,
     configYaml: obj.configYaml,
     shareYaml: obj.shareYaml,
-    charts: obj.charts as StructuredStory['charts'],
+    // An open-ended `unknown` field occasionally comes back as a JSON string
+    // rather than an object — parse it so the chart file isn't double-encoded.
+    charts: obj.charts.map((c) => ({ id: c.id, json: parseMaybeJson(c.json) })),
     notes: obj.notes ?? '',
+  }
+}
+
+function parseMaybeJson(v: unknown): unknown {
+  if (typeof v !== 'string') return v
+  try {
+    return JSON.parse(v)
+  } catch {
+    return v
   }
 }
 
@@ -122,8 +133,7 @@ forward as the reader scrolls.
 
 # Your output
 
-Return a single JSON object matching this shape (no surrounding prose, no
-markdown fences):
+Fill in the structured output with these fields (shape shown as JSON):
 
 {
   "suggestedSlug": "short-kebab-slug-based-on-topic",
@@ -271,5 +281,5 @@ Body:
 ${input.source.body}
 </source>
 
-Now return the JSON bundle described above. No prose outside the JSON.`
+Now produce the bundle described above.`
 }

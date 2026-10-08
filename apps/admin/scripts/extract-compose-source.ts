@@ -11,7 +11,7 @@
  * Extraction strategy (see `extractSource`):
  *   - Office / EPub / text-layer PDFs → markitdown (Python CLI → Markdown).
  *   - Scanned / graphical PDFs → markitdown's text layer comes back sparse, so
- *     we fall back to the vision transcriber (Claude Sonnet, Gemini fallback —
+ *     we fall back to the vision transcriber (Claude Sonnet, GPT-5.6 Terra fallback —
  *     rasterise each page → markdown).
  *
  * Why a worker and not a request route: markitdown is Python (not installable in

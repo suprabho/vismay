@@ -1,7 +1,7 @@
 /**
  * Press-release adapter. Fetches a federation announcement URL (HTML), strips
- * boilerplate, and hands the visible body text to Gemini for structured
- * extraction.
+ * boilerplate, and hands the visible body text to Claude (llm-extract.ts) for
+ * structured extraction.
  *
  * PDF press releases aren't handled here — the worker would need pdf-parse
  * which is heavy. For PDFs, paste the extracted text via the `manual` adapter.
@@ -9,7 +9,7 @@
 
 import * as cheerio from 'cheerio';
 import { RawSquadEntry } from '../types';
-import { extractSquadFromText } from './gemini-extract';
+import { extractSquadFromText } from './llm-extract';
 
 export async function fetchSquadFromPressRelease(url: string): Promise<RawSquadEntry[]> {
   const res = await fetch(url, {

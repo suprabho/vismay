@@ -2,7 +2,7 @@
  * The slug rule `entities` rows from football-data.org are stored under.
  *
  * football-data.org stores official names ("Juventus FC", "SSC Napoli", "Bologna FC 1909"),
- * but news articles — and Gemini's extraction — use common names ("Juventus", "Napoli", "Bologna").
+ * but news articles — and the LLM's extraction — use common names ("Juventus", "Napoli", "Bologna").
  * We strip club-type suffixes/prefixes and trailing founding years so the slug matches
  * what the resolver sees. The original name is preserved on `name` for display.
  *

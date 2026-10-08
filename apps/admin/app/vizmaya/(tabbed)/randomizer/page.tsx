@@ -3,7 +3,7 @@ import { deskHeatTable, type DeskHeatTableRow } from '@vismay/html-stories/rando
 import { loadStoryStylePool } from '@vismay/html-stories/storyStyles'
 import type { StylePool } from '@vismay/html-stories/styles'
 import { listSpins } from '@vismay/randomizer/spins'
-import type { SpinRecord } from '@vismay/randomizer/types'
+import { randomizersFor, type SpinRecord } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
 import { vizmayaPublicUrl } from '@/lib/publicSite'
 import { RandomizerClient } from '@/components/randomizer/RandomizerClient'
@@ -20,7 +20,7 @@ export default async function RandomizerPage() {
   if (!(await isAuthed())) redirect('/login?next=/vizmaya/randomizer')
 
   const [spinsResult, heatResult, poolResult] = await Promise.allSettled([
-    listSpins({ limit: 150 }),
+    listSpins({ randomizers: randomizersFor('vizmaya-fyi'), limit: 150 }),
     deskHeatTable(),
     loadStoryStylePool('vizmaya-fyi'),
   ])

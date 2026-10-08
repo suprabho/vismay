@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { FilmStrip } from '@phosphor-icons/react'
 import { useSchedule } from '@/lib/useSchedule'
 import { RaceWeekendTabs } from '@/components/RaceWeekendTabs'
 import { CircuitMap } from '@/components/CircuitMap'
@@ -48,12 +49,20 @@ export default function RaceDetail({ round }: { round: number }) {
         </div>
       ) : (
         <>
-          <Link
-            href={`/race/${round}/replay`}
-            className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-2.5 text-xs font-medium text-text transition-colors hover:border-accent"
-          >
-            <span className="text-accent">▶</span> Race Replay
-          </Link>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={`/race/${round}/replay`}
+              className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-2.5 text-xs font-medium text-text transition-colors hover:border-accent"
+            >
+              <span className="text-accent">▶</span> Race Replay
+            </Link>
+            <Link
+              href={`/race/${round}/recap`}
+              className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-2.5 text-xs font-medium text-text transition-colors hover:border-accent"
+            >
+              <FilmStrip size={14} weight="bold" className="text-accent" aria-hidden /> Race Recap
+            </Link>
+          </div>
           <div className="mt-6">
             <RaceWeekendTabs race={race} />
           </div>

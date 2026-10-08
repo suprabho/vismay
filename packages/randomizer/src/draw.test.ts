@@ -1,12 +1,27 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, DESK, EPICS, epicRoute, isPhilosophical } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, VIZNBA, epicRoute, isPhilosophical, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks } from './draw'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { extractHeroInsight, researchFileName, researchStub } from './stub'
+import { extractHeroInsight, gameSummary, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
-import type { AtlasPicks, DeskPicks, DrawResult, EpicsPicks, SpinHistoryEntry, SpinRecord } from './types'
+import {
+  randomizersFor,
+  type AtlasPicks,
+  type DeskPicks,
+  type DrawResult,
+  type EpicsPicks,
+  type FootshortsFixtureRef,
+  type FootshortsNews,
+  type FootshortsPicks,
+  type FootshortsTeamNews,
+  type SpinHistoryEntry,
+  type SpinRecord,
+  type ViznbaGameRef,
+  type ViznbaNews,
+  type ViznbaPicks,
+} from './types'
 
 const NOW = new Date('2026-10-05T12:00:00Z')
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 864e5).toISOString()
@@ -190,9 +205,201 @@ assert.deepEqual(normalizeLocks('atlas', ['pair', 'nope', 'lens']), ['lens'])
   assert.ok(next.subject.randomizer === 'epics' && next.subject.sequence)
 }
 
+// Footshorts: a synthetic news snapshot. Six Premier League sides (one with
+// no news), four in the Champions League, and nothing in the rest.
+const fx = (id: string, comp: string, home: FootshortsTeamNews | string, away: FootshortsTeamNews | string, d: number, done: boolean): FootshortsFixtureRef => ({
+  id,
+  competition: comp,
+  kickoff: daysAgo(d),
+  status: done ? 'FINISHED' : 'TIMED',
+  homeId: typeof home === 'string' ? `id-${home}` : home.id,
+  awayId: typeof away === 'string' ? `id-${away}` : away.id,
+  home: typeof home === 'string' ? home : home.name,
+  away: typeof away === 'string' ? away : away.name,
+  homeScore: done ? 2 : null,
+  awayScore: done ? 1 : null,
+})
+const team = (slug: string, competitions: string[], heat: number, newsDaysAgo: number[]): FootshortsTeamNews => ({
+  id: `id-${slug}`,
+  slug,
+  name: slug.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()),
+  country: 'England',
+  crestUrl: null,
+  competitions,
+  heat,
+  articles: newsDaysAgo.length,
+  headlines: newsDaysAgo.slice(0, 3).map((d) => ({ title: `${slug} news`, url: `https://example.com/${slug}/${d}`, publisher: 'BBC Sport', date: daysAgo(d).slice(0, 10) })),
+  recent: [fx(`f-${slug}-1`, competitions[0]!, slug, 'other', 3, true)],
+  upcoming: [fx(`f-${slug}-2`, competitions[0]!, 'other', slug, -4, false)],
+})
+const PL = ['arsenal', 'chelsea', 'liverpool', 'everton', 'fulham', 'brentford']
+const NEWS: FootshortsNews = {
+  asOf: NOW.toISOString(),
+  windowDays: 14,
+  competitions: FOOTSHORTS.competitions.map((c) => ({
+    slug: c.slug,
+    heat: c.slug === 'premier-league' ? 100 : c.slug === 'champions-league' ? 60 : 0,
+    articles: c.slug === 'premier-league' ? 40 : 10,
+    headlines: [],
+    teams: c.slug === 'premier-league' ? 6 : c.slug === 'champions-league' ? 4 : 0,
+  })),
+  teams: PL.map((slug, i) =>
+    team(slug, i < 4 ? ['premier-league', 'champions-league'] : ['premier-league'], slug === 'brentford' ? 0 : 90 - i * 15, slug === 'brentford' ? [] : [1, 2, 6]),
+  ),
+}
+// Arsenal host Chelsea in the window: the head-to-head should find it.
+NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
+
+assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics'])
+assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
+assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
+assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
+{
+  const a = draw({ randomizer: 'footshorts', seed: 7, now: NOW, news: NEWS })
+  assert.deepEqual(a, draw({ randomizer: 'footshorts', seed: 7, now: NOW, news: NEWS }))
+  for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  const live = new Set(['premier-league', 'champions-league'])
+  for (let seed = 0; seed < 200; seed++) {
+    const r = draw({ randomizer: 'footshorts', seed, now: NOW, news: NEWS })
+    const p = r.picks as FootshortsPicks
+    assert.ok(live.has(p.competition), `only tournaments with fixtures: ${p.competition}`)
+    const t = NEWS.teams.find((x) => x.slug === p.team)!
+    assert.ok(t.competitions.includes(p.competition), 'the team plays in the tournament')
+    assert.equal(r.primary, p.team)
+    assert.ok(r.subject.randomizer === 'footshorts' && r.subject.fixtureIds.length > 0)
+    // Brentford have no news: Matchday can never stand for them.
+    if (p.team === 'brentford') assert.notEqual(p.fresh, 'Matchday')
+  }
+  // Locks keep the team and angle; the same tournament twice in a row is re-drawn once.
+  for (let seed = 0; seed < 40; seed++) {
+    const locked = draw({ randomizer: 'footshorts', seed, now: NOW, news: NEWS, prev: a, locks: ['team', 'angle'] })
+    assert.equal((locked.picks as FootshortsPicks).team, (a.picks as FootshortsPicks).team)
+    assert.equal((locked.picks as FootshortsPicks).angle, (a.picks as FootshortsPicks).angle)
+  }
+  let repeats = 0
+  for (let seed = 0; seed < 400; seed++) {
+    const r = draw({ randomizer: 'footshorts', seed, now: NOW, news: NEWS, history: [entry(a, 1)] })
+    if (r.meta.competition === a.meta.competition) repeats++
+    assert.notEqual(r.primary, a.primary === 'arsenal' ? '__' : a.primary, 'blocked inside 30 days unless heat forces it')
+  }
+  assert.ok(repeats < 400 * 0.75, `tournament repeated ${repeats} times in 400`)
+}
+{
+  // Head-to-head: Arsenal's opponent is Chelsea, the side they meet in the window.
+  const prev = draw({ randomizer: 'footshorts', seed: 1, now: NOW, news: NEWS })
+  const ars = { picks: { ...(prev.picks as FootshortsPicks), competition: 'premier-league', team: 'arsenal' } }
+  const h2h = draw({ randomizer: 'footshorts', seed: 3, now: NOW, news: NEWS, prev: ars, locks: ['team'], pair: true })
+  assert.equal((h2h.picks as FootshortsPicks).opponent, 'chelsea')
+  assert.ok(h2h.reels.pair && h2h.summary.includes(' v '))
+  assert.ok(h2h.subject.randomizer === 'footshorts' && h2h.subject.fixtureIds[0] === 'f-ars-che')
+  assert.ok(h2h.rules.some((x) => x.tag === 'pair' && x.kind === 'good'))
+}
+
+// VizNBA: all 30 franchises, the Celtics and Knicks busy and meeting in the
+// window, the Jazz with no news at all.
+const game = (id: string, away: string, home: string, d: number): ViznbaGameRef => {
+  const done = d > 0
+  const name = (t: string) => VIZNBA.teams.find((x) => x.id === t)?.name ?? t
+  return {
+    id,
+    date: daysAgo(d),
+    state: done ? 'post' : 'pre',
+    season: 'Regular Season',
+    homeId: home,
+    awayId: away,
+    home: name(home),
+    away: name(away),
+    homeScore: done ? 108 : null,
+    awayScore: done ? 112 : null,
+  }
+}
+const NBA: ViznbaNews = {
+  asOf: NOW.toISOString(),
+  windowDays: 14,
+  conferences: [
+    { slug: 'east', heat: 100, articles: 30, headlines: [] },
+    { slug: 'west', heat: 70, articles: 20, headlines: [] },
+  ],
+  teams: VIZNBA.teams.map((t, i) => {
+    const heat = t.id === 'utah' ? 0 : t.id === 'bos' || t.id === 'ny' ? 95 : 20 + (i % 5) * 10
+    const news = t.id === 'utah' ? [] : [1, 4, 9]
+    return {
+      id: t.id,
+      espnId: t.espn_id,
+      abbreviation: t.abbreviation,
+      name: t.name,
+      conference: t.conference,
+      division: t.division,
+      logoUrl: null,
+      color: t.color,
+      heat,
+      articles: news.length,
+      headlines: news.map((d) => ({ title: `${t.name} news`, url: `https://example.com/${t.id}/${d}`, publisher: 'ESPN', date: daysAgo(d).slice(0, 10), topic: 'game' })),
+      people: [],
+      recent: [game(`g-${t.id}-1`, t.id, 'other', 2)],
+      upcoming: [game(`g-${t.id}-2`, 'other', t.id, -2)],
+    }
+  }),
+  schedule: { ok: true, games: 60, error: null },
+}
+// The Celtics visit the Knicks in the window: the head-to-head should find it.
+NBA.teams.find((t) => t.id === 'bos')!.upcoming = [game('g-bos-ny', 'bos', 'ny', -3)]
+
+assert.equal(VIZNBA.teams.length, 30)
+assert.equal(new Set(VIZNBA.teams.map((t) => t.id)).size, 30)
+for (const c of VIZNBA.conferences) assert.equal(VIZNBA.teams.filter((t) => t.conference === c.slug).length, 15)
+assert.deepEqual(randomizersFor('viznba'), ['viznba'])
+assert.deepEqual(normalizeLocks('viznba', ['team', 'pair']), ['conference', 'team'])
+assert.equal(reelPool('viznba', 'team').length, 30)
+assert.throws(() => draw({ randomizer: 'viznba', seed: 1, now: NOW }), /news snapshot/)
+assert.equal(gameSummary(game('g', 'bos', 'ny', 2)), `Boston Celtics 112 @ New York Knicks 108 · ${daysAgo(2).slice(0, 10)} · Regular Season, final`)
+{
+  const a = draw({ randomizer: 'viznba', seed: 7, now: NOW, nbaNews: NBA })
+  assert.deepEqual(a, draw({ randomizer: 'viznba', seed: 7, now: NOW, nbaNews: NBA }))
+  for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  for (let seed = 0; seed < 200; seed++) {
+    const r = draw({ randomizer: 'viznba', seed, now: NOW, nbaNews: NBA })
+    const p = r.picks as ViznbaPicks
+    const t = NBA.teams.find((x) => x.id === p.team)!
+    assert.equal(t.conference, p.conference, 'the team plays in the conference')
+    assert.equal(r.primary, p.team)
+    assert.ok(r.subject.randomizer === 'viznba' && r.subject.gameIds.length > 0)
+    // The Jazz have no news: Last night can never stand for them.
+    if (p.team === 'utah') assert.notEqual(p.fresh, 'Last night')
+  }
+  for (let seed = 0; seed < 40; seed++) {
+    const locked = draw({ randomizer: 'viznba', seed, now: NOW, nbaNews: NBA, prev: a, locks: ['team', 'angle'] })
+    assert.equal((locked.picks as ViznbaPicks).team, (a.picks as ViznbaPicks).team)
+    assert.equal((locked.picks as ViznbaPicks).angle, (a.picks as ViznbaPicks).angle)
+  }
+  let repeats = 0
+  for (let seed = 0; seed < 400; seed++) {
+    const r = draw({ randomizer: 'viznba', seed, now: NOW, nbaNews: NBA, history: [entry(a, 1)] })
+    if (r.meta.conference === a.meta.conference) repeats++
+    if (NBA.teams.find((x) => x.id === a.primary)!.heat < DRAW_RULES.heatExempt) assert.notEqual(r.primary, a.primary, 'blocked inside 30 days')
+  }
+  assert.ok(repeats < 400 * 0.5, `conference repeated ${repeats} times in 400`)
+  // A failed schedule read is said, and the spin carries no games.
+  const noSchedule = { ...NBA, schedule: { ok: false, games: 0, error: 'HTTP 503' }, teams: NBA.teams.map((t) => ({ ...t, recent: [], upcoming: [] })) }
+  const quiet = draw({ randomizer: 'viznba', seed: 5, now: NOW, nbaNews: noSchedule })
+  assert.ok(quiet.rules.some((x) => x.tag === 'schedule' && x.kind === 'warn'))
+  assert.ok(quiet.subject.randomizer === 'viznba' && quiet.subject.gameIds.length === 0)
+}
+{
+  // Head-to-head: the Celtics' opponent is the Knicks, the team they play in the window.
+  const prev = draw({ randomizer: 'viznba', seed: 1, now: NOW, nbaNews: NBA })
+  const bos = { picks: { ...(prev.picks as ViznbaPicks), conference: 'east' as const, team: 'bos' } }
+  const h2h = draw({ randomizer: 'viznba', seed: 3, now: NOW, nbaNews: NBA, prev: bos, locks: ['team'], pair: true })
+  assert.equal((h2h.picks as ViznbaPicks).opponent, 'ny')
+  assert.ok(h2h.reels.pair && h2h.summary.includes(' v '))
+  assert.ok(h2h.subject.randomizer === 'viznba' && h2h.subject.gameIds[0] === 'g-bos-ny')
+  assert.ok(h2h.rules.some((x) => x.tag === 'pair' && x.kind === 'good'))
+}
+
 // Stub and brief sections.
-for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
-  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW }))
+for (const randomizer of ['desk', 'atlas', 'epics', 'footshorts', 'viznba'] as const) {
+  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))
   assert.ok(stub.includes('## HERO INSIGHT'))

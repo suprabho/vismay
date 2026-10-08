@@ -2,10 +2,11 @@
  * Dispatch a recap job to GitHub Actions.
  *
  * Mirrors storyAudioDispatch.ts. The recap generator (`worker/src/recap.ts`)
- * needs Supabase + Gemini, so it lives behind the `footshorts-recap.yml`
- * workflow rather than running inline in a serverless function. This is the
- * manual entry point used by the admin Recaps tab for ad-hoc runs over a
- * trailing "last X hours" window, filtered by competition and/or team.
+ * needs Supabase + the AI gateway (Claude writes the narrative), so it lives
+ * behind the `footshorts-recap.yml` workflow rather than running inline in a
+ * serverless function. This is the manual entry point used by the admin
+ * Recaps tab for ad-hoc runs over a trailing "last X hours" window, filtered
+ * by competition and/or team.
  *
  * Required env (server only):
  *   GITHUB_DISPATCH_TOKEN  fine-grained PAT with `workflow` write on the repo

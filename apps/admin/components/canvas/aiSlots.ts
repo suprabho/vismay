@@ -47,22 +47,21 @@ export interface AiSlotConfig {
 
 /** Long-form editorial prose — content + narration scripts. */
 const PROSE_MODELS = [
-  'text.claude',
+  'text.sonnet',
   'text.opus',
   'text.fable',
-  'text.pro',
-  'text.fast',
+  'text.haiku',
   'text.deepseek',
 ] as const
 /** Structured / strict output — YAML slices, layout tokens, theme objects. */
 const STRUCT_MODELS = [
   'text.code',
-  'text.pro',
+  'text.sonnet',
   'text.codeLong',
   'text.proPlus',
   'text.fable',
   'text.terra',
-  'text.fast',
+  'text.haiku',
   'text.codeCheap',
   'text.qwen',
   'text.glm',
@@ -90,13 +89,12 @@ const IMAGE_MODELS = [
 
 /** Friendly labels for the model dropdown. Falls back to the alias tail. */
 export const MODEL_LABELS: Record<string, string> = {
-  'text.fast': 'Gemini 3 Flash · fast',
-  'text.pro': 'Gemini 3.1 Pro',
+  'text.haiku': 'Claude Haiku 5.5 · fast',
+  'text.sonnet': 'Claude Sonnet 5.5',
+  'text.opus': 'Claude Opus 5.5 · frontier',
   'text.proPlus': 'GPT-5.6 Sol · frontier',
   'text.terra': 'GPT-5.6 Terra · fast',
   'text.luna': 'GPT-5.6 Luna · cheap',
-  'text.claude': 'Claude Sonnet',
-  'text.opus': 'Claude Opus · frontier',
   'text.fable': 'Claude Fable 5 · frontier+',
   'text.code': 'GPT-5 Codex · code/YAML',
   'text.codeLong': 'Qwen3 Coder · 1M ctx',
@@ -127,7 +125,25 @@ export const MODEL_LABELS: Record<string, string> = {
 }
 
 export function modelLabel(alias: string): string {
-  return MODEL_LABELS[alias] ?? alias.replace(/^(text|image)\./, '')
+  const canonical = canonicalModelAlias(alias)
+  return MODEL_LABELS[canonical] ?? canonical.replace(/^(text|image)\./, '')
+}
+
+/**
+ * Legacy text aliases → the Claude tier they now resolve to in
+ * `@vismay/ai-gateway`. They predate the tier names; settings rows and API
+ * clients may still carry them, so every place that checks an alias against a
+ * model set canonicalises it first rather than offering the old names.
+ */
+export const LEGACY_TEXT_ALIASES: Readonly<Record<string, string>> = {
+  'text.fast': 'text.haiku',
+  'text.pro': 'text.sonnet',
+  'text.claude': 'text.sonnet',
+}
+
+/** Map a legacy alias onto its current tier name; anything else passes through. */
+export function canonicalModelAlias(alias: string): string {
+  return LEGACY_TEXT_ALIASES[alias] ?? alias
 }
 
 /* ─── Per-slot config ────────────────────────────────────────────── */

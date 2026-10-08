@@ -1,0 +1,16 @@
+# Next.js
+.next/
+out/
+
+# Production
+build/
+
+# Dependencies (covered by root .gitignore but explicit for clarity)
+node_modules/
+
+# TypeScript incremental cache
+*.tsbuildinfo
+next-env.d.ts
+
+# Local env files
+.env*.local

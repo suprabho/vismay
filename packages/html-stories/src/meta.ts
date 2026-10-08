@@ -10,6 +10,7 @@
 import {
   FORMAT_META_NAME,
   HTML_STORY_FORMAT_META,
+  HTML_STORY_FORMATS,
   PAGED_HTML_STORY_FORMATS,
   isHtmlStoryFormat,
   type HtmlStoryFormat,
@@ -173,7 +174,7 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
   const raw = metaContent(tags, FORMAT_META_NAME)
   if (raw !== null && !isHtmlStoryFormat(raw.trim().toLowerCase())) {
     warnings.push(
-      `<meta name="${FORMAT_META_NAME}" content="${raw}"> isn't a format; use scroll, book, board or deck. The page is listed as a scroll story.`,
+      `<meta name="${FORMAT_META_NAME}" content="${raw}"> isn't a format; use ${HTML_STORY_FORMATS.join(', ')}. The page is listed as a scroll story.`,
     )
   }
   const format = extractFormatMeta(html)
@@ -200,8 +201,34 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
   }
   if (/\bdata-step\b/i.test(html)) {
     warnings.push(
-      `data-step is the scroll format's marker. In a ${format} nothing is scroll-triggered: mark each ${unit} with data-unit and let the runtime enter it.`,
+      format === 'recap'
+        ? `data-step is the scroll format's marker. In a recap, mark each chapter with data-unit and move the replay with data-lap / data-at.`
+        : `data-step is the scroll format's marker. In a ${format} nothing is scroll-triggered: mark each ${unit} with data-unit and let the runtime enter it.`,
     )
+  }
+  if (format === 'recap') lintRecap(html, warnings)
+}
+
+/** A recap needs the replay (with a race's session key) and cues to drive it. */
+function lintRecap(html: string, warnings: string[]): void {
+  const replay = /<div\b[^>]*\bclass="[^"]*\breplay\b[^"]*"[^>]*>/i.exec(html)?.[0]
+  if (!replay) {
+    warnings.push('No <div class="replay" data-session="…">: a recap frames the race replay beside its chapters.')
+  } else {
+    const session = /\bdata-session="([^"]*)"/i.exec(replay)?.[1] ?? ''
+    if (!/^\d{4}_[a-z0-9_]+_(R|S)$/.test(session)) {
+      warnings.push(
+        session
+          ? `data-session="${session}" isn't a race's session key (like 2024_austrian_grand_prix_R); copy it from "Replay moments" in the race context, or the replay plays another race or the demo.`
+          : 'The replay has no data-session: copy the race\'s session key from "Replay moments" in the race context, or the replay plays the demo race.',
+      )
+    }
+  }
+  if (!/\bclass="[^"]*\bchapter\b/i.test(html)) {
+    warnings.push('No <section class="chapter" data-unit> elements inside <div class="chapters">: the runtime has nothing to scroll the replay through.')
+  }
+  if (!/\bdata-(lap|at)="/i.test(html)) {
+    warnings.push('No cues: give each chapter (and the beats inside it) a data-lap or data-at, or the replay never moves.')
   }
 }
 

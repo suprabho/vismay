@@ -1,10 +1,22 @@
 /**
  * Model registry.
  *
- * Call sites pass aliases ("text.fast", "image.default"), not provider IDs,
- * so model upgrades (Gemini 3 → Gemini 4, swap Claude → OpenAI for one task)
- * land in this file alone. Aliases also let us split text vs. image namespaces
- * without conflating which models can do what.
+ * Call sites pass aliases ("text.haiku", "image.default"), not provider IDs,
+ * so model upgrades (Sonnet 5.5 → 6, swap Claude → OpenAI for one task) land
+ * in this file alone. Aliases also let us split text / image / decision /
+ * speech namespaces without conflating which models can do what.
+ *
+ * Text work is tiered by complexity on Claude:
+ *   - text.haiku  — high-volume, per-item work: summaries, taggers, NER,
+ *                   field extraction, OCR of a single page.
+ *   - text.sonnet — editorial prose, multi-step extraction, vision, strict
+ *                   JSON with nested/union schemas. The default.
+ *   - text.opus   — the hardest calls: whole-document restructuring, judges
+ *                   grading other models, long-horizon reasoning.
+ *
+ * Typed decisions (yes/no, pick-one-of-N, score) don't go to a text model at
+ * all — they go to Jev via `decide()` (see ./decide.ts), which returns a
+ * calibrated probability instead of prose.
  *
  * Gateway IDs are always `<provider>/<model>` strings, exactly as Vercel AI
  * Gateway exposes them.
@@ -12,21 +24,28 @@
 
 export const MODELS = {
   text: {
-    /** Cheap, fast, decent quality. Workhorse for summaries, taggers, NER. */
-    fast: 'google/gemini-3-flash',
-    /** Reasoning, long context, strict JSON. Use for judge + complex extraction. */
-    pro: 'google/gemini-3.1-pro-preview',
-    /** Long-form prose, editorial register. Use for narrative content gen. */
-    claude: 'anthropic/claude-sonnet-5',
-    /** Frontier editorial + long-horizon agentic. Escalate from claude here. */
-    opus: 'anthropic/claude-opus-4.8',
+    /** Light tier — cheap + fast. Workhorse for summaries, taggers, NER, per-item extraction. */
+    haiku: 'anthropic/claude-haiku-5.5',
+    /** Standard tier — editorial prose, complex extraction, vision, union schemas. */
+    sonnet: 'anthropic/claude-sonnet-5.5',
+    /** Heavy tier — whole-document restructuring, judges, long-horizon reasoning. */
+    opus: 'anthropic/claude-opus-5.5',
+    /**
+     * Legacy aliases, kept so persisted admin settings, env overrides
+     * (EVAL_MODEL=text.pro …) and older call sites keep resolving. They used to
+     * point at Gemini; they now map onto the Claude tier of the same weight.
+     * Prefer the tier names above in new code.
+     */
+    fast: 'anthropic/claude-haiku-5.5',
+    pro: 'anthropic/claude-sonnet-5.5',
+    claude: 'anthropic/claude-sonnet-5.5',
     /** Anthropic's tier above opus — deepest reasoning + long-horizon agentic. 1M ctx, $10/$50 per MTok. */
     fable: 'anthropic/claude-fable-5',
     /**
-     * Cross-provider reasoning frontier — escalate here if `pro` (Gemini) misses.
-     * Deliberately a different lineage than `pro`/`opus` so it's a real second
-     * opinion, not the same family one tier up. Sol is deep but slow (~46tps);
-     * reach for `terra` when latency matters.
+     * Cross-provider reasoning frontier — escalate here if Claude misses.
+     * Deliberately a different lineage than the Claude tiers so it's a real
+     * second opinion, not the same family one tier up. Sol is deep but slow
+     * (~46tps); reach for `terra` when latency matters.
      */
     proPlus: 'openai/gpt-5.6-sol',
     /** Fast OpenAI flagship — 1.1M ctx, $2.5/$15 per MTok, ~100tps. */
@@ -111,6 +130,24 @@ export const MODELS = {
     /** GPT Image 2.5 (Flare) — the sibling variant of the same line. */
     gptImageFlare: 'openai/gpt-image-2.5-flare',
   },
+  decision: {
+    /**
+     * Jev (TypeSafe) — a System One decision model. State plus named typed
+     * questions (boolean / choice / score) in, a calibrated probability per
+     * question out, no prose. Call through `decide()`.
+     */
+    jev: 'typesafe-ai/jev',
+  },
+  speech: {
+    /**
+     * Gemini TTS. Kept on Google deliberately — Claude has no speech output —
+     * but routed through the gateway like everything else, so no call site
+     * needs GEMINI_API_KEY. Prebuilt Gemini voices (`Orus`, …) go in `voice`.
+     */
+    default: 'google/gemini-3.8-flash-tts',
+    /** Cheaper Gemini TTS tier. */
+    lite: 'google/gemini-3.8-flash-lite-tts',
+  },
 } as const
 
 /**
@@ -141,10 +178,7 @@ export function isLLMImageModel(id: string): boolean {
  * request. Point fallbacks at GA models that won't disappear; once a primary
  * goes GA, swap it in above and drop its entry here.
  */
-export const MODEL_FALLBACKS: Readonly<Record<string, string>> = {
-  'google/gemini-3.1-pro-preview': 'google/gemini-2.5-pro',
-  'google/gemini-3-pro-preview': 'google/gemini-2.5-pro',
-}
+export const MODEL_FALLBACKS: Readonly<Record<string, string>> = {}
 
 /** Stable fallback id for a volatile model id, or null if it has none. */
 export function fallbackModel(id: string): string | null {
@@ -153,13 +187,15 @@ export function fallbackModel(id: string): string | null {
 
 export type TextModelAlias = `text.${keyof typeof MODELS.text}`
 export type ImageModelAlias = `image.${keyof typeof MODELS.image}`
-export type ModelAlias = TextModelAlias | ImageModelAlias
+export type DecisionModelAlias = `decision.${keyof typeof MODELS.decision}`
+export type SpeechModelAlias = `speech.${keyof typeof MODELS.speech}`
+export type ModelAlias = TextModelAlias | ImageModelAlias | DecisionModelAlias | SpeechModelAlias
 
 /**
- * Resolve an alias ("text.pro") to its gateway model ID ("google/gemini-2.5-pro").
- * Passes through any string that already looks like a gateway ID (contains a /
- * and no leading "text." / "image.") so call sites can drop down to a specific
- * model without registering it.
+ * Resolve an alias ("text.sonnet") to its gateway model ID
+ * ("anthropic/claude-sonnet-5.5"). Passes through any string that already looks
+ * like a gateway ID (contains a / and no known namespace prefix) so call sites
+ * can drop down to a specific model without registering it.
  */
 export function resolveModel(alias: ModelAlias | string): string {
   if (alias.startsWith('text.')) {
@@ -174,8 +210,20 @@ export function resolveModel(alias: ModelAlias | string): string {
     if (!id) throw new Error(`Unknown image model alias: ${alias}`)
     return id
   }
+  if (alias.startsWith('decision.')) {
+    const key = alias.slice(9) as keyof typeof MODELS.decision
+    const id = MODELS.decision[key]
+    if (!id) throw new Error(`Unknown decision model alias: ${alias}`)
+    return id
+  }
+  if (alias.startsWith('speech.')) {
+    const key = alias.slice(7) as keyof typeof MODELS.speech
+    const id = MODELS.speech[key]
+    if (!id) throw new Error(`Unknown speech model alias: ${alias}`)
+    return id
+  }
   if (alias.includes('/')) return alias
   throw new Error(
-    `Bad model id "${alias}" — expected alias (text.* / image.*) or gateway id (provider/model)`,
+    `Bad model id "${alias}" — expected alias (text.* / image.* / decision.* / speech.*) or gateway id (provider/model)`,
   )
 }

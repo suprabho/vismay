@@ -1,11 +1,11 @@
 /**
  * Manual-paste adapter. Used when the source is a PDF press release, a paywalled
- * article, or any text the admin curates by hand. Same Gemini extractor under
+ * article, or any text the admin curates by hand. Same Claude extractor under
  * the hood as the press-release adapter — only the input plumbing differs.
  */
 
 import { RawSquadEntry } from '../types';
-import { extractSquadFromText } from './gemini-extract';
+import { extractSquadFromText } from './llm-extract';
 
 export async function extractSquadFromManualText(text: string): Promise<RawSquadEntry[]> {
   if (!text || text.trim().length < 50) {

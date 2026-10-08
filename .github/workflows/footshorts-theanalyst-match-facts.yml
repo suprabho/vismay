@@ -25,7 +25,7 @@ name: Footshorts - theanalyst match facts
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
-# (No Gemini key — the scrape is deterministic parsing.)
+# (No AI gateway key — the scrape is deterministic parsing.)
 
 on:
   schedule:

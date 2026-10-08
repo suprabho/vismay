@@ -11,7 +11,7 @@
  *   - the `--national-teams` mode of the worker's backfillEntityTags.ts.
  *
  * `name` is the common English form news copy uses ("Ivory Coast", not
- * "Côte d'Ivoire"), and `slug` is normalizeEntityKey(name) — the key Gemini's
+ * "Côte d'Ivoire"), and `slug` is normalizeEntityKey(name) — the key the summarizer's
  * extraction lands on. FIFA/official spellings go in `aliases`, already in
  * normalizeEntityKey form.
  *

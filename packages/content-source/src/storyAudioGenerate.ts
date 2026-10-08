@@ -9,14 +9,15 @@
  * Reads each story's content + config, resolves mobile units (the same
  * `resolveUnits` the runtime player uses, so `unit_index` cues stay aligned),
  * packs consecutive units into chunks (~250 words of audio each) and calls
- * Gemini TTS once per chunk — not once per unit. This keeps daily request
- * volume well under Gemini's quota. Per-unit playback cues are stored alongside
+ * TTS (Gemini TTS via the AI gateway, `speech.default`) once per chunk — not
+ * once per unit. This keeps daily request volume well under the provider's
+ * quota. Per-unit playback cues are stored alongside
  * the chunk audio so the autoplay player can drive `activeUnit` from currentTime.
  *
  * Narration text + per-unit overrides + the methodology skip-list all come from
  * `./storyTts` (`defaultNarrationText`, `parseTtsConfig`, `findTtsOverride`,
  * `TTS_SKIP_IDS`) — the single source of truth the admin Narration tab also
- * reads, so the previewed string is byte-for-byte what gets sent to Gemini.
+ * reads, so the previewed string is byte-for-byte what gets sent to TTS.
  *
  * Tables written:
  *   - story_audio_chunks (one row per chunk)
@@ -34,6 +35,7 @@ import path from 'path'
 import crypto from 'crypto'
 import { spawn } from 'child_process'
 import type { ResolvedUnit } from '@vismay/viz-engine'
+import { generateSpeech, hasGatewayCredentials } from '@vismay/ai-gateway'
 import { getContentSource } from './contentSource'
 import { createServiceClient } from './supabase'
 import { resolveMobileUnits } from './resolveMobileUnits'
@@ -61,17 +63,15 @@ export interface GenerateStoryAudioOptions {
   slug: string
   /** Regenerate every chunk even if the transcript hash is unchanged. */
   force?: boolean
-  /** Gemini API key (default `process.env.GEMINI_API_KEY`). */
-  geminiApiKey?: string
   /** Supabase service client (default `createServiceClient()`). */
   supabase?: ServiceClient
   /** Target words per chunk (default `CHUNK_WORD_TARGET` env or 250). */
   chunkWordTarget?: number
-  /** Minimum ms between Gemini calls (default `RATE_LIMIT_MS` env or 8000). */
+  /** Minimum ms between TTS calls (default `RATE_LIMIT_MS` env or 8000). */
   rateLimitMs?: number
   /** Storage bucket for chunk WAVs (default `story-audio`). */
   bucket?: string
-  /** Prebuilt Gemini voice (default `Orus`). */
+  /** Prebuilt TTS voice name, passed through the gateway (default `Orus`). */
   voiceName?: string
   /** Optional whisper.cpp forced alignment. */
   whisper?: WhisperOptions
@@ -86,7 +86,7 @@ export interface GenerateStoryAudioResult {
   failed: number
 }
 
-/** Thrown when Gemini returns a multi-minute retry hint (daily quota). */
+/** Thrown when the TTS provider returns a multi-minute retry hint (daily quota). */
 export class DailyQuotaExhaustedError extends Error {
   constructor() {
     super('DAILY_QUOTA_EXHAUSTED')
@@ -152,29 +152,73 @@ function createWavHeader(dataLength: number, options: WavConversionOptions): Buf
   return buffer
 }
 
-function wrapPcmInWav(pcmData: Buffer): Buffer {
+/** Wrap bare 16-bit mono PCM in a WAV header (default 24kHz, Gemini TTS's native rate). */
+function wrapPcmInWav(pcmData: Buffer, sampleRate = 24000): Buffer {
   const header = createWavHeader(pcmData.length, {
     numChannels: 1,
-    sampleRate: 24000,
+    sampleRate,
     bitsPerSample: 16,
   })
   return Buffer.concat([header, pcmData])
 }
 
-/**
- * Duration in ms of a WAV produced by `wrapPcmInWav` (mono / 24kHz / 16-bit).
- * Reads the standard 44-byte header off the front and divides by the byte rate.
- */
-function wavDurationMs(wav: Buffer): number {
-  const pcmBytes = Math.max(0, wav.length - 44)
-  const samples = pcmBytes / 2
-  return Math.round((samples / 24000) * 1000)
+function isRiffWav(buf: Buffer): boolean {
+  return buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WAVE'
 }
 
-/* ─── Gemini TTS ───────────────────────────────────────────────────── */
+/**
+ * Turn whatever the TTS call returned into a WAV buffer. A full RIFF/WAVE
+ * container passes through untouched; bare PCM (`audio/L16`, `audio/pcm`,
+ * optionally `;rate=NNNN`) gets a header using the advertised rate. Anything
+ * else (mp3, ogg, …) is rejected — downstream storage + whisper expect WAV.
+ */
+function toWavBuffer(bytes: Uint8Array, mimeType: string): Buffer | null {
+  const buf = Buffer.from(bytes)
+  if (isRiffWav(buf)) return buf
+
+  const [base, ...params] = mimeType.toLowerCase().split(';').map((p) => p.trim())
+  if (base === 'audio/l16' || base === 'audio/pcm') {
+    const rateParam = params.find((p) => p.startsWith('rate='))
+    const rate = rateParam ? Number(rateParam.slice(5)) : NaN
+    return wrapPcmInWav(buf, Number.isFinite(rate) && rate > 0 ? rate : 24000)
+  }
+  return null
+}
 
 /**
- * Rate limiter — enforces a minimum interval between Gemini API calls.
+ * Duration in ms of a RIFF/WAVE buffer. Walks the chunk list for `fmt `
+ * (byte rate) and `data` (payload size) rather than assuming a fixed 44-byte
+ * mono/24kHz header, since a gateway-produced WAV may carry extra chunks
+ * (LIST, fact, …) or a different sample rate / channel count.
+ */
+function wavDurationMs(wav: Buffer): number {
+  if (!isRiffWav(wav)) return 0
+  let byteRate = 0
+  let dataSize = 0
+  let offset = 12
+  while (offset + 8 <= wav.length) {
+    const id = wav.toString('ascii', offset, offset + 4)
+    const size = wav.readUInt32LE(offset + 4)
+    const body = offset + 8
+    if (id === 'fmt ' && body + 12 <= wav.length) {
+      byteRate = wav.readUInt32LE(body + 8)
+    } else if (id === 'data') {
+      // Streamed WAVs sometimes leave the size as 0 / 0xFFFFFFFF — clamp to what's actually there.
+      const available = wav.length - body
+      dataSize = size === 0 || size > available ? available : size
+      break
+    }
+    // Chunks are word-aligned: odd sizes carry one pad byte.
+    offset = body + size + (size % 2)
+  }
+  if (!byteRate || !dataSize) return 0
+  return Math.round((dataSize / byteRate) * 1000)
+}
+
+/* ─── TTS (Gemini TTS via the AI gateway) ──────────────────────────── */
+
+/**
+ * Rate limiter — enforces a minimum interval between TTS calls.
  * 8000ms ≈ 7.5 req/min.
  */
 function makeRateLimiter(minIntervalMs: number) {
@@ -189,104 +233,125 @@ function makeRateLimiter(minIntervalMs: number) {
   }
 }
 
-interface GeminiContext {
-  apiKey: string
+interface TtsContext {
   voiceName: string
   rateLimit: () => Promise<void>
 }
 
+interface ErrorDetails {
+  status: number
+  retryAfterMs?: number
+  message: string
+}
+
 /**
- * Single Gemini TTS call. Returns the parsed WAV buffer, or an object
- * describing why it failed so the retry layer can decide what to do.
+ * Pull status + retry hint off an AI SDK / gateway error. Duck-typed since
+ * `ai` isn't a direct dependency here: gateway errors carry `statusCode` and
+ * wrap the underlying `APICallError` (with `responseHeaders` /
+ * `responseBody`) in `cause`; SDK retry errors keep theirs in `lastError`.
+ * Walk the chain and take the first value found for each field.
  */
-async function callGeminiOnce(
-  ctx: GeminiContext,
+function describeTtsError(err: unknown): ErrorDetails {
+  let status = 0
+  let retryAfterMs: number | undefined
+  let message = err instanceof Error ? err.message : String(err)
+
+  const seen = new Set<unknown>()
+  let cur: unknown = err
+  while (cur && typeof cur === 'object' && !seen.has(cur)) {
+    seen.add(cur)
+    const e = cur as {
+      statusCode?: unknown
+      responseHeaders?: Record<string, string>
+      responseBody?: unknown
+      cause?: unknown
+      lastError?: unknown
+    }
+    if (!status && typeof e.statusCode === 'number') status = e.statusCode
+    if (retryAfterMs === undefined) retryAfterMs = retryHintFromHeaders(e.responseHeaders)
+    if (retryAfterMs === undefined) retryAfterMs = retryHintFromBody(e.responseBody)
+    if (typeof e.responseBody === 'string' && e.responseBody) message = e.responseBody
+    cur = e.lastError ?? e.cause
+  }
+  return { status, retryAfterMs, message: message.slice(0, 200) }
+}
+
+/** `retry-after` header, in seconds (HTTP-date form is ignored). */
+function retryHintFromHeaders(headers: Record<string, string> | undefined): number | undefined {
+  if (!headers) return undefined
+  const key = Object.keys(headers).find((k) => k.toLowerCase() === 'retry-after')
+  const secs = key ? Number(headers[key]) : NaN
+  return Number.isFinite(secs) && secs >= 0 ? Math.ceil(secs * 1000) : undefined
+}
+
+/** Google's `RetryInfo.retryDelay` ("37s"), if the gateway passed the upstream body through. */
+function retryHintFromBody(body: unknown): number | undefined {
+  if (typeof body !== 'string' || !body) return undefined
+  try {
+    const json = JSON.parse(body)
+    const details = json?.error?.details ?? []
+    for (const d of Array.isArray(details) ? details : []) {
+      if (d?.['@type']?.includes('RetryInfo') && typeof d.retryDelay === 'string') {
+        const m = d.retryDelay.match(/^([\d.]+)s$/)
+        if (m) return Math.ceil(parseFloat(m[1]) * 1000)
+      }
+    }
+  } catch {
+    // body wasn't JSON
+  }
+  return undefined
+}
+
+/**
+ * Single TTS call. Returns the WAV buffer, or an object describing why it
+ * failed so the retry layer can decide what to do.
+ */
+async function synthesizeOnce(
+  ctx: TtsContext,
   text: string
-): Promise<
-  | { ok: true; buffer: Buffer }
-  | { ok: false; status: number; retryAfterMs?: number; error: string }
-> {
+): Promise<{ ok: true; buffer: Buffer } | ({ ok: false } & ErrorDetails)> {
   await ctx.rateLimit()
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${ctx.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
-          generationConfig: {
-            temperature: 1.5,
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: ctx.voiceName },
-              },
-            },
-          },
-        }),
-      }
-    )
-
-    if (!res.ok) {
-      const errText = await res.text()
-      // Try to parse a Retry-After hint from the response body
-      let retryAfterMs: number | undefined
-      try {
-        const errJson = JSON.parse(errText)
-        const details = errJson?.error?.details ?? []
-        for (const d of details) {
-          if (d['@type']?.includes('RetryInfo') && typeof d.retryDelay === 'string') {
-            const m = d.retryDelay.match(/^([\d.]+)s$/)
-            if (m) retryAfterMs = Math.ceil(parseFloat(m[1]) * 1000)
-          }
-        }
-      } catch {
-        // body wasn't JSON
-      }
-      return { ok: false, status: res.status, retryAfterMs, error: errText.slice(0, 200) }
+    const res = await generateSpeech({
+      model: 'speech.default',
+      text,
+      voice: ctx.voiceName,
+      outputFormat: 'wav',
+      metadata: { feature: 'story-audio' },
+    })
+    const buffer = toWavBuffer(res.bytes, res.mimeType)
+    if (!buffer) {
+      return { ok: false, status: 0, message: `Unexpected audio format: ${res.mimeType || 'unknown'}` }
     }
-
-    const data = await res.json()
-    const audioPart = data?.candidates?.[0]?.content?.parts?.find(
-      (p: { inlineData?: { mimeType?: string } }) =>
-        p.inlineData?.mimeType?.startsWith('audio/')
-    )
-
-    if (!audioPart?.inlineData?.data) {
-      return { ok: false, status: 0, error: 'No audio in response' }
-    }
-
-    const rawPcm = Buffer.from(audioPart.inlineData.data, 'base64')
-    return { ok: true, buffer: wrapPcmInWav(rawPcm) }
+    return { ok: true, buffer }
   } catch (err) {
-    return { ok: false, status: 0, error: String(err) }
+    return { ok: false, ...describeTtsError(err) }
   }
 }
 
 /**
  * Generate speech with automatic retry on rate-limit (429) and transient
- * server errors (500/503). Honors `Retry-After` hints from Gemini when present.
+ * server errors (500/503). Honors `retry-after` / RetryInfo hints when present.
  */
-async function generateSpeech(ctx: GeminiContext, text: string): Promise<Buffer | null> {
+async function synthesizeWithRetry(ctx: TtsContext, text: string): Promise<Buffer | null> {
   const MAX_ATTEMPTS = 5
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const result = await callGeminiOnce(ctx, text)
+    const result = await synthesizeOnce(ctx, text)
     if (result.ok) return result.buffer
 
     const retryable = result.status === 429 || result.status === 500 || result.status === 503
 
     if (!retryable || attempt === MAX_ATTEMPTS) {
-      console.error(`  Gemini API error ${result.status}: ${result.error}`)
+      console.error(`  TTS error ${result.status}: ${result.message}`)
       return null
     }
 
-    // If Gemini's hint is longer than 5 minutes, treat it as a daily-quota
+    // If the provider's hint is longer than 5 minutes, treat it as a daily-quota
     // signal — bail out instead of sleeping overnight inside the script.
     const MAX_INLINE_BACKOFF = 5 * 60 * 1000
     if (result.retryAfterMs && result.retryAfterMs > MAX_INLINE_BACKOFF) {
       console.error(
-        `\n  ✗ Gemini returned a ${Math.round(result.retryAfterMs / 60_000)}-minute retry delay — likely daily quota exhausted. Stopping.`
+        `\n  ✗ TTS returned a ${Math.round(result.retryAfterMs / 60_000)}-minute retry delay — likely daily quota exhausted. Stopping.`
       )
       throw new DailyQuotaExhaustedError()
     }
@@ -455,7 +520,7 @@ async function pruneCues(
 
 /**
  * One TTS request's worth of units. `texts[i]` is the narration string for
- * `unitIndices[i]`; the prompt sent to Gemini is `texts.join(SEPARATOR)`.
+ * `unitIndices[i]`; the text sent to TTS is `texts.join(SEPARATOR)`.
  */
 interface AudioChunk {
   unitIndices: number[]
@@ -513,7 +578,7 @@ function packUnitsIntoChunks(
 
 /**
  * Allocate a chunk's audio duration to its units in proportion to each
- * unit's narration length (characters). Exact only if Gemini speaks at a
+ * unit's narration length (characters). Exact only if the voice speaks at a
  * uniform rate — close enough for animation cues over a 2–4 unit chunk,
  * and replaceable later with forced alignment.
  */
@@ -646,7 +711,7 @@ async function runWhisperAlignment(
  * Generate (or refresh) the audio chunks + cues for a single story.
  *
  * Idempotent: chunks whose transcript hash is unchanged are skipped unless
- * `force` is set. Throws `DailyQuotaExhaustedError` if Gemini signals the
+ * `force` is set. Throws `DailyQuotaExhaustedError` if the TTS provider signals the
  * daily quota is gone — already-generated rows are left in place so a re-run
  * picks up where it stopped.
  */
@@ -655,8 +720,11 @@ export async function generateStoryAudio(
 ): Promise<GenerateStoryAudioResult> {
   const { slug, force = false } = options
 
-  const apiKey = options.geminiApiKey ?? process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set.')
+  if (!hasGatewayCredentials()) {
+    throw new Error(
+      'AI gateway credentials missing — set AI_GATEWAY_API_KEY (or VERCEL_OIDC_TOKEN) to generate story audio.'
+    )
+  }
 
   const supabase = options.supabase ?? createServiceClient()
   const bucket = options.bucket ?? 'story-audio'
@@ -673,8 +741,7 @@ export async function generateStoryAudio(
     throw new Error('whisper.enabled is set but whisper.model is missing.')
   }
 
-  const geminiCtx: GeminiContext = {
-    apiKey,
+  const ttsCtx: TtsContext = {
     voiceName,
     rateLimit: makeRateLimiter(rateLimitMs),
   }
@@ -724,7 +791,7 @@ export async function generateStoryAudio(
       `  [${i + 1}/${chunks.length}] generating (${chunk.unitIndices.length} units, ${wordCount(transcript)}w)... `
     )
 
-    const audioBuffer = await generateSpeech(geminiCtx, transcript)
+    const audioBuffer = await synthesizeWithRetry(ttsCtx, transcript)
     if (!audioBuffer) {
       console.log('✗ TTS failed')
       failed++

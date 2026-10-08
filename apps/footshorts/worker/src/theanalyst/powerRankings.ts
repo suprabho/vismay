@@ -18,7 +18,7 @@
  * same reasoning as the squads wikipedia adapter's table parsing: structured
  * data plus an LLM is just added cost and hallucination surface). The
  * surrounding article prose is NOT parsed here beyond plain-text extraction;
- * the entry script (theanalystPowerRankings.ts) summarizes it with Gemini so
+ * the entry script (theanalystPowerRankings.ts) summarizes it with Claude so
  * we store a short abstractive summary, never the full article text.
  *
  * SELECTOR CAVEAT: three extraction strategies are tried in order (table
@@ -48,7 +48,7 @@ export type RankingEntry = {
 
 export type PowerRankingsPage = {
   rankings: RankingEntry[];
-  /** Article prose (plain text) — Gemini input only, never stored verbatim. */
+  /** Article prose (plain text) — LLM input only, never stored verbatim. */
   narrativeText: string;
   title: string;
   publishedAt: string | null;

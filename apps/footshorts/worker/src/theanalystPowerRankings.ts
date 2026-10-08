@@ -3,7 +3,7 @@
  *
  * Fetches the Power Rankings article, parses the ranked team list
  * deterministically (theanalyst/powerRankings.ts), resolves team names to our
- * canonical entities, summarizes the article prose with Gemini (we never store
+ * canonical entities, summarizes the article prose with Claude (we never store
  * the full text — attribution policy, see docs/theanalyst-scraping.md), and
  * inserts a status='draft' row into `power_rankings` for editorial review in
  * the admin app. Nothing is auto-published: an editor flips the row to
@@ -18,21 +18,23 @@
  *   npm run power-rankings -- --url=https://theanalyst.com/articles/<slug>
  *   npm run power-rankings -- --dry        # fetch + parse + print, no insert
  *
- * Gemini is optional here (like recap.ts): without GEMINI_API_KEY the draft
- * still lands, with narrative=null, and the editor writes their own.
+ * The narrative is written by Claude Sonnet via the AI Gateway (`text.sonnet`,
+ * overridable with TEXT_MODEL). It is optional here (like recap.ts): without
+ * gateway credentials the draft still lands, with narrative=null, and the
+ * editor writes their own.
  */
 
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateText, hasGatewayCredentials } from '@vismay/ai-gateway';
 import { fetchPowerRankings, RankingEntry } from './theanalyst/powerRankings';
 import { closeBrowser } from './theanalyst/fetch';
 import { resolveTeamName } from './entityResolver';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+// Editorial prose — the standard Claude tier.
+const TEXT_MODEL = process.env.TEXT_MODEL || 'text.sonnet';
 
 const DEFAULT_URL =
   'https://theanalyst.com/articles/who-are-the-best-football-team-in-the-world-opta-power-rankings';
@@ -63,19 +65,21 @@ function isoWeekLabel(d: Date): string {
 }
 
 async function summarizeNarrative(title: string, narrativeText: string): Promise<string | null> {
-  if (!GEMINI_API_KEY) {
-    console.log('[power-rankings] GEMINI_API_KEY not set — storing draft without narrative');
+  if (!hasGatewayCredentials()) {
+    console.log('[power-rankings] no AI Gateway credentials (AI_GATEWAY_API_KEY) — storing draft without narrative');
     return null;
   }
-  const model = new GoogleGenerativeAI(GEMINI_API_KEY).getGenerativeModel({
-    model: GEMINI_MODEL,
-    generationConfig: { temperature: 0.2, maxOutputTokens: 2000 },
-  });
   const prompt = `The text below is the prose from The Analyst's weekly "Opta Power Rankings" football article titled "${title}". Write a neutral, factual 80-100 word summary of the week's headline movements and the reasoning the article gives. Lead with the most notable change. No opinion, no preamble, do not mention that this is a summary.
 
 ${narrativeText.slice(0, 20000)}`;
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  const { result } = await generateText({
+    model: TEXT_MODEL,
+    prompt,
+    temperature: 0.2,
+    maxOutputTokens: 2000,
+    metadata: { feature: 'footshorts-power-rankings' },
+  });
+  const text = result.trim();
   return text || null;
 }
 
@@ -97,7 +101,7 @@ async function run() {
   const page = await fetchPowerRankings(url);
   console.log(`[power-rankings] parsed ${page.rankings.length} ranked teams from "${page.title}"`);
 
-  // Hash the source content (pre-entity-resolution, pre-Gemini) so the dedupe
+  // Hash the source content (pre-entity-resolution, pre-summary) so the dedupe
   // key only changes when theanalyst's content does.
   const contentHash = crypto
     .createHash('sha256')

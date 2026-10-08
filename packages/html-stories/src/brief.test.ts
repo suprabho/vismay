@@ -59,8 +59,29 @@ assert.ok(f1Ctx.includes('\n## Race context: VER, NOR across 2 sessions\n'))
 assert.ok(f1Ctx.includes('**The race context at the end of this brief is your primary source.**'))
 assert.ok(f1Ctx.includes('never compare a lap time at one circuit'))
 
+// viznba: its own look, chrome, byline, posting target, team-logo guidance.
+const nba = htmlStoryBrief({ siteUrl: 'https://nba.vizmaya.fyi', app: 'viznba' })
+assert.ok(nba.startsWith('# Writing a VizNBA HTML story'))
+assert.ok(nba.includes('basketball data story for VizNBA'))
+assert.ok(nba.includes('https://nba.vizmaya.fyi/s/<slug>'))
+assert.ok(nba.includes('slim VizNBA header'))
+assert.ok(nba.includes(`content="${themeMetaContent(HOUSE_PALETTES.viznba)}"`))
+assert.ok(nba.includes('Accent `#ff8a3d`'))
+assert.ok(nba.includes('Byline "VizNBA desk"'))
+assert.ok(nba.includes('## Icons, team logos and flags'))
+assert.ok(nba.includes('`app: "viznba"`'))
+assert.ok(nba.includes('POST https://nba.vizmaya.fyi/api/html-stories?slug=<slug>'))
+assert.ok(nba.includes('NBA photos') && !nba.includes('F1 photos') && !nba.includes('Football photos'))
+assert.ok(nba.includes('score-margin chart'))
+assert.ok(nba.includes('carries no game context'))
+assert.ok(!nba.includes('match context') && !nba.includes('race context') && !nba.includes('Footshorts') && !nba.includes('VizF1'))
+const nbaCtx = htmlStoryBrief({ siteUrl: 'https://nba.vizmaya.fyi', app: 'viznba', context: '## Game context\n\n### Celtics 112 @ Knicks 108\n' })
+assert.ok(nbaCtx.includes('Everything below comes from the VizNBA box scores (ESPN).'))
+assert.ok(nbaCtx.includes('\n### Game context\n'))
+assert.ok(nbaCtx.includes('**The game context at the end of this brief is your primary source.**'))
+
 // Photography: asked for on both sites, hosted through each site's own assets endpoint.
-for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com'], [f1, 'https://www.vizf1.com']] as const) {
+for (const [b, site] of [[viz, 'https://vizmaya.fyi'], [fs, 'https://footshorts.com'], [f1, 'https://www.vizf1.com'], [nba, 'https://nba.vizmaya.fyi']] as const) {
   assert.ok(b.includes('## Photography and media'))
   assert.ok(b.indexOf('## Photography and media') > b.indexOf('## Icons') && b.indexOf('## Photography and media') < b.indexOf('## Charts'))
   assert.ok(b.includes(`POST ${site}/api/html-stories/assets?slug=<slug>`))
@@ -124,6 +145,30 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(!b.includes('Every number has a source. End with a "Sources & method"'))
   assert.equal(b.includes('saves a draft'), randomizer !== 'desk', `${randomizer}: gate note`)
 }
+// A Football Desk spin on footshorts: its sections, the footshorts posting target, and the match-context rules.
+{
+  const now = new Date('2026-10-05T12:00:00Z')
+  const fixture = { id: 'fx-1', competition: 'premier-league', kickoff: '2026-10-02T15:00:00Z', status: 'FINISHED', homeId: 't1', awayId: 't2', home: 'Arsenal', away: 'Everton', homeScore: 2, awayScore: 0 }
+  const team = { id: 't1', slug: 'arsenal', name: 'Arsenal', country: 'England', crestUrl: null, competitions: ['premier-league'], heat: 80, articles: 5, headlines: [], recent: [fixture], upcoming: [] }
+  const news = { asOf: now.toISOString(), windowDays: 14, competitions: [{ slug: 'premier-league', heat: 100, articles: 9, headlines: [], teams: 1 }], teams: [team] }
+  const spin = {
+    ...draw({ randomizer: 'footshorts', seed: 4, now, news }),
+    id: '00000000-0000-4000-8000-0000000000bb',
+    seed: '00000004',
+    status: 'spun',
+    heroInsight: null,
+    researchMd: null,
+    createdAt: now.toISOString(),
+  } as Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'>
+  const b = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', spin, context: '# Match context\n\n## Arsenal 2 – 0 Everton\n' })
+  for (const h of ['## Your assignment', '## Format: football explainer', '## Reel script', '# Source material', '# Research stub']) assert.ok(b.includes(h), `footshorts spin: missing ${h}`)
+  assert.ok(b.includes('Randomizer: Football Desk'))
+  assert.ok(b.includes('Arsenal 2-0 Everton'))
+  assert.ok(b.includes(`spinId: "${spin.id}"\` to \`publish_html_story\` with \`app: "footshorts"\``))
+  assert.ok(b.includes('The match context at the end of this brief is primary data'))
+  assert.ok(b.includes('Byline "footshorts desk"'))
+  assert.ok(!b.includes('saves a draft'), 'the Football Desk has no gate')
+}
 // Maps: Mapbox scrollytelling only with a public token; MapLibre otherwise.
 const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
 for (const app of ['vizmaya-fyi', 'footshorts'] as const) {
@@ -168,6 +213,20 @@ for (const format of ['book', 'board', 'deck'] as const) {
   assert.ok(b.includes('## Before you post') && b.indexOf('## Before you post') < at('## Posting'))
 }
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).includes('One idea per page.'))
+
+// The recap (vizf1): the replay, cues, its own example; no scroll sections, no maps of its own.
+{
+  const r = htmlStoryBrief({ app: 'vizf1', siteUrl: 'https://vizf1.com', format: 'recap' })
+  assert.ok(r.includes('## Story format: a race recap') && r.includes('This story is a race recap'))
+  assert.ok(r.includes('<meta name="vizmaya:format" content="recap">'))
+  assert.ok(r.includes('https://www.vizf1.com/formats/recap@1.css') && r.includes('https://www.vizf1.com/formats/recap@1.js'))
+  assert.ok(r.includes('https://www.vizf1.com/formats/examples/austria-2024-recap.html'))
+  assert.ok(r.includes('data-session') && r.includes('data-lap') && r.includes('data-at') && r.includes('data-cam') && r.includes('data-focus'))
+  assert.ok(r.includes('Replay moments'))
+  assert.ok(!r.includes('## Motion and scroll animation') && !r.includes('mapboxgl'))
+  assert.ok(r.includes("The 3D replay is the race's map"))
+  assert.ok(!/\\`/.test(r), 'no double-escaped backticks')
+}
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'deck' }).includes('One idea per slide.'))
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'board' }).includes('data-pin-to'))
 // footshorts runtimes come from footshorts.com.

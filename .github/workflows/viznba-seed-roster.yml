@@ -1,0 +1,51 @@
+name: VizNBA - seed roster
+
+# Refreshes viznba_teams / viznba_players / viznba_coaches from ESPN's public
+# NBA API — the canonical set the news tagger resolves names against. Players
+# who leave every roster are flagged inactive, never deleted.
+#
+# Run it once by hand before the first news ingest, then it keeps up weekly.
+# Trigger it manually after the trade deadline, draft night and free agency.
+#
+# Required repo secrets (in the `Production` environment):
+#   NEXT_PUBLIC_SUPABASE_URL    - Supabase project URL
+#   SUPABASE_SERVICE_ROLE_KEY   - service role key
+
+on:
+  schedule:
+    # Mondays 05:40 UTC.
+    - cron: '40 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: viznba-seed-roster
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/viznba/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Seed roster
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm seed:roster:ci

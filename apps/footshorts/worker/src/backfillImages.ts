@@ -1,6 +1,6 @@
 /**
  * Backfill image_url on existing articles by re-parsing the same RSS feeds.
- * Cheap: no Gemini calls, just RSS + one UPDATE per matched item.
+ * Cheap: no LLM calls, just RSS + one UPDATE per matched item.
  *
  * Run via: npm run backfill:images
  */

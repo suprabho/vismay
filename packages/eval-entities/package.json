@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.50.1"
+    "@vismay/ai-gateway": "workspace:*",
+    "zod": "^3.25.76"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0"

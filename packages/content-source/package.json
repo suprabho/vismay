@@ -46,6 +46,7 @@
     "./storyReorder": "./src/storyReorder.ts",
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
     "./footshortsData": "./src/footshortsData.ts",
+    "./viznbaData": "./src/viznbaData.ts",
     "./footshortsShareCards": "./src/footshortsShareCards.ts",
     "./footshortsPowerRankings": "./src/footshortsPowerRankings.ts",
     "./powerRankingsDispatch": "./src/powerRankingsDispatch.ts",
@@ -92,6 +93,7 @@
   },
   "dependencies": {
     "@footshorts/shared": "workspace:*",
+    "@vismay/ai-gateway": "workspace:*",
     "gray-matter": "^4.0.3",
     "yaml": "^2.8.3"
   },

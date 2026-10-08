@@ -3,7 +3,8 @@
  * agent posted: for vizmaya a header with the animated Rive logo and a footer
  * with the static logo mark; for footshorts the app's mark and navigation in
  * its dark bar; for vizf1 the chequered-flag mark and the app's navigation in
- * its paddock-dark bar. Applied when the page is served (`/s/<slug>`) and in the
+ * its paddock-dark bar; for viznba the ball mark and the app's navigation in
+ * its court-dark bar. Applied when the page is served (`/s/<slug>`) and in the
  * admin preview, never to the stored HTML, so every published story picks it
  * up without a re-post and the stored HTML stays exactly what the agent wrote.
  *
@@ -331,6 +332,77 @@ function vizf1FooterHtml(site: string, look: Vizf1Look): string {
 </style><div class="bar" role="contentinfo"><a class="brand" href="${site}/">${VIZF1_MARK}<span><span class="name" style="display:block">VizF1</span><span class="mono tag" style="display:block">Data journalism for Formula 1 · © ${year} VizF1</span></span></a><nav class="links mono" aria-label="vizf1"><a class="link" href="${site}/feed">Feed</a><a class="link" href="${site}/schedule">Schedule</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a><a class="link" href="${site}/about-us">About us</a></nav></div></template></vizf1-footer>`
 }
 
+// ── VizNBA chrome ────────────────────────────────────────────────────────────
+
+interface ViznbaLook {
+  header: BarColors
+  footer: BarColors
+  /** The ball's colour: the page's accent, else the brand orange. */
+  mark: string
+  /** The seams, cut in the bar's own background so the ball reads on any palette. */
+  ink: string
+}
+
+/**
+ * Used when the page doesn't declare its palette: the app's own bar
+ * (apps/viznba/web/app/globals.css) with the ball in the brand orange.
+ */
+const VIZNBA_HOME_LOOK: ViznbaLook = {
+  header: { bg: '#0b0d12', fg: '#f5f5f5', link: '#8e8e99', line: '#1f2330' },
+  footer: { bg: '#13161d', fg: '#f5f5f5', link: '#8e8e99', line: '#1f2330' },
+  mark: '#ff8a3d',
+  ink: '#0b0d12',
+}
+
+/** The bars in the page's own palette. */
+function viznbaThemedLook(t: ThemeColors): ViznbaLook {
+  const bg = t.background!
+  const surface = t.surface ?? bg
+  const line = t.line ?? t.muted!
+  return {
+    header: { bg, fg: t.text!, link: t.muted!, line },
+    footer: { bg: surface, fg: t.text!, link: t.muted!, line },
+    mark: t.accent ?? VIZNBA_HOME_LOOK.mark,
+    ink: bg,
+  }
+}
+
+/**
+ * The ball mark (apps/viznba/web/components/Logo.tsx): a disc in --mark with
+ * its seams in --ink, inlined like the other marks.
+ */
+const VIZNBA_MARK = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="var(--mark)"/><path d="M16 1v30M1 16h30M6 5.5c4 3 6 6.5 6 10.5s-2 7.5-6 10.5M26 5.5c-4 3-6 6.5-6 10.5s2 7.5 6 10.5" fill="none" stroke="var(--ink)" stroke-width="1.6"/></svg>`
+
+function viznbaBarStyle(c: BarColors, look: ViznbaLook): string {
+  return `:host{--bg:${c.bg};--fg:${c.fg};--link:${c.link};--line:${c.line};--mark:${look.mark};--ink:${look.ink}}${VIZF1_BAR_STYLE}
+.brand{font-style:normal;font-weight:800;letter-spacing:-.01em;font-stretch:80%}
+.brand svg{width:28px;height:28px}`
+}
+
+function viznbaHeaderHtml(site: string, look: ViznbaLook): string {
+  const meta = HTML_STORY_APP_META.viznba
+  return `<viznba-header><template shadowrootmode="open"><style>${viznbaBarStyle(look.header, look)}
+:host{border-bottom:1px solid var(--line)}
+.bar{height:60px}
+.brand{font-size:20px}
+.links{display:flex;gap:20px}
+@media (max-width:480px){.bar{height:52px}.brand{font-size:18px}.brand svg{width:24px;height:24px}}
+</style><div class="bar" role="banner"><a class="brand" href="${site}/" aria-label="VizNBA home">${VIZNBA_MARK}<span>VizNBA</span></a><nav class="links mono" aria-label="viznba"><a class="link" href="${site}/calendar">Calendar</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></viznba-header>`
+}
+
+function viznbaFooterHtml(site: string, look: ViznbaLook): string {
+  const year = new Date().getUTCFullYear()
+  const meta = HTML_STORY_APP_META.viznba
+  return `<viznba-footer><template shadowrootmode="open"><style>${viznbaBarStyle(look.footer, look)}
+:host{border-top:1px solid var(--line)}
+.bar{flex-wrap:wrap;padding-top:28px;padding-bottom:28px}
+.brand svg{width:34px;height:34px}
+.name{font-size:18px;line-height:1.1}
+.tag{color:var(--link);margin-top:4px;font-weight:400;font-stretch:100%}
+.links{display:flex;flex-wrap:wrap;gap:12px 20px}
+</style><div class="bar" role="contentinfo"><a class="brand" href="${site}/">${VIZNBA_MARK}<span><span class="name" style="display:block">VizNBA</span><span class="mono tag" style="display:block">The NBA, read through the numbers · © ${year} VizNBA</span></span></a><nav class="links mono" aria-label="viznba"><a class="link" href="${site}/">Feed</a><a class="link" href="${site}/calendar">Calendar</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></viznba-footer>`
+}
+
 /**
  * Each site's header height, its 1px bottom border included, on wide screens
  * and under 480px (the bars' own breakpoint). The page gets it as
@@ -341,6 +413,7 @@ export const CHROME_HEIGHT: Record<HtmlStoryApp, { wide: number; narrow: number 
   'vizmaya-fyi': { wide: 65, narrow: 57 },
   footshorts: { wide: 61, narrow: 53 },
   vizf1: { wide: 61, narrow: 53 },
+  viznba: { wide: 61, narrow: 53 },
 }
 
 function chromeHeightStyle(app: HtmlStoryApp): string {
@@ -407,6 +480,10 @@ export function brandHtmlStory(
     const look = theme ? vizf1ThemedLook(theme) : VIZF1_HOME_LOOK
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + vizf1HeaderHtml(site, look)
     footer = vizf1FooterHtml(site, look)
+  } else if (app === 'viznba') {
+    const look = theme ? viznbaThemedLook(theme) : VIZNBA_HOME_LOOK
+    header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + viznbaHeaderHtml(site, look)
+    footer = viznbaFooterHtml(site, look)
   } else {
     const look = theme ? themedLook(theme) : HOME_LOOK
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)

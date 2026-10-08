@@ -20,6 +20,7 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
   const meta = HTML_STORY_APP_META[app]
   const isFootshorts = app === 'footshorts'
   const isVizf1 = app === 'vizf1'
+  const isViznba = app === 'viznba'
 
   let stories: HtmlStorySummary[] = []
   let loadError: string | null = null
@@ -55,7 +56,8 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
           <li>
             Give the agent the brief: <em>Copy agent brief</em> above, or point it at{' '}
             <code className="text-neutral-300">{siteUrl}/api/html-stories/brief</code>. Pick the story format first:
-            a scrolling page, or a <em>book</em>, <em>board</em> or <em>deck</em> built on the runtime the site hosts at{' '}
+            a scrolling page, or a <em>book</em>, <em>board</em> or <em>deck</em>
+            {isVizf1 ? <>, or a <em>race recap</em> beside the 3D replay,</> : null} built on the runtime the site hosts at{' '}
             <code>/formats</code> (<code>?format=book</code> on that URL). <em>Randomize style</em>{' '}
             (or <code>?style=random</code> on that URL) swaps the house look for a palette and fonts from an existing{' '}
             {meta.name} story.
@@ -77,6 +79,16 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
                 agent writes from real numbers. On the URL that is{' '}
                 <code>?sessions=&lt;key&gt;,&lt;key&gt;&amp;drivers=VER,NOR&amp;prompt=…</code> with the publish
                 token as a bearer.
+              </>
+            )}
+            {isViznba && (
+              <>
+                {' '}
+                <em>Add games</em> appends the game context — each game&rsquo;s box score from ESPN: the score by
+                quarter, team stats, every player&rsquo;s line, the runs, the leaders and the recap (for a game ahead,
+                the records, form, injury report and win probability) — so the agent writes from real numbers. On the
+                URL that is <code>?games=&lt;espn id&gt;,&lt;espn id&gt;&amp;prompt=…</code> with the publish token as a
+                bearer.
               </>
             )}
           </li>

@@ -176,6 +176,7 @@
     prev: '<path d="M15 5l-7 7 7 7"/>',
     next: '<path d="M9 5l7 7-7 7"/>',
     rows: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    replay: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/>',
     book: '<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5V19"/>',
     pin: '<path d="M14.5 3.5l6 6M16 5l-5 5-4-1-2 2 8 8 2-2-1-4 5-5M9 15l-5 5"/>',
     slides: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M12 16v4M8 20h8"/>',

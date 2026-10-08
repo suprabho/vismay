@@ -7,8 +7,9 @@
  *      page and pull new article pages
  *   2. For each item, compute url_hash; skip if already in DB
  *   3. Insert row with status='pending'
- *   4. Call Gemini for summary + entities
- *   5. Map Gemini's free-text entity names to canonical entity IDs
+ *   4. Ask Jev for the topic (football or not); for football, call Claude
+ *      Haiku for the English summary + entity names (summarize.ts)
+ *   5. Map the extracted free-text entity names to canonical entity IDs
  *   6. Ask Jev, per candidate, whether it's a real subject of the article —
  *      the probability becomes article_entities.confidence, and passing
  *      mentions below the threshold are dropped (jevEntityGate.ts)
@@ -30,7 +31,7 @@ import Parser from 'rss-parser';
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { RSS_SOURCES, RssSource, SCRAPE_SOURCES, ScrapeSource } from './sources';
-import { summarizeAndTag } from './gemini';
+import { summarizeAndTag } from './summarize';
 import { resolveEntitiesDetailed } from './entityResolver';
 import { gateEntityTags } from './jevEntityGate';
 import { listArticleLinks, fetchArticleBody } from './theanalyst/news';
@@ -42,18 +43,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-const parser = new Parser({
-  headers: {
-    'User-Agent': 'Footshorts/1.0 (+https://footshorts.app)',
-  },
-  timeout: 10000,
-  customFields: {
-    item: [
-      ['media:content', 'mediaContent', { keepArray: true }],
-      ['media:thumbnail', 'mediaThumbnail'],
-    ],
-  },
-});
+const DEFAULT_USER_AGENT = 'Footshorts/1.0 (+https://footshorts.app)';
+
+function makeParser(userAgent: string) {
+  return new Parser({
+    headers: { 'User-Agent': userAgent },
+    timeout: 10000,
+    customFields: {
+      item: [
+        ['media:content', 'mediaContent', { keepArray: true }],
+        ['media:thumbnail', 'mediaThumbnail'],
+      ],
+    },
+  });
+}
+
+const parser = makeParser(DEFAULT_USER_AGENT);
 
 function hashUrl(url: string): string {
   return crypto.createHash('sha256').update(url).digest('hex');
@@ -91,7 +96,7 @@ type CandidateArticle = {
   url: string;
   headline: string;
   publisher: string;
-  /** Full text / description handed to Gemini. Never stored verbatim. */
+  /** Full text / description handed to the summarizer. Never stored verbatim. */
   body: string;
   /** Short original snippet stored on the row (RSS description). */
   snippet: string | null;
@@ -151,7 +156,7 @@ async function processCandidateArticle(
 
   // Summarize + tag (async — but we await here for simplicity; parallelize later)
   try {
-    const gemini = await summarizeAndTag({
+    const result = await summarizeAndTag({
       headline: candidate.headline,
       body: candidate.body,
       publisher: candidate.publisher,
@@ -159,37 +164,39 @@ async function processCandidateArticle(
     });
 
     const summaryAt = new Date().toISOString();
-    const summaryModel = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+    // `<decision model>+<text model>` — whichever models actually answered.
+    const summaryModel = result.summary_model;
 
-    // For non-English sources, replace the stored headline with Gemini's
+    // For non-English sources, replace the stored headline with Claude's
     // English translation (the original stays available at the linked URL).
     const isNonEnglish = Boolean(candidate.language && candidate.language !== 'en');
     const translatedHeadline =
-      isNonEnglish && gemini.headline_en?.trim() ? { headline: gemini.headline_en.trim() } : {};
+      isNonEnglish && result.headline_en?.trim() ? { headline: result.headline_en.trim() } : {};
 
-    if (!gemini.is_football_news) {
-      // Article isn't primarily about football — hide it from the feed. Stash the topic_category
+    if (!result.is_football_news) {
+      // Jev says the article isn't primarily about football — hide it from the feed (no summary
+      // was written; `summary` is a short placeholder). Stash the topic_category
       // in failure_reason so we can audit drift in the eval HTML without a schema migration.
       await supabase
         .from('articles')
         .update({
           ...translatedHeadline,
-          summary: gemini.summary,
+          summary: result.summary,
           summary_model: summaryModel,
           summary_at: summaryAt,
           status: 'hidden',
-          failure_reason: `not_football:${gemini.topic_category}`,
+          failure_reason: `not_football:${result.topic_category}`,
         })
         .eq('id', inserted.id);
       stats.hidden++;
       return;
     }
 
-    const candidates = await resolveEntitiesDetailed(supabase, gemini.entities, {
+    const candidates = await resolveEntitiesDetailed(supabase, result.entities, {
       country: candidate.country,
     });
 
-    // Precision gate. Judged against the article text Gemini saw, not the
+    // Precision gate. Judged against the article text Claude saw, not the
     // 60-word summary, so "mentioned in passing" is decided on the real thing.
     const gated = await gateEntityTags(
       { headline: candidate.headline, body: candidate.body, publisher: candidate.publisher },
@@ -210,7 +217,7 @@ async function processCandidateArticle(
       .from('articles')
       .update({
         ...translatedHeadline,
-        summary: gemini.summary,
+        summary: result.summary,
         summary_model: summaryModel,
         summary_at: summaryAt,
         status: 'summarized',
@@ -245,12 +252,22 @@ async function processCandidateArticle(
   }
 }
 
+// Cap on new articles summarized per RSS source per run. Each one costs several
+// gateway calls (~5-10s), so one firehose feed (infobae dumps ~100 at once) used
+// to eat the whole job timeout and starve every source after it. Feeds list
+// newest first, so the cap keeps the freshest; the hourly cron drains the rest.
+const MAX_NEW_RSS_ARTICLES_PER_RUN = 25;
+
+// RSS sources processed in parallel. Kept low: each worker does a JSONB write
+// per article and bursts against the shared Supabase instance are what wedge it.
+const RSS_SOURCE_CONCURRENCY = 3;
+
 async function ingestSource(source: RssSource): Promise<IngestStats> {
   const stats = emptyStats();
 
   let feed;
   try {
-    feed = await parser.parseURL(source.feedUrl);
+    feed = await (source.userAgent ? makeParser(source.userAgent) : parser).parseURL(source.feedUrl);
   } catch (e: any) {
     console.error(`[${source.id}] feed fetch failed:`, e);
     // "Unable to parse XML." usually means the publisher served HTML (consent page,
@@ -259,7 +276,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
     if (typeof e?.message === 'string' && e.message.includes('parse XML')) {
       try {
         const res = await fetch(source.feedUrl, {
-          headers: { 'User-Agent': 'Footshorts/1.0 (+https://footshorts.app)' },
+          headers: { 'User-Agent': source.userAgent ?? DEFAULT_USER_AGENT },
         });
         const body = await res.text();
         console.error(
@@ -276,6 +293,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
   stats.fetched = feed.items.length;
 
   for (const item of feed.items) {
+    if (stats.new >= MAX_NEW_RSS_ARTICLES_PER_RUN) break;
     if (!item.link || !item.title) continue;
     await processCandidateArticle(
       source.id,
@@ -429,9 +447,14 @@ export async function runIngestion() {
     totals.sourceFailures += stats.sourceFailures;
   };
 
-  for (const source of RSS_SOURCES) {
-    addTotals(source.id, await ingestSource(source));
-  }
+  const queue = [...RSS_SOURCES];
+  await Promise.all(
+    Array.from({ length: RSS_SOURCE_CONCURRENCY }, async () => {
+      for (let source = queue.shift(); source; source = queue.shift()) {
+        addTotals(source.id, await ingestSource(source));
+      }
+    })
+  );
   for (const source of SCRAPE_SOURCES) {
     addTotals(source.id, await ingestScrapeSource(source));
   }

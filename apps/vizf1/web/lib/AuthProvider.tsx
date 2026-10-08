@@ -2,6 +2,7 @@
 
 import { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabaseAuth } from './supabaseAuth'
 
 type Profile = {
@@ -20,7 +21,25 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/** Signed out, with nothing to load: what the embeds get. */
+const NO_AUTH: AuthContextValue = {
+  session: null,
+  profile: null,
+  loading: false,
+  signOut: async () => {},
+  refreshProfile: async () => {},
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // /embed/* pages run framed inside sandboxed stories (/s/<slug>), where
+  // cookies and the Locks API the auth client needs are denied; they have no
+  // signed-in features, so they never create the client.
+  const pathname = usePathname()
+  if (pathname?.startsWith('/embed/')) return <AuthContext.Provider value={NO_AUTH}>{children}</AuthContext.Provider>
+  return <LiveAuthProvider>{children}</LiveAuthProvider>
+}
+
+function LiveAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)

@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --font-sans: var(--font-vn-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-vn-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+@theme {
+  --color-bg: #0b0d12;
+  --color-surface: #13161d;
+  --color-surface-raised: #171b25;
+  --color-well: #0f1219;
+  --color-border: #1f2330;
+  --color-border-strong: #2a2f3d;
+  --color-grid: #262b38;
+  --color-text: #f5f5f5;
+  --color-soft: #c9c9d1;
+  --color-dim: #a3a3ad;
+  --color-muted: #8e8e99;
+  --color-faint: #6f6f7a;
+  /* VizNBA orange + the near-black ink that sits on it. */
+  --color-accent: #ff8a3d;
+  --color-accent-ink: #0b0d12;
+  --color-live: #ff4d4f;
+  --color-live-text: #ff7a7c;
+}
+
+/* Saira is variable on width: display headlines run condensed. */
+@utility wdth-75 { font-stretch: 75%; }
+@utility wdth-80 { font-stretch: 80%; }
+@utility wdth-88 { font-stretch: 88%; }
+
+/* Martian Mono for data, a touch condensed, always tabular. */
+@utility font-mono {
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@keyframes vn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.vn-pulse { animation: vn-pulse 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vn-pulse { animation: none; }
+}

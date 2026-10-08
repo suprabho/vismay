@@ -15,6 +15,17 @@ export interface GenerateImageInput {
   mimeType: string
 }
 
+/**
+ * A document attached to a request — raw base64 data + its mime type (e.g.
+ * `application/pdf`). Claude reads PDFs natively, text layer and page images
+ * both, so scanned documents don't need a separate OCR pass.
+ */
+export interface GenerateFileInput {
+  data: string
+  mimeType: string
+  filename?: string
+}
+
 export interface GenerateTextOptions<S extends z.ZodType | undefined = undefined> {
   /** Alias from MODELS.text (preferred) or a raw gateway id. */
   model: TextModelAlias | string
@@ -23,11 +34,13 @@ export interface GenerateTextOptions<S extends z.ZodType | undefined = undefined
   /** User message — the actual task input. */
   prompt: string
   /**
-   * Optional images for vision models (Gemini / Claude / GPT). When set, the
-   * prompt + images are sent as a single multimodal user message instead of a
-   * bare text prompt. The chosen `model` must be vision-capable.
+   * Optional images for vision models (Claude / GPT). When set, the prompt +
+   * images are sent as a single multimodal user message instead of a bare text
+   * prompt. The chosen `model` must be vision-capable.
    */
   images?: GenerateImageInput[]
+  /** Optional documents (PDFs) — sent in the same multimodal user message. */
+  files?: GenerateFileInput[]
   /** Optional zod schema. When set, returns parsed `object` instead of `text`. */
   schema?: S
   temperature?: number
@@ -45,23 +58,31 @@ export interface GenerateTextOptions<S extends z.ZodType | undefined = undefined
 }
 
 /**
- * Build the model input: a bare `prompt` string, or — when images are present —
- * a multimodal user `messages` array (text part + one image part per image).
+ * Build the model input: a bare `prompt` string, or — when images or files are
+ * present — a multimodal user `messages` array (text part, then one image part
+ * per image, then one file part per document).
  */
 function buildInput(
   prompt: string,
   images: GenerateImageInput[] | undefined,
+  files: GenerateFileInput[] | undefined,
 ): { prompt: string } | { messages: ModelMessage[] } {
-  if (!images?.length) return { prompt }
+  if (!images?.length && !files?.length) return { prompt }
   return {
     messages: [
       {
         role: 'user',
         content: [
           { type: 'text', text: prompt },
-          ...images.map((img) => ({
+          ...(images ?? []).map((img) => ({
             type: 'image' as const,
             image: `data:${img.mimeType};base64,${img.data}`,
+          })),
+          ...(files ?? []).map((f) => ({
+            type: 'file' as const,
+            data: f.data,
+            mediaType: f.mimeType,
+            ...(f.filename ? { filename: f.filename } : {}),
           })),
         ],
       },
@@ -84,14 +105,14 @@ export interface GenerateTextResult<T = string> {
  *
  * Pass a `schema` for typed JSON output — internally uses `generateObject` so
  * the model is constrained at the provider level (function calling on OpenAI,
- * structured output on Gemini), not just by prompt instruction.
+ * tool-calling on Claude), not just by prompt instruction.
  */
 export async function generateText<S extends z.ZodType | undefined = undefined>(
   opts: GenerateTextOptions<S>,
 ): Promise<GenerateTextResult<S extends z.ZodType ? z.infer<S> : string>> {
   const gateway = getGatewayClient()
   const modelId = resolveModel(opts.model)
-  const input = buildInput(opts.prompt, opts.images)
+  const input = buildInput(opts.prompt, opts.images, opts.files)
 
   if (opts.schema) {
     const { res, modelUsed } = await withModelFallback(modelId, (id) =>
@@ -103,6 +124,7 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
         temperature: opts.temperature,
         maxOutputTokens: opts.maxOutputTokens,
         headers: opts.metadata,
+        ...schemaProviderOptions(id),
       }),
     )
     return {
@@ -130,6 +152,18 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
     modelUsed,
     usage: normaliseUsage(res.usage),
   }
+}
+
+/**
+ * Claude 5.x thinks by default, and thinking tokens count against
+ * `maxOutputTokens`. On a structured call with a tight budget the model can
+ * spend all of it reasoning and return no object (finishReason `length`,
+ * AI_NoObjectGeneratedError). Schema calls are extraction, not reasoning, so
+ * turn thinking off for Anthropic models.
+ */
+function schemaProviderOptions(modelId: string) {
+  if (!modelId.startsWith('anthropic/')) return {}
+  return { providerOptions: { anthropic: { thinking: { type: 'disabled' as const } } } }
 }
 
 /**
@@ -163,7 +197,7 @@ function isModelNotFound(err: unknown): boolean {
 }
 
 /**
- * ai v5 reports usage as `{ inputTokens, outputTokens, totalTokens }` with all
+ * The AI SDK reports usage as `{ inputTokens, outputTokens, totalTokens }` with all
  * three optional — providers that don't report token counts (some image models,
  * some streaming endpoints) leave them undefined. We re-shape into our stable
  * `{ input, output, total }` and collapse the all-undefined case to `null` so

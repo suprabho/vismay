@@ -16,6 +16,17 @@ const nextConfig: NextConfig = {
     '@vismay/ai-gateway',
     '@vismay/randomizer',
   ],
+  // /embed/replay runs inside sandboxed HTML stories (/s/<slug>), an opaque
+  // origin, so its own same-site requests are cross-origin: the replay
+  // fixtures it falls back to and the self-hosted fonts need CORS (the /api
+  // routes it calls set it).
+  async headers() {
+    const cors = [{ key: 'Access-Control-Allow-Origin', value: '*' }]
+    return [
+      { source: '/fixtures/:path*', headers: cors },
+      { source: '/_next/static/media/:path*', headers: cors },
+    ]
+  },
 }
 
 export default nextConfig

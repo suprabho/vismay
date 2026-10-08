@@ -10,7 +10,9 @@ import {
   Copy,
   Fire,
   LockSimple,
+  Newspaper,
   LockSimpleOpen,
+  Basketball,
   PaperPlaneTilt,
   Shuffle,
   Warning,
@@ -22,10 +24,16 @@ import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-s
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { FOOTSHORTS, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
   RESPIN_REASONS,
+  randomizersFor,
+  type FootshortsNews,
+  type ViznbaGameRef,
+  type ViznbaNews,
+  type RandomizerApp,
   type RandomizerId,
   type ReelDef,
   type RuleKind,
@@ -178,26 +186,45 @@ function ageLabel(days: number | null): string {
   return `${days}d ago`
 }
 
+const perRandomizer = <T,>(value: (r: RandomizerId) => T) =>
+  Object.fromEntries(RANDOMIZERS.map((r) => [r, value(r)])) as Record<RandomizerId, T>
+
+/**
+ * One slot machine for a site's randomizers: Desk, Atlas and Epics on
+ * vizmaya (with the Desk heat table), the Football Desk on footshorts (with
+ * its live news table), the NBA Desk on viznba (with its news and games).
+ */
 export function RandomizerClient({
+  app = 'vizmaya-fyi',
   initialSpins,
-  heat,
+  heat = null,
+  news = null,
+  nbaNews = null,
   pool,
   loadError,
   siteUrl,
+  storiesBasePath = '/vizmaya/html-stories',
 }: {
+  app?: RandomizerApp
   initialSpins: SpinRecord[]
-  heat: DeskHeatTableRow[] | null
+  heat?: DeskHeatTableRow[] | null
+  /** The Football Desk's live news snapshot (footshorts only). */
+  news?: FootshortsNews | null
+  /** The NBA Desk's live news snapshot (viznba only). */
+  nbaNews?: ViznbaNews | null
   pool: StylePool | null
   loadError: string | null
   siteUrl: string
+  /** Where this site's HTML stories are managed in admin, for the spin's story link. */
+  storiesBasePath?: string
 }) {
-  const [tab, setTab] = useState<RandomizerId>('desk')
+  const tabs = randomizersFor(app)
+  const [tab, setTab] = useState<RandomizerId>(tabs[0]!)
   const [spins, setSpins] = useState<SpinRecord[]>(initialSpins)
-  const [selected, setSelected] = useState<Record<RandomizerId, string | null>>(() => {
-    const first = (r: RandomizerId) => initialSpins.find((s) => s.randomizer === r && s.status !== 'rejected')?.id ?? null
-    return { desk: first('desk'), atlas: first('atlas'), epics: first('epics') }
-  })
-  const [locks, setLocks] = useState<Record<RandomizerId, string[]>>({ desk: [], atlas: [], epics: [] })
+  const [selected, setSelected] = useState<Record<RandomizerId, string | null>>(() =>
+    perRandomizer((r) => initialSpins.find((s) => s.randomizer === r && s.status !== 'rejected')?.id ?? null),
+  )
+  const [locks, setLocks] = useState<Record<RandomizerId, string[]>>(() => perRandomizer(() => []))
   const [opts, setOpts] = useState({ pair: false, sequence: false })
   const [anim, setAnim] = useState<SpinAnim | null>(null)
   const [busy, setBusy] = useState(false)
@@ -221,8 +248,8 @@ export function RandomizerClient({
 
   // The composed brief for the spin on screen, built server-side (it reads the spin).
   const request = useMemo(
-    () => (current ? JSON.stringify({ app: 'vizmaya-fyi', format, style, spinId: current.id, v: current.updatedAt }) : null),
-    [current, format, style],
+    () => (current ? JSON.stringify({ app, format, style, spinId: current.id, v: current.updatedAt }) : null),
+    [app, current, format, style],
   )
   const building = !!request && built?.request !== request
   const brief = request && !building ? built?.brief ?? null : null
@@ -268,8 +295,8 @@ export function RandomizerClient({
           locks: current ? locks[tab] : [],
           respin,
           reason,
-          pair: tab === 'atlas' && opts.pair,
-          sequence: tab === 'epics' && opts.sequence,
+          pair: meta.option?.key === 'pair' && opts.pair,
+          sequence: meta.option?.key === 'sequence' && opts.sequence,
         }),
       })
       const body = (await res.json().catch(() => ({}))) as { spin?: SpinRecord; error?: string }
@@ -279,7 +306,7 @@ export function RandomizerClient({
       const strips: Record<string, string[]> = {}
       RANDOMIZER_META[tab].reels.forEach((r, i) => {
         if (lockedNow.has(r.key)) return
-        const values = reelPool(tab, r.key)
+        const values = reelPool(tab, r.key, news?.teams.map((t) => t.name))
         if (values.length) strips[r.key] = Array.from({ length: 10 + i * 3 }, () => values[Math.floor(Math.random() * values.length)]!)
       })
       setSpins((prev) => [
@@ -350,22 +377,40 @@ export function RandomizerClient({
           <div>
             <h1 className="text-lg font-semibold">Randomizer</h1>
             <p className="text-sm text-neutral-400 mt-0.5 max-w-2xl">
-              One slot machine, three reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
-              tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The agent brief then carries the
-              spin.
+              {app === 'viznba' ? (
+                <>
+                  The NBA Desk draws a conference, a franchise in it, an angle and a freshness, weighted by how much VizNBA news each has
+                  in the last {nbaNews?.windowDays ?? 14} days (a story about a player or coach counts for his team), under the
+                  playbook&rsquo;s rules (30 and 90 day repeat blocks, no conference twice in a row) and logs it. The agent brief then
+                  carries the spin and the box scores of its games.
+                </>
+              ) : app === 'footshorts' ? (
+                <>
+                  The Football Desk draws a tournament, a team in it, an angle and a freshness, weighted by how much footshorts news each
+                  has in the last {news?.windowDays ?? 14} days, under the playbook&rsquo;s rules (30 and 90 day repeat blocks, no
+                  tournament twice in a row) and logs it. The agent brief then carries the spin and the match context of its fixtures.
+                </>
+              ) : (
+                <>
+                  One slot machine, three reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The agent brief then carries the
+                  spin.
+                </>
+              )}
             </p>
           </div>
         </header>
 
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
-            {loadError}. Has migration 088_randomizer.sql been applied?
+            {loadError}. Has migration 088_randomizer.sql
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ''} been applied?
           </div>
         )}
 
         <section className="rounded-xl border border-white/10 bg-neutral-900/60 overflow-hidden">
           <div role="tablist" className="flex overflow-x-auto border-b border-white/10">
-            {RANDOMIZERS.map((r) => (
+            {tabs.map((r) => (
               <button
                 key={r}
                 role="tab"
@@ -552,6 +597,7 @@ export function RandomizerClient({
             <SpinPanel
               spin={current}
               siteUrl={siteUrl}
+              storiesBasePath={storiesBasePath}
               busy={busy}
               reviewNote={reviewNote}
               setReviewNote={setReviewNote}
@@ -605,6 +651,9 @@ export function RandomizerClient({
             </div>
           </section>
         )}
+
+        {tab === 'footshorts' && <FootballNews news={news} />}
+        {tab === 'viznba' && <NbaNews news={nbaNews} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -695,6 +744,7 @@ const STEPS: SpinStatus[] = ['spun', 'researching', 'insight_review', 'approved'
 function SpinPanel({
   spin,
   siteUrl,
+  storiesBasePath,
   busy,
   reviewNote,
   setReviewNote,
@@ -707,6 +757,7 @@ function SpinPanel({
 }: {
   spin: SpinRecord
   siteUrl: string
+  storiesBasePath: string
   busy: boolean
   reviewNote: string
   setReviewNote: (v: string) => void
@@ -724,7 +775,7 @@ function SpinPanel({
     <div className="rounded-xl border border-white/10 bg-neutral-900/40 p-4 flex flex-col gap-4 min-w-0">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-medium">This spin</h2>
-        <span className="text-xs text-neutral-500">{gated ? 'Hero insight is gated' : 'No approval gate (Desk)'}</span>
+        <span className="text-xs text-neutral-500">{gated ? 'Hero insight is gated' : `No approval gate (${RANDOMIZER_META[spin.randomizer].name})`}</span>
       </div>
 
       {spin.status === 'rejected' ? (
@@ -794,7 +845,7 @@ function SpinPanel({
       {spin.storySlug && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="text-neutral-400">Story:</span>
-          <a href={`/vizmaya/html-stories/${spin.storySlug}`} className="text-neutral-200 hover:text-white underline decoration-white/20">
+          <a href={`${storiesBasePath}/${spin.storySlug}`} className="text-neutral-200 hover:text-white underline decoration-white/20">
             {spin.storySlug}
           </a>
           {spin.status === 'published' && (
@@ -850,5 +901,255 @@ function SpinPanel({
         </div>
       )}
     </div>
+  )
+}
+
+/** The Football Desk's live news: what its 60% branch weights by. */
+function FootballNews({ news }: { news: FootshortsNews | null }) {
+  const [all, setAll] = useState(false)
+  if (!news) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500">
+        The footshorts news could not be read, so the Football Desk cannot spin. Check the fixtures and articles tables.
+      </section>
+    )
+  }
+  const comps = FOOTSHORTS.competitions
+    .map((c) => ({ ...c, ...(news.competitions.find((n) => n.slug === c.slug) ?? { heat: 0, articles: 0, teams: 0, headlines: [] }) }))
+    .sort((a, b) => b.heat - a.heat)
+  const teams = [...news.teams].sort((a, b) => b.heat - a.heat || a.name.localeCompare(b.name))
+  const shown = all ? teams : teams.slice(0, 25)
+  const compName = (slug: string) => FOOTSHORTS.competitions.find((c) => c.slug === slug)?.name ?? slug
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Newspaper size={15} className="text-orange-400" />
+          Football news heat
+        </h2>
+        <span className="text-xs text-neutral-500">
+          Stories tagged on footshorts in the last {news.windowDays} days, read {new Date(news.asOf).toLocaleString()}. Live from the feed: nothing
+          to refresh. Only tournaments with fixtures in the window are in the draw.
+        </span>
+      </div>
+      <div className="px-4 py-3 flex flex-wrap gap-2 border-b border-white/5">
+        {comps.map((c) => (
+          <span
+            key={c.slug}
+            className={`text-xs rounded-full border px-2.5 py-1 inline-flex items-center gap-1.5 ${
+              c.teams ? 'border-white/15 text-neutral-200' : 'border-white/5 text-neutral-600 line-through'
+            }`}
+            title={c.teams ? `${c.articles} stories · ${c.teams} teams with fixtures` : 'No fixtures in the window: out of the draw'}
+          >
+            {c.name}
+            <span className="font-mono tabular-nums text-orange-300/90">{c.heat}</span>
+          </span>
+        ))}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">
+            <tr className="border-b border-white/5">
+              <th className="text-left font-medium px-4 py-2">Team</th>
+              <th className="text-left font-medium px-4 py-2 w-48">Heat</th>
+              <th className="text-left font-medium px-4 py-2">Stories</th>
+              <th className="text-left font-medium px-4 py-2">Next</th>
+              <th className="text-left font-medium px-4 py-2">Newest headline</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((t) => (
+              <tr key={t.id} className="border-b border-white/5 last:border-0 align-top">
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    {t.crestUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- third-party crest CDNs, 20px
+                      <img src={t.crestUrl} alt="" className="w-5 h-5 object-contain" />
+                    ) : (
+                      <span className="w-5" />
+                    )}
+                    <span className="text-neutral-200">{t.name}</span>
+                  </div>
+                  <div className="text-xs text-neutral-500 pl-7">{t.competitions.map(compName).join(' · ')}</div>
+                </td>
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full bg-orange-500/80" style={{ width: `${t.heat}%` }} />
+                    </div>
+                    <span className="font-mono text-xs tabular-nums text-neutral-300 w-7 text-right">{t.heat}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-2 font-mono text-xs tabular-nums text-neutral-400">{t.articles}</td>
+                <td className="px-4 py-2 text-xs text-neutral-400 whitespace-nowrap">
+                  {t.upcoming[0] ? (
+                    <>
+                      {t.upcoming[0].home} v {t.upcoming[0].away}
+                      <div className="font-mono text-neutral-500">{t.upcoming[0].kickoff.slice(0, 10)}</div>
+                    </>
+                  ) : (
+                    <span className="text-neutral-600">none on file</span>
+                  )}
+                </td>
+                <td className="px-4 py-2 text-xs text-neutral-400 max-w-[22rem]">
+                  {t.headlines[0] ? (
+                    <a href={t.headlines[0].url} target="_blank" rel="noreferrer" className="hover:text-white">
+                      {t.headlines[0].date}: {t.headlines[0].title}
+                    </a>
+                  ) : (
+                    <span className="text-neutral-600">none in the window</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {teams.length > 25 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="w-full text-xs text-neutral-400 hover:text-white py-2 border-t border-white/5">
+          {all ? 'Show the top 25' : `Show all ${teams.length} teams`}
+        </button>
+      )}
+    </section>
+  )
+}
+
+function gameLine(g: ViznbaGameRef, teamId: string): string {
+  const home = g.homeId === teamId
+  const opp = home ? g.away : g.home
+  const oppShort = VIZNBA.teams.find((t) => t.name === opp)?.abbreviation ?? opp
+  return `${home ? 'v' : '@'} ${oppShort}`
+}
+
+/** The NBA Desk's live news: what its 60% branch weights by, and the games a spin attaches. */
+function NbaNews({ news }: { news: ViznbaNews | null }) {
+  const [all, setAll] = useState(false)
+  if (!news) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500">
+        The VizNBA news could not be read, so the NBA Desk cannot spin. Check the viznba_ tables (migration supabase/viznba/001_init.sql).
+      </section>
+    )
+  }
+  const teams = [...news.teams].sort((a, b) => b.heat - a.heat || a.name.localeCompare(b.name))
+  const shown = all ? teams : teams.slice(0, 15)
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Basketball size={15} className="text-orange-400" />
+          NBA news heat
+        </h2>
+        <span className="text-xs text-neutral-500">
+          Stories tagged on VizNBA in the last {news.windowDays} days, read {new Date(news.asOf).toLocaleString()}. Live from the feed and
+          ESPN&rsquo;s schedule: nothing to refresh.
+        </span>
+        {!news.schedule.ok && (
+          <span
+            className="text-xs text-red-300 border border-red-400/40 bg-red-500/10 rounded-full px-2 py-0.5 inline-flex items-center gap-1"
+            title={news.schedule.error ?? undefined}
+          >
+            <Warning size={12} /> ESPN schedule unavailable
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 flex flex-wrap gap-2 border-b border-white/5">
+        {VIZNBA.conferences.map((c) => {
+          const n = news.conferences.find((x) => x.slug === c.slug)
+          return (
+            <span key={c.slug} className="text-xs rounded-full border border-white/15 text-neutral-200 px-2.5 py-1 inline-flex items-center gap-1.5" title={`${n?.articles ?? 0} stories`}>
+              {c.name}
+              <span className="font-mono tabular-nums text-orange-300/90">{n?.heat ?? 0}</span>
+            </span>
+          )
+        })}
+        <span className="text-xs text-neutral-500 self-center">{news.schedule.games} games on the schedule in the window</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">
+            <tr className="border-b border-white/5">
+              <th className="text-left font-medium px-4 py-2">Team</th>
+              <th className="text-left font-medium px-4 py-2 w-40">Heat</th>
+              <th className="text-left font-medium px-4 py-2">Stories</th>
+              <th className="text-left font-medium px-4 py-2">In the news</th>
+              <th className="text-left font-medium px-4 py-2">Last · next</th>
+              <th className="text-left font-medium px-4 py-2">Newest headline</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((t) => {
+              const last = t.recent[0]
+              const next = t.upcoming[0]
+              return (
+                <tr key={t.id} className="border-b border-white/5 last:border-0 align-top">
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      {t.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- ESPN logo CDN, 20px
+                        <img src={t.logoUrl} alt="" className="w-5 h-5 object-contain" />
+                      ) : (
+                        <span className="w-2.5 h-2.5 rounded-full mx-[5px]" style={{ background: t.color }} />
+                      )}
+                      <span className="text-neutral-200">{t.name}</span>
+                    </div>
+                    <div className="text-xs text-neutral-500 pl-7">
+                      {t.conference === 'east' ? 'East' : 'West'} · {t.division}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full bg-orange-500/80" style={{ width: `${t.heat}%` }} />
+                      </div>
+                      <span className="font-mono text-xs tabular-nums text-neutral-300 w-7 text-right">{t.heat}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs tabular-nums text-neutral-400">{t.articles}</td>
+                  <td className="px-4 py-2 text-xs text-neutral-400 max-w-[12rem]">
+                    {t.people.length ? t.people.map((p) => `${p.name} (${p.articles})`).join(', ') : <span className="text-neutral-600">none</span>}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-neutral-400 whitespace-nowrap font-mono">
+                    {last ? (
+                      <div>
+                        {gameLine(last, t.id)}{' '}
+                        {last.homeScore !== null && last.awayScore !== null
+                          ? (() => {
+                              const us = last.homeId === t.id ? last.homeScore : last.awayScore
+                              const them = last.homeId === t.id ? last.awayScore : last.homeScore
+                              return `${us > them ? 'W' : 'L'} ${us}-${them}`
+                            })()
+                          : ''}
+                      </div>
+                    ) : (
+                      <div className="text-neutral-600">no recent game</div>
+                    )}
+                    {next ? (
+                      <div className="text-neutral-500">
+                        {gameLine(next, t.id)} {next.date.slice(5, 10)}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-neutral-400 max-w-[22rem]">
+                    {t.headlines[0] ? (
+                      <a href={t.headlines[0].url} target="_blank" rel="noreferrer" className="hover:text-white">
+                        {t.headlines[0].date}: {t.headlines[0].title}
+                      </a>
+                    ) : (
+                      <span className="text-neutral-600">none in the window</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {teams.length > 15 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="w-full text-xs text-neutral-400 hover:text-white py-2 border-t border-white/5">
+          {all ? 'Show the top 15' : `Show all ${teams.length} teams`}
+        </button>
+      )}
+    </section>
   )
 }

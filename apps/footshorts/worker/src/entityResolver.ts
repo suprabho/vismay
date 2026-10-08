@@ -1,7 +1,7 @@
 /**
  * Entity resolver.
  *
- * Gemini returns entity names like "Arsenal", "Bukayo Saka", "Premier League".
+ * The summarizer (Claude, summarize.ts) returns entity names like "Arsenal", "Bukayo Saka", "Premier League".
  * We need to map these to canonical entities in our DB (with stable IDs linked
  * to football-data.org / api-football IDs).
  *
@@ -15,12 +15,12 @@
  *   4. Fuzzy match (Levenshtein) — only if above fail, and only cached
  *
  * Unknown entities are logged for manual review — we DON'T auto-create them.
- * This keeps the canonical set clean and prevents Gemini hallucinations from
+ * This keeps the canonical set clean and prevents LLM hallucinations from
  * polluting the follow graph.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { GeminiSummary } from '@footshorts/shared/schemas';
+import { ArticleSummary } from '@footshorts/shared/schemas';
 import { ENTITY_ALIASES as ALIASES, canonicalTeamKey, normalizeEntityKey as normalize } from '@footshorts/shared/entityKeys';
 
 // The slug rule + alias table live in @footshorts/shared/entityKeys so the
@@ -28,7 +28,7 @@ import { ENTITY_ALIASES as ALIASES, canonicalTeamKey, normalizeEntityKey as norm
 // way this resolver does. Re-exported for the theanalyst match discovery.
 export { canonicalTeamKey };
 
-/** A candidate tag: the canonical row a Gemini-extracted name resolved to,
+/** A candidate tag: the canonical row an LLM-extracted name resolved to,
  *  plus the surface form that produced it. The Jev precision gate
  *  (jevEntityGate.ts) needs the canonical name to phrase its question, and the
  *  surface form is what `[entity-miss]` logs and alias fixes are written
@@ -52,7 +52,7 @@ type EntityMeta = { name: string; type: EntityType };
  * ~1,250 names that are a squad roster, not a curated follow list. Matching
  * them made player chips depend on whether someone happened to be in a World
  * Cup squad, and they were what pushed the table past the 1000-row cap.
- * Gemini still extracts players; they're just not resolved or tagged.
+ * The summarizer still extracts players; they're just not resolved or tagged.
  */
 const TAGGED_TYPES: readonly EntityType[] = ['league', 'team'];
 
@@ -239,7 +239,7 @@ async function resolveOne(
   const dbAliasHit = aliases.get(`${type}:${slug}`);
   if (dbAliasHit) return dbAliasHit;
 
-  // 2c. "Argentina National Team" / "Spain national team" — Gemini's phrasing
+  // 2c. "Argentina National Team" / "Spain national team" — LLM extractors' phrasing
   // for selecciones in Spanish copy. Retry once on the bare country name.
   if (type === 'team') {
     const bare = slug.replace(/-national-(?:football-)?team$/, '');
@@ -261,13 +261,13 @@ async function resolveOne(
 }
 
 /**
- * Resolve Gemini's free-text names to canonical rows, keeping each row's name
+ * Resolve the summarizer's free-text names to canonical rows, keeping each row's name
  * and type. Deduped by entity id — two surface forms of the same club ("Spurs"
  * and "Tottenham") collapse to one tag, the first one wins.
  */
 export async function resolveEntitiesDetailed(
   supabase: SupabaseClient,
-  entities: GeminiSummary['entities'],
+  entities: ArticleSummary['entities'],
   context: ResolveContext = {}
 ): Promise<ResolvedEntity[]> {
   const cache = await loadEntityCache(supabase);
@@ -301,7 +301,7 @@ export async function resolveEntitiesDetailed(
 
 export async function resolveEntities(
   supabase: SupabaseClient,
-  entities: GeminiSummary['entities']
+  entities: ArticleSummary['entities']
 ): Promise<string[]> {
   return (await resolveEntitiesDetailed(supabase, entities)).map((e) => e.id);
 }
