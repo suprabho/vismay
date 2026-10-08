@@ -14,7 +14,13 @@ interface AppEntry {
    *  vizmaya's registry slug is 'vizmaya-fyi'; experiments/storytime-ovo have
    *  no registry entry, so the lookup stays optional. */
   slug?: string
+  /** A currentColor brand mark for an app with no registry entry. */
+  logoSvg?: string
 }
+
+/** The VizNBA ball (apps/viznba/web/components/Logo.tsx) as a currentColor outline. */
+const VIZNBA_LOGO_SVG =
+  '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14"/><path d="M16 2v28M2 16h28M6.5 6c3.7 2.8 5.5 6.1 5.5 10s-1.8 7.2-5.5 10M25.5 6c-3.7 2.8-5.5 6.1-5.5 10s1.8 7.2 5.5 10"/></svg>'
 
 const APPS: AppEntry[] = [
   {
@@ -37,6 +43,13 @@ const APPS: AppEntry[] = [
     name: 'Footshorts',
     description: 'Football stories and epics tagged to the footshorts app.',
     status: 'available',
+  },
+  {
+    href: '/viznba',
+    name: 'VizNBA',
+    description: 'NBA news pipeline, HTML stories briefed with ESPN box scores, and the NBA Desk randomizer.',
+    status: 'available',
+    logoSvg: VIZNBA_LOGO_SVG,
   },
   {
     href: '/umami',
@@ -111,7 +124,7 @@ function AppCard({ app }: { app: AppEntry }) {
 
   // Brand mark from the verticals registry (currentColor SVG string); apps
   // without a registry entry / logo just render the neutral card.
-  const logoSvg = app.slug ? APP_BY_SLUG.get(app.slug)?.branding.logoSvg : undefined
+  const logoSvg = app.logoSvg ?? (app.slug ? APP_BY_SLUG.get(app.slug)?.branding.logoSvg : undefined)
 
   const body = (
     <div className="flex items-baseline justify-between gap-4">
