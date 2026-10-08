@@ -87,4 +87,16 @@ export function teamFromEspn(espnId: string, abbr?: string, name?: string): Team
   )
 }
 
+/**
+ * ESPN's CDN logo for one of the 30 franchises (the same art `seedRoster`
+ * stores as `logo_url`), using the dark-background variant and resized
+ * server-side to ~2x the rendered size. Null for exhibition / TBD sides,
+ * which keep the lettered badge.
+ */
+export function teamLogo(team: Team, px: number): string | null {
+  if (!byId.has(team.id)) return null
+  const s = Math.round(px * 2)
+  return `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nba/500-dark/${team.espnAbbr.toLowerCase()}.png&w=${s}&h=${s}`
+}
+
 export const DEFAULT_FOLLOWED = ['lal', 'gsw', 'okc']
