@@ -116,6 +116,50 @@ em{font-style:italic}
 .pic .glyph{position:absolute;inset:0;display:grid;place-items:center;font:400 180px/1 var(--ss,var(--serif));font-style:italic;color:var(--sa,var(--signal));
   background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--sa,var(--signal)) 28%,transparent),transparent 60%),var(--sb,var(--surface2))}
 .hi,h1 em,h2 em,h3 em,blockquote em{color:var(--signal)}
+.bento{display:grid;gap:8px;flex:1 1 auto;min-height:0}
+/* a story tile: its cover (or its initial) full-bleed, the title over a dark wash */
+.bt{position:relative;overflow:hidden;border-radius:7px;background:var(--sb,#17181c);color:#f7f2e9;text-decoration:none;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:10px 12px 11px;min-width:0;min-height:0}
+.bt .pic{position:absolute;inset:0;container-type:size;background:var(--sb,#17181c)}
+.bt .pic .glyph{place-items:start end;padding:2px 12px;font-size:min(58cqh,40cqw);line-height:1;opacity:.55}
+.bt .pic img{transition:transform .6s ease}
+.bt:hover .pic img{transform:scale(1.04)}
+.bt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,rgba(10,11,13,.95) 0%,rgba(10,11,13,.72) 42%,rgba(10,11,13,.22) 76%,rgba(10,11,13,.06) 100%)}
+.bt::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--sa,var(--signal));z-index:2}
+.bt .tt{position:relative;z-index:1;display:block}
+.bt b{display:block;font:400 15px/1.04 var(--ss,var(--serif));letter-spacing:-.005em}
+.bt .dek{display:block;font-size:12px;line-height:1.4;opacity:.8;margin-top:5px}
+.bt .meta{display:block;font-size:9px;letter-spacing:.06em;opacity:.7;margin-top:5px;color:inherit}
+.bt:hover b{text-decoration:underline;text-decoration-color:var(--sa,var(--signal));text-decoration-thickness:1px;text-underline-offset:3px}
+.bt.all{background:var(--signal);color:${P.bg};justify-content:space-between}
+.bt.all::before,.bt.all::after{content:none}
+.bt.all b{font-size:24px;line-height:.98}
+.bt.all .go{font:500 12px/1 var(--sans);display:flex;align-items:center;gap:6px}
+/* an epic tile: its accent as a glow over dark */
+.et{position:relative;overflow:hidden;border-radius:7px;color:#f7f2e9;text-decoration:none;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 14px;min-width:0;min-height:0;
+  background:radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--ea) 45%,transparent),transparent 62%),#17181c;border-top:3px solid var(--ea)}
+.et b{display:block;font:400 22px/1 var(--serif)}
+.et span{display:block;font-size:12px;line-height:1.4;opacity:.75;margin-top:6px}
+.et i{position:absolute;top:10px;right:12px;font-size:16px;color:var(--ea)}
+.et:hover b{text-decoration:underline;text-decoration-color:var(--ea);text-decoration-thickness:1px;text-underline-offset:3px}
+/* doom v boom tiles */
+.dv-score{grid-area:s;border-radius:7px;background:#17181c;color:#f7f2e9;padding:12px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;overflow:hidden;
+  background-image:radial-gradient(circle at 0% 100%,rgba(255,106,61,.28),transparent 60%)}
+.dv-score .big{font:400 112px/.78 var(--serif);letter-spacing:-.04em;color:var(--signal);font-variant-numeric:lining-nums}
+.dv-score .of{text-align:right;font:400 10px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#a39e94}
+.dv-score .of b{display:block;font:400 24px/1.05 var(--serif);letter-spacing:0;text-transform:none;color:#f7f2e9;margin-bottom:4px}
+.dv-score[data-tone="boom"] .of b{color:var(--mint)}
+.dv-score[data-tone="doom"] .of b{color:#ff8a6b}
+.dv-head{grid-area:h;border-radius:7px;background:#e6dfd2;color:var(--paper-ink);padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;overflow:hidden}
+.dv-head b{font:400 19px/1.12 var(--serif)}
+.dv-head .foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dv-head .go{font:500 12px/1 var(--sans);color:var(--signal)}
+.dv-head:hover b{text-decoration:underline;text-decoration-color:var(--signal);text-underline-offset:3px}
+.dv-e{border-radius:7px;background:#ece6db;color:var(--paper-ink);padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;overflow:hidden;border:1px solid rgba(23,24,28,.08)}
+.dv-e .n{font:400 34px/.85 var(--serif);color:var(--signal)}
+.dv-e span{font-size:11.5px;line-height:1.35}
+.dv-e .meta{font-size:9px}
+.dv-e:hover span{text-decoration:underline}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;margin:0}
 .stats div{margin:0}
 .stats dd{margin:0}
@@ -156,6 +200,48 @@ function picture(s: HomeStory): string {
 
 function storyMeta(s: HomeStory): string {
   return storyMetaBits(s).map(esc).join(' · ')
+}
+
+/** A bento story tile; `area` places it in a grid-template-areas grid. */
+function storyTile(s: HomeStory, i: number, area: string, kind: string, lines: number, withDek = false): string {
+  return `<a class="bt${kind ? ' ' + kind : ''}" href="${esc(storyHref(s))}" style="${area ? `grid-area:${area};` : ''}${storyVars(s, i)}"><span class="pic">${picture(s)}</span><span class="tt"><b class="clamp c${lines}">${esc(s.title)}</b>${
+    withDek && s.subtitle ? `<span class="dek clamp c2">${esc(s.subtitle)}</span>` : ''
+  }<span class="meta">${storyMeta(s)}</span></span></a>`
+}
+
+function archiveTile(total: number, area: string): string {
+  return `<a class="bt all" href="/stories"${area ? ` style="grid-area:${area}"` : ''}><b>All ${total} stories</b><span class="go">The archive <i class="ph ph-arrow-right" aria-hidden="true"></i></span></a>`
+}
+
+/** Doom v Boom as a bento: the score, the headline, the two mornings before. */
+function dailyBento(edition: HomeDailyEdition, earlier: HomeDailyEdition[]): string {
+  return `<div class="bento dv">
+    <div class="dv-score" data-tone="${edition.tone}"><span class="big">${score(edition)}</span><span class="of"><b>${esc(edition.word)}</b>Boom Score${edition.score != null ? ' / 100' : ''}<br>${esc(edition.signed)}</span></div>
+    <a class="dv-head" href="${esc(edition.href)}"><b class="clamp c4">${esc(edition.headline)}</b><span class="foot"><span class="meta">${esc(edition.date)}${edition.number != null ? ` · No. ${edition.number}` : ''}</span><span class="go">Read the edition →</span></span></a>
+    ${earlier
+      .slice(0, 2)
+      .map((e, k) => `<a class="dv-e" href="${esc(e.href)}" style="grid-area:e${k + 1}"><span class="n">${e.score ?? '—'}</span><span class="clamp c2">${esc(e.headline)}</span><span class="meta">${esc(e.date)}</span></a>`)
+      .join('')}
+  </div>`
+}
+
+/** An epic's accent: its theme's own (accent, or Epstein's ember) when it has one. */
+function epicAccent(e: HomeEpic, i: number): string {
+  const t = (e.theme ?? {}) as { accent?: unknown; ember?: unknown }
+  const own = [t.accent, t.ember].find((v): v is string => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v))
+  return own ?? ACCENTS[i % ACCENTS.length]
+}
+
+/** Epic tiles for a two-column bento: the first spans the row, and so does a last odd one. */
+function epicTiles(shelf: HomeEpic[]): string {
+  return shelf
+    .map((e, i) => {
+      const span = i === 0 || (i === shelf.length - 1 && (shelf.length - 1) % 2 === 1)
+      return `<a class="et${span ? ' span' : ''}" href="/${esc(e.slug)}" style="--ea:${epicAccent(e, i)}"><i class="ph ph-arrow-up-right" aria-hidden="true"></i><b>${esc(e.name)}</b>${
+        e.description ? `<span class="clamp ${span ? 'c2' : 'c3'}">${esc(e.description)}</span>` : ''
+      }</a>`
+    })
+    .join('')
 }
 
 /** The statement, with its last three words set in the signal italic. */
@@ -297,34 +383,19 @@ html:not(.book-on) .page{min-height:580px}
 .epigraph{display:flex;flex-direction:column;justify-content:center;background:#e8e2d6}
 .epigraph blockquote{margin:0;font:400 36px/1.08 var(--serif);letter-spacing:-.01em}
 .epigraph footer{margin-top:18px;font:400 11px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-muted)}
-/* the stories: one spread, the latest as a feature and the rest as rows */
-.story-spread h2{margin-bottom:12px}
-.feature{display:block;text-decoration:none;margin-bottom:10px}
-.feature .pic{display:block;height:128px;border-radius:3px;margin-bottom:10px;border-top:4px solid var(--sa)}
-.feature .pic .glyph{font-size:96px}
-.feature b{display:block;font:400 25px/1.02 var(--ss,var(--serif));letter-spacing:-.01em}
-.feature .dek{display:block;font-size:13.5px;line-height:1.42;color:#45423c;margin:6px 0 4px}
-.feature:hover b{color:var(--signal)}
-.rows{list-style:none;margin:0;padding:0}
-.rows a{display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;text-decoration:none;padding:4px 0;border-top:1px solid rgba(23,24,28,.12)}
-.rows .pic{display:block;width:46px;height:42px;border-radius:3px;border-left:3px solid var(--sa)}
-.rows .pic .glyph{font-size:28px}
-.rows b{display:block;font:400 15.5px/1.02 var(--ss,var(--serif))}
-.rows .meta{font-size:9.5px;margin-top:2px}
-.more-link{display:inline-block;margin-top:10px;font-weight:500;font-size:14px;text-decoration-color:var(--signal);text-underline-offset:4px}
-.rows a:hover b{color:var(--signal)}
-/* doom v boom, epics, the studio */
-.score{display:flex;align-items:flex-end;gap:14px;margin:0 0 10px}
-.score .big{font:400 100px/.82 var(--serif);letter-spacing:-.04em;color:var(--signal);font-variant-numeric:lining-nums}
-.score .of{font:400 11px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-muted);padding-bottom:6px}
-.score .of b{display:block;font:400 24px/1.1 var(--serif);letter-spacing:0;text-transform:none;color:var(--paper-ink)}
-.headline{font:400 21px/1.18 var(--serif);margin-bottom:6px!important}
-.daily-page .read{margin:10px 0 14px}
-.epic-list{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:12px}
-.epic-list a{display:block;text-decoration:none;padding:0 0 12px 14px;border-left:3px solid var(--ea);border-bottom:1px solid rgba(23,24,28,.1)}
-.epic-list b{display:block;font:400 24px/1.1 var(--serif)}
-.epic-list span{font-size:14px;line-height:1.4;color:#55524c}
-.epic-list a:hover b{color:var(--signal)}
+/* bento pages: a heading, then a grid that fills the page and clips its tiles */
+.bento-page{display:flex;flex-direction:column}
+html:not(.book-on) .bento-page{height:580px}
+.bento-page > h2{flex:none}
+.bento.s1{grid-template-columns:1fr 1fr;grid-template-rows:1.75fr 1fr 1fr;grid-template-areas:"a a" "b c" "d e"}
+.bento.s2{grid-template-columns:1fr 1fr;grid-template-rows:repeat(5,1fr);grid-template-areas:"f g" "f h" "i i" "j k" "l m"}
+.bt.big b{font-size:24px}
+.bt.tall b{font-size:21px}
+.bt.wide b{font-size:19px}
+.bento.ep{grid-template-columns:1fr 1fr;grid-auto-rows:1fr}
+.et.span{grid-column:span 2}
+.et.span b{font-size:28px}
+.bento.dv{grid-template-columns:1fr 1fr;grid-template-rows:1.15fr 1.25fr 1fr;grid-template-areas:"s s" "h h" "e1 e2"}
 .quote-page{display:flex;flex-direction:column;justify-content:center;background:#e8e2d6}
 .quote-page blockquote{margin:0 0 18px;font:400 36px/1.04 var(--serif);letter-spacing:-.01em}
 .quote-page p{font-size:14.5px;line-height:1.55;color:#45423c}
@@ -406,42 +477,36 @@ function renderBook(input: HomeStageInput): string {
   </ol>
 </article>`)
 
-  // Every story on one spread: the latest as a feature with three more on the
-  // left-hand page, the rest as rows on the right.
+  // Every story on one spread, as a bento: the latest large with four more on
+  // the left-hand page; a tall tile, a wide one, five more and the archive on
+  // the right. The grid fills the page and each tile clips its own text, so a
+  // long title can't push the page over.
   if (stories.length) {
-    const [lead, ...others] = stories
-    const left = others.slice(0, 3)
-    const right = others.slice(3)
-    const row = (s: HomeStory, i: number) =>
-      `<li><a href="${esc(storyHref(s))}" style="${storyVars(s, i)}"><span class="pic">${picture(s)}</span><span><b class="clamp c2">${esc(s.title)}</b><span class="meta">${storyMeta(s)}</span></span></a></li>`
     fillToLeft()
     add(
-      `<article class="page story-spread" data-unit data-head="The stories" data-label="The stories">
+      `<article class="page bento-page" data-unit data-head="The stories" data-label="The stories">
   <h2>The <em>stories</em></h2>
-  <a class="feature" href="${esc(storyHref(lead))}" style="${storyVars(lead, 0)}"><span class="pic">${picture(lead)}</span><b class="clamp c2">${esc(lead.title)}</b>${
-        lead.subtitle ? `<span class="dek clamp c2">${esc(lead.subtitle)}</span>` : ''
-      }<span class="meta">${storyMeta(lead)}</span></a>
-  <ul class="rows">${left.map((s, k) => row(s, k + 1)).join('')}</ul>
+  <div class="bento s1">${stories
+    .slice(0, 5)
+    .map((s, i) => storyTile(s, i, 'abcde'[i], i === 0 ? 'big' : '', 3, i === 0))
+    .join('')}</div>
 </article>`,
       'stories'
     )
-    if (right.length) {
-      add(`<article class="page story-spread" data-unit data-head="The stories" data-label="More stories">
-  <ul class="rows">${right.map((s, k) => row(s, k + 4)).join('')}</ul>
-  <a class="more-link" href="/stories">All ${total} stories in the archive →</a>
+    const rest = stories.slice(5, 12)
+    if (rest.length) {
+      const kinds = ['tall', '', '', 'wide', '', '', '']
+      add(`<article class="page bento-page" data-unit data-head="The stories" data-label="More stories">
+  <div class="bento s2">${rest.map((s, k) => storyTile(s, k + 5, 'fghijkl'[k], kinds[k], kinds[k] === 'tall' ? 5 : kinds[k] === 'wide' ? 2 : 3, kinds[k] === 'tall')).join('')}${archiveTile(total, 'm')}</div>
 </article>`)
     }
   }
 
   if (edition) {
     add(
-      `<article class="page daily-page" data-unit data-head="Every morning" data-label="Doom v Boom">
+      `<article class="page bento-page" data-unit data-head="Every morning" data-label="Doom v Boom">
   <h2>Doom v Boom, <em>this morning</em></h2>
-  <div class="score"><span class="big">${score(edition)}</span><span class="of">Boom Score${edition.score != null ? ' / 100' : ''}<b>${esc(edition.word)}</b></span></div>
-  <p class="headline clamp c3">${esc(edition.headline)}</p>
-  <p class="meta">${esc(edition.date)}${edition.number != null ? ` · No. ${edition.number}` : ''}</p>
-  <a class="read" href="${esc(edition.href)}">Read the edition <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
-  ${earlierList(earlier.slice(0, 2))}
+  ${dailyBento(edition, earlier)}
 </article>`,
       'daily'
     )
@@ -449,16 +514,9 @@ function renderBook(input: HomeStageInput): string {
 
   if (shelf.length) {
     add(
-      `<article class="page" data-unit data-head="The epics" data-label="Epics">
+      `<article class="page bento-page" data-unit data-head="The epics" data-label="Epics">
   <h2>The <em>epics</em></h2>
-  <ul class="epic-list">
-    ${shelf
-      .map(
-        (e, i) =>
-          `<li><a href="/${esc(e.slug)}" style="--ea:${ACCENTS[i % 3]}"><b>${esc(e.name)}</b>${e.description ? `<span class="clamp c2">${esc(e.description)}</span>` : ''}</a></li>`
-      )
-      .join('\n    ')}
-  </ul>
+  <div class="bento ep">${epicTiles(shelf)}</div>
 </article>`,
       'epics'
     )
@@ -536,37 +594,37 @@ const DECK_CSS = `
 .s-stats .stats{grid-template-columns:repeat(4,1fr)}
 .s-stats .stats b{font-size:150px}
 .s-stats .stats span{font-size:18px;color:var(--muted);opacity:1}
-.s-stories .in{gap:22px}
-.s-stories h2{font-size:60px}
-.tiles{flex:1 1 auto;min-height:0;display:grid;gap:16px}
-.tiles.latest{grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:1fr 1fr}
-.tiles.latest .lead{grid-row:span 2}
-.tiles.more{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr}
-.tile{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0;text-decoration:none;color:var(--text)}
-.tile .pic{display:block;flex:1 1 auto;min-height:0;border-radius:6px;border-top:3px solid var(--sa);container-type:size}
-.tile .pic .glyph{font-size:min(70cqh,45cqw)}
-.tile .tt{display:block}
-.tile b{display:block;font:400 24px/1.04 var(--ss,var(--serif));letter-spacing:-.01em}
-.tile.lead b{font-size:40px}
-.tile .dek{display:block;font-size:16px;line-height:1.45;color:var(--muted);margin-top:8px}
-.tile .meta{display:block;color:var(--dim);margin-top:6px}
-.tile:hover b{color:var(--signal)}
-.tile.all{justify-content:flex-end;padding:22px;border:1px solid var(--line2);border-radius:6px;background:var(--surface2)}
-.tile.all b{font-size:36px}
-.tile.all b em{color:var(--signal)}
-.s-daily .in{justify-content:center}
-.s-daily .row{display:grid;grid-template-columns:auto 1fr;gap:56px;align-items:center;margin-top:28px}
-.s-daily .big{font:400 240px/.8 var(--serif);letter-spacing:-.05em;color:var(--signal);font-variant-numeric:lining-nums}
-.s-daily .word{font:400 34px/1.05 var(--serif)}
-.s-daily .headline{font:400 28px/1.2 var(--serif);margin:12px 0;max-width:30ch;color:var(--muted)}
-.s-daily .read{margin:16px 0 18px}
-.s-daily .earlier{max-width:640px}
-.s-epics h2{margin:0 0 28px}
-.epic-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1 1 auto;min-height:0}
-.epic-grid a{display:flex;flex-direction:column;justify-content:flex-end;gap:8px;text-decoration:none;padding:22px 24px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);border-top:3px solid var(--ea)}
-.epic-grid a:hover{background:#23272d}
-.epic-grid b{font:400 32px/1.02 var(--serif)}
-.epic-grid span{font-size:16px;line-height:1.45;color:var(--muted)}
+.s-stories .in,.s-bento .in{gap:22px}
+.s-stories h2,.s-bento h2{font-size:60px}
+.bento{gap:14px}
+.bento.latest{grid-template-columns:1.45fr 1fr 1fr;grid-template-rows:1fr 1fr;grid-template-areas:"a b c" "a d e"}
+.bento.more{grid-template-columns:repeat(5,1fr);grid-template-rows:1fr 1fr;grid-template-areas:"f f g h i" "j k g l m"}
+.bt{padding:16px 18px 17px;border-radius:10px}
+.bt b{font-size:22px}
+.bt.big b{font-size:46px}
+.bt.tall b,.bt.wide b{font-size:30px}
+.bt .dek{font-size:17px;margin-top:8px;max-width:46ch}
+.bt .meta{font-size:11px;margin-top:8px}
+.bt.all b{font-size:34px}
+.bt.all .go{font-size:15px}
+.bento.ep{grid-template-columns:1fr 1fr;grid-auto-rows:1fr}
+.et{padding:18px 22px;border-radius:10px}
+.et b{font-size:34px}
+.et.span{grid-column:span 2}
+.et.span b{font-size:48px}
+.et span{font-size:16px;max-width:60ch}
+.et i{font-size:22px;top:16px;right:18px}
+.bento.dv{grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:1.3fr 1fr;grid-template-areas:"s h h" "s e1 e2"}
+.dv-score{flex-direction:column;align-items:flex-start;justify-content:space-between;padding:22px 24px;border-radius:10px}
+.dv-score .big{font-size:260px}
+.dv-score .of{text-align:left;font-size:12px}
+.dv-score .of b{font-size:38px}
+.dv-head,.dv-e{padding:18px 22px;border-radius:10px}
+.dv-head b{font-size:34px}
+.dv-head .go{font-size:15px}
+.dv-e .n{font-size:56px}
+.dv-e span{font-size:16px}
+.dv-e .meta,.dv-head .meta{font-size:11px}
 .s-studio .cols{grid-template-columns:1.1fr 1fr;align-items:center}
 .s-studio blockquote{margin:0;font:400 64px/1 var(--serif);letter-spacing:-.015em}
 .s-studio .cap{font-size:18px;line-height:1.6;color:var(--muted);margin-top:22px;max-width:44ch}
@@ -586,30 +644,32 @@ const DECK_CSS = `
   .s-stats .stats{grid-template-columns:1fr 1fr;gap:28px 20px}
   .s-stats .stats b{font-size:84px}
   .s-stats .stats span{font-size:15px}
-  .s-stories .in{gap:14px}
-  .s-stories h2{font-size:38px}
-  .tiles.latest,.tiles.more{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:min-content;gap:8px;align-content:start}
-  .tiles.latest .lead{grid-row:auto}
-  .tile{display:grid;grid-template-columns:60px 1fr;align-items:center;gap:12px}
-  .tile .pic{flex:none;height:50px;border-top:0;border-left:3px solid var(--sa)}
-  .tile b{font-size:19px}
-  .tile .meta{margin-top:3px;font-size:10px}
-  .tile .dek{display:none}
-  .tile.lead{display:flex;align-items:stretch;gap:8px}
-  .tile.lead .pic{height:150px;border-left:0;border-top:3px solid var(--sa)}
-  .tile.lead b{font-size:28px}
-  .tile.all{display:block;padding:12px 14px}
-  .tile.all b{font-size:22px}
-  .s-daily .row{grid-template-columns:1fr;gap:10px;margin-top:14px}
-  .s-daily .big{font-size:130px}
-  .s-daily .word{font-size:26px}
-  .s-daily .headline{font-size:20px;margin:6px 0}
-  .s-daily .read{margin:10px 0 12px}
-  .s-epics h2{margin:0 0 16px}
-  .epic-grid{grid-template-columns:1fr;gap:10px}
-  .epic-grid a{padding:14px 16px;justify-content:center}
-  .epic-grid b{font-size:24px}
-  .epic-grid span{font-size:14px}
+  .s-stories .in,.s-bento .in{gap:14px}
+  .s-stories h2,.s-bento h2{font-size:38px}
+  .bento{gap:8px}
+  .bento.latest{grid-template-columns:1fr 1fr;grid-template-rows:1.6fr 1fr 1fr;grid-template-areas:"a a" "b c" "d e"}
+  .bento.more{grid-template-columns:1fr 1fr;grid-template-rows:repeat(5,1fr);grid-template-areas:"f f" "g h" "g i" "j k" "l m"}
+  .bt{padding:10px 12px 11px;border-radius:8px}
+  .bt b{font-size:16px}
+  .bt.big b{font-size:26px}
+  .bt.tall b,.bt.wide b{font-size:20px}
+  .bt .dek{font-size:13px}
+  .bt .meta{font-size:9.5px;margin-top:5px}
+  .bt.all b{font-size:22px}
+  .et{padding:12px 14px}
+  .et b{font-size:22px}
+  .et.span b{font-size:28px}
+  .et span{font-size:13px}
+  .bento.dv{grid-template-columns:1fr 1fr;grid-template-rows:1.2fr 1.3fr 1fr;grid-template-areas:"s s" "h h" "e1 e2"}
+  .dv-score{flex-direction:row;align-items:flex-end;padding:14px 16px}
+  .dv-score .big{font-size:120px}
+  .dv-score .of{text-align:right;font-size:10px}
+  .dv-score .of b{font-size:24px}
+  .dv-head,.dv-e{padding:12px 14px}
+  .dv-head b{font-size:22px}
+  .dv-head .go{font-size:12px}
+  .dv-e .n{font-size:36px}
+  .dv-e span{font-size:12px}
   .s-studio .cols{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:22px;align-items:start}
   .s-studio blockquote{font-size:36px}
   .s-studio .steps{gap:12px}
@@ -641,61 +701,43 @@ function renderDeck(input: HomeStageInput): string {
   </div>
 </section>`)
 
-  // Every story on two slides: the latest five, then the rest and the archive.
-  const tile = (s: HomeStory, i: number, lead = false) =>
-    `<a class="tile${lead ? ' lead' : ''}" href="${esc(storyHref(s))}" style="${storyVars(s, i)}"><span class="pic">${picture(s)}</span><span class="tt"><b class="clamp ${lead ? 'c3' : 'c2'}">${esc(s.title)}</b>${
-      lead && s.subtitle ? `<span class="dek clamp c2">${esc(s.subtitle)}</span>` : ''
-    }<span class="meta">${storyMeta(s)}</span></span></a>`
+  // Every story on two bento slides: the latest five (the lead large), then
+  // the next seven (one wide, one tall) and the archive.
   const latest = stories.slice(0, 5)
   const more = stories.slice(5, 12)
   if (latest.length) {
     slides.push(`<section class="slide s-stories" data-unit aria-label="The latest stories" style="--sb:${P.bg}">
   <div class="in">
     <h2>The <em>latest</em></h2>
-    <div class="tiles latest">${latest.map((s, i) => tile(s, i, i === 0)).join('')}</div>
+    <div class="bento latest">${latest.map((s, i) => storyTile(s, i, 'abcde'[i], i === 0 ? 'big' : '', 3, i === 0)).join('')}</div>
   </div>
 </section>`)
   }
   if (more.length) {
+    const kinds = ['wide', 'tall', '', '', '', '', '']
     slides.push(`<section class="slide s-stories" data-unit aria-label="More stories" style="--sb:${P.bg}">
   <div class="in">
     <h2>More <em>stories</em></h2>
-    <div class="tiles more">${more.map((s, k) => tile(s, k + 5)).join('')}<a class="tile all" href="/stories"><b>All ${total} <em>stories</em></b><span class="meta">The archive →</span></a></div>
+    <div class="bento more">${more.map((s, k) => storyTile(s, k + 5, 'fghijkl'[k], kinds[k], kinds[k] === 'tall' ? 5 : 3)).join('')}${archiveTile(total, 'm')}</div>
   </div>
 </section>`)
   }
 
   if (edition) {
-    slides.push(`<section class="slide s-daily" data-unit aria-label="Doom v Boom" style="--sb:${P.surface}">
+    slides.push(`<section class="slide s-bento" data-unit aria-label="Doom v Boom" style="--sb:${P.bg}">
   <div class="in">
     <h2>Doom v Boom, <em>this morning</em></h2>
-    <div class="row">
-      <span class="big">${score(edition)}</span>
-      <div>
-        <p class="word">${esc(edition.word)}</p>
-        <p class="headline clamp c3">${esc(edition.headline)}</p>
-        <p class="meta">${esc(edition.date)}${edition.number != null ? ` · No. ${edition.number}` : ''}${edition.score != null ? ' · Boom Score / 100' : ''}</p>
-        <a class="read hot" href="${esc(edition.href)}">Read this morning’s edition <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
-        ${earlierList(earlier.slice(0, 2))}
-      </div>
-    </div>
+    ${dailyBento(edition, earlier)}
   </div>
 </section>`)
   }
 
-  const shelf = epics.slice(0, 4)
+  const shelf = epics.slice(0, 5)
   if (shelf.length) {
-    slides.push(`<section class="slide s-epics" data-unit aria-label="Epics" style="--sb:${P.surface}">
+    slides.push(`<section class="slide s-bento" data-unit aria-label="Epics" style="--sb:${P.bg}">
   <div class="in">
     <h2>The <em>epics</em></h2>
-    <div class="epic-grid">
-      ${shelf
-        .map(
-          (e, i) =>
-            `<a href="/${esc(e.slug)}" style="--ea:${ACCENTS[i % 3]}"><b>${esc(e.name)}</b>${e.description ? `<span class="clamp c2">${esc(e.description)}</span>` : ''}</a>`
-        )
-        .join('\n      ')}
-    </div>
+    <div class="bento ep">${epicTiles(shelf)}</div>
   </div>
 </section>`)
   }
