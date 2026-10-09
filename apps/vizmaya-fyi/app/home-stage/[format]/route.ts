@@ -1,28 +1,27 @@
 import { loadHomeData } from '@/lib/home/homeData'
-import { FRONT_PAGE_LIMIT, formatStoryDate, isHomeStageFormat, storiesForTopic } from '@/lib/home/homeShape'
+import { FRONT_PAGE_LIMIT, formatStoryDate, homeStats, isHomeStageFormat } from '@/lib/home/homeShape'
 import { renderHomeStage } from '@/lib/home/renderHomeStage'
 
 /**
- * The home page's front page as a book, a board or a deck: one complete HTML
- * story on the hosted format runtimes, framed by the home page, which swaps
- * between them (lib/home/renderHomeStage.ts). `?topic=` binds only that
- * topic's stories. Not a page of its own, so it stays out of search.
+ * The whole home page as a book, a board or a deck: one complete HTML story
+ * on the hosted format runtimes, framed full-screen by the home page, which
+ * swaps between them and its scrolling version (lib/home/renderHomeStage.ts).
+ * Not a page of its own, so it stays out of search.
  */
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: Request, { params }: { params: Promise<{ format: string }> }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ format: string }> }) {
   const { format } = await params
   if (!isHomeStageFormat(format)) return new Response('Not found', { status: 404 })
 
-  const topic = new URL(req.url).searchParams.get('topic')?.trim() || null
   const data = await loadHomeData()
   const html = renderHomeStage(format, {
-    stories: storiesForTopic(data.stories, topic).slice(0, FRONT_PAGE_LIMIT),
+    stories: data.stories.slice(0, FRONT_PAGE_LIMIT),
     total: data.stories.length,
-    topic,
     epics: data.epics,
-    edition: data.dailyEditions[0] ?? null,
+    editions: data.dailyEditions,
+    stats: homeStats(data),
     fontUrls: data.fontUrls,
     today: formatStoryDate(new Date().toISOString()),
   })

@@ -107,10 +107,10 @@ export const HOME_STAGE_FORMATS: readonly HomeStageFormat[] = ['book', 'board', 
 export const HOME_VIEWS: readonly HomeView[] = ['book', 'board', 'deck', 'scroll']
 
 export const HOME_VIEW_META: Record<HomeView, { label: string; hint: string }> = {
-  book: { label: 'Book', hint: 'Turn the pages: tap, drag, or the arrow keys.' },
-  board: { label: 'Board', hint: 'Follow the tour, or drag and pinch around the board.' },
-  deck: { label: 'Deck', hint: 'Step through the slides, or deal them as cards.' },
-  scroll: { label: 'Scroll', hint: 'Every story as one long page.' },
+  book: { label: 'Book', hint: 'The whole page as a book: tap, drag, or the arrow keys.' },
+  board: { label: 'Board', hint: 'The whole page pinned to a board: follow the tour, or drag and pinch.' },
+  deck: { label: 'Deck', hint: 'The whole page as slides, or a stack of cards to deal.' },
+  scroll: { label: 'Scroll', hint: 'The whole page as one long scroll.' },
 }
 
 export function isHomeView(v: unknown): v is HomeView {
@@ -122,9 +122,31 @@ export function isHomeStageFormat(v: unknown): v is HomeStageFormat {
 }
 
 /** Where a stage document is served. */
-export function homeStageUrl(format: HomeStageFormat, topic: string | null): string {
-  return `/home-stage/${format}${topic ? `?topic=${encodeURIComponent(topic)}` : ''}`
+export function homeStageUrl(format: HomeStageFormat): string {
+  return `/home-stage/${format}`
 }
+
+/** Where the reader's pick is remembered. */
+export const HOME_VIEW_STORAGE_KEY = 'vizmaya:home-view'
+
+/** The default binding: a book on wide screens, a deck on phones, where the board is weakest. */
+export const HOME_WIDE_QUERY = '(min-width: 720px)'
+
+/** The id of the style the boot script adds, and the classes it hides or fills in. */
+export const HOME_PENDING_STYLE_ID = 'home-view-pending'
+
+/**
+ * Runs before the page paints (app/page.tsx inlines it): when the reader's
+ * binding is a book, board or deck, it adds a <style> to <head> that hides
+ * the server-rendered scroll page (.hs-scroll) and fills in the masthead
+ * (.hs-mast) until the stage takes over, so the scroll page doesn't flash
+ * first. HomeStory removes it once that binding is rendered (its
+ * data-view says which). A style in <head>, not an attribute on <html>, so
+ * hydration has nothing to disagree with. Same precedence as
+ * components/home/homeViewStore. Without JS it never runs and the scroll
+ * page shows.
+ */
+export const HOME_VIEW_BOOT_SCRIPT = `(function(){try{var ok=/^(book|board|deck|scroll)$/,v=new URLSearchParams(location.search).get('view');if(!ok.test(v||'')){v=null;try{v=localStorage.getItem('${HOME_VIEW_STORAGE_KEY}')}catch(e){}if(!ok.test(v||''))v=matchMedia('${HOME_WIDE_QUERY}').matches?'book':'deck'}if(v==='scroll')return;var s=document.createElement('style');s.id='${HOME_PENDING_STYLE_ID}';s.setAttribute('data-view',v);s.textContent='.hs-scroll{display:none!important}.hs-mast{background:${PALETTE.bg}!important;border-color:${PALETTE.line}!important}';document.head.appendChild(s);setTimeout(function(){s.remove()},5000)}catch(e){}})()`
 
 /**
  * The message a stage document posts to the page around it: `ready` once its
@@ -134,8 +156,31 @@ export function homeStageUrl(format: HomeStageFormat, topic: string | null): str
 export const HOME_STAGE_MESSAGE = 'vizmaya:home-stage'
 export type HomeStageEvent = 'ready' | 'linear'
 
-/** How many stories the front page binds; the rest are in the archive. */
+/** How many stories the page binds; the rest are in the archive. */
 export const FRONT_PAGE_LIMIT = 12
+
+/** How the studio works, in three steps (the page and every stage). */
+export const PROCESS = [
+  { n: '01', title: 'A data brief', body: 'You bring findings worth publishing. We read the data the way a sceptical reader would.' },
+  { n: '02', title: 'An editorial call', body: 'We agree the argument, the evidence and the one chart that carries it.' },
+  { n: '03', title: 'Two to four weeks', body: 'Maps, charts and prose, built to travel: a scrolling story, a book, a board or a deck.' },
+]
+
+export const CONTACT = {
+  title: 'Have data that deserves a better story?',
+  body: 'We work with B2B data companies, research institutions and think tanks who have findings worth publishing but need the storytelling and design layer to make them travel. A typical engagement starts with a data brief and an editorial call. Turnaround is two to four weeks.',
+}
+
+/** The numbers the lede shows; zeros (no epics, no editions yet) are left out. */
+export function homeStats(data: Pick<HomeData, 'stories' | 'epics' | 'dailyEditions'>): { n: number; label: string }[] {
+  const latest = data.dailyEditions[0]
+  return [
+    { n: data.stories.length, label: 'stories published' },
+    { n: data.epics.length, label: 'running epics' },
+    { n: latest?.number ?? 0, label: 'mornings scored' },
+    { n: 2, label: 'people' },
+  ].filter((s) => s.n > 0)
+}
 
 // ── stories ───────────────────────────────────────────────────────────────
 

@@ -1,40 +1,56 @@
 'use client'
 
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import {
-  ArrowDown,
+  ArrowCounterClockwise,
   ArrowRight,
   ArrowUpRight,
   EnvelopeSimple,
   LinkedinLogo,
   Newspaper,
+  Warning,
   XLogo,
   YoutubeLogo,
 } from '@phosphor-icons/react'
 import { StoryGridFonts, epicCardTheme } from '@vismay/ui'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import { LiveRing } from '@/app/ai-daily/doom-v-boom/components/ScoreRing'
+import { trackTopicFiltered } from '@/lib/analytics'
 import {
+  CONTACT,
+  FRONT_PAGE_LIMIT,
+  HOME_PENDING_STYLE_ID,
   HOME_VIEWS,
   HOME_VIEW_META,
   MARK,
   PALETTE,
+  PROCESS,
   STUDIO,
+  homeStats,
+  isHomeStageFormat,
+  storiesForTopic,
+  storyTopics,
   type HomeDailyEdition,
   type HomeData,
   type HomeEpic,
+  type HomeStory as HomeStoryCard,
+  type HomeView,
 } from '@/lib/home/homeShape'
 import { Chapter, CountUp, PenroseMark, REVEAL, useReveal } from './bits'
-import FrontPage, { VIEW_ICONS } from './FrontPage'
-import { chooseHomeView } from './homeViewStore'
+import HomeStage from './HomeStage'
+import ScrollIndex from './ScrollIndex'
+import ViewSwitcher, { VIEW_ICONS } from './ViewSwitcher'
+import { chooseHomeView, useHomeView } from './homeViewStore'
 
 /**
- * The vizmaya.fyi home page, told as an HTML story: a masthead and a lede,
- * then chapters. The first is the front page itself, swappable between a
- * Book, a Board and a Deck (the hosted story formats) with a plain Scroll as
- * the fallback; then the Doom v Boom daily, the epics, the studio and how to
- * work with it. Palette and type come from lib/home/homeShape (PALETTE, TYPE).
+ * The vizmaya.fyi home page, told as an HTML story and bound four ways. The
+ * whole page is a Book, a Board or a Deck (each a stage document on the
+ * hosted story formats, framed full-screen under the masthead, which carries
+ * the switcher) or a Scroll: the long page below, which is also the fallback.
+ * It is what the server renders (every link is in the HTML without JS), what
+ * shows when a stage doesn't come up, and what a reader gets by asking a
+ * format to "Read as one page". Palette and type: lib/home/homeShape.
  */
 
 const TOKENS = {
@@ -66,10 +82,11 @@ const LOGO_PALETTE = {
 
 // ── masthead ──────────────────────────────────────────────────────────────
 
-function Masthead() {
+function Masthead({ view, staged }: { view: HomeView; staged: boolean }) {
   const bar = useRef<HTMLDivElement>(null)
   const nav = useRef<HTMLElement>(null)
-  // Reading progress along the bottom of the bar, and a solid bar once scrolled.
+  // On the scroll page: reading progress along the bottom of the bar, and a
+  // solid bar once scrolled. Over a stage the bar is always solid.
   useEffect(() => {
     let raf = 0
     const update = () => {
@@ -92,8 +109,8 @@ function Masthead() {
     }
   }, [])
 
-  const links = [
-    { href: '#front-page', label: 'Stories' },
+  const anchors = [
+    { href: '#stories', label: 'Stories' },
     { href: '#daily', label: 'Daily' },
     { href: '#epics', label: 'Epics' },
     { href: '#studio', label: 'Studio' },
@@ -103,24 +120,27 @@ function Masthead() {
     <nav
       ref={nav}
       aria-label="vizmaya"
-      className="fixed inset-x-0 top-0 z-50 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-(--line) data-[scrolled]:bg-[rgba(14,15,18,.82)] data-[scrolled]:backdrop-blur-md"
+      data-staged={staged || undefined}
+      className="fixed inset-x-0 top-0 z-50 h-16 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-(--line) data-[scrolled]:bg-[rgba(14,15,18,.82)] data-[scrolled]:backdrop-blur-md data-[staged]:border-(--line) data-[staged]:bg-(--bg) hs-mast"
     >
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-8">
+      <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between gap-3 px-3 sm:px-8">
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           aria-label="Vizmaya Labs, back to the top"
-          className="-ml-1 flex items-center"
+          className="-ml-1 flex flex-none items-center"
         >
-          <VizmayaLogo className="h-[38px] w-[150px] sm:h-[42px] sm:w-[170px]" palette={LOGO_PALETTE} />
+          <VizmayaLogo className="h-[34px] w-[120px] sm:h-[42px] sm:w-[170px]" palette={LOGO_PALETTE} />
         </button>
-        <div className="flex items-center gap-6">
-          {links.map((l) => (
-            <a key={l.href} href={l.href} className={`hidden md:inline ${linkClass}`}>
-              {l.label}
-            </a>
-          ))}
-          <Link href="/stories" className={`hidden sm:inline ${linkClass}`}>
+        <ViewSwitcher view={view} />
+        <div className="hidden flex-none items-center gap-6 sm:flex">
+          {!staged &&
+            anchors.map((l) => (
+              <a key={l.href} href={l.href} className={`hidden xl:inline ${linkClass}`}>
+                {l.label}
+              </a>
+            ))}
+          <Link href="/stories" className={`hidden lg:inline ${linkClass}`}>
             Archive
           </Link>
           <a
@@ -129,13 +149,15 @@ function Masthead() {
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-(--text) px-4 py-2 text-[14px] font-medium text-(--bg) transition-colors hover:bg-(--signal)"
           >
-            <YoutubeLogo size={16} weight="fill" aria-hidden /> Subscribe
+            <YoutubeLogo size={16} weight="fill" aria-hidden /> <span className="hidden md:inline">Subscribe</span>
           </a>
         </div>
       </div>
-      <div aria-hidden className="h-[2px] w-full">
-        <div ref={bar} className="h-full origin-left scale-x-0 bg-(--signal)" />
-      </div>
+      {!staged && (
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-[2px]">
+          <div ref={bar} className="h-full origin-left scale-x-0 bg-(--signal)" />
+        </div>
+      )}
     </nav>
   )
 }
@@ -143,13 +165,7 @@ function Masthead() {
 // ── the lede ──────────────────────────────────────────────────────────────
 
 function Lede({ data, today }: { data: HomeData; today: string }) {
-  const latest = data.dailyEditions[0]
-  const stats = [
-    { n: data.stories.length, label: 'stories published' },
-    { n: data.epics.length, label: 'running epics' },
-    ...(latest?.number ? [{ n: latest.number, label: 'mornings scored' }] : []),
-    { n: 2, label: 'people' },
-  ].filter((s) => s.n > 0)
+  const stats = homeStats(data)
   return (
     <header className="relative overflow-hidden px-4 pb-16 pt-36 sm:px-8 md:pb-24 md:pt-48">
       {/* a low signal glow behind the lede */}
@@ -189,34 +205,71 @@ function Lede({ data, today }: { data: HomeData; today: string }) {
           </dl>
         </div>
 
-        {/* choose a binding, then jump to it */}
+        {/* rebind the whole page */}
         <div data-reveal className={`mt-16 ${REVEAL}`}>
           <p className="font-(family-name:--serif) text-[30px] leading-none">
-            How would you like to <em className="text-(--signal)">read it?</em>
+            Read this page as a book, a board or a <em className="text-(--signal)">deck</em>
           </p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {HOME_VIEWS.map((v) => {
               const I = VIEW_ICONS[v]
               return (
-                <a
+                <button
                   key={v}
-                  href="#front-page"
-                  onClick={() => chooseHomeView(v)}
-                  className="group flex flex-col gap-3 rounded-[14px] border border-(--line) bg-(--surface) p-4 transition-[border-color,transform,background-color] duration-300 hover:-translate-y-0.5 hover:border-(--signal) hover:bg-(--surface2)"
+                  type="button"
+                  onClick={() => {
+                    chooseHomeView(v)
+                    window.scrollTo({ top: 0 })
+                  }}
+                  className="group flex flex-col gap-3 rounded-[14px] border border-(--line) bg-(--surface) p-4 text-left transition-[border-color,transform,background-color] duration-300 hover:-translate-y-0.5 hover:border-(--signal) hover:bg-(--surface2)"
                 >
-                  <span className="flex items-center justify-between">
-                    <I size={26} aria-hidden className="text-(--signal)" />
-                    <ArrowDown size={14} aria-hidden className="text-(--dim) transition-transform group-hover:translate-y-0.5" />
-                  </span>
+                  <I size={26} aria-hidden className="text-(--signal)" />
                   <span className="font-(family-name:--serif) text-[30px] leading-none">{HOME_VIEW_META[v].label}</span>
                   <span className="text-[13px] leading-[1.45] text-(--muted)">{HOME_VIEW_META[v].hint}</span>
-                </a>
+                </button>
               )
             })}
           </div>
         </div>
       </div>
     </header>
+  )
+}
+
+// ── stories ───────────────────────────────────────────────────────────────
+
+function Stories({ stories }: { stories: HomeStoryCard[] }) {
+  const [topic, setTopic] = useState<string | null>(null)
+  const topics = useMemo(() => storyTopics(stories), [stories])
+  const shown = useMemo(() => storiesForTopic(stories, topic).slice(0, FRONT_PAGE_LIMIT), [stories, topic])
+  const pick = useCallback((t: string | null) => {
+    setTopic(t)
+    trackTopicFiltered(t ?? 'All')
+  }, [])
+  return (
+    <>
+      {topics.length > 0 && (
+        <div role="group" aria-label="Filter by topic" className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+          {[null, ...topics].map((t) => {
+            const on = t === topic
+            return (
+              <button
+                key={t ?? 'all'}
+                type="button"
+                aria-pressed={on}
+                onClick={() => pick(t)}
+                className={`h-8 flex-none rounded-full border px-3.5 text-[13px] transition-colors ${
+                  on ? 'border-(--signal) bg-(--signal) text-(--bg)' : 'border-(--line2) text-(--muted) hover:border-(--text) hover:text-(--text)'
+                }`}
+              >
+                {t ?? 'All'}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      <ScrollIndex stories={shown} total={stories.length} />
+    </>
   )
 }
 
@@ -307,12 +360,6 @@ function Epics({ epics }: { epics: HomeEpic[] }) {
 
 // ── the studio ────────────────────────────────────────────────────────────
 
-const PROCESS = [
-  { n: '01', title: 'A data brief', body: 'You bring findings worth publishing. We read the data the way a sceptical reader would.' },
-  { n: '02', title: 'An editorial call', body: 'We agree the argument, the evidence and the one chart that carries it.' },
-  { n: '03', title: 'Two to four weeks', body: 'Maps, charts and prose, built to travel: a scrolling story, a book, a board or a deck.' },
-]
-
 function Studio() {
   return (
     <div className="grid gap-12 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] md:gap-16">
@@ -321,8 +368,8 @@ function Studio() {
           The map does the argument. The prose does <em className="text-(--signal)">the meaning.</em>
         </blockquote>
         <figcaption className="mt-6 max-w-[52ch] text-[16px] leading-[1.7] text-(--muted)">
-          Vizmaya {STUDIO.motto.charAt(0).toLowerCase() + STUDIO.motto.slice(1)} We work with B2B data companies, research
-          institutions and think tanks who have the findings but need the storytelling and design layer to make them travel.
+          Vizmaya {STUDIO.motto.charAt(0).toLowerCase() + STUDIO.motto.slice(1)} Two people who make data stories for others, and
+          publish their own.
         </figcaption>
         {/* An HTML story, served by a route handler rather than the app router: a full load. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
@@ -355,6 +402,32 @@ export default function HomeStory({ data, today, fontVars = '' }: { data: HomeDa
   useReveal(root)
   const { stories, epics, dailyEditions, dailyVars, fontUrls } = data
 
+  // Which binding is on. A stage that fails (or never reports ready) leaves
+  // the page on Scroll with a notice; "Try again" mounts a fresh stage.
+  const view = useHomeView()
+  const format = isHomeStageFormat(view) ? view : null
+  const [attempt, setAttempt] = useState(0)
+  const [readyKey, setReadyKey] = useState<string | null>(null)
+  const [failedKey, setFailedKey] = useState<string | null>(null)
+  const key = format ? `${format}|${attempt}` : null
+  const failed = key !== null && failedKey === key
+  const staged = format !== null && !failed
+  const onReady = useCallback(() => setReadyKey(key), [key])
+  const onFail = useCallback(() => setFailedKey(key), [key])
+  const onLinear = useCallback(() => chooseHomeView('scroll'), [])
+
+  // The pre-paint script (app/page.tsx) hid the scroll page for the binding
+  // it expected; let go once that binding is the one rendered.
+  useEffect(() => {
+    const pending = document.getElementById(HOME_PENDING_STYLE_ID)
+    if (pending && pending.getAttribute('data-view') === view) pending.remove()
+  }, [view])
+
+  // A stage owns the screen: start it, and the scroll page after it, at the top.
+  useEffect(() => {
+    if (staged) window.scrollTo({ top: 0 })
+  }, [staged])
+
   return (
     <div
       ref={root}
@@ -363,122 +436,153 @@ export default function HomeStory({ data, today, fontVars = '' }: { data: HomeDa
     >
       {/* each epic card renders in its own typefaces */}
       <StoryGridFonts fontUrls={fontUrls} />
-      <Masthead />
+      <Masthead view={view} staged={staged} />
 
-      <main>
-        <Lede data={data} today={today} />
+      {staged && format && (
+        <HomeStage key={key} format={format} ready={readyKey === key} onReady={onReady} onLinear={onLinear} onFail={onFail} />
+      )}
 
-        <Chapter
-          id="front-page"
-          title={
-            <>
-              The front page, <em>bound four ways</em>
-            </>
-          }
-          dek="Every story we have published. Turn it as a book, tour it as a board, step through it as a deck, or simply scroll."
-        >
-          <FrontPage stories={stories} />
-        </Chapter>
+      {/* the scroll page: the Scroll binding, and the fallback for the others */}
+      <div hidden={staged} className="hs-scroll">
+        {failed && format && (
+          <div role="status" className="fixed inset-x-0 top-16 z-40 border-b border-(--line2) bg-(--surface) px-4 py-3 text-[14px] text-(--muted) sm:px-8">
+            <div className="mx-auto flex max-w-[1180px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="flex items-center gap-2">
+                <Warning size={18} className="flex-none text-(--signal)" aria-hidden />
+                The {HOME_VIEW_META[format].label.toLowerCase()} didn’t open, so here is the page as one long scroll.
+              </span>
+              <button
+                type="button"
+                onClick={() => setAttempt((a) => a + 1)}
+                className="inline-flex flex-none items-center gap-2 font-medium text-(--text) hover:text-(--signal)"
+              >
+                <ArrowCounterClockwise size={15} weight="bold" aria-hidden /> Try again
+              </button>
+            </div>
+          </div>
+        )}
 
-        {dailyEditions.length > 0 && (
+        <main>
+          <Lede data={data} today={today} />
+
           <Chapter
-            id="daily"
+            id="stories"
             title={
               <>
-                Doom v Boom, <em>every morning</em>
+                The <em>stories</em>
               </>
             }
-            dek="Each morning we read the previous day of AI data-centre, energy and sustainability news and score it: a Boom Score out of 100, where 50 is balanced."
+            dek="The newest first. Every one of them is also in the book, on the board and in the deck."
             aside={
               <Link
-                href="/ai-daily/doom-v-boom"
+                href="/stories"
                 className="inline-flex items-center gap-2 text-[15px] font-medium text-(--text) underline decoration-(--signal) underline-offset-[6px] hover:text-(--signal)"
               >
-                <Newspaper size={17} aria-hidden /> Every edition
+                All {stories.length} stories <ArrowUpRight size={15} weight="bold" aria-hidden />
               </Link>
             }
           >
-            <DailyEditions editions={dailyEditions} vars={dailyVars} />
+            <Stories stories={stories} />
           </Chapter>
-        )}
 
-        {epics.length > 0 && (
+          {dailyEditions.length > 0 && (
+            <Chapter
+              id="daily"
+              title={
+                <>
+                  Doom v Boom, <em>every morning</em>
+                </>
+              }
+              dek="Each morning we read the previous day of AI data-centre, energy and sustainability news and score it: a Boom Score out of 100, where 50 is balanced."
+              aside={
+                <Link
+                  href="/ai-daily/doom-v-boom"
+                  className="inline-flex items-center gap-2 text-[15px] font-medium text-(--text) underline decoration-(--signal) underline-offset-[6px] hover:text-(--signal)"
+                >
+                  <Newspaper size={17} aria-hidden /> Every edition
+                </Link>
+              }
+            >
+              <DailyEditions editions={dailyEditions} vars={dailyVars} />
+            </Chapter>
+          )}
+
+          {epics.length > 0 && (
+            <Chapter
+              id="epics"
+              title={
+                <>
+                  The <em>epics</em>
+                </>
+              }
+              dek="Investigations we keep returning to: each a collection of stories with a landing page of its own."
+            >
+              <Epics epics={epics} />
+            </Chapter>
+          )}
+
           <Chapter
-            id="epics"
+            id="studio"
             title={
               <>
-                The <em>epics</em>
+                The <em>studio</em>
               </>
             }
-            dek="Investigations we keep returning to: each a collection of stories with a landing page of its own."
+            dek="Two people who make data stories for others, and publish their own."
           >
-            <Epics epics={epics} />
+            <Studio />
           </Chapter>
-        )}
 
-        <Chapter
-          id="studio"
-          title={
-            <>
-              The <em>studio</em>
-            </>
-          }
-          dek="Two people who make data stories for others, and publish their own."
-        >
-          <Studio />
-        </Chapter>
-
-        {/* the call to action */}
-        <section id="contact" className="relative scroll-mt-16 overflow-hidden border-t border-(--line) bg-(--surface) px-4 py-28 text-center sm:px-8 md:py-40">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-full h-[700px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,106,61,.18),transparent_62%)]"
-          />
-          <div data-reveal className={`relative mx-auto max-w-[820px] ${REVEAL}`}>
-            <h2 className="mx-auto max-w-[16ch] font-(family-name:--serif) text-[clamp(44px,6.4vw,88px)] leading-[.95] tracking-[-.02em] text-balance">
-              Have data that deserves a <em className="text-(--signal)">better story?</em>
-            </h2>
-            <p className="mx-auto mt-7 max-w-[54ch] text-[16px] leading-[1.8] text-(--muted)">
-              A typical engagement starts with a data brief and an editorial call. Turnaround is two to four weeks.
-            </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <a
-                href={`mailto:${STUDIO.email}`}
-                className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-7 py-4 text-[15px] font-medium text-(--bg) transition-colors hover:bg-(--text)"
-              >
-                <EnvelopeSimple size={17} weight="bold" aria-hidden /> Get in touch
-              </a>
-              <a
-                href={STUDIO.newsletter}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-(--line2) px-7 py-4 text-[15px] text-(--text) transition-colors hover:border-(--text)"
-              >
-                Read The Asymmetry Letter <ArrowUpRight size={15} weight="bold" aria-hidden />
-              </a>
+          {/* the call to action */}
+          <section id="contact" className="relative scroll-mt-16 overflow-hidden border-t border-(--line) bg-(--surface) px-4 py-28 text-center sm:px-8 md:py-40">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-full h-[700px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,106,61,.18),transparent_62%)]"
+            />
+            <div data-reveal className={`relative mx-auto max-w-[820px] ${REVEAL}`}>
+              <h2 className="mx-auto max-w-[16ch] font-(family-name:--serif) text-[clamp(44px,6.4vw,88px)] leading-[.95] tracking-[-.02em] text-balance">
+                Have data that deserves a <em className="text-(--signal)">better story?</em>
+              </h2>
+              <p className="mx-auto mt-7 max-w-[60ch] text-[16px] leading-[1.8] text-(--muted)">{CONTACT.body}</p>
+              <div className="mt-10 flex flex-wrap justify-center gap-3">
+                <a
+                  href={`mailto:${STUDIO.email}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-7 py-4 text-[15px] font-medium text-(--bg) transition-colors hover:bg-(--text)"
+                >
+                  <EnvelopeSimple size={17} weight="bold" aria-hidden /> Get in touch
+                </a>
+                <a
+                  href={STUDIO.newsletter}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-(--line2) px-7 py-4 text-[15px] text-(--text) transition-colors hover:border-(--text)"
+                >
+                  Read The Asymmetry Letter <ArrowUpRight size={15} weight="bold" aria-hidden />
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
-      </main>
+          </section>
+        </main>
 
-      <footer className="flex flex-wrap items-center justify-between gap-5 border-t border-(--line) bg-(--bg) px-4 py-7 sm:px-8">
-        <div className="flex items-center gap-3">
-          <PenroseMark size={20} />
-          <span className="font-(family-name:--serif) text-[20px] leading-none">{STUDIO.name}</span>
-          <span className="hidden max-w-[44ch] text-[13px] text-(--dim) md:inline">{STUDIO.motto}</span>
-        </div>
-        <div className="flex items-center gap-5 text-(--muted)">
-          <a href={STUDIO.youtube} target="_blank" rel="noreferrer" aria-label="YouTube" className="transition-colors hover:text-(--signal)">
-            <YoutubeLogo size={20} aria-hidden />
-          </a>
-          <a href={STUDIO.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="transition-colors hover:text-(--signal)">
-            <LinkedinLogo size={20} aria-hidden />
-          </a>
-          <a href={STUDIO.x} target="_blank" rel="noreferrer" aria-label="X" className="transition-colors hover:text-(--signal)">
-            <XLogo size={20} aria-hidden />
-          </a>
-        </div>
-      </footer>
+        <footer className="flex flex-wrap items-center justify-between gap-5 border-t border-(--line) bg-(--bg) px-4 py-7 sm:px-8">
+          <div className="flex items-center gap-3">
+            <PenroseMark size={20} />
+            <span className="font-(family-name:--serif) text-[20px] leading-none">{STUDIO.name}</span>
+            <span className="hidden max-w-[44ch] text-[13px] text-(--dim) md:inline">{STUDIO.motto}</span>
+          </div>
+          <div className="flex items-center gap-5 text-(--muted)">
+            <a href={STUDIO.youtube} target="_blank" rel="noreferrer" aria-label="YouTube" className="transition-colors hover:text-(--signal)">
+              <YoutubeLogo size={20} aria-hidden />
+            </a>
+            <a href={STUDIO.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="transition-colors hover:text-(--signal)">
+              <LinkedinLogo size={20} aria-hidden />
+            </a>
+            <a href={STUDIO.x} target="_blank" rel="noreferrer" aria-label="X" className="transition-colors hover:text-(--signal)">
+              <XLogo size={20} aria-hidden />
+            </a>
+          </div>
+        </footer>
+      </div>
     </div>
   )
 }
