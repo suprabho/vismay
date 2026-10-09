@@ -121,7 +121,7 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
         system: opts.system,
         ...input,
         schema: opts.schema as z.ZodType,
-        temperature: opts.temperature,
+        temperature: samplingTemperature(id, opts.temperature),
         maxOutputTokens: opts.maxOutputTokens,
         headers: opts.metadata,
         ...schemaProviderOptions(id),
@@ -140,7 +140,7 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
       model: gateway(id),
       system: opts.system,
       ...input,
-      temperature: opts.temperature,
+      temperature: samplingTemperature(id, opts.temperature),
       maxOutputTokens: opts.maxOutputTokens,
       headers: opts.metadata,
       ...(opts.tools ? { tools: opts.tools, stopWhen: stepCountIs(opts.maxSteps ?? 1) } : {}),
@@ -152,6 +152,17 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
     modelUsed,
     usage: normaliseUsage(res.usage),
   }
+}
+
+/**
+ * Claude 5.x (and Opus 4.7 / 4.8) dropped sampling parameters — the gateway
+ * ignores `temperature` for them and logs an AI SDK warning on every call. Call
+ * sites keep passing a temperature so other providers (and a TEXT_MODEL
+ * override to a non-Claude model) still honour it; we drop it here per model.
+ */
+function samplingTemperature(modelId: string, temperature: number | undefined) {
+  if (temperature === undefined) return undefined
+  return /^anthropic\/claude-(?:[a-z]+-5|opus-4[.-][78])/.test(modelId) ? undefined : temperature
 }
 
 /**
