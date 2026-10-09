@@ -39,7 +39,7 @@ interface Look {
 
 /**
  * Used when the page doesn't declare its palette: the home page's look
- * (apps/vizmaya-fyi/components/HomeClient.tsx), a cream nav with the logo in
+ * (apps/vizmaya-fyi/components/home/HomeStory.tsx), a cream nav with the logo in
  * ink, over an ink footer.
  */
 const HOME_LOOK: Look = {
