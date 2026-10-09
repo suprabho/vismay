@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowRight, ArrowUpRight } from '@phosphor-icons/react'
 import {
-  formatStoryDate,
   storyHref,
+  storyMetaBits,
   storyNumber,
   storyPalette,
   type HomeStory,
@@ -48,7 +48,7 @@ function Cover({ story, index, className = '' }: { story: HomeStory; index: numb
       {/* The story's initial in its colours, under the cover (or instead of one that fails). */}
       <span
         aria-hidden
-        className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_25%,color-mix(in_srgb,var(--sa)_32%,transparent),transparent_60%)] font-(family-name:--serif) text-[clamp(64px,9vw,120px)] font-semibold text-(--sa)"
+        className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_25%,color-mix(in_srgb,var(--sa)_28%,transparent),transparent_60%)] font-(family-name:--serif) text-[clamp(72px,10vw,140px)] font-normal italic text-(--sa)"
       >
         {(story.title.trim()[0] ?? '·').toUpperCase()}
       </span>
@@ -68,11 +68,12 @@ function Cover({ story, index, className = '' }: { story: HomeStory; index: numb
 }
 
 function Meta({ story }: { story: HomeStory }) {
-  const bits = [formatStoryDate(story.date), story.format].filter(Boolean)
   return (
-    <p className="font-(family-name:--mono) text-[10.5px] uppercase tracking-[.16em] text-(--muted)">{bits.join(' · ')}</p>
+    <p className="font-(family-name:--mono) text-[11px] uppercase tracking-[.06em] text-(--dim)">{storyMetaBits(story).join(' · ')}</p>
   )
 }
+
+const TITLE_LINK = 'decoration-(--signal) decoration-1 underline-offset-[6px] transition-colors hover:underline'
 
 export default function ScrollIndex({ stories, total }: { stories: HomeStory[]; total: number }) {
   if (!stories.length) {
@@ -84,25 +85,21 @@ export default function ScrollIndex({ stories, total }: { stories: HomeStory[]; 
       {/* The lead story, as a feature */}
       <article className="group grid gap-8 border-y border-(--line) py-8 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-center md:gap-12 md:py-10">
         <StoryLink story={lead} decorative className="block">
-          <Cover story={lead} index={0} className="aspect-[16/10] shadow-[0_30px_60px_-30px_rgba(12,12,16,.45)]" />
+          <Cover story={lead} index={0} className="aspect-[16/10] shadow-[0_40px_80px_-40px_rgba(0,0,0,.8)]" />
         </StoryLink>
         <div>
-          <p className="font-(family-name:--mono) text-[11px] font-medium uppercase tracking-[.2em] text-(--teal)">
-            Latest · No. {storyNumber(0)}
-            {lead.topic ? ` · ${lead.topic}` : ''}
-          </p>
-          <h3 className="mt-4 font-(family-name:--serif) text-[clamp(30px,3.6vw,46px)] font-semibold leading-[1.04] tracking-[-.02em] text-balance">
-            <StoryLink story={lead} className="decoration-(--teal) decoration-2 underline-offset-[6px] hover:underline">
+          <h3 className="font-(family-name:--serif) text-[clamp(38px,4.4vw,60px)] font-normal leading-[.98] tracking-[-.015em] text-balance">
+            <StoryLink story={lead} className={TITLE_LINK}>
               {lead.title}
             </StoryLink>
           </h3>
-          {lead.subtitle && <p className="mt-4 max-w-[54ch] text-[17px] leading-[1.65] text-(--muted)">{lead.subtitle}</p>}
-          <div className="mt-6 flex flex-wrap items-center gap-5">
+          {lead.subtitle && <p className="mt-5 max-w-[54ch] text-[17px] leading-[1.65] text-(--muted)">{lead.subtitle}</p>}
+          <div className="mt-7 flex flex-wrap items-center gap-5">
             <StoryLink
               story={lead}
-              className="inline-flex items-center gap-2 rounded-[3px] bg-(--ink) px-5 py-3 font-(family-name:--mono) text-[11px] uppercase tracking-[.16em] text-(--cream) transition-colors hover:bg-(--teal) hover:text-(--ink)"
+              className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-5 py-3 text-[14px] font-medium text-(--bg) transition-colors hover:bg-(--text)"
             >
-              Read the story <ArrowRight size={14} weight="bold" />
+              Read the story <ArrowRight size={15} weight="bold" />
             </StoryLink>
             <Meta story={lead} />
           </div>
@@ -114,24 +111,19 @@ export default function ScrollIndex({ stories, total }: { stories: HomeStory[]; 
         {rest.map((s, k) => {
           const i = k + 1
           return (
-            <li key={s.slug} className="group grid grid-cols-[48px_minmax(0,1fr)] gap-x-4 py-6 sm:grid-cols-[64px_minmax(0,1fr)_180px] sm:gap-x-8 md:py-7">
-              <span className="font-(family-name:--serif) text-[26px] font-semibold leading-none tracking-[-.02em] text-(--teal) tabular-nums sm:text-[32px]">
+            <li key={s.slug} className="group grid grid-cols-[44px_minmax(0,1fr)] gap-x-4 py-6 sm:grid-cols-[64px_minmax(0,1fr)_180px] sm:gap-x-8 md:py-7">
+              <span className="font-(family-name:--serif) text-[30px] italic leading-none text-(--signal) tabular-nums sm:text-[40px]">
                 {storyNumber(i)}
               </span>
               <div className="min-w-0">
-                {(s.topic || s.format) && (
-                  <p className="mb-2 font-(family-name:--mono) text-[10.5px] font-medium uppercase tracking-[.18em] text-(--muted)">
-                    {[s.topic, s.format].filter(Boolean).join(' · ')}
-                  </p>
-                )}
-                <h3 className="font-(family-name:--serif) text-[22px] font-semibold leading-[1.15] tracking-[-.01em] text-balance sm:text-[27px]">
-                  <StoryLink story={s} className="decoration-(--teal) decoration-2 underline-offset-[5px] hover:underline">
+                <h3 className="font-(family-name:--serif) text-[26px] font-normal leading-[1.05] tracking-[-.01em] text-balance sm:text-[34px]">
+                  <StoryLink story={s} className={TITLE_LINK}>
                     {s.title}
                   </StoryLink>
                 </h3>
                 {s.subtitle && <p className="mt-2 line-clamp-2 max-w-[62ch] text-[15.5px] leading-[1.6] text-(--muted)">{s.subtitle}</p>}
                 <div className="mt-3">
-                  <Meta story={{ ...s, format: undefined }} />
+                  <Meta story={s} />
                 </div>
               </div>
               <StoryLink story={s} decorative className="hidden sm:block">
@@ -145,9 +137,9 @@ export default function ScrollIndex({ stories, total }: { stories: HomeStory[]; 
       <div className="mt-8 flex justify-end">
         <Link
           href="/stories"
-          className="inline-flex items-center gap-2 font-(family-name:--mono) text-[11px] uppercase tracking-[.18em] text-(--ink) underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-2 text-[14px] font-medium text-(--text) underline decoration-(--signal) underline-offset-[6px] hover:text-(--signal)"
         >
-          All {total} stories in the archive <ArrowUpRight size={14} weight="bold" />
+          All {total} stories in the archive <ArrowUpRight size={15} weight="bold" />
         </Link>
       </div>
     </div>

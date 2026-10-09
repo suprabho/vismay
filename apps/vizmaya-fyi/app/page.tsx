@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import HomeStory from '@/components/home/HomeStory'
 import { loadHomeData } from '@/lib/home/homeData'
+import { homeFontVars } from '@/lib/home/homeFonts'
 import { formatStoryDate } from '@/lib/home/homeShape'
 
 export const revalidate = 0
@@ -19,5 +20,5 @@ export const metadata: Metadata = {
  */
 export default async function HomePage() {
   const data = await loadHomeData()
-  return <HomeStory data={data} today={formatStoryDate(new Date().toISOString())} />
+  return <HomeStory data={data} today={formatStoryDate(new Date().toISOString())} fontVars={homeFontVars} />
 }

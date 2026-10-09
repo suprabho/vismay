@@ -105,7 +105,7 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
           <div
             role="group"
             aria-label="Read the front page as"
-            className="grid grid-cols-4 rounded-[14px] border border-(--line2) bg-(--paper) p-1 shadow-[0_1px_0_rgba(12,12,16,.04)] sm:inline-flex sm:rounded-full"
+            className="grid grid-cols-4 rounded-[14px] border border-(--line2) bg-(--surface) p-1 sm:inline-flex sm:rounded-full"
           >
             {HOME_VIEWS.map((v) => {
               const I = VIEW_ICONS[v]
@@ -116,8 +116,8 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
                   type="button"
                   aria-pressed={on}
                   onClick={() => chooseHomeView(v)}
-                  className={`flex h-14 flex-col items-center justify-center gap-1 rounded-[10px] px-2 font-(family-name:--mono) text-[10px] font-medium uppercase tracking-[.14em] transition-colors sm:h-10 sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-[11px] ${
-                    on ? 'bg-(--ink) text-(--cream)' : 'text-(--muted) hover:text-(--ink)'
+                  className={`flex h-14 flex-col items-center justify-center gap-1 rounded-[10px] px-2 text-[13px] font-medium transition-colors sm:h-10 sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-[14px] ${
+                    on ? 'bg-(--text) text-(--bg)' : 'text-(--muted) hover:text-(--text)'
                   }`}
                 >
                   <I size={17} weight={on ? 'fill' : 'regular'} aria-hidden />
@@ -145,8 +145,8 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
                   type="button"
                   aria-pressed={on}
                   onClick={() => pickTopic(t)}
-                  className={`h-8 flex-none rounded-full border px-3.5 font-(family-name:--mono) text-[10px] uppercase tracking-[.14em] transition-colors ${
-                    on ? 'border-(--ink) bg-(--ink) text-(--cream)' : 'border-(--line2) text-(--muted) hover:border-(--ink) hover:text-(--ink)'
+                  className={`h-8 flex-none rounded-full border px-3.5 text-[13px] transition-colors ${
+                    on ? 'border-(--signal) bg-(--signal) text-(--bg)' : 'border-(--line2) text-(--muted) hover:border-(--text) hover:text-(--text)'
                   }`}
                 >
                   {t ?? 'All'}
@@ -159,7 +159,7 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
 
       {/* The stage: a bound format in its frame… */}
       {format && status !== 'failed' && (
-        <div className="relative h-[min(860px,calc(100svh-96px))] min-h-[540px] overflow-hidden rounded-[14px] bg-(--ink) shadow-[0_40px_90px_-40px_rgba(12,12,16,.55),0_0_0_1px_rgba(12,12,16,.12)]">
+        <div className="relative h-[min(860px,calc(100svh-96px))] min-h-[540px] overflow-hidden rounded-[16px] bg-(--bg) shadow-[0_50px_100px_-40px_rgba(0,0,0,.9),0_0_0_1px_var(--line2)]">
           <iframe
             key={key}
             ref={frameRef}
@@ -169,8 +169,8 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
             className={`absolute inset-0 h-full w-full border-0 transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`}
           />
           {status === 'loading' && (
-            <div className="absolute inset-0 grid place-items-center text-(--cream)" role="status">
-              <span className="flex items-center gap-3 font-(family-name:--mono) text-[11px] uppercase tracking-[.2em] text-[rgba(244,241,236,.7)]">
+            <div className="absolute inset-0 grid place-items-center text-(--text)" role="status">
+              <span className="flex items-center gap-3 font-(family-name:--serif) text-[22px] italic text-(--muted)">
                 <CircleNotch size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />
                 Binding the {label.toLowerCase()}…
               </span>
@@ -185,16 +185,16 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
           {status === 'failed' && (
             <div
               role="status"
-              className="mb-6 flex flex-col gap-3 rounded-[8px] border border-(--line2) bg-(--paper) px-4 py-3 text-[14px] text-(--muted) sm:flex-row sm:items-center sm:justify-between"
+              className="mb-6 flex flex-col gap-3 rounded-[10px] border border-(--line2) bg-(--surface) px-4 py-3 text-[14px] text-(--muted) sm:flex-row sm:items-center sm:justify-between"
             >
               <span className="flex items-center gap-2">
-                <Warning size={18} className="flex-none text-(--pink)" aria-hidden />
+                <Warning size={18} className="flex-none text-(--signal)" aria-hidden />
                 The {label.toLowerCase()} didn’t open, so here is the front page as one long scroll.
               </span>
               <button
                 type="button"
                 onClick={() => setAttempt((a) => a + 1)}
-                className="inline-flex flex-none items-center gap-2 font-(family-name:--mono) text-[11px] uppercase tracking-[.16em] text-(--ink) hover:text-(--teal)"
+                className="inline-flex flex-none items-center gap-2 text-[14px] font-medium text-(--text) hover:text-(--signal)"
               >
                 <ArrowCounterClockwise size={14} weight="bold" aria-hidden /> Try again
               </button>
@@ -212,7 +212,7 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
             <button
               type="button"
               onClick={() => chooseHomeView('scroll')}
-              className="text-(--ink) underline decoration-(--teal) decoration-2 underline-offset-4 hover:text-(--teal)"
+              className="text-(--text) underline decoration-(--signal) underline-offset-4 hover:text-(--signal)"
             >
               Read it as one page
             </button>
@@ -220,7 +220,7 @@ export default function FrontPage({ stories }: { stories: HomeStory[] }) {
           </p>
           <Link
             href="/stories"
-            className="inline-flex items-center gap-2 font-(family-name:--mono) text-[11px] uppercase tracking-[.18em] text-(--ink) underline-offset-4 hover:underline"
+            className="inline-flex items-center gap-2 text-[14px] font-medium text-(--text) underline decoration-(--signal) underline-offset-[6px] hover:text-(--signal)"
           >
             All {stories.length} stories <ArrowUpRight size={14} weight="bold" />
           </Link>

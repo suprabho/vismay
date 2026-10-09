@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { MARK } from '@/lib/home/homeShape'
 
 /**
- * Small pieces of the home page's story styling: the chapter frame, kickers,
- * the Penrose mark, count-ups and the gentle scroll reveal.
+ * Small pieces of the home page's story styling: the chapter frame, the
+ * Penrose mark, count-ups and the gentle scroll reveal.
  */
 
 /**
@@ -36,31 +37,17 @@ export function useReveal(root: React.RefObject<HTMLElement | null>) {
   }, [root])
 }
 
-export function Kicker({ children, tone = 'teal' }: { children: ReactNode; tone?: 'teal' | 'pink' | 'blue' | 'cream' }) {
-  const color = { teal: 'text-(--teal)', pink: 'text-(--pink)', blue: 'text-(--blue)', cream: 'text-(--cream)' }[tone]
-  return (
-    <p className={`flex items-center gap-3 font-(family-name:--mono) text-[11px] font-medium uppercase tracking-[.24em] ${color}`}>
-      <span aria-hidden className="h-px w-6 bg-current" />
-      {children}
-    </p>
-  )
-}
-
-/** One chapter of the page: numeral, headline and dek, then its content. */
+/** One chapter of the page: its headline and dek, then its content. */
 export function Chapter({
   id,
-  numeral,
   title,
   dek,
-  tone = 'teal',
   aside,
   children,
 }: {
   id: string
-  numeral: string
   title: ReactNode
   dek?: ReactNode
-  tone?: 'teal' | 'pink' | 'blue'
   aside?: ReactNode
   children: ReactNode
 }) {
@@ -69,10 +56,9 @@ export function Chapter({
       <div className="mx-auto max-w-[1180px]">
         <header data-reveal className={`mb-10 grid gap-6 md:mb-14 md:grid-cols-[minmax(0,1fr)_auto] md:items-end ${REVEAL}`}>
           <div>
-            <Kicker tone={tone}>Chapter {numeral}</Kicker>
             <h2
               id={`${id}-h`}
-              className="mt-5 max-w-[18ch] font-(family-name:--serif) text-[clamp(36px,5.4vw,68px)] font-semibold leading-[1] tracking-[-.03em] text-balance"
+              className="max-w-[18ch] font-(family-name:--serif) text-[clamp(44px,6.4vw,84px)] font-normal leading-[.95] tracking-[-.02em] text-balance [&_em]:text-(--signal)"
             >
               {title}
             </h2>
@@ -86,14 +72,14 @@ export function Chapter({
   )
 }
 
-/** The studio's three-mysteries logo. */
-export function PenroseMark({ size = 20, line = 'rgba(12,12,16,.2)', className = '' }: { size?: number; line?: string; className?: string }) {
+/** The studio's three-mysteries logo, in its own colours. */
+export function PenroseMark({ size = 20, line = 'rgba(238,232,221,.3)', className = '' }: { size?: number; line?: string; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 150 150" aria-hidden className={className}>
       <path d="M75 28L28 122M75 28l47 94M28 122h94" stroke={line} strokeWidth="1.2" fill="none" />
-      <circle cx="75" cy="28" r="15" fill="#0BBFAB" />
-      <circle cx="28" cy="122" r="15" fill="#E84D7A" />
-      <circle cx="122" cy="122" r="15" fill="#2B4ACF" />
+      <circle cx="75" cy="28" r="15" fill={MARK.teal} />
+      <circle cx="28" cy="122" r="15" fill={MARK.pink} />
+      <circle cx="122" cy="122" r="15" fill={MARK.blue} />
     </svg>
   )
 }

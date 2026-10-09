@@ -59,15 +59,41 @@ export const STUDIO = {
   x: 'https://x.com/VizmayaFyi',
 }
 
-/** The brand colours: cream paper, ink, and the Penrose tricolour. */
-export const BRAND = {
-  cream: '#F4F1EC',
-  paper: '#FBF9F5',
-  ink: '#0C0C10',
-  muted: '#55524C',
-  teal: '#0BBFAB',
-  pink: '#E84D7A',
-  blue: '#2B4ACF',
+/**
+ * The home page's palette, a night edition: warm paper-white type on
+ * blue-black, one signal colour (vermilion) and one cool secondary (sky).
+ * The page (components/home/HomeStory.tsx) and every stage read it, so the
+ * look changes here. The Penrose logo keeps its own teal, pink and blue.
+ */
+export const PALETTE = {
+  bg: '#0E0F12',
+  surface: '#16181C',
+  surface2: '#1D2025',
+  text: '#EEE8DD',
+  muted: '#A39E94',
+  dim: '#6E6A63',
+  line: 'rgba(238,232,221,.10)',
+  line2: 'rgba(238,232,221,.20)',
+  signal: '#FF6A3D',
+  sky: '#8EB9FF',
+  mint: '#7ED9B4',
+  /** The book's pages, and the ink printed on them. */
+  paper: '#F2EDE3',
+  paperInk: '#17181C',
+  paperMuted: '#6B665E',
+}
+
+/** The Penrose mark's own colours (the logo, not the page). */
+export const MARK = { teal: '#0BBFAB', pink: '#E84D7A', blue: '#2B4ACF' }
+
+/**
+ * The type: Instrument Serif for headlines and big numbers (one weight, with
+ * a true italic), Instrument Sans for text, Geist Mono for dates and data.
+ */
+export const TYPE = {
+  serif: 'Instrument Serif',
+  sans: 'Instrument Sans',
+  mono: 'Geist Mono',
 }
 
 // ── views ─────────────────────────────────────────────────────────────────
@@ -133,7 +159,7 @@ export interface StoryPalette {
   accent: string
 }
 
-const FALLBACK_ACCENTS = [BRAND.teal, BRAND.pink, BRAND.blue]
+const FALLBACK_ACCENTS = [PALETTE.signal, PALETTE.sky, PALETTE.mint]
 const HEX = /^#[0-9a-f]{3,8}$/i
 
 /** A story's own colours (its theme), or an ink card in the brand tricolour. */
@@ -141,9 +167,9 @@ export function storyPalette(s: HomeStory, index: number): StoryPalette {
   const c = s.theme?.colors
   const ok = (v: string | undefined) => (v && HEX.test(v) ? v : undefined)
   return {
-    bg: ok(c?.background) ?? BRAND.ink,
-    text: ok(c?.text) ?? BRAND.cream,
-    muted: ok(c?.muted) ?? 'rgba(244,241,236,.62)',
+    bg: ok(c?.background) ?? PALETTE.surface2,
+    text: ok(c?.text) ?? PALETTE.text,
+    muted: ok(c?.muted) ?? PALETTE.muted,
     accent: ok(c?.accent) ?? FALLBACK_ACCENTS[index % FALLBACK_ACCENTS.length],
   }
 }
@@ -159,6 +185,11 @@ export function formatStoryDate(date: string | undefined | null): string {
   const d = new Date(date)
   if (Number.isNaN(d.getTime())) return date
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+}
+
+/** What a story's meta line says: its date, topic and format. */
+export function storyMetaBits(s: HomeStory): string[] {
+  return [formatStoryDate(s.date), s.topic, s.format].filter((x): x is string => Boolean(x))
 }
 
 /** A story's number on the front page: '01', '02', … */
