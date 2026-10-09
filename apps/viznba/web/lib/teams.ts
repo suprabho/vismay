@@ -61,9 +61,9 @@ const UNKNOWN: Team = {
   espnId: '0',
   location: '',
   name: 'TBD',
-  bg: '#2a2f3d',
-  fg: '#f5f5f5',
-  dot: '#8e8e99',
+  bg: '#373b41',
+  fg: '#f8f8f9',
+  dot: '#a3a8b0',
 }
 
 export function teamById(id: string): Team | undefined {
