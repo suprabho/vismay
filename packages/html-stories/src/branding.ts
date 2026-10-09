@@ -38,9 +38,8 @@ interface Look {
 }
 
 /**
- * Used when the page doesn't declare its palette: the home page's look
- * (apps/vizmaya-fyi/components/HomeClient.tsx), a cream nav with the logo in
- * ink, over an ink footer.
+ * Used when the page doesn't declare its palette: the studio's cream look, a
+ * cream nav with the logo in ink, over an ink footer.
  */
 const HOME_LOOK: Look = {
   header: { bg: '#F4F1EC', fg: '#0C0C10', link: 'rgba(12,12,16,.45)', line: 'rgba(12,12,16,.1)' },

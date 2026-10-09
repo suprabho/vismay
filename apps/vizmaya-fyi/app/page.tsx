@@ -1,15 +1,8 @@
 import type { Metadata } from 'next'
-import { getAllStories } from '@vismay/content-source/content'
-import { getEpic, listEpicsForHome } from '@vismay/content-source/epics'
-import { listEditions } from '@vismay/dc-editions/dcEditions'
-import { formatEditionDate, formatSigned, moodTone, moodWord } from '@vismay/dc-editions/dcEditionTypes'
-import { getFontImportUrl } from '@vismay/content-source/getFontImports'
-import { getHtmlStoryCards } from '@/lib/htmlStoryListing'
-import HomeClient, { type HomeStory, type HomeEpic, type HomeDailyEdition } from '@/components/HomeClient'
-import { boomScore, editionHref } from './ai-daily/doom-v-boom/components/editionUtils'
-import { EDITION_CSS_VARS, resolveAiDataCentersTheme, type AiDataCentersTheme } from './ai-data-centers/theme'
-
-type FontSet = { serif?: string; sans?: string; mono?: string }
+import HomeStory from '@/components/home/HomeStory'
+import { loadHomeData } from '@/lib/home/homeData'
+import { homeFontVars } from '@/lib/home/homeFonts'
+import { HOME_VIEW_BOOT_SCRIPT, formatStoryDate } from '@/lib/home/homeShape'
 
 export const revalidate = 0
 
@@ -20,67 +13,20 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
 
+/**
+ * The home page, told as an HTML story and bound four ways
+ * (components/home/HomeStory.tsx): the whole page as a book, a board or a
+ * deck, framed from /home-stage/<format>, or as one long scroll, which is
+ * what the server renders and the fallback for the others. The inline script
+ * runs before paint, so a reader whose binding is a book, board or deck
+ * doesn't see the scroll page flash first.
+ */
 export default async function HomePage() {
-  const [stories, htmlStories, epics, editions, dcEpic] = await Promise.all([
-    getAllStories('vizmaya-fyi'),
-    getHtmlStoryCards(),
-    listEpicsForHome('vizmaya-fyi'),
-    // Best-effort: the home page must not 500 if the editions table is unavailable.
-    listEditions(3).catch(() => []),
-    getEpic('ai-data-centers').catch(() => null),
-  ])
-  // Agent-authored HTML stories (/s/<slug>) lead, newest first, ahead of the
-  // curated viz-engine order.
-  const homeStories: HomeStory[] = [...htmlStories, ...stories.map((s) => ({
-    slug: s.slug,
-    title: s.title,
-    subtitle: s.subtitle,
-    date: s.date,
-    byline: s.byline ?? '',
-    aura: s.aura,
-    theme: s.theme,
-    topic: s.topic,
-    thumbnail: s.thumbnail,
-    thumbnailTextColor: s.thumbnailTextColor,
-  }))]
-  const homeEpics: HomeEpic[] = epics.map((e) => ({
-    slug: e.slug,
-    name: e.name,
-    description: e.description,
-    theme: e.theme,
-  }))
-
-  const dailyEditions: HomeDailyEdition[] = editions.map((e) => ({
-    href: editionHref(e.date),
-    date: formatEditionDate(e.date, { year: false }),
-    number: e.number,
-    headline: e.headline,
-    moodScore: e.moodScore,
-    score: boomScore(e.moodScore),
-    signed: formatSigned(e.moodScore),
-    word: moodWord(e.moodScore),
-    tone: moodTone(e.moodScore),
-  }))
-
-  // The Doom v Boom cards wear the edition's own palette (the epic's theme
-  // override over the dark defaults), as the CSS variables the ring reads.
-  const dailyTheme = resolveAiDataCentersTheme(dcEpic?.theme)
-  const dailyVars: Record<string, string> = {}
-  for (const [key, cssVar] of Object.entries(EDITION_CSS_VARS)) {
-    if (cssVar) dailyVars[cssVar] = dailyTheme[key as keyof AiDataCentersTheme]
-  }
-
-  // Each story/epic card renders in its own theme's typefaces, so collect every
-  // distinct font set and resolve the Google Fonts links to load.
-  const fontSets: FontSet[] = []
-  for (const s of homeStories) if (s.theme?.fonts) fontSets.push(s.theme.fonts)
-  for (const e of homeEpics) {
-    const f = e.theme?.fonts as FontSet | undefined
-    if (f) fontSets.push(f)
-  }
-  const fontUrls = Array.from(
-    new Set(fontSets.map((f) => getFontImportUrl(f)).filter((u): u is string => Boolean(u)))
+  const data = await loadHomeData()
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: HOME_VIEW_BOOT_SCRIPT }} />
+      <HomeStory data={data} today={formatStoryDate(new Date().toISOString())} fontVars={homeFontVars} />
+    </>
   )
-
-  return <HomeClient stories={homeStories} epics={homeEpics} dailyEditions={dailyEditions} dailyVars={dailyVars} fontUrls={fontUrls} />
 }
