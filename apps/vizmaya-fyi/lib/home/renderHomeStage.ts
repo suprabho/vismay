@@ -129,19 +129,18 @@ em{font-style:italic}
 .bt .pic img{transition:transform .6s ease}
 .bt:hover .pic img{transform:scale(1.04)}
 .bt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,color-mix(in srgb,var(--bg) 95%,transparent) 0%,color-mix(in srgb,var(--bg) 72%,transparent) 42%,color-mix(in srgb,var(--bg) 22%,transparent) 76%,color-mix(in srgb,var(--bg) 6%,transparent) 100%)}
-.bt::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--sa,var(--signal));z-index:2}
 .bt .tt{position:relative;z-index:1;display:block}
 .bt b{display:block;font:400 15px/1.04 var(--ss,var(--serif));letter-spacing:-.005em}
 .bt .dek{display:block;font-size:12px;line-height:1.4;opacity:.8;margin-top:5px}
 .bt .meta{display:block;font-size:9px;letter-spacing:.06em;opacity:.7;margin-top:5px;color:inherit}
 .bt:hover b{text-decoration:underline;text-decoration-color:var(--sa,var(--signal));text-decoration-thickness:1px;text-underline-offset:3px}
 .bt.all{background:var(--signal);color:var(--on-signal);justify-content:space-between}
-.bt.all::before,.bt.all::after{content:none}
+.bt.all::after{content:none}
 .bt.all b{font-size:24px;line-height:.98}
 .bt.all .go{font:500 12px/1 var(--sans);display:flex;align-items:center;gap:6px}
 /* an epic tile: its accent as a glow over dark */
 .et{position:relative;overflow:hidden;border-radius:7px;color:var(--text);text-decoration:none;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 14px;min-width:0;min-height:0;
-  background:radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--ea) 45%,transparent),transparent 62%),var(--surface2);border-top:3px solid var(--ea)}
+  background:radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--ea) 45%,transparent),transparent 62%),var(--surface2)}
 .et b{display:block;font:400 22px/1 var(--serif)}
 .et span{display:block;font-size:12px;line-height:1.4;opacity:.75;margin-top:6px}
 .et i{position:absolute;top:10px;right:12px;font-size:16px;color:var(--ea)}
@@ -804,8 +803,7 @@ const BOARD_CSS = `
 .title-card .meta{font-size:15px;margin-top:18px}
 .stat b{display:block;font:400 104px/.82 var(--serif);letter-spacing:-.03em}
 .stat p{font:400 22px/1.15 var(--serif);margin:8px 0 0}
-.story-card .pic{margin:-6px -8px 18px;height:var(--ph,250px);border-radius:3px}
-.story-card{border-top:6px solid var(--sa)}
+.story-card .pic{margin:-6px -8px 14px;height:var(--ph,250px);border-radius:3px}
 .story-card .sub{color:var(--paper-ink-2)}
 .go{display:inline-flex;align-items:center;gap:6px;font:500 15px/1 var(--sans);text-decoration:none;color:var(--paper-ink);margin-top:12px}
 .go:hover{color:var(--ink-signal)}
@@ -842,10 +840,10 @@ const TILTS = [-1.2, 0.8, -0.4, 1.4, -1.6, 0.5, 1.1, -0.8, 0.3, -1.3, 1.6, -0.5]
 const STICKIES = ['gold', 'rose', 'blue', 'sage']
 
 function boardCard(s: HomeStory, i: number, id: string, pos: { x: number; y: number; w: number }, lead: boolean, pinTo: string | null): string {
-  return `<div class="item paper story-card${lead ? ' lead' : ''}" id="${id}"${pinTo ? ` data-pin-to="${pinTo}"` : ''} style="--x:${pos.x};--y:${pos.y};--w:${pos.w};--r:${TILTS[i % TILTS.length]};--ph:${lead ? 520 : 250}px;${storyVars(s, i)}">
+  return `<div class="item paper story-card${lead ? ' lead' : ''}" id="${id}"${pinTo ? ` data-pin-to="${pinTo}"` : ''} style="--x:${pos.x};--y:${pos.y};--w:${pos.w};--r:${TILTS[i % TILTS.length]};--ph:${lead ? 420 : 210}px;${storyVars(s, i)}">
   <div class="pic">${picture(s)}</div>
   <h3 class="clamp c3"><a href="${esc(storyHref(s))}">${esc(s.title)}</a></h3>
-  ${s.subtitle ? `<p class="sub clamp ${lead ? 'c4' : 'c3'}">${esc(s.subtitle)}</p>` : ''}
+  ${s.subtitle ? `<p class="sub clamp ${lead ? 'c3' : 'c2'}">${esc(s.subtitle)}</p>` : ''}
   <p class="meta">${storyMeta(s)}</p>
   <a class="go" href="${esc(storyHref(s))}">Read the story <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
 </div>`
@@ -873,15 +871,16 @@ function renderBoard(input: HomeStageInput): string {
 </div>`)
   const statIds = stats.map((_, k) => `it-stat-${k}`)
   stats.forEach((s, k) => {
-    items.push(`<div class="item sticky ${STICKIES[k % 4]} stat" id="it-stat-${k}" style="--x:${140 + k * 255};--y:860;--w:225;--r:${k % 2 ? 2.2 : -1.8}">
+    items.push(`<div class="item sticky ${STICKIES[k % 4]} stat" id="it-stat-${k}" style="--x:${140 + k * 255};--y:640;--w:225;--r:${k % 2 ? 2.2 : -1.8}">
   <b data-count="${s.n}">${s.n}</b>
   <p>${esc(s.label)}</p>
 </div>`)
   })
-  let leftY = stats.length ? 1180 : 860
+  // Packed to the cards' real heights (a story card is ~470 tall, the lead ~680).
+  let leftY = stats.length ? 880 : 640
   if (lead) {
     items.push(boardCard(lead, 0, 'st-0', { x: 140, y: leftY, w: 1000 }, true, topicId(lead.topic)))
-    leftY += 1000
+    leftY += 740
   }
   if (topics.length) {
     topics.forEach((t, k) => {
@@ -891,12 +890,12 @@ function renderBoard(input: HomeStageInput): string {
   <p class="meta">${n} ${n === 1 ? 'story' : 'stories'}</p>
 </div>`)
     })
-    leftY += 300
+    leftY += 260
   }
 
   // Right: the rest of the stories in a grid.
   const COLS = [1320, 1840, 2360, 2880]
-  const ROW_H = 760
+  const ROW_H = 540
   rest.forEach((s, k) => {
     const i = k + 1
     items.push(boardCard(s, i, `st-${i}`, { x: COLS[k % 4], y: 140 + Math.floor(k / 4) * ROW_H, w: 440 }, false, topicId(s.topic)))
@@ -904,7 +903,7 @@ function renderBoard(input: HomeStageInput): string {
   const gridBottom = rest.length ? 140 + Math.ceil(rest.length / 4) * ROW_H : 0
 
   // Along the bottom: the daily, the epics, the studio, and how to reach it.
-  const y = Math.max(leftY, gridBottom) + 120
+  const y = Math.max(leftY, gridBottom) + 60
   if (edition) {
     items.push(`<div class="item index daily" id="it-daily" style="--x:140;--y:${y};--w:520;--r:-1">
   <h3>Doom v Boom, <em>this morning</em></h3>
@@ -936,7 +935,7 @@ function renderBoard(input: HomeStageInput): string {
   ${contactButtons(total, true)}
   ${socials()}
 </div>`)
-  const height = y + 980
+  const height = y + 640
 
   // The tour follows the page: the statement, each story, the topics, the rest.
   tour.push(`<li data-unit data-target="board">

@@ -337,7 +337,6 @@ function Epics({ epics }: { epics: HomeEpic[] }) {
             style={{ background: bg, color: text, '--ea': accent, '--em': muted } as CSSProperties}
             className={`group relative flex min-h-[260px] flex-col overflow-hidden rounded-[14px] border border-(--line) p-6 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-(--ea) ${REVEAL}`}
           >
-            <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-(--ea)" />
             <span
               aria-hidden
               className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-(--ea) opacity-20 blur-3xl transition-opacity group-hover:opacity-35"
