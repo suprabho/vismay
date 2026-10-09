@@ -23,9 +23,10 @@ import {
   HOME_PENDING_STYLE_ID,
   HOME_VIEWS,
   HOME_VIEW_META,
+  HOME_SCHEMES,
   MARK,
-  PALETTE,
   PROCESS,
+  SCHEME_ACCENTS,
   STUDIO,
   homeStats,
   isHomeStageFormat,
@@ -37,6 +38,7 @@ import {
   type HomeStory as HomeStoryCard,
   type HomeView,
 } from '@/lib/home/homeShape'
+import { schemeVars } from '@/lib/home/logoPalette'
 import { Chapter, CountUp, PenroseMark, REVEAL, useReveal } from './bits'
 import HomeStage from './HomeStage'
 import ScrollIndex from './ScrollIndex'
@@ -53,31 +55,21 @@ import { chooseHomeView, useHomeView } from './homeViewStore'
  * format to "Read as one page". Palette and type: lib/home/homeShape.
  */
 
-const TOKENS = {
-  '--bg': PALETTE.bg,
-  '--surface': PALETTE.surface,
-  '--surface2': PALETTE.surface2,
-  '--text': PALETTE.text,
-  '--muted': PALETTE.muted,
-  '--dim': PALETTE.dim,
-  '--line': PALETTE.line,
-  '--line2': PALETTE.line2,
-  '--signal': PALETTE.signal,
-  '--sky': PALETTE.sky,
-  '--mint': PALETTE.mint,
+const TYPE_TOKENS = {
   '--serif': 'var(--font-home-serif), Georgia, serif',
   '--sans': 'var(--font-home-sans), -apple-system, "Segoe UI", sans-serif',
   '--mono': 'var(--font-home-mono), ui-monospace, monospace',
-} as CSSProperties
+}
 
-const LOGO_PALETTE = {
-  text: PALETTE.text,
-  teal: MARK.teal,
-  accent: MARK.pink,
-  accent2: MARK.blue,
-  surface: PALETTE.bg,
-  muted: PALETTE.text,
-  line: PALETTE.text,
+/** The page wears the scheme of the binding on (homeShape's HOME_SCHEMES): the bar over a stage, the whole page on Scroll. */
+const TOKENS = Object.fromEntries(
+  Object.entries(HOME_SCHEMES).map(([v, s]) => [v, { ...schemeVars(s), ...TYPE_TOKENS } as CSSProperties])
+) as Record<HomeView, CSSProperties>
+
+/** The logo in its own colours, its type in the binding's text. */
+function logoPalette(view: HomeView) {
+  const s = HOME_SCHEMES[view]
+  return { text: s.text, teal: MARK.teal, accent: MARK.pink, accent2: MARK.blue, surface: s.bg, muted: s.text, line: s.text }
 }
 
 // ── masthead ──────────────────────────────────────────────────────────────
@@ -121,7 +113,7 @@ function Masthead({ view, staged }: { view: HomeView; staged: boolean }) {
       ref={nav}
       aria-label="vizmaya"
       data-staged={staged || undefined}
-      className="fixed inset-x-0 top-0 z-50 h-16 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-(--line) data-[scrolled]:bg-[rgba(14,15,18,.82)] data-[scrolled]:backdrop-blur-md data-[staged]:border-(--line) data-[staged]:bg-(--bg) hs-mast"
+      className="fixed inset-x-0 top-0 z-50 h-16 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-(--line) data-[scrolled]:bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] data-[scrolled]:backdrop-blur-md data-[staged]:border-(--line) data-[staged]:bg-(--bg) hs-mast"
     >
       <div className="mx-auto flex h-full max-w-[1240px] items-center justify-between gap-3 px-3 sm:px-8">
         <button
@@ -130,7 +122,7 @@ function Masthead({ view, staged }: { view: HomeView; staged: boolean }) {
           aria-label="Vizmaya Labs, back to the top"
           className="-ml-1 flex flex-none items-center"
         >
-          <VizmayaLogo className="h-[34px] w-[120px] sm:h-[42px] sm:w-[170px]" palette={LOGO_PALETTE} />
+          <VizmayaLogo className="h-[34px] w-[120px] sm:h-[42px] sm:w-[170px]" palette={logoPalette(view)} />
         </button>
         <ViewSwitcher view={view} />
         <div className="hidden flex-none items-center gap-6 sm:flex">
@@ -171,7 +163,7 @@ function Lede({ data, today }: { data: HomeData; today: string }) {
       {/* a low signal glow behind the lede */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-[20%] -top-[30%] h-[900px] w-[900px] rounded-full bg-[radial-gradient(circle,rgba(255,106,61,.16),transparent_62%)]"
+        className="pointer-events-none absolute -right-[20%] -top-[30%] h-[900px] w-[900px] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--signal)_16%,transparent),transparent_62%)]"
       />
       <div className="relative mx-auto max-w-[1180px]">
         <h1
@@ -259,7 +251,7 @@ function Stories({ stories }: { stories: HomeStoryCard[] }) {
                 aria-pressed={on}
                 onClick={() => pick(t)}
                 className={`h-8 flex-none rounded-full border px-3.5 text-[13px] transition-colors ${
-                  on ? 'border-(--signal) bg-(--signal) text-(--bg)' : 'border-(--line2) text-(--muted) hover:border-(--text) hover:text-(--text)'
+                  on ? 'border-(--signal) bg-(--signal) text-(--on-signal)' : 'border-(--line2) text-(--muted) hover:border-(--text) hover:text-(--text)'
                 }`}
               >
                 {t ?? 'All'}
@@ -331,12 +323,18 @@ function Epics({ epics }: { epics: HomeEpic[] }) {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {epics.map((e, i) => {
         const t = epicCardTheme(e.theme, i)
+        // What the epic's theme doesn't set comes from the binding's scheme.
+        const own = (e.theme ?? {}) as Record<string, unknown>
+        const bg = own.ink || own.surface ? t.bg : 'var(--surface2)'
+        const text = own.bone ? t.text : 'var(--text)'
+        const muted = own.muted ? t.muted : 'var(--muted)'
+        const accent = own.accent || own.ember ? t.accent : SCHEME_ACCENTS[i % SCHEME_ACCENTS.length]
         return (
           <Link
             key={e.slug}
             href={`/${e.slug}`}
             data-reveal
-            style={{ background: t.bg, color: t.text, '--ea': t.accent, '--em': t.muted } as CSSProperties}
+            style={{ background: bg, color: text, '--ea': accent, '--em': muted } as CSSProperties}
             className={`group relative flex min-h-[260px] flex-col overflow-hidden rounded-[14px] border border-(--line) p-6 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-(--ea) ${REVEAL}`}
           >
             <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-(--ea)" />
@@ -431,8 +429,8 @@ export default function HomeStory({ data, today, fontVars = '' }: { data: HomeDa
   return (
     <div
       ref={root}
-      style={TOKENS}
-      className={`${fontVars} min-h-screen bg-(--bg) font-(family-name:--sans) text-(--text) antialiased selection:bg-(--signal) selection:text-(--bg)`}
+      style={TOKENS[view]}
+      className={`${fontVars} min-h-screen bg-(--bg) transition-[background-color] duration-500 font-(family-name:--sans) text-(--text) antialiased selection:bg-(--signal) selection:text-(--on-signal)`}
     >
       {/* each epic card renders in its own typefaces */}
       <StoryGridFonts fontUrls={fontUrls} />
@@ -537,7 +535,7 @@ export default function HomeStory({ data, today, fontVars = '' }: { data: HomeDa
           <section id="contact" className="relative scroll-mt-16 overflow-hidden border-t border-(--line) bg-(--surface) px-4 py-28 text-center sm:px-8 md:py-40">
             <div
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-full h-[700px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,106,61,.18),transparent_62%)]"
+              className="pointer-events-none absolute left-1/2 top-full h-[700px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--third)_20%,transparent),transparent_62%)]"
             />
             <div data-reveal className={`relative mx-auto max-w-[820px] ${REVEAL}`}>
               <h2 className="mx-auto max-w-[16ch] font-(family-name:--serif) text-[clamp(44px,6.4vw,88px)] leading-[.95] tracking-[-.02em] text-balance">
@@ -547,7 +545,7 @@ export default function HomeStory({ data, today, fontVars = '' }: { data: HomeDa
               <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <a
                   href={`mailto:${STUDIO.email}`}
-                  className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-7 py-4 text-[15px] font-medium text-(--bg) transition-colors hover:bg-(--text)"
+                  className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-7 py-4 text-[15px] font-medium text-(--on-signal) transition-colors hover:bg-(--text) hover:text-(--bg)"
                 >
                   <EnvelopeSimple size={17} weight="bold" aria-hidden /> Get in touch
                 </a>

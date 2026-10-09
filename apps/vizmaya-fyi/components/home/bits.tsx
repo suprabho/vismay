@@ -73,10 +73,10 @@ export function Chapter({
 }
 
 /** The studio's three-mysteries logo, in its own colours. */
-export function PenroseMark({ size = 20, line = 'rgba(238,232,221,.3)', className = '' }: { size?: number; line?: string; className?: string }) {
+export function PenroseMark({ size = 20, line = 'color-mix(in srgb, var(--text) 30%, transparent)', className = '' }: { size?: number; line?: string; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 150 150" aria-hidden className={className}>
-      <path d="M75 28L28 122M75 28l47 94M28 122h94" stroke={line} strokeWidth="1.2" fill="none" />
+      <path d="M75 28L28 122M75 28l47 94M28 122h94" style={{ stroke: line }} strokeWidth="1.2" fill="none" />
       <circle cx="75" cy="28" r="15" fill={MARK.teal} />
       <circle cx="28" cy="122" r="15" fill={MARK.pink} />
       <circle cx="122" cy="122" r="15" fill={MARK.blue} />

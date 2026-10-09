@@ -1,10 +1,11 @@
 import { FORMAT_RUNTIME_MAJOR } from '@vismay/html-stories/formats'
 import {
   CONTACT,
+  HOME_SCHEMES,
   HOME_STAGE_MESSAGE,
   MARK,
-  PALETTE,
   PROCESS,
+  SCHEME_ACCENTS,
   STUDIO,
   storyHref,
   storyMetaBits,
@@ -14,6 +15,7 @@ import {
   type HomeStageFormat,
   type HomeStory,
 } from './homeShape'
+import { schemeVars, type Scheme } from './logoPalette'
 
 /**
  * The whole home page as an HTML story in one of the hosted formats: a book
@@ -73,23 +75,25 @@ function family(name: string | undefined, fallback: string): string | undefined 
 
 // ── shared pieces ─────────────────────────────────────────────────────────
 
-const P = PALETTE
+/** The runtime controls' colours (the format reads them as --vz-*): the binding's scheme. */
+function themeMeta(s: Scheme): string {
+  return `background:${s.bg}; surface:${s.surface}; text:${s.text}; muted:${s.muted}; line:${s.surface2}; accent:${s.signal}; accent2:${s.second}; teal:${s.logo.teal}`
+}
 
-/** The runtime controls' colours (the format reads them as --vz-*). */
-const THEME_META = `background:${P.bg}; surface:${P.surface}; text:${P.text}; muted:${P.muted}; line:#2a2c31; accent:${P.signal}; accent2:${P.sky}; teal:${P.mint}`
+/** The binding's scheme as :root custom properties, and the sticky notes in its tints. */
+function rootVars(s: Scheme): string {
+  const vars = Object.entries(schemeVars(s)).map(([k, v]) => `${k}:${v}`).join(';')
+  const [teal, pink, blue, gold] = s.tints
+  return `:root{${vars};--tint-teal:${teal};--tint-pink:${pink};--tint-blue:${blue};--tint-gold:${gold}}`
+}
 
 const FONTS =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400..700&family=Geist+Mono:wght@400;500&display=swap'
 const PHOSPHOR = 'https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css'
 const D3 = 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js'
 
-const ACCENTS = [P.signal, P.sky, P.mint]
-
 const BASE_CSS = `
 :root{
-  --bg:${P.bg};--surface:${P.surface};--surface2:${P.surface2};--text:${P.text};--muted:${P.muted};--dim:${P.dim};
-  --line:${P.line};--line2:${P.line2};--signal:${P.signal};--sky:${P.sky};--mint:${P.mint};
-  --paper:${P.paper};--paper-ink:${P.paperInk};--paper-muted:${P.paperMuted};
   --serif:'Instrument Serif',Georgia,serif;--sans:'Instrument Sans',-apple-system,'Segoe UI',sans-serif;--mono:'Geist Mono',ui-monospace,monospace;
   --vz-accent:var(--signal);
 }
@@ -101,11 +105,13 @@ em{font-style:italic}
 :focus-visible{outline:2px solid var(--signal);outline-offset:3px}
 .meta{font:400 11px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;margin:0}
 .clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+/* tiles set display on their text; a clamp still has to be a box to clamp */
+:is(.bt,.et) .clamp.clamp{display:-webkit-box}
 .c1{-webkit-line-clamp:1}.c2{-webkit-line-clamp:2}.c3{-webkit-line-clamp:3}.c4{-webkit-line-clamp:4}.c5{-webkit-line-clamp:5}.c6{-webkit-line-clamp:6}.c7{-webkit-line-clamp:7}
 .read{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font:500 14px/1 var(--sans);padding:12px 18px;border-radius:999px;background:var(--paper-ink);color:var(--paper);white-space:nowrap}
-.read:hover{background:var(--signal);color:var(--bg)}
-.read.hot{background:var(--signal);color:var(--bg)}
-.read.hot:hover{background:var(--text)}
+.read:hover{background:var(--signal);color:var(--on-signal)}
+.read.hot{background:var(--signal);color:var(--on-signal)}
+.read.hot:hover{background:var(--text);color:var(--bg)}
 .read.ghost{background:transparent;color:inherit;border:1px solid currentColor}
 .btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .socials{display:flex;gap:16px;font-size:22px}
@@ -117,44 +123,44 @@ em{font-style:italic}
 .hi,h1 em,h2 em,h3 em,blockquote em{color:var(--signal)}
 .bento{display:grid;gap:8px;flex:1 1 auto;min-height:0}
 /* a story tile: its cover (or a glow in its colours) full-bleed, the title over a dark wash */
-.bt{position:relative;overflow:hidden;border-radius:7px;background:var(--sb,#17181c);color:#f7f2e9;text-decoration:none;
+.bt{position:relative;overflow:hidden;border-radius:7px;background:var(--sb,var(--surface2));color:var(--text);text-decoration:none;
   display:flex;flex-direction:column;justify-content:flex-end;padding:10px 12px 11px;min-width:0;min-height:0}
-.bt .pic{position:absolute;inset:0;container-type:size;background:var(--sb,#17181c)}
+.bt .pic{position:absolute;inset:0;container-type:size;background:var(--sb,var(--surface2))}
 .bt .pic img{transition:transform .6s ease}
 .bt:hover .pic img{transform:scale(1.04)}
-.bt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,rgba(10,11,13,.95) 0%,rgba(10,11,13,.72) 42%,rgba(10,11,13,.22) 76%,rgba(10,11,13,.06) 100%)}
+.bt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,color-mix(in srgb,var(--bg) 95%,transparent) 0%,color-mix(in srgb,var(--bg) 72%,transparent) 42%,color-mix(in srgb,var(--bg) 22%,transparent) 76%,color-mix(in srgb,var(--bg) 6%,transparent) 100%)}
 .bt::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--sa,var(--signal));z-index:2}
 .bt .tt{position:relative;z-index:1;display:block}
 .bt b{display:block;font:400 15px/1.04 var(--ss,var(--serif));letter-spacing:-.005em}
 .bt .dek{display:block;font-size:12px;line-height:1.4;opacity:.8;margin-top:5px}
 .bt .meta{display:block;font-size:9px;letter-spacing:.06em;opacity:.7;margin-top:5px;color:inherit}
 .bt:hover b{text-decoration:underline;text-decoration-color:var(--sa,var(--signal));text-decoration-thickness:1px;text-underline-offset:3px}
-.bt.all{background:var(--signal);color:${P.bg};justify-content:space-between}
+.bt.all{background:var(--signal);color:var(--on-signal);justify-content:space-between}
 .bt.all::before,.bt.all::after{content:none}
 .bt.all b{font-size:24px;line-height:.98}
 .bt.all .go{font:500 12px/1 var(--sans);display:flex;align-items:center;gap:6px}
 /* an epic tile: its accent as a glow over dark */
-.et{position:relative;overflow:hidden;border-radius:7px;color:#f7f2e9;text-decoration:none;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 14px;min-width:0;min-height:0;
-  background:radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--ea) 45%,transparent),transparent 62%),#17181c;border-top:3px solid var(--ea)}
+.et{position:relative;overflow:hidden;border-radius:7px;color:var(--text);text-decoration:none;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 14px;min-width:0;min-height:0;
+  background:radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--ea) 45%,transparent),transparent 62%),var(--surface2);border-top:3px solid var(--ea)}
 .et b{display:block;font:400 22px/1 var(--serif)}
 .et span{display:block;font-size:12px;line-height:1.4;opacity:.75;margin-top:6px}
 .et i{position:absolute;top:10px;right:12px;font-size:16px;color:var(--ea)}
 .et:hover b{text-decoration:underline;text-decoration-color:var(--ea);text-decoration-thickness:1px;text-underline-offset:3px}
 /* doom v boom tiles */
-.dv-score{grid-area:s;border-radius:7px;background:#17181c;color:#f7f2e9;padding:12px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;overflow:hidden;
-  background-image:radial-gradient(circle at 0% 100%,rgba(255,106,61,.28),transparent 60%)}
+.dv-score{grid-area:s;border-radius:7px;background:var(--surface2);color:var(--text);padding:12px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;overflow:hidden;
+  background-image:radial-gradient(circle at 0% 100%,color-mix(in srgb,var(--signal) 28%,transparent),transparent 60%)}
 .dv-score .big{font:400 112px/.78 var(--serif);letter-spacing:-.04em;color:var(--signal);font-variant-numeric:lining-nums}
-.dv-score .of{text-align:right;font:400 10px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#a39e94}
-.dv-score .of b{display:block;font:400 24px/1.05 var(--serif);letter-spacing:0;text-transform:none;color:#f7f2e9;margin-bottom:4px}
-.dv-score[data-tone="boom"] .of b{color:var(--mint)}
-.dv-score[data-tone="doom"] .of b{color:#ff8a6b}
-.dv-head{grid-area:h;border-radius:7px;background:#e6dfd2;color:var(--paper-ink);padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;overflow:hidden}
+.dv-score .of{text-align:right;font:400 10px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.dv-score .of b{display:block;font:400 24px/1.05 var(--serif);letter-spacing:0;text-transform:none;color:var(--text);margin-bottom:4px}
+.dv-score[data-tone="boom"] .of b{color:var(--teal)}
+.dv-score[data-tone="doom"] .of b{color:var(--pink)}
+.dv-head{grid-area:h;border-radius:7px;background:var(--paper2);color:var(--paper-ink);padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;overflow:hidden}
 .dv-head b{font:400 19px/1.12 var(--serif)}
 .dv-head .foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.dv-head .go{font:500 12px/1 var(--sans);color:var(--signal)}
+.dv-head .go{font:500 12px/1 var(--sans);color:var(--ink-signal)}
 .dv-head:hover b{text-decoration:underline;text-decoration-color:var(--signal);text-underline-offset:3px}
-.dv-e{border-radius:7px;background:#ece6db;color:var(--paper-ink);padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;overflow:hidden;border:1px solid rgba(23,24,28,.08)}
-.dv-e .n{font:400 34px/.85 var(--serif);color:var(--signal)}
+.dv-e{border-radius:7px;background:var(--card);color:var(--paper-ink);padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;overflow:hidden;border:1px solid color-mix(in srgb,var(--paper-ink) 8%,transparent)}
+.dv-e .n{font:400 34px/.85 var(--serif);color:var(--ink-signal)}
 .dv-e span{font-size:11.5px;line-height:1.35}
 .dv-e .meta{font-size:9px}
 .dv-e:hover span{text-decoration:underline}
@@ -173,11 +179,14 @@ em{font-style:italic}
 .earlier b{font:400 24px/1 var(--serif);color:var(--signal)}
 .earlier span{font-size:14px;line-height:1.35;opacity:.8}
 .earlier a:hover span{opacity:1;text-decoration:underline}
+/* on paper the lead deepens to its ink */
+.page:not(.dark) :is(h1,h2,h3,blockquote) em,.item:is(.paper,.index,.sticky):not(.contact) :is(h1,h2,h3,blockquote) em,
+.page:not(.dark) .steps i,.item.paper:not(.contact) .steps i,.page:not(.dark) .earlier b,.item.index .earlier b{color:var(--ink-signal)}
 `
 
 /** The Penrose mark: the studio's three mysteries, in the logo's own colours. */
-function penrose(size: number, line = 'rgba(238,232,221,.3)'): string {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 150 150" aria-hidden="true"><path d="M75 28L28 122M75 28l47 94M28 122h94" stroke="${line}" stroke-width="1.2" fill="none"/><circle cx="75" cy="28" r="15" fill="${MARK.teal}"/><circle cx="28" cy="122" r="15" fill="${MARK.pink}"/><circle cx="122" cy="122" r="15" fill="${MARK.blue}"/></svg>`
+function penrose(size: number): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 150 150" aria-hidden="true"><path d="M75 28L28 122M75 28l47 94M28 122h94" style="stroke:color-mix(in srgb,currentColor 30%,transparent)" stroke-width="1.2" fill="none"/><circle cx="75" cy="28" r="15" fill="${MARK.teal}"/><circle cx="28" cy="122" r="15" fill="${MARK.pink}"/><circle cx="122" cy="122" r="15" fill="${MARK.blue}"/></svg>`
 }
 
 /** A story's own colours and title face, as custom properties for its unit. */
@@ -226,7 +235,7 @@ function dailyBento(edition: HomeDailyEdition, earlier: HomeDailyEdition[]): str
 function epicAccent(e: HomeEpic, i: number): string {
   const t = (e.theme ?? {}) as { accent?: unknown; ember?: unknown }
   const own = [t.accent, t.ember].find((v): v is string => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v))
-  return own ?? ACCENTS[i % ACCENTS.length]
+  return own ?? SCHEME_ACCENTS[i % SCHEME_ACCENTS.length]
 }
 
 /** Epic tiles for a two-column bento: the first spans the row, and so does a last odd one. */
@@ -279,6 +288,7 @@ function contactButtons(total: number, withArchive: boolean): string {
 }
 
 function head(format: HomeStageFormat, title: string, fontUrls: string[], css: string): string {
+  const scheme = HOME_SCHEMES[format]
   const runtime = `/formats/${format}@${FORMAT_RUNTIME_MAJOR}`
   return `<!doctype html>
 <html lang="en">
@@ -287,7 +297,7 @@ function head(format: HomeStageFormat, title: string, fontUrls: string[], css: s
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="robots" content="noindex">
-<meta name="vizmaya:theme" content="${THEME_META}">
+<meta name="vizmaya:theme" content="${themeMeta(scheme)}">
 <meta name="vizmaya:format" content="${format}">
 <base target="_top">
 <style>:root{--vizmaya-chrome-h:0px}</style>
@@ -297,7 +307,7 @@ function head(format: HomeStageFormat, title: string, fontUrls: string[], css: s
 ${fontUrls.map((u) => (safeUrl(u) ? `<link rel="stylesheet" href="${esc(u)}">` : '')).join('\n')}
 <link rel="stylesheet" href="${PHOSPHOR}">
 <link rel="stylesheet" href="${runtime}.css">
-<style>${BASE_CSS}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}${css}</style>
+<style>${rootVars(scheme)}${BASE_CSS}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}${css}</style>
 </head>
 <body>
 `
@@ -340,7 +350,7 @@ ${bridge(format)}
 // ── book ──────────────────────────────────────────────────────────────────
 
 const BOOK_CSS = `
-:root{--book-paper:var(--paper);--book-table:radial-gradient(ellipse 70% 60% at 50% 45%,#1d2026 0%,var(--bg) 72%);--book-head:var(--paper-muted)}
+:root{--book-paper:var(--paper);--book-table:radial-gradient(ellipse 70% 60% at 50% 45%,var(--surface2) 0%,var(--bg) 72%);--book-head:var(--paper-muted)}
 .page{position:relative;color:var(--paper-ink);background:var(--paper);font-size:16px;line-height:1.5;padding:46px 40px 52px}
 html:not(.book-on) .page{min-height:580px}
 .page h2{font:400 36px/1.02 var(--ss,var(--serif));letter-spacing:-.01em;margin:0 0 14px}
@@ -357,27 +367,27 @@ html:not(.book-on) .page{min-height:580px}
 .cover h1{font:400 66px/.92 var(--serif);letter-spacing:-.02em;margin:0;max-width:6ch}
 .cover-sub{font:400 16px/1.45 var(--sans);color:var(--muted);max-width:24ch;margin:0}
 .titlepage h1{font:400 46px/.95 var(--serif);letter-spacing:-.02em;margin:0}
-.foreword p{font:400 15.5px/1.6 var(--sans);color:#3d3a35}
-.foreword .stats{border-top:1px solid rgba(23,24,28,.15);padding-top:18px;margin-top:20px}
+.foreword p{font:400 15.5px/1.6 var(--sans);color:var(--paper-ink-2)}
+.foreword .stats{border-top:1px solid var(--paper-line);padding-top:18px;margin-top:20px}
 .backcover h2{color:var(--text);font-size:40px;max-width:10ch;margin:0}
 .backcover p{color:var(--muted);max-width:26ch}
 /* endpaper: how to read */
-.endpaper{background:#e8e2d6;display:flex;align-items:center;justify-content:center}
-.bookplate{border:1px solid rgba(23,24,28,.2);padding:26px 24px;max-width:300px}
+.endpaper{background:var(--paper2);display:flex;align-items:center;justify-content:center}
+.bookplate{border:1px solid color-mix(in srgb,var(--paper-ink) 20%,transparent);padding:26px 24px;max-width:300px}
 .bookplate h3{font:400 28px/1.05 var(--serif);margin:0 0 14px}
 .bookplate ul{list-style:none;margin:0;padding:0;display:grid;gap:12px;font-size:15px;line-height:1.4}
 .bookplate li{display:grid;grid-template-columns:26px 1fr;gap:8px}
-.bookplate i{font-size:20px;color:var(--signal)}
+.bookplate i{font-size:20px;color:var(--ink-signal)}
 /* contents */
 .toc-title{font:400 44px/1 var(--serif);letter-spacing:-.02em;margin:0 0 18px}
-.toc{list-style:none;margin:0;padding:0;border-top:1px solid rgba(23,24,28,.15)}
-.toc button{all:unset;cursor:pointer;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:baseline;width:100%;padding:8px 0;border-bottom:1px solid rgba(23,24,28,.1);font-size:15px;line-height:1.3}
-.toc button:hover .toc-t{color:var(--signal)}
+.toc{list-style:none;margin:0;padding:0;border-top:1px solid var(--paper-line)}
+.toc button{all:unset;cursor:pointer;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:baseline;width:100%;padding:8px 0;border-bottom:1px solid color-mix(in srgb,var(--paper-ink) 10%,transparent);font-size:15px;line-height:1.3}
+.toc button:hover .toc-t{color:var(--ink-signal)}
 .toc button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .toc-n,.toc-p{font:400 11px/1 var(--mono);color:var(--paper-muted);font-variant-numeric:tabular-nums}
 .toc-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* epigraph */
-.epigraph{display:flex;flex-direction:column;justify-content:center;background:#e8e2d6}
+.epigraph{display:flex;flex-direction:column;justify-content:center;background:var(--paper2)}
 .epigraph blockquote{margin:0;font:400 36px/1.08 var(--serif);letter-spacing:-.01em}
 .epigraph footer{margin-top:18px;font:400 11px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-muted)}
 /* bento pages: a heading, then a grid that fills the page and clips its tiles */
@@ -393,10 +403,10 @@ html:not(.book-on) .bento-page{height:580px}
 .et.span{grid-column:span 2}
 .et.span b{font-size:28px}
 .bento.dv{grid-template-columns:1fr 1fr;grid-template-rows:1.15fr 1.25fr 1fr;grid-template-areas:"s s" "h h" "e1 e2"}
-.quote-page{display:flex;flex-direction:column;justify-content:center;background:#e8e2d6}
+.quote-page{display:flex;flex-direction:column;justify-content:center;background:var(--paper2)}
 .quote-page blockquote{margin:0 0 18px;font:400 36px/1.04 var(--serif);letter-spacing:-.01em}
-.quote-page p{font-size:14.5px;line-height:1.55;color:#45423c}
-.quote-page a{font-weight:500;text-decoration-color:var(--signal);text-underline-offset:4px}
+.quote-page p{font-size:14.5px;line-height:1.55;color:var(--paper-ink-2)}
+.quote-page a{font-weight:500;text-decoration-color:var(--ink-signal);text-underline-offset:4px}
 .contact-page h2{font-size:38px}
 .contact-page p{font-size:14.5px;line-height:1.55;color:var(--muted)}
 .contact-page .btns{flex-direction:column;align-items:flex-start;margin:16px 0 22px}
@@ -574,7 +584,7 @@ ${body}
 // ── deck ──────────────────────────────────────────────────────────────────
 
 const DECK_CSS = `
-:root{--deck-table:radial-gradient(ellipse 80% 70% at 50% 40%,#1d2026,var(--bg) 75%);--deck-folio:var(--dim)}
+:root{--deck-table:radial-gradient(ellipse 80% 70% at 50% 40%,var(--surface2),var(--bg) 75%);--deck-folio:var(--dim)}
 .slide{background:var(--sb,var(--surface));color:var(--st,var(--text));border:1px solid var(--line)}
 .slide h1{font:400 92px/.94 var(--serif);letter-spacing:-.025em;margin:0}
 .slide h2{font:400 66px/.98 var(--ss,var(--serif));letter-spacing:-.02em;margin:0}
@@ -682,7 +692,7 @@ function renderDeck(input: HomeStageInput): string {
   const [edition, ...earlier] = editions
   const slides: string[] = []
 
-  slides.push(`<section class="slide s-title bare" data-unit aria-label="Vizmaya Labs" style="--sb:${P.bg}">
+  slides.push(`<section class="slide s-title bare" data-unit aria-label="Vizmaya Labs" style="--sb:var(--bg)">
   <div class="mark">${penrose(120)}</div>
   <div class="in">
     <h1>${statement()}</h1>
@@ -691,7 +701,7 @@ function renderDeck(input: HomeStageInput): string {
   </div>
 </section>`)
 
-  slides.push(`<section class="slide s-stats" data-unit aria-label="In numbers" style="--sb:${P.surface}">
+  slides.push(`<section class="slide s-stats" data-unit aria-label="In numbers" style="--sb:var(--surface)">
   <div class="in">
     <h2>A two-person studio, <em>in numbers</em></h2>
     ${statsList(stats)}
@@ -703,7 +713,7 @@ function renderDeck(input: HomeStageInput): string {
   const latest = stories.slice(0, 5)
   const more = stories.slice(5, 12)
   if (latest.length) {
-    slides.push(`<section class="slide s-stories" data-unit aria-label="The latest stories" style="--sb:${P.bg}">
+    slides.push(`<section class="slide s-stories" data-unit aria-label="The latest stories" style="--sb:var(--bg)">
   <div class="in">
     <h2>The <em>latest</em></h2>
     <div class="bento latest">${latest.map((s, i) => storyTile(s, i, 'abcde'[i], i === 0 ? 'big' : '', 3, i === 0)).join('')}</div>
@@ -712,7 +722,7 @@ function renderDeck(input: HomeStageInput): string {
   }
   if (more.length) {
     const kinds = ['wide', 'tall', '', '', '', '', '']
-    slides.push(`<section class="slide s-stories" data-unit aria-label="More stories" style="--sb:${P.bg}">
+    slides.push(`<section class="slide s-stories" data-unit aria-label="More stories" style="--sb:var(--bg)">
   <div class="in">
     <h2>More <em>stories</em></h2>
     <div class="bento more">${more.map((s, k) => storyTile(s, k + 5, 'fghijkl'[k], kinds[k], kinds[k] === 'tall' ? 5 : 3)).join('')}${archiveTile(total, 'm')}</div>
@@ -721,7 +731,7 @@ function renderDeck(input: HomeStageInput): string {
   }
 
   if (edition) {
-    slides.push(`<section class="slide s-bento" data-unit aria-label="Doom v Boom" style="--sb:${P.bg}">
+    slides.push(`<section class="slide s-bento" data-unit aria-label="Doom v Boom" style="--sb:var(--bg)">
   <div class="in">
     <h2>Doom v Boom, <em>this morning</em></h2>
     ${dailyBento(edition, earlier)}
@@ -731,7 +741,7 @@ function renderDeck(input: HomeStageInput): string {
 
   const shelf = epics.slice(0, 5)
   if (shelf.length) {
-    slides.push(`<section class="slide s-bento" data-unit aria-label="Epics" style="--sb:${P.bg}">
+    slides.push(`<section class="slide s-bento" data-unit aria-label="Epics" style="--sb:var(--bg)">
   <div class="in">
     <h2>The <em>epics</em></h2>
     <div class="bento ep">${epicTiles(shelf)}</div>
@@ -739,7 +749,7 @@ function renderDeck(input: HomeStageInput): string {
 </section>`)
   }
 
-  slides.push(`<section class="slide s-studio" data-unit aria-label="The studio" style="--sb:${P.surface}">
+  slides.push(`<section class="slide s-studio" data-unit aria-label="The studio" style="--sb:var(--surface)">
   <div class="in">
     <div class="cols">
       <div>
@@ -751,7 +761,7 @@ function renderDeck(input: HomeStageInput): string {
   </div>
 </section>`)
 
-  slides.push(`<section class="slide s-contact bare" data-unit aria-label="Work with us" style="--sb:${P.bg}">
+  slides.push(`<section class="slide s-contact bare" data-unit aria-label="Work with us" style="--sb:var(--bg)">
   <div class="in">
     ${penrose(64)}
     <h2>${esc(CONTACT.title.replace(/ better story\?$/, ''))} <em>better story?</em></h2>
@@ -777,10 +787,10 @@ ${slides.join('\n')}
 
 const BOARD_CSS = `
 :root{
-  --board-felt:${P.surface};--board-felt-2:${P.surface2};--board-edge:#2a2d33;
-  --board-string:${P.signal};--board-pin:${P.sky};--board-label:var(--muted);
-  --board-paper:${P.paper};--board-card:#f7f3ec;--board-ink:${P.paperInk};--board-ink-muted:${P.paperMuted};
-  --sticky-gold:#f3d98b;--sticky-rose:#f7bba7;--sticky-blue:#c3d6ff;--sticky-sage:#bfe8d6;
+  --board-felt:var(--surface);--board-felt-2:var(--surface2);--board-edge:color-mix(in srgb,var(--text) 14%,var(--surface));
+  --board-string:var(--signal);--board-pin:var(--second);--board-label:var(--muted);
+  --board-paper:var(--paper);--board-card:var(--card);--board-ink:var(--paper-ink);--board-ink-muted:var(--paper-muted);
+  --sticky-gold:var(--tint-gold);--sticky-rose:var(--tint-pink);--sticky-blue:var(--tint-blue);--sticky-sage:var(--tint-teal);
 }
 .item h3{font:400 36px/1.02 var(--ss,var(--serif));letter-spacing:-.01em;margin:0 0 10px}
 .item h3 a{text-decoration:none}
@@ -788,7 +798,7 @@ const BOARD_CSS = `
 .item p{margin:0 0 .5em;font-size:17px;line-height:1.45}
 .item .meta{font-size:13px;margin:8px 0 0}
 .bare-text{color:var(--text)}
-.stage[data-surface="whiteboard"] .bare-text{color:${P.paperInk}}
+.stage[data-surface="whiteboard"] .bare-text{color:var(--paper-ink)}
 .title-card h1{font:400 104px/.92 var(--serif);letter-spacing:-.03em;margin:0 0 30px}
 .title-card p{font-size:23px;line-height:1.55;max-width:44ch;color:var(--board-label)}
 .title-card .meta{font-size:15px;margin-top:18px}
@@ -796,23 +806,23 @@ const BOARD_CSS = `
 .stat p{font:400 22px/1.15 var(--serif);margin:8px 0 0}
 .story-card .pic{margin:-6px -8px 18px;height:var(--ph,250px);border-radius:3px}
 .story-card{border-top:6px solid var(--sa)}
-.story-card .sub{color:#45423c}
+.story-card .sub{color:var(--paper-ink-2)}
 .go{display:inline-flex;align-items:center;gap:6px;font:500 15px/1 var(--sans);text-decoration:none;color:var(--paper-ink);margin-top:12px}
-.go:hover{color:var(--signal)}
+.go:hover{color:var(--ink-signal)}
 .story-card.lead h3{font-size:56px}
 .story-card.lead .sub{font-size:21px}
 .topic p{font:400 30px/1.05 var(--serif);margin:0}
-.topic .meta{color:rgba(23,24,28,.6);font-size:12px}
-.daily .big{display:block;font:400 136px/.82 var(--serif);letter-spacing:-.04em;color:var(--signal);margin:2px 0 6px}
+.topic .meta{color:color-mix(in srgb,var(--paper-ink) 60%,transparent);font-size:12px}
+.daily .big{display:block;font:400 136px/.82 var(--serif);letter-spacing:-.04em;color:var(--ink-signal);margin:2px 0 6px}
 .daily b{font:400 26px/1.1 var(--serif)}
 .daily .earlier span{font-size:15px}
 .daily a,.epics a{color:var(--paper-ink)}
 .epics ul{list-style:none;margin:0;padding:0}
 .epics li{font-size:17px;line-height:28px}
 .epics li a{text-decoration:none;font-weight:600}
-.epics li a:hover{color:var(--signal)}
+.epics li a:hover{color:var(--ink-signal)}
 .studio blockquote{margin:0 0 18px;font:400 52px/1 var(--serif);letter-spacing:-.015em}
-.studio .cap{font-size:17px;color:#45423c;margin-bottom:24px}
+.studio .cap{font-size:17px;color:var(--paper-ink-2);margin-bottom:24px}
 .contact{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--line2)}
 .contact h3{font-size:64px;margin-bottom:18px}
 .contact p{color:var(--muted)}

@@ -95,7 +95,7 @@ export default function ScrollIndex({ stories, total }: { stories: HomeStory[]; 
           <div className="mt-7 flex flex-wrap items-center gap-5">
             <StoryLink
               story={lead}
-              className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-5 py-3 text-[14px] font-medium text-(--bg) transition-colors hover:bg-(--text)"
+              className="inline-flex items-center gap-2 rounded-full bg-(--signal) px-5 py-3 text-[14px] font-medium text-(--on-signal) transition-colors hover:bg-(--text) hover:text-(--bg)"
             >
               Read the story <ArrowRight size={15} weight="bold" />
             </StoryLink>

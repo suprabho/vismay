@@ -1,4 +1,5 @@
 import type { StoryCardData } from '@vismay/ui'
+import { LOGO, logoScheme, type Scheme } from './logoPalette'
 
 /**
  * The home page's data model and the pieces both of its renderers share: the
@@ -60,31 +61,22 @@ export const STUDIO = {
 }
 
 /**
- * The home page's palette, a night edition: warm paper-white type on
- * blue-black, one signal colour (vermilion) and one cool secondary (sky).
- * The page (components/home/HomeStory.tsx) and every stage read it, so the
- * look changes here. The Penrose logo keeps its own teal, pink and blue.
+ * The home page's colours, generated from the logo (./logoPalette): each
+ * binding leads with one of the Penrose mark's dots on a ground tinted by it,
+ * so switching formats shifts the whole page. Book teal, Board pink, Deck
+ * blue; Scroll, the Penrose, keeps the pink lead on the blue's ground. The
+ * page (components/home/HomeStory.tsx) and every stage read these, so the
+ * look changes here.
  */
-export const PALETTE = {
-  bg: '#0E0F12',
-  surface: '#16181C',
-  surface2: '#1D2025',
-  text: '#EEE8DD',
-  muted: '#A39E94',
-  dim: '#6E6A63',
-  line: 'rgba(238,232,221,.10)',
-  line2: 'rgba(238,232,221,.20)',
-  signal: '#FF6A3D',
-  sky: '#8EB9FF',
-  mint: '#7ED9B4',
-  /** The book's pages, and the ink printed on them. */
-  paper: '#F2EDE3',
-  paperInk: '#17181C',
-  paperMuted: '#6B665E',
+export const HOME_SCHEMES: Record<HomeView, Scheme> = {
+  book: logoScheme('Teal', 'teal'),
+  board: logoScheme('Pink', 'pink'),
+  deck: logoScheme('Blue', 'blue'),
+  scroll: logoScheme('Penrose', 'pink', 'blue'),
 }
 
-/** The Penrose mark's own colours (the logo, not the page). */
-export const MARK = { teal: '#0BBFAB', pink: '#E84D7A', blue: '#2B4ACF' }
+/** The Penrose mark's own colours, exactly as drawn. */
+export const MARK = LOGO
 
 /**
  * The type: Instrument Serif for headlines and big numbers (one weight, with
@@ -142,11 +134,12 @@ export const HOME_PENDING_STYLE_ID = 'home-view-pending'
  * (.hs-mast) until the stage takes over, so the scroll page doesn't flash
  * first. HomeStory removes it once that binding is rendered (its
  * data-view says which). A style in <head>, not an attribute on <html>, so
- * hydration has nothing to disagree with. Same precedence as
- * components/home/homeViewStore. Without JS it never runs and the scroll
- * page shows.
+ * hydration has nothing to disagree with. The bar wears that binding's
+ * ground. Same precedence as components/home/homeViewStore. Without JS it
+ * never runs and the scroll page shows.
  */
-export const HOME_VIEW_BOOT_SCRIPT = `(function(){try{var ok=/^(book|board|deck|scroll)$/,v=new URLSearchParams(location.search).get('view');if(!ok.test(v||'')){v=null;try{v=localStorage.getItem('${HOME_VIEW_STORAGE_KEY}')}catch(e){}if(!ok.test(v||''))v=matchMedia('${HOME_WIDE_QUERY}').matches?'book':'deck'}if(v==='scroll')return;var s=document.createElement('style');s.id='${HOME_PENDING_STYLE_ID}';s.setAttribute('data-view',v);s.textContent='.hs-scroll{display:none!important}.hs-mast{background:${PALETTE.bg}!important;border-color:${PALETTE.line}!important}';document.head.appendChild(s);setTimeout(function(){s.remove()},5000)}catch(e){}})()`
+const BOOT_MAST = Object.fromEntries(HOME_STAGE_FORMATS.map((f) => [f, [HOME_SCHEMES[f].bg, HOME_SCHEMES[f].line]]))
+export const HOME_VIEW_BOOT_SCRIPT = `(function(){try{var ok=/^(book|board|deck|scroll)$/,v=new URLSearchParams(location.search).get('view');if(!ok.test(v||'')){v=null;try{v=localStorage.getItem('${HOME_VIEW_STORAGE_KEY}')}catch(e){}if(!ok.test(v||''))v=matchMedia('${HOME_WIDE_QUERY}').matches?'book':'deck'}if(v==='scroll')return;var m=${JSON.stringify(BOOT_MAST)}[v],s=document.createElement('style');s.id='${HOME_PENDING_STYLE_ID}';s.setAttribute('data-view',v);s.textContent='.hs-scroll{display:none!important}.hs-mast{background:'+m[0]+'!important;border-color:'+m[1]+'!important}';document.head.appendChild(s);setTimeout(function(){s.remove()},5000)}catch(e){}})()`
 
 /**
  * The message a stage document posts to the page around it: `ready` once its
@@ -204,18 +197,23 @@ export interface StoryPalette {
   accent: string
 }
 
-const FALLBACK_ACCENTS = [PALETTE.signal, PALETTE.sky, PALETTE.mint]
+/** The scheme's three logo colours, in its order: lead, second, third. */
+export const SCHEME_ACCENTS = ['var(--signal)', 'var(--second)', 'var(--third)']
 const HEX = /^#[0-9a-f]{3,8}$/i
 
-/** A story's own colours (its theme), or an ink card in the brand tricolour. */
+/**
+ * A story's own colours (its theme), or, where it has none, the binding's
+ * surface and the logo colours in turn. The fallbacks are custom properties,
+ * so they follow whichever scheme the story is shown in.
+ */
 export function storyPalette(s: HomeStory, index: number): StoryPalette {
   const c = s.theme?.colors
   const ok = (v: string | undefined) => (v && HEX.test(v) ? v : undefined)
   return {
-    bg: ok(c?.background) ?? PALETTE.surface2,
-    text: ok(c?.text) ?? PALETTE.text,
-    muted: ok(c?.muted) ?? PALETTE.muted,
-    accent: ok(c?.accent) ?? FALLBACK_ACCENTS[index % FALLBACK_ACCENTS.length],
+    bg: ok(c?.background) ?? 'var(--surface2)',
+    text: ok(c?.text) ?? 'var(--text)',
+    muted: ok(c?.muted) ?? 'var(--muted)',
+    accent: ok(c?.accent) ?? SCHEME_ACCENTS[index % SCHEME_ACCENTS.length],
   }
 }
 
