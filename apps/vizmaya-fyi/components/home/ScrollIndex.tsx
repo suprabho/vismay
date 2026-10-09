@@ -45,13 +45,11 @@ function Cover({ story, index, className = '' }: { story: HomeStory; index: numb
       className={`relative overflow-hidden rounded-[6px] bg-(--sb) ${className}`}
       style={{ '--sb': p.bg, '--sa': p.accent } as CSSProperties}
     >
-      {/* The story's initial in its colours, under the cover (or instead of one that fails). */}
+      {/* A glow in the story's colours, under the cover (or instead of one that fails). */}
       <span
         aria-hidden
-        className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_25%,color-mix(in_srgb,var(--sa)_28%,transparent),transparent_60%)] font-(family-name:--serif) text-[clamp(72px,10vw,140px)] font-normal italic text-(--sa)"
-      >
-        {(story.title.trim()[0] ?? '·').toUpperCase()}
-      </span>
+        className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,color-mix(in_srgb,var(--sa)_30%,transparent),transparent_62%)]"
+      />
       {story.thumbnail && !failed && (
         // eslint-disable-next-line @next/next/no-img-element
         <img

@@ -113,15 +113,13 @@ em{font-style:italic}
 .socials a:hover{opacity:1;color:var(--signal)}
 .pic{position:relative;overflow:hidden;background:var(--sb,var(--surface2))}
 .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.pic .glyph{position:absolute;inset:0;display:grid;place-items:center;font:400 180px/1 var(--ss,var(--serif));font-style:italic;color:var(--sa,var(--signal));
-  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--sa,var(--signal)) 28%,transparent),transparent 60%),var(--sb,var(--surface2))}
+.pic .wash{position:absolute;inset:0;background:radial-gradient(circle at 70% 25%,color-mix(in srgb,var(--sa,var(--signal)) 30%,transparent),transparent 62%),var(--sb,var(--surface2))}
 .hi,h1 em,h2 em,h3 em,blockquote em{color:var(--signal)}
 .bento{display:grid;gap:8px;flex:1 1 auto;min-height:0}
-/* a story tile: its cover (or its initial) full-bleed, the title over a dark wash */
+/* a story tile: its cover (or a glow in its colours) full-bleed, the title over a dark wash */
 .bt{position:relative;overflow:hidden;border-radius:7px;background:var(--sb,#17181c);color:#f7f2e9;text-decoration:none;
   display:flex;flex-direction:column;justify-content:flex-end;padding:10px 12px 11px;min-width:0;min-height:0}
 .bt .pic{position:absolute;inset:0;container-type:size;background:var(--sb,#17181c)}
-.bt .pic .glyph{place-items:start end;padding:2px 12px;font-size:min(58cqh,40cqw);line-height:1;opacity:.55}
 .bt .pic img{transition:transform .6s ease}
 .bt:hover .pic img{transform:scale(1.04)}
 .bt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,rgba(10,11,13,.95) 0%,rgba(10,11,13,.72) 42%,rgba(10,11,13,.22) 76%,rgba(10,11,13,.06) 100%)}
@@ -189,13 +187,12 @@ function storyVars(s: HomeStory, i: number): string {
   return `--sb:${p.bg};--st:${p.text};--sm:${p.muted};--sa:${p.accent}${serif ? `;--ss:${esc(serif)}` : ''}`
 }
 
-/** The story's cover, or its initial in its own colours when it has none. */
+/** The story's cover, or a glow in its own colours when it has none. */
 function picture(s: HomeStory): string {
   const src = safeUrl(s.thumbnail)
-  const initial = (s.title.trim()[0] ?? '·').toUpperCase()
-  const glyph = `<span class="glyph" aria-hidden="true">${esc(initial)}</span>`
-  // The initial sits under the image, so a cover that fails to load leaves it showing.
-  return src ? `${glyph}<img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : glyph
+  // The glow sits under the image, so a cover that fails to load leaves it showing.
+  const wash = '<span class="wash" aria-hidden="true"></span>'
+  return src ? `${wash}<img src="${esc(src)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : wash
 }
 
 function storyMeta(s: HomeStory): string {
