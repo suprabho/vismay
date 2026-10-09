@@ -8,7 +8,6 @@ import {
   STUDIO,
   storyHref,
   storyMetaBits,
-  storyNumber,
   storyPalette,
   type HomeDailyEdition,
   type HomeEpic,
@@ -298,14 +297,22 @@ html:not(.book-on) .page{min-height:580px}
 .epigraph{display:flex;flex-direction:column;justify-content:center;background:#e8e2d6}
 .epigraph blockquote{margin:0;font:400 36px/1.08 var(--serif);letter-spacing:-.01em}
 .epigraph footer{margin-top:18px;font:400 11px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-muted)}
-/* a story: a plate on the left, its page on the right */
-.plate-page{padding:0;background:var(--sb);color:var(--st)}
-.plate-page .pic{position:absolute;inset:0 0 120px 0}
-.plate-num{position:absolute;left:30px;bottom:24px;font:400 96px/.86 var(--ss,var(--serif));font-style:italic;color:var(--sa);letter-spacing:-.03em}
-.story-page{border-top:6px solid var(--sa)}
-.story-page .dek{font:400 16.5px/1.55 var(--sans);color:#45423c}
-.story-foot{position:absolute;left:40px;right:40px;bottom:52px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
-.story-foot .meta{max-width:22ch}
+/* the stories: one spread, the latest as a feature and the rest as rows */
+.story-spread h2{margin-bottom:12px}
+.feature{display:block;text-decoration:none;margin-bottom:10px}
+.feature .pic{display:block;height:128px;border-radius:3px;margin-bottom:10px;border-top:4px solid var(--sa)}
+.feature .pic .glyph{font-size:96px}
+.feature b{display:block;font:400 25px/1.02 var(--ss,var(--serif));letter-spacing:-.01em}
+.feature .dek{display:block;font-size:13.5px;line-height:1.42;color:#45423c;margin:6px 0 4px}
+.feature:hover b{color:var(--signal)}
+.rows{list-style:none;margin:0;padding:0}
+.rows a{display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;text-decoration:none;padding:4px 0;border-top:1px solid rgba(23,24,28,.12)}
+.rows .pic{display:block;width:46px;height:42px;border-radius:3px;border-left:3px solid var(--sa)}
+.rows .pic .glyph{font-size:28px}
+.rows b{display:block;font:400 15.5px/1.02 var(--ss,var(--serif))}
+.rows .meta{font-size:9.5px;margin-top:2px}
+.more-link{display:inline-block;margin-top:10px;font-weight:500;font-size:14px;text-decoration-color:var(--signal);text-underline-offset:4px}
+.rows a:hover b{color:var(--signal)}
 /* doom v boom, epics, the studio */
 .score{display:flex;align-items:flex-end;gap:14px;margin:0 0 10px}
 .score .big{font:400 100px/.82 var(--serif);letter-spacing:-.04em;color:var(--signal);font-variant-numeric:lining-nums}
@@ -365,7 +372,7 @@ function renderBook(input: HomeStageInput): string {
       <li><i class="ph ph-hand-tap" aria-hidden="true"></i><span>Tap the right page to turn forward, the left page to go back.</span></li>
       <li><i class="ph ph-hand-grabbing" aria-hidden="true"></i><span>Or take hold of a page and drag it across.</span></li>
       <li><i class="ph ph-keyboard" aria-hidden="true"></i><span>The arrow keys work too.</span></li>
-      <li><i class="ph ph-list-numbers" aria-hidden="true"></i><span>The contents page jumps straight to a story.</span></li>
+      <li><i class="ph ph-list-numbers" aria-hidden="true"></i><span>The contents page jumps straight to a section.</span></li>
     </ul>
   </div>
 </article>`)
@@ -382,43 +389,49 @@ function renderBook(input: HomeStageInput): string {
   ${statsList(stats)}
 </article>`)
 
-  // Contents: every story, then the rest of the book, nine lines a page.
-  const toc: { n: string; title: string; key: string }[] = [
-    ...stories.map((s, i) => ({ n: storyNumber(i), title: s.title, key: `story-${i}` })),
-    ...(edition ? [{ n: '·', title: 'Doom v Boom, this morning', key: 'daily' }] : []),
-    ...(shelf.length ? [{ n: '·', title: 'The epics', key: 'epics' }] : []),
-    { n: '·', title: 'The studio', key: 'studio' },
-    { n: '·', title: 'Work with us', key: 'contact' },
+  // Contents: one page, the book's sections.
+  const toc: { title: string; key: string }[] = [
+    ...(stories.length ? [{ title: 'The stories', key: 'stories' }] : []),
+    ...(edition ? [{ title: 'Doom v Boom, this morning', key: 'daily' }] : []),
+    ...(shelf.length ? [{ title: 'The epics', key: 'epics' }] : []),
+    { title: 'The studio', key: 'studio' },
+    { title: 'Work with us', key: 'contact' },
   ]
-  const tocPages = Math.ceil(toc.length / 9)
-  for (let p = 0; p < tocPages; p++) {
-    add(`<article class="page" data-unit data-head="Contents" data-label="Contents${p ? ', continued' : ''}">
-  <h2 class="toc-title">${p ? 'Contents, <em>continued</em>' : 'Contents'}</h2>
+  add(`<article class="page" data-unit data-head="Contents" data-label="Contents">
+  <h2 class="toc-title">Contents</h2>
   <ol class="toc">
     ${toc
-      .slice(p * 9, p * 9 + 9)
-      .map((e) => `<li><button type="button" data-goto="{{page:${e.key}}}"><span class="toc-n">${esc(e.n)}</span><span class="toc-t">${esc(e.title)}</span><span class="toc-p">{{page:${e.key}}}</span></button></li>`)
+      .map((e, i) => `<li><button type="button" data-goto="{{page:${e.key}}}"><span class="toc-n">${i + 1}</span><span class="toc-t">${esc(e.title)}</span><span class="toc-p">{{page:${e.key}}}</span></button></li>`)
       .join('\n    ')}
   </ol>
 </article>`)
-  }
 
-  fillToLeft()
-  stories.forEach((s, i) => {
-    const num = storyNumber(i)
+  // Every story on one spread: the latest as a feature with three more on the
+  // left-hand page, the rest as rows on the right.
+  if (stories.length) {
+    const [lead, ...others] = stories
+    const left = others.slice(0, 3)
+    const right = others.slice(3)
+    const row = (s: HomeStory, i: number) =>
+      `<li><a href="${esc(storyHref(s))}" style="${storyVars(s, i)}"><span class="pic">${picture(s)}</span><span><b class="clamp c2">${esc(s.title)}</b><span class="meta">${storyMeta(s)}</span></span></a></li>`
+    fillToLeft()
     add(
-      `<article class="page plate-page bare" data-unit data-label="${num}" style="${storyVars(s, i)}">
-  <div class="pic">${picture(s)}</div>
-  <span class="plate-num">${num}</span>
+      `<article class="page story-spread" data-unit data-head="The stories" data-label="The stories">
+  <h2>The <em>stories</em></h2>
+  <a class="feature" href="${esc(storyHref(lead))}" style="${storyVars(lead, 0)}"><span class="pic">${picture(lead)}</span><b class="clamp c2">${esc(lead.title)}</b>${
+        lead.subtitle ? `<span class="dek clamp c2">${esc(lead.subtitle)}</span>` : ''
+      }<span class="meta">${storyMeta(lead)}</span></a>
+  <ul class="rows">${left.map((s, k) => row(s, k + 1)).join('')}</ul>
 </article>`,
-      `story-${i}`
+      'stories'
     )
-    add(`<article class="page story-page" data-unit data-head="${esc(s.topic || 'Stories')}" data-label="${esc(s.title)}" style="${storyVars(s, i)}">
-  <h2 class="clamp c5">${esc(s.title)}</h2>
-  ${s.subtitle ? `<p class="dek clamp c6">${esc(s.subtitle)}</p>` : ''}
-  <div class="story-foot"><p class="meta">${storyMeta(s)}</p><a class="read" href="${esc(storyHref(s))}">Read <i class="ph ph-arrow-right" aria-hidden="true"></i></a></div>
+    if (right.length) {
+      add(`<article class="page story-spread" data-unit data-head="The stories" data-label="More stories">
+  <ul class="rows">${right.map((s, k) => row(s, k + 4)).join('')}</ul>
+  <a class="more-link" href="/stories">All ${total} stories in the archive →</a>
 </article>`)
-  })
+    }
+  }
 
   if (edition) {
     add(
@@ -523,13 +536,24 @@ const DECK_CSS = `
 .s-stats .stats{grid-template-columns:repeat(4,1fr)}
 .s-stats .stats b{font-size:150px}
 .s-stats .stats span{font-size:18px;color:var(--muted);opacity:1}
-.story-cols{grid-template-columns:1fr 1.08fr;gap:56px}
-.story-cols .pic{border-radius:8px}
-.story .txt{justify-content:center;gap:20px}
-.story .dek{font:400 21px/1.5 var(--sans);color:var(--sm)}
-.story .foot{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:8px}
-.story .read{background:var(--sa);color:var(--sb)}
-.story .read:hover{background:var(--st);color:var(--sb)}
+.s-stories .in{gap:22px}
+.s-stories h2{font-size:60px}
+.tiles{flex:1 1 auto;min-height:0;display:grid;gap:16px}
+.tiles.latest{grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:1fr 1fr}
+.tiles.latest .lead{grid-row:span 2}
+.tiles.more{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr}
+.tile{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0;text-decoration:none;color:var(--text)}
+.tile .pic{display:block;flex:1 1 auto;min-height:0;border-radius:6px;border-top:3px solid var(--sa);container-type:size}
+.tile .pic .glyph{font-size:min(70cqh,45cqw)}
+.tile .tt{display:block}
+.tile b{display:block;font:400 24px/1.04 var(--ss,var(--serif));letter-spacing:-.01em}
+.tile.lead b{font-size:40px}
+.tile .dek{display:block;font-size:16px;line-height:1.45;color:var(--muted);margin-top:8px}
+.tile .meta{display:block;color:var(--dim);margin-top:6px}
+.tile:hover b{color:var(--signal)}
+.tile.all{justify-content:flex-end;padding:22px;border:1px solid var(--line2);border-radius:6px;background:var(--surface2)}
+.tile.all b{font-size:36px}
+.tile.all b em{color:var(--signal)}
 .s-daily .in{justify-content:center}
 .s-daily .row{display:grid;grid-template-columns:auto 1fr;gap:56px;align-items:center;margin-top:28px}
 .s-daily .big{font:400 240px/.8 var(--serif);letter-spacing:-.05em;color:var(--signal);font-variant-numeric:lining-nums}
@@ -562,11 +586,20 @@ const DECK_CSS = `
   .s-stats .stats{grid-template-columns:1fr 1fr;gap:28px 20px}
   .s-stats .stats b{font-size:84px}
   .s-stats .stats span{font-size:15px}
-  .story-cols{grid-template-columns:1fr;grid-template-rows:40% 1fr;gap:20px}
-  .story-cols .pic{order:-1}
-  .story .txt{justify-content:flex-start;gap:12px}
-  .story .dek{font-size:16px}
-  .pic .glyph{font-size:120px}
+  .s-stories .in{gap:14px}
+  .s-stories h2{font-size:38px}
+  .tiles.latest,.tiles.more{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:min-content;gap:8px;align-content:start}
+  .tiles.latest .lead{grid-row:auto}
+  .tile{display:grid;grid-template-columns:60px 1fr;align-items:center;gap:12px}
+  .tile .pic{flex:none;height:50px;border-top:0;border-left:3px solid var(--sa)}
+  .tile b{font-size:19px}
+  .tile .meta{margin-top:3px;font-size:10px}
+  .tile .dek{display:none}
+  .tile.lead{display:flex;align-items:stretch;gap:8px}
+  .tile.lead .pic{height:150px;border-left:0;border-top:3px solid var(--sa)}
+  .tile.lead b{font-size:28px}
+  .tile.all{display:block;padding:12px 14px}
+  .tile.all b{font-size:22px}
   .s-daily .row{grid-template-columns:1fr;gap:10px;margin-top:14px}
   .s-daily .big{font-size:130px}
   .s-daily .word{font-size:26px}
@@ -608,20 +641,29 @@ function renderDeck(input: HomeStageInput): string {
   </div>
 </section>`)
 
-  stories.forEach((s, i) => {
-    slides.push(`<section class="slide story" data-unit aria-label="${esc(`No. ${storyNumber(i)}: ${s.title}`)}" style="${storyVars(s, i)}">
+  // Every story on two slides: the latest five, then the rest and the archive.
+  const tile = (s: HomeStory, i: number, lead = false) =>
+    `<a class="tile${lead ? ' lead' : ''}" href="${esc(storyHref(s))}" style="${storyVars(s, i)}"><span class="pic">${picture(s)}</span><span class="tt"><b class="clamp ${lead ? 'c3' : 'c2'}">${esc(s.title)}</b>${
+      lead && s.subtitle ? `<span class="dek clamp c2">${esc(s.subtitle)}</span>` : ''
+    }<span class="meta">${storyMeta(s)}</span></span></a>`
+  const latest = stories.slice(0, 5)
+  const more = stories.slice(5, 12)
+  if (latest.length) {
+    slides.push(`<section class="slide s-stories" data-unit aria-label="The latest stories" style="--sb:${P.bg}">
   <div class="in">
-    <div class="cols story-cols">
-      <div class="txt">
-        <h2 class="clamp c4">${esc(s.title)}</h2>
-        ${s.subtitle ? `<p class="dek clamp c4">${esc(s.subtitle)}</p>` : ''}
-        <div class="foot"><a class="read" href="${esc(storyHref(s))}">Read the story <i class="ph ph-arrow-right" aria-hidden="true"></i></a><span class="meta">${storyMeta(s)}</span></div>
-      </div>
-      <div class="pic">${picture(s)}</div>
-    </div>
+    <h2>The <em>latest</em></h2>
+    <div class="tiles latest">${latest.map((s, i) => tile(s, i, i === 0)).join('')}</div>
   </div>
 </section>`)
-  })
+  }
+  if (more.length) {
+    slides.push(`<section class="slide s-stories" data-unit aria-label="More stories" style="--sb:${P.bg}">
+  <div class="in">
+    <h2>More <em>stories</em></h2>
+    <div class="tiles more">${more.map((s, k) => tile(s, k + 5)).join('')}<a class="tile all" href="/stories"><b>All ${total} <em>stories</em></b><span class="meta">The archive →</span></a></div>
+  </div>
+</section>`)
+  }
 
   if (edition) {
     slides.push(`<section class="slide s-daily" data-unit aria-label="Doom v Boom" style="--sb:${P.surface}">
@@ -739,6 +781,10 @@ const BOARD_CSS = `
 .vz-panel .tour h2{font:400 32px/1.02 var(--serif)}
 .vz-panel .tour p{color:var(--muted)}
 .vz-panel .tour .meta{color:var(--dim);margin-bottom:10px}
+.tour-list{list-style:none;margin:0 0 10px;padding:0}
+.tour-list a{display:block;padding:7px 0;border-top:1px solid var(--line);text-decoration:none;font:400 19px/1.12 var(--serif)}
+.tour-list a:hover{color:var(--signal)}
+.tour-list span{display:block;font:400 10.5px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-top:3px}
 .tour-link{display:inline-flex;align-items:center;gap:6px;font:500 14px/1 var(--sans);color:var(--signal);text-decoration:none;margin:2px 0 10px}
 .tour-link:hover{text-decoration:underline;text-underline-offset:4px}
 `
@@ -852,14 +898,26 @@ function renderBoard(input: HomeStageInput): string {
   <h2>${statement()}</h2>
   <p>${esc(STUDIO.deck)}</p>
 </li>`)
-  stories.forEach((s, i) => {
-    tour.push(`<li data-unit data-target="st-${i}">
-  <h2>${esc(s.title)}</h2>
-  ${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ''}
-  <p class="meta">${storyMeta(s)}</p>
-  <a class="tour-link" href="${esc(storyHref(s))}">Read the story <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+  // The stories in two stops: the lead and the first row, then the rest.
+  const tourList = (from: number, to: number) =>
+    `<ul class="tour-list">${stories
+      .slice(from, to)
+      .map((s) => `<li><a href="${esc(storyHref(s))}">${esc(s.title)}<span>${storyMeta(s)}</span></a></li>`)
+      .join('')}</ul>`
+  const ids = (from: number, to: number) => stories.slice(from, to).map((_, k) => `st-${from + k}`).join(' ')
+  if (stories.length) {
+    tour.push(`<li data-unit data-target="${ids(0, 5)}" data-target-sm="st-0">
+  <h2>The <em>latest</em></h2>
+  ${tourList(0, 5)}
 </li>`)
-  })
+  }
+  if (stories.length > 5) {
+    tour.push(`<li data-unit data-target="${ids(5, stories.length)}">
+  <h2>More <em>stories</em></h2>
+  ${tourList(5, stories.length)}
+  <a class="tour-link" href="/stories">All ${total} stories <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+</li>`)
+  }
   if (topics.length) {
     tour.push(`<li data-unit data-target="${topics.map((_, k) => `tp-${k}`).join(' ')}">
   <h2>${topics.length === 1 ? 'One topic' : `${topics.length} topics`}</h2>
