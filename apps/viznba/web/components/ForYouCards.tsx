@@ -325,7 +325,7 @@ export function FinalMedium({ game, detail, ctx }: { game: Game; detail: GameDet
           const bright = lead === ha
           return [
             <TeamBadge key={`${ha}b`} team={s.team} />,
-            <span key={`${ha}n`} className={`flex items-center gap-1.5 text-left font-sans text-base font-bold ${bright ? '' : 'text-[#b9b9c2]'}`}>
+            <span key={`${ha}n`} className={`flex items-center gap-1.5 text-left font-sans text-base font-bold ${bright ? '' : 'text-slate-300'}`}>
               <span className="truncate">{s.team.name}</span>
               {ctx.followed.has(s.team.id) && <FavStar />}
             </span>,

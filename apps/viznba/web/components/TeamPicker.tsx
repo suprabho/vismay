@@ -32,7 +32,7 @@ export function TeamPicker({ teams, initial }: { teams: Team[]; initial: string[
                 aria-pressed={on}
                 onClick={() => toggle(t.id)}
                 className="flex min-h-14 w-full items-center gap-2.5 rounded-[14px] border bg-surface px-3 text-left"
-                style={{ borderColor: on ? `color-mix(in srgb, ${t.dot} 60%, transparent)` : '#1f2330' }}
+                style={{ borderColor: on ? `color-mix(in srgb, ${t.dot} 60%, transparent)` : 'var(--color-border)' }}
               >
                 <TeamBadge team={t} />
                 <span className="min-w-0 flex-1">

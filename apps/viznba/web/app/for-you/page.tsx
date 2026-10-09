@@ -116,7 +116,7 @@ export default async function ForYouPage({ searchParams }: { searchParams: Promi
             >
               <span
                 className="flex size-[58px] items-center justify-center rounded-full border-[2.5px]"
-                style={{ borderColor: active || !focus ? t.dot : '#2a2f3d' }}
+                style={{ borderColor: active || !focus ? t.dot : 'var(--color-border-strong)' }}
               >
                 <span className="flex size-12 items-center justify-center rounded-full bg-surface">
                   <TeamBadge team={t} size={32} />
@@ -127,7 +127,7 @@ export default async function ForYouPage({ searchParams }: { searchParams: Promi
           )
         })}
         <Link href="/teams" className="flex w-16 flex-none flex-col items-center gap-1.5">
-          <span className="flex size-[58px] items-center justify-center rounded-full border-[1.5px] border-dashed border-[#3a4050] text-muted">
+          <span className="flex size-[58px] items-center justify-center rounded-full border-[1.5px] border-dashed border-slate-700 text-muted">
             <Plus size={22} />
           </span>
           <span className="text-[11px] font-medium text-muted">Follow</span>
