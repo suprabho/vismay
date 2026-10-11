@@ -29,7 +29,7 @@ export default async function StandingsPage() {
         <ol className="flex flex-col gap-1">
           {all.map((r) => {
             const w = (Math.abs(r.diff) / peak) * 50
-            const color = mine.has(r.team.id) ? r.team.dot : r.diff >= 0 ? 'var(--color-accent)' : '#5a6070'
+            const color = mine.has(r.team.id) ? r.team.dot : r.diff >= 0 ? 'var(--color-accent)' : 'var(--color-slate-600)'
             return (
               <li key={r.team.id} className="grid items-center gap-2" style={{ gridTemplateColumns: '36px minmax(0,1fr) 44px' }}>
                 <span className={`font-mono text-[10.5px] ${mine.has(r.team.id) ? 'font-bold text-text' : 'text-muted'}`}>{r.team.abbr}</span>

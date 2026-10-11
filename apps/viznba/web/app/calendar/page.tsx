@@ -197,7 +197,7 @@ async function WeekView({ date, today, tz, ids, followed }: ViewProps) {
           {days.map((d) => {
             const list = byDay.get(d) ?? []
             const colored = list.flatMap((g) => followed.filter((t) => g.home.team.id === t.id || g.away.team.id === t.id).map((t) => t.dot))
-            const blocks = list.map((_, i) => colored[i] ?? (d < today ? '#2a2f3d' : '#3a4050'))
+            const blocks = list.map((_, i) => colored[i] ?? (d < today ? 'var(--color-border-strong)' : 'var(--color-slate-700)'))
             const isToday = d === today
             return (
               <Link
