@@ -368,7 +368,9 @@ export default function HtmlStoryEditorClient({
                       ? 'norris-piastri-pit-wall-2026'
                       : app === 'viznba'
                         ? 'knicks-bench-minutes-2026'
-                        : 'india-solar-boom-2026'
+                        : app === 'travel'
+                          ? 'new-york-2026-day-3'
+                          : 'india-solar-boom-2026'
                 }
                 onChange={(e) => {
                   setSlug(e.target.value)

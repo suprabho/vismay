@@ -110,6 +110,24 @@ assert.ok(nbaThemed.includes('--bg:#FAF7F2') && nbaThemed.includes('--mark:#C241
 assert.ok(nbaThemed.indexOf('<vizmaya-aura') < nbaThemed.indexOf('<viznba-header>'))
 console.log('branding (viznba): ok')
 
+// Travel chrome: the compass on the scrapbook's paper; the page's trip tag
+// turns the header into a link back to that trip's journey map.
+const tripDoc = doc.replace('<title>T</title>', '<title>T</title><meta name="travel:trip" content="New-York-2026">')
+const trOut = brandHtmlStory(tripDoc, { siteUrl: 'https://protrip.vismay.xyz/', app: 'travel' })
+assert.ok(trOut.includes('<BODY class="x"><style>:root{--vizmaya-chrome-h:57px}@media (max-width:480px){:root{--vizmaya-chrome-h:49px}}</style><travel-header>'))
+assert.ok(/<\/travel-footer><\/BODY><\/html>$/.test(trOut))
+assert.ok(!trOut.includes('vizmaya-header') && !trOut.includes('rive'))
+assert.ok(trOut.includes('href="https://protrip.vismay.xyz/t/new-york-2026"'))
+assert.ok(trOut.includes('href="https://protrip.vismay.xyz/t/new-york-2026/story"'))
+assert.ok(trOut.includes('--mark:#c94f2c') && trOut.includes('--bg:#fffdf8'))
+assert.ok(!trOut.includes('protrip.vismay.xyz//'))
+// Without a (valid) trip tag, no trip links.
+const noTrip = brandHtmlStory(doc.replace('<title>T</title>', '<meta name="travel:trip" content="../x">'), { siteUrl: 'https://protrip.vismay.xyz', app: 'travel' })
+assert.ok(!noTrip.includes('/t/') && noTrip.includes('href="https://protrip.vismay.xyz/"'))
+const trThemed = brandHtmlStory(fsThemedDoc, { siteUrl: 'https://protrip.vismay.xyz', app: 'travel' })
+assert.ok(trThemed.includes('--mark:#C2410C'))
+console.log('branding (travel): ok')
+
 // Embedded (chrome: false, /s/<slug>?embed=1): no bars, the aura stays, the story untouched.
 // With no header the chrome height is 0, so a paged stage fills the whole
 // screen instead of stopping short by the formats' 64px/56px fallback.

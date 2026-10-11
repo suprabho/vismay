@@ -9,13 +9,14 @@
  * origin with no access to the site's cookies or storage. The agent brief
  * tells authors to expect that.
  *
- * Shared by vizmaya-fyi, footshorts, vizf1 and viznba, whose route handlers are one line each.
+ * Shared by vizmaya-fyi, footshorts, vizf1 and viznba, whose route handlers are
+ * one line each, and travel, which checks the trip's password first.
  * Server only.
  */
 
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { brandHtmlStory } from './branding'
-import { getPublishedHtmlStory } from './htmlStories'
+import { getPublishedHtmlStory, type HtmlStory } from './htmlStories'
 import { HTML_STORY_SANDBOX_CSP, isSafeSlug } from './meta'
 
 const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: string; font: string }> = {
@@ -23,6 +24,7 @@ const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: strin
   footshorts: { bg: '#0B0B0F', fg: '#F4F4F5', link: '#F26A3C', font: "'Space Grotesk',-apple-system,'Segoe UI',sans-serif" },
   vizf1: { bg: '#0b0d12', fg: '#f5f5f5', link: '#ff4346', font: "Saira,-apple-system,'Segoe UI',sans-serif" },
   viznba: { bg: '#0b0d12', fg: '#f5f5f5', link: '#ff8a3d', font: "Saira,-apple-system,'Segoe UI',sans-serif" },
+  travel: { bg: '#f6f1e7', fg: '#2b2419', link: '#c94f2c', font: "Manrope,-apple-system,'Segoe UI',sans-serif" },
 }
 
 function notFoundHtml(app: HtmlStoryApp): string {
@@ -36,19 +38,36 @@ function notFoundHtml(app: HtmlStoryApp): string {
 </head><body><main><p>This story doesn't exist or isn't published yet.</p><p><a href="${home}">Back to ${meta.name}</a></p></main></body></html>`
 }
 
+/** The app's "story not found" page. `private` keeps it out of shared caches. */
+export function htmlStoryNotFound(app: HtmlStoryApp, { private: isPrivate = false }: { private?: boolean } = {}): Response {
+  return new Response(notFoundHtml(app), {
+    status: 404,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': isPrivate ? 'private, no-store' : 'public, s-maxage=30',
+    },
+  })
+}
+
+export interface HtmlStoryResponseOptions {
+  /**
+   * A page only some visitors may see (travel's trip-password stories): no
+   * shared caching, so a CDN never hands it to someone without the cookie,
+   * and kept out of search indexes.
+   */
+  private?: boolean
+}
+
 /**
- * GET /s/[slug] for one app. `?embed=1` serves it chrome-less (aura, no site
- * header/footer) for a host app that frames it under its own back button,
- * the same flag the render service's story view takes.
+ * A story document as served: wrapped in its site's chrome (`?embed=1` drops
+ * the header and footer), under the sandbox CSP.
  */
-export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryApp): Promise<Response> {
-  const story = isSafeSlug(slug) ? await getPublishedHtmlStory(slug, app) : null
-  if (!story) {
-    return new Response(notFoundHtml(app), {
-      status: 404,
-      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, s-maxage=30' },
-    })
-  }
+export function htmlStoryResponse(
+  req: Request,
+  story: Pick<HtmlStory, 'html' | 'aura' | 'updatedAt'>,
+  app: HtmlStoryApp,
+  { private: isPrivate = false }: HtmlStoryResponseOptions = {},
+): Response {
   const url = new URL(req.url)
   const html = brandHtmlStory(story.html, {
     siteUrl: url.origin,
@@ -63,9 +82,25 @@ export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryA
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'strict-origin-when-cross-origin',
       'last-modified': new Date(story.updatedAt).toUTCString(),
-      // Re-posts show up within a minute; the CDN keeps serving the last good
-      // copy while it refetches.
-      'cache-control': 'public, s-maxage=60, stale-while-revalidate=86400',
+      ...(isPrivate
+        ? { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex, nofollow' }
+        : // Re-posts show up within a minute; the CDN keeps serving the last
+          // good copy while it refetches.
+          { 'cache-control': 'public, s-maxage=60, stale-while-revalidate=86400' }),
     },
   })
+}
+
+/**
+ * GET /s/[slug] for one app. `?embed=1` serves it chrome-less (aura, no site
+ * header/footer) for a host app that frames it under its own back button,
+ * the same flag the render service's story view takes.
+ *
+ * Public stories only: travel gates its pages behind a trip's password and
+ * serves them through htmlStoryResponse itself (apps/travel/web/app/s/[slug]).
+ */
+export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryApp): Promise<Response> {
+  const story = isSafeSlug(slug) ? await getPublishedHtmlStory(slug, app) : null
+  if (!story) return htmlStoryNotFound(app)
+  return htmlStoryResponse(req, story, app)
 }

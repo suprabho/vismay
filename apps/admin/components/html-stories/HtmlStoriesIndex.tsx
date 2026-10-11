@@ -21,6 +21,7 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
   const isFootshorts = app === 'footshorts'
   const isVizf1 = app === 'vizf1'
   const isViznba = app === 'viznba'
+  const isTravel = app === 'travel'
 
   let stories: HtmlStorySummary[] = []
   let loadError: string | null = null
@@ -89,6 +90,17 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
                 the records, form, injury report and win probability) — so the agent writes from real numbers. On the
                 URL that is <code>?games=&lt;espn id&gt;,&lt;espn id&gt;&amp;prompt=…</code> with the publish token as a
                 bearer.
+              </>
+            )}
+            {isTravel && (
+              <>
+                {' '}
+                <em>Add trip</em> appends the trip context — the itinerary stop by stop (times, places, notes, tips)
+                and the curated photos and clips with their URLs, for one day or the whole trip — so the agent writes
+                the day as it went and links the travellers&rsquo; own pictures. On the URL that is{' '}
+                <code>?trip=&lt;slug&gt;&amp;day=3&amp;prompt=…</code> with the publish token as a bearer. Every
+                travel story names its trip (<code>&lt;meta name=&quot;travel:trip&quot;&gt;</code>), its slug starts
+                with the trip&rsquo;s, and only people with that trip&rsquo;s password can open it.
               </>
             )}
           </li>

@@ -1,7 +1,18 @@
 /** Checks for metadata extraction + the hosting lint.
  *  (run: npx tsx src/meta.test.ts) */
 import assert from 'node:assert/strict'
-import { extractFormatMeta, extractHtmlMeta, extractThemeMeta, isSafeSlug, lintHtml, parseAuraSlug, slugify, themeMetaContent } from './meta'
+import {
+  extractFormatMeta,
+  extractHtmlMeta,
+  extractThemeMeta,
+  extractTripMeta,
+  isSafeSlug,
+  isTripStorySlug,
+  lintHtml,
+  parseAuraSlug,
+  slugify,
+  themeMetaContent,
+} from './meta'
 
 const good = `<!doctype html>
 <html lang="en"><head>
@@ -111,5 +122,18 @@ assert.ok(warns(odd).some((w) => w.includes('isn\'t a format')))
 assert.ok(warns(book.replace(/<meta content=" Book " name="vizmaya:format">/, '')).some((w) => w.includes('add <meta name="vizmaya:format" content="book">')))
 // data-step is fine in a scroll story.
 assert.deepEqual(warns(good.replace('<body>', '<body><section data-step>x</section>')), [])
+
+// Travel: the page must name its trip, and the slug must sit under the trip's.
+const trip = good.replace('<head>', '<head><meta name="travel:trip" content="new-york-2026">')
+assert.equal(extractTripMeta(trip), 'new-york-2026')
+assert.equal(extractTripMeta(good), null)
+assert.equal(extractTripMeta(good.replace('<head>', '<head><meta name="travel:trip" content="../etc">')), null)
+assert.ok(isTripStorySlug('new-york-2026', 'new-york-2026') && isTripStorySlug('new-york-2026-day-3', 'new-york-2026'))
+assert.ok(!isTripStorySlug('new-york-20267', 'new-york-2026') && !isTripStorySlug('paris', 'new-york-2026'))
+assert.deepEqual(lintHtml(trip, { app: 'travel', slug: 'new-york-2026-day-3' }).errors, [])
+assert.equal(lintHtml(good, { app: 'travel', slug: 'new-york-2026-day-3' }).errors.length, 1)
+assert.ok(lintHtml(trip, { app: 'travel', slug: 'paris-day-1' }).errors[0]?.includes('start with "new-york-2026-"'))
+// Other apps don't care about the tag.
+assert.deepEqual(lintHtml(good, { app: 'footshorts', slug: 'x' }).errors, [])
 
 console.log('meta: ok')

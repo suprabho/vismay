@@ -3,7 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function TripLogin({ slug }: { slug: string }) {
+/**
+ * `next` (already checked by the page, lib/gate's safeReturnPath) is where to
+ * land after the password: the journey map by default, or the HTML story
+ * that sent the visitor here. A story at /s/<slug> is a route handler, not a
+ * page, so it gets a full navigation rather than the client router.
+ */
+export default function TripLogin({ slug, next = null }: { slug: string; next?: string | null }) {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +30,11 @@ export default function TripLogin({ slug }: { slug: string }) {
         setError(res.status === 429 ? body?.error ?? 'too many attempts' : 'Wrong password — check the message you were sent.')
         return
       }
-      router.replace(`/t/${slug}`)
+      if (next?.startsWith('/s/')) {
+        window.location.replace(next)
+        return
+      }
+      router.replace(next ?? `/t/${slug}`)
       router.refresh()
     } finally {
       setBusy(false)

@@ -40,6 +40,12 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
     tabs.push({ href: `/${appSlug}/randomizer`, label: 'Randomizer' })
   }
+  // Agent-authored pages hosted at the travel site's /s/<slug>, each private to
+  // one trip (its password gates it), briefed with the trip's itinerary and
+  // curated photos.
+  if (appSlug === 'travel') {
+    tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
+  }
   // Recipe-corpora coverage (migration 070) + the history review queue
   // (migration 071) are the food vertical's — umami-only. Social frames is the
   // umami compose-frames creator (vizmaya layer composer in umami mode).

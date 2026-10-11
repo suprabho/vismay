@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Basketball, Check, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
+import { Basketball, Check, Compass, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
@@ -11,6 +11,7 @@ import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canv
 import { FormatPicker } from './FormatPicker'
 import { GameContextPicker, type GameContextPick } from './GameContextPicker'
 import { RaceContextPicker, type RaceContextPick } from './RaceContextPicker'
+import { TripContextPicker, type TripContextPick } from './TripContextPicker'
 
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
 
@@ -43,6 +44,10 @@ interface MatchContextPick {
  * For viznba there is a game picker (./GameContextPicker): tick games off
  * ESPN's schedule and the brief gains their box scores (./viznbaBrief).
  *
+ * For travel there is a trip picker (./TripContextPicker): a trip, one day
+ * of it or all of it, and notes on how it really went; the brief gains the
+ * itinerary and the curated photos' URLs (./travelBrief).
+ *
  * The brief itself is built server-side (POST /api/html-stories/brief) so the
  * match context can be read with the service client; it is fetched whenever
  * the style or the matches change and copied synchronously on click, so the
@@ -57,6 +62,8 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
   const [pickingRace, setPickingRace] = useState(false)
   const [games, setGames] = useState<GameContextPick | null>(null)
   const [pickingGames, setPickingGames] = useState(false)
+  const [trip, setTrip] = useState<TripContextPick | null>(null)
+  const [pickingTrip, setPickingTrip] = useState(false)
   // The last brief the server built, tagged with the request it answers; the
   // button is "building" whenever the current request has no answer yet.
   const [built, setBuilt] = useState<{ request: string; brief: string | null; error: string | null } | null>(null)
@@ -65,6 +72,7 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
   const isFootshorts = app === 'footshorts'
   const isVizf1 = app === 'vizf1'
   const isViznba = app === 'viznba'
+  const isTravel = app === 'travel'
 
   const request = useMemo(
     () =>
@@ -73,9 +81,11 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           ? { app, format, style, sessionKeys: race?.sessionKeys ?? [], drivers: race?.drivers ?? [], prompt: race?.prompt }
           : isViznba
             ? { app, format, style, gameIds: games?.gameIds ?? [], prompt: games?.prompt }
-            : { app, format, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt },
+            : isTravel
+              ? { app, format, style, tripSlug: trip?.tripSlug, day: trip?.day ?? undefined, prompt: trip?.prompt }
+              : { app, format, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt },
       ),
-    [app, isVizf1, isViznba, format, style, matches, race, games],
+    [app, isVizf1, isViznba, isTravel, format, style, matches, race, games, trip],
   )
   const building = built?.request !== request
   const brief = building ? null : built?.brief ?? null
@@ -244,6 +254,26 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
           </button>
         </div>
       )}
+      {trip && (
+        <div className={chip} title={trip.prompt ? `Notes: ${trip.prompt}` : 'Trip context in the brief'}>
+          <Compass size={14} />
+          <span>{trip.label} in the brief</span>
+          <button
+            onClick={() => setTrip(null)}
+            className="p-1 text-neutral-500 hover:text-white rounded"
+            aria-label="Drop the trip context"
+            title="Drop the trip context"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+      {isTravel && (
+        <button onClick={() => setPickingTrip(true)} className={btn} title="Add the trip's itinerary and curated photos to the brief">
+          <Compass size={14} />
+          {trip ? 'Change trip' : 'Add trip'}
+        </button>
+      )}
       {isViznba && (
         <button onClick={() => setPickingGames(true)} className={btn} title="Add the games' box scores, runs, leaders and recaps to the brief">
           <Basketball size={14} />
@@ -293,6 +323,7 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
       {error && <span className="text-xs text-red-400 basis-full">{error}</span>}
       {pickingRace && <RaceContextPicker initial={race} onClose={() => setPickingRace(false)} onPick={setRace} />}
       {pickingGames && <GameContextPicker initial={games} onClose={() => setPickingGames(false)} onPick={setGames} />}
+      {pickingTrip && <TripContextPicker initial={trip} onClose={() => setPickingTrip(false)} onPick={setTrip} />}
       {picking && (
         <MatchPicker
           title="Match context"

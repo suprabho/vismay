@@ -4,9 +4,11 @@
  * with the static logo mark; for footshorts the app's mark and navigation in
  * its dark bar; for vizf1 the chequered-flag mark and the app's navigation in
  * its paddock-dark bar; for viznba the ball mark and the app's navigation in
- * its court-dark bar. Applied when the page is served (`/s/<slug>`) and in the
- * admin preview, never to the stored HTML, so every published story picks it
- * up without a re-post and the stored HTML stays exactly what the agent wrote.
+ * its court-dark bar; for travel a compass mark on the scrapbook's paper,
+ * linking back to the trip's journey map. Applied when the page is served
+ * (`/s/<slug>`) and in the admin preview, never to the stored HTML, so every
+ * published story picks it up without a re-post and the stored HTML stays
+ * exactly what the agent wrote.
  *
  * Both bars live in declarative shadow roots, so the story's CSS (a global
  * `header {}` or `a {}` rule) can't restyle them and its scripts don't find
@@ -18,7 +20,7 @@
 import { auraCaptureUrl, auraEmbedUrl } from '@vismay/viz-engine/src/lib/aura'
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { mapboxTokenScript, storyMapboxToken } from './mapbox'
-import { extractThemeMeta, type ThemeColors } from './meta'
+import { extractThemeMeta, extractTripMeta, type ThemeColors } from './meta'
 
 /** Pinned to the version the apps' `@rive-app/canvas` resolves to. */
 const RIVE_RUNTIME = 'https://cdn.jsdelivr.net/npm/@rive-app/canvas@2.37.7/rive.js'
@@ -402,6 +404,79 @@ function viznbaFooterHtml(site: string, look: ViznbaLook): string {
 </style><div class="bar" role="contentinfo"><a class="brand" href="${site}/">${VIZNBA_MARK}<span><span class="name" style="display:block">VizNBA</span><span class="mono tag" style="display:block">The NBA, read through the numbers · © ${year} VizNBA</span></span></a><nav class="links mono" aria-label="viznba"><a class="link" href="${site}/">Feed</a><a class="link" href="${site}/calendar">Calendar</a><a class="link" href="${site}${meta.storiesPath}">${meta.storiesLabel}</a></nav></div></template></viznba-footer>`
 }
 
+// ── Travel chrome ────────────────────────────────────────────────────────────
+
+/**
+ * Used when the page doesn't declare its palette: the travel app's paper look
+ * (apps/travel/web/app/globals.css, the trip pages' header) with the compass in
+ * the scrapbook's terracotta.
+ */
+const TRAVEL_HOME_LOOK: Vizf1Look = {
+  header: { bg: '#fffdf8', fg: '#2b2419', link: '#8a8172', line: '#e2d9c8' },
+  footer: { bg: '#f6f1e7', fg: '#2b2419', link: '#8a8172', line: '#e2d9c8' },
+  mark: '#c94f2c',
+}
+
+/** The bars in the page's own palette, the compass in its accent. */
+function travelThemedLook(t: ThemeColors): Vizf1Look {
+  const bg = t.background!
+  const surface = t.surface ?? bg
+  const line = t.line ?? t.muted!
+  return {
+    header: { bg: surface, fg: t.text!, link: t.muted!, line },
+    footer: { bg, fg: t.text!, link: t.muted!, line },
+    mark: t.accent ?? TRAVEL_HOME_LOOK.mark,
+  }
+}
+
+/** A compass rose in `currentColor`: the travel app's 🧭, drawn so it takes the page's accent. */
+const TRAVEL_MARK = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="13.5" stroke="currentColor" stroke-width="2"/><path d="M16 6.5 19 16h-6z" fill="currentColor"/><path d="M13 16h6l-3 9.5z" fill="currentColor" opacity=".4"/><circle cx="16" cy="16" r="1.5" fill="var(--bg)"/></svg>`
+
+const TRAVEL_BAR_STYLE = `
+:host{all:initial;display:block;position:relative;z-index:1;background:var(--bg);color:var(--fg);font:14px/1.4 Manrope,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1600px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
+.mono{font-family:'Space Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase}
+.link{color:var(--link);transition:color .2s;display:inline-flex;align-items:center;gap:6px}
+.link:hover,.link:focus-visible{color:var(--fg)}
+.brand{display:flex;align-items:center;gap:10px;font:600 19px/1 Lora,Georgia,serif;letter-spacing:-.01em}
+.brand svg{width:26px;height:26px;color:var(--mark)}
+a:focus-visible{outline:2px solid var(--mark);outline-offset:3px;border-radius:4px}
+`
+
+function travelBarStyle(c: BarColors, mark: string): string {
+  return `:host{--bg:${c.bg};--fg:${c.fg};--link:${c.link};--line:${c.line};--mark:${mark}}${TRAVEL_BAR_STYLE}`
+}
+
+/**
+ * The header links back to the trip the page names (<meta name="travel:trip">):
+ * its journey map, behind the same password. Without one, just the brand.
+ */
+function travelHeaderHtml(site: string, look: Vizf1Look, trip: string | null): string {
+  const back = trip ? `<a class="link mono" href="${site}/t/${trip}">Journey map <span aria-hidden="true">&rarr;</span></a>` : ''
+  return `<travel-header><template shadowrootmode="open"><style>${travelBarStyle(look.header, look.mark)}
+:host{border-bottom:1px solid var(--line)}
+.bar{height:56px}
+@media (max-width:480px){.bar{height:48px}.brand{font-size:17px}.brand svg{width:22px;height:22px}}
+</style><div class="bar" role="banner"><a class="brand" href="${trip ? `${site}/t/${trip}` : `${site}/`}" aria-label="Trips home">${TRAVEL_MARK}<span>Trips</span></a><nav aria-label="trip">${back}</nav></div></template></travel-header>`
+}
+
+function travelFooterHtml(site: string, look: Vizf1Look, trip: string | null): string {
+  const year = new Date().getUTCFullYear()
+  const links = trip
+    ? `<a class="link" href="${site}/t/${trip}">Journey map</a><a class="link" href="${site}/t/${trip}/story">Scrapbook</a>`
+    : `<a class="link" href="${site}/">Trips</a>`
+  return `<travel-footer><template shadowrootmode="open"><style>${travelBarStyle(look.footer, look.mark)}
+:host{border-top:1px solid var(--line)}
+.bar{flex-wrap:wrap;padding-top:28px;padding-bottom:28px}
+.brand svg{width:30px;height:30px}
+.tag{color:var(--link);margin-top:6px;font-weight:400}
+.links{display:flex;flex-wrap:wrap;gap:12px 20px}
+</style><div class="bar" role="contentinfo"><span class="brand">${TRAVEL_MARK}<span><span style="display:block">Trips</span><span class="mono tag" style="display:block">Shared with friends and family · © ${year}</span></span></span><nav class="links mono" aria-label="trip">${links}</nav></div></template></travel-footer>`
+}
+
 /**
  * Each site's header height, its 1px bottom border included, on wide screens
  * and under 480px (the bars' own breakpoint). The page gets it as
@@ -413,6 +488,7 @@ export const CHROME_HEIGHT: Record<HtmlStoryApp, { wide: number; narrow: number 
   footshorts: { wide: 61, narrow: 53 },
   vizf1: { wide: 61, narrow: 53 },
   viznba: { wide: 61, narrow: 53 },
+  travel: { wide: 57, narrow: 49 },
 }
 
 function chromeHeightStyle(app: HtmlStoryApp): string {
@@ -483,6 +559,11 @@ export function brandHtmlStory(
     const look = theme ? viznbaThemedLook(theme) : VIZNBA_HOME_LOOK
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + viznbaHeaderHtml(site, look)
     footer = viznbaFooterHtml(site, look)
+  } else if (app === 'travel') {
+    const look = theme ? travelThemedLook(theme) : TRAVEL_HOME_LOOK
+    const trip = extractTripMeta(html)
+    header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + travelHeaderHtml(site, look, trip)
+    footer = travelFooterHtml(site, look, trip)
   } else {
     const look = theme ? themedLook(theme) : HOME_LOOK
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)

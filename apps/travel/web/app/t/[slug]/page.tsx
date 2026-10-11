@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 
 import TripJourneyMap from '@/components/journey/TripJourneyMap'
 import { requireTripAuth } from '@/lib/gate'
+import { listTripHtmlStories } from '@/lib/htmlStories'
 import { readTrip, readTripWithMedia } from '@/lib/trips'
 
 // Password-gated: render per request (the gate reads the visitor's cookie),
@@ -28,8 +29,11 @@ export default async function TripJourneyPage({ params }: RouteParams) {
   await requireTripAuth(slug)
 
   // DB-first media (what /curate edits), YAML manifest fallback.
-  const trip = await readTripWithMedia(slug)
+  const [trip, htmlStories] = await Promise.all([readTripWithMedia(slug), listTripHtmlStories(slug)])
   if (!trip) notFound()
+  // The trip's HTML story, when it has one, is THE story; the viz-engine
+  // scrapbook stays one tap away.
+  const htmlStory = htmlStories[0] ?? null
 
   const dayCount = trip.days.filter((d) => d.n != null).length
   const stopCount = trip.days.reduce((n, d) => n + d.stops.length, 0)
@@ -50,12 +54,31 @@ export default async function TripJourneyPage({ params }: RouteParams) {
               .join(' · ')}
           </p>
         </div>
-        <Link
-          href={`/t/${slug}/story`}
-          className="shrink-0 rounded-full bg-[#2b2419] text-[#fffdf8] px-4 py-2 text-sm font-medium hover:opacity-90"
-        >
-          Read the story →
-        </Link>
+        {htmlStory ? (
+          <>
+            <Link
+              href={`/t/${slug}/story`}
+              className="shrink-0 hidden sm:inline text-sm opacity-60 hover:opacity-100"
+            >
+              Scrapbook
+            </Link>
+            {/* A route handler, not a page: a plain link, full navigation. */}
+            <a
+              href={`/s/${htmlStory.slug}`}
+              title={htmlStory.title}
+              className="shrink-0 rounded-full bg-[#2b2419] text-[#fffdf8] px-4 py-2 text-sm font-medium hover:opacity-90"
+            >
+              Read the story →
+            </a>
+          </>
+        ) : (
+          <Link
+            href={`/t/${slug}/story`}
+            className="shrink-0 rounded-full bg-[#2b2419] text-[#fffdf8] px-4 py-2 text-sm font-medium hover:opacity-90"
+          >
+            Read the story →
+          </Link>
+        )}
       </header>
       <TripJourneyMap
         trip={trip}

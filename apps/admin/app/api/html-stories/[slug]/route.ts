@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const story = await getHtmlStoryForAdmin(slug, app)
   if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
   const versions = await listHtmlStoryVersions(slug, 50, app)
-  return NextResponse.json({ story, versions, lint: lintHtml(story.html) })
+  return NextResponse.json({ story, versions, lint: lintHtml(story.html, { app, slug }) })
 }
 
 /** Status / metadata only; HTML changes go through POST /api/html-stories. */
