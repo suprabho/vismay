@@ -28,9 +28,12 @@ const jetbrains = JetBrains_Mono({
 const DESCRIPTION = 'NBA news, scores and schedules, read through the numbers.'
 
 export const metadata: Metadata = {
+  // Relative canonical / OG URLs resolve against production, never a preview host.
+  metadataBase: new URL('https://nba.vizmaya.fyi'),
   applicationName: 'VizNBA',
-  title: { default: 'VizNBA', template: '%s · VizNBA' },
+  title: { default: 'VizNBA · The NBA, read through the numbers', template: '%s · VizNBA' },
   description: DESCRIPTION,
+  alternates: { types: { 'application/rss+xml': [{ url: '/editorial/rss.xml', title: 'VizNBA Editorial' }] } },
   appleWebApp: { capable: true, title: 'VizNBA', statusBarStyle: 'black' },
   // The image itself comes from app/opengraph-image.png + twitter-image.png.
   openGraph: { type: 'website', siteName: 'VizNBA', title: 'VizNBA', description: DESCRIPTION },

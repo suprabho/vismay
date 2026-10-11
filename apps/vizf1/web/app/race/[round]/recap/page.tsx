@@ -6,7 +6,7 @@ interface RouteParams {
 }
 
 export const metadata: Metadata = {
-  title: 'Race recap · VizF1',
+  title: 'Race recap',
 }
 
 // Full-screen story with its own header: outside the (shell) group, so no AppHeader.

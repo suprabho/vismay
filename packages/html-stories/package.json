@@ -20,7 +20,8 @@
     "./randomizerApi": "./src/randomizerApi.ts",
     "./formats": "./src/formats.ts",
     "./formatsApi": "./src/formatsApi.ts",
-    "./assetsApi": "./src/assetsApi.ts"
+    "./assetsApi": "./src/assetsApi.ts",
+    "./seo": "./src/seo.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
