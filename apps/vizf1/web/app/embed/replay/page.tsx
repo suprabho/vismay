@@ -3,7 +3,7 @@ import { isCameraMode } from '@vismay/f1-viz/web/replay'
 import ReplayEmbed from './ReplayEmbed'
 
 export const metadata: Metadata = {
-  title: 'Race replay · VizF1',
+  title: 'Race replay',
   robots: { index: false },
 }
 

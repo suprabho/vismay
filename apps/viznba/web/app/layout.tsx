@@ -19,10 +19,17 @@ const martian = Martian_Mono({
   variable: '--font-vn-mono',
 })
 
+const DESCRIPTION = 'NBA news, scores and schedules, read through the numbers.'
+
 export const metadata: Metadata = {
+  // Relative canonical / OG URLs resolve against production, never a preview host.
+  metadataBase: new URL('https://nba.vizmaya.fyi'),
   applicationName: 'VizNBA',
-  title: { default: 'VizNBA', template: '%s · VizNBA' },
-  description: 'NBA news, scores and schedules, read through the numbers.',
+  title: { default: 'VizNBA · The NBA, read through the numbers', template: '%s · VizNBA' },
+  description: DESCRIPTION,
+  openGraph: { type: 'website', siteName: 'VizNBA', locale: 'en_US', description: DESCRIPTION },
+  twitter: { card: 'summary_large_image' },
+  alternates: { types: { 'application/rss+xml': [{ url: '/editorial/rss.xml', title: 'VizNBA Editorial' }] } },
   appleWebApp: { capable: true, title: 'VizNBA', statusBarStyle: 'black' },
 }
 

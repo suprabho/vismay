@@ -17,6 +17,7 @@ import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { brandHtmlStory } from './branding'
 import { getPublishedHtmlStory } from './htmlStories'
 import { HTML_STORY_SANDBOX_CSP, isSafeSlug } from './meta'
+import { injectHtmlStorySeo } from './seo'
 
 const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: string; font: string }> = {
   'vizmaya-fyi': { bg: '#0a0e14', fg: '#e0ddd5', link: '#D85A30', font: "-apple-system,'Segoe UI',Inter,sans-serif" },
@@ -50,15 +51,20 @@ export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryA
     })
   }
   const url = new URL(req.url)
-  const html = brandHtmlStory(story.html, {
+  const embed = url.searchParams.get('embed') === '1'
+  // Canonical, robots, missing OG/article tags and NewsArticle JSON-LD (./seo),
+  // read from the author's own <head> before the chrome goes in.
+  const html = brandHtmlStory(injectHtmlStorySeo(story.html, story, { embed }), {
     siteUrl: url.origin,
     aura: story.aura,
     app,
-    chrome: url.searchParams.get('embed') !== '1',
+    chrome: !embed,
   })
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
+      // The embed is the same story at a second URL; keep it out of the index.
+      ...(embed ? { 'x-robots-tag': 'noindex, follow' } : {}),
       'content-security-policy': HTML_STORY_SANDBOX_CSP,
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'strict-origin-when-cross-origin',

@@ -1,9 +1,19 @@
+import type { Metadata } from 'next'
 import { AppShell } from '@/components/AppShell'
 import { EditorialMagazine } from '@/components/EditorialMagazine'
 import { loadEditorialStories, type EditorialGrid } from '@/lib/editorialStories'
 import { getHtmlStoryCards } from '@/lib/htmlStoryCards'
 
 export const revalidate = 300
+
+export const metadata: Metadata = {
+  title: 'F1 Editorial: race analysis, strategy and data stories',
+  description:
+    'Formula 1 data stories from the VizF1 desk: race recaps, tyre strategy, telemetry and the championship, told in charts.',
+  // Replaces the root layout's alternates, so the RSS link is repeated here.
+  alternates: { canonical: '/editorial', types: { 'application/rss+xml': '/editorial/rss.xml' } },
+  openGraph: { type: 'website', siteName: 'VizF1', url: '/editorial' },
+}
 
 // The shell lives here (not in a layout) so /editorial/[slug] renders the
 // story full-screen with only its own back button + logo chrome.

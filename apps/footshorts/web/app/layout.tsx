@@ -7,10 +7,18 @@ import { QueryProvider } from '@/lib/QueryProvider';
 import { Analytics } from '@vercel/analytics/next';
 import AmplitudeProvider from '@/components/AmplitudeProvider';
 
+const DESCRIPTION =
+  'Football news in 60 words, and data stories on the tactics, title races and transfers behind the headlines.';
+
 export const metadata: Metadata = {
+  // Relative canonical / OG URLs resolve against production, never a preview host.
+  metadataBase: new URL('https://footshorts.com'),
   applicationName: 'Footshorts',
-  title: 'Footshorts',
-  description: 'Footshorts web',
+  title: { default: 'Footshorts · Football news, short', template: '%s · Footshorts' },
+  description: DESCRIPTION,
+  openGraph: { type: 'website', siteName: 'Footshorts', locale: 'en_GB', description: DESCRIPTION },
+  twitter: { card: 'summary_large_image' },
+  alternates: { types: { 'application/rss+xml': [{ url: '/editorial/rss.xml', title: 'Footshorts Editorial' }] } },
   // iOS has no manifest-driven install — these drive "Add to Home Screen":
   // launch fullscreen (standalone), the home-screen label, and a dark status bar.
   appleWebApp: {

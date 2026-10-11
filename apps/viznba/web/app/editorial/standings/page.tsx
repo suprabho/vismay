@@ -4,7 +4,11 @@ import { TeamBadge } from '@/components/ui'
 import { standings, type StandingRow } from '@/lib/espn'
 import { getPrefs } from '@/lib/prefs'
 
-export const metadata: Metadata = { title: 'Season Tracker' }
+export const metadata: Metadata = {
+  title: 'NBA Season Tracker: standings and point differential',
+  description: 'Every NBA team by point differential and record, East and West, updated through the season.',
+  alternates: { canonical: '/editorial/standings' },
+}
 export const dynamic = 'force-dynamic'
 
 export default async function StandingsPage() {

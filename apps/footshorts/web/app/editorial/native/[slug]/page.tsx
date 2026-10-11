@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import NativeStoryboard from '@/components/storyboard/NativeStoryboard';
 import { getStoryboard, listStoryboards } from '@/lib/storyboards';
@@ -8,6 +9,19 @@ interface RouteParams {
 
 export function generateStaticParams() {
   return listStoryboards().map((s) => ({ slug: s.slug }));
+}
+
+export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
+  const { slug } = await params;
+  const storyboard = getStoryboard(slug);
+  if (!storyboard) return {};
+  const url = `/editorial/native/${slug}`;
+  return {
+    title: storyboard.title,
+    description: storyboard.subtitle,
+    alternates: { canonical: url },
+    openGraph: { type: 'article', url, title: storyboard.title, description: storyboard.subtitle },
+  };
 }
 
 export default async function NativeStoryboardPage({ params }: RouteParams) {

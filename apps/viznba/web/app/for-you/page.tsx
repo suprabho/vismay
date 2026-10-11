@@ -9,7 +9,7 @@ import { getPrefs } from '@/lib/prefs'
 import { teamById } from '@/lib/teams'
 import { addDays, dayKey, dayRange, ET, todayKey, zoneLabel } from '@/lib/time'
 
-export const metadata: Metadata = { title: 'For you' }
+export const metadata: Metadata = { title: 'For you', robots: { index: false, follow: true } }
 export const dynamic = 'force-dynamic'
 
 const BACK = 5
