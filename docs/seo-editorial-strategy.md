@@ -25,7 +25,7 @@ So the strategy is:
 
 ## Where we started (audit, Oct 2026)
 
-| | VizF1 (`www.vizf1.com`) | Footshorts (`footshorts.com`) | VizNBA (`nba.vizmaya.fyi`) |
+| | VizF1 (`www.vizf1.com`) | Footshorts (`www.footshorts.com`) | VizNBA (`nba.vizmaya.fyi`) |
 |---|---|---|---|
 | sitemap / robots | none | none | none |
 | `metadataBase`, title template | no / no | no / no | no / yes |
