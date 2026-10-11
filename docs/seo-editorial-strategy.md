@@ -153,7 +153,7 @@ Each editorial in the cluster links to the hub, and the hub lists the editorials
 4. **Crawlable chrome links.** The header and footer are injected inside `<template shadowrootmode>`. Google renders declarative shadow DOM, but other crawlers may not. Add a visually hidden plain `<nav>` with the same links, or render the links in light DOM.
 5. **Fix redirecting nav targets on VizF1.** `/` and `/schedule` are redirects. Make `/` a real server-rendered landing page (or a 308 to `/feed`), and point the chrome at the final URLs.
 6. **Editorial index pagination.** VizNBA's grid and VizF1's magazine page on the client. Add `?page=N` server pagination (or render every card as a link and collapse it with CSS), so the index links to every story without depending on the sitemap.
-7. **Default OG images.** Footshorts and VizNBA have no `opengraph-image` at the root. Add branded 1200×630 cards like VizF1's, plus per-game cards on VizNBA (`/game/[id]/opengraph-image`) showing the final score.
+7. **Default OG images.** Footshorts has no `opengraph-image` at the root. Add a branded 1200×630 card like VizF1's and VizNBA's, plus per-game cards on VizNBA (`/game/[id]/opengraph-image`) showing the final score.
 8. **Google News sitemap** (`/news-sitemap.xml`, stories from the last 48 h) once Publisher Center approval is in.
 9. **Engine stories (`/editorial/<slug>`).** Decide each story's home:
    - If the story belongs to the vertical, publish it as an HTML story on that site.
