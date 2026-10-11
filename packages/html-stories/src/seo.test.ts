@@ -84,8 +84,8 @@ assert.equal(breakout.match(/<\/script>/g)?.length, 1)
 // Footshorts breadcrumbs point at the public archive, not the client-side tab.
 const fs = htmlStoryJsonLd({ ...story, app: 'footshorts' }) as { '@graph': Record<string, any>[] }
 assert.equal(fs['@graph'][1]!.itemListElement[1].item, 'https://footshorts.com/editorial')
-// vizmaya.fyi has no editorial RSS route, so no alternate link.
-assert.ok(!injectHtmlStorySeo(bare, { ...story, app: 'vizmaya-fyi' }).includes('application/rss+xml'))
+// vizmaya.fyi's feed hangs off its /stories hub, not /editorial.
+assert.ok(injectHtmlStorySeo(bare, { ...story, app: 'vizmaya-fyi' }).includes('href="https://vizmaya.fyi/stories/rss.xml"'))
 
 // Headlines are cut on a word.
 assert.equal(clampHeadline('short'), 'short')

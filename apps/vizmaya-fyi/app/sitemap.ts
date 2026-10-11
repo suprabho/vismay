@@ -3,11 +3,13 @@ import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/c
 import { listPublishedEpics } from '@vismay/content-source/epics'
 import { listEditions } from '@vismay/dc-editions/dcEditions'
 import { listAuthors } from '@vismay/content-source/authors'
+import { listPublishedHtmlStories } from '@vismay/html-stories/htmlStories'
+import { htmlStorySitemapEntries } from '@vismay/html-stories/seo'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vizmaya.fyi'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [slugs, epics, authors, editions] = await Promise.all([
+  const [slugs, epics, authors, editions, htmlStories] = await Promise.all([
     getViewableStorySlugs(),
     listPublishedEpics(),
     // Best-effort: the sitemap must not 500 if the authors registry is
@@ -15,6 +17,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listAuthors('vizmaya-fyi').catch(() => []),
     // Same for the daily snapshot editions (migration 078).
     listEditions(400).catch(() => []),
+    // And the agent-authored HTML stories at /s/<slug> (table html_stories).
+    listPublishedHtmlStories('vizmaya-fyi').catch(() => []),
   ])
   const stories = await Promise.all(
     slugs.map(async (slug) => {
@@ -78,5 +82,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...editionEntries,
     ...authorEntries,
     ...stories.filter((s): s is NonNullable<typeof s> => s !== null),
+    ...htmlStorySitemapEntries(htmlStories),
   ]
 }
