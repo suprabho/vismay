@@ -18,6 +18,7 @@ import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { brandHtmlStory } from './branding'
 import { getPublishedHtmlStory, type HtmlStory } from './htmlStories'
 import { HTML_STORY_SANDBOX_CSP, isSafeSlug } from './meta'
+import { injectHtmlStorySeo } from './seo'
 
 const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: string; font: string }> = {
   'vizmaya-fyi': { bg: '#0a0e14', fg: '#e0ddd5', link: '#D85A30', font: "-apple-system,'Segoe UI',Inter,sans-serif" },
@@ -60,8 +61,17 @@ export interface HtmlStoryResponseOptions {
 
 /**
  * A story document as served: wrapped in its site's chrome (`?embed=1` drops
- * the header and footer), under the sandbox CSP.
+ * the header and footer), under the sandbox CSP. A public story also gets its
+ * SEO head (./seo); a private one is served exactly as written, with no
+ * canonical or JSON-LD pointing a crawler at it.
  */
+export function htmlStoryResponse(req: Request, story: HtmlStory, app: HtmlStoryApp, opts?: { private?: false }): Response
+export function htmlStoryResponse(
+  req: Request,
+  story: Pick<HtmlStory, 'html' | 'aura' | 'updatedAt'>,
+  app: HtmlStoryApp,
+  opts: { private: true },
+): Response
 export function htmlStoryResponse(
   req: Request,
   story: Pick<HtmlStory, 'html' | 'aura' | 'updatedAt'>,
@@ -69,15 +79,21 @@ export function htmlStoryResponse(
   { private: isPrivate = false }: HtmlStoryResponseOptions = {},
 ): Response {
   const url = new URL(req.url)
-  const html = brandHtmlStory(story.html, {
+  const embed = url.searchParams.get('embed') === '1'
+  // Canonical, robots, missing OG/article tags and NewsArticle JSON-LD (./seo),
+  // read from the author's own <head> before the chrome goes in.
+  const doc = isPrivate ? story.html : injectHtmlStorySeo(story.html, story as HtmlStory, { embed })
+  const html = brandHtmlStory(doc, {
     siteUrl: url.origin,
     aura: story.aura,
     app,
-    chrome: url.searchParams.get('embed') !== '1',
+    chrome: !embed,
   })
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
+      // The embed is the same story at a second URL; keep it out of the index.
+      ...(embed ? { 'x-robots-tag': 'noindex, follow' } : {}),
       'content-security-policy': HTML_STORY_SANDBOX_CSP,
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'strict-origin-when-cross-origin',

@@ -21,10 +21,19 @@ const martian = Martian_Mono({
   variable: '--font-vf-mono',
 })
 
+const SITE_URL = 'https://www.vizf1.com'
+const DESCRIPTION =
+  'Formula 1 data journalism: race recaps, strategy, telemetry and driver and team stories, told in charts.'
+
 export const metadata: Metadata = {
+  // www is canonical (the apex redirects): relative OG/canonical URLs resolve here.
+  metadataBase: new URL(SITE_URL),
   applicationName: 'VizF1',
-  title: 'VizF1',
-  description: 'Data journalism for Formula 1',
+  title: { default: 'VizF1 · Formula 1, told in data', template: '%s · VizF1' },
+  description: DESCRIPTION,
+  openGraph: { type: 'website', siteName: 'VizF1', locale: 'en_US', description: DESCRIPTION },
+  twitter: { card: 'summary_large_image' },
+  alternates: { types: { 'application/rss+xml': [{ url: '/editorial/rss.xml', title: 'VizF1 Editorial' }] } },
   // iOS has no manifest-driven install — these drive "Add to Home Screen":
   // launch fullscreen (standalone), the home-screen label, and a dark status bar.
   appleWebApp: {

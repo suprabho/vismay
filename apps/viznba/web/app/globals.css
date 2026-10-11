@@ -1,39 +1,198 @@
 @import 'tailwindcss';
 
+/* ──────────────────────────────────────────────────────────────
+   VizNBA brand — Figma "Vismay Brands"
+   Colour: orange · sky · slate ramps (393:425)
+   Type:   base 16px × 1.25 (major third) (389:376)
+   Families: Archivo (display) · Schibsted Grotesk (body) · JetBrains Mono
+   ────────────────────────────────────────────────────────────── */
+
+/* Families come from next/font CSS variables, so reference them inline */
 @theme inline {
-  --font-sans: var(--font-vn-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-vn-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @theme {
-  --color-bg: #0b0d12;
-  --color-surface: #13161d;
-  --color-surface-raised: #171b25;
-  --color-well: #0f1219;
-  --color-border: #1f2330;
-  --color-border-strong: #2a2f3d;
-  --color-grid: #262b38;
-  --color-text: #f5f5f5;
-  --color-soft: #c9c9d1;
-  --color-dim: #a3a3ad;
-  --color-muted: #8e8e99;
-  --color-faint: #6f6f7a;
-  /* VizNBA orange + the near-black ink that sits on it. */
-  --color-accent: #ff8a3d;
-  --color-accent-ink: #0b0d12;
+  /* Brand ramps replace Tailwind's stock orange / sky / slate. */
+  --color-orange-50: #fef7f4;
+  --color-orange-100: #feeae0;
+  --color-orange-200: #fbd5c2;
+  --color-orange-300: #fab594;
+  --color-orange-400: #f08855;
+  --color-orange-500: #ca5400;
+  --color-orange-600: #ae3200;
+  --color-orange-700: #8d1f00;
+  --color-orange-800: #6e1500;
+  --color-orange-900: #571200;
+  --color-orange-950: #350a00;
+
+  --color-sky-50: #f6f9fb;
+  --color-sky-100: #e7f0f6;
+  --color-sky-200: #cfe1ed;
+  --color-sky-300: #accde1;
+  --color-sky-400: #7bafce;
+  --color-sky-500: #3d7c9e;
+  --color-sky-600: #256b8e;
+  --color-sky-700: #135472;
+  --color-sky-800: #0b4058;
+  --color-sky-900: #0a3245;
+  --color-sky-950: #061d29;
+
+  --color-slate-50: #f8f8f9;
+  --color-slate-100: #eeeef0;
+  --color-slate-200: #dcdee1;
+  --color-slate-300: #c4c7cd;
+  --color-slate-400: #a3a8b0;
+  --color-slate-500: #7b818a;
+  --color-slate-600: #5e646d;
+  --color-slate-700: #494e55;
+  --color-slate-800: #373b41;
+  --color-slate-900: #2b2e33;
+  --color-slate-950: #191b1e;
+
+  /* Semantic roles the components use, drawn from the ramps above.
+     Surfaces climb from slate-950; the in-between steps are mixes so a
+     card still lifts off the page without jumping a whole ramp step. */
+  --color-bg: var(--color-slate-950);
+  --color-well: color-mix(in oklab, var(--color-slate-950) 82%, var(--color-slate-900));
+  --color-surface: color-mix(in oklab, var(--color-slate-950) 60%, var(--color-slate-900));
+  --color-surface-raised: var(--color-slate-900);
+  --color-border: var(--color-slate-900);
+  --color-border-strong: var(--color-slate-800);
+  --color-grid: var(--color-slate-800);
+  --color-text: var(--color-slate-50);
+  --color-soft: var(--color-slate-300);
+  --color-dim: var(--color-slate-400);
+  --color-muted: color-mix(in oklab, var(--color-slate-400) 55%, var(--color-slate-500));
+  --color-faint: var(--color-slate-500);
+  /* The ball's highlight orange, and the slate ink that sits on it. */
+  --color-accent: var(--color-orange-400);
+  --color-accent-ink: var(--color-slate-950);
+  /* Live stays red so it never reads as the brand accent. */
   --color-live: #ff4d4f;
   --color-live-text: #ff7a7c;
+
+  /* Replace Tailwind's default sizes so nothing off-scale sneaks in.
+     Steps xs → 5xl map 1:1 to the Figma ladder (10 → 61px).
+     Reading sizes (xs–lg) carry 1.5 body leading; display sizes (xl+)
+     use Figma's 1.2 (5xl tightens to 1.1 for one-line heroes). */
+  --text-*: initial;
+
+  --text-xs: 0.625rem; /* 10px */
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.8125rem; /* 13px */
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem; /* 16px */
+  --text-base--line-height: 1.5;
+  --text-lg: 1.25rem; /* 20px */
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.5625rem; /* 25px */
+  --text-xl--line-height: 1.2;
+  --text-2xl: 1.9375rem; /* 31px */
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 2.4375rem; /* 39px */
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 3.0625rem; /* 49px */
+  --text-4xl--line-height: 1.2;
+  --text-5xl: 3.8125rem; /* 61px */
+  --text-5xl--line-height: 1.1;
+
+  --tracking-display: -0.03em;
+  --tracking-figure: -0.02em;
+  --tracking-label: 0.14em;
 }
 
-/* Saira is variable on width: display headlines run condensed. */
-@utility wdth-75 { font-stretch: 75%; }
-@utility wdth-80 { font-stretch: 80%; }
-@utility wdth-88 { font-stretch: 88%; }
+/* Archivo is variable on width: display headlines run condensed, so the
+   width utilities also switch the line to the display face. */
+@utility wdth-75 { font-family: var(--font-display); font-stretch: 75%; }
+@utility wdth-80 { font-family: var(--font-display); font-stretch: 80%; }
+@utility wdth-88 { font-family: var(--font-display); font-stretch: 88%; }
 
-/* Martian Mono for data, a touch condensed, always tabular. */
+/* JetBrains Mono for data, always tabular. */
 @utility font-mono {
   font-family: var(--font-mono);
-  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Semantic type roles ────────────────────────────────────────
+   Use these instead of composing size/weight/tracking by hand.
+   Rule from the brand: headlines and body are never set in capitals;
+   only mono labels are uppercase. */
+
+/* Hero verdict — the biggest step, for a single line of news */
+@utility type-display {
+  font-family: var(--font-display);
+  font-size: var(--text-5xl);
+  line-height: var(--text-5xl--line-height);
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+/* Card verdict — "You slept through the 12–0 run." */
+@utility type-headline {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  line-height: var(--text-4xl--line-height);
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+/* Section / specimen titles */
+@utility type-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* The one dry sentence under a headline */
+@utility type-lead {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  font-weight: 400;
+  text-wrap: pretty;
+}
+
+/* Default reading text */
+@utility type-body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-weight: 400;
+  text-wrap: pretty;
+}
+
+/* Small supporting text */
+@utility type-caption {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+}
+
+/* Kickers, timestamps, section labels — "FINAL · 6:02AM YOUR TIME" */
+@utility type-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* Scores and stats — the monospace is the hero for every figure */
+@utility type-figure {
+  font-family: var(--font-mono);
+  font-size: var(--text-5xl);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: var(--tracking-figure);
   font-variant-numeric: tabular-nums;
 }
 
@@ -42,10 +201,22 @@
   &::-webkit-scrollbar { display: none; }
 }
 
-html,
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  html,
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
 }
 
 @keyframes vn-pulse {

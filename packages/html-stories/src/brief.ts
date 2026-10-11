@@ -68,6 +68,7 @@ import { MAPBOX_TOKEN_GLOBAL, storyMapboxToken } from './mapbox'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
+import { editorialHubPath } from './seo'
 
 export interface BriefOptions {
   /** e.g. https://vizmaya.fyi */
@@ -633,6 +634,66 @@ How to build it:
 - Keep it calm: motion should guide the eye to the point, not decorate.`
 }
 
+/**
+ * A headline that names who and what, the way a reader would search for it.
+ * Travel has none: its stories are private to a trip, so its brief has no
+ * Search section.
+ */
+const SEARCH_HEADLINES: Record<Exclude<HtmlStoryApp, 'travel'>, { good: string; bad: string; slug: string }> = {
+  'vizmaya-fyi': {
+    good: 'How Europe refilled its gas storage before winter',
+    bad: 'Filling up',
+    slug: 'europe-gas-storage-refill-winter',
+  },
+  footshorts: {
+    good: "How Arsenal's set pieces decided the title race",
+    bad: 'Dead balls, live dreams',
+    slug: 'arsenal-set-pieces-title-race',
+  },
+  vizf1: {
+    good: "Verstappen's Monza tyre gamble, lap by lap",
+    bad: 'The gamble',
+    slug: 'verstappen-monza-tyre-strategy',
+  },
+  viznba: {
+    good: "Why the Celtics' three-point volume stalled in the playoffs",
+    bad: 'Cold from deep',
+    slug: 'celtics-three-point-volume-playoffs',
+  },
+}
+
+/**
+ * How a story gets found: people search for names, events and questions, so
+ * the title, description, h1 and slug carry them. The server adds the
+ * canonical, JSON-LD and any missing social tags (./seo); this is what only
+ * the author can write.
+ */
+function searchSection(app: Exclude<HtmlStoryApp, 'travel'>, site: string, hubPath: string): string {
+  const h = SEARCH_HEADLINES[app]
+  return `## Search (should)
+
+Most readers will arrive from a search or a shared link, not the home page.
+The server adds the canonical URL, structured data and any social tags you
+leave out; these are the parts only you can write.
+
+- \`<title>\` (≤ 60 characters) names the subject first: the people, team,
+  event or place, then the angle. "${h.good}", not "${h.bad}". Keep a clever
+  line for the deck under the headline.
+- \`<meta name="description">\`: 120–160 characters that answer the headline's
+  question with the story's key number or finding. It is the search snippet.
+- One \`<h1>\` that matches the title (it can be longer), then \`<h2>\`s for
+  sections that read as the questions the story answers.
+- The story's text is real text in the markup: every finding a chart shows is
+  also said in a sentence, and no headline or number exists only inside a
+  canvas, SVG or image.
+- Name things in full the first time (full names, competition, season), then
+  shorten. Searchers type full names.
+- Link two or three earlier ${site}/s/<slug> stories or ${site}${hubPath}
+  where they help the reader, with descriptive link text (never "here").
+- The slug names the subject too: \`${h.slug}\`, not a pun or a date code.
+`
+}
+
 function vizf1ContentSection(hasContext: boolean): string {
   const meta = HTML_STORY_APP_META.vizf1
   const contextRules = hasContext
@@ -938,6 +999,7 @@ ${formatIntro}${assignment}
    must redraw on resize.
 8. Respect \`prefers-reduced-motion\`. Content must never be hidden if a script fails.
 
+${app === 'travel' ? '' : searchSection(app, site, editorialHubPath(app))}
 ## Design direction
 
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters

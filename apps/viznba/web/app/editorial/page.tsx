@@ -10,7 +10,14 @@ import { htmlStories } from '@/lib/htmlStories'
 import { getPrefs } from '@/lib/prefs'
 import { ago, dayMonth, dayKey, ET, todayKey } from '@/lib/time'
 
-export const metadata: Metadata = { title: 'Editorial' }
+export const metadata: Metadata = {
+  title: 'NBA Editorial: game recaps, standings and data stories',
+  description:
+    'NBA data stories from the VizNBA desk, game recaps and the standings race, read through the numbers.',
+  // Replaces the root layout's alternates, so the RSS link is repeated here.
+  alternates: { canonical: '/editorial', types: { 'application/rss+xml': '/editorial/rss.xml' } },
+  openGraph: { type: 'website', siteName: 'VizNBA', url: '/editorial' },
+}
 export const dynamic = 'force-dynamic'
 
 /** "2026–27": a season starts in October and is labelled by both years. */

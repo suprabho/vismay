@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Footshorts',
+  title: 'Privacy Policy',
   description: 'What Footshorts collects, how it is processed, and how to delete your data.',
 };
 

@@ -71,7 +71,7 @@ export function Pill({ tone, children }: { tone: 'live' | 'accent' | 'final'; ch
       ? 'bg-live/15 text-live-text'
       : tone === 'accent'
         ? 'bg-accent/18 text-accent'
-        : 'bg-text/8 text-[#d4d4da]'
+        : 'bg-text/8 text-slate-200'
   return (
     <span className={`inline-flex flex-none items-center gap-1.5 rounded-full px-[9px] py-1 text-[11px] font-bold tracking-[0.06em] whitespace-nowrap ${cls}`}>
       {tone === 'live' && <LiveDot />}
@@ -131,7 +131,7 @@ export function ScoreRow({
       <div className="min-w-0 flex-1">
         <div
           className={`flex items-center gap-1.5 font-bold ${size === 'lg' ? 'text-[17px]' : 'text-[14.5px] font-semibold'} ${
-            bright ? 'text-text' : 'text-[#b9b9c2]'
+            bright ? 'text-text' : 'text-slate-300'
           }`}
         >
           <span className="truncate">{side.team.name}</span>

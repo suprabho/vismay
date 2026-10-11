@@ -3,7 +3,7 @@ import { TeamPicker } from '@/components/TeamPicker'
 import { getPrefs } from '@/lib/prefs'
 import { TEAMS } from '@/lib/teams'
 
-export const metadata: Metadata = { title: 'Your teams' }
+export const metadata: Metadata = { title: 'Your teams', robots: { index: false, follow: true } }
 
 export default async function TeamsPage() {
   const { followed } = await getPrefs()

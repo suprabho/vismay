@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { buildTripData } from '@vismay/content-source/travelTrips'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
+import { htmlStoryResponse } from './serve'
 import { buildTripContext, travelHtmlStoryBrief, tripMediaUrl } from './travelBrief'
 
 // The house brief: private chrome, the paper palette, the trip tag in the contract.
@@ -20,6 +21,20 @@ assert.ok(brief.includes('new-york-2026-day-3'))
 assert.ok(!brief.includes('Sources & method" section of links'))
 assert.ok(brief.includes('carries no trip context'))
 assert.ok(!/\\`/.test(brief), 'no double-escaped backticks')
+// Private stories: no Search section (nothing to rank for).
+assert.ok(!brief.includes('## Search'))
+
+// A private response is the page as written: no canonical or JSON-LD, never shared-cached.
+{
+  const page = '<!doctype html><html><head><title>T</title><meta name="travel:trip" content="new-york-2026"></head><body>x</body></html>'
+  const res = htmlStoryResponse(new Request('https://protrip.vismay.xyz/s/new-york-2026-x'), { html: page, aura: null, updatedAt: '2026-03-15T00:00:00Z' }, 'travel', { private: true })
+  assert.equal(res.headers.get('cache-control'), 'private, no-store')
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow')
+  void res.text().then((body) => {
+    assert.ok(!body.includes('rel="canonical"') && !body.includes('application/ld+json'))
+    assert.ok(body.includes('<travel-header>'))
+  })
+}
 
 // The trip context: one day, its stops in order, photo URLs on the public bucket.
 const trip = buildTripData('new-york-2026', {
