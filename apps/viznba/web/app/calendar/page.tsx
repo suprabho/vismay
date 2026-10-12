@@ -115,7 +115,24 @@ async function DayView({ date, today, tz, ids, followed }: ViewProps) {
   return (
     <>
       {games.some((g) => g.state === 'in') && <AutoRefresh />}
-      <div className="grid grid-cols-7 gap-1 px-3 pt-3.5 pb-3.5">
+      <div className="flex items-center justify-between px-3 pt-3.5">
+        {[
+          { to: addDays(date, -7), label: 'Previous week', Icon: CaretLeft, text: 'Prev week' },
+          { to: addDays(date, 7), label: 'Next week', Icon: CaretRight, text: 'Next week' },
+        ].map(({ to, label, Icon, text }, i) => (
+          <Link
+            key={label}
+            href={`/calendar?view=day&date=${to}`}
+            aria-label={label}
+            className="flex min-h-[36px] items-center gap-1 rounded-full border border-border bg-surface px-3 text-xs text-muted"
+          >
+            {i === 0 && <Icon size={12} weight="bold" />}
+            {text}
+            {i === 1 && <Icon size={12} weight="bold" />}
+          </Link>
+        ))}
+      </div>
+      <div className="no-scrollbar flex snap-x gap-1 overflow-x-auto px-3 pt-2.5 pb-3.5">
         {days.map((d) => {
           const list = byDay.get(d) ?? []
           const sel = d === date
@@ -125,7 +142,7 @@ async function DayView({ date, today, tz, ids, followed }: ViewProps) {
               href={`/calendar?view=day&date=${d}`}
               aria-label={`${weekdayLong(d)} ${dayMonth(d)}, ${list.length} games`}
               aria-current={sel ? 'date' : undefined}
-              className={`flex flex-col items-center gap-[3px] rounded-xl border-[1.5px] pt-2 pb-[7px] ${
+              className={`flex min-w-[56px] flex-1 snap-start flex-col items-center gap-[3px] rounded-xl border-[1.5px] pt-2 pb-[7px] ${
                 sel ? 'border-accent bg-[#1a1f2a]' : 'border-border bg-surface'
               }`}
             >
