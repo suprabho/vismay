@@ -242,14 +242,18 @@ export interface SitemapEntry {
   images?: string[]
 }
 
-/** Sitemap rows for a site's published stories. */
+/**
+ * Sitemap rows for a site's published stories. Next writes `url` and
+ * `images` into the XML verbatim, so they are XML-escaped here: an image URL
+ * with a query string (`?w=1280&q=80`) otherwise breaks the whole sitemap.
+ */
 export function htmlStorySitemapEntries(stories: HtmlStorySeoInput[]): SitemapEntry[] {
   return stories.map((s) => ({
-    url: htmlStoryCanonicalUrl(s.app, s.slug),
+    url: escapeXml(htmlStoryCanonicalUrl(s.app, s.slug)),
     lastModified: new Date(s.updatedAt),
     changeFrequency: 'weekly',
     priority: 0.8,
-    ...(s.ogImageUrl ? { images: [abs(s.app, s.ogImageUrl)] } : {}),
+    ...(s.ogImageUrl ? { images: [escapeXml(abs(s.app, s.ogImageUrl))] } : {}),
   }))
 }
 

@@ -99,6 +99,9 @@ const [row] = htmlStorySitemapEntries([story])
 assert.equal(row!.url, 'https://www.vizf1.com/s/verstappen-monza-tyre-strategy')
 assert.equal(row!.lastModified!.toISOString(), '2026-09-08T09:00:00.000Z')
 assert.deepEqual(row!.images, ['https://img.example.com/monza.jpg'])
+// Next writes sitemap values verbatim, so a query-string `&` must arrive escaped.
+const [queried] = htmlStorySitemapEntries([{ ...story, ogImageUrl: 'https://img.example.com/monza.jpg?w=1280&q=80' }])
+assert.deepEqual(queried!.images, ['https://img.example.com/monza.jpg?w=1280&amp;q=80'])
 
 // RSS: escaped, permalinked, self-linked.
 const rss = htmlStoriesRss('vizf1', [{ ...story, title: 'Fast & loose <laps>' }])
