@@ -113,6 +113,34 @@ assert.deepEqual(normalizeLocks('atlas', ['pair', 'nope', 'lens']), ['lens'])
   assert.ok([...Array(400).keys()].some((seed) => (draw({ randomizer: 'desk', seed, now: NOW, history: old }).picks as DeskPicks).subId === cool.id))
 }
 
+// Desk: once most segments were spun this month, the hot ones do not take over.
+// (Regression: HBM memory and Data center power, both above heatExempt, came up
+// on nearly every spin because they were the only segments left in the pool.)
+{
+  const fake = (id: string, lens = 'x') => ({ ...draw({ randomizer: 'desk', seed: 3, now: NOW }), primary: id, combo: `${id}|${lens}|y` })
+  const hot = DESK.sub_industries.filter((s) => s.heat >= DRAW_RULES.heatExempt)
+  const cool = DESK.sub_industries.filter((s) => s.heat < DRAW_RULES.heatExempt)
+  // Every cool segment 20 to 25 days ago, every hot one yesterday.
+  const history = [...cool.map((s, i) => entry(fake(s.id), 20 + (i % 6))), ...hot.map((s) => entry(fake(s.id), 1))]
+  for (let seed = 0; seed < 300; seed++) {
+    const r = draw({ randomizer: 'desk', seed, now: NOW, history })
+    assert.ok(!hot.some((s) => s.id === r.primary), 'a hot segment spun yesterday stays out')
+  }
+  // The lifted block favours the segments spun longest ago (the oldest third: 23 to 25 days).
+  const oldest = new Set(cool.filter((_, i) => i % 6 >= 3).map((s) => s.id))
+  for (let seed = 0; seed < 100; seed++) {
+    const r = draw({ randomizer: 'desk', seed, now: NOW, history })
+    assert.ok(oldest.has(r.primary), `lifted to the oldest spins, got ${r.primary}`)
+  }
+  // A hot segment comes back with a lens it has not had.
+  const h = hot[0]!
+  const used = [entry(fake(h.id, 'Regulatory'), 8), entry(fake(h.id, 'Market'), 9)]
+  for (let seed = 0; seed < 300; seed++) {
+    const r = draw({ randomizer: 'desk', seed, now: NOW, history: used })
+    if (r.primary === h.id) assert.ok(!['Regulatory', 'Market'].includes((r.picks as DeskPicks).lens), 'a fresh lens for a repeat segment')
+  }
+}
+
 // Desk: never-refreshed heat is stale; a failed refresh forces Evergreen; old news shifts the window.
 {
   const r = draw({ randomizer: 'desk', seed: 11, now: NOW })
