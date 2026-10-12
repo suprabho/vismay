@@ -11,8 +11,9 @@ const DESCRIPTION =
   'Football news in 60 words, and data stories on the tactics, title races and transfers behind the headlines.';
 
 export const metadata: Metadata = {
-  // Relative canonical / OG URLs resolve against production, never a preview host.
-  metadataBase: new URL('https://footshorts.com'),
+  // Relative canonical / OG URLs resolve against production, never a preview
+  // host; www, since the apex redirects to it.
+  metadataBase: new URL('https://www.footshorts.com'),
   applicationName: 'Footshorts',
   title: { default: 'Footshorts · Football news, short', template: '%s · Footshorts' },
   description: DESCRIPTION,

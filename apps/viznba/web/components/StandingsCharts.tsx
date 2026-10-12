@@ -8,10 +8,10 @@ export function DiffBars({ rows, width = 200, height = 54, highlight }: { rows: 
   const mid = height / 2
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} aria-hidden="true">
-      <line x1="0" y1={mid} x2={width} y2={mid} stroke="#2a2f3d" strokeDasharray="2 3" />
+      <line x1="0" y1={mid} x2={width} y2={mid} stroke="var(--color-border-strong)" strokeDasharray="2 3" />
       {sorted.map((r, i) => {
         const h = (Math.abs(r.diff) / peak) * (mid - 2)
-        const fill = highlight?.has(r.team.id) ? r.team.dot : r.diff >= 0 ? 'var(--color-accent)' : '#5a6070'
+        const fill = highlight?.has(r.team.id) ? r.team.dot : r.diff >= 0 ? 'var(--color-accent)' : 'var(--color-slate-600)'
         return (
           <rect
             key={r.team.id}

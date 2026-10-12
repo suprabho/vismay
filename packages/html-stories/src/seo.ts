@@ -67,8 +67,18 @@ export function editorialRssUrl(app: HtmlStoryApp): string | null {
   return path ? `${siteOrigin(app)}${path}` : null
 }
 
+/**
+ * The host search engines should index, where it differs from ./apps siteUrl:
+ * footshorts.com 307s to www, and a canonical or sitemap URL must be the final
+ * one, not a redirect.
+ */
+const CANONICAL_ORIGIN: Partial<Record<HtmlStoryApp, string>> = {
+  footshorts: 'https://www.footshorts.com',
+}
+
+/** The production origin canonicals, JSON-LD, sitemaps and RSS use. */
 export function siteOrigin(app: HtmlStoryApp): string {
-  return HTML_STORY_APP_META[app].siteUrl.replace(/\/$/, '')
+  return (CANONICAL_ORIGIN[app] ?? HTML_STORY_APP_META[app].siteUrl).replace(/\/$/, '')
 }
 
 /** The one URL a story is indexed under. */

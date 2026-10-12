@@ -83,7 +83,9 @@ assert.equal(breakout.match(/<\/script>/g)?.length, 1)
 
 // Footshorts breadcrumbs point at the public archive, not the client-side tab.
 const fs = htmlStoryJsonLd({ ...story, app: 'footshorts' }) as { '@graph': Record<string, any>[] }
-assert.equal(fs['@graph'][1]!.itemListElement[1].item, 'https://footshorts.com/editorial')
+assert.equal(fs['@graph'][1]!.itemListElement[1].item, 'https://www.footshorts.com/editorial')
+// footshorts.com redirects to www, so the canonical is the www URL.
+assert.equal(htmlStoryCanonicalUrl('footshorts', 'x'), 'https://www.footshorts.com/s/x')
 // vizmaya.fyi's feed hangs off its /stories hub, not /editorial.
 assert.ok(injectHtmlStorySeo(bare, { ...story, app: 'vizmaya-fyi' }).includes('href="https://vizmaya.fyi/stories/rss.xml"'))
 

@@ -86,12 +86,12 @@ export function MarginHero({
           </clipPath>
         </defs>
         {quarterLines(total, innerW, detail.periods).map((x) => (
-          <line key={x} x1={x + PAD_X} y1={TOP - 8} x2={x + PAD_X} y2={H - 6} stroke="#262b38" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          <line key={x} x1={x + PAD_X} y1={TOP - 8} x2={x + PAD_X} y2={H - 6} stroke="var(--color-grid)" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
         ))}
         <polygon points={pts(area)} fill={winner.dot} opacity={0.45} clipPath={`url(#${clipId}-up)`} />
         <polygon points={pts(area)} fill={loser.dot} opacity={0.4} clipPath={`url(#${clipId}-down)`} />
-        <line x1={PAD_X} y1={zeroY} x2={W - PAD_X} y2={zeroY} stroke="#8e8e99" opacity={0.5} vectorEffect="non-scaling-stroke" />
-        <polyline points={pts(shifted)} fill="none" stroke="#f5f5f5" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <line x1={PAD_X} y1={zeroY} x2={W - PAD_X} y2={zeroY} stroke="var(--color-muted)" opacity={0.5} vectorEffect="non-scaling-stroke" />
+        <polyline points={pts(shifted)} fill="none" stroke="var(--color-text)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {runCoords.length > 1 && (
           <polyline
             points={pts(runCoords)}
@@ -164,9 +164,9 @@ export function MarginSpark({
     <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className={className ?? 'block h-16 w-full'} aria-hidden="true">
       {quarters &&
         quarterLines(total, width, detail.periods).map((x) => (
-          <line key={x} x1={x} y1={0} x2={x} y2={height} stroke="#262b38" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+          <line key={x} x1={x} y1={0} x2={x} y2={height} stroke="var(--color-grid)" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
         ))}
-      <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke="#3a4050" vectorEffect="non-scaling-stroke" />
+      <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke="var(--color-slate-700)" vectorEffect="non-scaling-stroke" />
       <polyline points={pts(coords)} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       {last && <circle cx={last[0]} cy={last[1]} r={3.5} fill={color} />}
     </svg>
