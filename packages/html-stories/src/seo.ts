@@ -54,9 +54,9 @@ export function editorialHubPath(app: HtmlStoryApp): string {
   return EDITORIAL_HUB[app]
 }
 
-/** Each site's editorial RSS feed (a route in the app at this path); vizmaya.fyi has none yet. */
+/** Each site's editorial RSS feed (a route in the app at this path). */
 const EDITORIAL_RSS: Record<HtmlStoryApp, string | null> = {
-  'vizmaya-fyi': null,
+  'vizmaya-fyi': '/stories/rss.xml',
   footshorts: '/editorial/rss.xml',
   vizf1: '/editorial/rss.xml',
   viznba: '/editorial/rss.xml',

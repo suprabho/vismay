@@ -62,6 +62,8 @@ The chrome-less `?embed=1` copy (the app WebViews) gets `noindex, follow` plus a
 | Editorial index | keyword title / description, canonical | **new public, server-rendered `/editorial` archive**: every story as a plain link | keyword title / description, canonical |
 | Other | iframe `/editorial/<slug>` set to `noindex, follow` | the same; native storyboards get `generateMetadata` | `/game/<id>` titles become "Celtics 112–104 Lakers: box score and recap (Oct 10, 2026)", with recap description and canonical |
 
+vizmaya.fyi gets the same story-level tags, and its existing `sitemap.xml` now lists every `/s/*` too. Its feed is `/stories/rss.xml`, under the `/stories` hub, since the site has no `/editorial`.
+
 **The agent brief** (`packages/html-stories/src/brief.ts`, "Search (should)") now tells every writing agent what only the author can supply:
 
 - a `<title>` of 60 characters or fewer that leads with the subject;

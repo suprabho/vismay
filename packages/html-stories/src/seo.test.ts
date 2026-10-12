@@ -86,8 +86,8 @@ const fs = htmlStoryJsonLd({ ...story, app: 'footshorts' }) as { '@graph': Recor
 assert.equal(fs['@graph'][1]!.itemListElement[1].item, 'https://www.footshorts.com/editorial')
 // footshorts.com redirects to www, so the canonical is the www URL.
 assert.equal(htmlStoryCanonicalUrl('footshorts', 'x'), 'https://www.footshorts.com/s/x')
-// vizmaya.fyi has no editorial RSS route, so no alternate link.
-assert.ok(!injectHtmlStorySeo(bare, { ...story, app: 'vizmaya-fyi' }).includes('application/rss+xml'))
+// vizmaya.fyi's feed hangs off its /stories hub, not /editorial.
+assert.ok(injectHtmlStorySeo(bare, { ...story, app: 'vizmaya-fyi' }).includes('href="https://vizmaya.fyi/stories/rss.xml"'))
 
 // Headlines are cut on a word.
 assert.equal(clampHeadline('short'), 'short')
