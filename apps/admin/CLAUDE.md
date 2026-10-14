@@ -246,6 +246,65 @@ story links.
   `@vismay/randomizer/spins` helpers as the token-gated agent routes on
   vizmaya-fyi, so the draw rules hold whoever spins.
 
+## Books tab (/footshorts/books)
+
+The production desk for the season-book series (one season per book, one
+month per chapter; data in
+[vizmaya-data/football-seasons](../../vizmaya-data/football-seasons/README.md)).
+Work in spreads, not pages: each spread is one claim with one visual. The
+book page (`/footshorts/books/<2003-04>`, `?view=` deep-links) walks the
+workflow in order:
+
+1. **Beats** — the season's 15–25 one-sentence moments, each in a month, with
+   strength 1–3 (3 = could open a chapter). The **beat finder** proposes
+   candidates from a competition's results: month-end lead changes, the title
+   margin, unbeaten seasons, winning/unbeaten/winless runs, collapses (top-four
+   at a month's end → finished 5+ places lower), relegation margins, biggest
+   wins, Champions League finals.
+2. **Flatplan** — every spread on one grid, a row per chapter (cover, season
+   intro, Aug → Jul, season in numbers), numbered in reading order. Drag (or
+   arrow) spreads between months; drag unplaced beats in. A rhythm strip and
+   pacing checks enforce hero → dense → breather (3+ dense in a row,
+   back-to-back breathers or heroes, a month not opening on a hero).
+3. **Cards** — per spread: beat, headline (the claim) beside a freehand chart
+   sketch (pointer-drawn, stored as integer SVG paths), one stat, body with an
+   80–150 word meter (template budgets), caption, notes. The card check warns
+   on a headline without a sketch ("the claim is too vague") and vice versa.
+   **Pull real data** binds the chart to a preset — points race, table at a
+   month's end, results strip, goals per game by month — drawn in the series
+   chart style. Status advances itself (card → on real data), never back.
+4. **Chapters** — a month's spreads (or the whole book) as true-to-grid
+   low-fi thumbnails side by side, to judge flow before polishing.
+
+**System** (read-only) shows the locked series design system: 12-column spread
+grid, type scale, palette, chart style, chart forms and the seven spread
+templates (cover, intro, hero, comparison, timeline, table, breather). It
+lives in code, [lib/seasonBooks/system.ts](lib/seasonBooks/system.ts), and
+changes through review (bump `SYSTEM_VERSION`), never per book.
+
+- **Storage:** `admin_season_books` (footshorts Supabase, migration
+  [20261014000000](../../supabase/footshorts/migrations/20261014000000_admin_season_books.sql)),
+  private and RLS-locked: one row per book, the plan (beats + spreads) as
+  JSONB, validated by `planSchema` in
+  [lib/seasonBooks/plan.ts](lib/seasonBooks/plan.ts). Saves are optimistic
+  on `revision` (409 on a stale write; the page asks to reload, nothing is
+  merged). Autosaves 1.2s after the last edit.
+- **Match data:** `admin_historical_matches` (migration 20261013000000,
+  loaded by `pnpm --filter @footshorts/worker history:import`). The API ships
+  one competition-season's played matches; standings, races, strips and the
+  beat finder are computed in the browser by
+  [lib/seasonBooks/matches.ts](lib/seasonBooks/matches.ts) (3/1/0, no
+  deductions; tie-break GD, GF, name). Team names are the raw source labels.
+- **API (`isAuthed()`-gated, same-origin writes):** `GET|POST
+  /api/footshorts/books`, `GET|PUT|DELETE /api/footshorts/books/[slug]`,
+  `GET /api/footshorts/books/matches?season=&competition=` (competition from
+  `BOOK_COMPETITIONS`). Missing tables answer 503 with the migration to apply.
+- **UI:** [components/books/](components/books/) — `BookWorkspace` (load,
+  autosave, views), one component per view, `SpreadThumb` (template regions on
+  the grid, sized in container-query units from the type scale), `DataChart`,
+  `SketchPad`, `ChartGlyph`, `MatchData` (one fetch per competition, shared).
+- **Tests:** `pnpm --filter admin exec tsx lib/seasonBooks/seasonBooks.test.ts`.
+
 ## VizNBA Pipeline tab (/viznba/pipeline)
 
 The health of the VizNBA news worker ([apps/viznba/worker](../viznba/worker),
