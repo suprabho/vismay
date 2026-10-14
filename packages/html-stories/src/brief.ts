@@ -857,6 +857,8 @@ export function htmlStoryBrief({
   const paged = format && format !== 'scroll' ? format : null
   // A paged format draws its maps as charts; the Mapbox sticky map is the scroll format's.
   const mapbox = paged ? null : storyMapboxToken(mapboxToken)
+  // Travel's board lays a static Mapbox picture under the day's map chart, given a token.
+  const travelBoard = app === 'travel' && paged === 'board'
   const hint = spin ? formatHintSection(spin.randomizer, format ?? 'scroll') : null
   const meta = HTML_STORY_APP_META[app]
   const siteName = site.replace(/^https?:\/\//, '')
@@ -953,7 +955,9 @@ charts. "${formatHeading(paged)}" below says how.
   const mapsLine =
     paged === 'recap'
       ? `The 3D replay is the race's map (see "${formatHeading(paged)}").`
-      : paged
+      : travelBoard
+        ? `The day's map is a chart on the board's paper sheet (see "${formatHeading(paged)}").`
+        : paged
     ? `For maps, draw a chart with D3-geo and world-atlas/us-atlas TopoJSON
   (see "${formatHeading(paged)}").`
     : mapbox
@@ -965,7 +969,7 @@ charts. "${formatHeading(paged)}" below says how.
   credited "© OpenStreetMap contributors"). Not MapLibre or another WebGL map
   library: their web workers can't talk to a page in the site's sandbox, so
   the map never gets its tiles. Don't use Mapbox: this deployment has no token for it.`
-  const checks = paged ? formatChecks(paged).map((c) => `\n- ${c}`).join('') : ''
+  const checks = paged ? formatChecks(paged, app).map((c) => `\n- ${c}`).join('') : ''
   const tripMeta =
     app === 'travel'
       ? `
@@ -1018,7 +1022,7 @@ ${iconsSection(app)}
 
 ${mediaSection(app, site, unit)}
 
-${paged ? storyFormatSection(paged, app) : motionSection(app, mapbox)}
+${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapboxToken(mapboxToken) : null }) : motionSection(app, mapbox)}
 
 ## Charts
 
