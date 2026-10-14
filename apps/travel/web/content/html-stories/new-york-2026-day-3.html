@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://grbrfpaznehikakupavx.supabase.co" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Lora:ital,wght@0,400..700;1,400..700&family=Manrope:wght@400..700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Borel&family=Lora:ital,wght@0,400..700;1,400..700&family=Manrope:wght@400..700&family=Space+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
 <style>
 :root {
@@ -41,7 +41,7 @@
   --serif: "Lora", Georgia, "Times New Roman", serif;
   --sans: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
-  --hand: "Caveat", "Bradley Hand", "Segoe Print", cursive;
+  --hand: "Borel", "Bradley Hand", "Segoe Print", cursive;
   --chrome: var(--vizmaya-chrome-h, 0px);
   --col: 400px;
   --col-x: clamp(20px, 4vw, 72px);
@@ -164,6 +164,13 @@ button { font: inherit; color: inherit; }
 }
 .map-sticky.is-paper .map-note { display: block; }
 
+/* OpenStreetMap (Leaflet): tiles warmed toward the paper, quiet attribution */
+#map.is-osm { background: var(--bg); }
+#map.is-osm .leaflet-tile-pane { opacity: .8; filter: grayscale(.6) sepia(.3) contrast(.88) brightness(1.06); }
+#map.is-osm .leaflet-marker-icon.mk-o { display: grid; place-items: center; background: none; border: 0; }
+#map.is-osm .leaflet-control-attribution { font: 10px/1.4 var(--mono); background: rgba(255,253,248,.8); color: var(--muted-ink); }
+#map.is-osm .leaflet-control-attribution a { color: var(--ink-2); }
+
 /* Mapbox markers */
 .mk {
   width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
@@ -193,7 +200,9 @@ button { font: inherit; color: inherit; }
 .step.last { min-height: 135svh; align-items: flex-start; padding-top: 30svh; }
 .card {
   width: min(var(--col), 100%);
-  background: rgba(255,253,248,.97);
+  background: rgba(255,253,248,.78);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
   border: 1px solid var(--line);
   border-radius: 3px;
   padding: 26px 28px 26px;
@@ -215,7 +224,7 @@ button { font: inherit; color: inherit; }
   color: var(--accent2) !important; padding-bottom: 12px; border-bottom: 1px dashed var(--line);
 }
 .via i { font-size: 16px; flex: none; }
-.picked { font-family: var(--hand); font-size: 21px !important; line-height: 1.2 !important; color: var(--muted-ink) !important; margin-top: 10px !important; }
+.picked { font-family: var(--hand); font-size: 15px !important; line-height: 1.5 !important; color: var(--muted-ink) !important; margin-top: 10px !important; }
 .picked::before { content: "— "; }
 
 /* postmark stamp */
@@ -248,13 +257,15 @@ button { font: inherit; color: inherit; }
 /* --------------------------------------------------------------- spreads */
 .spread {
   position: relative;
-  background: var(--bg);
+  background: rgba(246,241,231,.46);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   padding: clamp(56px, 9svh, 96px) clamp(16px, 4vw, 56px) clamp(64px, 10svh, 110px);
   box-shadow: 0 -18px 40px rgba(43,36,25,.10), 0 18px 40px rgba(43,36,25,.10);
   overflow: clip;
 }
 .spread::before { /* faint ruled paper */
-  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .3;
   background-image: linear-gradient(transparent 31px, rgba(226,217,200,.55) 32px);
   background-size: 100% 32px;
 }
@@ -263,7 +274,7 @@ button { font: inherit; color: inherit; }
   display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
 }
 .spread-head .k { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
-.spread-head h3 { margin: 0; font-family: var(--hand); font-weight: 600; font-size: clamp(30px, 3.4vw, 40px); line-height: 1; color: var(--ink); }
+.spread-head h3 { margin: 0; font-family: var(--hand); font-weight: 400; font-size: clamp(21px, 2.4vw, 28px); line-height: 1.35; color: var(--ink); }
 .pgrid {
   position: relative; max-width: 1120px; margin: 0 auto;
   display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -294,7 +305,7 @@ button { font: inherit; color: inherit; }
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
   padding: 10px 4px 12px; min-height: 48px;
 }
-.pol-cap { font-family: var(--hand); font-size: 22px; line-height: 1.1; color: var(--ink); }
+.pol-cap { font-family: var(--hand); font-size: 14.5px; line-height: 1.55; color: var(--ink); }
 .pol time { flex: none; font-family: var(--mono); font-size: 11px; color: var(--muted-ink); letter-spacing: .04em; }
 
 /* video polaroid */
@@ -338,7 +349,7 @@ button { font: inherit; color: inherit; }
   box-shadow: 0 8px 18px rgba(43,36,25,.14);
 }
 .tapenote::before { content: ""; position: absolute; top: -11px; left: 50%; width: 96px; height: 24px; transform: translateX(-50%) rotate(-2deg); background: rgba(255,253,248,.7); box-shadow: 0 1px 2px rgba(43,36,25,.1); }
-.tapenote p { font-family: var(--hand) !important; font-size: 26px !important; line-height: 1.15 !important; margin: 0 0 8px !important; color: var(--ink) !important; }
+.tapenote p { font-family: var(--hand) !important; font-size: 17px !important; line-height: 1.55 !important; margin: 0 0 8px !important; color: var(--ink) !important; }
 .tapenote .sig { font-family: var(--mono) !important; font-size: 11px !important; letter-spacing: .14em; text-transform: uppercase; color: var(--accent) !important; margin: 0 !important; }
 .tapenote.sticky { transform: rotate(-2deg); background: #f3e3b3; }
 
@@ -373,7 +384,7 @@ button { font: inherit; color: inherit; }
 .lb-fig { margin: 0; min-height: 0; display: grid; place-items: center; padding: 8px clamp(8px, 6vw, 72px); }
 .lb-fig img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; background: #2b2419; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
 .lb-cap { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px 18px; max-width: 1100px; width: 100%; margin: 0 auto; }
-.lb-cap p { margin: 0; font-family: var(--hand); font-size: 24px; line-height: 1.2; }
+.lb-cap p { margin: 0; font-family: var(--hand); font-size: 17px; line-height: 1.55; }
 .lb-btn {
   width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,253,248,.35); background: rgba(255,253,248,.08);
   display: grid; place-items: center; cursor: pointer; color: var(--surface); flex: none;
@@ -1106,7 +1117,7 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       <h2 id="about-h">About these photos</h2>
       <div>
         <p>Photos and video by the travellers, New York, March 2026: 45 photos and one clip from the day's 386. The time on each print is when it was taken; the times on the stop cards are from the day's plan.</p>
-        <p>The route on the map joins the stops in order with straight lines: it shows the sequence, not the exact streets walked or the lines ridden. The live map is © Mapbox © OpenStreetMap; where it can't load, a hand-drawn schematic of the shoreline stands in.</p>
+        <p>The route on the map joins the stops in order with straight lines: it shows the sequence, not the exact streets walked or the lines ridden. The live map is © Mapbox © OpenStreetMap, or © OpenStreetMap contributors; where neither can load, a hand-drawn schematic of the shoreline stands in.</p>
       </div>
     </aside>
   </section>
@@ -1131,6 +1142,12 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
   root.classList.add('js');
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var MAPBOX_VERSION = '3.21.0';
+  var LEAFLET_VERSION = '1.9.4';
+  // OpenStreetMap's own tiles (no key): the map whenever there is no Mapbox
+  // token. Raster tiles in Leaflet, because the GL libraries' web workers
+  // can't talk to a page in the site's sandbox (an opaque origin).
+  var OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  var OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   var C = { paper: '#f6f1e7', surface: '#fffdf8', ink: '#2b2419', muted: '#8a8172', mutedInk: '#6f675a', line: '#e2d9c8', accent: '#c94f2c', accent2: '#2c6bc9', teal: '#2ca089', water: '#dde2e3', park: '#dfe8db', land: '#f6f1e7', building: '#ece4d5' };
 
   /* ---------------------------------------------------------- broken images:
@@ -1228,13 +1245,27 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       if (t < 1) routeAnim = requestAnimationFrame(tick);
     })(t0);
   }
+  function routePart(f) {
+    var target = f * TOTAL, out = [ROUTE[0]];
+    for (var i = 1; i < ROUTE.length; i++) {
+      if (cum[i] <= target) { out.push(ROUTE[i]); continue; }
+      var seg = cum[i] - cum[i - 1], t = seg ? (target - cum[i - 1]) / seg : 0;
+      if (t > 0) out.push([ROUTE[i - 1][0] + (ROUTE[i][0] - ROUTE[i - 1][0]) * t, ROUTE[i - 1][1] + (ROUTE[i][1] - ROUTE[i - 1][1]) * t]);
+      break;
+    }
+    return out;
+  }
+  function lineOf(coords) {
+    // A one-point line is invalid GeoJSON for a line layer: repeat the point.
+    return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords.length > 1 ? coords : [coords[0], coords[0]] } };
+  }
   function drawRoute() {
+    var f = Math.min(1, Math.max(0, routeF));
     if (mode === 'gl' && glLoaded) {
-      var v = [Math.min(1, Math.max(0, routeF)), 1];
-      try {
-        map.setPaintProperty('route-done', 'line-trim-offset', v);
-        map.setPaintProperty('route-done-casing', 'line-trim-offset', v);
-      } catch (e) {}
+      try { map.getSource('route-done').setData(lineOf(routePart(f))); } catch (e) {}
+    } else if (mode === 'osm' && glLoaded) {
+      var ll = routePart(f).map(function (c) { return [c[1], c[0]]; });
+      osmDone.forEach(function (l) { l.setLatLngs(ll); });
     } else if (mode === 'paper') {
       paper.render();
     }
@@ -1250,6 +1281,13 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       var cam = { center: ch.center, zoom: camZoom(ch), pitch: ch.pitch, bearing: ch.bearing, padding: padding() };
       if (reduce || instant) map.jumpTo(cam);
       else map.flyTo(Object.assign({ duration: 2000, essential: true, curve: 1.3 }, cam));
+      setMarkerStates(ch);
+      animateRoute(fracFor(ch));
+    } else if (mode === 'osm') {
+      if (!glLoaded) return;            // applied on load
+      var v = osmView(ch);
+      if (reduce || instant) map.setView(v[0], v[1], { animate: false });
+      else map.flyTo(v[0], v[1], { duration: 2, easeLinearity: 0.2 });
       setMarkerStates(ch);
       animateRoute(fracFor(ch));
     } else if (mode === 'paper') {
@@ -1284,15 +1322,16 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       try {
         if (l.type === 'background') map.setPaintProperty(id, 'background-color', C.land);
         else if (l.type === 'fill' && /water/.test(id)) map.setPaintProperty(id, 'fill-color', C.water);
+        else if (l.type === 'fill' && /^park/.test(id)) map.setPaintProperty(id, 'fill-color', C.park);
         else if (l.type === 'fill' && /national-park|landuse|landcover/.test(id)) map.setPaintProperty(id, 'fill-color', ['match', ['get', 'class'], ['park', 'grass', 'cemetery', 'pitch', 'wood', 'scrub'], C.park, C.land]);
         else if (l.type === 'fill' && /building/.test(id)) { map.setPaintProperty(id, 'fill-color', C.building); map.setPaintProperty(id, 'fill-opacity', 0.9); }
         else if (l.type === 'fill-extrusion') map.setLayoutProperty(id, 'visibility', 'none');
         else if (l.type === 'line' && /water/.test(id)) map.setPaintProperty(id, 'line-color', C.water);
         else if (l.type === 'line' && /case|casing/.test(id)) map.setPaintProperty(id, 'line-color', C.line);
-        else if (l.type === 'line' && /road|bridge|tunnel|street|path|steps|pedestrian/.test(id)) map.setPaintProperty(id, 'line-color', C.surface);
+        else if (l.type === 'line' && /road|highway|railway|bridge|tunnel|street|path|steps|pedestrian/.test(id)) map.setPaintProperty(id, 'line-color', C.surface);
         else if (l.type === 'line' && /admin|boundary/.test(id)) map.setLayoutProperty(id, 'visibility', 'none');
         else if (l.type === 'symbol') {
-          if (/poi|road|transit|airport|natural|ferry|aerialway|path|golf|building|housenum|label-pedestrian|crosswalk/.test(id)) {
+          if (/poi|road|highway|transit|airport|aeroway|natural|ferry|aerialway|path|golf|building|housenum|label-pedestrian|crosswalk/.test(id)) {
             map.setLayoutProperty(id, 'visibility', 'none');
           } else {
             map.setPaintProperty(id, 'text-color', C.mutedInk);
@@ -1307,7 +1346,7 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
   }
   function startGL() {
     var mapboxgl = window.mapboxgl;
-    if (!mapboxgl || (typeof mapboxgl.supported === 'function' && !mapboxgl.supported())) return toPaper();
+    if (!mapboxgl || (typeof mapboxgl.supported === 'function' && !mapboxgl.supported())) return glFailed();
     mapboxgl.accessToken = window.MAPBOX_ACCESS_TOKEN || '';
     var ch = CH[current] || CH.intro;
     try {
@@ -1320,12 +1359,12 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
         attributionControl: true,
         fadeDuration: 0
       });
-    } catch (e) { return toPaper(); }
+    } catch (e) { return glFailed(); }
     mode = 'gl';
     map.on('style.load', tintStyle);
     map.on('error', function (e) {
       var s = e && e.error && e.error.status;
-      if (!glLoaded && (s === 401 || s === 403)) toPaper();
+      if (!glLoaded && (s === 401 || s === 403)) glFailed();
     });
     map.on('load', function () {
       if (mode !== 'gl') return;
@@ -1333,12 +1372,13 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       map.addLayer({ id: 'route-ghost', type: 'line', source: 'route',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': C.muted, 'line-width': 2, 'line-opacity': 0.7, 'line-dasharray': [1.2, 2] } });
-      map.addLayer({ id: 'route-done-casing', type: 'line', source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'butt' },
-        paint: { 'line-color': C.surface, 'line-width': 8, 'line-opacity': 0.9, 'line-trim-offset': [0, 1] } });
-      map.addLayer({ id: 'route-done', type: 'line', source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'butt' },
-        paint: { 'line-color': C.accent, 'line-width': 4, 'line-trim-offset': [0, 1] } });
+      map.addSource('route-done', { type: 'geojson', data: lineOf([ROUTE[0]]) });
+      map.addLayer({ id: 'route-done-casing', type: 'line', source: 'route-done',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': C.surface, 'line-width': 8, 'line-opacity': 0.9 } });
+      map.addLayer({ id: 'route-done', type: 'line', source: 'route-done',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': C.accent, 'line-width': 4 } });
       var hotel = document.createElement('div'); hotel.className = 'mk-o'; hotel.innerHTML = '<div class="mk-h"></div>';
       new mapboxgl.Marker({ element: hotel }).setLngLat(ROUTE[0]).addTo(map);
       STOPS.forEach(function (s) {
@@ -1358,7 +1398,81 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       routeF = 0;
       applyChapter(current, true);
     });
-    setTimeout(function () { if (!glLoaded && mode === 'gl') toPaper(); }, 15000);
+    setTimeout(function () { if (!glLoaded && mode === 'gl') glFailed(); }, 15000);
+  }
+  /* A Mapbox failure (a bad or URL-restricted token, no WebGL) falls back to
+     the OpenStreetMap map; that failing too, to the paper schematic. */
+  function glFailed() {
+    if (map) { try { map.remove(); } catch (e) {} map = null; }
+    glLoaded = false;
+    glMarkers = [];
+    mode = 'pending';
+    loadLib('leaflet');
+  }
+  function loadLib(kind) {
+    var base = kind === 'mapbox'
+      ? 'https://api.mapbox.com/mapbox-gl-js/v' + MAPBOX_VERSION + '/mapbox-gl'
+      : 'https://unpkg.com/leaflet@' + LEAFLET_VERSION + '/dist/leaflet';
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = base + '.css';
+    document.head.appendChild(css);
+    var js = document.createElement('script');
+    js.src = base + '.js';
+    js.onload = kind === 'mapbox' ? startGL : startOsm;
+    js.onerror = kind === 'mapbox' ? glFailed : toPaper;
+    document.head.appendChild(js);
+  }
+
+  /* ------------------------------------------- OpenStreetMap path (Leaflet)
+     Flat (no pitch or bearing): the same cameras, the same route and stops.
+     Leaflet zooms count 256px tiles, one more than the GL cameras' 512px. */
+  var osmDone = [];
+  function osmView(ch) {
+    var z = camZoom(ch) + 1, P = padding();
+    // Put the subject at the middle of the part of the map the card leaves free.
+    var off = window.L.point((P.left - P.right) / 2, (P.top - P.bottom) / 2);
+    var c = map.unproject(map.project([ch.center[1], ch.center[0]], z).subtract(off), z);
+    return [c, z];
+  }
+  function startOsm() {
+    var L = window.L;
+    if (!L) return toPaper();
+    try {
+      map = L.map('map', {
+        zoomControl: false, attributionControl: true, zoomSnap: 0,
+        dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false,
+        boxZoom: false, keyboard: false, inertia: false, zoomAnimation: !reduce
+      });
+    } catch (e) { return toPaper(); }
+    mode = 'osm';
+    map.attributionControl.setPrefix(false);
+    var ch = CH[current] || CH.intro;
+    map.setView([ch.center[1], ch.center[0]], camZoom(ch) + 1, { animate: false });
+    var tiles = L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: OSM_ATTRIBUTION }).addTo(map);
+    var ll = ROUTE.map(function (c) { return [c[1], c[0]]; });
+    L.polyline(ll, { color: C.muted, weight: 2, opacity: 0.7, dashArray: '2 6', lineCap: 'round', interactive: false }).addTo(map);
+    osmDone = [
+      L.polyline([ll[0]], { color: C.surface, weight: 8, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map),
+      L.polyline([ll[0]], { color: C.accent, weight: 4, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map)
+    ];
+    var icon = function (html, size) { return L.divIcon({ className: 'mk-o', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }); };
+    L.marker(ll[0], { icon: icon('<div class="mk-h"></div>', 18), interactive: false, keyboard: false }).addTo(map);
+    STOPS.forEach(function (s) {
+      var m = L.marker(ll[s.i], { icon: icon('<div class="mk"><span>' + s.n + '</span><span class="mk-label">' + s.name + '</span></div>', 30), interactive: false, keyboard: false }).addTo(map);
+      glMarkers.push({ n: s.n, el: m.getElement().firstChild });
+    });
+    var shown = false;
+    function ready() {
+      if (shown || mode !== 'osm') return;
+      shown = true;
+      glLoaded = true;
+      document.getElementById('map').classList.add('ready', 'is-osm');
+      routeF = 0;
+      applyChapter(current, true);
+    }
+    tiles.once('load', ready);
+    setTimeout(function () { if (!shown && mode === 'osm') toPaper(); }, 15000);
   }
   function toPaper() {
     if (mode === 'paper') return;
@@ -1414,16 +1528,7 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
       for (var i = 0; i < list.length; i++) { var q = pt(list[i]); d += (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1); }
       return d + (close ? 'Z' : '');
     }
-    function partial(f) {
-      var target = f * TOTAL, out = [ROUTE[0]];
-      for (var i = 1; i < ROUTE.length; i++) {
-        if (cum[i] <= target) { out.push(ROUTE[i]); continue; }
-        var seg = cum[i] - cum[i - 1], t = seg ? (target - cum[i - 1]) / seg : 0;
-        if (t > 0) out.push([ROUTE[i - 1][0] + (ROUTE[i][0] - ROUTE[i - 1][0]) * t, ROUTE[i - 1][1] + (ROUTE[i][1] - ROUTE[i - 1][1]) * t]);
-        break;
-      }
-      return out;
-    }
+    function partial(f) { return routePart(f); }
     function init() {
       if (built) return;
       built = true;
@@ -1531,20 +1636,8 @@ html:not(.js) .step { min-height: 0; padding-top: 48px; padding-bottom: 48px; }
   })();
 
   /* --------------------------------------------------------------- start */
-  var token = window.MAPBOX_ACCESS_TOKEN || '';
-  if (token && hasWebGL()) {
-    var css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = 'https://api.mapbox.com/mapbox-gl-js/v' + MAPBOX_VERSION + '/mapbox-gl.css';
-    document.head.appendChild(css);
-    var s = document.createElement('script');
-    s.src = 'https://api.mapbox.com/mapbox-gl-js/v' + MAPBOX_VERSION + '/mapbox-gl.js';
-    s.onload = startGL;
-    s.onerror = toPaper;
-    document.head.appendChild(s);
-  } else {
-    toPaper();
-  }
+  // Mapbox when the site injects its token (and WebGL works), otherwise OpenStreetMap.
+  loadLib(window.MAPBOX_ACCESS_TOKEN && hasWebGL() ? 'mapbox' : 'leaflet');
 
   /* --------------------------------------------------- steps → chapters */
   var steps = [].slice.call(document.querySelectorAll('[data-step]'));

@@ -31,7 +31,9 @@
  * (./mapbox: HTML_STORIES_MAPBOX_TOKEN, else NEXT_PUBLIC_MAPBOX_TOKEN): the
  * brief hands the agent that token and the sticky-map pattern, and the served
  * page gets the same token injected (./branding), which the story prefers.
- * Without one the brief falls back to MapLibre and D3-geo.
+ * Without one the brief falls back to Leaflet with OpenStreetMap tiles and
+ * D3-geo (not MapLibre: in the sandbox's opaque origin its worker drops every
+ * message, so it never loads a tile).
  *
  * A brief is for one story format (./formats): the scrolling page by default,
  * or a book, a board or a deck. For those, the scroll-specific sections
@@ -98,7 +100,7 @@ export interface BriefOptions {
   /**
    * A public Mapbox token (`pk.…`) to hand the agent for scrollytelling maps.
    * Omit to use the configured one (./mapbox); null for no Mapbox
-   * (the brief then points at MapLibre). Anything that isn't a public token is
+   * (the brief then points at Leaflet + OpenStreetMap). Anything that isn't a public token is
    * ignored: the brief is served publicly, so a secret `sk.` token must never
    * reach it.
    */
@@ -957,8 +959,12 @@ charts. "${formatHeading(paged)}" below says how.
     : mapbox
       ? `For maps, see Maps below; D3-geo with world-atlas/us-atlas TopoJSON is fine
   for a small static choropleth or locator.`
-      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
-  with free tiles. Don't use Mapbox: this deployment has no token for it.`
+      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or Leaflet
+  (\`https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\` and \`.css\`) with
+  OpenStreetMap's tiles (\`https://tile.openstreetmap.org/{z}/{x}/{y}.png\`,
+  credited "© OpenStreetMap contributors"). Not MapLibre or another WebGL map
+  library: their web workers can't talk to a page in the site's sandbox, so
+  the map never gets its tiles. Don't use Mapbox: this deployment has no token for it.`
   const checks = paged ? formatChecks(paged).map((c) => `\n- ${c}`).join('') : ''
   const tripMeta =
     app === 'travel'
