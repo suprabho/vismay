@@ -161,6 +161,19 @@ export interface DeskSubIndustry {
   key_metrics: string[]
   /** Regulators, filings, trade bodies. */
   primary_sources: string[]
+  /** A newer segment still finding its shape: the brief asks for a definition first. */
+  emerging?: boolean
+  /** The geography the segment is about (India, China, Gulf); absent when global. */
+  region?: string
+  /** A dated fact from seed research, to verify before use. */
+  seed_note?: DeskSeedNote
+}
+
+export interface DeskSeedNote {
+  text: string
+  confidence: 'low' | 'medium' | 'high'
+  /** ISO date, YYYY-MM-DD, of the research the note came from. */
+  researched: string
 }
 
 export interface NamedOption {

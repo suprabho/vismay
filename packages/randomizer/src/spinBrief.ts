@@ -36,7 +36,9 @@ function insightReady(spin: BriefSpin): boolean {
 function deskAssignment(s: DeskSubject): string[] {
   const out = [
     `- Industry: ${s.industry.name}`,
-    `- Sub-industry: ${s.sub.name} (heat ${s.sub.heat})`,
+    `- Sub-industry: ${s.sub.name} (heat ${s.sub.heat})${s.sub.region ? `. Region: ${s.sub.region}.` : ''}${
+      s.sub.emerging ? ' Emerging segment: define it and size it before the Why Now.' : ''
+    }`,
     `- Lens: ${s.lens.name}. ${s.lens.description}`,
     `- Freshness: ${s.freshness.name} (${s.freshness.window})`,
     '',
@@ -59,6 +61,13 @@ function deskAssignment(s: DeskSubject): string[] {
   if (headlines.length) {
     out.push('', 'Last known headlines (check they are still the newest):')
     for (const h of headlines) out.push(`- ${h.date}: [${h.title}](${h.url})`)
+  }
+  const note = s.sub.seed_note
+  if (note) {
+    out.push(
+      '',
+      `Seed note from ${note.researched} research (${note.confidence} confidence, verify against the primary source before using it): ${note.text}`,
+    )
   }
   out.push(
     '',
