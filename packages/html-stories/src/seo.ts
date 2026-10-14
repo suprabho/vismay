@@ -27,6 +27,8 @@ const PUBLISHER_LOGO: Record<HtmlStoryApp, string> = {
   footshorts: '/icons/icon-512.png',
   vizf1: '/icons/icon-512.png',
   viznba: '/icon.svg',
+  // Travel stories are private (never indexed or listed); kept for the type.
+  travel: '/favicon.ico',
 }
 
 /** The subject each site's editorials are about, for JSON-LD `about` and the RSS category. */
@@ -35,6 +37,7 @@ const SITE_TOPIC: Record<HtmlStoryApp, string> = {
   footshorts: 'Football',
   vizf1: 'Formula 1',
   viznba: 'NBA',
+  travel: 'Travel',
 }
 
 /**
@@ -48,6 +51,7 @@ const EDITORIAL_HUB: Record<HtmlStoryApp, string> = {
   footshorts: '/editorial',
   vizf1: '/editorial',
   viznba: '/editorial',
+  travel: '/',
 }
 
 export function editorialHubPath(app: HtmlStoryApp): string {
@@ -60,6 +64,8 @@ const EDITORIAL_RSS: Record<HtmlStoryApp, string | null> = {
   footshorts: '/editorial/rss.xml',
   vizf1: '/editorial/rss.xml',
   viznba: '/editorial/rss.xml',
+  // Private stories: no feed.
+  travel: null,
 }
 
 export function editorialRssUrl(app: HtmlStoryApp): string | null {

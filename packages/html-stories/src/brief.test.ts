@@ -169,7 +169,7 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(b.includes('Byline "footshorts desk"'))
   assert.ok(!b.includes('saves a draft'), 'the Football Desk has no gate')
 }
-// Maps: Mapbox scrollytelling only with a public token; MapLibre otherwise.
+// Maps: Mapbox scrollytelling only with a public token; Leaflet + OpenStreetMap otherwise.
 const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
 for (const app of ['vizmaya-fyi', 'footshorts'] as const) {
   const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', app, mapboxToken: pk })
@@ -184,7 +184,7 @@ for (const mapboxToken of [null, '', 'sk.secret-token', 'not-a-token']) {
   const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', mapboxToken })
   assert.ok(!m.includes('## Maps'), `no maps for ${mapboxToken}`)
   assert.ok(!m.includes('sk.secret-token'))
-  assert.ok(m.includes("Don't use Mapbox") && m.includes('MapLibre GL'))
+  assert.ok(m.includes("Don't use Mapbox") && m.includes('Leaflet') && m.includes('tile.openstreetmap.org'))
 }
 
 // No spin: none of it.

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import TripLogin from '@/components/TripLogin'
+import { safeReturnPath } from '@/lib/gate'
 import { readTrip } from '@/lib/trips'
 
 export const dynamic = 'force-dynamic'
@@ -12,10 +13,13 @@ export const metadata: Metadata = {
 
 interface RouteParams {
   params: Promise<{ slug: string }>
+  /** `next`: where to go after the password, e.g. an HTML story at /s/<slug>. */
+  searchParams: Promise<{ next?: string | string[] }>
 }
 
-export default async function TripLoginPage({ params }: RouteParams) {
+export default async function TripLoginPage({ params, searchParams }: RouteParams) {
   const { slug } = await params
+  const { next } = await searchParams
   if (!/^[a-z0-9][a-z0-9_-]*$/.test(slug)) notFound()
 
   // Show the trip's name/emoji when the content exists locally — but render
@@ -34,7 +38,7 @@ export default async function TripLoginPage({ params }: RouteParams) {
           This trip is shared with friends and family. Enter the trip password you
           were sent to open it.
         </p>
-        <TripLogin slug={slug} />
+        <TripLogin slug={slug} next={safeReturnPath(typeof next === 'string' ? next : null, slug)} />
       </div>
     </main>
   )

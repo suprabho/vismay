@@ -12,7 +12,11 @@
  * a race context (classifications, lap-by-lap timing, telemetry and standings
  * for the sessions and drivers the story is about — see ./vizf1Brief), and
  * viznba briefs a game context (box scores from ESPN for the games the story
- * is about — see ./viznbaBrief).
+ * is about — see ./viznbaBrief), and travel briefs a trip context (the
+ * itinerary and the curated photos' URLs for the trip or day the story is
+ * about — see ./travelBrief). Travel stories are private to their trip, so
+ * the travel brief also asks for the trip tag and is about the travellers'
+ * own photos rather than sourced ones.
  *
  * A brief can also carry a randomizer spin (@vismay/randomizer): the topic
  * the Desk, Atlas or Epics randomizer drew for vizmaya, the Football Desk
@@ -27,7 +31,9 @@
  * (./mapbox: HTML_STORIES_MAPBOX_TOKEN, else NEXT_PUBLIC_MAPBOX_TOKEN): the
  * brief hands the agent that token and the sticky-map pattern, and the served
  * page gets the same token injected (./branding), which the story prefers.
- * Without one the brief falls back to MapLibre and D3-geo.
+ * Without one the brief falls back to Leaflet with OpenStreetMap tiles and
+ * D3-geo (not MapLibre: in the sandbox's opaque origin its worker drops every
+ * message, so it never loads a tile).
  *
  * A brief is for one story format (./formats): the scrolling page by default,
  * or a book, a board or a deck. For those, the scroll-specific sections
@@ -62,7 +68,7 @@ import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from '
 import { formatChecks, formatHeading, formatHintSection, formatTitle, storyFormatSection } from './formatBrief'
 import { MAPBOX_TOKEN_GLOBAL, storyMapboxToken } from './mapbox'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
-import { MAX_HTML_BYTES, THEME_META_NAME, themeMetaContent, type ThemeColors } from './meta'
+import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 import { editorialHubPath } from './seo'
 
@@ -94,7 +100,7 @@ export interface BriefOptions {
   /**
    * A public Mapbox token (`pk.…`) to hand the agent for scrollytelling maps.
    * Omit to use the configured one (./mapbox); null for no Mapbox
-   * (the brief then points at MapLibre). Anything that isn't a public token is
+   * (the brief then points at Leaflet + OpenStreetMap). Anything that isn't a public token is
    * ignored: the brief is served publicly, so a secret `sk.` token must never
    * reach it.
    */
@@ -171,11 +177,29 @@ const VIZNBA_PALETTE: ThemeColors = {
   teal: '#2DD4BF',
 }
 
+/**
+ * The travel house palette: the scrapbook story's paper
+ * (apps/travel/web/content/stories/*.md themes, the trip pages' header).
+ * Terracotta is the accent, a postbox blue the secondary, a park green the
+ * tertiary.
+ */
+const TRAVEL_PALETTE: ThemeColors = {
+  background: '#f6f1e7',
+  surface: '#fffdf8',
+  text: '#2b2419',
+  muted: '#8a8172',
+  line: '#e2d9c8',
+  accent: '#c94f2c',
+  accent2: '#2c6bc9',
+  teal: '#2ca089',
+}
+
 export const HOUSE_PALETTES: Record<HtmlStoryApp, ThemeColors> = {
   'vizmaya-fyi': VIZMAYA_PALETTE,
   footshorts: FOOTSHORTS_PALETTE,
   vizf1: VIZF1_PALETTE,
   viznba: VIZNBA_PALETTE,
+  travel: TRAVEL_PALETTE,
 }
 
 const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
@@ -226,6 +250,21 @@ const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
   for scores, clocks, labels, axes and data, always with tabular numerals (all on
   Google Fonts:
   \`https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,100..900&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=swap\`).
+  Body 18–20px, line-height 1.6, measure 60–70 characters.`,
+  travel: `House style (the trip scrapbook's own look; use it unless the trip clearly wants its own):
+- A light page, warm paper. Background \`#f6f1e7\`, surface \`#fffdf8\` (cards, photo
+  mounts), text \`#2b2419\`, muted \`#8a8172\`, hairlines \`#e2d9c8\`.
+- Accent \`#c94f2c\` (terracotta: the one colour that means "look here", the route
+  and the stop you're at), secondary \`#2c6bc9\` (postbox blue: transit, water),
+  green \`#2ca089\` (parks, walking). The day colours the itinerary gives each day
+  are allowed on top of these, for that day's route and markers only.
+- Scrapbook touches are welcome but sparing: photos mounted like prints or
+  polaroids with a slight tilt, a strip of tape, a ticket stub or a postmark
+  for a time and place. They frame the photos and the words, never bury them.
+- Type: Lora for headlines and big numbers, Manrope for body, Space Mono for
+  times, distances, labels and data, and optionally Caveat for a handwritten
+  note or two (all on Google Fonts:
+  \`https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Manrope:wght@400..800&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap\`).
   Body 18–20px, line-height 1.6, measure 60–70 characters.`,
 }
 
@@ -305,7 +344,9 @@ Use ${app === 'vizmaya-fyi' ? 'both' : 'them'}. They make a page scannable, but 
         ? ", a driver's nationality, a Grand Prix"
         : app === 'viznba'
           ? ", a player's home country, an international game"
-          : ''
+          : app === 'travel'
+            ? ', a border crossing, a flight'
+            : ''
   }), show its flag next to its name. Load
   \`https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/css/flag-icons.min.css\` and write
   \`<span class="fi fi-in"></span>\` (ISO 3166-1 alpha-2, lowercase; add \`fis\`
@@ -321,6 +362,7 @@ Use ${app === 'vizmaya-fyi' ? 'both' : 'them'}. They make a page scannable, but 
  * assets endpoint (./assetsApi) to host them on the story-assets bucket.
  */
 function mediaSection(app: HtmlStoryApp, site: string, unit: string): string {
+  if (app === 'travel') return travelMediaSection(site, unit)
   const subjects =
     app === 'footshorts'
       ? 'the ground, the players, the city, the trophy, the crowd'
@@ -417,6 +459,56 @@ A data story is not only charts. When it has real ${subjects}, show them.
 - **Share card.** The hero (cropped to 1200×630) is usually the right \`og:image\`.`
 }
 
+/**
+ * Travel's "Photography and media": the trip's own photos and clips, which
+ * the trip context lists with their URLs, are the story. Outside images are
+ * for what the travellers didn't shoot, under the same licence rules.
+ */
+function travelMediaSection(site: string, unit: string): string {
+  return `## Photography and media
+
+A trip story is the travellers' own photos and clips. Show them generously.
+
+- **Where they come from.** The trip context at the end of this brief lists
+  the trip's curated photos and videos stop by stop, each with its URL and
+  caption. They are already hosted (the story-assets bucket); link them by
+  those URLs, exactly as given. Never re-host, crop into a new file or
+  base64 them.
+- **Choose, don't dump.** Pick the best two to five per stop (more where the
+  day lingered), with a clear hero for the cover. Skip near-duplicates,
+  blurred frames and screenshots. Look at a photo before you build a spread
+  around it: if you can fetch an image, do; the file name and caption only
+  say where it was taken.
+- **How many.** A hero image at the top, then photos in every ${unit} that
+  has them: this is a photo story with words, not a text with pictures.
+- **Video.** A clip from the context plays as \`<video autoplay muted loop
+  playsinline poster="…">\` with an mp4 \`<source>\`, one at a time, no sound
+  needed. Under reduced motion, don't autoplay: show the poster (a photo of
+  the same stop).
+- **Outside images** only for what the travellers didn't shoot (an old map,
+  a building's history), and only openly licensed: Wikimedia Commons or
+  Openverse, CC0, Public Domain, CC BY or CC BY-SA, credited in a
+  \`<figcaption>\` and under "About these photos". Never stock libraries or
+  news agencies, and no AI images of the places or people on the trip: the
+  page is a record of a real trip.
+- **Credit.** The trip's own photos need no per-image credit; a short note
+  at the end ("Photos and video by the travellers, <month year>") covers them.
+- **Hosting anything new** (an outside image you're allowed to use): MCP
+  \`save_story_image\` with \`app: "travel"\`, or \`POST ${site}/api/html-stories/assets?slug=<slug>\`
+  with \`Authorization: Bearer $HTML_STORIES_TOKEN\` and JSON
+  \`{"fromUrl": "https://…", "credit": "…", "license": "CC BY-SA 4.0"}\`.
+- **Markup.** \`<figure><img src="https://…" alt="…" width="1600" height="1200"
+  loading="lazy" decoding="async"><figcaption>…</figcaption></figure>\`. The
+  hero is not lazy. Alt text says what the photo shows ("The Manhattan Bridge
+  from the DUMBO pier at first light"), not "photo of". Phone photos are
+  often portrait: give each frame its real aspect ratio, or \`object-fit:
+  cover\` with a crop that keeps the subject.
+- **Let people look closer.** A tap on a photo opening it large (a simple
+  lightbox: a button, Esc closes, focus returns) suits a trip story.
+- **Share card.** The hero is the right \`og:image\`. The page is private, so
+  link previews only show for people who already have the link.`
+}
+
 /** The "Maps" section: Mapbox scrollytelling, given a public token. */
 function mapsSection(app: HtmlStoryApp, token: string): string {
   const places =
@@ -426,7 +518,9 @@ function mapsSection(app: HtmlStoryApp, token: string): string {
         ? "a season's calendar across continents, the flyaway swing, where the circuits sit"
         : app === 'viznba'
           ? "a road trip across time zones, where a roster's players come from, the league's map of markets"
-          : 'a trade route, a river basin, where the plants or the outbreaks cluster'
+          : app === 'travel'
+            ? "the day's route stop by stop, a city's neighbourhoods, the flight in and the train out"
+            : 'a trade route, a river basin, where the plants or the outbreaks cluster'
   return `## Maps: Mapbox scrollytelling
 
 When the story happens somewhere (${places}), tell that part on a Mapbox map
@@ -523,7 +617,12 @@ Animate on scroll. The page should feel alive as the reader moves through it:
   A game is exactly this: the score-margin chart (the lead by minute) stays put
   while the runs, the quarters, the timeouts and the closing possessions step
   past it, each step highlighting its stretch of the clock.`
-          : ''
+          : app === 'travel'
+            ? `
+  A day of travel is exactly this: the map stays put while the stops step
+  past it, the route growing from one to the next, each step with its time,
+  its photos and how you got there.`
+            : ''
   }
 
 How to build it:
@@ -537,8 +636,12 @@ How to build it:
 - Keep it calm: motion should guide the eye to the point, not decorate.`
 }
 
-/** A headline that names who and what, the way a reader would search for it. */
-const SEARCH_HEADLINES: Record<HtmlStoryApp, { good: string; bad: string; slug: string }> = {
+/**
+ * A headline that names who and what, the way a reader would search for it.
+ * Travel has none: its stories are private to a trip, so its brief has no
+ * Search section.
+ */
+const SEARCH_HEADLINES: Record<Exclude<HtmlStoryApp, 'travel'>, { good: string; bad: string; slug: string }> = {
   'vizmaya-fyi': {
     good: 'How Europe refilled its gas storage before winter',
     bad: 'Filling up',
@@ -567,7 +670,7 @@ const SEARCH_HEADLINES: Record<HtmlStoryApp, { good: string; bad: string; slug: 
  * canonical, JSON-LD and any missing social tags (./seo); this is what only
  * the author can write.
  */
-function searchSection(app: HtmlStoryApp, site: string, hubPath: string): string {
+function searchSection(app: Exclude<HtmlStoryApp, 'travel'>, site: string, hubPath: string): string {
   const h = SEARCH_HEADLINES[app]
   return `## Search (should)
 
@@ -655,10 +758,36 @@ ${contextRules}
   Lead with the finding.`
 }
 
+function travelContentSection(hasContext: boolean): string {
+  const contextRules = hasContext
+    ? `- **The trip context at the end of this brief is your primary source.** Stop
+  names, times, places, coordinates, notes and captions come from it. If the
+  editor's notes give the day as it really went (a stop skipped, the train
+  instead of the walk), they win over the plan. Never invent what happened at
+  a stop: if all you have is the plan and the photos, describe what the
+  photos show and keep the rest to the place itself.`
+    : `- Write only what you know happened. If the brief carries no trip context,
+  ask for the itinerary and the photo URLs rather than inventing them.`
+  return `## Content
+
+${contextRules}
+- Past tense, first person plural, the voice of the people who were there
+  ("we took the F", "one sandwich between us, still too much"). Warm and
+  specific; no travel-brochure adjectives, no hype.
+- Follow the day in order. Each stop gets its time, a short paragraph, its
+  photos, and how the travellers got to the next one when the context says.
+- Numbers are welcome when they are real (steps, kilometres, stops, hours):
+  big standalone figures on the cover or the closing spread.
+- No "Sources & method" section: end with the day's totals and a short note
+  on the photos instead.
+- Byline: the context's (e.g. "A travel scrapbook"), else "${HTML_STORY_APP_META.travel.desk}", plus the date.`
+}
+
 function contentSection(app: HtmlStoryApp, hasContext: boolean): string {
   const meta = HTML_STORY_APP_META[app]
   if (app === 'vizf1') return vizf1ContentSection(hasContext)
   if (app === 'viznba') return viznbaContentSection(hasContext)
+  if (app === 'travel') return travelContentSection(hasContext)
   if (app !== 'footshorts') {
     return `## Content
 
@@ -753,7 +882,11 @@ navigation) above your page and a VizF1 footer below it`
         : app === 'viznba'
           ? `The only thing added is a slim VizNBA header (the ball mark and the app's
 navigation) above your page and a VizNBA footer below it`
-          : `The only thing added is a slim vizmaya header (logo) above
+          : app === 'travel'
+            ? `It is private: only people with the trip's password can open it. The only
+thing added is a slim Trips header (a compass mark and a link back to the
+trip's journey map) above your page and a Trips footer below it`
+            : `The only thing added is a slim vizmaya header (logo) above
 your page and a vizmaya footer below it`
   const appMcp = app === 'vizmaya-fyi' ? '' : ` and \`app: "${app}"\``
   const storyKind =
@@ -763,8 +896,19 @@ your page and a vizmaya footer below it`
         ? 'Formula 1 data story for VizF1'
         : app === 'viznba'
           ? 'basketball data story for VizNBA'
-          : 'data story for vizmaya.fyi'
-  const newsrooms = app === 'footshorts' ? ', The Athletic' : app === 'vizf1' ? ', The Race' : app === 'viznba' ? ', The Ringer' : ''
+          : app === 'travel'
+            ? 'travel story (one trip, or one day of it) for the people it was shared with'
+            : 'data story for vizmaya.fyi'
+  const newsrooms =
+    app === 'footshorts'
+      ? ', The Athletic'
+      : app === 'vizf1'
+        ? ', The Race'
+        : app === 'viznba'
+          ? ', The Ringer'
+          : app === 'travel'
+            ? ', NYT Travel'
+            : ''
   const [chartTitleGood, chartTitleBad] =
     app === 'footshorts'
       ? ['Arsenal had the ball, Chelsea had the chances', 'Possession and shots']
@@ -772,7 +916,9 @@ your page and a vizmaya footer below it`
         ? ['Norris was faster on every stint but lost it in the pit lane', 'Lap times, laps 1–57']
         : app === 'viznba'
           ? ['The Knicks won the minutes Brunson sat', 'Score margin by minute']
-          : ['Exports doubled after 2019', 'Exports 2015–2024']
+          : app === 'travel'
+            ? ['Most of the day was on foot', 'Distance by mode']
+            : ['Exports doubled after 2019', 'Exports 2015–2024']
   const slugExample =
     app === 'footshorts'
       ? 'arsenal-chelsea-xg-gap-2026'
@@ -780,9 +926,17 @@ your page and a vizmaya footer below it`
         ? 'norris-piastri-pit-wall-2026'
         : app === 'viznba'
           ? 'knicks-bench-minutes-2026'
-          : 'india-solar-boom-2026'
+          : app === 'travel'
+            ? 'new-york-2026-day-3'
+            : 'india-solar-boom-2026'
   const sourceTables =
-    app === 'vizf1' ? 'timing and telemetry tables' : app === 'viznba' ? 'box scores (ESPN)' : 'match tables'
+    app === 'vizf1'
+      ? 'timing and telemetry tables'
+      : app === 'viznba'
+        ? 'box scores (ESPN)'
+        : app === 'travel'
+          ? 'trip itinerary and photo library'
+          : 'match tables'
   const unit = paged ? HTML_STORY_FORMAT_META[paged].unit : 'screen'
   const formatIntro = paged
     ? `
@@ -805,9 +959,20 @@ charts. "${formatHeading(paged)}" below says how.
     : mapbox
       ? `For maps, see Maps below; D3-geo with world-atlas/us-atlas TopoJSON is fine
   for a small static choropleth or locator.`
-      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or MapLibre GL
-  with free tiles. Don't use Mapbox: this deployment has no token for it.`
+      : `For maps, use D3-geo with world-atlas/us-atlas TopoJSON, or Leaflet
+  (\`https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\` and \`.css\`) with
+  OpenStreetMap's tiles (\`https://tile.openstreetmap.org/{z}/{x}/{y}.png\`,
+  credited "© OpenStreetMap contributors"). Not MapLibre or another WebGL map
+  library: their web workers can't talk to a page in the site's sandbox, so
+  the map never gets its tiles. Don't use Mapbox: this deployment has no token for it.`
   const checks = paged ? formatChecks(paged).map((c) => `\n- ${c}`).join('') : ''
+  const tripMeta =
+    app === 'travel'
+      ? `
+   - \`<meta name="${TRIP_META_NAME}" content="<trip slug>">\`: the trip the story belongs
+     to (the trip context gives its slug). Required: the site serves the page only
+     to people holding that trip's password, and refuses a page without it.`
+      : ''
 
   return `# Writing a ${meta.name} HTML story
 
@@ -828,7 +993,7 @@ ${formatIntro}${assignment}
    - \`og:title\`, \`og:description\`, \`og:image\` (absolute https URL, 1200×630) and \`twitter:card\` = \`summary_large_image\`.
    - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(style?.palette ?? HOUSE_PALETTES[app])}">\`:
      your page's colours, as hex. The ${meta.name} header, footer and logo are tinted
-     to match. Copy it as given, and update it if you change the palette.${formatMeta}
+     to match. Copy it as given, and update it if you change the palette.${formatMeta}${tripMeta}
 3. Every asset is inline or an absolute \`https://\` URL. There is no folder next
    to the page, so \`./chart.js\` or \`images/map.png\` will 404.
 4. Load libraries from a CDN (jsdelivr, unpkg, cdnjs) with pinned versions.
@@ -840,7 +1005,7 @@ ${formatIntro}${assignment}
    must redraw on resize.
 8. Respect \`prefers-reduced-motion\`. Content must never be hidden if a script fails.
 
-${searchSection(app, site, editorialHubPath(app))}
+${app === 'travel' ? '' : searchSection(app, site, editorialHubPath(app))}
 ## Design direction
 
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters
@@ -892,7 +1057,9 @@ Pick the first one you can do:
 - **Otherwise**: give the user the complete HTML file. They will paste it into
   the admin's HTML stories tab for ${siteName}.
 
-Slugs are lowercase words joined by hyphens, e.g. \`${slugExample}\`.
+Slugs are lowercase words joined by hyphens, e.g. \`${slugExample}\`.${
+    app === 'travel' ? ' A trip story\'s slug starts with its trip\'s slug (`<trip>-day-3`, `<trip>-highlights`).' : ''
+  }
 Posting to an existing slug replaces it; older versions stay restorable.
 ${spin ? `\n${postingLines(spin)}\n` : ''}${
   hasContext

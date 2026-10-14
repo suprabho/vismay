@@ -157,7 +157,7 @@ stories from (falling back to the engine's `DEFAULT_THEME`).
   `appSlug` (`f1`); `CanvasClient` resolves it with `appSlugForVertical()` from
   `@vismay/verticals/data` before it reaches the presets strip (`vizf1`).
 
-## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories, /viznba/html-stories)
+## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories, /viznba/html-stories, /travel/html-stories)
 
 Agent-authored, self-contained HTML pages hosted as-is at `<site>/s/<slug>`
 ([packages/html-stories](../../packages/html-stories); the pipeline is
@@ -165,7 +165,7 @@ documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)). One
 table, scoped by `app_slug`; one set of admin code for every hosting app:
 
 - **Pages:** `app/vizmaya/(tabbed)/html-stories` and
-  `app/[appSlug]/(tabbed)/html-stories` (footshorts, vizf1 and viznba; other apps 404) render
+  `app/[appSlug]/(tabbed)/html-stories` (footshorts, vizf1, viznba and travel; other apps 404) render
   [components/html-stories/HtmlStoriesIndex.tsx](components/html-stories/HtmlStoriesIndex.tsx);
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
@@ -178,7 +178,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
+  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
   scroll, book, board, deck, and recap on vizf1 only; also on the Randomizer tab, where it marks the
@@ -200,8 +200,16 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   from `@vismay/randomizer/spins`) by window and team, up to 12, and the angle —
   the brief then carries their game context (`buildGameContext` in
   `@vismay/html-stories/viznbaBrief`: ESPN box scores, quarters, team stats,
-  player lines, runs, leaders, recap). The brief is fetched whenever
-  style, matches, races or games change and copied synchronously on click.
+  player lines, runs, leaders, recap); for travel, **Add trip**
+  ([TripContextPicker.tsx](components/html-stories/TripContextPicker.tsx)): a
+  trip from `/api/travel/trips`, one day or the whole trip, and notes on how
+  it really went — the brief then carries the trip context (`buildTripContext`
+  in `@vismay/html-stories/travelBrief`: the itinerary stop by stop and the
+  curated photos and clips with their public URLs). Travel stories must carry
+  `<meta name="travel:trip">` and a slug under the trip's (the save lint
+  refuses them otherwise): the travel site serves them only behind that
+  trip's password. The brief is fetched whenever style, matches, races,
+  games or the trip change and copied synchronously on click.
 
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 

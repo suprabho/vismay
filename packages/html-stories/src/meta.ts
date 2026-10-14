@@ -7,6 +7,7 @@
  * No Supabase / Node imports — safe for client components and the MCP server.
  */
 
+import type { HtmlStoryApp } from './apps'
 import {
   FORMAT_META_NAME,
   HTML_STORY_FORMAT_META,
@@ -122,6 +123,27 @@ export function extractHtmlMeta(html: string): HtmlMeta {
  * so the vizmaya header, footer and logo (./branding) can match it. The slots
  * are the story theme's (./styles StylePalette), which are also the logo's.
  */
+/**
+ * The trip a travel story belongs to (`<meta name="travel:trip" content="<trip slug>">`).
+ * The travel site serves the page only to visitors holding that trip's
+ * password cookie, so the tag is required there, and the story's slug must
+ * start with the trip's (`<trip>` or `<trip>-…`) so a trip's stories can be
+ * found by slug alone.
+ */
+export const TRIP_META_NAME = 'travel:trip'
+const TRIP_SLUG = /^[a-z0-9][a-z0-9_-]{1,63}$/
+
+/** The trip slug the page declares, or null when the tag is missing or malformed. */
+export function extractTripMeta(html: string): string | null {
+  const content = metaContent(metaTags(html), TRIP_META_NAME)?.trim().toLowerCase()
+  return content && TRIP_SLUG.test(content) ? content : null
+}
+
+/** Whether a story slug sits under a trip's: the trip slug itself, or `<trip>-…`. */
+export function isTripStorySlug(slug: string, trip: string): boolean {
+  return slug === trip || slug.startsWith(`${trip}-`)
+}
+
 export const THEME_META_NAME = 'vizmaya:theme'
 export const THEME_SLOTS = ['background', 'surface', 'text', 'muted', 'line', 'accent', 'accent2', 'teal'] as const
 export type ThemeSlot = (typeof THEME_SLOTS)[number]
@@ -290,6 +312,21 @@ export function parseAuraSlug(input: string): string | null {
   return s.length <= MAX_AURA_SLUG_LENGTH && SAFE_SLUG.test(s) ? s : null
 }
 
+/** A travel story must name its trip, and live under the trip's slug: it is the page's password gate. */
+function lintTrip(html: string, slug: string | undefined, errors: string[]): void {
+  const trip = extractTripMeta(html)
+  if (!trip) {
+    errors.push(
+      `Missing <meta name="${TRIP_META_NAME}" content="<trip slug>">. A travel story is served only to people ` +
+        "with its trip's password, so it must say which trip it belongs to.",
+    )
+    return
+  }
+  if (slug && !isTripStorySlug(slug, trip)) {
+    errors.push(`A story for the trip "${trip}" must have the slug "${trip}" or start with "${trip}-" (got "${slug}").`)
+  }
+}
+
 export interface HtmlLint {
   /** Problems that make the page unpublishable. */
   errors: string[]
@@ -297,12 +334,19 @@ export interface HtmlLint {
   warnings: string[]
 }
 
+export interface LintOptions {
+  /** The hosting app; travel stories must name their trip (see TRIP_META_NAME). */
+  app?: HtmlStoryApp
+  /** The slug it will be saved under, checked against the trip's on travel. */
+  slug?: string
+}
+
 /**
  * Checks an agent-posted document against the hosting contract in the brief.
  * Errors block the save; warnings are returned to the poster so it can fix
  * them in its next version.
  */
-export function lintHtml(html: string): HtmlLint {
+export function lintHtml(html: string, { app, slug }: LintOptions = {}): HtmlLint {
   const errors: string[] = []
   const warnings: string[] = []
 
@@ -356,6 +400,7 @@ export function lintHtml(html: string): HtmlLint {
   if (relative.size > 5) warnings.push(`…and ${relative.size - 5} more relative paths.`)
 
   lintMedia(html, warnings)
+  if (app === 'travel') lintTrip(html, slug, errors)
 
   // Coarse on purpose: any try/catch in the document is taken as the guard.
   if (/\b(?:localStorage|sessionStorage|indexedDB)\b/.test(html) && !/\bcatch\b/.test(html)) {
