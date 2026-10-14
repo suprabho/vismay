@@ -8,7 +8,7 @@
  * contract, design direction, icons, charts and content sections stay.
  */
 
-import type { HtmlStoryApp } from './apps'
+import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import {
   HTML_STORY_FORMAT_META,
   formatExampleUrl,
@@ -17,6 +17,7 @@ import {
   type HtmlStoryFormat,
   type PagedHtmlStoryFormat,
 } from './formats'
+import { MAPBOX_TOKEN_GLOBAL } from './mapbox'
 
 const D3 = 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js'
 
@@ -179,6 +180,166 @@ ${skeleton(
   tokens.`
 }
 
+/** The travel story told as a board: the git copy of the reference page, private to its trip. */
+export const TRAVEL_BOARD_EXAMPLE = {
+  slug: 'new-york-2026-day-3-board',
+  trip: 'new-york-2026',
+  path: 'apps/travel/web/content/html-stories/new-york-2026-day-3-board.html',
+}
+
+/**
+ * Travel's board: one day of a trip pinned to a corkboard. The day's map is
+ * the spine (a paper sheet whose chart projects the stops and anchors the
+ * strings), each stop is a card with its photos taped around it, and the tour
+ * walks the day in order. The map can lay a Mapbox Static Images picture
+ * under its route when the deployment has a public token: a still image
+ * scales with the board, where a live map canvas wouldn't.
+ */
+function travelBoardSection(app: HtmlStoryApp, mapboxToken: string | null): string {
+  const tokenExpr = `window.${MAPBOX_TOKEN_GLOBAL} || '${mapboxToken ?? ''}'`
+  const basemap = mapboxToken
+    ? `- **Under the route, a real map.** Put a Mapbox Static Images picture
+  under your SVG, at the same centre and zoom as your projection:
+  \`https://api.mapbox.com/styles/v1/mapbox/light-v11/static/<lng>,<lat>,<zoom>,0/<w>x<h>@2x?access_token=<token>\`
+  (\`w\` and \`h\` are the chart's size, at most 1280; the zoom may be
+  fractional). A Web Mercator projection matches it exactly:
+  \`d3.geoMercator().center([lng, lat]).scale(512 * Math.pow(2, zoom) / (2 * Math.PI)).translate([w / 2, h / 2])\`.
+  Read the token as \`${tokenExpr}\`, exactly like that: the site sets
+  \`window.${MAPBOX_TOKEN_GLOBAL}\` on the posted page, so a rotated token
+  reaches it without a re-post. Warm it toward the paper with a CSS filter
+  (\`sepia(.3) saturate(.8)\`), keep the Mapbox logo and attribution that
+  come in the image, and draw the schematic below anyway, so a failed or
+  refused image still leaves a map. Not Mapbox GL or Leaflet: a live map
+  canvas doesn't belong inside a board that scales.`
+    : `- **No live map.** This deployment has no Mapbox token, and a live map
+  canvas (Mapbox GL, Leaflet) doesn't belong inside a board that scales. The
+  schematic is the map: draw it carefully.`
+  return `The story is the day pinned to one board: a traveller's corkboard
+with the day's map as its spine, every stop a card with its photos taped
+around it, a ticket stub or a tape note where the day left one, and strings
+running from each stop's card to its place on the map. The reader follows the
+day as a guided tour while the camera flies from stop to stop, or drags and
+zooms around the board freely. Design it for a laptop first; phones get
+tighter frames.
+
+A hosted runtime does the board: the camera (it pulls back, travels and pushes
+in between frames), the tour panel, the strings, pins, a minimap, a Whiteboard
+switch, "Read as one page" (every item in markup order as one column, which is
+also what readers without JavaScript get), full screen, keys (←/→, Esc for the
+whole board, + and −), deep links (\`#step=5\`), and gestures that leave
+scrolling to the page (⌘/Ctrl + wheel, or two fingers, move the board). It
+loads d3 itself if the page hasn't. You write the board: the items, their
+design, the map chart and the tour.
+
+${skeleton(
+  'board',
+  app,
+  `<main class="stage" aria-label="<the day's headline>, as a pinned board">
+  <div class="world" data-width="5600" data-height="3800">
+    <div class="item bare" id="title" style="--x:120;--y:110;--w:900">
+      <p class="eyebrow">Day 3 · Mar 14, 2026</p><h1>New York</h1><p class="lede">…</p>
+    </div>
+    <div class="item paper tape" id="map" style="--x:2000;--y:150;--w:980">
+      <div class="chart" data-chart="route" style="height:1280px" data-alt="Map of the day's route: …"></div>
+      <p class="src">© Mapbox © OpenStreetMap · straight lines between the stops, in order</p>
+    </div>
+    <!-- one cluster per stop: its card, pinned and strung to the map, and its photos, taped -->
+    <article class="item index" id="s1" data-pin-to="map:1" style="--x:160;--y:900;--w:380;--r:-1">
+      <p class="when"><b>01</b> 7:50 AM</p><h3>The Brooklyn Bridge</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>F train · 11 min</p><p>…</p>
+    </article>
+    <figure class="item photo tape" id="s1-a" style="--x:580;--y:860;--w:460;--r:-2">
+      <button type="button" data-full="https://…/d3-….jpg" aria-label="Open photo: …">
+        <img src="https://…" alt="…" width="2560" height="1182" loading="lazy" decoding="async">
+      </button>
+      <figcaption>The bridge from below <time>8:02 AM</time></figcaption>
+    </figure>
+    <div class="item sticky gold" id="s3-note" style="--x:…;--y:…;--w:300;--r:3"><p>split one sandwich.</p></div>
+    <span class="zone-label" style="--x:160;--y:820">brooklyn, first light</span>
+    …
+  </div>
+  <ol class="tour board-only">
+    <li data-unit data-target="board"><h2>…the day in one line…</h2><p>…</p></li>
+    <li data-unit data-stop="1" data-target="s1 s1-a s1-b" data-target-sm="s1-a"><h2>…</h2><p>…</p></li>
+    …
+    <li data-unit data-target="board"><h2>The whole day</h2><p>…</p></li>
+  </ol>
+</main>`,
+)}
+
+- **The world** is a fixed canvas, 3400 × 2240 by default; a full day of
+  photos wants more room (\`data-width\`, \`data-height\`; the reference page
+  is 5600 × 3800). Place each item with inline \`--x\` and \`--y\` (its top-left
+  corner, in world pixels), \`--w\` (its width) and an optional \`--r\` (a tilt
+  in degrees, within ±3). Its height is its content's. Leave 40px or more
+  between items.
+- **Lay the day out in time.** The map is the spine; the stops go around it
+  in the order they happened (morning on one side, evening on the other, or
+  clockwise from the title), each stop a cluster: its card and its photos
+  together, with a \`.zone-label\` in the handwriting font naming a stretch of
+  the day ("brooklyn, first light", "museum mile"). Put a cluster on the side
+  of the map where its stop is, when you can, so its string stays short.
+- **Items** go in reading order in the markup: the order of the one-column
+  view, so cluster by cluster, the day in order. Kinds: \`.paper\` (the map
+  sheet, under the strings), \`.index\` (a stop's card: its number, time, how
+  the travellers got there, a short paragraph, whose pick it was), photos
+  (any element: a \`<figure class="item photo tape">\` mounted like a print or
+  a polaroid, taped rather than pinned), \`.sticky\` with \`.gold\`, \`.rose\`,
+  \`.blue\` or \`.sage\` (a tape note, the day's numbers), and \`.bare\` (the
+  title, straight on the cork: no card, no pin, not clickable). A ticket stub
+  or a postmark is an item too, styled your way.
+- **Strings.** Every stop card carries \`data-pin-to="map:<n>"\`: the runtime
+  runs a string from the card's pin to stop \`n\` on the map, which your map
+  chart returns from \`anchor(n)\` (see below). Strings tie cards to places;
+  don't string the photos.
+- **The map is a chart** (\`Story.charts.route\`), drawn in SVG on the paper
+  sheet: project the stops' \`[lng, lat]\` from the trip context with Web
+  Mercator, fit to the day's stops with some margin, and draw the water and
+  the land as a simple schematic (a few hand-placed shoreline points are
+  enough for a city), the route as a dashed line joining the stops in order
+  (the stay first and last when the day starts and ends there), and a
+  numbered circle per stop with a short label. Return
+  \`anchor: function (n) { return [x, y] }\` (stop \`n\`'s pixel position) for the
+  strings. Make it tall and big: 900–1000px wide, as tall as the day's shape
+  needs, with labels that don't collide.
+${basemap}
+- **The tour walks the day.** \`<ol class="tour board-only">\`: a first step on
+  the whole board (\`data-target="board"\`: the day in one line), a step on the
+  map (the shape of the day), one step per stop in order (\`data-target\` its
+  card and photos), and a last step on the whole board. On a phone the panel
+  takes the bottom 40% of the screen, so only one item fits at a readable
+  size: give every step \`data-target-sm\` with the stop's best photo (or its
+  ticket, or the card when the stop has no photo), and let the step's own
+  text carry the words there. Each step has a heading and one to three
+  sentences that add to the card rather than repeat it: the times the photos
+  give, what happened between this stop and the next. Give each stop's step
+  \`data-stop="<n>"\` and listen for \`story:enter\` on it to move the map
+  along: the route drawn up to that stop and the stop highlighted (the
+  runtime enters the step every time it is shown).
+- **Photos.** Mount each like a print: a white border, a caption in the
+  handwriting font with the time it was taken, a little tilt, a strip of tape.
+  Link them at a display size (Supabase's
+  \`/storage/v1/render/image/public/…?width=900&resize=contain\` for the
+  story-assets bucket) with the original as the lightbox's \`data-full\`, and
+  give each \`<img>\` its real \`width\` and \`height\` (phone photos are often
+  portrait) so items keep their size before the image arrives. Don't wrap
+  a whole photo in a button: the board can't be dragged by a button. A tap
+  on a far-off print flies the camera there (the runtime does that); a tap
+  on a print that is already close, or on a small corner button, opens it
+  large in a lightbox (decide in a capture-phase click listener and call
+  \`preventDefault()\`, which the runtime respects). A clip plays (muted, looped) when its stop's step is entered and
+  pauses when the tour moves on; never under reduced motion.
+- **Legibility.** Items are read at whatever zoom frames them: card text 16px
+  or more at world scale, headings 26–34px, photos 300–560px wide, the map
+  900–1000px wide.
+- **Tokens** for your \`:root\`: \`--board-felt\`, \`--board-felt-2\` and
+  \`--board-edge\` (the surface and its frame: cork and a wooden frame suit a
+  trip), \`--board-string\`, \`--board-pin\`, \`--board-label\`, \`--board-paper\`,
+  \`--board-card\`, \`--board-ink\`, \`--board-ink-muted\`, \`--sticky-gold\` and the
+  other sticky colours. The Whiteboard switch swaps the surface, string, pin
+  and label tokens.`
+}
+
 function deckSection(app: HtmlStoryApp): string {
   return `The reader steps through slides (a tap on the right of a slide or a
 swipe goes on, the left fifth goes back; the arrow keys and Space work too), or
@@ -231,13 +392,14 @@ ${skeleton(
 
 function enterSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
   const unit = HTML_STORY_FORMAT_META[format].unit
+  const travelBoard = isTravelBoard(format, app)
   const verb =
     format === 'book' ? 'turned to' : format === 'board' ? 'flown to' : format === 'recap' ? 'scrolled to' : 'shown'
   const board =
     format === 'board'
       ? `
 - The board draws every chart in its start state when it loads, so the
-  overview shows the whole case; \`play()\` runs when the reader gets close.
+  overview shows the whole board; \`play()\` runs when the reader gets close.
   Make the start state readable (axes and labels drawn, data at zero).
 - A chart can also return \`anchor: function (key) { return [x, y] }\` in its
   own pixels (a map projects place \`key\`), for strings to pin to.`
@@ -253,12 +415,23 @@ ${unit} is ${verb}`
       ? `- The replay is the race's map: don't add a Mapbox or MapLibre map of the
   circuit. A map of somewhere else (the calendar, a driver's home) is a D3-geo
   chart.`
-      : `- Maps are charts too: D3-geo with world-atlas or us-atlas TopoJSON. A Mapbox
+      : travelBoard
+        ? `- The day's map is a chart too (see "The map is a chart" above); a map of
+  somewhere bigger (the flight in, the country) is D3-geo with world-atlas
+  TopoJSON. A live map canvas doesn't belong inside a scaled ${unit}.`
+        : `- Maps are charts too: D3-geo with world-atlas or us-atlas TopoJSON. A Mapbox
   or MapLibre canvas doesn't belong inside a scaled ${unit}.`
   const example =
     format === 'recap'
       ? `A complete example, the 2024 Austrian Grand Prix told as a race recap:`
-      : `A complete example, the Odyssey voyage told as ${TITLES[format]}:`
+      : travelBoard
+        ? `A complete example, day 3 of the New York trip as a trip board, is the
+story \`${TRAVEL_BOARD_EXAMPLE.slug}\`:
+${HTML_STORY_APP_META.travel.siteUrl}/s/${TRAVEL_BOARD_EXAMPLE.slug} (behind that trip's
+password; its source is \`${TRAVEL_BOARD_EXAMPLE.path}\` in the vismay
+repository). It is private, so for the runtime's mechanics alone, read the
+public reference board, the Odyssey voyage told as ${TITLES[format]}:`
+        : `A complete example, the Odyssey voyage told as ${TITLES[format]}:`
   return `### Charts and numbers: animate on enter
 
 ${trigger}; after a resize or a switch to the one-column view it is
@@ -383,13 +556,28 @@ ${skeleton(
   beside the replay.`
 }
 
-/** "## Story format: …": replaces the scroll format's motion and Mapbox sections. */
-export function storyFormatSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
+/** Travel's board is its own: a day of a trip on a corkboard, strung to the day's map. */
+function isTravelBoard(format: PagedHtmlStoryFormat, app: HtmlStoryApp): boolean {
+  return format === 'board' && app === 'travel'
+}
+
+/**
+ * "## Story format: …": replaces the scroll format's motion and Mapbox sections.
+ * `mapboxToken` is the deployment's public token (./mapbox): only travel's
+ * board uses it, for a static picture under the day's map.
+ */
+export function storyFormatSection(
+  format: PagedHtmlStoryFormat,
+  app: HtmlStoryApp,
+  { mapboxToken = null }: { mapboxToken?: string | null } = {},
+): string {
   const body =
     format === 'book'
       ? bookSection(app)
       : format === 'board'
-        ? boardSection(app)
+        ? app === 'travel'
+          ? travelBoardSection(app, mapboxToken)
+          : boardSection(app)
         : format === 'recap'
           ? recapSection(app)
           : deckSection(app)
@@ -401,7 +589,15 @@ ${enterSection(format, app)}`
 }
 
 /** Extra lines for "Before you post", per format. */
-export function formatChecks(format: PagedHtmlStoryFormat): string[] {
+export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): string[] {
+  if (app && isTravelBoard(format, app)) {
+    return [
+      "tour steps whose items are off screen or under the panel at either size (step through the whole tour, then zoom into a few items by hand)",
+      'a stop card without a string, or a string that lands on the wrong stop (every card\'s `data-pin-to="map:<n>"` must be a stop your map chart anchors)',
+      'a step that doesn\'t move the map along, and photos without their real width and height (items jump as images arrive)',
+      'text too small to read at the zoom that frames it, and the one-column view ("Read as one page") you haven\'t read',
+    ]
+  }
   if (format === 'book') {
     return [
       'any page the console says overflows its frame: split it',

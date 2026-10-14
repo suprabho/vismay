@@ -231,6 +231,13 @@ overflow, so the rule is "one idea per page; if it doesn't fit, split it".
   `--board-label`: felt → whiteboard, red string → indigo marker line, gold
   pins → wine magnets.
 
+**Travel's board:** the travel brief has its own board section (a day of a
+trip on a corkboard: the day's map as a chart on a paper sheet, each stop's
+card strung to its stop, the tour walking the day; `travelBoardSection` in
+`src/formatBrief.ts`). Its example is the trip's own story,
+`apps/travel/web/content/html-stories/new-york-2026-day-3-board.html`, kept
+out of `examples/` because it holds a private trip's photos.
+
 **Known limits:** strings are straight with a little sag and don't avoid
 cards. Phones are the weak spot: the board is small and the panel takes up to
 40% of the screen, which is what `data-target-sm` is for. Keep body text on

@@ -122,6 +122,18 @@ else, at the publish API, in admin and in the seed script.
   photos, a Mapbox sticky-map walk through the twelve stops). Edit it there,
   then `pnpm travel:sync-html-story --slug new-york-2026-day-3 --force` (or
   re-post it through the publish API) once the row exists.
+- **The NYC day-3 board** is the same day as a pinned board (story format
+  `board`): `content/html-stories/new-york-2026-day-3-board.html`. A corkboard
+  with the day's map as its spine (an SVG chart that projects the stops, with
+  a Mapbox Static Images picture under it when the site injects a token, a
+  hand-drawn shoreline otherwise), each stop an index card strung to its stop
+  (`data-pin-to="map:<n>"`) with its prints taped around it, and a tour that
+  walks the day and grows the route as it goes (`data-stop`/`data-upto` on the
+  steps). It is also the travel brief's board example
+  (`GET /api/html-stories/brief?format=board`; `TRAVEL_BOARD_EXAMPLE` in
+  packages/html-stories/src/formatBrief.ts): private trip content, so it is
+  never copied under `/formats/examples/`. Seed it with
+  `pnpm travel:sync-html-story --slug new-york-2026-day-3-board`.
 
 ## Data flow
 

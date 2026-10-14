@@ -3,6 +3,7 @@
  *  (run: npx tsx src/formats.test.ts) */
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { buildFormatAssets, GENERATED_PATH, renderGeneratedModule } from '../scripts/gen-format-assets'
 import { FORMAT_ASSETS } from './formatAssets.generated'
 import {
@@ -16,6 +17,7 @@ import {
   parseHtmlStoryFormat,
   suggestedFormatFor,
 } from './formats'
+import { TRAVEL_BOARD_EXAMPLE } from './formatBrief'
 import { serveFormatAsset } from './formatsApi'
 import { extractFormatMeta, HTML_STORY_SANDBOX_CSP, lintHtml } from './meta'
 
@@ -71,6 +73,29 @@ for (const f of PAGED_HTML_STORY_FORMATS) {
   const lint = lintHtml(html)
   assert.deepEqual(lint.errors, [], `${path}: lint errors`)
   assert.deepEqual(lint.warnings.filter((w) => !w.startsWith('No photographs or video')), [], `${path}: lint`)
+}
+
+// Travel's board example is a trip's own story (private, so not under /formats):
+// the git copy the brief points at. It names its trip, loads travel's runtime,
+// lints clean, and every string and tour step points at something real.
+{
+  const ex = TRAVEL_BOARD_EXAMPLE
+  const html = readFileSync(join(__dirname, '..', '..', '..', ex.path), 'utf8')
+  assert.equal(extractFormatMeta(html), 'board')
+  assert.ok(ex.slug.startsWith(`${ex.trip}-`))
+  const { css, js } = formatRuntimeUrls('travel', 'board')
+  assert.ok(html.includes(`href="${css}"`) && html.includes(`src="${js}"`), 'travel board: loads its runtime')
+  const lint = lintHtml(html, { app: 'travel', slug: ex.slug })
+  assert.deepEqual(lint.errors, [], 'travel board: lint errors')
+  assert.deepEqual(lint.warnings, [], 'travel board: lint warnings')
+  const ids = new Set([...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]))
+  for (const [, t] of html.matchAll(/data-target(?:-sm)?="([^"]+)"/g)) {
+    for (const id of t.split(/\s+/)) assert.ok(id === 'board' || ids.has(id), `travel board: tour targets a missing item "${id}"`)
+  }
+  const pins = [...html.matchAll(/data-pin-to="map:(\d+)"/g)].map((m) => +m[1])
+  assert.ok(pins.length >= 12 && pins.every((n) => n >= 1 && n <= 12), 'travel board: every stop card is strung to a stop')
+  assert.deepEqual([...new Set(pins)].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+  assert.ok(!html.includes('/formats/examples/'), 'travel board: not served as a public example')
 }
 
 assert.equal(parseHtmlStoryFormat(undefined), 'scroll')

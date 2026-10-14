@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New York — Day Three, on one board</title>
+<meta name="description" content="Day three in New York pinned to one board: twelve stops from the Brooklyn Bridge at first light to Central Park at golden hour, strung to the day's map. Follow the tour or explore.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="New York — Day Three, on one board">
+<meta property="og:description" content="One day, twelve stops, 42,258 steps: Brooklyn at first light, Museum Mile by afternoon, Central Park at golden hour, pinned to a corkboard.">
+<meta property="og:image" content="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-03.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="travel:trip" content="new-york-2026">
+<meta name="vizmaya:theme" content="background:#f6f1e7; surface:#fffdf8; text:#2b2419; muted:#8a8172; line:#e2d9c8; accent:#c94f2c; accent2:#2c6bc9; teal:#2ca089">
+<meta name="vizmaya:format" content="board">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://grbrfpaznehikakupavx.supabase.co" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Borel&family=Lora:ital,wght@0,400..700;1,400..700&family=Manrope:wght@400..700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+<!-- The board format: the camera, the tour panel, strings, minimap and the one-column view. -->
+<link rel="stylesheet" href="https://protrip.vismay.xyz/formats/board@1.css">
+<style>
+/* ── Tokens ──────────────────────────────────────────────────────────────
+   The trip scrapbook's paper palette, pinned to cork in a wooden frame.
+   The board itself (camera, tour panel, strings, pins, whiteboard, the
+   one-column view) is board@1.css and board@1.js; everything here is this
+   story's design. */
+:root {
+  --bg: #f6f1e7; --surface: #fffdf8; --ink: #2b2419; --ink-2: #4a4033; --muted: #8a8172; --muted-ink: #6f675a;
+  --line: #e2d9c8; --accent: #c94f2c; --accent2: #2c6bc9; --teal: #2ca089; --amber: #d9a84a; --red: #b04a3a;
+  --print: #fffdf8; --tape: rgba(217, 168, 74, .5);
+  --serif: "Lora", Georgia, "Times New Roman", serif;
+  --sans: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
+  --hand: "Borel", "Bradley Hand", "Segoe Print", cursive;
+  /* the format's tokens: cork in a wooden frame, terracotta pins, red string */
+  --board-felt: #c09669; --board-felt-2: #d0a979; --board-edge: #7a5a3a;
+  --board-string: #a8321f; --board-pin: #c94f2c; --board-label: #3a2d1d;
+  --board-paper: #fbf6ea; --board-card: #fffdf8; --board-ink: var(--ink); --board-ink-muted: var(--muted-ink);
+  --sticky-gold: #f3e2a4; --sticky-rose: #f1cbbf;
+  --vz-accent: var(--accent);
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--bg); color: var(--ink) }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased }
+a { color: inherit }
+:focus-visible { outline: 3px solid var(--accent2); outline-offset: 3px }
+.ph { line-height: 1 }
+/* also in board@1.css; here too so a page that can't reach it still reads */
+.chart:empty::before { content: attr(data-alt); display: block; font-style: italic; font-size: 15px; line-height: 1.5; color: var(--muted-ink); padding: 8px 0 }
+html:not(.board-on) .board-only { display: none }
+
+/* ── The cork ─────────────────────────────────────────────────────────── */
+html.board-on .vz-viewport::before {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(88, 56, 26, .22) 1px, transparent 1.7px) 0 0 / 9px 9px,
+    radial-gradient(circle at 70% 60%, rgba(255, 238, 205, .18) 1px, transparent 1.9px) 3px 5px / 13px 13px,
+    radial-gradient(circle at 45% 75%, rgba(80, 50, 22, .14) 1.4px, transparent 2.2px) 6px 2px / 17px 17px,
+    radial-gradient(ellipse at 50% 40%, var(--board-felt-2), var(--board-felt) 78%);
+}
+html.board-on .stage[data-surface="whiteboard"] .vz-viewport::before {
+  background: radial-gradient(ellipse at 50% 40%, var(--board-felt-2), var(--board-felt) 78%);
+}
+html.board-on .world .item.tape::before { background: var(--tape); box-shadow: 0 1px 2px rgba(43, 36, 25, .12) }
+html.board-on .world .zone-label { transform: rotate(calc(var(--r, 0) * 1deg)) }
+/* lighter strings: a dozen of them cross the map sheet to reach their stops */
+.vz-strings path { stroke-width: 1.8; opacity: .72 }
+.zone-label { font-family: var(--hand); font-size: 30px; line-height: 1.6 }
+
+/* ── Things pinned to the board ──────────────────────────────────────── */
+.item {
+  --c-ink: var(--ink); --c-muted: var(--muted-ink); --c-line: var(--line); --c-hi: var(--accent);
+  --c-water: #d9e1e2; --c-land: #f4eee2; --c-land-2: #ebe3d3; --c-park: #dbe6d4; --c-halo: var(--board-paper);
+}
+.hand { font-family: var(--hand); font-weight: 400 }
+
+/* the title, straight on the cork */
+.title .eyebrow {
+  font-family: var(--mono); font-size: 17px; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.title .eyebrow::before { content: ""; width: 40px; height: 3px; background: var(--accent) }
+.title h1 { font-family: var(--serif); font-weight: 600; letter-spacing: -.025em; font-size: 168px; line-height: .9; margin: 0 0 22px }
+.title .lede { font-family: var(--serif); font-style: italic; font-size: 30px; line-height: 1.4; margin: 0 0 18px; max-width: 30ch }
+.title .byline { font-family: var(--mono); font-size: 15px; letter-spacing: .1em; text-transform: uppercase; margin: 0; color: var(--board-label) }
+html:not(.board-on) .title h1 { font-size: clamp(64px, 16vw, 120px) }
+html:not(.board-on) .title .lede { font-size: clamp(20px, 4.4vw, 26px) }
+
+/* stop cards: index cards, pinned and strung to the map */
+.stop .when { font-family: var(--mono); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-ink); margin: 0 0 28px; line-height: 28px }
+/* every line sits on the card's rules: 28px apart, the first under the red one */
+.stop .when b { color: var(--accent); font-size: 15px; margin-right: 4px }
+.stop h3 { font-family: var(--serif); font-weight: 600; font-size: 26px; line-height: 28px; letter-spacing: -.01em; margin: 0 0 0; padding-top: 4px; margin-top: -4px; text-wrap: balance }
+.stop .via {
+  display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12.5px; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--accent2); margin: 0; line-height: 28px
+}
+.stop .via i { font-size: 17px; flex: none }
+.stop p { font-size: 16.5px; line-height: 28px; margin: 0 }
+.stop .picked { font-family: var(--hand); font-size: 15px; color: var(--muted-ink) }
+.stop .picked::before { content: "— " }
+.stop.end h3 { font-size: 34px; line-height: 56px }
+.about h3 { font-family: var(--mono); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted-ink); margin: 0 0 18px; line-height: 28px }
+.about p { font-size: 15.5px; line-height: 28px; margin: 0 }
+
+/* photos, mounted like prints and taped on */
+.photo { background: var(--print); padding: 12px 12px 0; margin: 0; position: relative }
+.photo img, .photo video { display: block; width: 100%; height: auto; aspect-ratio: var(--ar, 3 / 2); object-fit: cover; object-position: var(--pos, 50% 50%); background: #e9e2d4 }
+.photo video { aspect-ratio: 9 / 16 }
+.photo figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 2px 12px; font-family: var(--hand); font-size: 16px; line-height: 1.55; color: var(--ink) }
+.photo figcaption time { flex: none; font-family: var(--mono); font-size: 12px; color: var(--muted-ink); letter-spacing: .04em }
+.photo .open, .photo .play {
+  position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; border: 1px solid rgba(255, 253, 248, .5); background: rgba(30, 24, 16, .58);
+  color: #fffdf8; cursor: pointer; opacity: 0; transition: opacity .2s
+}
+.photo .open i, .photo .play i { font-size: 18px }
+.photo:hover .open, .photo:focus-within .open, .photo .play, .photo .open:focus-visible { opacity: 1 }
+@media (hover: none) { .photo .open { opacity: .85 } }
+html.board-on .world .photo { cursor: zoom-in }
+.clip .play { top: auto; bottom: 66px; right: 20px }
+
+/* Katz's: a ticket stub and a tape note */
+.ticket { position: relative; display: grid; grid-template-columns: 1fr 96px; filter: drop-shadow(0 10px 16px rgba(43, 36, 25, .28)) }
+.ticket-main, .ticket-stub { background: #fbf3df }
+.ticket-main {
+  padding: 18px 18px 16px 22px; border-left: 9px solid var(--teal); border-radius: 3px 0 0 3px;
+  -webkit-mask: radial-gradient(circle 10px at 100% 50%, transparent 98%, #000) right / 100% 100% no-repeat;
+          mask: radial-gradient(circle 10px at 100% 50%, transparent 98%, #000) right / 100% 100% no-repeat
+}
+.ticket-stub {
+  -webkit-mask: radial-gradient(circle 10px at 0 50%, transparent 98%, #000) left / 100% 100% no-repeat;
+          mask: radial-gradient(circle 10px at 0 50%, transparent 98%, #000) left / 100% 100% no-repeat;
+  border-left: 2px dashed rgba(138, 129, 114, .6); border-radius: 0 3px 3px 0; display: grid; place-items: center; padding: 10px 6px
+}
+.ticket .t-title { font-family: var(--mono); font-weight: 700; font-size: 18px; letter-spacing: .06em; line-height: 1.15; margin: 0 0 8px }
+.ticket .t-row { display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 13px; color: var(--muted-ink) }
+.ticket .t-line { margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed rgba(138, 129, 114, .5); font-family: var(--mono); font-size: 14px; line-height: 1.45; color: var(--ink-2) }
+.ticket .t-price { font-family: var(--serif); font-weight: 700; font-size: 30px; color: var(--teal); line-height: 1; text-align: center }
+.ticket .t-admit { margin-top: 10px; font-family: var(--mono); font-weight: 700; font-size: 11px; letter-spacing: .12em; color: var(--red); border: 2px solid var(--red); padding: 4px 5px; transform: rotate(-8deg); text-align: center; line-height: 1.15 }
+.note p, .totals p { font-family: var(--hand); font-size: 22px; line-height: 1.55; margin: 0 0 10px }
+.note .sig, .totals .sig { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 }
+
+/* the day in numbers */
+.stats .hand { font-size: 19px; margin: 0 0 10px; color: var(--ink-2) }
+.stats ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px }
+.stats b { display: block; font-family: var(--serif); font-weight: 600; font-size: 50px; line-height: 1; font-variant-numeric: tabular-nums lining-nums }
+.stats li:nth-child(2) b { color: var(--accent) }
+.stats span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2) }
+
+/* a postmark */
+.postmark {
+  width: 132px; height: 132px; border-radius: 50%; border: 3px solid currentColor; color: var(--accent);
+  display: grid; place-items: center; align-content: center; text-align: center; position: relative; opacity: .85;
+  font-family: var(--mono); text-transform: uppercase
+}
+.postmark::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1.5px dashed currentColor; opacity: .7 }
+.postmark span { display: block; font-size: 12px; letter-spacing: .16em; line-height: 1.2 }
+.postmark b { display: block; font-size: 24px; line-height: 1.1; margin: 3px 0 }
+html:not(.board-on) .stamp { display: none }
+
+/* the map sheet */
+.mapsheet h3 { font-size: 26px; margin: 0 0 14px; line-height: 1.4 }
+.mapsheet .chart { background: var(--c-water); box-shadow: inset 0 0 0 1px var(--line) }
+.mapsheet .src { font-size: 13px; line-height: 1.45; margin: 12px 0 0; font-family: var(--mono); color: var(--muted-ink) }
+.basemap { filter: sepia(.32) saturate(.82) brightness(1.02) }
+
+/* the Met's overflow pile */
+.pile-h { font-size: 24px; margin: 0 0 12px }
+.thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 18px }
+.thumb { margin: 0; background: var(--print); padding: 8px 8px 0; box-shadow: 0 1px 1px rgba(0, 0, 0, .15), 0 8px 14px rgba(43, 36, 25, .22); transform: rotate(var(--t, 0deg)); cursor: zoom-in }
+.thumb img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: var(--pos, 50% 50%); background: #e9e2d4 }
+.thumb figcaption { display: flex; flex-direction: column; padding: 6px 1px 8px; font-family: var(--hand); font-size: 13.5px; line-height: 1.45 }
+.thumb figcaption time { font-family: var(--mono); font-size: 11px; color: var(--muted-ink) }
+
+/* the tour panel */
+.vz-panel .tour h2 { font-family: var(--serif); font-weight: 600; font-size: 27px; letter-spacing: -.01em }
+.vz-panel .tour p { color: var(--ink-2) }
+@media (max-width: 720px) { .vz-panel .tour h2 { font-size: 21px } }
+
+/* ── One column: no JS, or "Read as one page" ────────────────────────── */
+html:not(.board-on) .world { gap: 34px }
+html:not(.board-on) .world > .photo.port, html:not(.board-on) .world > .photo.clip { width: min(100%, 400px) }
+html:not(.board-on) .world > .ticket-item { width: min(100%, 470px) }
+html:not(.board-on) .world > .sticky { width: min(100%, 420px) }
+html:not(.board-on) .world > .stop, html:not(.board-on) .world > .about { width: min(100%, 520px) }
+html:not(.board-on) .world > .item:not(.bare):not(.paper) { transform: rotate(calc(var(--r, 0) * .5deg)) }
+@media (max-width: 520px) {
+  .thumbs { gap: 12px 10px }
+  .stats b { font-size: 38px }
+}
+
+/* ── Lightbox ─────────────────────────────────────────────────────────── */
+.lb { border: 0; padding: 0; margin: auto; width: 100vw; height: 100svh; max-width: 100vw; max-height: 100svh; background: transparent; color: var(--surface); overflow: hidden }
+.lb::backdrop { background: rgba(26, 21, 14, .96) }
+.lb[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto }
+.lb-bar { display: flex; justify-content: flex-end; padding: 12px 12px 0 }
+.lb-fig { margin: 0; min-height: 0; display: grid; place-items: center; padding: 8px clamp(8px, 6vw, 72px) }
+.lb-fig img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; background: #2b2419; box-shadow: 0 20px 60px rgba(0, 0, 0, .4) }
+.lb-cap { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px 18px; max-width: 1100px; width: 100%; margin: 0 auto }
+.lb-cap p { margin: 0; font-family: var(--hand); font-size: 18px; line-height: 1.55 }
+.lb-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255, 253, 248, .35); background: rgba(255, 253, 248, .08); display: grid; place-items: center; cursor: pointer; color: var(--surface); flex: none; padding: 0 }
+.lb-btn:hover { background: rgba(255, 253, 248, .18) }
+.lb-btn i { font-size: 20px }
+.lb-nav { display: flex; gap: 8px }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important }
+}
+</style>
+</head>
+<body>
+
+<main class="stage" aria-label="New York, day three, as a pinned board">
+  <div class="world" data-width="5600" data-height="3800">
+
+    <!-- Items are in reading order: the day, stop by stop (the one-column view).
+         --x/--y/--w place them on the 5600×3800 board; --r tilts them. Each
+         stop card's data-pin-to strings it to its stop on the map. -->
+    <div class="item bare title" id="title" style="--x:130;--y:120;--w:960">
+      <p class="eyebrow">Day Three · Saturday, Mar 14, 2026</p>
+      <h1>New York</h1>
+      <p class="lede">One day. Twelve stops. Brooklyn at first light, Museum Mile by afternoon, Central Park at golden hour.</p>
+      <p class="byline">A travel scrapbook · Mar 15, 2026</p>
+    </div>
+
+    <figure class="item photo land tape" id="cover" style="--x:1110;--y:150;--w:940;--r:-1.5" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-03.jpg" data-cap="Lower Manhattan from the DUMBO piers · 8:02 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-03.jpg?width=1400&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Lower Manhattan&#x27;s skyline across the East River from the DUMBO piers, the Brooklyn Bridge on the left and the Manhattan Bridge overhead on the right, under a cloudless morning sky." style="--ar:2560 / 1182;--pos:48% 46%" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-03.jpg">
+      <figcaption><span>Lower Manhattan from the DUMBO piers</span><time>8:02 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Lower Manhattan from the DUMBO piers"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <div class="item sticky gold stats" id="stats" style="--x:170;--y:560;--w:560;--r:-2">
+      <p class="hand">the day in numbers</p>
+      <ul>
+        <li><b data-count="12">12</b><span>stops</span></li>
+        <li><b data-count="42258">42,258</b><span>steps · a record</span></li>
+        <li><b data-count="31">31</b><span>km</span></li>
+        <li><b>~12</b><span>hours</span></li>
+      </ul>
+    </div>
+
+    <div class="item bare stamp" id="stamp" style="--x:820;--y:640;--w:150;--r:-9" aria-hidden="true">
+      <span class="postmark"><span>New York</span><b>MAR 14</b><span>2026</span></span>
+    </div>
+
+    <div class="item paper tape mapsheet" id="map" style="--x:2230;--y:150;--w:980">
+      <h3 class="hand">Saturday's route</h3>
+      <div class="chart" data-chart="route" style="height:1280px;--chart-ratio:920 / 1280" data-alt="Map of the day's route: from the hotel in NoHo to the Brooklyn Bridge and the DUMBO piers, back to Katz's on the Lower East Side, up the West Side by the High Line and Hudson Yards, across Midtown from McGee's to MoMA, Rockefeller Center and Grand Central, up Museum Mile to the Met and the Guggenheim, and down the length of Central Park, then home."></div>
+      <p class="src">Straight lines join the stops in order: the sequence, not the streets. Base map © Mapbox © OpenStreetMap where it loads, else a hand-drawn shoreline.</p>
+    </div>
+
+    <article class="item index stop" id="s1" data-pin-to="map:1" style="--x:120;--y:2760;--w:380;--r:-1.2">
+      <p class="when"><b>01</b> 7:50 AM</p>
+      <h3>The Brooklyn Bridge</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>F train · NoHo to York St · 11 min</p><p>The plan was to walk it. Instead the F train had us in Brooklyn eleven minutes after leaving the hotel, so we met the bridge from underneath — gothic towers, cables catching the first light.</p><p class="picked">Srayana&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo land tape" id="s1-a" style="--x:545;--y:2700;--w:500;--r:1.6" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-06.jpg" data-cap="The Brooklyn Bridge from the Brooklyn side · 8:02 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-06.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="The Brooklyn Bridge from the Brooklyn side" style="--ar:3 / 2;--pos:34% 72%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-06.jpg">
+      <figcaption><span>The Brooklyn Bridge from the Brooklyn side</span><time>8:02 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The Brooklyn Bridge from the Brooklyn side"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s1-b" style="--x:640;--y:3110;--w:280;--r:-2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-08.jpg" data-cap="A gothic tower, One World Trade behind · 8:02 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-08.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="A gothic tower, One World Trade behind" style="--ar:3 / 4;--pos:50% 52%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-08.jpg">
+      <figcaption><span>A gothic tower, One World Trade behind</span><time>8:02 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: A gothic tower, One World Trade behind"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <article class="item index stop" id="s2" data-pin-to="map:2" style="--x:1720;--y:2820;--w:380;--r:1.4">
+      <p class="when"><b>02</b> 7:55 AM</p>
+      <h3>DUMBO Piers — Manhattan Skyline</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot · down to the water</p><p>Up out of York Street station and straight down to the water. The skyline framed by bridge cables really is the best view of Manhattan anywhere, and in the early morning light we had the piers almost to ourselves.</p><p class="picked">Suprabho &amp; Srayana&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo land tape" id="s2-a" style="--x:1110;--y:2680;--w:580;--r:-1" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-04.jpg" data-cap="The skyline between the bridges · 8:02 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-04.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="The skyline between the bridges, the piers almost to ourselves" style="--ar:2560 / 1182;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-04.jpg">
+      <figcaption><span>The skyline between the bridges</span><time>8:02 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The skyline between the bridges"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s2-b" style="--x:1180;--y:3060;--w:270;--r:2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-19.jpg" data-cap="Washington Street, the Manhattan Bridge framed · 8:13 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-19.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Washington Street, the Manhattan Bridge framed" style="--ar:3 / 4;--pos:50% 42%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-dumbo-piers-manhattan-skyline-19.jpg">
+      <figcaption><span>Washington Street, the Manhattan Bridge framed</span><time>8:13 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Washington Street, the Manhattan Bridge framed"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:140;--y:2640;--r:-2">brooklyn, first light</span>
+
+    <article class="item index stop" id="s3" data-pin-to="map:3" style="--x:120;--y:1880;--w:380;--r:1">
+      <p class="when"><b>03</b> 8:45 AM</p>
+      <h3>Katz&#x27;s Delicatessen</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>Subway · 6 min back under the river</p><p>Six minutes back under the river, then pastrami on rye at quarter to nine in a room that hasn&#x27;t changed in decades. One sandwich between us, still too much. No photos — hands were busy.</p>
+    </article>
+
+    <div class="item bare ticket-item" id="s3-ticket" style="--x:560;--y:1900;--w:470;--r:-2.5">
+      <div class="ticket" role="img" aria-label="Ticket stub: Katz's Delicatessen, 205 E Houston St, 8:45 AM. No. 47, pastrami on rye, matzo ball soup. $27.45. Admit one.">
+        <div class="ticket-main">
+          <p class="t-title">KATZ'S DELICATESSEN</p>
+          <div class="t-row"><span>205 E Houston St</span><span>8:45 AM</span></div>
+          <p class="t-line">No. 47 · pastrami on rye · matzo ball soup</p>
+        </div>
+        <div class="ticket-stub"><div><div class="t-price">$27.45</div><div class="t-admit">ADMIT<br>ONE</div></div></div>
+      </div>
+    </div>
+
+    <div class="item sticky gold note" id="s3-note" style="--x:640;--y:2200;--w:320;--r:3">
+      <p>split one sandwich. trust us — they're massive.</p>
+      <p class="sig">Suprabho's pick</p>
+    </div>
+
+    <article class="item index stop" id="s4" data-pin-to="map:4" style="--x:1720;--y:1900;--w:380;--r:-1">
+      <p class="when"><b>04</b> 10:15 AM</p>
+      <h3>The High Line</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>Subway · a quick hop west</p><p>A quick hop west on the subway, then up onto the old elevated rail and north toward Hudson Yards — a sky-bridge overhead, a building-sized mural, avenues opening up below.</p><p class="picked">Suprabho&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo port tape" id="s4-a" style="--x:1120;--y:1840;--w:270;--r:-1.8" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-05.jpg" data-cap="A sky-bridge overhead · 10:46 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-05.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="A sky-bridge overhead" style="--ar:3 / 4;--pos:50% 34%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-05.jpg">
+      <figcaption><span>A sky-bridge overhead</span><time>10:46 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: A sky-bridge overhead"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s4-b" style="--x:1410;--y:1880;--w:270;--r:1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-10.jpg" data-cap="The building-sized mural · 10:49 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-10.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="The building-sized mural" style="--ar:3 / 4;--pos:50% 45%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-10.jpg">
+      <figcaption><span>The building-sized mural</span><time>10:49 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The building-sized mural"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:140;--y:1790;--r:1.5">lower east side, then west</span>
+
+    <article class="item index stop" id="s5" data-pin-to="map:5" style="--x:120;--y:1000;--w:380;--r:-1.4">
+      <p class="when"><b>05</b> 10:45 AM</p>
+      <h3>The Edge, Hudson Yards</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot · north on the High Line</p><p>We never went up — from the High Line, the Edge is the building that keeps photobombing you: that triangular deck jutting out over Hudson Yards, a hundred floors up. Midday light, no haze — it looked good enough from down here.</p><p class="picked">Suprabho &amp; Srayana&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo port tape" id="s5-a" style="--x:545;--y:990;--w:270;--r:1.6" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-07.jpg" data-cap="The Edge, jutting out over Hudson Yards · 10:47 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-07.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="The Edge, jutting out over Hudson Yards" style="--ar:3 / 4;--pos:50% 34%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-07.jpg">
+      <figcaption><span>The Edge, jutting out over Hudson Yards</span><time>10:47 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The Edge, jutting out over Hudson Yards"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s5-b" style="--x:835;--y:1040;--w:270;--r:-1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-17.jpg" data-cap="Photobombing again · 10:53 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-17.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Photobombing again" style="--ar:3 / 4;--pos:50% 42%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-how-i-met-your-mother-mcgees-pub-17.jpg">
+      <figcaption><span>Photobombing again</span><time>10:53 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Photobombing again"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <article class="item index stop" id="s6" data-pin-to="map:6" style="--x:1720;--y:1010;--w:380;--r:1.2">
+      <p class="when"><b>06</b> 11:45 AM</p>
+      <h3>How I Met Your Mother — McGee&#x27;s Pub</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>Subway · 9 min to Columbus Circle, then on foot</p><p>Nine minutes on the subway to Columbus Circle, then on foot to the real MacLaren&#x27;s — or the bar that inspired it — a little brick building on West 55th under a glass tower. We didn&#x27;t go in; the red PUB sign was what we came for.</p>
+    </article>
+
+    <figure class="item photo port tape" id="s6-a" style="--x:1150;--y:1000;--w:270;--r:-2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-01.jpg" data-cap="Columbus Circle · 11:33 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-01.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Columbus Circle" style="--ar:3 / 4;--pos:50% 52%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-01.jpg">
+      <figcaption><span>Columbus Circle</span><time>11:33 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Columbus Circle"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s6-b" style="--x:1430;--y:1050;--w:270;--r:1.4" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-28.jpg" data-cap="McGee&#x27;s, West 55th: the red PUB sign · 11:45 AM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-28.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="McGee&#x27;s, West 55th: the red PUB sign" style="--ar:3 / 4;--pos:40% 56%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-28.jpg">
+      <figcaption><span>McGee&#x27;s, West 55th: the red PUB sign</span><time>11:45 AM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: McGee&#x27;s, West 55th: the red PUB sign"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:140;--y:910;--r:-1">hudson yards to midtown</span>
+
+    <article class="item index stop" id="s7" data-pin-to="map:7" style="--x:3340;--y:2760;--w:380;--r:-1">
+      <p class="when"><b>07</b> 11:55 AM</p>
+      <h3>Museum of Modern Art (MoMA)</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot · a short walk</p><p>Starry Night, Warhol&#x27;s soup cans, Monet&#x27;s Water Lilies wrapping a whole room. We moved fast and still didn&#x27;t want to leave.</p><p class="picked">Ritwik&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo clip tape" id="s7-clip" style="--x:3770;--y:2690;--w:260;--r:1.8">
+      <video muted loop playsinline preload="none" width="1080" height="1920" poster="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-46.jpg?width=600&amp;resize=contain&amp;quality=78" aria-label="Short silent clip moving slowly across a large rippling line painting in a white MoMA gallery">
+        <source src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-day-02.mp4" type="video/mp4">
+      </video>
+      <figcaption><span>Rippling lines, up close</span><time>12:03 PM</time></figcaption>
+      <button class="play" type="button" aria-label="Play the clip" aria-pressed="false"><i class="ph ph-play" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s7-a" style="--x:3340;--y:3240;--w:300;--r:1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-55.jpg" data-cap="The Starry Night · 12:09 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-55.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="The Starry Night" style="--ar:4 / 3;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-55.jpg">
+      <figcaption><span>The Starry Night</span><time>12:09 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The Starry Night"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s7-b" style="--x:3690;--y:3260;--w:560;--r:-1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-61.jpg" data-cap="Monet&#x27;s Water Lilies, wrapping the room · 12:14 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-61.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Monet&#x27;s Water Lilies, wrapping the room" style="--ar:2560 / 1182;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-61.jpg">
+      <figcaption><span>Monet&#x27;s Water Lilies, wrapping the room</span><time>12:14 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Monet&#x27;s Water Lilies, wrapping the room"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s7-c" style="--x:4080;--y:2720;--w:300;--r:-2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-52.jpg" data-cap="Warhol&#x27;s soup cans · 12:05 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-52.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Warhol&#x27;s soup cans" style="--ar:3 / 2;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-museum-of-modern-art-moma-52.jpg">
+      <figcaption><span>Warhol&#x27;s soup cans</span><time>12:05 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Warhol&#x27;s soup cans"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <article class="item index stop" id="s8" data-pin-to="map:8" style="--x:4480;--y:2760;--w:380;--r:1.2">
+      <p class="when"><b>08</b> 12:45 PM</p>
+      <h3>Rockefeller Center &amp; LEGO Store</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot</p><p>St. Patrick&#x27;s Cathedral first — white spires against a hard blue sky — then Atlas holding up the world across the street. Then straight into the flagship LEGO Store: a brick-built Empire State, Pikachu in the window, and souvenirs we absolutely did not need.</p><p class="picked">Ritwik &amp; Suprabho&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo port tape" id="s8-a" style="--x:4430;--y:3270;--w:240;--r:-1.6" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-09.jpg" data-cap="St. Patrick&#x27;s Cathedral · 12:53 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-09.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="St. Patrick&#x27;s Cathedral" style="--ar:3 / 4;--pos:50% 38%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-09.jpg">
+      <figcaption><span>St. Patrick&#x27;s Cathedral</span><time>12:53 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: St. Patrick&#x27;s Cathedral"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s8-b" style="--x:4690;--y:3300;--w:240;--r:1.4" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-32.jpg" data-cap="Atlas, holding up the world · 1:12 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-32.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Atlas, holding up the world" style="--ar:3 / 4;--pos:50% 40%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-32.jpg">
+      <figcaption><span>Atlas, holding up the world</span><time>1:12 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Atlas, holding up the world"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s8-c" style="--x:4950;--y:2740;--w:240;--r:-1" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-26.jpg" data-cap="A brick-built Empire State · 1:03 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-26.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="A brick-built Empire State" style="--ar:3 / 4;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-26.jpg">
+      <figcaption><span>A brick-built Empire State</span><time>1:03 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: A brick-built Empire State"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s8-d" style="--x:4950;--y:3190;--w:240;--r:2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-13.jpg" data-cap="Pikachu in the window · 12:54 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-13.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Pikachu in the window" style="--ar:3 / 4;--pos:50% 55%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-rockefeller-center-lego-store-13.jpg">
+      <figcaption><span>Pikachu in the window</span><time>12:54 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Pikachu in the window"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:3360;--y:2650;--r:1">midtown, on foot</span>
+
+    <article class="item index stop" id="s9" data-pin-to="map:9" style="--x:3340;--y:1900;--w:380;--r:1">
+      <p class="when"><b>09</b> 1:55 PM</p>
+      <h3>Grand Central Terminal</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot</p><p>Outside: Mercury on the roofline, the Chrysler Building peeking over its shoulder. Inside, the celestial ceiling — one of the great interiors of the city, and free. Everything since MoMA had been on foot; from here, the subway uptown.</p><p class="picked">Suprabho&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo land tape" id="s9-a" style="--x:3770;--y:1860;--w:480;--r:-1.6" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-grand-central-terminal-24.jpg" data-cap="The Chrysler Building over Grand Central&#x27;s shoulder · 1:56 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-grand-central-terminal-24.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="The Chrysler Building over Grand Central&#x27;s shoulder" style="--ar:3 / 2;--pos:62% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-grand-central-terminal-24.jpg">
+      <figcaption><span>The Chrysler Building over Grand Central&#x27;s shoulder</span><time>1:56 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The Chrysler Building over Grand Central&#x27;s shoulder"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s9-b" style="--x:3880;--y:2240;--w:250;--r:2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-grand-central-terminal-26.jpg" data-cap="Mercury on the roofline · 1:58 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-grand-central-terminal-26.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Mercury on the roofline" style="--ar:4 / 3;--pos:50% 40%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-grand-central-terminal-26.jpg">
+      <figcaption><span>Mercury on the roofline</span><time>1:58 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Mercury on the roofline"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <article class="item index stop" id="s10" data-pin-to="map:10" style="--x:4400;--y:1880;--w:380;--r:-1.2">
+      <p class="when"><b>10</b> 3:00 PM</p>
+      <h3>The Metropolitan Museum of Art</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>Subway uptown · up from 86th St</p><p>Up from 86th Street to Fifth Avenue, then an hour and change in too many wings — the Temple of Dendur, Monet&#x27;s lilies, Greek marble, the Chinese courtyard. We shot more here than anywhere.</p><p class="picked">Suprabho &amp; Srayana&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo land tape" id="s10-a" style="--x:4830;--y:1840;--w:600;--r:1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-79.jpg" data-cap="The Temple of Dendur&#x27;s glass wing · 3:26 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-79.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="The Temple of Dendur&#x27;s glass wing" style="--ar:2560 / 1182;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-79.jpg">
+      <figcaption><span>The Temple of Dendur&#x27;s glass wing</span><time>3:26 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The Temple of Dendur&#x27;s glass wing"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s10-b" style="--x:4840;--y:2200;--w:330;--r:-1.6" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-93.jpg" data-cap="Monet&#x27;s lilies · 3:47 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-93.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Monet&#x27;s lilies" style="--ar:3 / 2;--pos:42% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-93.jpg">
+      <figcaption><span>Monet&#x27;s lilies</span><time>3:47 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Monet&#x27;s lilies"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s10-c" style="--x:5200;--y:2190;--w:240;--r:1.8" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-53.jpg" data-cap="Greek marble · 3:17 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-53.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Greek marble" style="--ar:4 / 5;--pos:50% 52%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-53.jpg">
+      <figcaption><span>Greek marble</span><time>3:17 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Greek marble"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:3360;--y:1790;--r:-1.5">museum mile</span>
+
+    <article class="item index stop" id="s10b" data-pin-to="map:10" style="--x:4400;--y:1010;--w:380;--r:1.4">
+      <p class="when"><b>10</b> continued</p>
+      <h3>The MET — Second Wind</h3>
+      <p>The overflow pile. One museum, over a hundred photos — these are the ones that survived the cut.</p>
+    </article>
+    <div class="item paper pile" id="s10b-pile" style="--x:4830;--y:960;--w:640;--r:-1">
+      <p class="hand pile-h">the overflow pile</p>
+      <div class="thumbs">
+        <figure class="thumb" style="--t:-2.5deg" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-62.jpg" data-cap="Egypt, seated · 3:20 PM">
+          <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-62.jpg?width=480&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Egypt, seated" style="--pos:50% 52%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-62.jpg">
+          <figcaption>Egypt, seated<time>3:20 PM</time></figcaption>
+        </figure>
+        <figure class="thumb" style="--t:1.5deg" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-99.jpg" data-cap="Monet&#x27;s footbridge · 3:49 PM">
+          <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-99.jpg?width=480&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Monet&#x27;s footbridge" style="--pos:50% 40%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-99.jpg">
+          <figcaption>Monet&#x27;s footbridge<time>3:49 PM</time></figcaption>
+        </figure>
+        <figure class="thumb" style="--t:-1deg" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-97.jpg" data-cap="Van Gogh&#x27;s wheat field · 3:48 PM">
+          <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-97.jpg?width=480&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Van Gogh&#x27;s wheat field" style="--pos:50% 40%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-97.jpg">
+          <figcaption>Van Gogh&#x27;s wheat field<time>3:48 PM</time></figcaption>
+        </figure>
+        <figure class="thumb" style="--t:2deg" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-84.jpg" data-cap="Ganesha in stone · 3:30 PM">
+          <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-84.jpg?width=480&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Ganesha in stone" style="--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-84.jpg">
+          <figcaption>Ganesha in stone<time>3:30 PM</time></figcaption>
+        </figure>
+        <figure class="thumb" style="--t:-1.8deg" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-21.jpg" data-cap="Under the skylights · 3:08 PM">
+          <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-21.jpg?width=480&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Under the skylights" style="--pos:50% 40%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-21.jpg">
+          <figcaption>Under the skylights<time>3:08 PM</time></figcaption>
+        </figure>
+        <figure class="thumb" style="--t:1deg" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-47.jpg" data-cap="A painted Greek vase · 3:16 PM">
+          <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-47.jpg?width=480&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="A painted Greek vase" style="--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-47.jpg">
+          <figcaption>A painted Greek vase<time>3:16 PM</time></figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <article class="item index stop" id="s11" data-pin-to="map:11" style="--x:3340;--y:1010;--w:380;--r:-1">
+      <p class="when"><b>11</b> 4:30 PM</p>
+      <h3>Guggenheim Museum</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot · 9 min up Fifth Avenue</p><p>Nine minutes up Fifth Avenue to Frank Lloyd Wright&#x27;s spiral, taken over by Carol Bove — crumpled steel in candy colours on every ramp. The rotunda from below is the shot everyone takes and it&#x27;s still worth taking.</p><p class="picked">Ritwik&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo land tape" id="s11-a" style="--x:3770;--y:960;--w:520;--r:1.4" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-105.jpg" data-cap="The spiral from Fifth Avenue · 4:29 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-105.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="The spiral from Fifth Avenue" style="--ar:2560 / 1182;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-the-metropolitan-museum-of-art-105.jpg">
+      <figcaption><span>The spiral from Fifth Avenue</span><time>4:29 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The spiral from Fifth Avenue"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s11-b" style="--x:3780;--y:1240;--w:240;--r:-1.8" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-guggenheim-museum-36.jpg" data-cap="The rotunda from below · 4:52 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-guggenheim-museum-36.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="The rotunda from below" style="--ar:3 / 4;--pos:50% 30%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-guggenheim-museum-36.jpg">
+      <figcaption><span>The rotunda from below</span><time>4:52 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The rotunda from below"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s11-c" style="--x:4040;--y:1270;--w:240;--r:1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-guggenheim-museum-15.jpg" data-cap="Carol Bove, in blue · 4:44 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-guggenheim-museum-15.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Carol Bove, in blue" style="--ar:3 / 4;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-guggenheim-museum-15.jpg">
+      <figcaption><span>Carol Bove, in blue</span><time>4:44 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Carol Bove, in blue"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:3360;--y:900;--r:1">museum mile, the spiral</span>
+
+    <article class="item index stop" id="s12" data-pin-to="map:12" style="--x:3340;--y:150;--w:380;--r:1.2">
+      <p class="when"><b>12</b> 5:20 PM</p>
+      <h3>Central Park</h3>
+      <p>Twenty past five at the Reservoir: flat blue water, the San Remo&#x27;s twin towers on the far shore. Then the length of the park on foot — almost six kilometres in under an hour.</p><p class="picked">Srayana &amp; Ritwik&#x27;s pick</p>
+    </article>
+
+    <figure class="item photo land tape" id="s12-a" style="--x:3760;--y:120;--w:560;--r:-1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-guggenheim-museum-38.jpg" data-cap="The Reservoir, the San Remo&#x27;s twin towers on the far shore · 5:20 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-guggenheim-museum-38.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="The Reservoir, the San Remo&#x27;s twin towers on the far shore" style="--ar:2560 / 1182;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-guggenheim-museum-38.jpg">
+      <figcaption><span>The Reservoir, the San Remo&#x27;s twin towers on the far shore</span><time>5:20 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: The Reservoir, the San Remo&#x27;s twin towers on the far shore"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s12-b" style="--x:3790;--y:460;--w:240;--r:1.8" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-04.jpg" data-cap="Through the bare trees · 5:35 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-central-park-04.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Through the bare trees" style="--ar:4 / 5;--pos:50% 40%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-04.jpg">
+      <figcaption><span>Through the bare trees</span><time>5:35 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Through the bare trees"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s12-c" style="--x:4060;--y:480;--w:260;--r:-1.4" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-07.jpg" data-cap="Heading south through the park · 5:36 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-central-park-07.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Heading south through the park" style="--ar:4 / 5;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-07.jpg">
+      <figcaption><span>Heading south through the park</span><time>5:36 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Heading south through the park"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <article class="item index stop" id="s12b" data-pin-to="map:12" style="--x:4400;--y:170;--w:380;--r:-1.2">
+      <p class="when">6:12 PM</p>
+      <h3>Golden Hour in the Park</h3>
+      <p class="via"><i class="ph ph-person-simple-walk" aria-hidden="true"></i>On foot · the length of the park</p><p>The light went soft and everything turned to honey, Billionaires&#x27; Row lined up above the bare trees. We came out by the Plaza just after six, walked east to Lexington, and let the subway carry us home — back at the hotel before seven.</p>
+    </article>
+
+    <figure class="item photo land tape" id="s12b-a" style="--x:4820;--y:120;--w:600;--r:1.4" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-12.jpg" data-cap="Honey light, Billionaires&#x27; Row above the trees · 5:52 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-central-park-12.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Honey light, Billionaires&#x27; Row above the trees" style="--ar:2560 / 1182;--pos:50% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-12.jpg">
+      <figcaption><span>Honey light, Billionaires&#x27; Row above the trees</span><time>5:52 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Honey light, Billionaires&#x27; Row above the trees"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo port tape" id="s12b-b" style="--x:4850;--y:470;--w:250;--r:-2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-27.jpg" data-cap="Supertalls, going gold · 6:08 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-central-park-27.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="Supertalls, going gold" style="--ar:4 / 5;--pos:50% 45%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-27.jpg">
+      <figcaption><span>Supertalls, going gold</span><time>6:08 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Supertalls, going gold"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <figure class="item photo land tape" id="s12b-c" style="--x:5130;--y:500;--w:300;--r:1.2" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-39.jpg" data-cap="Out by the Plaza, just after six · 6:12 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-central-park-39.jpg?width=900&amp;resize=contain&amp;quality=78" width="2560" height="1182" alt="Out by the Plaza, just after six" style="--ar:4 / 5;--pos:58% 50%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-39.jpg">
+      <figcaption><span>Out by the Plaza, just after six</span><time>6:12 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Out by the Plaza, just after six"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <span class="zone-label" style="--x:3360;--y:60;--r:-1">the park, golden hour</span>
+
+    <article class="item index stop end" id="end" style="--x:2690;--y:1740;--w:480;--r:1.2">
+      <p class="when">Home · before 7 PM</p>
+      <h3>Day's End</h3>
+      <p class="via"><i class="ph ph-train" aria-hidden="true"></i>On foot to Lexington · subway home</p>
+      <p>Twelve stops, nearly twelve hours, 42,258 steps — a personal record. Brooklyn at first light to Central Park at golden hour — the day that made the trip.</p>
+    </article>
+
+    <figure class="item photo port tape" id="end-a" style="--x:2250;--y:1730;--w:380;--r:-1.6" data-full="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-49.jpg" data-cap="Walking east, the last of the light · 6:18 PM">
+      <img src="https://grbrfpaznehikakupavx.supabase.co/storage/v1/render/image/public/story-assets/new-york-2026/d3-central-park-49.jpg?width=900&amp;resize=contain&amp;quality=78" width="1182" height="2560" alt="A Midtown street at dusk, steam rising from the road and the tops of the towers lit gold by the last sun." style="--ar:3 / 4;--pos:50% 55%" loading="lazy" decoding="async" data-orig="https://grbrfpaznehikakupavx.supabase.co/storage/v1/object/public/story-assets/new-york-2026/d3-central-park-49.jpg">
+      <figcaption><span>Walking east, the last of the light</span><time>6:18 PM</time></figcaption>
+      <button class="open" type="button" aria-label="Open photo: Walking east, the last of the light"><i class="ph ph-arrows-out" aria-hidden="true"></i></button>
+    </figure>
+
+    <div class="item sticky rose totals" id="end-totals" style="--x:2730;--y:2110;--w:420;--r:2.5">
+      <p>12 stops · 42,258 steps · 31 km · 7 trains · 386 photos.</p>
+      <p>see you soon, new york.</p>
+      <p class="sig">Until next time</p>
+    </div>
+
+    <article class="item index about" id="about" style="--x:2300;--y:2440;--w:820;--r:-0.8">
+      <h3>About these photos</h3>
+      <p>Photos and video by the travellers, New York, March 2026: a few dozen frames and one clip from the day's 386. The time on each print is when it was taken; the times on the stop cards are from the day's plan.</p>
+    </article>
+
+    <span class="zone-label" style="--x:2270;--y:1650;--r:1">home before seven</span>
+
+  </div>
+
+  <!-- The guided tour: one step per stop. data-stop highlights the stop on the
+       map and data-upto draws the route through that point. -->
+  <ol class="tour board-only">
+    <li data-unit data-target="board" data-upto="0"><h2>One day in New York</h2><p>Saturday, March 14: twelve stops and 42,258 steps, from Brooklyn at first light to Central Park at golden hour.</p><p>Follow the day stop by stop, or drag the board and zoom into anything. Tap a photo to see it large.</p></li>
+    <li data-unit data-target="map" data-upto="0"><h2>The shape of the day</h2><p>Out of NoHo, across the river and back, up the West Side, through Midtown, up Museum Mile and down the length of the park.</p><p>Each card on the board has a string to its stop. The route fills in as the tour goes.</p></li>
+    <li data-unit data-target="s1 s1-a s1-b" data-target-sm="s1-a" data-stop="1" data-upto="1"><h2>7:50 AM · Under the bridge</h2><p>The day started under the river: the F train from NoHo to York Street, and the Brooklyn Bridge from below instead of from its deck.</p></li>
+    <li data-unit data-target="s2 s2-a s2-b" data-target-sm="s2-a" data-stop="2" data-upto="2"><h2>7:55 AM · The piers to ourselves</h2><p>Eleven minutes of photos on the water, 8:02 to 8:13: the skyline between the two bridges, then Washington Street for the famous frame.</p></li>
+    <li data-unit data-target="s3 s3-ticket s3-note" data-target-sm="s3-ticket" data-stop="3" data-upto="3"><h2>8:45 AM · Pastrami for breakfast</h2><p>Back to Manhattan for Katz&#x27;s. The only stop of the day with no photos, so the ticket stub stands in.</p></li>
+    <li data-unit data-target="s4 s4-a s4-b" data-target-sm="s4-a" data-stop="4" data-upto="4"><h2>10:15 AM · North on the old rail line</h2><p>The High Line from Chelsea toward Hudson Yards: the city at the height of a second floor, walking north.</p></li>
+    <li data-unit data-target="s5 s5-a s5-b" data-target-sm="s5-a" data-stop="5" data-upto="5"><h2>10:45 AM · Never went up</h2><p>The Edge, from below: the deck kept turning up in the corner of every photo from the High Line.</p></li>
+    <li data-unit data-target="s6 s6-a s6-b" data-target-sm="s6-b" data-stop="6" data-upto="6"><h2>11:45 AM · The real MacLaren&#x27;s</h2><p>Columbus Circle at 11:33, then McGee&#x27;s on West 55th for the sign, not the drinks.</p></li>
+    <li data-unit data-target="s7 s7-clip s7-a s7-b s7-c" data-target-sm="s7-clip" data-stop="7" data-upto="7"><h2>11:55 AM · MoMA, fast</h2><p>Warhol at 12:05, The Starry Night at 12:09, the Water Lilies by 12:14. One room we filmed instead.</p></li>
+    <li data-unit data-target="s8 s8-a s8-b s8-c s8-d" data-target-sm="s8-c" data-stop="8" data-upto="8"><h2>12:45 PM · Spires, Atlas, bricks</h2><p>Fifth Avenue on foot: St. Patrick&#x27;s, Atlas across the street, then the flagship LEGO Store.</p></li>
+    <li data-unit data-target="s9 s9-a s9-b" data-target-sm="s9-a" data-stop="9" data-upto="9"><h2>1:55 PM · Look up</h2><p>Grand Central, the last stop of the Midtown walk. From here, the subway uptown to Museum Mile.</p></li>
+    <li data-unit data-target="s10 s10-a s10-b s10-c" data-target-sm="s10-a" data-stop="10" data-upto="10"><h2>3:00 PM · Too many wings</h2><p>The Met: Egypt, Greece, the Chinese courtyard and Monet, in an hour and change.</p></li>
+    <li data-unit data-target="s10b s10b-pile" data-target-sm="s10b-pile" data-stop="10" data-upto="10"><h2>The overflow pile</h2><p>Over a hundred photos in one museum. These six didn&#x27;t make the first cut and wouldn&#x27;t leave the board.</p></li>
+    <li data-unit data-target="s11 s11-a s11-b s11-c" data-target-sm="s11-a" data-stop="11" data-upto="11"><h2>4:30 PM · The spiral</h2><p>Nine minutes up Fifth Avenue to the Guggenheim, its ramps full of Carol Bove&#x27;s crumpled steel.</p></li>
+    <li data-unit data-target="s12 s12-a s12-b s12-c" data-target-sm="s12-a" data-stop="12" data-upto="12"><h2>5:20 PM · Flat blue water</h2><p>Into the park at the Reservoir, then south through the bare trees.</p></li>
+    <li data-unit data-target="s12b s12b-a s12b-b s12b-c" data-target-sm="s12b-a" data-stop="12" data-upto="13"><h2>6:12 PM · Everything turned to honey</h2><p>Golden hour on the walk south, out by the Plaza just after six, then east to Lexington for the subway home.</p></li>
+    <li data-unit data-target="end-a end end-totals" data-target-sm="end" data-upto="15"><h2>Before 7 PM · Day&#x27;s end</h2><p>Back at the hotel before seven: 42,258 steps, a personal record, and 386 photos to sort through.</p></li>
+    <li data-unit data-target="board" data-upto="15"><h2>The whole day</h2><p>That&#x27;s the tour. The board is yours: drag it, zoom into any print, or start again from Brooklyn.</p></li>
+  </ol>
+</main>
+
+<dialog class="lb" id="lb" aria-label="Photo viewer">
+  <div class="lb-bar"><button class="lb-btn" type="button" id="lbClose" aria-label="Close photo viewer"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+  <div class="lb-fig"><img id="lbImg" alt=""></div>
+  <div class="lb-cap">
+    <p id="lbCap"></p>
+    <div class="lb-nav">
+      <button class="lb-btn" type="button" id="lbPrev" aria-label="Previous photo"><i class="ph ph-arrow-left" aria-hidden="true"></i></button>
+      <button class="lb-btn" type="button" id="lbNext" aria-label="Next photo"><i class="ph ph-arrow-right" aria-hidden="true"></i></button>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://protrip.vismay.xyz/formats/board@1.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   Photos (lightbox, broken-image fallback) and the MoMA clip work in both
+   views. The map is a chart: the format runtime above draws it on load and
+   plays it when it's flown to; the tour moves it along stop by stop.
+   ───────────────────────────────────────────────────────────────────────── */
+(function () {
+  'use strict'
+  var doc = document
+  var root = doc.documentElement
+  var reduced = false
+  try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch (e) {}
+
+  /* a resized (render) URL that fails falls back to the original object */
+  doc.addEventListener('error', function (e) {
+    var t = e.target
+    if (t && t.tagName === 'IMG' && t.dataset.orig && !t.dataset.fb) { t.dataset.fb = '1'; t.src = t.dataset.orig }
+  }, true)
+
+  /* ── lightbox ─────────────────────────────────────────────────────────── */
+  var shots = [].slice.call(doc.querySelectorAll('.photo[data-full], .thumb[data-full]'))
+  var lb = doc.getElementById('lb'), lbImg = doc.getElementById('lbImg'), lbCap = doc.getElementById('lbCap')
+  var cur = 0, opener = null
+  function show(i) {
+    cur = (i + shots.length) % shots.length
+    var s = shots[cur], img = s.querySelector('img')
+    lbImg.src = s.getAttribute('data-full')
+    lbImg.alt = img ? img.alt : ''
+    lbCap.textContent = s.getAttribute('data-cap') || ''
+  }
+  function open(el) {
+    var i = shots.indexOf(el)
+    if (i < 0 || !lb.showModal) return false
+    opener = doc.activeElement
+    show(i)
+    lb.showModal()
+    return true
+  }
+  doc.getElementById('lbClose').addEventListener('click', function () { lb.close() })
+  doc.getElementById('lbPrev').addEventListener('click', function () { show(cur - 1) })
+  doc.getElementById('lbNext').addEventListener('click', function () { show(cur + 1) })
+  lb.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); show(cur - 1) }
+    if (e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); show(cur + 1) }
+  })
+  lb.addEventListener('click', function (e) { if (e.target === lb || e.target.classList.contains('lb-fig')) lb.close() })
+  lb.addEventListener('close', function () { if (opener && opener.focus) opener.focus() })
+
+  /* On the board a tap on a far-off print flies the camera to it (the runtime
+     does that); a tap on a print that's already close, or on its corner
+     button, opens it large. Capture phase, so this decides first. */
+  function closeEnough(el) {
+    var img = el.querySelector('img, video')
+    var w = img ? img.getBoundingClientRect().width : 0
+    return w >= Math.min(260, window.innerWidth * 0.42)
+  }
+  doc.addEventListener('click', function (e) {
+    var shot = e.target.closest && e.target.closest('.photo[data-full], .thumb[data-full]')
+    if (!shot) return
+    var board = root.classList.contains('board-on')
+    if (e.target.closest('.open') || !board || closeEnough(shot)) {
+      if (open(shot)) e.preventDefault()
+    }
+  }, true)
+  doc.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !e.target.matches || !e.target.matches('.photo[data-full]')) return
+    if (!root.classList.contains('board-on') || closeEnough(e.target)) { if (open(e.target)) { e.preventDefault(); e.stopPropagation() } }
+  }, true)
+
+  /* ── the MoMA clip: plays while its stop is on screen ─────────────────── */
+  var clip = doc.querySelector('.clip video'), playBtn = doc.querySelector('.clip .play')
+  function setPlaying(on) {
+    if (!clip) return
+    if (on) { var p = clip.play(); if (p && p.catch) p.catch(function () {}) } else clip.pause()
+  }
+  if (clip) {
+    clip.addEventListener('play', function () { playBtn.setAttribute('aria-pressed', 'true'); playBtn.setAttribute('aria-label', 'Pause the clip'); playBtn.firstChild.className = 'ph ph-pause' })
+    clip.addEventListener('pause', function () { playBtn.setAttribute('aria-pressed', 'false'); playBtn.setAttribute('aria-label', 'Play the clip'); playBtn.firstChild.className = 'ph ph-play' })
+    playBtn.addEventListener('click', function (e) { e.preventDefault(); setPlaying(clip.paused) })
+  }
+
+  /* ── the tour moves the map along, and starts and stops the clip ──────── */
+  var mapState = { upto: null, stop: null }  // null: the whole route, no stop picked out
+  var mapChart = null
+  doc.addEventListener('story:enter', function (e) {
+    var li = e.target
+    if (!li.matches || !li.matches('.tour > li')) return
+    mapState.upto = +li.getAttribute('data-upto')
+    mapState.stop = li.hasAttribute('data-stop') ? +li.getAttribute('data-stop') : null
+    if (mapChart) mapChart.go(mapState.upto, mapState.stop)
+    var t = ' ' + (li.getAttribute('data-target') || '') + ' '
+    if (!reduced) setPlaying(t.indexOf(' s7-clip ') !== -1)
+  })
+
+  if (!window.Story) return // the runtime didn't load: the page reads as one column
+  var Story = window.Story, dur = Story.dur, size = Story.size
+
+  /* ── the day's route ─────────────────────────────────────────────────── */
+  // [lng, lat] from the trip's itinerary: the hotel (Now Now NoHo), the 12
+  // stops, out of the park by the Plaza, the subway at Lexington, the hotel.
+  var ROUTE = [
+    [-73.9923, 40.7261], [-73.9969, 40.7061], [-73.9956, 40.7030], [-73.9874, 40.7223],
+    [-74.0048, 40.7480], [-74.0011, 40.7534], [-73.9814, 40.7642], [-73.9776, 40.7614],
+    [-73.9787, 40.7587], [-73.9772, 40.7527], [-73.9632, 40.7794], [-73.9590, 40.7830],
+    [-73.9656, 40.7826], [-73.9730, 40.7644], [-73.9677, 40.7625], [-73.9923, 40.7261]
+  ]
+  // n: the stop's number (its route index); lab: where its label sits. On a
+  // narrow map (the one-column view on a phone) minor labels drop out.
+  var STOPS = [
+    { n: 1, name: 'Brooklyn Bridge', lab: 'l', short: 'Bridge' }, { n: 2, name: 'DUMBO', lab: 'r' }, { n: 3, name: "Katz's", lab: 'r' },
+    { n: 4, name: 'High Line', lab: 'l' }, { n: 5, name: 'The Edge', lab: 'l', minor: 1 }, { n: 6, name: "McGee's", lab: 'l' },
+    { n: 7, name: 'MoMA', lab: 'r' }, { n: 8, name: 'Rockefeller', lab: 'l', minor: 1 }, { n: 9, name: 'Grand Central', lab: 'l', short: 'GCT' },
+    { n: 10, name: 'The Met', lab: 'r', minor: 1 }, { n: 11, name: 'Guggenheim', lab: 'r', short: 'Gugg.' }, { n: 12, name: 'Central Park', lab: 'l' }
+  ]
+  // A hand-drawn shoreline: the map when the Mapbox picture can't load.
+  var LAND = [
+    [[-74.0170,40.7005],[-74.0190,40.7065],[-74.0170,40.7150],[-74.0135,40.7230],[-74.0115,40.7300],[-74.0110,40.7380],[-74.0100,40.7460],[-74.0080,40.7540],[-74.0020,40.7620],[-73.9960,40.7700],[-73.9900,40.7800],[-73.9850,40.7870],[-73.9780,40.7970],[-73.9700,40.8070],[-73.9640,40.8150],[-73.9550,40.8300],[-73.9450,40.8450],[-73.9330,40.8500],[-73.9340,40.8100],[-73.9330,40.7980],[-73.9420,40.7860],[-73.9440,40.7780],[-73.9530,40.7660],[-73.9590,40.7590],[-73.9670,40.7500],[-73.9710,40.7430],[-73.9740,40.7350],[-73.9730,40.7270],[-73.9760,40.7180],[-73.9790,40.7110],[-73.9920,40.7090],[-73.9980,40.7070],[-74.0030,40.7040],[-74.0090,40.7020],[-74.0140,40.7010]],
+    [[-74.0300,40.6400],[-74.0150,40.6750],[-74.0050,40.6850],[-73.9990,40.6950],[-73.9960,40.7030],[-73.9900,40.7045],[-73.9830,40.7040],[-73.9760,40.7050],[-73.9680,40.7110],[-73.9620,40.7220],[-73.9600,40.7330],[-73.9590,40.7400],[-73.9530,40.7450],[-73.9490,40.7520],[-73.9440,40.7600],[-73.9380,40.7700],[-73.9300,40.7800],[-73.9200,40.7950],[-73.9000,40.8000],[-73.7000,40.8000],[-73.7000,40.6000],[-74.0300,40.6000]],
+    [[-74.0400,40.6400],[-74.0350,40.6900],[-74.0330,40.7150],[-74.0260,40.7450],[-74.0190,40.7650],[-74.0050,40.7850],[-73.9900,40.8100],[-73.9750,40.8350],[-73.9600,40.8600],[-74.3000,40.8600],[-74.3000,40.6400]]
+  ]
+  var PARK = [[-73.9730,40.7644],[-73.9819,40.7681],[-73.9582,40.8006],[-73.9493,40.7968]]
+  var NAMES = [
+    { t: 'MANHATTAN', p: [-73.9905, 40.7375], s: 15, r: -61 },
+    { t: 'BROOKLYN', p: [-73.9800, 40.6930], s: 14 },
+    { t: 'NEW JERSEY', p: [-74.0330, 40.7560], s: 13, r: -64 },
+    { t: 'HUDSON RIVER', p: [-74.0140, 40.7440], s: 12, r: -72, water: 1 },
+    { t: 'EAST RIVER', p: [-73.9655, 40.7330], s: 12, r: -70, water: 1 }
+  ]
+  // The token the site sets on the served page; none in a copy opened on its own.
+  var MAPBOX_TOKEN = window.MAPBOX_ACCESS_TOKEN || ''
+
+  // Web Mercator at zoom 0 on Mapbox's 512px world.
+  function m0(p) {
+    var s = Math.sin(p[1] * Math.PI / 180)
+    return [(p[0] + 180) / 360 * 512, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 512]
+  }
+  function unm0(x, y) {
+    return [x / 512 * 360 - 180, Math.atan(Math.sinh(Math.PI * (1 - 2 * y / 512))) * 180 / Math.PI]
+  }
+
+  Story.charts.route = function (el) {
+    var sz = size(el, 1.39), W = sz[0], H = sz[1]
+    // Fit the route, then round the zoom so the picture and the SVG share it.
+    var q = ROUTE.map(m0)
+    var x0 = d3.min(q, function (d) { return d[0] }), x1 = d3.max(q, function (d) { return d[0] })
+    var y0 = d3.min(q, function (d) { return d[1] }), y1 = d3.max(q, function (d) { return d[1] })
+    var zoom = Math.round(Math.log2(Math.min((W * 0.76) / (x1 - x0), (H * 0.86) / (y1 - y0))) * 100) / 100
+    var k = Math.pow(2, zoom), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2
+    function proj(p) { var m = m0(p); return [(m[0] - cx) * k + W / 2, (m[1] - cy) * k + H / 2] }
+    var line = function (list, close) { return 'M' + list.map(function (p) { var c = proj(p); return c[0].toFixed(1) + ',' + c[1].toFixed(1) }).join('L') + (close ? 'Z' : '') }
+
+    var svg = d3.select(el).append('svg').attr('viewBox', [0, 0, W, H]).attr('width', W).attr('height', H)
+      .attr('role', 'img').attr('aria-label', el.getAttribute('data-alt') || '').style('display', 'block')
+    svg.append('rect').attr('width', W).attr('height', H).style('fill', 'var(--c-water)')
+    LAND.forEach(function (poly, i) {
+      svg.append('path').attr('d', line(poly, true)).style('fill', i ? 'var(--c-land-2)' : 'var(--c-land)').style('stroke', 'var(--c-line)').style('stroke-width', 1.4)
+    })
+    svg.append('path').attr('d', line(PARK, true)).style('fill', 'var(--c-park)').style('stroke', '#c5d6bd')
+    var names = svg.append('g').style('font-family', 'var(--mono)')
+    NAMES.forEach(function (n) {
+      var c = proj(n.p)
+      names.append('text').attr('transform', 'translate(' + c[0] + ',' + c[1] + ') rotate(' + (n.r || 0) + ')')
+        .attr('text-anchor', 'middle').text(n.t).style('font-size', n.s * Math.max(0.7, Math.min(1, W / 920)) + 'px').style('letter-spacing', '.25em')
+        .style('font-style', n.water ? 'italic' : 'normal')
+        .style('fill', n.water ? '#7f9196' : 'var(--c-muted)')
+    })
+
+    // The Mapbox picture under the route, at the same centre and zoom.
+    var iw = Math.round(W), ih = Math.round(H)
+    if (MAPBOX_TOKEN && iw <= 1280 && ih <= 1280) {
+      var c = unm0(cx, cy)
+      var url = 'https://api.mapbox.com/styles/v1/mapbox/light-v11/static/' + c[0].toFixed(5) + ',' + c[1].toFixed(5) + ',' + zoom + ',0/' +
+        iw + 'x' + ih + '@2x?access_token=' + encodeURIComponent(MAPBOX_TOKEN)
+      var pic = svg.append('image').attr('class', 'basemap').attr('href', url).attr('width', W).attr('height', H)
+        .attr('preserveAspectRatio', 'none').style('opacity', 0)
+      pic.on('load', function () { pic.transition().duration(dur(500)).style('opacity', 1) })
+      pic.on('error', function () { pic.remove() })
+    }
+
+    var pts = ROUTE.map(proj)
+    var cum = [0]
+    for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]))
+    function partial(f) { // the route's first f pixels, as a path
+      var out = [pts[0]]
+      for (var j = 1; j < pts.length; j++) {
+        if (cum[j] <= f) { out.push(pts[j]); continue }
+        var t = (f - cum[j - 1]) / (cum[j] - cum[j - 1])
+        if (t > 0) out.push([pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * t, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * t])
+        break
+      }
+      return 'M' + out.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1) }).join('L')
+    }
+    svg.append('path').attr('d', partial(cum[cum.length - 1])).style('fill', 'none')
+      .style('stroke', 'var(--c-ink)').style('stroke-opacity', 0.6).style('stroke-width', 2.6)
+      .style('stroke-dasharray', '1 7').style('stroke-linecap', 'round').style('stroke-linejoin', 'round')
+    var doneCase = svg.append('path').style('fill', 'none').style('stroke', 'var(--board-paper)').style('stroke-width', 10)
+      .style('stroke-linecap', 'round').style('stroke-linejoin', 'round').style('stroke-opacity', 0.9)
+    var done = svg.append('path').style('fill', 'none').style('stroke', 'var(--c-hi)').style('stroke-width', 4.5)
+      .style('stroke-linecap', 'round').style('stroke-linejoin', 'round')
+
+    // Marks and labels are sized for the board's 920px sheet; smaller in the one-column view.
+    var u = Math.max(0.62, Math.min(1, W / 920)), narrow = W < 600
+    var h0 = pts[0]
+    var hotel = svg.append('g').attr('transform', 'translate(' + h0[0] + ',' + h0[1] + ')')
+    hotel.append('rect').attr('x', -8 * u).attr('y', -8 * u).attr('width', 16 * u).attr('height', 16 * u).attr('rx', 3)
+      .style('fill', 'var(--board-paper)').style('stroke', 'var(--c-ink)').style('stroke-width', 2.5)
+    hotel.append('text').attr('x', -16 * u).attr('dy', '0.36em').attr('text-anchor', 'end').text('HOTEL · NOHO')
+      .style('font', '700 ' + 12 * u + 'px var(--mono)').style('letter-spacing', '.08em').style('fill', 'var(--c-ink)')
+      .style('paint-order', 'stroke').style('stroke', 'var(--c-halo)').style('stroke-width', 4).style('stroke-linejoin', 'round')
+
+    var marks = svg.append('g').selectAll('g').data(STOPS).join('g')
+      .attr('transform', function (d) { var p = pts[d.n]; return 'translate(' + p[0] + ',' + p[1] + ')' })
+    var dot = marks.append('circle').attr('r', 15 * u).style('stroke-width', 2.5 * u)
+    var num = marks.append('text').attr('text-anchor', 'middle').attr('dy', '0.36em').text(function (d) { return d.n })
+      .style('font', '700 ' + 13 * u + 'px var(--mono)')
+    var lab = marks.append('text').attr('x', function (d) { return (d.lab === 'l' ? -22 : 22) * u }).attr('dy', '0.36em')
+      .attr('text-anchor', function (d) { return d.lab === 'l' ? 'end' : 'start' })
+      .text(function (d) { return narrow && d.minor ? '' : (narrow && d.short ? d.short : d.name).toUpperCase() })
+      .style('font', '700 ' + 13.5 * u + 'px var(--mono)').style('letter-spacing', '.06em').style('fill', 'var(--c-ink)')
+      .style('paint-order', 'stroke').style('stroke', 'var(--c-halo)').style('stroke-width', 5 * u).style('stroke-linejoin', 'round')
+
+    var shown = 0 // how much of the route is drawn, in pixels
+    function paint(upto, stop, ms) {
+      var full = upto == null
+      var past = function (d) { return full || d.n < upto }
+      var lit = function (d) { return d.n === stop }
+      var to = full ? cum[cum.length - 1] : cum[Math.max(0, Math.min(upto, cum.length - 1))]
+      var from = shown
+      shown = to
+      var tw = function () { var f = d3.interpolateNumber(from, to); return function (t) { return partial(f(t)) } }
+      ;[done, doneCase].forEach(function (p) {
+        if (ms) p.transition().duration(ms).ease(d3.easeCubicInOut).attrTween('d', tw)
+        else p.interrupt().attr('d', partial(to))
+      })
+      dot.interrupt().transition().duration(ms ? 350 : 0)
+        .attr('r', function (d) { return (lit(d) ? 19 : 15) * u })
+        .style('fill', function (d) { return lit(d) ? 'var(--c-hi)' : past(d) ? 'var(--c-ink)' : 'var(--board-paper)' })
+        .style('stroke', function (d) { return lit(d) ? 'var(--board-paper)' : past(d) ? 'var(--c-ink)' : 'var(--c-muted)' })
+      num.style('fill', function (d) { return lit(d) || past(d) ? 'var(--board-paper)' : 'var(--c-muted)' })
+      lab.style('opacity', function (d) { return stop == null || lit(d) ? 1 : 0.6 })
+    }
+    // On the board the tour sets how far along the day is (the first step: the
+    // route as a ghost, nothing walked). The one-column view shows it all.
+    var onBoard = root.classList.contains('board-on')
+    paint(onBoard ? mapState.upto : null, onBoard ? mapState.stop : null, 0)
+    mapChart = {
+      anchor: function (n) { return pts[+n] || null }, // strings: data-pin-to="map:<n>"
+      go: function (upto, stop) { paint(upto, stop, dur(1200)) }
+    }
+    return mapChart
+  }
+})()
+</script>
+</body>
+</html>
