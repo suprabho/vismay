@@ -1,0 +1,311 @@
+<title>2003–04 Events Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a proof desk — sticky tally + filters, then the season as month sheets; each event a row with its date in the margin and the verdict on the right. */
+:root {
+  --paper: #f6f7f3; --sheet: #ffffff; --ink: #1b2420; --muted: #5d6a63; --rule: #dde3dc;
+  --accent: #0f5c78; --accent-soft: #e3eff3;
+  --yes: #2e7d32; --yes-soft: #e6f3e6; --no: #b42318; --no-soft: #fbe9e7; --fix: #a15c07; --fix-soft: #fdf1df;
+  --quote: #f1f4ef;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #121715; --sheet: #19201d; --ink: #e6ece8; --muted: #9aa8a0; --rule: #2a332f;
+  --accent: #6fb8d4; --accent-soft: #17303a;
+  --yes: #7cc27f; --yes-soft: #1b2e1c; --no: #f08a7d; --no-soft: #3a1d1a; --fix: #e3a656; --fix-soft: #35270f;
+  --quote: #1e2623; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #121715; --sheet: #19201d; --ink: #e6ece8; --muted: #9aa8a0; --rule: #2a332f;
+  --accent: #6fb8d4; --accent-soft: #17303a;
+  --yes: #7cc27f; --yes-soft: #1b2e1c; --no: #f08a7d; --no-soft: #3a1d1a; --fix: #e3a656; --fix-soft: #35270f;
+  --quote: #1e2623; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 0 64px; }
+a { color: var(--accent); }
+button, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header.desk { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper);
+  border-bottom: 1px solid var(--rule); padding-block: 14px 12px; }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+h1 { font: 700 2rem/1 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+h1 small { font: 500 1rem var(--display); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-left: 8px; }
+.tally { display: flex; gap: 14px; flex-wrap: wrap; font: 500 .8rem var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.tally b { color: var(--ink); font-weight: 500; }
+.tally .y b { color: var(--yes); } .tally .n b { color: var(--no); } .tally .f b { color: var(--fix); }
+.bar { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; display: flex; margin-top: 10px; }
+.bar span { display: block; height: 100%; transition: width .3s; }
+.bar .y { background: var(--yes); } .bar .f { background: var(--fix); } .bar .n { background: var(--no); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--sheet); }
+.seg button { border: 0; background: none; padding: 5px 10px; font: 600 .82rem var(--display); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.seg button + button { border-left: 1px solid var(--rule); }
+select { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px; font-size: .85rem; }
+.keys { font: .72rem var(--mono); color: var(--muted); margin-left: auto; }
+.keys kbd { font: inherit; border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; background: var(--sheet); }
+
+.month { margin-top: 28px; }
+.month h2 { font: 700 1.35rem var(--display); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 6px;
+  display: flex; align-items: baseline; gap: 10px; }
+.month h2 span { font: 500 .78rem var(--mono); color: var(--muted); letter-spacing: 0; text-transform: none; }
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
+
+.ev { display: grid; grid-template-columns: 92px minmax(0, 1fr) 210px; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--rule);
+  border-left: 4px solid transparent; }
+.ev:first-child { border-top: 0; }
+.ev.current { box-shadow: inset 0 0 0 2px var(--accent); }
+.ev[data-v="yes"] { border-left-color: var(--yes); }
+.ev[data-v="no"] { border-left-color: var(--no); }
+.ev[data-v="fixed"] { border-left-color: var(--fix); }
+.date { font: 500 .8rem/1.3 var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.date b { display: block; font-size: 1rem; color: var(--ink); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.chip { font: 600 .72rem var(--display); letter-spacing: .07em; text-transform: uppercase; padding: 1px 7px; border-radius: 4px;
+  background: var(--accent-soft); color: var(--accent); }
+.imp { font: .75rem var(--mono); color: var(--muted); }
+.imp i { font-style: normal; color: var(--accent); letter-spacing: 1px; }
+.summary { font-weight: 600; margin: 0; }
+.meta { font-size: .88rem; color: var(--muted); margin-top: 2px; }
+blockquote { margin: 8px 0 0; padding: 8px 12px; background: var(--quote); border-radius: 6px; font-style: italic; font-size: .92rem; color: var(--ink); }
+.src { font: .74rem var(--mono); color: var(--muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px; overflow-wrap: anywhere; }
+
+.verdict { display: flex; flex-direction: column; gap: 8px; }
+.vbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.vbtns button { border: 1px solid var(--rule); background: var(--sheet); border-radius: 6px; padding: 6px 0; cursor: pointer;
+  font: 600 .85rem var(--display); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.vbtns button:disabled { cursor: default; opacity: .55; }
+.vbtns .y[aria-pressed="true"] { background: var(--yes-soft); color: var(--yes); border-color: var(--yes); }
+.vbtns .n[aria-pressed="true"] { background: var(--no-soft); color: var(--no); border-color: var(--no); }
+.vbtns .f[aria-pressed="true"] { background: var(--fix-soft); color: var(--fix); border-color: var(--fix); }
+textarea { width: 100%; min-height: 54px; resize: vertical; border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px;
+  background: var(--paper); font-size: .85rem; line-height: 1.4; }
+.saved { font: .7rem var(--mono); color: var(--muted); min-height: 1em; }
+
+.empty { margin-top: 40px; padding: 28px; border: 1px dashed var(--rule); border-radius: 8px; color: var(--muted); max-width: 62ch; }
+.empty h2 { font: 700 1.3rem var(--display); color: var(--ink); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
+.notice { margin-top: 12px; font-size: .85rem; color: var(--no); }
+
+@media (max-width: 720px) {
+  .ev { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .date b { display: inline; margin-right: 6px; }
+  .keys { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="desk">
+    <div class="title-row">
+      <h1>2003–04 Events Review <small>Layer 2 pilot</small></h1>
+      <div class="tally" id="tally" aria-live="polite"><span>Loading events…</span></div>
+    </div>
+    <div class="bar" aria-hidden="true"><span class="y" id="bar-y"></span><span class="f" id="bar-f"></span><span class="n" id="bar-n"></span></div>
+    <div class="filters">
+      <div class="seg" role="group" aria-label="Show">
+        <button type="button" data-show="todo" aria-pressed="true">To check</button>
+        <button type="button" data-show="all" aria-pressed="false">All</button>
+        <button type="button" data-show="yes" aria-pressed="false">Yes</button>
+        <button type="button" data-show="fixed" aria-pressed="false">Fixed</button>
+        <button type="button" data-show="no" aria-pressed="false">No</button>
+      </div>
+      <label>Type <select id="f-type"><option value="">All types</option></select></label>
+      <label>Importance <select id="f-imp"><option value="1">Any</option><option value="2">2+</option><option value="3">3 only</option></select></label>
+      <span class="keys"><kbd>j</kbd>/<kbd>k</kbd> move · <kbd>y</kbd> <kbd>f</kbd> <kbd>n</kbd> mark · <kbd>e</kbd> note</span>
+    </div>
+  </header>
+
+  <main id="list">
+    <div class="empty" id="empty">
+      <h2>Events load here</h2>
+      <p>This page reads the season's events from its database: manager changes, big transfers and the events Claude pulled from Wikipedia, each with the quote it came from. Mark each one Yes, Fixed or No as you check it against the source.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const TYPE_LABEL = { manager_change: 'Manager change', transfer: 'Transfer', match: 'Match', record: 'Record', controversy: 'Controversy',
+  suspension: 'Suspension', injury: 'Injury', ownership: 'Ownership', finance: 'Finance', award: 'Award', international: 'International',
+  off_field: 'Off the pitch', other: 'Other' };
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const state = { events: new Map(), show: 'todo', type: '', imp: 1, current: null, canWrite: true };
+let db = null;
+
+const $ = s => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+function sourceLabel(origin) {
+  if (origin.startsWith('wikipedia:managerial')) return 'Wikipedia · managerial changes table';
+  if (origin.startsWith('wikipedia:transfers')) return 'Wikipedia · transfer list';
+  if (origin.startsWith('transfermarkt')) return 'Transfermarkt';
+  return origin.split(' + ').map(o => o.replace(/^claude:/, 'Claude from “') + (o.startsWith('claude:') ? '”' : '')).join(' + ');
+}
+function fmtDate(d) {
+  const [y, m, day] = d.split('-');
+  return { big: day ? String(+day) + ' ' + MONTHS[+m - 1].slice(0, 3) : MONTHS[+m - 1].slice(0, 3), small: day ? y : y + ' · month only' };
+}
+function visible(e) {
+  const v = e.verified || '';
+  if (state.show === 'todo' && v) return false;
+  if (['yes', 'no', 'fixed'].includes(state.show) && v !== state.show) return false;
+  if (state.type && e.type !== state.type) return false;
+  return (e.importance || 1) >= state.imp;
+}
+
+function renderTally() {
+  const all = [...state.events.values()];
+  const c = { yes: 0, no: 0, fixed: 0 };
+  all.forEach(e => { if (c[e.verified] != null) c[e.verified]++; });
+  const done = c.yes + c.no + c.fixed, n = all.length || 1;
+  const t = $('#tally'); t.replaceChildren();
+  [['', `${done} of ${all.length} checked`], ['y', `${c.yes} yes`], ['f', `${c.fixed} fixed`], ['n', `${c.no} no`]].forEach(([cls, txt]) => {
+    const s = el('span', cls); const [num, ...rest] = txt.split(' '); s.append(el('b', '', num), ' ' + rest.join(' ')); t.append(s);
+  });
+  $('#bar-y').style.width = (100 * c.yes / n) + '%'; $('#bar-f').style.width = (100 * c.fixed / n) + '%'; $('#bar-n').style.width = (100 * c.no / n) + '%';
+}
+
+function eventRow(e) {
+  const row = el('article', 'ev'); row.dataset.id = e.id; row.dataset.v = e.verified || ''; row.tabIndex = -1;
+  if (state.current === e.id) row.classList.add('current');
+  const d = fmtDate(e.date), date = el('div', 'date'); date.append(el('b', '', d.big), d.small);
+
+  const body = el('div'); body.style.minWidth = '0';
+  const chips = el('div', 'chips');
+  chips.append(el('span', 'chip', TYPE_LABEL[e.type] || e.type));
+  const imp = el('span', 'imp'); imp.append(el('i', '', '●'.repeat(e.importance || 1) + '○'.repeat(3 - (e.importance || 1))));
+  imp.title = 'Importance ' + (e.importance || 1) + ' of 3'; chips.append(imp);
+  if (e.competition) chips.append(el('span', 'imp', e.competition));
+  body.append(chips, el('p', 'summary', e.summary));
+  const meta = [e.team_names, e.people].filter(Boolean).map(s => s.split(' | ').join(', ')).join(' — ');
+  if (meta) body.append(el('div', 'meta', meta));
+  if (e.evidence) body.append(el('blockquote', '', '“' + e.evidence + '”'));
+  const src = el('div', 'src');
+  src.append(el('span', '', sourceLabel(e.origin || '')));
+  if (e.source_page) { const a = el('a', '', 'Wikipedia page ↗'); a.href = e.source_page; a.target = '_blank'; a.rel = 'noopener'; src.append(a); }
+  if (e.source_url) { const a = el('a', '', 'Citation ↗'); a.href = e.source_url; a.target = '_blank'; a.rel = 'noopener'; a.title = e.source_url; src.append(a); }
+  body.append(src);
+
+  const verdict = el('div', 'verdict'), btns = el('div', 'vbtns');
+  [['yes', 'y', 'Yes'], ['fixed', 'f', 'Fixed'], ['no', 'n', 'No']].forEach(([v, cls, label]) => {
+    const b = el('button', cls, label); b.type = 'button'; b.setAttribute('aria-pressed', String(e.verified === v));
+    b.disabled = !state.canWrite; b.addEventListener('click', () => setVerdict(e.id, e.verified === v ? '' : v));
+    btns.append(b);
+  });
+  const note = el('textarea'); note.id = 'note-' + e.id; note.placeholder = 'Note (what was wrong, the fix, a better source)…';
+  note.value = e.notes || ''; note.disabled = !state.canWrite; note.setAttribute('aria-label', 'Note for this event');
+  const saved = el('div', 'saved');
+  note.addEventListener('blur', () => { if (note.value !== (e.notes || '')) saveNote(e.id, note.value, saved); });
+  verdict.append(btns, note, saved);
+  row.append(date, body, verdict);
+  row.addEventListener('click', ev => { if (ev.target.closest('a,button,textarea')) return; focusRow(e.id); });
+  return row;
+}
+
+function render() {
+  renderTally();
+  const list = $('#list');
+  const focused = document.activeElement && document.activeElement.tagName === 'TEXTAREA' ? document.activeElement.id : null;
+  if (focused) return; // never yank a note field out from under the typist; the next render catches up
+  const evs = [...state.events.values()].filter(visible).sort((a, b) => a.date.localeCompare(b.date) || (b.importance - a.importance));
+  list.replaceChildren();
+  if (!state.events.size) { list.append($('#empty-tpl').content.cloneNode(true)); return; }
+  if (!evs.length) {
+    const box = el('div', 'empty'); box.append(el('h2', '', state.show === 'todo' ? 'All checked' : 'Nothing here'),
+      el('p', '', state.show === 'todo' ? 'Every event matching these filters has a verdict. Switch to All to revisit them.' : 'No events match these filters.'));
+    list.append(box); return;
+  }
+  const byMonth = new Map();
+  evs.forEach(e => { const k = e.date.slice(0, 7); (byMonth.get(k) || byMonth.set(k, []).get(k)).push(e); });
+  for (const [k, items] of byMonth) {
+    const sec = el('section', 'month'), [y, m] = k.split('-');
+    const h = el('h2', '', MONTHS[+m - 1] + ' ' + y); h.append(el('span', '', items.length + (items.length === 1 ? ' event' : ' events')));
+    const sheet = el('div', 'sheet'); items.forEach(e => sheet.append(eventRow(e)));
+    sec.append(h, sheet); list.append(sec);
+  }
+}
+
+async function write(id, patch) {
+  const e = state.events.get(id); if (!e || !db) return false;
+  try { await db.collection('events').doc(id).update(patch); return true; }
+  catch (err) {
+    if (err && err.code === 'invalid_argument') { state.canWrite = false; showNotice('This view can read the review but not save to it.'); render(); }
+    else showNotice('Couldn’t save just now. Try again in a moment.');
+    return false;
+  }
+}
+async function setVerdict(id, v) {
+  const e = state.events.get(id); if (!e) return;
+  const prev = e.verified; e.verified = v; render();
+  if (!(await write(id, { verified: v, checked_at: new Date().toISOString() }))) { e.verified = prev; render(); }
+}
+async function saveNote(id, text, saved) {
+  const e = state.events.get(id); const prev = e.notes;
+  e.notes = text; saved.textContent = 'Saving…';
+  if (await write(id, { notes: text })) saved.textContent = 'Note saved'; else { e.notes = prev; saved.textContent = ''; }
+}
+function showNotice(text) {
+  let n = $('#notice'); if (!n) { n = el('div', 'notice'); n.id = 'notice'; $('header.desk').append(n); }
+  n.textContent = text;
+}
+
+function rowsInView() { return [...document.querySelectorAll('.ev')]; }
+function focusRow(id) {
+  state.current = id;
+  rowsInView().forEach(r => r.classList.toggle('current', r.dataset.id === id));
+  const r = document.querySelector(`.ev[data-id="${id}"]`); if (r) { r.focus({ preventScroll: true }); r.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+}
+document.addEventListener('keydown', ev => {
+  if (ev.target.closest('textarea,select,input') || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const rows = rowsInView(); if (!rows.length) return;
+  const i = rows.findIndex(r => r.dataset.id === state.current);
+  if (ev.key === 'j' || ev.key === 'k') { ev.preventDefault(); const n = Math.max(0, Math.min(rows.length - 1, i + (ev.key === 'j' ? 1 : -1))); focusRow(rows[i < 0 ? 0 : n].dataset.id); }
+  else if (state.current && state.canWrite && 'yfn'.includes(ev.key)) {
+    ev.preventDefault();
+    const v = { y: 'yes', f: 'fixed', n: 'no' }[ev.key], id = state.current, e = state.events.get(id);
+    const next = rows[i + 1] && rows[i + 1].dataset.id;
+    setVerdict(id, e.verified === v ? '' : v).then(() => { if (state.show === 'todo' && next) focusRow(next); });
+  } else if (ev.key === 'e' && state.current) { ev.preventDefault(); const t = document.getElementById('note-' + state.current); if (t) t.focus(); }
+});
+
+document.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => {
+  state.show = b.dataset.show;
+  document.querySelectorAll('[data-show]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  render();
+}));
+$('#f-type').addEventListener('change', e => { state.type = e.target.value; render(); });
+$('#f-imp').addEventListener('change', e => { state.imp = +e.target.value; render(); });
+Object.entries(TYPE_LABEL).forEach(([k, v]) => { const o = el('option', '', v); o.value = k; $('#f-type').append(o); });
+
+(async () => {
+  db = window.claude ? await window.claude.use('db') : null;
+  if (!db) {
+    $('#tally').replaceChildren(el('span', '', 'Sign in to claude.ai to load the events.'));
+    return;
+  }
+  try {
+    const user = await window.claude.use('user');
+    const can = user ? await user.can('data.write') : null;
+    if (can === false) { state.canWrite = false; showNotice('You can read this review; only people who can edit the page can mark events.'); }
+  } catch { /* keep inputs; a refused write decides */ }
+  db.collection('events').onSnapshot(snap => {
+    snap.docChanges().forEach(ch => {
+      if (ch.type === 'removed') state.events.delete(ch.doc.id);
+      else state.events.set(ch.doc.id, { id: ch.doc.id, ...ch.doc.data() });
+    });
+    render();
+  }, err => showNotice(err.code === 'revoked' ? 'This review is no longer available in this view.' : 'Lost the connection to the review. Reload the page.'));
+})();
+</script>
+<template id="empty-tpl">
+  <div class="empty">
+    <h2>No events yet</h2>
+    <p>The season's events haven't been loaded into this page's database. Ask Claude to load the 2003–04 events into the review page.</p>
+  </div>
+</template>

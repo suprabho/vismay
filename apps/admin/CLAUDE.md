@@ -283,3 +283,27 @@ tables in [supabase/viznba](../../supabase/viznba/migrations)). The
   `NEXT_PUBLIC_VIZNBA_URL` sets the public site the "Live at" links and briefs
   point at (default `https://nba.vizmaya.fyi`).
 
+
+## Season events tab (/footshorts/season-events)
+
+Fact-check desk for the football-seasons book's monthly events
+([vizmaya-data/football-seasons](../../vizmaya-data/football-seasons/README.md), Layer 2):
+manager changes, notable transfers and Claude-extracted events, each with its
+verbatim source quote. Editors mark each one Yes / Fixed / No and leave a note;
+a verdict stamps `checked_by` (admin email) and `checked_at`.
+
+- **Storage:** private `admin_historical_events` (footshorts migration
+  `20261015000000`; RLS on, no consumer grants). Rows come from `events.csv` via
+  `pnpm --filter @footshorts/worker history:events-sync -- --season=<start> --push`
+  (content only, never overwrites a verdict); `--pull` copies verdicts back to the CSV.
+- **Page:** [app/[appSlug]/(tabbed)/season-events/](<app/[appSlug]/(tabbed)/season-events/>)
+  → [components/footshorts/SeasonEventsClient.tsx](components/footshorts/SeasonEventsClient.tsx)
+  (footshorts only; month groups, filters, `j`/`k` + `y`/`f`/`n`/`e` keys).
+- **API (`isAuthed()`-gated, private no-store):** `GET /api/footshorts/season-events?season=2003-04`
+  and `PATCH /api/footshorts/season-events/[id]` (`{ verified?, notes? }`, same-origin),
+  backed by [lib/historicalEvents.ts](lib/historicalEvents.ts); shared types in
+  `@footshorts/shared/historicalEvents`.
+- **Migrations note:** the footshorts project's remote migration history is
+  empty (migrations were applied by hand), so `supabase db push` would re-run
+  all of them. Apply a single file with `supabase db query --linked -f <file>`
+  from a directory laid out as `supabase/{config.toml,migrations,.temp}`.
