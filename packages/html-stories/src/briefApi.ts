@@ -26,6 +26,10 @@
  *     appends the game context for those games (./viznbaBrief: box scores
  *     from ESPN's public API), with an optional `prompt`. Token-gated like
  *     the match context.
+ *   - travel only: `trip=<trip slug>` (and optionally `day=<n>`) appends the
+ *     trip context (./travelBrief: the itinerary and the curated photos' URLs),
+ *     with an optional `prompt`. A trip is private, so this is token-gated
+ *     like the match context.
  *   - `spin=<id>` renders the brief for a logged randomizer spin
  *     (@vismay/randomizer) on the site its randomizer writes for (Desk,
  *     Atlas and Epics on vizmaya, the Football Desk on footshorts, the NBA
@@ -47,6 +51,7 @@ import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief
 import { HTML_STORY_APP_META } from './apps'
 import { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS, vizf1HtmlStoryBrief } from './vizf1Brief'
 import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from './viznbaBrief'
+import { travelHtmlStoryBrief, type TripLoader } from './travelBrief'
 import { HTML_STORY_FORMATS, formatsForApp, isFormatForApp, parseHtmlStoryFormat } from './formats'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
@@ -69,13 +74,25 @@ export function parseFixtureIds(params: URLSearchParams): string[] {
   return parseListParam(params, 'fixtures')
 }
 
-export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryApp): Promise<Response> {
+export interface BriefRequestOptions {
+  /** travel: how to read a trip (the travel app falls back to its git files). Default: the database. */
+  loadTrip?: TripLoader
+}
+
+export async function handleHtmlStoryBriefRequest(
+  req: Request,
+  app: HtmlStoryApp,
+  { loadTrip }: BriefRequestOptions = {},
+): Promise<Response> {
   const url = new URL(req.url)
   const random = url.searchParams.get('style') === 'random'
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
   const sessionKeys = app === 'vizf1' ? parseListParam(url.searchParams, 'sessions') : []
   const drivers = app === 'vizf1' ? parseListParam(url.searchParams, 'drivers').map((d) => d.toUpperCase()) : []
   const gameIds = app === 'viznba' ? parseListParam(url.searchParams, 'games') : []
+  const tripSlug = app === 'travel' ? url.searchParams.get('trip')?.trim() || null : null
+  const dayRaw = app === 'travel' ? url.searchParams.get('day')?.trim() || null : null
+  const day = dayRaw != null ? Number(dayRaw) : null
   const spinId = url.searchParams.get('spin')?.trim() || null
   const format = parseHtmlStoryFormat(url.searchParams.get('format'))
   if (!format) return new Response(`format must be one of ${HTML_STORY_FORMATS.join(', ')}`, { status: 400 })
@@ -85,7 +102,7 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
 
   let spin: SpinRecord | null = null
   if (spinId) {
-    if (app === 'vizf1') return new Response('vizf1 has no randomizer', { status: 400 })
+    if (app === 'vizf1' || app === 'travel') return new Response(`${app} has no randomizer`, { status: 400 })
     if (!isSpinId(spinId)) return new Response('spin must be a spin id', { status: 400 })
     try {
       spin = await getSpin(spinId)
@@ -119,13 +136,17 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
   if (gameIds.some((id) => !isGameId(id))) {
     return new Response('games must be ESPN event ids (digits)', { status: 400 })
   }
+  if (day != null && (!Number.isInteger(day) || day < 0)) return new Response('day must be a day number', { status: 400 })
+  if (day != null && !tripSlug) return new Response('day needs a trip: pass trip=<slug> too', { status: 400 })
   const contextKind = fixtureIds.length
     ? 'match context'
     : sessionKeys.length
       ? 'race context'
       : gameIds.length
         ? 'game context'
-        : null
+        : tripSlug
+          ? 'trip context'
+          : null
   if (contextKind && !isHtmlStoriesTokenRequest(req)) {
     const why = process.env[HTML_STORIES_TOKEN_ENV]
       ? `the ${contextKind} needs Authorization: Bearer $HTML_STORIES_TOKEN`
@@ -152,16 +173,19 @@ export async function handleHtmlStoryBriefRequest(req: Request, app: HtmlStoryAp
           ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format })
           : app === 'viznba'
             ? await viznbaHtmlStoryBrief({ siteUrl: url.origin, style, gameIds, prompt, format, spin })
-            : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
+            : app === 'travel'
+              ? await travelHtmlStoryBrief({ siteUrl: url.origin, style, tripSlug, day, prompt, format, loadTrip })
+              : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
   } catch (e) {
-    const what = app === 'vizf1' ? 'race context' : app === 'viznba' ? 'game context' : 'match context'
+    const what =
+      app === 'vizf1' ? 'race context' : app === 'viznba' ? 'game context' : app === 'travel' ? 'trip context' : 'match context'
     return new Response(`${what} failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
   }
 
   return new Response(brief, {
     headers: {
       'content-type': 'text/markdown; charset=utf-8',
-      // A random, match-, race- or spin-specific brief must differ per request; the house brief is cacheable.
+      // A random, match-, race-, trip- or spin-specific brief must differ per request; the house brief is cacheable.
       'cache-control': random || contextKind || spin ? 'no-store' : 'public, s-maxage=3600',
     },
   })

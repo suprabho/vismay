@@ -254,6 +254,18 @@ def _build_drivers(of1_drivers: list[dict], standings: dict[str, dict]) -> list[
     return out
 
 
+def _num(value, cast):
+    """`cast(value)`, or None when OpenF1 sends a non-numeric marker. Results
+    rows can carry a status code where a number belongs (position "RT" for a
+    driver who retired in qualifying) — one such row must not sink the ingest."""
+    if value is None:
+        return None
+    try:
+        return cast(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_results(
     results: list[dict], grid: list[dict], drivers: list[dict], session_type: str
 ) -> list[dict]:
@@ -272,14 +284,17 @@ def _build_results(
         except (KeyError, TypeError, ValueError):
             continue
         info = drivers_by_num.get(dn, {})
-        position = int(r["position"]) if r.get("position") is not None else None
+        raw_pos = r.get("position")
+        position = _num(raw_pos, int)
+        # A non-numeric position is OpenF1's own classification code ("RT").
+        code = str(raw_pos).strip().upper() if raw_pos is not None and position is None else None
 
         # Quali-style sessions carry duration as a [Q1, Q2, Q3] array; races a scalar.
         dur = r.get("duration")
         time_sec = q1 = q2 = q3 = None
         if isinstance(dur, list):
             padded = (dur + [None, None, None])[:3]
-            q1, q2, q3 = (float(v) if v is not None else None for v in padded)
+            q1, q2, q3 = (_num(v, float) for v in padded)
         elif isinstance(dur, (int, float)):
             time_sec = float(dur)
 
@@ -290,6 +305,8 @@ def _build_results(
             classified, status = "DNS", "Did not start"
         elif dnf:
             classified, status = "DNF", "DNF"
+        elif code:
+            classified, status = code, "Retired" if code == "RT" else code
         else:
             classified = str(position) if position is not None else None
             gap = r.get("gap_to_leader")
@@ -301,12 +318,12 @@ def _build_results(
             "gridPosition":       grid_by_num.get(dn),
             "position":           position,
             "classifiedPosition": classified,
-            "points":             float(r.get("points") or 0.0),
+            "points":             _num(r.get("points"), float) or 0.0,
             "status":             status,
-            "dnf":                dnf or dns or dsq,
-            "dnfReason":          status if (dnf or dns or dsq) else None,
+            "dnf":                dnf or dns or dsq or bool(code),
+            "dnfReason":          status if (dnf or dns or dsq or code) else None,
             "timeSec":            time_sec,
-            "laps":               int(r["number_of_laps"]) if r.get("number_of_laps") is not None else None,
+            "laps":               _num(r.get("number_of_laps"), int),
             "q1TimeSec":          q1,
             "q2TimeSec":          q2,
             "q3TimeSec":          q3,

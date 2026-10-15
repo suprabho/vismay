@@ -24,6 +24,8 @@ export function AppAdminTabs({ appSlug }: Props) {
     // The Football Desk randomizer: topics for those pages (packages/randomizer).
     tabs.push({ href: `/${appSlug}/randomizer`, label: 'Randomizer' })
     tabs.push({ href: `/${appSlug}/cup-fixtures`, label: 'Cup fixtures' })
+    // Fact-checking the football-seasons book's events (vizmaya-data/football-seasons).
+    tabs.push({ href: `/${appSlug}/season-events`, label: 'Season events' })
     // The season-book series: beats, flatplan and spread cards per season,
     // on the football-seasons match data (admin_season_books, private).
     tabs.push({ href: `/${appSlug}/books`, label: 'Books' })
@@ -42,6 +44,12 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/pipeline`, label: 'Pipeline' })
     tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
     tabs.push({ href: `/${appSlug}/randomizer`, label: 'Randomizer' })
+  }
+  // Agent-authored pages hosted at the travel site's /s/<slug>, each private to
+  // one trip (its password gates it), briefed with the trip's itinerary and
+  // curated photos.
+  if (appSlug === 'travel') {
+    tabs.push({ href: `/${appSlug}/html-stories`, label: 'HTML stories' })
   }
   // Recipe-corpora coverage (migration 070) + the history review queue
   // (migration 071) are the food vertical's — umami-only. Social frames is the

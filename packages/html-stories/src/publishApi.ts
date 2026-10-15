@@ -24,6 +24,9 @@
  * hero insight, so a publish request for one that isn't approved yet saves a
  * draft (with a warning) instead.
  *
+ * On travel, the page must name its trip (`<meta name="travel:trip">`) and the
+ * slug must sit under the trip's: the trip's password is the page's gate.
+ *
  * Without a slug, one is derived from the document's <title>. The response
  * carries lint `warnings` so the agent can fix and re-post to the same slug.
  *
@@ -129,13 +132,14 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
   const parsed = await readBody(req)
   if ('error' in parsed) return json({ error: parsed.error }, 400)
 
-  const lint = lintHtml(parsed.html)
-  if (lint.errors.length) return json({ error: lint.errors.join(' '), ...lint }, 400)
-
   const slug = parsed.slug ?? slugify(parsed.title ?? extractHtmlMeta(parsed.html).title ?? '')
   if (!slug || !isSafeSlug(slug)) {
     return json({ error: 'slug must be lowercase letters, digits and single hyphens (max 80 chars)', slug }, 400)
   }
+
+  // Travel checks the page's trip tag against the slug (the page's gate).
+  const lint = lintHtml(parsed.html, { app, slug })
+  if (lint.errors.length) return json({ error: lint.errors.join(' '), ...lint }, 400)
 
   const warnings = [...lint.warnings]
   let spin: SpinRecord | null = null

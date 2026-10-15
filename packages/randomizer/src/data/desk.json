@@ -1,141 +1,3690 @@
 {
-  "_note": "Sample lists. The playbook says to keep the existing Desk industries, sub-industries and lenses; they were not in the repo (decision D5), so these stand in until they are pasted here. heat is a seed: the live value comes from desk_heat once a refresh writes it.",
+  "_note": "Desk industries and sub-industries, expanded 2026-10-14 from the trending-segments research list. heat is a seed (original seeds, 2026-10-14 estimates, or researched values); the live value comes from desk_heat once a refresh writes it. seed_note is a dated fact from that research: verify before use.",
   "industries": [
-    { "id": "semis", "name": "Semiconductors" },
-    { "id": "aiinfra", "name": "AI infrastructure" },
-    { "id": "energy", "name": "Energy" },
-    { "id": "capmkts", "name": "Capital markets" },
-    { "id": "shipping", "name": "Shipping" },
-    { "id": "defense", "name": "Defense" },
-    { "id": "pharma", "name": "Pharma" }
+    {
+      "id": "aiinfra",
+      "name": "AI infrastructure"
+    },
+    {
+      "id": "ai-software-and-agents",
+      "name": "AI software and agents"
+    },
+    {
+      "id": "aerospace-and-aviation",
+      "name": "Aerospace and aviation"
+    },
+    {
+      "id": "agriculture-and-food",
+      "name": "Agriculture and food"
+    },
+    {
+      "id": "capmkts",
+      "name": "Capital markets"
+    },
+    {
+      "id": "chemicals-and-materials",
+      "name": "Chemicals and materials"
+    },
+    {
+      "id": "critical-minerals-and-mining",
+      "name": "Critical minerals and mining"
+    },
+    {
+      "id": "cybersecurity",
+      "name": "Cybersecurity"
+    },
+    {
+      "id": "defense",
+      "name": "Defense"
+    },
+    {
+      "id": "energy",
+      "name": "Energy"
+    },
+    {
+      "id": "fintech-and-payments",
+      "name": "Fintech and payments"
+    },
+    {
+      "id": "healthcare-and-medtech",
+      "name": "Healthcare and medtech"
+    },
+    {
+      "id": "insurance",
+      "name": "Insurance"
+    },
+    {
+      "id": "manufacturing",
+      "name": "Manufacturing"
+    },
+    {
+      "id": "media-sports-and-gaming",
+      "name": "Media, sports and gaming"
+    },
+    {
+      "id": "mobility-and-batteries",
+      "name": "Mobility and batteries"
+    },
+    {
+      "id": "pharma",
+      "name": "Pharma"
+    },
+    {
+      "id": "professional-services",
+      "name": "Professional services"
+    },
+    {
+      "id": "quantum-and-frontier-computing",
+      "name": "Quantum and frontier computing"
+    },
+    {
+      "id": "real-estate-and-construction",
+      "name": "Real estate and construction"
+    },
+    {
+      "id": "retail-and-consumer",
+      "name": "Retail and consumer"
+    },
+    {
+      "id": "semis",
+      "name": "Semiconductors"
+    },
+    {
+      "id": "shipping",
+      "name": "Shipping"
+    },
+    {
+      "id": "space-and-satellites",
+      "name": "Space and satellites"
+    },
+    {
+      "id": "supply-chain-and-logistics",
+      "name": "Supply chain and logistics"
+    },
+    {
+      "id": "telecom-and-connectivity",
+      "name": "Telecom and connectivity"
+    },
+    {
+      "id": "trade-and-policy",
+      "name": "Trade and policy"
+    },
+    {
+      "id": "water-and-environment",
+      "name": "Water and environment"
+    },
+    {
+      "id": "workforce-and-education",
+      "name": "Workforce and education"
+    }
   ],
   "sub_industries": [
     {
-      "id": "hbm-memory", "industry": "semis", "name": "HBM memory", "heat": 88, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["HBM revenue by vendor", "DRAM contract price", "HBM share of DRAM bit output", "Memory capex"],
-      "primary_sources": ["SK hynix, Samsung and Micron filings", "TrendForce", "WSTS"]
-    },
-    {
-      "id": "advanced-packaging", "industry": "semis", "name": "Advanced packaging", "heat": 74, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["CoWoS capacity (wafers per month)", "Packaging capex", "OSAT revenue", "Lead times"],
-      "primary_sources": ["TSMC quarterly reports", "ASE and Amkor filings", "SEMI"]
-    },
-    {
-      "id": "lithography-equipment", "industry": "semis", "name": "Lithography equipment", "heat": 61, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["EUV and DUV system shipments", "Order backlog", "Revenue by customer country", "Export licence rules"],
-      "primary_sources": ["ASML annual and quarterly reports", "US BIS rules", "Dutch government export notices"]
-    },
-    {
-      "id": "mature-node-foundry", "industry": "semis", "name": "Mature-node foundry", "heat": 38, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Capacity by country", "Utilisation rate", "Wafer price", "Subsidy commitments"],
-      "primary_sources": ["SMIC, UMC and GlobalFoundries filings", "SEMI World Fab Forecast", "Government subsidy announcements"]
-    },
-    {
-      "id": "data-center-power", "industry": "aiinfra", "name": "Data center power", "heat": 92, "heat_updated": null, "top_headlines": [],
+      "id": "data-center-power",
+      "industry": "aiinfra",
+      "name": "Data center power",
+      "heat": 92,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Contracted MW", "Interconnection queue (GW)", "Wholesale power price", "Data center share of electricity demand"],
       "primary_sources": ["IEA", "Grid operator queue reports (PJM, ERCOT)", "Utility rate filings"]
     },
     {
-      "id": "gpu-cloud", "industry": "aiinfra", "name": "GPU cloud", "heat": 79, "heat_updated": null, "top_headlines": [],
+      "id": "gpu-cloud",
+      "industry": "aiinfra",
+      "name": "GPU cloud",
+      "heat": 79,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Hyperscaler capex", "GPU rental price per hour", "Contracted backlog", "Debt raised by neoclouds"],
       "primary_sources": ["Hyperscaler 10-Q filings", "CoreWeave and peers' filings", "SEC EDGAR"]
     },
     {
-      "id": "liquid-cooling", "industry": "aiinfra", "name": "Liquid cooling", "heat": 45, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Rack power density (kW)", "Cooling vendor revenue", "Water use per MW", "Share of new builds with liquid cooling"],
-      "primary_sources": ["Vertiv and Schneider filings", "Uptime Institute surveys", "Local water permits"]
+      "id": "custom-ai-chips-asics",
+      "industry": "aiinfra",
+      "name": "Custom AI chips (ASICs)",
+      "heat": 78,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Custom ASIC revenue", "Hyperscaler capex", "TSMC advanced node revenue share", "AI accelerator shipments"],
+      "primary_sources": ["Broadcom and Marvell filings", "TSMC quarterly reports", "Alphabet, Amazon and Meta 10-K filings"]
     },
     {
-      "id": "subsea-cables", "industry": "aiinfra", "name": "Subsea cables", "heat": 52, "heat_updated": null, "top_headlines": [],
+      "id": "data-center-construction-and-land",
+      "industry": "aiinfra",
+      "name": "Data center construction and land",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Data center construction spending", "Capacity under construction MW", "Vacancy rate in primary markets", "Land price per acre"],
+      "primary_sources": ["US Census Bureau construction spending", "CBRE data center reports", "JLL"]
+    },
+    {
+      "id": "inference-economics-and-cost-per-token",
+      "industry": "aiinfra",
+      "name": "Inference economics and cost per token",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["API price per million tokens", "Tokens processed per month", "GPU rental price per hour", "Inference revenue"],
+      "primary_sources": ["OpenAI, Anthropic and Google pricing pages", "Microsoft and Alphabet earnings calls", "Epoch AI"],
+      "emerging": true
+    },
+    {
+      "id": "neocloud-financing-and-gpu-backed-debt",
+      "industry": "aiinfra",
+      "name": "Neocloud financing and GPU-backed debt",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["GPU-backed debt raised", "Contracted backlog", "Interest expense", "H100 rental price per hour"],
+      "primary_sources": ["CoreWeave and Nebius SEC filings", "Moody's and S&P ratings", "SEC EDGAR"]
+    },
+    {
+      "id": "sovereign-ai-and-national-compute",
+      "industry": "aiinfra",
+      "name": "Sovereign AI and national compute",
+      "heat": 68,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Government AI compute budgets", "National GPU counts", "Sovereign AI fund size", "Domestic data center capacity MW"],
+      "primary_sources": ["IndiaAI Mission, MeitY", "European Commission EuroHPC", "OECD AI Policy Observatory"]
+    },
+    {
+      "id": "ai-data-center-networking",
+      "industry": "aiinfra",
+      "name": "AI data center networking",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Data center switch revenue", "800G port shipments", "Optical transceiver revenue", "Networking share of AI capex"],
+      "primary_sources": ["Arista and Nvidia filings", "Dell'Oro Group", "LightCounting"]
+    },
+    {
+      "id": "ai-data-platforms-and-storage",
+      "industry": "aiinfra",
+      "name": "AI data platforms and storage",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Data platform revenue growth", "Net revenue retention", "HDD and SSD exabytes shipped", "NAND flash contract price"],
+      "primary_sources": ["Snowflake and Databricks disclosures", "Seagate and Western Digital filings", "TrendForce"],
+      "seed_note": {
+        "text": "VAST Data was valued at $30B in an April 2026 round, more than triple its 2023 valuation (Reuters, as cited on Wikipedia).",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "edge-ai-and-on-device-inference",
+      "industry": "aiinfra",
+      "name": "Edge AI and on-device inference",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["AI PC shipments", "AI smartphone share", "NPU TOPS per device", "Edge AI chip revenue"],
+      "primary_sources": ["IDC", "Qualcomm and Apple filings", "Counterpoint Research"]
+    },
+    {
+      "id": "subsea-cables",
+      "industry": "aiinfra",
+      "name": "Subsea cables",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Cables in service and planned", "Capacity (Tbps) by route", "Owners by company", "Faults and repair times"],
       "primary_sources": ["TeleGeography", "ITU", "National cable landing licences"]
     },
     {
-      "id": "grid-batteries", "industry": "energy", "name": "Grid batteries", "heat": 66, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Installed storage (GWh)", "Battery pack price", "Cell supply by country", "Capacity market prices"],
-      "primary_sources": ["EIA", "BloombergNEF price survey", "National grid operators"]
+      "id": "liquid-cooling",
+      "industry": "aiinfra",
+      "name": "Liquid cooling",
+      "heat": 45,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Rack power density (kW)", "Cooling vendor revenue", "Water use per MW", "Share of new builds with liquid cooling"],
+      "primary_sources": ["Vertiv and Schneider filings", "Uptime Institute surveys", "Local water permits"]
     },
     {
-      "id": "uranium-and-smrs", "industry": "energy", "name": "Uranium and SMRs", "heat": 58, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Uranium spot and term price", "Enrichment capacity by country", "SMR licensing milestones", "Reactor construction starts"],
-      "primary_sources": ["IAEA PRIS", "US NRC", "Cameco and Kazatomprom filings"]
+      "id": "agentic-enterprise-software",
+      "industry": "ai-software-and-agents",
+      "name": "Agentic enterprise software",
+      "heat": 90,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["AI agent revenue", "Enterprise AI adoption rate", "AI seats sold", "Software spending growth"],
+      "primary_sources": ["Salesforce, ServiceNow and Microsoft filings", "Gartner", "US Census Bureau BTOS"],
+      "seed_note": {
+        "text": "Software and services stocks lost roughly $1T in value in early February 2026 as investors feared AI agents would undercut per-seat pricing; estimates vary by source. Deloitte is cited as expecting at least 40% of enterprise SaaS spend to move to usage or outcome pricing by 2030.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
     },
     {
-      "id": "lng-shipping", "industry": "energy", "name": "LNG shipping", "heat": 49, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["LNG carrier day rates", "Export volumes by country", "Fleet orderbook", "Regasification capacity"],
-      "primary_sources": ["GIIGNL annual report", "EIA", "Shipbroker reports"]
+      "id": "ai-coding-tools",
+      "industry": "ai-software-and-agents",
+      "name": "AI coding tools",
+      "heat": 88,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Annual recurring revenue", "Developer adoption rate", "Paid subscribers", "Share of AI-written code"],
+      "primary_sources": ["Stack Overflow Developer Survey", "GitHub Octoverse", "Microsoft filings"]
     },
     {
-      "id": "rooftop-solar", "industry": "energy", "name": "Rooftop solar", "heat": 34, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Installed rooftop capacity", "Module price", "Net metering tariffs", "Installer bankruptcies"],
-      "primary_sources": ["IEA PVPS", "National energy regulators", "MNRE (India), SEIA (US)"]
+      "id": "foundation-model-economics-and-lab-funding",
+      "industry": "ai-software-and-agents",
+      "name": "Foundation model economics and lab funding",
+      "heat": 85,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["AI lab funding raised", "Lab valuations", "Inference price per million tokens", "Hyperscaler AI capex"],
+      "primary_sources": ["PitchBook", "Microsoft, Alphabet and Amazon filings", "Stanford AI Index"]
     },
     {
-      "id": "prediction-markets", "industry": "capmkts", "name": "Prediction markets", "heat": 71, "heat_updated": null, "top_headlines": [],
+      "id": "revenue-intelligence-and-ai-sales-agents",
+      "industry": "ai-software-and-agents",
+      "name": "Revenue intelligence and AI sales agents",
+      "heat": 80,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Annual recurring revenue", "Sales tech funding", "Customer count", "Seat growth"],
+      "primary_sources": ["Salesforce and HubSpot filings", "PitchBook", "Gartner"],
+      "seed_note": {
+        "text": "Gartner issued its first Magic Quadrant for Revenue Action Orchestration in December 2025, merging sales engagement, conversation intelligence and revenue intelligence. 6sense was reported at a $5.2B valuation after SoftBank joined a July 2026 round, and Clay was reported at $7.1B after a $115M raise in September 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "vertical-ai-legal-health-finance",
+      "industry": "ai-software-and-agents",
+      "name": "Vertical AI (legal, health, finance)",
+      "heat": 76,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Vertical AI funding raised", "Annual recurring revenue", "FDA cleared AI devices", "Enterprise customer count"],
+      "primary_sources": ["PitchBook", "US FDA AI device list", "CB Insights"],
+      "seed_note": {
+        "text": "VC coverage names specialized vertical AI as a leading 2026 theme; legal AI startup Legora is listed with a $550M Series D.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "customer-support-and-voice-agents",
+      "industry": "ai-software-and-agents",
+      "name": "Customer support and voice agents",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Contact centre AI spend", "Contact centre employment", "Resolution rate by AI", "Startup funding raised"],
+      "primary_sources": ["US BLS", "Gartner", "NICE and Five9 filings"]
+    },
+    {
+      "id": "ai-search-and-answer-engines",
+      "industry": "ai-software-and-agents",
+      "name": "AI search and answer engines",
+      "heat": 68,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Search market share", "Monthly active users", "Search ad revenue", "Referral traffic to publishers"],
+      "primary_sources": ["StatCounter", "Alphabet filings", "Similarweb"]
+    },
+    {
+      "id": "generative-video-and-media-tools",
+      "industry": "ai-software-and-agents",
+      "name": "Generative video and media tools",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Startup funding raised", "Monthly active users", "Creative software revenue", "Model releases"],
+      "primary_sources": ["Adobe filings", "PitchBook", "Stanford AI Index"]
+    },
+    {
+      "id": "agent-platforms-and-mcp-integrations",
+      "industry": "ai-software-and-agents",
+      "name": "Agent platforms and MCP integrations",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["MCP servers published", "Agent framework downloads", "GitHub stars", "Platform API revenue"],
+      "primary_sources": ["GitHub", "PyPI and npm download stats", "Microsoft and Alphabet filings"],
+      "emerging": true,
+      "seed_note": {
+        "text": "6sense launched an MCP server in July 2026 so its data can feed any AI agent.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "ai-evaluation-observability-and-governance",
+      "industry": "ai-software-and-agents",
+      "name": "AI evaluation, observability and governance",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["AI incidents reported", "AI governance startup funding", "AI laws enacted", "Benchmark scores"],
+      "primary_sources": ["OECD AI Incidents Monitor", "Stanford AI Index", "European Commission AI Office"]
+    },
+    {
+      "id": "commercial-aircraft-backlog-and-delivery-delays",
+      "industry": "aerospace-and-aviation",
+      "name": "Commercial aircraft backlog and delivery delays",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Order backlog", "Monthly deliveries", "Narrowbody production rate", "Net orders"],
+      "primary_sources": ["Boeing orders and deliveries", "Airbus orders and deliveries", "FAA"]
+    },
+    {
+      "id": "aircraft-engines-and-mro",
+      "industry": "aerospace-and-aviation",
+      "name": "Aircraft engines and MRO",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Engine shop visits", "Aftermarket revenue", "Aircraft grounded for engine checks", "Engine deliveries"],
+      "primary_sources": ["GE Aerospace filings", "Rolls-Royce and Safran filings", "RTX filings"]
+    },
+    {
+      "id": "india-aviation",
+      "industry": "aerospace-and-aviation",
+      "name": "India aviation",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Domestic passenger traffic", "Airline market share", "Aircraft on order", "Load factor"],
+      "primary_sources": ["DGCA", "Airports Authority of India", "IndiGo filings"],
+      "region": "India"
+    },
+    {
+      "id": "drones-for-logistics-and-delivery",
+      "industry": "aerospace-and-aviation",
+      "name": "Drones for logistics and delivery",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Drone deliveries completed", "BVLOS waivers granted", "Registered commercial drones", "Delivery drone funding"],
+      "primary_sources": ["FAA", "Zipline and Wing disclosures", "EASA"]
+    },
+    {
+      "id": "airline-capacity-and-fares",
+      "industry": "aerospace-and-aviation",
+      "name": "Airline capacity and fares",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Available seat miles", "Airfare CPI", "Load factor", "Unit revenue (RASM)"],
+      "primary_sources": ["BTS", "BLS", "IATA"]
+    },
+    {
+      "id": "sustainable-aviation-fuel",
+      "industry": "aerospace-and-aviation",
+      "name": "Sustainable aviation fuel",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["SAF production volume", "SAF share of jet fuel", "SAF price premium", "SAF offtake agreements"],
+      "primary_sources": ["IATA", "EIA", "EASA"]
+    },
+    {
+      "id": "air-traffic-control-modernization",
+      "industry": "aerospace-and-aviation",
+      "name": "Air traffic control modernization",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Controller staffing levels", "ATC delay minutes", "FAA facilities and equipment budget", "Runway incursions"],
+      "primary_sources": ["FAA", "Eurocontrol", "DOT Inspector General"]
+    },
+    {
+      "id": "airport-infrastructure",
+      "industry": "aerospace-and-aviation",
+      "name": "Airport infrastructure",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Airport passenger throughput", "Airport capex", "Terminal capacity", "Airport grants awarded"],
+      "primary_sources": ["ACI World", "FAA", "Airports Authority of India"]
+    },
+    {
+      "id": "business-jets-and-private-aviation",
+      "industry": "aerospace-and-aviation",
+      "name": "Business jets and private aviation",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Business jet deliveries", "Private flight departures", "Used jet inventory", "Fractional share sales"],
+      "primary_sources": ["GAMA", "WingX", "Textron and General Dynamics filings"]
+    },
+    {
+      "id": "fertilizer-markets",
+      "industry": "agriculture-and-food",
+      "name": "Fertilizer markets",
+      "heat": 82,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Urea price per tonne", "DAP price per tonne", "Potash export volumes", "Fertilizer affordability index"],
+      "primary_sources": ["World Bank Pink Sheet", "International Fertilizer Association", "USDA ERS"],
+      "seed_note": {
+        "text": "The World Bank's April 2026 outlook warned fertilizer prices could rise more than 30% in 2026. Its next Commodity Markets Outlook, due in October 2026, is the first hard read on whether the disruption eased.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "food-inflation-and-affordability",
+      "industry": "agriculture-and-food",
+      "name": "Food inflation and affordability",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["FAO Food Price Index", "Food CPI year on year", "Food share of household spending", "Cereal price index"],
+      "primary_sources": ["FAO", "US Bureau of Labor Statistics", "Eurostat"],
+      "seed_note": {
+        "text": "The EU's 2026 farm outlook warns that food commodity futures point to further price increases through mid-2027.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "el-nino-and-crop-risk",
+      "industry": "agriculture-and-food",
+      "name": "El Nino and crop risk",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Oceanic Nino Index", "Crop yield anomaly", "Rainfall deviation from normal", "Global wheat stocks to use ratio"],
+      "primary_sources": ["NOAA Climate Prediction Center", "USDA WASDE", "AMIS Market Monitor"],
+      "seed_note": {
+        "text": "Gallagher Re reported growing confidence in a transition to El Nino conditions by mid-2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "cocoa-and-coffee-prices",
+      "industry": "agriculture-and-food",
+      "name": "Cocoa and coffee prices",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["ICE cocoa futures price", "Arabica futures price", "Cocoa grindings", "Global coffee production"],
+      "primary_sources": ["International Cocoa Organization", "International Coffee Organization", "ICE Futures"],
+      "seed_note": {
+        "text": "The World Bank expects beverage prices, notably coffee and cocoa, to soften in 2026 as supply expands.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "soybeans-and-us-china-farm-trade",
+      "industry": "agriculture-and-food",
+      "name": "Soybeans and US-China farm trade",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["US soybean exports to China", "China soybean imports by origin", "CBOT soybean futures", "Brazil soybean exports"],
+      "primary_sources": ["USDA FAS Export Sales", "China General Administration of Customs", "CME Group"],
+      "seed_note": {
+        "text": "One analysis argues China has finished decoupling its soybean supply from the United States.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "glp-1-effect-on-food-and-beverage",
+      "industry": "agriculture-and-food",
+      "name": "GLP-1 effect on food and beverage",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["GLP-1 prescriptions", "Snack food volume sales", "Per household grocery spend", "Calorie purchase per capita"],
+      "primary_sources": ["Novo Nordisk and Eli Lilly filings", "Circana", "Food company SEC filings"]
+    },
+    {
+      "id": "biofuels-and-food-versus-fuel",
+      "industry": "agriculture-and-food",
+      "name": "Biofuels and food-versus-fuel",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Ethanol production volume", "Corn used for ethanol", "Biodiesel feedstock use", "RIN prices"],
+      "primary_sources": ["US EIA", "EPA RFS data", "OECD-FAO Agricultural Outlook"],
+      "seed_note": {
+        "text": "The World Bank says growing conversion of food commodities into biofuels is increasingly shaping agricultural markets.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "india-agriculture-and-the-monsoon",
+      "industry": "agriculture-and-food",
+      "name": "India agriculture and the monsoon",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Monsoon rainfall vs long period average", "Kharif sowing area", "Foodgrain production", "Reservoir storage levels"],
+      "primary_sources": ["India Meteorological Department", "Ministry of Agriculture and Farmers Welfare", "Central Water Commission"],
+      "region": "India"
+    },
+    {
+      "id": "precision-agriculture-and-ag-robotics",
+      "industry": "agriculture-and-food",
+      "name": "Precision agriculture and ag robotics",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Precision ag equipment sales", "Ag robot shipments", "Ag tech VC funding", "Acres under precision management"],
+      "primary_sources": ["Deere and CNH Industrial filings", "AgFunder", "USDA ERS"]
+    },
+    {
+      "id": "seeds-and-crop-science",
+      "industry": "agriculture-and-food",
+      "name": "Seeds and crop science",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Seed and trait revenue", "GM crop acreage", "Crop protection sales", "R&D spending"],
+      "primary_sources": ["Corteva and Bayer filings", "ISAAA", "USDA NASS"]
+    },
+    {
+      "id": "grain-trade-and-storage",
+      "industry": "agriculture-and-food",
+      "name": "Grain trade and storage",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Global grain export volumes", "Ending stocks", "Freight rates for grain", "Storage capacity"],
+      "primary_sources": ["USDA WASDE", "International Grains Council", "FAO AMIS"]
+    },
+    {
+      "id": "aquaculture",
+      "industry": "agriculture-and-food",
+      "name": "Aquaculture",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Aquaculture production volume", "Salmon spot price", "Seafood exports", "Fishmeal price"],
+      "primary_sources": ["FAO FishStat", "Norwegian Seafood Council", "Mowi filings"]
+    },
+    {
+      "id": "alternative-proteins",
+      "industry": "agriculture-and-food",
+      "name": "Alternative proteins",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Plant-based meat retail sales", "Alt protein investment", "Cultivated meat approvals", "Unit price vs conventional meat"],
+      "primary_sources": ["Good Food Institute", "Beyond Meat filings", "SPINS"]
+    },
+    {
+      "id": "food-safety-and-recalls",
+      "industry": "agriculture-and-food",
+      "name": "Food safety and recalls",
+      "heat": 32,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Food recalls per year", "Foodborne illness outbreaks", "Import refusals", "Recalls by hazard type"],
+      "primary_sources": ["US FDA", "USDA FSIS", "CDC"]
+    },
+    {
+      "id": "stablecoins-and-payment-rails",
+      "industry": "capmkts",
+      "name": "Stablecoins and payment rails",
+      "heat": 82,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Stablecoin market cap", "Monthly on-chain transfer volume", "Reserve holdings in T-bills", "Active stablecoin addresses"],
+      "primary_sources": ["Circle and Tether attestations", "Federal Reserve", "BIS"],
+      "seed_note": {
+        "text": "The GENIUS Act, signed July 18, 2025, created the first US federal framework for payment stablecoins, and the EU's MiCA is also in force. US licensing for service providers phases in from July 18, 2028.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "prediction-markets",
+      "industry": "capmkts",
+      "name": "Prediction markets",
+      "heat": 71,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Monthly traded volume", "Open interest", "Share by venue", "Regulatory actions"],
       "primary_sources": ["CFTC filings and orders", "Venue disclosures", "Court records"]
     },
     {
-      "id": "private-credit", "industry": "capmkts", "name": "Private credit", "heat": 63, "heat_updated": null, "top_headlines": [],
+      "id": "tokenized-real-world-assets",
+      "industry": "capmkts",
+      "name": "Tokenized real-world assets",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Tokenized treasuries AUM", "Number of tokenized funds", "On-chain private credit outstanding", "Tokenized asset holders"],
+      "primary_sources": ["SEC EDGAR", "BlackRock and Franklin Templeton filings", "BIS"],
+      "seed_note": {
+        "text": "The IMF published notes on tokenization and market structure in 2026, and SEC staff issued a statement on tokenized securities on January 28, 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "india-capital-markets-and-ipo-boom",
+      "industry": "capmkts",
+      "name": "India capital markets and IPO boom",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["IPO funds raised", "Demat accounts", "SIP monthly inflows", "Nifty 50 market cap"],
+      "primary_sources": ["SEBI", "NSE and BSE", "AMFI"],
+      "region": "India"
+    },
+    {
+      "id": "sovereign-wealth-funds-and-gulf-capital",
+      "industry": "capmkts",
+      "name": "Sovereign wealth funds and Gulf capital",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["SWF assets under management", "Outbound deal value", "Gulf FDI outflows", "Number of SWF deals"],
+      "primary_sources": ["PIF, ADIA and QIA annual reports", "UNCTAD", "IMF"],
+      "region": "Gulf"
+    },
+    {
+      "id": "crypto-market-structure-and-etfs",
+      "industry": "capmkts",
+      "name": "Crypto market structure and ETFs",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Spot bitcoin ETF net flows", "ETF assets under management", "Exchange spot volume", "CME futures open interest"],
+      "primary_sources": ["SEC EDGAR", "CME Group", "CFTC"]
+    },
+    {
+      "id": "private-credit",
+      "industry": "capmkts",
+      "name": "Private credit",
+      "heat": 63,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["AUM", "Default and non-accrual rates", "Bank lending to funds", "Payment-in-kind share"],
       "primary_sources": ["BDC 10-K filings", "Federal Reserve Financial Stability Report", "IMF Global Financial Stability Report"]
     },
     {
-      "id": "ipo-pipeline", "industry": "capmkts", "name": "IPO pipeline", "heat": 40, "heat_updated": null, "top_headlines": [],
+      "id": "private-equity-exits-and-secondaries",
+      "industry": "capmkts",
+      "name": "Private equity exits and secondaries",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["PE exit value", "Secondaries transaction volume", "Dry powder", "Median holding period"],
+      "primary_sources": ["PitchBook", "Preqin", "Blackstone and KKR filings"]
+    },
+    {
+      "id": "bond-markets-and-term-premium",
+      "industry": "capmkts",
+      "name": "Bond markets and term premium",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["10-year Treasury yield", "ACM term premium", "2s10s yield curve spread", "Treasury auction bid-to-cover"],
+      "primary_sources": ["US Treasury", "Federal Reserve Bank of New York", "FRED"]
+    },
+    {
+      "id": "market-infrastructure-and-24-hour-trading",
+      "industry": "capmkts",
+      "name": "Market infrastructure and 24-hour trading",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Overnight trading volume", "Equity trading hours offered", "Off-exchange volume share", "Clearing fund size"],
+      "primary_sources": ["SEC EDGAR", "FINRA", "DTCC"],
+      "emerging": true
+    },
+    {
+      "id": "retail-trading-platforms",
+      "industry": "capmkts",
+      "name": "Retail trading platforms",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Funded accounts", "Assets under custody", "Options contracts traded", "Payment for order flow revenue"],
+      "primary_sources": ["Robinhood and Schwab filings", "FINRA", "OCC"]
+    },
+    {
+      "id": "leveraged-loans-and-clos",
+      "industry": "capmkts",
+      "name": "Leveraged loans and CLOs",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Leveraged loan issuance", "CLO new issuance", "Loan default rate", "Average loan price"],
+      "primary_sources": ["PitchBook LCD", "Federal Reserve", "S&P Global Ratings"]
+    },
+    {
+      "id": "bank-capital-rules",
+      "industry": "capmkts",
+      "name": "Bank capital rules",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["CET1 capital ratio", "Risk-weighted assets", "Supplementary leverage ratio", "Bank buyback totals"],
+      "primary_sources": ["Federal Reserve", "BIS Basel Committee", "FDIC"]
+    },
+    {
+      "id": "asset-manager-consolidation",
+      "industry": "capmkts",
+      "name": "Asset manager consolidation",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Asset manager M&A deal count", "Passive share of fund assets", "Average fund expense ratio", "Top 10 managers AUM share"],
+      "primary_sources": ["ICI", "Morningstar", "SEC EDGAR"]
+    },
+    {
+      "id": "commodity-trading-houses",
+      "industry": "capmkts",
+      "name": "Commodity trading houses",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Trading house net profit", "Gross trading margin", "Physical volumes traded", "Revolving credit facility size"],
+      "primary_sources": ["Glencore and Trafigura annual reports", "Vitol disclosures", "CFTC"]
+    },
+    {
+      "id": "ipo-pipeline",
+      "industry": "capmkts",
+      "name": "IPO pipeline",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["IPOs and proceeds by exchange", "First-day returns", "Draft filings on file", "Lock-up expiries"],
       "primary_sources": ["SEC EDGAR S-1 filings", "SEBI DRHP filings", "Exchange data"]
     },
     {
-      "id": "container-rates", "industry": "shipping", "name": "Container rates", "heat": 55, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Spot rate index by lane", "Schedule reliability", "Idle fleet", "Carrier earnings"],
-      "primary_sources": ["Shanghai Containerized Freight Index", "Drewry World Container Index", "Carrier filings"]
+      "id": "copper-foil-and-pcb-laminates-for-ai",
+      "industry": "chemicals-and-materials",
+      "name": "Copper foil and PCB laminates for AI",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Copper foil price", "PCB production value", "Copper clad laminate shipments", "HVLP foil capacity"],
+      "primary_sources": ["Taiwan PCB Association", "Prismark", "Mitsui Kinzoku and Kingboard filings"]
     },
     {
-      "id": "red-sea-routing", "industry": "shipping", "name": "Red Sea routing", "heat": 60, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Suez Canal transits", "Cape of Good Hope diversions", "Canal revenue", "War risk insurance premiums"],
-      "primary_sources": ["Suez Canal Authority", "IMF PortWatch", "UNCTAD"]
+      "id": "battery-materials-chemistry",
+      "industry": "chemicals-and-materials",
+      "name": "Battery materials chemistry",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Lithium carbonate price", "Cathode production by chemistry", "LFP share of EV batteries", "Battery pack price"],
+      "primary_sources": ["Benchmark Mineral Intelligence", "BloombergNEF", "IEA"]
     },
     {
-      "id": "shipbuilding", "industry": "shipping", "name": "Shipbuilding", "heat": 42, "heat_updated": null, "top_headlines": [],
-      "key_metrics": ["Orderbook by country", "Newbuild prices", "Deliveries", "Yard capacity"],
-      "primary_sources": ["Clarksons Research", "OECD shipbuilding data", "National industry ministries"]
+      "id": "glass-and-optical-fiber",
+      "industry": "chemicals-and-materials",
+      "name": "Glass and optical fiber",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Optical fiber demand", "Fiber price per km", "Flat glass production", "Data center fiber shipments"],
+      "primary_sources": ["Corning filings", "CRU Group", "USGS"]
     },
     {
-      "id": "drones", "industry": "defense", "name": "Drones", "heat": 77, "heat_updated": null, "top_headlines": [],
+      "id": "industrial-gases-and-helium",
+      "industry": "chemicals-and-materials",
+      "name": "Industrial gases and helium",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Helium price", "Helium production by country", "Industrial gas sales", "Project backlog"],
+      "primary_sources": ["USGS Mineral Commodity Summaries", "Linde and Air Liquide filings", "Air Products filings"]
+    },
+    {
+      "id": "advanced-composites-and-carbon-fiber",
+      "industry": "chemicals-and-materials",
+      "name": "Advanced composites and carbon fiber",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Carbon fiber demand", "Carbon fiber capacity", "Aerospace composite use", "Carbon fiber price per kg"],
+      "primary_sources": ["Toray and Hexcel filings", "JEC Group", "Composites Forecasts and Consulting"]
+    },
+    {
+      "id": "plastics-and-recycling",
+      "industry": "chemicals-and-materials",
+      "name": "Plastics and recycling",
+      "heat": 34,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Plastic production", "Recycling rate", "Recycled PET price", "Plastic waste exports"],
+      "primary_sources": ["Plastics Europe", "OECD Global Plastics Outlook", "US EPA"]
+    },
+    {
+      "id": "rare-earths-and-magnets",
+      "industry": "critical-minerals-and-mining",
+      "name": "Rare earths and magnets",
+      "heat": 90,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["NdPr oxide price", "Rare earth mine output", "Magnet export volumes", "China export licences"],
+      "primary_sources": ["USGS Mineral Commodity Summaries", "China Customs", "Lynas and MP Materials filings"],
+      "seed_note": {
+        "text": "China's heavy rare earth controls have split the market into licensed and non-licensed buyers. Controls suspended under a truce are due to return on November 10, 2026 unless extended, and in June 2026 China put MP Materials and USA Rare Earth on its export control list. China holds about 91% of global refining capacity (IEA, via S&P).",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "copper",
+      "industry": "critical-minerals-and-mining",
+      "name": "Copper",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["LME copper price", "Refined copper output", "Exchange inventories", "Treatment charges"],
+      "primary_sources": ["International Copper Study Group", "London Metal Exchange", "USGS"]
+    },
+    {
+      "id": "mineral-processing-outside-china",
+      "industry": "critical-minerals-and-mining",
+      "name": "Mineral processing outside China",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Refining capacity by country", "China share of processing", "Projects funded", "Offtake agreements"],
+      "primary_sources": ["IEA Critical Minerals Outlook", "USGS", "US DOE"],
+      "seed_note": {
+        "text": "MP Materials produced about 51,000 t of rare earth concentrate in 2025 versus about 95,000 t at China Northern Rare Earth, and Lynas aims for about 16,000 t in 2026. The UK committed 20m pounds to a magnet hub in July 2026.",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "gold-and-central-bank-buying",
+      "industry": "critical-minerals-and-mining",
+      "name": "Gold and central bank buying",
+      "heat": 68,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Gold price", "Central bank net purchases", "Gold ETF holdings", "Official reserve holdings"],
+      "primary_sources": ["World Gold Council", "IMF International Financial Statistics", "LBMA"]
+    },
+    {
+      "id": "tungsten-antimony-and-gallium",
+      "industry": "critical-minerals-and-mining",
+      "name": "Tungsten, antimony and gallium",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Tungsten APT price", "Antimony price", "Gallium price", "China export volumes"],
+      "primary_sources": ["USGS", "China Customs", "Fastmarkets"],
+      "seed_note": {
+        "text": "Critical raw materials, with tungsten as the worked example, are on the October 28 materials seminar agenda.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "lithium",
+      "industry": "critical-minerals-and-mining",
+      "name": "Lithium",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Lithium carbonate price", "Mine production", "Spodumene price", "Lithium supply surplus"],
+      "primary_sources": ["USGS", "Benchmark Mineral Intelligence", "Albemarle and SQM filings"],
+      "seed_note": {
+        "text": "CATL cited lithium price swings as a driver of its sodium-ion push.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "graphite-and-battery-materials",
+      "industry": "critical-minerals-and-mining",
+      "name": "Graphite and battery materials",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Graphite price", "Anode production", "Cathode capacity", "China export volumes"],
+      "primary_sources": ["Benchmark Mineral Intelligence", "USGS", "IEA"]
+    },
+    {
+      "id": "rare-earth-recycling",
+      "industry": "critical-minerals-and-mining",
+      "name": "Rare earth recycling",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Recycled rare earth output", "Recycling capacity", "Magnet scrap volumes", "Recycling share of supply"],
+      "primary_sources": ["IEA", "US DOE Critical Materials Innovation Hub", "European Commission JRC"],
+      "emerging": true
+    },
+    {
+      "id": "deep-sea-mining",
+      "industry": "critical-minerals-and-mining",
+      "name": "Deep sea mining",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Exploration contracts issued", "Nodule resource estimates", "Nickel and cobalt prices", "Funding raised"],
+      "primary_sources": ["International Seabed Authority", "NOAA", "The Metals Company filings"],
+      "emerging": true
+    },
+    {
+      "id": "mining-equipment-and-autonomy",
+      "industry": "critical-minerals-and-mining",
+      "name": "Mining equipment and autonomy",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Autonomous haul trucks deployed", "Mining equipment orders", "Mining capex", "Dealer sales"],
+      "primary_sources": ["Caterpillar and Komatsu filings", "Epiroc and Sandvik reports", "SEC EDGAR"]
+    },
+    {
+      "id": "ai-agent-security-and-non-human-identity",
+      "industry": "cybersecurity",
+      "name": "AI agent security and non-human identity",
+      "heat": 84,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Machine to human identity ratio", "Credential leak incidents", "Exposed secrets found in repos", "Funding to NHI security startups"],
+      "primary_sources": ["Verizon Data Breach Investigations Report", "OWASP", "GitGuardian State of Secrets Sprawl"],
+      "seed_note": {
+        "text": "Cyera agreed in July 2026 to acquire Oasis Security, which governs non-human identities such as AI agents, for about $1B. Cisco found only 24% of organizations using or planning agents could fully control their actions (May 2026).",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "cyber-m-a-and-consolidation",
+      "industry": "cybersecurity",
+      "name": "Cyber M&A and consolidation",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Cyber M&A deal count", "Cyber M&A deal value", "Platform vendor revenue share", "Venture funding to security"],
+      "primary_sources": ["SEC EDGAR", "Momentum Cyber", "PitchBook"],
+      "seed_note": {
+        "text": "The first half of 2026 saw 209 cybersecurity M&A deals and $10.6B in venture funding; Alphabet closed its $32B Wiz purchase in March 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "security-operations-automation-agentic-soc",
+      "industry": "cybersecurity",
+      "name": "Security operations automation (agentic SOC)",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Mean time to detect", "Mean time to respond", "Alerts per analyst per day", "SIEM and SOAR vendor revenue"],
+      "primary_sources": ["IBM Cost of a Data Breach", "CrowdStrike and Palo Alto Networks filings", "SANS SOC Survey"],
+      "seed_note": {
+        "text": "Sophos reported an 89-second response time and a 52% AI resolution rate in its agentic SOC data, per Futurum.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "data-security-posture-dspm",
+      "industry": "cybersecurity",
+      "name": "Data security posture (DSPM)",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Records exposed in breaches", "Cloud misconfiguration incidents", "Average breach cost", "DSPM vendor ARR"],
+      "primary_sources": ["IBM Cost of a Data Breach", "Identity Theft Resource Center", "Varonis and Rubrik filings"],
+      "seed_note": {
+        "text": "Cyera raised $600M at a $12B valuation and has been acquiring to build a platform.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "ransomware-and-critical-infrastructure",
+      "industry": "cybersecurity",
+      "name": "Ransomware and critical infrastructure",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Ransomware incidents reported", "Ransom payments in crypto", "Leak site victim postings", "Attacks by critical sector"],
+      "primary_sources": ["FBI IC3 Annual Report", "CISA", "Chainalysis Crypto Crime Report"]
+    },
+    {
+      "id": "post-quantum-cryptography",
+      "industry": "cybersecurity",
+      "name": "Post-quantum cryptography",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["PQC standards finalised", "Share of TLS traffic using PQC", "Federal migration milestones", "Quantum computer qubit counts"],
+      "primary_sources": ["NIST", "Cloudflare Radar", "NSA CNSA 2.0 guidance"],
+      "seed_note": {
+        "text": "Executive orders signed on June 22, 2026 set agency timelines for quantum capability and cryptographic defense.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "identity-and-zero-trust",
+      "industry": "cybersecurity",
+      "name": "Identity and zero trust",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Breaches involving stolen credentials", "MFA adoption rate", "Identity vendor revenue", "Phishing attack volume"],
+      "primary_sources": ["Verizon Data Breach Investigations Report", "Okta and CyberArk filings", "Anti-Phishing Working Group"]
+    },
+    {
+      "id": "software-supply-chain-security",
+      "industry": "cybersecurity",
+      "name": "Software supply chain security",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Malicious open source packages", "CVEs published per year", "Known exploited vulnerabilities added", "SBOM adoption rate"],
+      "primary_sources": ["CISA KEV catalog", "NIST National Vulnerability Database", "Sonatype State of the Software Supply Chain"]
+    },
+    {
+      "id": "cyber-regulation-and-disclosure-rules",
+      "industry": "cybersecurity",
+      "name": "Cyber regulation and disclosure rules",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["SEC 8-K Item 1.05 filings", "GDPR fines issued", "NIS2 transposition status", "Breach notifications filed"],
+      "primary_sources": ["SEC EDGAR", "European Data Protection Board", "CERT-In"]
+    },
+    {
+      "id": "election-and-information-security",
+      "industry": "cybersecurity",
+      "name": "Election and information security",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": [
+        "Foreign influence operations removed",
+        "Election infrastructure incidents",
+        "Election security grant funding",
+        "Deepfake incidents reported"
+      ],
+      "primary_sources": ["CISA", "US Election Assistance Commission", "Meta adversarial threat reports"]
+    },
+    {
+      "id": "drones",
+      "industry": "defense",
+      "name": "Drones",
+      "heat": 77,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Procurement orders", "Unit cost", "Production capacity claims", "Export approvals"],
       "primary_sources": ["Defence ministry budgets", "Contract award notices", "SIPRI Arms Transfers Database"]
     },
     {
-      "id": "munitions-supply-chain", "industry": "defense", "name": "Munitions supply chain", "heat": 64, "heat_updated": null, "top_headlines": [],
+      "id": "military-ai-and-autonomy",
+      "industry": "defense",
+      "name": "Military AI and autonomy",
+      "heat": 76,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["DoD AI contract obligations", "Autonomous systems budget", "Defense AI startup funding", "Replicator program spend"],
+      "primary_sources": ["USAspending.gov", "DoD budget justification books", "Palantir filings"]
+    },
+    {
+      "id": "european-rearmament",
+      "industry": "defense",
+      "name": "European rearmament",
+      "heat": 76,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Defense spending as share of GDP", "European defense procurement", "Ammunition production capacity", "Rheinmetall order backlog"],
+      "primary_sources": ["NATO", "SIPRI", "European Defence Agency"]
+    },
+    {
+      "id": "counter-drone-systems",
+      "industry": "defense",
+      "name": "Counter-drone systems",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["C-UAS contract awards", "Drone incursion incidents", "Interceptor unit cost", "C-UAS budget request"],
+      "primary_sources": ["DoD budget justification books", "USAspending.gov", "FAA"]
+    },
+    {
+      "id": "defense-tech-startups",
+      "industry": "defense",
+      "name": "Defense tech startups",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Defense tech VC funding", "Number of defense deals", "Startup contract awards", "Anduril valuation"],
+      "primary_sources": ["PitchBook", "USAspending.gov", "DIU"]
+    },
+    {
+      "id": "missile-defense-and-hypersonics",
+      "industry": "defense",
+      "name": "Missile defense and hypersonics",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Missile Defense Agency budget", "Interceptor procurement quantities", "Hypersonic test flights", "Patriot production rate"],
+      "primary_sources": ["Missile Defense Agency", "CBO", "Lockheed Martin and RTX filings"]
+    },
+    {
+      "id": "munitions-supply-chain",
+      "industry": "defense",
+      "name": "Munitions supply chain",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["155mm shell output per month", "Explosives (TNT, nitrocellulose) capacity", "Procurement spend", "Delivery backlog"],
       "primary_sources": ["US Army and DoD budget documents", "EU ASAP programme reports", "Manufacturer filings"]
     },
     {
-      "id": "glp-1-drugs", "industry": "pharma", "name": "GLP-1 drugs", "heat": 81, "heat_updated": null, "top_headlines": [],
+      "id": "defense-exports-and-india-manufacturing",
+      "industry": "defense",
+      "name": "Defense exports and India manufacturing",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Indian defence exports", "Domestic defence production value", "Capital acquisition budget", "Arms import share"],
+      "primary_sources": ["Ministry of Defence India", "SIPRI", "HAL and BEL filings"],
+      "region": "India"
+    },
+    {
+      "id": "electronic-warfare",
+      "industry": "defense",
+      "name": "Electronic warfare",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EW procurement budget", "GPS jamming incidents", "EW contract awards", "EW R&D funding"],
+      "primary_sources": ["DoD budget justification books", "EASA", "USAspending.gov"]
+    },
+    {
+      "id": "naval-shipbuilding-and-submarines",
+      "industry": "defense",
+      "name": "Naval shipbuilding and submarines",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Battle force ship count", "Shipbuilding budget", "Submarine delivery delays", "Shipyard workforce"],
+      "primary_sources": ["CBO", "GAO", "Congressional Research Service"]
+    },
+    {
+      "id": "cyber-and-space-warfare",
+      "industry": "defense",
+      "name": "Cyber and space warfare",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Space Force budget", "Military satellite launches", "Cyber Command budget", "Reported state cyber incidents"],
+      "primary_sources": ["DoD budget justification books", "CISA", "Space Development Agency"]
+    },
+    {
+      "id": "military-logistics-and-sustainment",
+      "industry": "defense",
+      "name": "Military logistics and sustainment",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Operations and maintenance budget", "Aircraft mission capable rate", "Spare parts backlog", "Depot maintenance spend"],
+      "primary_sources": ["GAO", "DoD budget justification books", "Defense Logistics Agency"]
+    },
+    {
+      "id": "gas-turbines-and-power-equipment-backlog",
+      "industry": "energy",
+      "name": "Gas turbines and power equipment backlog",
+      "heat": 78,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Gas turbine order backlog", "Turbine orders in GW", "Delivery lead times", "Book-to-bill ratio"],
+      "primary_sources": ["GE Vernova, Siemens Energy and Mitsubishi filings", "EIA", "SEC EDGAR"]
+    },
+    {
+      "id": "grid-transformers-and-transmission",
+      "industry": "energy",
+      "name": "Grid transformers and transmission",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Transformer lead times", "Transformer import value", "Transmission line miles added", "Interconnection queue size"],
+      "primary_sources": ["US DOE", "FERC", "Wood Mackenzie"]
+    },
+    {
+      "id": "oil-market-and-opec",
+      "industry": "energy",
+      "name": "Oil market and OPEC+",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Brent crude price", "OPEC+ production", "OECD commercial stocks", "Spare capacity"],
+      "primary_sources": ["OPEC Monthly Oil Market Report", "IEA Oil Market Report", "EIA"]
+    },
+    {
+      "id": "grid-batteries",
+      "industry": "energy",
+      "name": "Grid batteries",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Installed storage (GWh)", "Battery pack price", "Cell supply by country", "Capacity market prices"],
+      "primary_sources": ["EIA", "BloombergNEF price survey", "National grid operators"]
+    },
+    {
+      "id": "natural-gas-and-lng-prices",
+      "industry": "energy",
+      "name": "Natural gas and LNG prices",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Henry Hub price", "TTF price", "JKM LNG price", "LNG export volumes"],
+      "primary_sources": ["EIA", "IEA", "GIIGNL"]
+    },
+    {
+      "id": "uranium-and-smrs",
+      "industry": "energy",
+      "name": "Uranium and SMRs",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Uranium spot and term price", "Enrichment capacity by country", "SMR licensing milestones", "Reactor construction starts"],
+      "primary_sources": ["IAEA PRIS", "US NRC", "Cameco and Kazatomprom filings"]
+    },
+    {
+      "id": "utility-scale-solar",
+      "industry": "energy",
+      "name": "Utility-scale solar",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Installed capacity added", "Module price per watt", "Utility PPA price", "Solar share of generation"],
+      "primary_sources": ["SEIA and Wood Mackenzie", "IRENA", "EIA"],
+      "seed_note": {
+        "text": "BLS projections cited by Clarify Capital rank solar power generation as the fastest-growing US industry, at about 180% from 2024 to 2034.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "nuclear-fuel-enrichment-haleu",
+      "industry": "energy",
+      "name": "Nuclear fuel enrichment (HALEU)",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["SWU price", "Uranium spot price", "HALEU production volume", "Enrichment capacity"],
+      "primary_sources": ["US DOE", "World Nuclear Association", "Centrus Energy and Urenco filings"]
+    },
+    {
+      "id": "geothermal",
+      "industry": "energy",
+      "name": "Geothermal",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Installed geothermal capacity", "Capacity under development", "Drilling cost per well", "Geothermal generation"],
+      "primary_sources": ["IRENA", "US DOE Geothermal Technologies Office", "EIA"],
+      "seed_note": {
+        "text": "The same BLS projections show geothermal power generation growing about 41% from 2024 to 2034.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "virtual-power-plants-and-demand-response",
+      "industry": "energy",
+      "name": "Virtual power plants and demand response",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Enrolled VPP capacity", "Demand response capacity", "Capacity market clearing price", "Peak load reduction"],
+      "primary_sources": ["FERC", "PJM and ERCOT market data", "US DOE"],
+      "emerging": true
+    },
+    {
+      "id": "nuclear-fusion",
+      "industry": "energy",
+      "name": "Nuclear fusion",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Private fusion funding", "Number of fusion companies", "Plasma performance records", "Public fusion budgets"],
+      "primary_sources": ["Fusion Industry Association", "IAEA", "US DOE"],
+      "emerging": true
+    },
+    {
+      "id": "power-trading-and-electricity-markets",
+      "industry": "energy",
+      "name": "Power trading and electricity markets",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Wholesale power price", "Traded volume", "Price volatility", "Negative price hours"],
+      "primary_sources": ["EIA", "ENTSO-E Transparency Platform", "Indian Energy Exchange"]
+    },
+    {
+      "id": "lng-shipping",
+      "industry": "energy",
+      "name": "LNG shipping",
+      "heat": 49,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["LNG carrier day rates", "Export volumes by country", "Fleet orderbook", "Regasification capacity"],
+      "primary_sources": ["GIIGNL annual report", "EIA", "Shipbroker reports"]
+    },
+    {
+      "id": "coal-and-power-in-india-and-china",
+      "industry": "energy",
+      "name": "Coal and power in India and China",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Coal production", "Coal-fired generation", "Coal plant pipeline in GW", "Peak power demand"],
+      "primary_sources": ["Central Electricity Authority", "China National Bureau of Statistics", "Global Energy Monitor"],
+      "region": "India"
+    },
+    {
+      "id": "offshore-wind",
+      "industry": "energy",
+      "name": "Offshore wind",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Installed offshore capacity", "Auction strike price", "Capacity cancelled or delayed", "Final investment decisions"],
+      "primary_sources": ["GWEC", "WindEurope", "Orsted and Vestas filings"]
+    },
+    {
+      "id": "hydrogen-and-ammonia",
+      "industry": "energy",
+      "name": "Hydrogen and ammonia",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Electrolyser capacity installed", "Green hydrogen cost per kg", "Ammonia price", "Projects reaching FID"],
+      "primary_sources": ["IEA Hydrogen Projects Database", "Hydrogen Council", "IRENA"]
+    },
+    {
+      "id": "rooftop-solar",
+      "industry": "energy",
+      "name": "Rooftop solar",
+      "heat": 34,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Installed rooftop capacity", "Module price", "Net metering tariffs", "Installer bankruptcies"],
+      "primary_sources": ["IEA PVPS", "National energy regulators", "MNRE (India), SEIA (US)"]
+    },
+    {
+      "id": "real-time-payment-rails-upi",
+      "industry": "fintech-and-payments",
+      "name": "Real-time payment rails (UPI)",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["UPI transaction volume", "UPI transaction value", "Average ticket size", "Market share by app"],
+      "primary_sources": ["NPCI", "RBI", "BIS CPMI"],
+      "region": "India"
+    },
+    {
+      "id": "fraud-and-ai-scams",
+      "industry": "fintech-and-payments",
+      "name": "Fraud and AI scams",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Reported fraud losses", "Number of fraud reports", "Authorised push payment fraud", "Card fraud rate"],
+      "primary_sources": ["FTC Consumer Sentinel", "FBI IC3", "UK Finance"]
+    },
+    {
+      "id": "agentic-commerce-and-ai-payments",
+      "industry": "fintech-and-payments",
+      "name": "Agentic commerce and AI payments",
+      "heat": 68,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["AI referred retail traffic", "Agent initiated transactions", "Tokenised card transactions", "AI shopping assistant users"],
+      "primary_sources": ["Visa and Mastercard filings", "Adobe Analytics", "Stripe annual letter"],
+      "emerging": true
+    },
+    {
+      "id": "cross-border-payments-and-remittances",
+      "industry": "fintech-and-payments",
+      "name": "Cross-border payments and remittances",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Remittance inflows", "Average remittance cost", "Cross-border payment volume", "Remittances as share of GDP"],
+      "primary_sources": ["World Bank Remittance Prices Worldwide", "KNOMAD", "BIS CPMI"]
+    },
+    {
+      "id": "fintech-funding",
+      "industry": "fintech-and-payments",
+      "name": "Fintech funding",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Fintech VC funding", "Number of fintech deals", "Fintech IPO count", "Median deal size"],
+      "primary_sources": ["CB Insights", "PitchBook", "KPMG Pulse of Fintech"],
+      "seed_note": {
+        "text": "VCs invested $12B in fintech from January to early April 2026, up 5% on the prior year (Crunchbase, via HubSpot).",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "embedded-finance-and-banking-as-a-service",
+      "industry": "fintech-and-payments",
+      "name": "Embedded finance and banking-as-a-service",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["BaaS partner bank count", "Embedded finance revenue", "Consent orders against BaaS banks", "Program deposits"],
+      "primary_sources": ["FDIC call reports", "OCC and Federal Reserve enforcement", "Company filings"]
+    },
+    {
+      "id": "neobanks-and-digital-banks",
+      "industry": "fintech-and-payments",
+      "name": "Neobanks and digital banks",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Customer accounts", "Customer deposits", "Revenue per user", "Net profit"],
+      "primary_sources": ["Nubank and Revolut annual reports", "FDIC call reports", "Bank of England PRA"]
+    },
+    {
+      "id": "stablecoin-card-programs",
+      "industry": "fintech-and-payments",
+      "name": "Stablecoin card programs",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Stablecoin market cap", "Stablecoin card spend volume", "Stablecoin transfer volume", "Active card programs"],
+      "primary_sources": ["Circle and Tether attestations", "Visa onchain analytics", "DefiLlama"]
+    },
+    {
+      "id": "buy-now-pay-later",
+      "industry": "fintech-and-payments",
+      "name": "Buy now pay later",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["BNPL gross merchandise volume", "Delinquency rate", "Active users", "Revenue take rate"],
+      "primary_sources": ["Affirm and Klarna filings", "CFPB", "Federal Reserve SHED"]
+    },
+    {
+      "id": "open-banking-and-data-sharing-rules",
+      "industry": "fintech-and-payments",
+      "name": "Open banking and data sharing rules",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Open banking API calls", "Active open banking users", "Account aggregator consents", "Payment initiations"],
+      "primary_sources": ["Open Banking Limited UK", "CFPB", "Sahamati and RBI"]
+    },
+    {
+      "id": "core-banking-modernization",
+      "industry": "fintech-and-payments",
+      "name": "Core banking modernization",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Bank IT spending", "Core migrations completed", "Cloud share of bank workloads", "Outage incidents"],
+      "primary_sources": ["Temenos and FIS filings", "Gartner", "FCA operational incident data"]
+    },
+    {
+      "id": "clinical-ai-scribes-and-admin-automation",
+      "industry": "healthcare-and-medtech",
+      "name": "Clinical AI scribes and admin automation",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Clinicians using AI scribes", "Documentation time per visit", "Health AI funding", "Admin cost share of spending"],
+      "primary_sources": ["AMA", "Rock Health", "CMS National Health Expenditure"]
+    },
+    {
+      "id": "wearables-and-continuous-monitoring",
+      "industry": "healthcare-and-medtech",
+      "name": "Wearables and continuous monitoring",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Wearable shipments", "CGM users", "FDA cleared wearable devices", "Wearable revenue"],
+      "primary_sources": ["IDC", "Dexcom and Abbott filings", "US FDA"]
+    },
+    {
+      "id": "surgical-and-medical-robots",
+      "industry": "healthcare-and-medtech",
+      "name": "Surgical and medical robots",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Robotic procedures performed", "Installed systems base", "System placements", "Recurring revenue share"],
+      "primary_sources": ["Intuitive Surgical filings", "US FDA 510k database", "Medtronic and Stryker filings"]
+    },
+    {
+      "id": "digital-health-and-telehealth",
+      "industry": "healthcare-and-medtech",
+      "name": "Digital health and telehealth",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Telehealth share of claims", "Digital health funding", "Telehealth visits", "Virtual care users"],
+      "primary_sources": ["FAIR Health", "Rock Health", "CMS"],
+      "seed_note": {
+        "text": "One market forecast puts digital health at $199.1B in 2025, rising to $573.5B by 2030.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "early-cancer-detection-and-diagnostics",
+      "industry": "healthcare-and-medtech",
+      "name": "Early cancer detection and diagnostics",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Screening test volumes", "Cancer incidence rate", "Stage at diagnosis share", "Test revenue"],
+      "primary_sources": ["Exact Sciences and GRAIL filings", "National Cancer Institute SEER", "American Cancer Society"]
+    },
+    {
+      "id": "health-insurance-and-medicare-advantage",
+      "industry": "healthcare-and-medtech",
+      "name": "Health insurance and Medicare Advantage",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Medicare Advantage enrolment", "Medical loss ratio", "Star ratings distribution", "Premium growth"],
+      "primary_sources": ["CMS", "KFF", "UnitedHealth and Humana filings"]
+    },
+    {
+      "id": "hospital-finances-and-staffing",
+      "industry": "healthcare-and-medtech",
+      "name": "Hospital finances and staffing",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Hospital operating margin", "Nurse vacancy rate", "Healthcare employment", "Hospital expense per adjusted discharge"],
+      "primary_sources": ["Kaufman Hall", "US Bureau of Labor Statistics", "American Hospital Association"]
+    },
+    {
+      "id": "longevity-and-healthspan",
+      "industry": "healthcare-and-medtech",
+      "name": "Longevity and healthspan",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Life expectancy", "Healthy life expectancy", "Longevity biotech funding", "Clinical trials in aging"],
+      "primary_sources": ["WHO", "CDC NCHS", "ClinicalTrials.gov"],
+      "emerging": true
+    },
+    {
+      "id": "reinsurance-pricing-and-catastrophe-losses",
+      "industry": "insurance",
+      "name": "Reinsurance pricing and catastrophe losses",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Insured catastrophe losses", "Property cat rate on line", "Reinsurance capital", "Combined ratio"],
+      "primary_sources": ["Swiss Re Institute", "Guy Carpenter", "Munich Re NatCatSERVICE"],
+      "seed_note": {
+        "text": "Global insured natural catastrophe losses for H1 2026 were about $44B to $46B depending on the source, the lowest half-year since 2018, and property reinsurance rates fell around 16% at the July renewal. Munich Re warns a strong El Nino could shape second-half risk.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "homeowners-insurance-availability",
+      "industry": "insurance",
+      "name": "Homeowners insurance availability",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Average homeowners premium", "Non-renewal rates", "FAIR plan policies", "Insurer loss ratio"],
+      "primary_sources": ["NAIC", "California Department of Insurance", "Insurance Information Institute"]
+    },
+    {
+      "id": "catastrophe-bonds-and-insurance-linked-securities",
+      "industry": "insurance",
+      "name": "Catastrophe bonds and insurance-linked securities",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Cat bond issuance", "Outstanding cat bond market", "Cat bond spreads", "ILS capital"],
+      "primary_sources": ["Artemis", "Swiss Re Capital Markets", "Aon Securities"]
+    },
+    {
+      "id": "life-insurers-and-private-credit",
+      "industry": "insurance",
+      "name": "Life insurers and private credit",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Private credit share of assets", "Offshore reinsurance volume", "Annuity sales", "Below investment grade holdings"],
+      "primary_sources": ["NAIC", "LIMRA", "Bermuda Monetary Authority"]
+    },
+    {
+      "id": "cyber-insurance",
+      "industry": "insurance",
+      "name": "Cyber insurance",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Cyber premiums written", "Ransomware claims", "Loss ratio", "Average cost of breach"],
+      "primary_sources": ["NAIC", "IBM Cost of a Data Breach Report", "FBI IC3"]
+    },
+    {
+      "id": "insurance-fraud-and-ai",
+      "industry": "insurance",
+      "name": "Insurance fraud and AI",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Fraudulent claims detected", "Fraud cost estimate", "Insurer AI adoption", "Fraud referrals"],
+      "primary_sources": ["Coalition Against Insurance Fraud", "NICB", "Association of British Insurers"],
+      "seed_note": {
+        "text": "An Oklahoma insurance commissioner reported US AI-related insurance fraud cases nearly tripled in two years.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "parametric-insurance",
+      "industry": "insurance",
+      "name": "Parametric insurance",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Parametric premiums written", "Payouts triggered", "Sovereign risk pool coverage", "Countries covered"],
+      "primary_sources": ["CCRIF", "African Risk Capacity", "World Bank"],
+      "seed_note": {
+        "text": "Mapfre Economics expects growing demand for parametric cover against rising catastrophe risk.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "marine-and-political-risk-insurance",
+      "industry": "insurance",
+      "name": "Marine and political risk insurance",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["War risk premium rates", "Red Sea transits", "Political risk claims", "Marine premiums"],
+      "primary_sources": ["Lloyd's Market Association", "IUMI", "Berne Union"]
+    },
+    {
+      "id": "trade-credit-insurance-and-tariffs",
+      "industry": "insurance",
+      "name": "Trade credit insurance and tariffs",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Insured trade exposure", "Claims paid", "Business insolvencies", "Average tariff rate"],
+      "primary_sources": ["Berne Union", "Allianz Trade", "WTO"],
+      "seed_note": {
+        "text": "The Insurer's 2026 predictions say tariffs are raising demand for trade credit insurance.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "humanoid-and-general-purpose-robots",
+      "industry": "manufacturing",
+      "name": "Humanoid and general-purpose robots",
+      "heat": 80,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Humanoid units shipped", "Venture funding", "Unit cost estimates", "Pilot deployments"],
+      "primary_sources": ["International Federation of Robotics", "PitchBook", "Tesla, UBTech and Figure disclosures"],
+      "seed_note": {
+        "text": "Schaeffler signed a binding deal in May 2026 for 1,000 to 2,000 humanoids from UK firm Humanoid by 2032, while analysts at Automate 2026 said production-line use is still years away. UBTech targets more than 10,000 industrial humanoids in 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "india-electronics-manufacturing-pli",
+      "industry": "manufacturing",
+      "name": "India electronics manufacturing (PLI)",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Mobile phone exports", "Electronics production value", "PLI incentives disbursed", "Electronics import value"],
+      "primary_sources": ["MeitY", "Ministry of Commerce DGCI&S", "ICEA"],
+      "region": "India"
+    },
+    {
+      "id": "skilled-trades-and-technician-shortage",
+      "industry": "manufacturing",
+      "name": "Skilled trades and technician shortage",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Job openings in trades", "Apprenticeship starts", "Wage growth in trades", "Median worker age"],
+      "primary_sources": ["US Bureau of Labor Statistics", "UK ONS", "US Department of Labor"],
+      "seed_note": {
+        "text": "A 2026 report argues technician readiness, more than land cost or tax breaks, decides which reshoring projects succeed.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "industrial-robots-and-cobots",
+      "industry": "manufacturing",
+      "name": "Industrial robots and cobots",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Robot installations", "Robot density per 10000 workers", "Cobot share of installs", "Robot orders"],
+      "primary_sources": ["International Federation of Robotics", "Association for Advancing Automation", "Fanuc and ABB filings"],
+      "seed_note": {
+        "text": "Roland Berger forecasts 6 to 9% annual growth in industrial automation over the next five years; North American robot orders reached $2.25B in 2025.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "factory-ai-and-digital-twins",
+      "industry": "manufacturing",
+      "name": "Factory AI and digital twins",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Industrial software revenue", "AI adoption rate in factories", "Manufacturing productivity", "Industrial IoT spending"],
+      "primary_sources": ["Siemens and PTC filings", "US Census Bureau", "OECD"]
+    },
+    {
+      "id": "electronics-manufacturing-services",
+      "industry": "manufacturing",
+      "name": "Electronics manufacturing services",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EMS revenue", "Operating margin", "Capex", "Inventory days"],
+      "primary_sources": ["Foxconn, Jabil and Flex filings", "Taiwan MOEA", "SEC EDGAR"]
+    },
+    {
+      "id": "southeast-asia-contract-manufacturing",
+      "industry": "manufacturing",
+      "name": "Southeast Asia contract manufacturing",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Manufacturing FDI inflows", "Electronics exports", "Manufacturing PMI", "US imports by origin"],
+      "primary_sources": ["ASEAN Secretariat", "Vietnam General Statistics Office", "US Census Bureau"]
+    },
+    {
+      "id": "steel-and-aluminum",
+      "industry": "manufacturing",
+      "name": "Steel and aluminum",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Crude steel production", "Aluminium price", "Steel import volumes", "Capacity utilisation"],
+      "primary_sources": ["worldsteel", "International Aluminium Institute", "London Metal Exchange"]
+    },
+    {
+      "id": "additive-manufacturing-3d-printing",
+      "industry": "manufacturing",
+      "name": "Additive manufacturing (3D printing)",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Industry revenue", "Printer unit shipments", "Metal AM system sales", "Company revenue growth"],
+      "primary_sources": ["Wohlers Report", "Stratasys and 3D Systems filings", "SEC EDGAR"]
+    },
+    {
+      "id": "specialty-chemicals-plants",
+      "industry": "manufacturing",
+      "name": "Specialty chemicals plants",
+      "heat": 45,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Chemical production index", "Plant utilisation", "Chemical prices", "Capex announcements"],
+      "primary_sources": ["American Chemistry Council", "Cefic", "BASF and Dow filings"]
+    },
+    {
+      "id": "textiles-and-apparel-supply-chains",
+      "industry": "manufacturing",
+      "name": "Textiles and apparel supply chains",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Apparel export value", "Cotton price", "Garment import share by country", "Factory wages"],
+      "primary_sources": ["WTO", "US OTEXA", "Bangladesh BGMEA"]
+    },
+    {
+      "id": "machine-tools-and-precision-parts",
+      "industry": "manufacturing",
+      "name": "Machine tools and precision parts",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Machine tool orders", "Machine tool production", "Export value", "Capacity utilisation"],
+      "primary_sources": ["Japan Machine Tool Builders Association", "VDW", "AMT USMTO"]
+    },
+    {
+      "id": "sports-media-rights-and-franchise-valuations",
+      "industry": "media-sports-and-gaming",
+      "name": "Sports media rights and franchise valuations",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Media rights value per season", "Franchise valuations", "League revenue", "Viewership"],
+      "primary_sources": ["Nielsen", "League and club annual reports", "Deloitte Football Money League"]
+    },
+    {
+      "id": "streaming-consolidation-and-bundling",
+      "industry": "media-sports-and-gaming",
+      "name": "Streaming consolidation and bundling",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Paid subscribers", "Churn rate", "Average revenue per user", "Share of TV viewing"],
+      "primary_sources": ["Netflix, Disney and Warner Bros. Discovery filings", "Nielsen The Gauge", "Antenna"]
+    },
+    {
+      "id": "ai-music-and-generated-media-rights",
+      "industry": "media-sports-and-gaming",
+      "name": "AI music and generated media rights",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Copyright lawsuits filed", "Streaming revenue", "AI tracks uploaded daily", "Licensing deals signed"],
+      "primary_sources": ["IFPI", "RIAA", "US Copyright Office"]
+    },
+    {
+      "id": "short-form-video-platforms",
+      "industry": "media-sports-and-gaming",
+      "name": "Short-form video platforms",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Monthly active users", "Time spent per user", "Ad revenue", "Creator payouts"],
+      "primary_sources": ["Meta and Alphabet filings", "Pew Research Center", "Ofcom"]
+    },
+    {
+      "id": "video-games-and-platform-economics",
+      "industry": "media-sports-and-gaming",
+      "name": "Video games and platform economics",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Games revenue", "Console unit sales", "Industry layoffs", "Mobile game spend"],
+      "primary_sources": ["Circana", "Nintendo, Sony and Microsoft filings", "Newzoo"]
+    },
+    {
+      "id": "social-platform-regulation",
+      "industry": "media-sports-and-gaming",
+      "name": "Social platform regulation",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Regulatory fines issued", "Content removal requests", "Countries with age limits", "Enforcement actions"],
+      "primary_sources": ["European Commission DSA", "Ofcom", "US FTC"]
+    },
+    {
+      "id": "news-media-and-ai-licensing",
+      "industry": "media-sports-and-gaming",
+      "name": "News media and AI licensing",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["AI licensing deals signed", "Digital subscriptions", "Newsroom employment", "Search referral traffic"],
+      "primary_sources": ["Reuters Institute Digital News Report", "Pew Research Center", "News Corp and NYT filings"]
+    },
+    {
+      "id": "podcasts-and-creator-video",
+      "industry": "media-sports-and-gaming",
+      "name": "Podcasts and creator video",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Podcast ad revenue", "Monthly podcast listeners", "Creator payouts", "Video podcast share"],
+      "primary_sources": ["IAB", "Edison Research", "Spotify filings"]
+    },
+    {
+      "id": "live-events-and-ticketing",
+      "industry": "media-sports-and-gaming",
+      "name": "Live events and ticketing",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Concert ticket revenue", "Average ticket price", "Fans attending events", "Secondary resale markup"],
+      "primary_sources": ["Live Nation filings", "Pollstar", "US FTC"]
+    },
+    {
+      "id": "esports",
+      "industry": "media-sports-and-gaming",
+      "name": "Esports",
+      "heat": 30,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Esports revenue", "Peak concurrent viewers", "Prize pool totals", "Team sponsorship revenue"],
+      "primary_sources": ["Esports Charts", "Newzoo", "Twitch and YouTube data"]
+    },
+    {
+      "id": "chinese-ev-exports-and-trade-barriers",
+      "industry": "mobility-and-batteries",
+      "name": "Chinese EV exports and trade barriers",
+      "heat": 78,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": [
+        "China EV export volume",
+        "EU and US tariff rates on Chinese EVs",
+        "Chinese brand share of EU EV sales",
+        "Average export price per vehicle"
+      ],
+      "primary_sources": ["China Association of Automobile Manufacturers", "China General Administration of Customs", "European Commission trade defence"],
+      "region": "China"
+    },
+    {
+      "id": "robotaxis",
+      "industry": "mobility-and-batteries",
+      "name": "Robotaxis",
+      "heat": 76,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Paid robotaxi rides per week", "Driverless fleet size", "Cities with commercial service", "Disengagements per 1,000 miles"],
+      "primary_sources": ["California DMV and CPUC", "Waymo, Baidu and Pony.ai disclosures", "NHTSA crash reporting"],
+      "seed_note": {
+        "text": "Pony.ai's Q2 2026 robotaxi revenue rose about 691% to $12.1M, its fleet was 1,975 vehicles on June 30 with a target above 3,500 by year end, and a deal with Uber covers 2,000-plus robotaxis in Europe.",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "sodium-ion-batteries",
+      "industry": "mobility-and-batteries",
+      "name": "Sodium-ion batteries",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Sodium-ion cell production GWh", "Cell price per kWh", "Lithium carbonate price", "Announced manufacturing capacity"],
+      "primary_sources": ["BloombergNEF", "CATL and BYD filings", "Benchmark Mineral Intelligence"],
+      "region": "China",
+      "seed_note": {
+        "text": "CATL expects up to 20,000 EVs with sodium-ion packs in 2026 and says costs could match lithium by year end. Global sodium-ion shipments were about 9 GWh in 2025, up 150%.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "solid-state-batteries",
+      "industry": "mobility-and-batteries",
+      "name": "Solid-state batteries",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Pilot line capacity MWh", "Energy density Wh per kg", "Cumulative R&D spend", "Patent filings per year"],
+      "primary_sources": ["QuantumScape and Solid Power SEC filings", "Toyota and Samsung SDI disclosures", "WIPO patent statistics"],
+      "seed_note": {
+        "text": "CATL's chairman reportedly said solid-state is years from the mass market, and Chinese makers are pursuing semi-solid-state first.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "autonomous-trucking",
+      "industry": "mobility-and-batteries",
+      "name": "Autonomous trucking",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Driverless freight miles", "Commercial lanes operating", "Autonomous truck fleet size", "Cost per mile versus human drivers"],
+      "primary_sources": ["FMCSA", "Aurora Innovation SEC filings", "Texas DMV and state DOTs"],
+      "seed_note": {
+        "text": "Aurora planned a driverless fleet of about 200 trucks by the end of 2026, and Kodiak won a California testing permit in August 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "auto-tariffs-and-parts-supply",
+      "industry": "mobility-and-batteries",
+      "name": "Auto tariffs and parts supply",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["US auto parts imports by origin", "Effective tariff rate on vehicles", "Average new vehicle price", "US light vehicle production"],
+      "primary_sources": ["US Census Bureau trade data", "USTR", "Cox Automotive and Kelley Blue Book"]
+    },
+    {
+      "id": "us-ev-demand",
+      "industry": "mobility-and-batteries",
+      "name": "US EV demand",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EV share of new car sales", "Quarterly EV sales units", "Average EV transaction price", "EV days of inventory"],
+      "primary_sources": ["Cox Automotive", "US Department of Energy AFDC", "Tesla, GM and Ford filings"],
+      "seed_note": {
+        "text": "MIT Technology Review noted in February 2026 that the US EV market faces major headwinds.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "electric-two-wheelers-in-india",
+      "industry": "mobility-and-batteries",
+      "name": "Electric two-wheelers in India",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Monthly e2W registrations", "e2W share of two-wheeler sales", "PM E-DRIVE subsidy disbursed", "Market share by OEM"],
+      "primary_sources": ["VAHAN dashboard, MoRTH", "Ministry of Heavy Industries", "SIAM"],
+      "region": "India"
+    },
+    {
+      "id": "ev-charging",
+      "industry": "mobility-and-batteries",
+      "name": "EV charging",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Public charging ports installed", "DC fast charger share", "Charger utilisation rate", "EVs per public charger"],
+      "primary_sources": ["US DOE Alternative Fuels Data Center", "IEA Global EV Outlook", "ChargePoint and EVgo filings"]
+    },
+    {
+      "id": "software-defined-vehicles",
+      "industry": "mobility-and-batteries",
+      "name": "Software-defined vehicles",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Software and services revenue per vehicle", "OTA update recalls", "Connected car subscriptions", "Automaker software R&D spend"],
+      "primary_sources": ["NHTSA recall database", "Tesla, GM and Stellantis filings", "S&P Global Mobility"]
+    },
+    {
+      "id": "battery-recycling",
+      "industry": "mobility-and-batteries",
+      "name": "Battery recycling",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Recycling capacity tonnes per year", "Black mass price", "Recovered lithium, nickel and cobalt", "End-of-life battery volumes"],
+      "primary_sources": ["IEA", "European Commission Battery Regulation data", "Benchmark Mineral Intelligence"]
+    },
+    {
+      "id": "evtol-and-air-taxis",
+      "industry": "mobility-and-batteries",
+      "name": "eVTOL and air taxis",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Certification milestones completed", "Aircraft order book", "Cash burn per quarter", "Test flight hours"],
+      "primary_sources": ["FAA", "EASA", "Joby and Archer SEC filings"]
+    },
+    {
+      "id": "autonomous-delivery-robots",
+      "industry": "mobility-and-batteries",
+      "name": "Autonomous delivery robots",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Deliveries completed", "Robot fleet size", "Cities and campuses served", "Cost per delivery"],
+      "primary_sources": ["Starship and Serve Robotics disclosures", "Serve Robotics SEC filings", "FAA Part 135 drone delivery data"]
+    },
+    {
+      "id": "glp-1-drugs",
+      "industry": "pharma",
+      "name": "GLP-1 drugs",
+      "heat": 81,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Prescriptions", "Net price", "Revenue by drug", "Manufacturing capacity investment"],
       "primary_sources": ["Novo Nordisk and Eli Lilly filings", "FDA drug shortage list", "CMS data"]
     },
     {
-      "id": "api-supply-chain", "industry": "pharma", "name": "API supply chain", "heat": 47, "heat_updated": null, "top_headlines": [],
+      "id": "next-generation-obesity-drugs",
+      "industry": "pharma",
+      "name": "Next-generation obesity drugs",
+      "heat": 78,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["GLP-1 prescriptions per week", "Obesity drug revenue", "Phase 3 pipeline candidates", "Net price per month"],
+      "primary_sources": ["Novo Nordisk and Eli Lilly filings", "IQVIA", "ClinicalTrials.gov"],
+      "seed_note": {
+        "text": "Stifel sees obesity as a potential $200B market; the next wave centers on oral incretins, amylin combinations and muscle-preserving approaches.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "patent-cliff-and-pharma-m-a",
+      "industry": "pharma",
+      "name": "Patent cliff and pharma M&A",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Revenue at risk from patent expiry", "Pharma M&A deal value", "Number of biotech acquisitions", "Average deal premium"],
+      "primary_sources": ["SEC EDGAR", "FDA Orange Book", "EvaluatePharma"],
+      "seed_note": {
+        "text": "Stifel estimates over 40% of big pharma revenue is exposed to patent expiry within six years, and ING expects M&A to rise 15% in 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "drug-pricing-and-policy",
+      "industry": "pharma",
+      "name": "Drug pricing and policy",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Medicare Part D spending", "List price increases", "Drugs selected for negotiation", "Net price growth"],
+      "primary_sources": ["CMS", "IQVIA Institute", "KFF"]
+    },
+    {
+      "id": "ai-drug-discovery",
+      "industry": "pharma",
+      "name": "AI drug discovery",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": [
+        "AI-discovered drugs in clinical trials",
+        "Venture funding for AI biotech",
+        "Pharma AI partnership deal value",
+        "Time from target to candidate"
+      ],
+      "primary_sources": ["ClinicalTrials.gov", "PitchBook", "Company filings and investor reports"]
+    },
+    {
+      "id": "biotech-ipos-and-funding",
+      "industry": "pharma",
+      "name": "Biotech IPOs and funding",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Biotech IPO count", "Biotech venture funding", "XBI index level", "Follow-on offering proceeds"],
+      "primary_sources": ["SEC EDGAR", "Nasdaq", "PitchBook"],
+      "seed_note": {
+        "text": "A trade report says first-half 2026 biotech IPOs outpaced 2025.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "india-generics-and-pharma-exports",
+      "industry": "pharma",
+      "name": "India generics and pharma exports",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Pharma export value", "Exports to the US", "USFDA ANDA approvals", "USFDA warning letters"],
+      "primary_sources": ["Pharmexcil", "Ministry of Commerce DGCI&S", "US FDA"],
+      "region": "India"
+    },
+    {
+      "id": "rna-and-sirna-therapies",
+      "industry": "pharma",
+      "name": "RNA and siRNA therapies",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["siRNA product revenue", "RNA drugs approved", "Clinical trials by phase", "Licensing deal value"],
+      "primary_sources": ["Alnylam and Ionis filings", "US FDA", "ClinicalTrials.gov"],
+      "seed_note": {
+        "text": "Wave Life Sciences has preclinical data for an siRNA aimed at INHBE for fat reduction, one of several non-GLP-1 approaches.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "gene-editing",
+      "industry": "pharma",
+      "name": "Gene editing",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Gene editing trials active", "Approved gene editing therapies", "Patients treated", "Sector funding raised"],
+      "primary_sources": ["ClinicalTrials.gov", "US FDA and EMA", "Vertex and CRISPR Therapeutics filings"],
+      "seed_note": {
+        "text": "Casgevy took about ten years to go from CRISPR's discovery to market.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "antibody-drug-conjugates",
+      "industry": "pharma",
+      "name": "Antibody-drug conjugates",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["ADC sales revenue", "ADC licensing deal value", "ADCs in clinical trials", "ADC approvals"],
+      "primary_sources": ["AstraZeneca and Daiichi Sankyo filings", "ClinicalTrials.gov", "US FDA"]
+    },
+    {
+      "id": "cell-therapy-for-autoimmune-disease",
+      "industry": "pharma",
+      "name": "Cell therapy for autoimmune disease",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["CAR-T autoimmune trials", "Patients dosed", "Sector funding raised", "Approved CAR-T therapies"],
+      "primary_sources": ["ClinicalTrials.gov", "US FDA", "Alliance for Regenerative Medicine"]
+    },
+    {
+      "id": "radiopharmaceuticals",
+      "industry": "pharma",
+      "name": "Radiopharmaceuticals",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Pluvicto and Lutathera sales", "Radioligand deal value", "Isotope production capacity", "Radiopharma trials active"],
+      "primary_sources": ["Novartis filings", "IAEA", "ClinicalTrials.gov"]
+    },
+    {
+      "id": "contract-drug-manufacturing-cdmo",
+      "industry": "pharma",
+      "name": "Contract drug manufacturing (CDMO)",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["CDMO revenue growth", "Order backlog", "Bioreactor capacity in litres", "Capex announced"],
+      "primary_sources": ["Lonza and Samsung Biologics filings", "WuXi Biologics reports", "US Congress BIOSECURE Act records"]
+    },
+    {
+      "id": "api-supply-chain",
+      "industry": "pharma",
+      "name": "API supply chain",
+      "heat": 47,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["API imports by source country", "Drug master files by country", "Shortages", "Plant inspection outcomes"],
       "primary_sources": ["FDA", "CDSCO", "Indian commerce ministry trade data"]
     },
     {
-      "id": "biosimilars", "industry": "pharma", "name": "Biosimilars", "heat": 29, "heat_updated": null, "top_headlines": [],
+      "id": "vaccines-and-mrna",
+      "industry": "pharma",
+      "name": "Vaccines and mRNA",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Vaccine sales revenue", "Vaccination coverage rates", "mRNA pipeline candidates", "Government vaccine contracts"],
+      "primary_sources": ["CDC", "WHO", "Moderna, Pfizer and BioNTech filings"]
+    },
+    {
+      "id": "antimicrobial-resistance",
+      "industry": "pharma",
+      "name": "Antimicrobial resistance",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Deaths attributable to AMR", "Resistance rates by pathogen", "New antibiotic approvals", "Antibiotic consumption per capita"],
+      "primary_sources": ["WHO GLASS", "IHME", "ECDC"],
+      "emerging": true
+    },
+    {
+      "id": "biosimilars",
+      "industry": "pharma",
+      "name": "Biosimilars",
+      "heat": 29,
+      "heat_updated": null,
+      "top_headlines": [],
       "key_metrics": ["Approvals", "Price versus reference biologic", "Market share after launch", "Patent litigation"],
       "primary_sources": ["FDA Purple Book", "EMA", "Company filings"]
+    },
+    {
+      "id": "legal-ai",
+      "industry": "professional-services",
+      "name": "Legal AI",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Legal tech funding raised", "Law firm AI adoption rate", "Court sanctions for AI errors", "Legal services employment"],
+      "primary_sources": ["Thomson Reuters Institute", "American Bar Association", "US BLS"],
+      "seed_note": {
+        "text": "Legora is listed with a $550M Series D as a collaborative AI platform for lawyers.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "government-technology-govtech",
+      "industry": "professional-services",
+      "name": "Government technology (GovTech)",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Federal IT spending", "Contract award value", "Digital service adoption", "Legacy system spend"],
+      "primary_sources": ["USASpending.gov", "US GAO", "OECD Digital Government Index"],
+      "seed_note": {
+        "text": "GovTech is named among the fastest-growing startup industries of 2026.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "consulting-and-big-four-disruption",
+      "industry": "professional-services",
+      "name": "Consulting and Big Four disruption",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Big Four global revenue", "Headcount", "Graduate hiring", "Consulting fee growth"],
+      "primary_sources": ["Deloitte, PwC, EY and KPMG annual reports", "Accenture filings", "Source Global Research"]
+    },
+    {
+      "id": "outsourcing-and-bpo",
+      "industry": "professional-services",
+      "name": "Outsourcing and BPO",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["IT services revenue growth", "Headcount", "Deal total contract value", "Attrition rate"],
+      "primary_sources": ["NASSCOM", "TCS and Infosys filings", "ISG Index"]
+    },
+    {
+      "id": "compliance-and-regtech",
+      "industry": "professional-services",
+      "name": "Compliance and regtech",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Regulatory fines", "Regtech funding raised", "Compliance headcount", "Sanctions designations"],
+      "primary_sources": ["US SEC and FINRA", "UK FCA", "OFAC"]
+    },
+    {
+      "id": "accounting-automation",
+      "industry": "professional-services",
+      "name": "Accounting automation",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Accounting employment", "CPA exam candidates", "Software revenue", "Audit firm AI spend"],
+      "primary_sources": ["US BLS", "AICPA", "Intuit and Xero filings"]
+    },
+    {
+      "id": "quantum-computing-hardware",
+      "industry": "quantum-and-frontier-computing",
+      "name": "Quantum computing hardware",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Physical qubit count", "Two-qubit gate fidelity", "Logical qubits demonstrated", "Coherence time"],
+      "primary_sources": ["IBM and Google Quantum AI roadmaps", "arXiv", "NIST"],
+      "seed_note": {
+        "text": "Commerce announced roughly $2B in quantum funding under the CHIPS and Science Act in May 2026, and Oxford Quantum Circuits raised 260m pounds in June. IBM targets verified quantum advantage in chemistry by the end of 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "quantum-public-companies-and-funding",
+      "industry": "quantum-and-frontier-computing",
+      "name": "Quantum public companies and funding",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Quantum VC funding", "IonQ and Rigetti revenue", "Government quantum funding", "Quantum company market cap"],
+      "primary_sources": ["SEC EDGAR", "McKinsey Quantum Technology Monitor", "PitchBook"],
+      "seed_note": {
+        "text": "D-Wave reported 62.4% of Q2 2026 revenue from commercial customers, and Rigetti has a potential award of up to $100M from Commerce.",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "quantum-software-and-error-correction",
+      "industry": "quantum-and-frontier-computing",
+      "name": "Quantum software and error correction",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Logical error rate", "Error correction code distance", "Quantum software funding", "Algorithm benchmark results"],
+      "primary_sources": ["arXiv", "Google Quantum AI", "Quantinuum disclosures"]
+    },
+    {
+      "id": "quantum-sensing-and-networking",
+      "industry": "quantum-and-frontier-computing",
+      "name": "Quantum sensing and networking",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Quantum sensing contracts", "QKD network length", "Quantum navigation trials", "National quantum network funding"],
+      "primary_sources": ["DARPA", "European Commission EuroQCI", "UK National Quantum Technologies Programme"]
+    },
+    {
+      "id": "photonic-and-neuromorphic-computing",
+      "industry": "quantum-and-frontier-computing",
+      "name": "Photonic and neuromorphic computing",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Photonics startup funding", "Co-packaged optics shipments", "Energy per inference", "Neuromorphic chip neuron count"],
+      "primary_sources": ["Intel Labs", "PitchBook", "arXiv"],
+      "emerging": true
+    },
+    {
+      "id": "gulf-real-estate-dubai-and-riyadh",
+      "industry": "real-estate-and-construction",
+      "name": "Gulf real estate (Dubai and Riyadh)",
+      "heat": 70,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Residential price index", "Transaction volume", "Off-plan sales share", "Rental growth"],
+      "primary_sources": ["Dubai Land Department", "Saudi GASTAT", "Saudi Real Estate General Authority"],
+      "region": "Gulf"
+    },
+    {
+      "id": "india-real-estate-and-reits",
+      "industry": "real-estate-and-construction",
+      "name": "India real estate and REITs",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Housing sales by city", "Office absorption", "REIT distribution yield", "Housing price index"],
+      "primary_sources": ["RBI Housing Price Index", "SEBI", "National Housing Bank RESIDEX"],
+      "region": "India"
+    },
+    {
+      "id": "housing-affordability-and-build-to-rent",
+      "industry": "real-estate-and-construction",
+      "name": "Housing affordability and build-to-rent",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Price to income ratio", "Rent growth", "Build-to-rent completions", "Housing starts"],
+      "primary_sources": ["US Census Bureau", "UK ONS", "National Association of Home Builders"]
+    },
+    {
+      "id": "commercial-office-distress",
+      "industry": "real-estate-and-construction",
+      "name": "Commercial office distress",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Office vacancy rate", "CMBS delinquency rate", "Office property prices", "Office loan maturities"],
+      "primary_sources": ["Trepp", "MSCI Real Assets", "Federal Reserve"]
+    },
+    {
+      "id": "mortgage-rates-and-lending",
+      "industry": "real-estate-and-construction",
+      "name": "Mortgage rates and lending",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["30-year mortgage rate", "Mortgage originations", "Delinquency rate", "Refinance share"],
+      "primary_sources": ["Freddie Mac PMMS", "Mortgage Bankers Association", "Bank of England"]
+    },
+    {
+      "id": "construction-labor-and-productivity",
+      "industry": "real-estate-and-construction",
+      "name": "Construction labor and productivity",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Construction job openings", "Labour productivity", "Hourly earnings", "Construction employment"],
+      "primary_sources": ["US Bureau of Labor Statistics", "UK ONS", "Associated General Contractors"]
+    },
+    {
+      "id": "industrial-and-warehouse-space",
+      "industry": "real-estate-and-construction",
+      "name": "Industrial and warehouse space",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Warehouse vacancy rate", "Net absorption", "Asking rent", "Construction pipeline"],
+      "primary_sources": ["Prologis filings", "CBRE Research", "US Census Bureau"]
+    },
+    {
+      "id": "construction-tech-and-robots",
+      "industry": "real-estate-and-construction",
+      "name": "Construction tech and robots",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Contech venture funding", "Construction productivity", "Robot deployments on site", "Software adoption rate"],
+      "primary_sources": ["PitchBook", "US Bureau of Labor Statistics", "Autodesk and Procore filings"]
+    },
+    {
+      "id": "cement-and-building-materials",
+      "industry": "real-estate-and-construction",
+      "name": "Cement and building materials",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Cement production", "Cement price", "Construction materials PPI", "Capacity utilisation"],
+      "primary_sources": ["USGS", "Global Cement and Concrete Association", "US Bureau of Labor Statistics PPI"]
+    },
+    {
+      "id": "prefab-and-modular-homes",
+      "industry": "real-estate-and-construction",
+      "name": "Prefab and modular homes",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Manufactured home shipments", "Modular share of starts", "Factory capacity", "Average unit price"],
+      "primary_sources": ["US Census Bureau", "Manufactured Housing Institute", "Modular Building Institute"]
+    },
+    {
+      "id": "quick-commerce",
+      "industry": "retail-and-consumer",
+      "name": "Quick commerce",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Gross order value", "Dark store count", "Average order value", "Monthly transacting users"],
+      "primary_sources": ["Eternal (Zomato) and Swiggy filings", "SEBI", "Redseer"],
+      "region": "India"
+    },
+    {
+      "id": "cross-border-e-commerce-temu-and-shein",
+      "industry": "retail-and-consumer",
+      "name": "Cross-border e-commerce (Temu and Shein)",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["De minimis shipment volume", "Temu GMV", "China cross-border e-commerce exports", "App monthly active users"],
+      "primary_sources": ["US Customs and Border Protection", "PDD Holdings filings", "China General Administration of Customs"]
+    },
+    {
+      "id": "glp-1-impact-on-consumer-goods",
+      "industry": "retail-and-consumer",
+      "name": "GLP-1 impact on consumer goods",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["GLP-1 prescriptions", "Snack food volume growth", "Household grocery spend", "Novo and Lilly GLP-1 revenue"],
+      "primary_sources": ["Novo Nordisk and Eli Lilly filings", "IQVIA", "Circana"]
+    },
+    {
+      "id": "consumer-credit-stress",
+      "industry": "retail-and-consumer",
+      "name": "Consumer credit stress",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Credit card delinquency rate", "Total household debt", "Auto loan 90-day delinquency", "BNPL usage"],
+      "primary_sources": ["Federal Reserve Bank of New York", "CFPB", "TransUnion"]
+    },
+    {
+      "id": "creator-economy-and-influencer-commerce",
+      "industry": "retail-and-consumer",
+      "name": "Creator economy and influencer commerce",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Creator payouts", "Influencer marketing spend", "TikTok Shop GMV", "YouTube ad revenue"],
+      "primary_sources": ["Alphabet filings", "IAB", "Meta filings"]
+    },
+    {
+      "id": "luxury-goods-slowdown",
+      "industry": "retail-and-consumer",
+      "name": "Luxury goods slowdown",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Organic revenue growth", "China luxury spend", "Fashion and leather goods sales", "Swiss watch exports"],
+      "primary_sources": ["LVMH and Kering filings", "Federation of the Swiss Watch Industry", "Bain and Altagamma"]
+    },
+    {
+      "id": "retail-media-networks",
+      "industry": "retail-and-consumer",
+      "name": "Retail media networks",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Retail media ad revenue", "Amazon advertising revenue", "Walmart Connect growth", "Share of digital ad spend"],
+      "primary_sources": ["Amazon and Walmart filings", "IAB", "eMarketer"]
+    },
+    {
+      "id": "travel-and-tourism",
+      "industry": "retail-and-consumer",
+      "name": "Travel and tourism",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["International tourist arrivals", "Hotel RevPAR", "TSA checkpoint throughput", "Online travel bookings"],
+      "primary_sources": ["UN Tourism", "STR", "TSA"]
+    },
+    {
+      "id": "private-label-and-discounting",
+      "industry": "retail-and-consumer",
+      "name": "Private label and discounting",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Private label unit share", "Discounter store count", "Aldi and Lidl market share", "Grocery price inflation"],
+      "primary_sources": ["PLMA", "Kantar Worldpanel", "BLS"]
+    },
+    {
+      "id": "beauty-and-wellness",
+      "industry": "retail-and-consumer",
+      "name": "Beauty and wellness",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Prestige beauty sales growth", "Ulta comparable sales", "Fragrance category growth", "L'Oreal like-for-like sales"],
+      "primary_sources": ["L'Oreal and Estee Lauder filings", "Circana", "Ulta Beauty filings"]
+    },
+    {
+      "id": "resale-and-secondhand",
+      "industry": "retail-and-consumer",
+      "name": "Resale and secondhand",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Resale market size", "ThredUp active buyers", "Resale GMV", "Take rate"],
+      "primary_sources": ["ThredUp resale report", "The RealReal and eBay filings", "GlobalData"]
+    },
+    {
+      "id": "pet-economy",
+      "industry": "retail-and-consumer",
+      "name": "Pet economy",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["US pet industry spend", "Chewy net sales", "Pet insurance policies in force", "Vet services price inflation"],
+      "primary_sources": ["American Pet Products Association", "Chewy filings", "NAPHIA"]
+    },
+    {
+      "id": "loyalty-programs",
+      "industry": "retail-and-consumer",
+      "name": "Loyalty programs",
+      "heat": 34,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Loyalty members", "Co-brand card spend", "Points liability", "Paid membership renewal rate"],
+      "primary_sources": ["Delta and American Express filings", "Costco filings", "Starbucks filings"]
+    },
+    {
+      "id": "hbm-memory",
+      "industry": "semis",
+      "name": "HBM memory",
+      "heat": 88,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["HBM revenue by vendor", "DRAM contract price", "HBM share of DRAM bit output", "Memory capex"],
+      "primary_sources": ["SK hynix, Samsung and Micron filings", "TrendForce", "WSTS"]
+    },
+    {
+      "id": "dram-and-nand-shortage",
+      "industry": "semis",
+      "name": "DRAM and NAND shortage",
+      "heat": 86,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["DRAM contract price", "NAND contract price", "HBM revenue", "Memory inventory weeks"],
+      "primary_sources": ["SK hynix, Samsung and Micron filings", "TrendForce", "WSTS"],
+      "seed_note": {
+        "text": "A 2026 outlook named memory as the biggest friction point in the chip supply chain as AI servers absorb capacity; Taiwanese analyst notes expect NAND tightness through 2026.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "chip-export-controls-and-china-tech",
+      "industry": "semis",
+      "name": "Chip export controls and China tech",
+      "heat": 84,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["China chip imports", "Entity List additions", "China chip equipment imports", "SMIC revenue"],
+      "primary_sources": ["US Commerce Department BIS", "China General Administration of Customs", "SMIC filings"]
+    },
+    {
+      "id": "foundry-geopolitics-tsmc-intel-samsung",
+      "industry": "semis",
+      "name": "Foundry geopolitics (TSMC, Intel, Samsung)",
+      "heat": 80,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Foundry market share", "Foundry revenue by company", "Advanced node capacity", "Fab capex"],
+      "primary_sources": ["TSMC, Intel and Samsung filings", "TrendForce", "US CHIPS Program Office"],
+      "seed_note": {
+        "text": "DIGITIMES reported Intel planned to broaden talks with Taiwanese suppliers in mid-October 2026 (paywalled).",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "co-packaged-optics-and-silicon-photonics",
+      "industry": "semis",
+      "name": "Co-packaged optics and silicon photonics",
+      "heat": 75,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Optical transceiver shipments", "800G and 1.6T port shipments", "Optical component revenue", "Data centre optics spend"],
+      "primary_sources": ["LightCounting", "Broadcom and Nvidia filings", "Dell'Oro Group"],
+      "seed_note": {
+        "text": "September 2026 supply-chain digests point to co-packaged optics switches from Nvidia and Broadcom moving toward mass production or early shipments in H2 2026, with TSMC's COUPE platform on a similar timeline.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "advanced-packaging",
+      "industry": "semis",
+      "name": "Advanced packaging",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["CoWoS capacity (wafers per month)", "Packaging capex", "OSAT revenue", "Lead times"],
+      "primary_sources": ["TSMC quarterly reports", "ASE and Amkor filings", "SEMI"]
+    },
+    {
+      "id": "nexperia-and-automotive-chips",
+      "industry": "semis",
+      "name": "Nexperia and automotive chips",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Automotive chip revenue", "Vehicle production lost to shortages", "Chip lead times", "Discrete chip exports"],
+      "primary_sources": ["Nexperia and Wingtech filings", "S&P Global Mobility", "Dutch Ministry of Economic Affairs"],
+      "seed_note": {
+        "text": "China's commerce ministry warned in March 2026 that the dispute between Nexperia and its Chinese subsidiary could set off another global chip supply crisis.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "india-chip-fabs-and-osat",
+      "industry": "semis",
+      "name": "India chip fabs and OSAT",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Approved fab and OSAT projects", "Committed investment", "Government incentive disbursed", "Electronics production value"],
+      "primary_sources": ["India Semiconductor Mission", "MeitY", "PIB"],
+      "region": "India"
+    },
+    {
+      "id": "lithography-equipment",
+      "industry": "semis",
+      "name": "Lithography equipment",
+      "heat": 61,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EUV and DUV system shipments", "Order backlog", "Revenue by customer country", "Export licence rules"],
+      "primary_sources": ["ASML annual and quarterly reports", "US BIS rules", "Dutch government export notices"]
+    },
+    {
+      "id": "chip-design-software-and-ip",
+      "industry": "semis",
+      "name": "Chip design software and IP",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EDA revenue", "Semiconductor IP licensing revenue", "Chip design starts", "R&D spend"],
+      "primary_sources": ["Synopsys and Cadence filings", "Arm filings", "ESD Alliance"]
+    },
+    {
+      "id": "power-semiconductors-sic-and-gan",
+      "industry": "semis",
+      "name": "Power semiconductors (SiC and GaN)",
+      "heat": 55,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["SiC device revenue", "SiC wafer capacity", "EV inverter adoption", "GaN device revenue"],
+      "primary_sources": ["Infineon and STMicroelectronics filings", "Wolfspeed filings", "Yole Group"]
+    },
+    {
+      "id": "etch-deposition-and-metrology-equipment",
+      "industry": "semis",
+      "name": "Etch, deposition and metrology equipment",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Wafer fab equipment spend", "Equipment billings", "China share of tool sales", "Order backlog"],
+      "primary_sources": ["SEMI", "Applied Materials and Lam Research filings", "KLA and Tokyo Electron filings"]
+    },
+    {
+      "id": "semiconductor-materials-supply",
+      "industry": "semis",
+      "name": "Semiconductor materials supply",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Silicon wafer shipments", "Gallium and germanium prices", "Materials market revenue", "Rare gas prices"],
+      "primary_sources": ["SEMI", "USGS", "China Ministry of Commerce"],
+      "seed_note": {
+        "text": "The Critical Materials Council seminar on chip materials supply chains is set for October 28, 2026 in Singapore, with sessions on tungsten and advanced packaging materials.",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "neuromorphic-and-analog-ai-chips",
+      "industry": "semis",
+      "name": "Neuromorphic and analog AI chips",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Startup funding raised", "Energy per inference", "Research publications", "Government research grants"],
+      "primary_sources": ["Intel Labs and IBM Research", "PitchBook", "DARPA"],
+      "emerging": true
+    },
+    {
+      "id": "mature-node-foundry",
+      "industry": "semis",
+      "name": "Mature-node foundry",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Capacity by country", "Utilisation rate", "Wafer price", "Subsidy commitments"],
+      "primary_sources": ["SMIC, UMC and GlobalFoundries filings", "SEMI World Fab Forecast", "Government subsidy announcements"]
+    },
+    {
+      "id": "strait-of-hormuz-and-gulf-transit",
+      "industry": "shipping",
+      "name": "Strait of Hormuz and Gulf transit",
+      "heat": 88,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Daily tanker transits", "Oil flows through Hormuz", "LNG cargoes via Hormuz", "Gulf freight rates"],
+      "primary_sources": ["EIA", "IEA", "UKMTO"],
+      "region": "Gulf",
+      "seed_note": {
+        "text": "The World Bank's April 2026 outlook tied a fertilizer price surge to disruption at the Strait of Hormuz, which carries nearly one third of global seaborne fertilizer trade. Confirm the current state of the strait before researching.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "shadow-fleets-and-sanctions-enforcement",
+      "industry": "shipping",
+      "name": "Shadow fleets and sanctions enforcement",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Shadow fleet vessel count", "Sanctioned tankers designated", "Russian seaborne crude exports", "Urals discount to Brent"],
+      "primary_sources": ["OFAC", "EU Council sanctions lists", "Kpler"]
+    },
+    {
+      "id": "red-sea-routing",
+      "industry": "shipping",
+      "name": "Red Sea routing",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Suez Canal transits", "Cape of Good Hope diversions", "Canal revenue", "War risk insurance premiums"],
+      "primary_sources": ["Suez Canal Authority", "IMF PortWatch", "UNCTAD"]
+    },
+    {
+      "id": "maritime-insurance-and-war-risk",
+      "industry": "shipping",
+      "name": "Maritime insurance and war risk",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["War risk premium", "Marine insurance premiums", "Listed area incidents", "P&I club general increase"],
+      "primary_sources": ["Lloyd's Market Association", "IUMI", "International Group of P&I Clubs"]
+    },
+    {
+      "id": "tanker-markets",
+      "industry": "shipping",
+      "name": "Tanker markets",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["VLCC spot rate", "Tanker orderbook", "Crude tonne-miles", "Floating storage"],
+      "primary_sources": ["Baltic Exchange", "Clarksons Research", "EIA"]
+    },
+    {
+      "id": "container-rates",
+      "industry": "shipping",
+      "name": "Container rates",
+      "heat": 55,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Spot rate index by lane", "Schedule reliability", "Idle fleet", "Carrier earnings"],
+      "primary_sources": ["Shanghai Containerized Freight Index", "Drewry World Container Index", "Carrier filings"]
+    },
+    {
+      "id": "port-ownership-and-chinese-infrastructure",
+      "industry": "shipping",
+      "name": "Port ownership and Chinese infrastructure",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Chinese-owned port terminals", "Container throughput", "Port investment value", "COSCO terminal stakes"],
+      "primary_sources": ["COSCO Shipping Ports filings", "China Merchants Port filings", "UNCTAD"]
+    },
+    {
+      "id": "panama-canal-and-chokepoints",
+      "industry": "shipping",
+      "name": "Panama Canal and chokepoints",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Daily canal transits", "Gatun Lake water level", "Suez Canal transits", "Transit slot auction prices"],
+      "primary_sources": ["Panama Canal Authority", "Suez Canal Authority", "IMF PortWatch"]
+    },
+    {
+      "id": "dry-bulk",
+      "industry": "shipping",
+      "name": "Dry bulk",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Baltic Dry Index", "Capesize spot rate", "Iron ore seaborne trade", "Dry bulk fleet growth"],
+      "primary_sources": ["Baltic Exchange", "Clarksons Research", "China General Administration of Customs"]
+    },
+    {
+      "id": "shipbuilding",
+      "industry": "shipping",
+      "name": "Shipbuilding",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Orderbook by country", "Newbuild prices", "Deliveries", "Yard capacity"],
+      "primary_sources": ["Clarksons Research", "OECD shipbuilding data", "National industry ministries"]
+    },
+    {
+      "id": "arctic-and-alternative-routes",
+      "industry": "shipping",
+      "name": "Arctic and alternative routes",
+      "heat": 42,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Northern Sea Route transits", "Arctic sea ice extent", "Cargo volume on NSR", "Cape of Good Hope diversions"],
+      "primary_sources": ["Rosatom NSR data", "NSIDC", "IMF PortWatch"],
+      "emerging": true
+    },
+    {
+      "id": "shipping-decarbonization-fuels",
+      "industry": "shipping",
+      "name": "Shipping decarbonization fuels",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Alternative fuel ship orders", "Shipping CO2 emissions", "EU ETS shipping allowances", "Methanol and ammonia bunker supply"],
+      "primary_sources": ["IMO", "DNV Alternative Fuels Insight", "European Commission"]
+    },
+    {
+      "id": "direct-to-cell-satellite-service",
+      "industry": "space-and-satellites",
+      "name": "Direct-to-cell satellite service",
+      "heat": 90,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Direct-to-cell satellites launched", "Partner carrier count", "Covered subscribers", "Spectrum licensed MHz"],
+      "primary_sources": ["FCC", "AST SpaceMobile SEC filings", "T-Mobile and Starlink disclosures"],
+      "seed_note": {
+        "text": "TrendForce projects the global direct-to-cell market at about $7.6B in 2026, up roughly 49% year on year. In August 2026 SpaceX's COO said Starlink is positioning to run as a full mobile carrier using exclusive spectrum.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "leo-broadband-constellations",
+      "industry": "space-and-satellites",
+      "name": "LEO broadband constellations",
+      "heat": 88,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Satellites in orbit", "Subscriber count", "Median download speed", "Countries licensed"],
+      "primary_sources": ["FCC filings", "Ookla Speedtest Intelligence", "Jonathan McDowell satellite catalog"],
+      "seed_note": {
+        "text": "Starlink began deploying its first V3 satellites in August 2026, per TrendForce, which also projects the satellite launch market at about $40.4B by 2028.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "golden-dome-and-space-defense",
+      "industry": "space-and-satellites",
+      "name": "Golden Dome and space defense",
+      "heat": 85,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Space Force budget", "Missile defense appropriations", "Contract awards by prime", "Tracking satellites launched"],
+      "primary_sources": ["US Department of Defense budget documents", "Missile Defense Agency", "Congressional Budget Office"],
+      "seed_note": {
+        "text": "Space Force awarded up to $3.2B across 12 firms in April 2026 for space-based interceptor prototypes, and the Space Development Agency added about $1.75B in July 2026 for 36 missile-tracking satellites (L3Harris and Sierra Space). Whole-program cost estimates range very widely.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "spacex-ipo-and-space-capital-markets",
+      "industry": "space-and-satellites",
+      "name": "SpaceX IPO and space capital markets",
+      "heat": 84,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Space company valuations", "Space venture funding", "Space IPO count", "Starlink revenue estimates"],
+      "primary_sources": ["SEC EDGAR", "Space Capital quarterly reports", "PitchBook"],
+      "seed_note": {
+        "text": "TrendForce flagged SpaceX's IPO plans as a major market focus in June 2026. Check the current IPO status before researching.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "launch-and-rocket-reusability",
+      "industry": "space-and-satellites",
+      "name": "Launch and rocket reusability",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Orbital launches per year", "Booster reflights", "Mass to orbit tonnes", "Launch price per kg"],
+      "primary_sources": ["FAA Office of Commercial Space Transportation", "Jonathan McDowell launch logs", "BryceTech"],
+      "seed_note": {
+        "text": "A Falcon 9 booster set a reuse record in July 2026 at 35 flights, then reached 36 on a later mission, per KeepTrack.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "satellite-spectrum-and-regulation",
+      "industry": "space-and-satellites",
+      "name": "Satellite spectrum and regulation",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["ITU filings by operator", "FCC satellite licence grants", "Spectrum auction proceeds", "Interference complaints"],
+      "primary_sources": ["ITU", "FCC Space Bureau", "Ofcom"],
+      "seed_note": {
+        "text": "SpaceX reportedly paid about $17B for EchoStar spectrum in September 2025, per a 2026 satellite phone retailer explainer.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "earth-observation-and-geospatial-intelligence",
+      "industry": "space-and-satellites",
+      "name": "Earth observation and geospatial intelligence",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EO satellites launched", "Government imagery contract value", "EO data revenue", "Imagery resolution and revisit rate"],
+      "primary_sources": ["NGA and NRO contract awards", "Planet Labs SEC filings", "ESA Copernicus"]
+    },
+    {
+      "id": "orbital-data-centers-and-space-computing",
+      "industry": "space-and-satellites",
+      "name": "Orbital data centers and space computing",
+      "heat": 55,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Compute payloads launched", "Funding raised by startups", "Launch cost per kg", "Planned orbital compute MW"],
+      "primary_sources": ["FCC filings", "Starcloud and Axiom disclosures", "ESA ASCEND study"],
+      "emerging": true,
+      "seed_note": {
+        "text": "TrendForce notes Taiwanese suppliers are targeting satellite communications and AI space computing opportunities.",
+        "confidence": "low",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "space-stations-and-in-orbit-servicing",
+      "industry": "space-and-satellites",
+      "name": "Space stations and in-orbit servicing",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["NASA commercial LEO funding", "Crewed missions per year", "Servicing missions completed", "ISS deorbit timeline milestones"],
+      "primary_sources": ["NASA", "Axiom, Vast and Starlab disclosures", "ESA"]
+    },
+    {
+      "id": "space-debris-and-traffic-management",
+      "industry": "space-and-satellites",
+      "name": "Space debris and traffic management",
+      "heat": 45,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Tracked objects in orbit", "Conjunction warnings issued", "Collision avoidance manoeuvres", "Satellites deorbited"],
+      "primary_sources": ["ESA Space Environment Report", "US Space Command Space-Track", "Starlink semiannual FCC reports"]
+    },
+    {
+      "id": "reshoring-and-tariffs",
+      "industry": "supply-chain-and-logistics",
+      "name": "Reshoring and tariffs",
+      "heat": 80,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["US manufacturing construction spending", "Average effective US tariff rate", "Customs duties collected", "Manufacturing employment"],
+      "primary_sources": ["US Census Bureau", "US Treasury Monthly Statement", "Bureau of Labor Statistics"],
+      "seed_note": {
+        "text": "Reshoring Initiative data show 36% of surveyed OEMs reshored or are doing more in 2026, yet private spending on new US plants has fallen since tariffs began. KPMG found 26% of firms formally planning or executing reshoring in February 2026, up from 10% in September 2025.",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "chokepoints-and-single-source-dependencies",
+      "industry": "supply-chain-and-logistics",
+      "name": "Chokepoints and single-source dependencies",
+      "heat": 72,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Suez and Panama Canal transits", "Share of critical minerals refined in China", "Container freight rates", "Rare earth export volumes"],
+      "primary_sources": ["IMF PortWatch", "USGS Mineral Commodity Summaries", "Drewry World Container Index"]
+    },
+    {
+      "id": "supply-chain-visibility-and-ai-planning",
+      "industry": "supply-chain-and-logistics",
+      "name": "Supply chain visibility and AI planning",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Global Supply Chain Pressure Index", "Supplier delivery times", "Inventory to sales ratio", "Planning software revenue"],
+      "primary_sources": ["New York Fed GSCPI", "ISM Manufacturing Report", "US Census Bureau business inventories"]
+    },
+    {
+      "id": "warehouse-automation-and-mobile-robots",
+      "industry": "supply-chain-and-logistics",
+      "name": "Warehouse automation and mobile robots",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Industrial robot installations", "Mobile robot shipments", "Warehouse employment", "Automation order backlog"],
+      "primary_sources": ["International Federation of Robotics", "Bureau of Labor Statistics", "Symbotic and Ocado filings"]
+    },
+    {
+      "id": "trade-compliance-customs-and-sanctions-evasion",
+      "industry": "supply-chain-and-logistics",
+      "name": "Trade compliance, customs and sanctions evasion",
+      "heat": 64,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["OFAC enforcement penalties", "Exports to Russia's neighbours", "CBP seizures and detentions", "Entity List additions"],
+      "primary_sources": ["US Treasury OFAC", "US Customs and Border Protection", "UN Comtrade"]
+    },
+    {
+      "id": "nearshoring-and-mexico",
+      "industry": "supply-chain-and-logistics",
+      "name": "Nearshoring and Mexico",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["US imports from Mexico", "Mexico FDI inflows", "Industrial park vacancy rate", "Mexico manufacturing exports"],
+      "primary_sources": ["INEGI", "Secretaria de Economia", "US Census Bureau trade data"],
+      "seed_note": {
+        "text": "Kearney's 2026 Reshoring Index says Mexico stayed central to US-facing regional supply chains through 2025.",
+        "confidence": "medium",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "cross-border-e-commerce-and-air-cargo",
+      "industry": "supply-chain-and-logistics",
+      "name": "Cross-border e-commerce and air cargo",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Air cargo tonne-km", "De minimis shipment volumes", "Transpacific air freight rate", "Temu and Shein order volumes"],
+      "primary_sources": ["IATA", "US Customs and Border Protection", "TAC Index"]
+    },
+    {
+      "id": "freight-brokerage-and-the-trucking-cycle",
+      "industry": "supply-chain-and-logistics",
+      "name": "Freight brokerage and the trucking cycle",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Spot versus contract rate per mile", "Cass Freight Index shipments", "Truckload tender rejection rate", "Carrier authority revocations"],
+      "primary_sources": ["Cass Information Systems", "DAT Freight and Analytics", "FMCSA"]
+    },
+    {
+      "id": "india-logistics-corridors",
+      "industry": "supply-chain-and-logistics",
+      "name": "India logistics corridors",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Dedicated freight corridor traffic", "Railway freight loading tonnes", "Major port cargo throughput", "Logistics cost share of GDP"],
+      "primary_sources": ["Ministry of Railways", "Ministry of Ports, Shipping and Waterways", "DFCCIL"],
+      "region": "India"
+    },
+    {
+      "id": "port-automation-and-congestion",
+      "industry": "supply-chain-and-logistics",
+      "name": "Port automation and congestion",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Container throughput TEU", "Vessels waiting at anchor", "Average berth wait time", "Schedule reliability"],
+      "primary_sources": ["World Bank Container Port Performance Index", "Sea-Intelligence", "Port of Los Angeles and Long Beach statistics"]
+    },
+    {
+      "id": "supply-chain-finance",
+      "industry": "supply-chain-and-logistics",
+      "name": "Supply chain finance",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Supplier finance programme size", "Days payable outstanding", "Trade finance gap", "Receivables financing volumes"],
+      "primary_sources": ["FASB supplier finance disclosures in SEC filings", "ICC Trade Register", "Asian Development Bank"]
+    },
+    {
+      "id": "cold-chain-and-pharma-logistics",
+      "industry": "supply-chain-and-logistics",
+      "name": "Cold chain and pharma logistics",
+      "heat": 45,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Cold storage capacity", "Temperature controlled air cargo volume", "Biologics share of pharma sales", "Cold storage vacancy rate"],
+      "primary_sources": ["Global Cold Chain Alliance", "IATA CEIV Pharma", "Americold and Lineage filings"]
+    },
+    {
+      "id": "india-telecom-jio-airtel-vi",
+      "industry": "telecom-and-connectivity",
+      "name": "India telecom (Jio, Airtel, Vi)",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Wireless subscribers by operator", "ARPU", "5G subscriber base", "Data usage per subscriber"],
+      "primary_sources": ["TRAI", "Reliance Jio and Bharti Airtel filings", "Department of Telecommunications"],
+      "region": "India"
+    },
+    {
+      "id": "spectrum-auctions-and-reallocation",
+      "industry": "telecom-and-connectivity",
+      "name": "Spectrum auctions and reallocation",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Auction proceeds", "Price per MHz pop", "Spectrum holdings by operator", "Unsold spectrum share"],
+      "primary_sources": ["FCC", "Department of Telecommunications India", "Ofcom"]
+    },
+    {
+      "id": "fiber-and-broadband-subsidies",
+      "industry": "telecom-and-connectivity",
+      "name": "Fiber and broadband subsidies",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Fiber homes passed", "BEAD funds allocated", "Broadband households served", "Average broadband price"],
+      "primary_sources": ["NTIA", "FCC Broadband Data Collection", "Fiber Broadband Association"]
+    },
+    {
+      "id": "open-ran-and-network-equipment",
+      "industry": "telecom-and-connectivity",
+      "name": "Open RAN and network equipment",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["RAN equipment revenue", "Open RAN share of RAN market", "Vendor market share", "Operator capex"],
+      "primary_sources": ["Dell'Oro Group", "Ericsson and Nokia reports", "NTIA Wireless Innovation Fund"]
+    },
+    {
+      "id": "private-5g-for-enterprise",
+      "industry": "telecom-and-connectivity",
+      "name": "Private 5G for enterprise",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Private network deployments", "CBRS devices registered", "Private 5G revenue", "Deployments by industry"],
+      "primary_sources": ["GSA", "FCC CBRS data", "Ericsson Mobility Report"]
+    },
+    {
+      "id": "6g-research-and-standards",
+      "industry": "telecom-and-connectivity",
+      "name": "6G research and standards",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["6G patent filings", "Government 6G funding", "3GPP study items completed", "Standard essential patent share"],
+      "primary_sources": ["3GPP", "ITU-R IMT-2030", "WIPO and ETSI IPR database"]
+    },
+    {
+      "id": "tower-companies",
+      "industry": "telecom-and-connectivity",
+      "name": "Tower companies",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Tenancy ratio", "Site count", "Adjusted funds from operations", "Churn from carrier consolidation"],
+      "primary_sources": ["American Tower and Crown Castle filings", "Indus Towers filings", "SEC EDGAR"]
+    },
+    {
+      "id": "tariff-legal-fights-and-trade-deals",
+      "industry": "trade-and-policy",
+      "name": "Tariff legal fights and trade deals",
+      "heat": 78,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Average effective tariff rate", "Customs duty collections", "Import volumes by partner", "Trade deals signed"],
+      "primary_sources": ["US Customs and Border Protection", "US Census Bureau trade data", "WTO"],
+      "seed_note": {
+        "text": "Manufacturing Dive reports a Supreme Court ruling struck down many of the original tariffs, while KPMG's March 2026 survey found 55% of US firms planned further price increases.",
+        "confidence": "high",
+        "researched": "2026-10-14"
+      }
+    },
+    {
+      "id": "sanctions-and-export-control-regimes",
+      "industry": "trade-and-policy",
+      "name": "Sanctions and export control regimes",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Entities on sanctions lists", "Entity List additions", "Enforcement penalties", "Trade with sanctioned countries"],
+      "primary_sources": ["US Treasury OFAC", "Commerce Department BIS", "EU Council sanctions map"]
+    },
+    {
+      "id": "india-us-trade-and-tech-ties",
+      "industry": "trade-and-policy",
+      "name": "India-US trade and tech ties",
+      "heat": 66,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Bilateral goods trade", "India services exports to US", "US FDI into India", "Electronics exports to US"],
+      "primary_sources": ["India Ministry of Commerce", "US Census Bureau", "DPIIT"],
+      "region": "India"
+    },
+    {
+      "id": "industrial-policy-and-subsidies",
+      "industry": "trade-and-policy",
+      "name": "Industrial policy and subsidies",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Subsidy commitments", "Manufacturing construction spending", "Announced factory investments", "PLI disbursements"],
+      "primary_sources": ["US Census Bureau construction data", "European Commission state aid", "OECD"]
+    },
+    {
+      "id": "gulf-economic-diversification",
+      "industry": "trade-and-policy",
+      "name": "Gulf economic diversification",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Non-oil GDP growth", "Non-oil revenue share", "FDI inflows", "Tourist arrivals"],
+      "primary_sources": ["Saudi GASTAT", "UAE Federal Competitiveness and Statistics Centre", "IMF"],
+      "region": "Gulf"
+    },
+    {
+      "id": "digital-public-infrastructure",
+      "industry": "trade-and-policy",
+      "name": "Digital public infrastructure",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Digital ID enrolments", "Real-time payment transactions", "DigiLocker documents issued", "Countries adopting DPI"],
+      "primary_sources": ["UIDAI", "NPCI", "World Bank ID4D"],
+      "region": "India"
+    },
+    {
+      "id": "emerging-market-debt-stress",
+      "industry": "trade-and-policy",
+      "name": "Emerging market debt stress",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EM sovereign bond spreads", "External debt to GDP", "Countries in debt distress", "Debt service to exports"],
+      "primary_sources": ["IMF", "World Bank International Debt Statistics", "JP Morgan EMBI"]
+    },
+    {
+      "id": "critical-infrastructure-ownership-ports-cables",
+      "industry": "trade-and-policy",
+      "name": "Critical infrastructure ownership (ports, cables)",
+      "heat": 54,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Ports with foreign ownership stakes", "Subsea cable miles laid", "Cable fault incidents", "Container throughput"],
+      "primary_sources": ["TeleGeography", "UNCTAD", "Port authority annual reports"]
+    },
+    {
+      "id": "de-dollarization-and-local-currency-trade",
+      "industry": "trade-and-policy",
+      "name": "De-dollarization and local currency trade",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Dollar share of FX reserves", "Dollar share of SWIFT payments", "Central bank gold purchases", "Local currency trade settlement"],
+      "primary_sources": ["IMF COFER", "SWIFT RMB Tracker", "World Gold Council"]
+    },
+    {
+      "id": "migration-and-labor-mobility-policy",
+      "industry": "trade-and-policy",
+      "name": "Migration and labor mobility policy",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Net migration", "Work visas issued", "Foreign-born labor force share", "Asylum applications"],
+      "primary_sources": ["UN DESA", "OECD International Migration Outlook", "UK ONS"]
+    },
+    {
+      "id": "central-bank-digital-currencies",
+      "industry": "trade-and-policy",
+      "name": "Central bank digital currencies",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["CBDC in circulation", "Countries in pilot stage", "CBDC transaction count", "Wallets opened"],
+      "primary_sources": ["BIS", "RBI", "Atlantic Council CBDC Tracker"]
+    },
+    {
+      "id": "data-center-water-use",
+      "industry": "water-and-environment",
+      "name": "Data center water use",
+      "heat": 60,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Water withdrawal by operator", "Water usage effectiveness", "Data center capacity in MW", "Water stressed site share"],
+      "primary_sources": ["Google, Microsoft and Meta sustainability reports", "Lawrence Berkeley National Laboratory", "World Resources Institute Aqueduct"]
+    },
+    {
+      "id": "water-scarcity-and-desalination",
+      "industry": "water-and-environment",
+      "name": "Water scarcity and desalination",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Desalination capacity", "Water stress index", "Cost per cubic metre", "Reservoir levels"],
+      "primary_sources": ["FAO AQUASTAT", "International Desalination Association", "World Resources Institute"]
+    },
+    {
+      "id": "heat-and-extreme-weather-resilience",
+      "industry": "water-and-environment",
+      "name": "Heat and extreme weather resilience",
+      "heat": 52,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Billion dollar disasters", "Heat related deaths", "Insured losses", "Days above 35C"],
+      "primary_sources": ["NOAA", "Copernicus Climate Change Service", "Swiss Re Institute"]
+    },
+    {
+      "id": "wildfire-and-climate-adaptation-tech",
+      "industry": "water-and-environment",
+      "name": "Wildfire and climate adaptation tech",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Area burned", "Wildfire suppression spending", "Adaptation tech funding", "Insured wildfire losses"],
+      "primary_sources": ["National Interagency Fire Center", "Copernicus EFFIS", "PitchBook"]
+    },
+    {
+      "id": "carbon-markets-and-removal",
+      "industry": "water-and-environment",
+      "name": "Carbon markets and removal",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EU ETS carbon price", "Voluntary credits retired", "CDR tonnes purchased", "Credit prices"],
+      "primary_sources": ["European Commission EU ETS data", "Verra Registry", "CDR.fyi"]
+    },
+    {
+      "id": "pfas-and-chemical-regulation",
+      "industry": "water-and-environment",
+      "name": "PFAS and chemical regulation",
+      "heat": 46,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Contaminated sites identified", "Water systems over limits", "Litigation settlements", "Regulatory actions"],
+      "primary_sources": ["US EPA", "European Chemicals Agency", "3M and Chemours filings"]
+    },
+    {
+      "id": "water-utilities-and-infrastructure",
+      "industry": "water-and-environment",
+      "name": "Water utilities and infrastructure",
+      "heat": 44,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Water utility capex", "Leakage rates", "Average water bill", "Pipe replacement rate"],
+      "primary_sources": ["US EPA", "Ofwat", "American Water Works Association"]
+    },
+    {
+      "id": "waste-recycling-and-circular-economy",
+      "industry": "water-and-environment",
+      "name": "Waste, recycling and circular economy",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Recycling rate", "Municipal waste generated", "Recycled plastic price", "Landfill volumes"],
+      "primary_sources": ["US EPA", "Eurostat", "OECD"]
+    },
+    {
+      "id": "biodiversity-credits",
+      "industry": "water-and-environment",
+      "name": "Biodiversity credits",
+      "heat": 30,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Credits issued", "Credit prices", "Hectares under schemes", "Buyer commitments"],
+      "primary_sources": ["UK Natural England", "Verra", "Pollination Group"],
+      "emerging": true
+    },
+    {
+      "id": "entry-level-jobs-and-ai",
+      "industry": "workforce-and-education",
+      "name": "Entry-level jobs and AI",
+      "heat": 76,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Recent graduate unemployment rate", "Entry-level job postings", "Underemployment rate", "Hiring rate for under 25s"],
+      "primary_sources": ["New York Fed", "US Bureau of Labor Statistics", "Indeed Hiring Lab"]
+    },
+    {
+      "id": "india-it-services-under-ai-pressure",
+      "industry": "workforce-and-education",
+      "name": "India IT services under AI pressure",
+      "heat": 74,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Revenue growth in constant currency", "Headcount", "Deal TCV", "Attrition rate"],
+      "primary_sources": ["TCS and Infosys filings", "NASSCOM", "NSE and BSE disclosures"],
+      "region": "India"
+    },
+    {
+      "id": "global-talent-visas-and-immigration",
+      "industry": "workforce-and-education",
+      "name": "Global talent visas and immigration",
+      "heat": 62,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["H-1B registrations", "Skilled worker visas granted", "International student enrolment", "Green card backlog"],
+      "primary_sources": ["USCIS", "UK Home Office", "IIE Open Doors"]
+    },
+    {
+      "id": "ai-recruiting-and-hiring-tools",
+      "industry": "workforce-and-education",
+      "name": "AI recruiting and hiring tools",
+      "heat": 58,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Applications per job opening", "Time to hire", "HR tech funding", "AI tool adoption by employers"],
+      "primary_sources": ["LinkedIn Economic Graph", "SHRM", "Workday filings"]
+    },
+    {
+      "id": "edtech-and-ai-tutors",
+      "industry": "workforce-and-education",
+      "name": "EdTech and AI tutors",
+      "heat": 56,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["EdTech VC funding", "Paid subscribers", "Student AI tool usage", "Revenue growth"],
+      "primary_sources": ["HolonIQ", "Duolingo and Chegg filings", "Pew Research Center"]
+    },
+    {
+      "id": "vocational-training-and-trades",
+      "industry": "workforce-and-education",
+      "name": "Vocational training and trades",
+      "heat": 50,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Apprenticeship starts", "Trade school enrolment", "Skilled trades job openings", "Wage growth in trades"],
+      "primary_sources": ["US Department of Labor", "National Student Clearinghouse", "UK Department for Education"]
+    },
+    {
+      "id": "gig-work-and-platform-labor-rules",
+      "industry": "workforce-and-education",
+      "name": "Gig work and platform labor rules",
+      "heat": 48,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Gig workforce size", "Platform driver earnings", "Gross bookings", "Gig workers covered by social security"],
+      "primary_sources": ["Uber and DoorDash filings", "US Bureau of Labor Statistics", "NITI Aayog"]
+    },
+    {
+      "id": "online-degrees-and-credentials",
+      "industry": "workforce-and-education",
+      "name": "Online degrees and credentials",
+      "heat": 40,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Online enrolment", "Registered learners", "Degree program revenue", "Distance education share"],
+      "primary_sources": ["Coursera filings", "NCES IPEDS", "UGC India"]
+    },
+    {
+      "id": "freelance-marketplaces",
+      "industry": "workforce-and-education",
+      "name": "Freelance marketplaces",
+      "heat": 38,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Gross services volume", "Active clients", "Take rate", "Freelance earnings"],
+      "primary_sources": ["Upwork and Fiverr filings", "Online Labour Index", "US Bureau of Labor Statistics"]
+    },
+    {
+      "id": "remote-work-and-return-to-office",
+      "industry": "workforce-and-education",
+      "name": "Remote work and return to office",
+      "heat": 36,
+      "heat_updated": null,
+      "top_headlines": [],
+      "key_metrics": ["Office occupancy rate", "Share of paid days worked from home", "Office vacancy rate", "Remote job postings share"],
+      "primary_sources": ["Kastle Systems", "WFH Research", "CBRE"]
     }
   ],
   "lenses": [
-    { "name": "Concealment", "description": "What is not being disclosed, who benefits from the opacity, and what the filings leave out." },
-    { "name": "Market", "description": "Price, volume and share: who is winning, who is losing, and what the market is pricing in." },
-    { "name": "Choke point", "description": "Where one supplier, route, licence or rule can stop the whole system." },
-    { "name": "Who pays", "description": "Where the cost finally lands: consumers, taxpayers, workers, a region or a balance sheet." },
-    { "name": "Regulatory", "description": "The rule, regulator or court that changes the economics, and who lobbied for it." }
+    {
+      "name": "Concealment",
+      "description": "What is not being disclosed, who benefits from the opacity, and what the filings leave out."
+    },
+    {
+      "name": "Market",
+      "description": "Price, volume and share: who is winning, who is losing, and what the market is pricing in."
+    },
+    {
+      "name": "Choke point",
+      "description": "Where one supplier, route, licence or rule can stop the whole system."
+    },
+    {
+      "name": "Who pays",
+      "description": "Where the cost finally lands: consumers, taxpayers, workers, a region or a balance sheet."
+    },
+    {
+      "name": "Regulatory",
+      "description": "The rule, regulator or court that changes the economics, and who lobbied for it."
+    }
   ],
   "freshness": [
-    { "name": "Breaking", "days": 7, "window": "last 7 days" },
-    { "name": "Developing", "days": 90, "window": "last 90 days" },
-    { "name": "Evergreen", "days": null, "window": "no news window" }
+    {
+      "name": "Breaking",
+      "days": 7,
+      "window": "last 7 days"
+    },
+    {
+      "name": "Developing",
+      "days": 90,
+      "window": "last 90 days"
+    },
+    {
+      "name": "Evergreen",
+      "days": null,
+      "window": "no news window"
+    }
   ]
 }

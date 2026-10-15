@@ -89,6 +89,12 @@ export const DRAW_RULES = {
    * without a number; this is the number.
    */
   heatExempt: 85,
+  /**
+   * A heat exemption still waits this long after the segment's last spin, so a
+   * hot segment comes back now and then instead of on every spin once the rest
+   * of the pool is blocked.
+   */
+  heatExemptCooldownDays: 7,
   primaryBlockDays: 30,
   comboBlockDays: 90,
   heatStaleDays: 7,
@@ -163,6 +169,51 @@ function recent(ctx: Ctx, days: number, field: 'primary' | 'combo'): Set<string>
   return new Set(ctx.kept.filter((e) => ctx.within(e, days)).map((e) => e[field]))
 }
 
+/** When each primary value was last spun (kept spins only). */
+function lastSpun(ctx: Ctx): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const e of ctx.kept) out.set(e.primary, Date.parse(e.createdAt))
+  return out
+}
+
+/**
+ * The 30-day primary block, shared by the heat-weighted desks. A value spun in
+ * the last 30 days is left out unless its heat is at or above `heatExempt` AND
+ * its last spin is at least `heatExemptCooldownDays` old. When that leaves
+ * nothing, the block lifts to the values spun longest ago, never to the whole
+ * pool, so the draw keeps rotating instead of settling on a few hot values.
+ */
+function eligible<T>(
+  ctx: Ctx,
+  pool: readonly T[],
+  opts: { id: (x: T) => string; name: (x: T) => string; heat: (x: T) => number; the?: string; heatLabel: string; everyText: string },
+): T[] {
+  const last = lastSpun(ctx)
+  const ago = (x: T) => {
+    const t = last.get(opts.id(x))
+    return t === undefined ? Infinity : ctx.now - t
+  }
+  const blocked = pool.filter((x) => ago(x) < DRAW_RULES.primaryBlockDays * DAY)
+  const exempt = blocked.filter((x) => opts.heat(x) >= DRAW_RULES.heatExempt && ago(x) >= DRAW_RULES.heatExemptCooldownDays * DAY)
+  const left = blocked.filter((x) => !exempt.includes(x))
+  const the = opts.the ?? ''
+  let cands = pool.filter((x) => !left.includes(x))
+  if (left.length) rule(ctx, '30 days', 'block', `Left out ${the}${list(left.map(opts.name))}: spun in the last 30 days.`)
+  if (exempt.length) {
+    const cap = (the + list(exempt.map(opts.name))).replace(/^./, (c) => c.toUpperCase())
+    rule(ctx, '30 days', 'warn', `${cap} allowed back in despite a recent spin: ${opts.heatLabel} ${DRAW_RULES.heatExempt} or above forces it.`)
+  }
+  if (!cands.length && pool.length) {
+    // Lift the block to the oldest third of the pool (at least one value).
+    const byAge = [...pool].sort((a, b) => ago(b) - ago(a))
+    const keep = Math.max(1, Math.ceil(pool.length / 3))
+    const cutoff = ago(byAge[keep - 1]!)
+    cands = byAge.filter((x) => ago(x) >= cutoff)
+    rule(ctx, '30 days', 'warn', `${opts.everyText} The block is lifted for the ${cands.length} spun longest ago: ${the}${list(cands.map(opts.name))}.`)
+  }
+  return cands
+}
+
 function list(names: string[]): string {
   if (names.length <= 1) return names.join('')
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
@@ -218,19 +269,13 @@ function drawDesk(ctx: Ctx, data: DeskDataset, prev: DeskPicks | undefined, heat
     sub = prevSub
     rule(ctx, 'lock', 'info', `Sub-industry locked to ${sub.name}.`)
   } else {
-    const r30 = recent(ctx, DRAW_RULES.primaryBlockDays, 'primary')
-    const blocked = pool.filter((s) => r30.has(s.id))
-    const exempt = blocked.filter((s) => heatOf(s) >= DRAW_RULES.heatExempt)
-    const left = blocked.filter((s) => heatOf(s) < DRAW_RULES.heatExempt)
-    let cands = pool.filter((s) => !r30.has(s.id) || heatOf(s) >= DRAW_RULES.heatExempt)
-    if (left.length) rule(ctx, '30 days', 'block', `Left out ${list(left.map((s) => s.name))}: spun in the last 30 days.`)
-    if (exempt.length) {
-      rule(ctx, '30 days', 'warn', `${list(exempt.map((s) => s.name))} allowed back in despite a recent spin: heat ${DRAW_RULES.heatExempt} or above forces it.`)
-    }
-    if (!cands.length) {
-      cands = pool
-      rule(ctx, '30 days', 'warn', 'Every eligible segment was spun in the last 30 days, so the block is lifted for this draw.')
-    }
+    const cands = eligible(ctx, pool, {
+      id: (s) => s.id,
+      name: (s) => s.name,
+      heat: heatOf,
+      heatLabel: 'heat',
+      everyText: 'Every eligible segment was spun in the last 30 days.',
+    })
     if (rng() < DRAW_RULES.heatShare) {
       sub = weighted(cands, heatOf, rng)
       const total = cands.reduce((a, s) => a + heatOf(s), 0)
@@ -244,7 +289,16 @@ function drawDesk(ctx: Ctx, data: DeskDataset, prev: DeskPicks | undefined, heat
 
   const lensByName = (name: string) => data.lenses.find((l) => l.name === name)
   const freshByName = (name: string) => data.freshness.find((f) => f.name === name)
-  let lens = (ctx.locked('lens') && prev && lensByName(prev.lens)) || pick(data.lenses, rng)
+  // Prefer a lens this segment has not had in the last 90 days, whatever the freshness.
+  const usedLenses = new Set(
+    [...recent(ctx, DRAW_RULES.comboBlockDays, 'combo')].filter((c) => c.startsWith(`${sub.id}|`)).map((c) => c.split('|')[1]),
+  )
+  const freshLenses = data.lenses.filter((l) => !usedLenses.has(l.name))
+  const lensPool = freshLenses.length ? freshLenses : data.lenses
+  let lens = (ctx.locked('lens') && prev && lensByName(prev.lens)) || pick(lensPool, rng)
+  if (!ctx.locked('lens') && usedLenses.size && freshLenses.length) {
+    rule(ctx, '90 days', 'info', `${sub.name} already had the ${list([...usedLenses])} lens in the last 90 days, so the lens was drawn from the others.`)
+  }
   let freshDrawn = (ctx.locked('fresh') && prev && freshByName(prev.freshDrawn)) || pick(data.freshness, rng)
 
   // Staleness and the freshness fallback.
@@ -274,7 +328,7 @@ function drawDesk(ctx: Ctx, data: DeskDataset, prev: DeskPicks | undefined, heat
     let tries = 0
     while (r90.has(combo()) && tries < 16) {
       tries++
-      if (!ctx.locked('lens')) lens = pick(data.lenses, rng)
+      if (!ctx.locked('lens')) lens = pick(lensPool, rng)
       else if (!ctx.locked('fresh')) {
         freshDrawn = pick(data.freshness, rng)
         fresh = resolve(freshDrawn)
@@ -650,18 +704,13 @@ function drawFootshorts(
     team = prevTeam
     rule(ctx, 'lock', 'info', `Team locked to ${team.name}.`)
   } else {
-    const r30 = recent(ctx, DRAW_RULES.primaryBlockDays, 'primary')
-    const left = inComp.filter((t) => r30.has(t.slug) && t.heat < DRAW_RULES.heatExempt)
-    const exempt = inComp.filter((t) => r30.has(t.slug) && t.heat >= DRAW_RULES.heatExempt)
-    let cands = inComp.filter((t) => !left.includes(t))
-    if (left.length) rule(ctx, '30 days', 'block', `Left out ${list(left.map((t) => t.name))}: spun in the last 30 days.`)
-    if (exempt.length) {
-      rule(ctx, '30 days', 'warn', `${list(exempt.map((t) => t.name))} allowed back in despite a recent spin: news heat ${DRAW_RULES.heatExempt} or above forces it.`)
-    }
-    if (!cands.length) {
-      cands = inComp
-      rule(ctx, '30 days', 'warn', `Every ${competition.name} team was spun in the last 30 days, so the block is lifted for this draw.`)
-    }
+    const cands = eligible(ctx, inComp, {
+      id: (t) => t.slug,
+      name: (t) => t.name,
+      heat: (t) => t.heat,
+      heatLabel: 'news heat',
+      everyText: `Every ${competition.name} team was spun in the last 30 days.`,
+    })
     if (heatBranch) {
       team = weighted(cands, (t) => t.heat + 1, rng)
       const total = cands.reduce((a, t) => a + t.heat + 1, 0)
@@ -868,18 +917,14 @@ function drawViznba(
     team = prevTeam
     rule(ctx, 'lock', 'info', `Team locked to the ${team.name}.`)
   } else {
-    const r30 = recent(ctx, DRAW_RULES.primaryBlockDays, 'primary')
-    const left = inConf.filter((t) => r30.has(t.id) && t.heat < DRAW_RULES.heatExempt)
-    const exempt = inConf.filter((t) => r30.has(t.id) && t.heat >= DRAW_RULES.heatExempt)
-    let cands = inConf.filter((t) => !left.includes(t))
-    if (left.length) rule(ctx, '30 days', 'block', `Left out the ${list(left.map((t) => t.name))}: spun in the last 30 days.`)
-    if (exempt.length) {
-      rule(ctx, '30 days', 'warn', `The ${list(exempt.map((t) => t.name))} allowed back in despite a recent spin: news heat ${DRAW_RULES.heatExempt} or above forces it.`)
-    }
-    if (!cands.length) {
-      cands = inConf
-      rule(ctx, '30 days', 'warn', `Every ${conference.name} franchise was spun in the last 30 days, so the block is lifted for this draw.`)
-    }
+    const cands = eligible(ctx, inConf, {
+      id: (t) => t.id,
+      name: (t) => t.name,
+      heat: (t) => t.heat,
+      the: 'the ',
+      heatLabel: 'news heat',
+      everyText: `Every ${conference.name} franchise was spun in the last 30 days.`,
+    })
     if (heatBranch) {
       team = weighted(cands, (t) => t.heat + 1, rng)
       const total = cands.reduce((a, t) => a + t.heat + 1, 0)

@@ -169,7 +169,7 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(b.includes('Byline "footshorts desk"'))
   assert.ok(!b.includes('saves a draft'), 'the Football Desk has no gate')
 }
-// Maps: Mapbox scrollytelling only with a public token; MapLibre otherwise.
+// Maps: Mapbox scrollytelling only with a public token; Leaflet + OpenStreetMap otherwise.
 const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
 for (const app of ['vizmaya-fyi', 'footshorts'] as const) {
   const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', app, mapboxToken: pk })
@@ -184,7 +184,7 @@ for (const mapboxToken of [null, '', 'sk.secret-token', 'not-a-token']) {
   const m = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', mapboxToken })
   assert.ok(!m.includes('## Maps'), `no maps for ${mapboxToken}`)
   assert.ok(!m.includes('sk.secret-token'))
-  assert.ok(m.includes("Don't use Mapbox") && m.includes('MapLibre GL'))
+  assert.ok(m.includes("Don't use Mapbox") && m.includes('Leaflet') && m.includes('tile.openstreetmap.org'))
 }
 
 // No spin: none of it.
@@ -229,6 +229,31 @@ assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).inc
 }
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'deck' }).includes('One idea per slide.'))
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'board' }).includes('data-pin-to'))
+
+// Travel's board: a day on a corkboard, strung to the day's map (a chart, with a
+// Mapbox Static Images picture under it given a token), its own example.
+{
+  const tb = htmlStoryBrief({ app: 'travel', siteUrl: 'https://protrip-git-x.vercel.app', format: 'board', mapboxToken: pk })
+  assert.ok(tb.includes('## Story format: a pinned board') && tb.includes("a traveller's corkboard"))
+  assert.ok(tb.includes('https://protrip.vismay.xyz/formats/board@1.css') && tb.includes('https://protrip.vismay.xyz/formats/board@1.js'))
+  assert.ok(tb.includes('<meta name="travel:trip"'))
+  assert.ok(tb.includes('data-pin-to="map:<n>"') && tb.includes('Story.charts.route') && tb.includes('data-target-sm'))
+  assert.ok(tb.includes('api.mapbox.com/styles/v1/mapbox/light-v11/static/') && tb.includes(`window.MAPBOX_ACCESS_TOKEN || '${pk}'`))
+  assert.ok(!tb.includes('mapboxgl') && !tb.includes('## Maps') && !tb.includes('## Motion and scroll animation'))
+  assert.ok(tb.includes("The day's map is a chart on the board's paper sheet"))
+  assert.ok(tb.includes('new-york-2026-day-3-board') && tb.includes('apps/travel/web/content/html-stories/new-york-2026-day-3-board.html'))
+  assert.ok(tb.includes('https://protrip.vismay.xyz/formats/examples/odyssey-board.html'))
+  assert.ok(tb.includes('a stop card without a string'))
+  assert.ok(!/\\`/.test(tb), 'no double-escaped backticks')
+  // No token: no static picture, the schematic is the map; never a secret token.
+  for (const mapboxToken of [null, 'sk.secret-token']) {
+    const nt = htmlStoryBrief({ app: 'travel', siteUrl: 'https://protrip.vismay.xyz', format: 'board', mapboxToken })
+    assert.ok(nt.includes('**No live map.**') && !nt.includes('static/<lng>') && !nt.includes('sk.secret-token'))
+  }
+  // Other sites' boards and travel's other formats are unchanged.
+  assert.ok(!htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'board', mapboxToken: pk }).includes('corkboard'))
+  assert.ok(!htmlStoryBrief({ app: 'travel', siteUrl: 'https://protrip.vismay.xyz', format: 'deck' }).includes('corkboard'))
+}
 // footshorts runtimes come from footshorts.com.
 const fsBook = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', format: 'book' })
 assert.ok(fsBook.includes('https://footshorts.com/formats/book@1.js') && !fsBook.includes('vizmaya.fyi'))

@@ -20,6 +20,7 @@
     "travel:sync-media-db": "tsx scripts/travel/sync-media-db.ts",
     "travel:sync-trip-db": "tsx scripts/travel/sync-trip-db.ts",
     "travel:sync-story-db": "tsx scripts/travel/sync-story-db.ts",
+    "travel:sync-html-story": "tsx scripts/travel/sync-html-story.ts",
     "travel:set-password": "tsx scripts/travel/set-trip-password.ts"
   },
   "pnpm": {

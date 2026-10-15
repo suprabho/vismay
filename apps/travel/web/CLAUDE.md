@@ -14,6 +14,11 @@ from ONE content source:
   `<trip>-day-<n>` + `trip:` frontmatter naming the owning trip (gate,
   itinerary, and media are keyed on the trip slug).
 
+- **HTML stories** — `/s/<slug>` — agent-authored, self-contained HTML pages
+  (packages/html-stories, `app_slug = 'travel'`), each private to one trip.
+  When a trip has one, the journey page's "Read the story" opens it (the
+  scrapbook stays linked beside it). See "HTML stories" below.
+
 Plus the admin surfaces (gated by `travel_admin` cookie, ADMIN_PASSWORD):
 
 - **`/curate`** — THE media surface: browse everything for a trip, fix
@@ -80,6 +85,56 @@ in `verticals/travel-viz`. Gotchas:
 - Bad layer configs vanish silently — check the browser console for zod
   errors and the `[scrapbook] injected layers` audit line.
 
+## HTML stories
+
+The same pipeline as vizmaya.fyi/footshorts/vizf1/viznba (an agent reads the
+brief, writes one finished HTML page, posts it; documented in
+[apps/vizmaya-fyi/CLAUDE.md](../../vizmaya-fyi/CLAUDE.md)), with travel's one
+rule: **every page names its trip** — `<meta name="travel:trip"
+content="<trip slug>">` — and its slug starts with the trip's
+(`<trip>-day-3`). `lintHtml(html, { app: 'travel', slug })` refuses anything
+else, at the publish API, in admin and in the seed script.
+
+- **Serving:** `app/s/[slug]/route.ts` → `lib/htmlStories.ts`
+  (`getTripHtmlStory`: the `html_stories` row first — a draft or archived row
+  hides the story — else the git copy `content/html-stories/<slug>.html`),
+  then `isTripAuthed(trip)` from `lib/gate.ts`: no cookie → 307 to
+  `/t/<trip>/login?next=/s/<slug>` (the login page returns there via
+  `safeReturnPath`). Served by the shared `htmlStoryResponse` with
+  `{ private: true }`: Trips chrome (compass mark, links back to the trip's
+  journey map and scrapbook), the sandbox CSP, `cache-control: private,
+  no-store` and `x-robots-tag: noindex`. NEVER route a travel story through
+  the public `serveHtmlStory` — its CDN caching would leak the page past the
+  gate.
+- **Listing:** no public listing (`/api/html-stories` is POST-only here). The
+  journey page links the trip's stories via `listTripHtmlStories(trip)`.
+- **Publish / brief / assets / formats:** `POST /api/html-stories`
+  (`Authorization: Bearer $HTML_STORIES_TOKEN`), `GET /api/html-stories/brief`
+  (`?trip=<slug>&day=<n>&prompt=…` with the token appends the trip context:
+  the itinerary + curated photo URLs, read through `readTripWithMedia`, so the
+  git fallbacks apply), `/api/html-stories/assets`, `/formats/*`.
+- **Admin:** `/travel/html-stories` at vismay.xyz (paste, preview in the Trips
+  chrome, publish, history; **Add trip** in the brief generator).
+- **Photos** are the trip's own, linked by their public story-assets URLs
+  (`<NEXT_PUBLIC_SUPABASE_URL>/storage/v1/object/public/story-assets/<trip>/<file>`).
+- **The NYC day-3 story** is one: `content/html-stories/new-york-2026-day-3.html`,
+  the HTML version of the `new-york-2026` scrapbook (same prose, curated
+  photos, a Mapbox sticky-map walk through the twelve stops). Edit it there,
+  then `pnpm travel:sync-html-story --slug new-york-2026-day-3 --force` (or
+  re-post it through the publish API) once the row exists.
+- **The NYC day-3 board** is the same day as a pinned board (story format
+  `board`): `content/html-stories/new-york-2026-day-3-board.html`. A corkboard
+  with the day's map as its spine (an SVG chart that projects the stops, with
+  a Mapbox Static Images picture under it when the site injects a token, a
+  hand-drawn shoreline otherwise), each stop an index card strung to its stop
+  (`data-pin-to="map:<n>"`) with its prints taped around it, and a tour that
+  walks the day and grows the route as it goes (`data-stop`/`data-upto` on the
+  steps). It is also the travel brief's board example
+  (`GET /api/html-stories/brief?format=board`; `TRAVEL_BOARD_EXAMPLE` in
+  packages/html-stories/src/formatBrief.ts): private trip content, so it is
+  never copied under `/formats/examples/`. Seed it with
+  `pnpm travel:sync-html-story --slug new-york-2026-day-3-board`.
+
 ## Data flow
 
 ```
@@ -109,6 +164,11 @@ photos ──▶ vizmaya-data/travel-media/<slug>/incoming/
   story md + config into the shared `stories` table (`app_slug='travel'`).
   Insert-only by default; `--force` OVERWRITES admin canvas edits with the
   git files — say so before using it.
+- `pnpm travel:sync-html-story --slug <story-slug> [--dry-run] [--force]` —
+  seed a git HTML story (`content/html-stories/<slug>.html`) into
+  `html_stories` (`app_slug='travel'`, published). Insert-only by default;
+  `--force` replaces the row's HTML with the git copy (older versions stay
+  restorable in admin) — say so before using it.
 - `pnpm travel:set-password <s> <password> [--status live]` — viewer password.
 - `pnpm --filter @travel/web dev` / `typecheck` — run + verify.
 
@@ -135,7 +195,10 @@ editor — no CI applies them), seed media (`travel:sync-media-db`),
 
 Deploy (Vercel): project root `apps/travel/web`; env
 `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-`NEXT_PUBLIC_MAPBOX_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`.
+`NEXT_PUBLIC_MAPBOX_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, and
+`HTML_STORIES_TOKEN` for the HTML story publish/brief/assets APIs (without it
+they answer 503/401; `/s/<slug>` works regardless). HTML stories reuse the
+`html_stories` table (migrations 085–089, already applied for the other sites).
 Story prose/config: with `CONTENT_SOURCE=db` set (the target prod posture),
 they read from the shared `stories` table — admin compose/canvas edits at
 `vismay.xyz/travel` go live immediately, and the git files become the dev/seed

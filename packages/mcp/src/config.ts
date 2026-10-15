@@ -28,16 +28,19 @@ export interface VismayMcpConfig {
   vizf1HtmlStoriesUrl: string
   /** Site that hosts viznba HTML stories, e.g. https://nba.vizmaya.fyi */
   viznbaHtmlStoriesUrl: string
+  /** Site that hosts travel HTML stories (each private to a trip), e.g. https://protrip.vismay.xyz */
+  travelHtmlStoriesUrl: string
 }
 
 /** The apps whose sites host HTML stories (mirrors @vismay/html-stories/apps). */
-export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts' | 'vizf1' | 'viznba'
+export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts' | 'vizf1' | 'viznba' | 'travel'
 
 /** The hosting site for an app's HTML stories. */
 export function htmlStoriesUrlFor(config: VismayMcpConfig, app: HtmlStoryApp): string {
   if (app === 'footshorts') return config.footshortsHtmlStoriesUrl
   if (app === 'vizf1') return config.vizf1HtmlStoriesUrl
   if (app === 'viznba') return config.viznbaHtmlStoriesUrl
+  if (app === 'travel') return config.travelHtmlStoriesUrl
   return config.htmlStoriesUrl
 }
 
@@ -61,19 +64,21 @@ export function loadConfig(): VismayMcpConfig {
     vizf1HtmlStoriesUrl: (env('VIZF1_HTML_STORIES_URL') ?? 'https://www.vizf1.com').replace(/\/$/, ''),
     // Placeholder until the VizNBA domain is live: set VIZNBA_HTML_STORIES_URL.
     viznbaHtmlStoriesUrl: (env('VIZNBA_HTML_STORIES_URL') ?? 'https://nba.vizmaya.fyi').replace(/\/$/, ''),
+    travelHtmlStoriesUrl: (env('TRAVEL_HTML_STORIES_URL') ?? 'https://protrip.vismay.xyz').replace(/\/$/, ''),
   }
 }
 
 /**
  * The publish token for an app's HTML stories, or null. Each deployment has its
  * own HTML_STORIES_TOKEN; footshorts' is FOOTSHORTS_HTML_STORIES_TOKEN here,
- * vizf1's VIZF1_HTML_STORIES_TOKEN and viznba's VIZNBA_HTML_STORIES_TOKEN,
- * each falling back to HTML_STORIES_TOKEN when the sites share one value.
+ * vizf1's VIZF1_HTML_STORIES_TOKEN, viznba's VIZNBA_HTML_STORIES_TOKEN and
+ * travel's TRAVEL_HTML_STORIES_TOKEN, each falling back to HTML_STORIES_TOKEN when the sites share one value.
  */
 export function htmlStoriesToken(app: HtmlStoryApp): string | null {
   if (app === 'footshorts') return env('FOOTSHORTS_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
   if (app === 'vizf1') return env('VIZF1_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
   if (app === 'viznba') return env('VIZNBA_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
+  if (app === 'travel') return env('TRAVEL_HTML_STORIES_TOKEN') ?? env('HTML_STORIES_TOKEN') ?? null
   return env('HTML_STORIES_TOKEN') ?? null
 }
 
@@ -91,6 +96,9 @@ export function requireHtmlStoriesEnv(app: HtmlStoryApp = 'vizmaya-fyi'): { toke
           : app === 'viznba'
             ? 'publish_html_story for viznba needs VIZNBA_HTML_STORIES_TOKEN (or HTML_STORIES_TOKEN) in ' +
                 'the MCP server env (the same value as HTML_STORIES_TOKEN on the viznba web deployment).'
+            : app === 'travel'
+              ? 'publish_html_story for travel needs TRAVEL_HTML_STORIES_TOKEN (or HTML_STORIES_TOKEN) in ' +
+                  'the MCP server env (the same value as HTML_STORIES_TOKEN on the travel web deployment).'
           : 'publish_html_story needs HTML_STORIES_TOKEN in the MCP server env ' +
             '(the same value as HTML_STORIES_TOKEN on the vizmaya-fyi deployment).',
     )

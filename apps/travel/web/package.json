@@ -12,6 +12,7 @@
   "dependencies": {
     "@vismay/admin-core": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/html-stories": "workspace:*",
     "@vismay/story-reader": "workspace:*",
     "@vismay/travel-viz": "workspace:*",
     "@vismay/viz-engine": "workspace:*",

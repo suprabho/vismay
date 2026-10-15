@@ -6,7 +6,7 @@ import { isAuthed } from '@/lib/adminAuth'
 
 /**
  * Admin's session-gated HTML stories API, for every hosting app: `?app=`
- * (vizmaya-fyi — the default — footshorts or vizf1) scopes the list and the save.
+ * (vizmaya-fyi — the default — footshorts, vizf1, viznba or travel) scopes the list and the save.
  * Agents don't post here; they use each site's token-gated
  * /api/html-stories (packages/html-stories/src/publishApi.ts).
  */
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }, { status: 400 })
   }
 
-  const lint = lintHtml(b.html)
+  const lint = lintHtml(b.html, { app, slug: b.slug })
   if (lint.errors.length) return NextResponse.json({ error: lint.errors.join(' '), ...lint }, { status: 400 })
 
   const str = (v: unknown) => (typeof v === 'string' ? v : undefined)

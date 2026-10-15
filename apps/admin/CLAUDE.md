@@ -157,7 +157,7 @@ stories from (falling back to the engine's `DEFAULT_THEME`).
   `appSlug` (`f1`); `CanvasClient` resolves it with `appSlugForVertical()` from
   `@vismay/verticals/data` before it reaches the presets strip (`vizf1`).
 
-## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories, /viznba/html-stories)
+## HTML stories tabs (/vizmaya/html-stories, /footshorts/html-stories, /vizf1/html-stories, /viznba/html-stories, /travel/html-stories)
 
 Agent-authored, self-contained HTML pages hosted as-is at `<site>/s/<slug>`
 ([packages/html-stories](../../packages/html-stories); the pipeline is
@@ -165,7 +165,7 @@ documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)). One
 table, scoped by `app_slug`; one set of admin code for every hosting app:
 
 - **Pages:** `app/vizmaya/(tabbed)/html-stories` and
-  `app/[appSlug]/(tabbed)/html-stories` (footshorts, vizf1 and viznba; other apps 404) render
+  `app/[appSlug]/(tabbed)/html-stories` (footshorts, vizf1, viznba and travel; other apps 404) render
   [components/html-stories/HtmlStoriesIndex.tsx](components/html-stories/HtmlStoriesIndex.tsx);
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
@@ -178,7 +178,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
+  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
   scroll, book, board, deck, and recap on vizf1 only; also on the Randomizer tab, where it marks the
@@ -200,8 +200,16 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   from `@vismay/randomizer/spins`) by window and team, up to 12, and the angle —
   the brief then carries their game context (`buildGameContext` in
   `@vismay/html-stories/viznbaBrief`: ESPN box scores, quarters, team stats,
-  player lines, runs, leaders, recap). The brief is fetched whenever
-  style, matches, races or games change and copied synchronously on click.
+  player lines, runs, leaders, recap); for travel, **Add trip**
+  ([TripContextPicker.tsx](components/html-stories/TripContextPicker.tsx)): a
+  trip from `/api/travel/trips`, one day or the whole trip, and notes on how
+  it really went — the brief then carries the trip context (`buildTripContext`
+  in `@vismay/html-stories/travelBrief`: the itinerary stop by stop and the
+  curated photos and clips with their public URLs). Travel stories must carry
+  `<meta name="travel:trip">` and a slug under the trip's (the save lint
+  refuses them otherwise): the travel site serves them only behind that
+  trip's password. The brief is fetched whenever style, matches, races,
+  games or the trip change and copied synchronously on click.
 
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
@@ -334,3 +342,27 @@ tables in [supabase/viznba](../../supabase/viznba/migrations)). The
   `NEXT_PUBLIC_VIZNBA_URL` sets the public site the "Live at" links and briefs
   point at (default `https://nba.vizmaya.fyi`).
 
+
+## Season events tab (/footshorts/season-events)
+
+Fact-check desk for the football-seasons book's monthly events
+([vizmaya-data/football-seasons](../../vizmaya-data/football-seasons/README.md), Layer 2):
+manager changes, notable transfers and Claude-extracted events, each with its
+verbatim source quote. Editors mark each one Yes / Fixed / No and leave a note;
+a verdict stamps `checked_by` (admin email) and `checked_at`.
+
+- **Storage:** private `admin_historical_events` (footshorts migration
+  `20261015000000`; RLS on, no consumer grants). Rows come from `events.csv` via
+  `pnpm --filter @footshorts/worker history:events-sync -- --season=<start> --push`
+  (content only, never overwrites a verdict); `--pull` copies verdicts back to the CSV.
+- **Page:** [app/[appSlug]/(tabbed)/season-events/](<app/[appSlug]/(tabbed)/season-events/>)
+  → [components/footshorts/SeasonEventsClient.tsx](components/footshorts/SeasonEventsClient.tsx)
+  (footshorts only; month groups, filters, `j`/`k` + `y`/`f`/`n`/`e` keys).
+- **API (`isAuthed()`-gated, private no-store):** `GET /api/footshorts/season-events?season=2003-04`
+  and `PATCH /api/footshorts/season-events/[id]` (`{ verified?, notes? }`, same-origin),
+  backed by [lib/historicalEvents.ts](lib/historicalEvents.ts); shared types in
+  `@footshorts/shared/historicalEvents`.
+- **Migrations note:** the footshorts project's remote migration history is
+  empty (migrations were applied by hand), so `supabase db push` would re-run
+  all of them. Apply a single file with `supabase db query --linked -f <file>`
+  from a directory laid out as `supabase/{config.toml,migrations,.temp}`.

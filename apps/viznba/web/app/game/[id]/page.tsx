@@ -9,7 +9,7 @@ import { gameDetail, type GameDetail, type Leader } from '@/lib/espn'
 import { localDay, relativeDay, tipoff } from '@/lib/labels'
 import { biggestRun } from '@/lib/margin'
 import { getPrefs } from '@/lib/prefs'
-import { countdown, todayKey } from '@/lib/time'
+import { countdown, ET, todayKey } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +19,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const d = await gameDetail(id)
   if (!d) return { title: 'Game' }
-  const { away, home } = d.game
-  return { title: `${away.team.abbr} @ ${home.team.abbr}` }
+  const { away, home, state, date } = d.game
+  const day = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: ET })
+  const matchup = `${away.team.location} ${away.team.name} vs ${home.team.location} ${home.team.name}`
+  // People search "<team> vs <team>" plus "score" / "box score"; name both in full.
+  const title =
+    state === 'post' && away.score != null && home.score != null
+      ? `${away.team.name} ${away.score}–${home.score} ${home.team.name}: box score and recap (${day})`
+      : `${away.team.name} vs ${home.team.name}: ${state === 'in' ? 'live score' : 'preview'} (${day})`
+  const description = d.recap?.description ?? `${matchup}, ${day}: score, box score, leaders and the game's biggest run.`
+  return {
+    title,
+    description,
+    alternates: { canonical: `/game/${id}` },
+    openGraph: { type: 'article', url: `/game/${id}`, title, description, ...(d.recap?.image ? { images: [d.recap.image] } : {}) },
+  }
 }
 
 function periodLabel(p: number): string {
