@@ -61,5 +61,8 @@ Scope: Big 5 leagues (+ Championship, Eredivisie, Primeira, Scottish Prem as con
 - Checks: Arsenal 26W 0L, Henry 30 / Pirès 14 from shots (matches Layer 3); 5 score/shot mismatches are own goals.
 - Publishing requires StatsBomb attribution (logo + credit) per https://github.com/statsbomb/open-data#license.
 
+## Planning the books (admin)
+The admin **Books** tab (`/footshorts/books`, see [apps/admin/CLAUDE.md](../../apps/admin/CLAUDE.md#books-tab-footshortsbooks)) is where each book is planned in spreads: story beats (with a beat finder over `admin_historical_matches`), the flatplan, a card per spread (headline + chart sketch + stat + body + caption, then bound to real data), chapter thumbnails, and the locked series system (grid, type, chart style, spread templates). Plans live in the private `admin_season_books` table.
+
 ## Next layers (not fetched yet)
 5. **Event data** — StatsBomb open data for marquee seasons.

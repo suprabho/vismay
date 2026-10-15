@@ -26,6 +26,9 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/cup-fixtures`, label: 'Cup fixtures' })
     // Fact-checking the football-seasons book's events (vizmaya-data/football-seasons).
     tabs.push({ href: `/${appSlug}/season-events`, label: 'Season events' })
+    // The season-book series: beats, flatplan and spread cards per season,
+    // on the football-seasons match data (admin_season_books, private).
+    tabs.push({ href: `/${appSlug}/books`, label: 'Books' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
   }
