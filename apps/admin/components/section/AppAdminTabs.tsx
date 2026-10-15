@@ -24,6 +24,8 @@ export function AppAdminTabs({ appSlug }: Props) {
     // The Football Desk randomizer: topics for those pages (packages/randomizer).
     tabs.push({ href: `/${appSlug}/randomizer`, label: 'Randomizer' })
     tabs.push({ href: `/${appSlug}/cup-fixtures`, label: 'Cup fixtures' })
+    // Fact-checking the football-seasons book's events (vizmaya-data/football-seasons).
+    tabs.push({ href: `/${appSlug}/season-events`, label: 'Season events' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
   }

@@ -26,6 +26,7 @@
     "history:import": "tsx --env-file=.env src/historicalMatches.ts",
     "history:teams": "tsx --env-file=.env src/historicalTeams.ts",
     "history:events": "tsx --env-file=.env src/historicalEvents.ts",
+    "history:events-sync": "tsx --env-file=.env src/historicalEventsSync.ts",
     "fixtures:upcoming": "tsx --env-file=.env src/upcomingFixtures.ts",
     "fixtures:seasons": "tsx --env-file=.env src/fixtureSeasons.ts",
     "recap": "tsx --env-file=.env src/recap.ts",
