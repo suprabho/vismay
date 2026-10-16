@@ -61,6 +61,10 @@ Scope: Big 5 leagues (+ Championship, Eredivisie, Primeira, Scottish Prem as con
 - Checks: Arsenal 26W 0L, Henry 30 / Pirès 14 from shots (matches Layer 3); 5 score/shot mismatches are own goals.
 - Publishing requires StatsBomb attribution (logo + credit) per https://github.com/statsbomb/open-data#license.
 
+## Team-season packs (`teams/<club>/<season>/`, committed)
+Everything for one club in one season, gathered in one folder as the input for designing a book or story: every competitive match with lineups, minutes, goals and cards; the squad with bios and careers; all league results and the table after every round; transfers; friendlies; months; and a timeline of quoted club events plus events read off the data. `scripts/team_season.py` (`fetch` → `build`, stdlib only) caches BDFutbol, football-data.co.uk, Transfermarkt, Wikipedia and ClubElo pages in `raw/teams/<club>-<season>/`. The build checks itself: goals against scores, minutes against BDFutbol's squad table, points against the official standings, and each hand-picked event's quote against its page.
+- **FC Barcelona 2003-04**: [`teams/barcelona/2003-04/`](teams/barcelona/2003-04/README.md). Only Spanish clubs are configured so far (`TEAMS` in the script).
+
 ## Planning the books (admin)
 The admin **Books** tab (`/footshorts/books`, see [apps/admin/CLAUDE.md](../../apps/admin/CLAUDE.md#books-tab-footshortsbooks)) is where each book is planned in spreads: story beats (with a beat finder over `admin_historical_matches`), the flatplan, a card per spread (headline + chart sketch + stat + body + caption, then bound to real data), chapter thumbnails, and the locked series system (grid, type, chart style, spread templates). Plans live in the private `admin_season_books` table.
 

@@ -1,0 +1,381 @@
+round,date,home_id,home,away_id,away,hg,ag,ht,home_yellow,away_yellow,home_red,away_red,stadium,referee,b365_home,b365_draw,b365_away,bdf_match_id
+1,2003-08-30,albacete,Albacete,osasuna,Osasuna,0,2,0-1,3,3,0,0,Carlos Belmonte,Daudén Ibáñez,2.3,3,3,23200
+1,2003-08-30,athletic-club,Athletic Club,barcelona,Barcelona,0,1,0-1,1,2,0,0,San Mamés,Undiano Mallenco,2.6,3.2,2.5,23201
+1,2003-08-30,espanyol-de-barcelona,Espanyol,real-sociedad-de-futbol,Real Sociedad,1,1,1-0,2,3,0,0,Lluís Companys,Rubinos Pérez,2.6,3.2,2.5,23202
+1,2003-08-30,malaga,Málaga,villarreal,Villarreal,0,0,0-0,3,5,1,1,La Rosaleda,Muñiz Fernández,2.3,3.2,2.875,23203
+1,2003-08-30,real-madrid,Real Madrid,real-betis-balompie,Betis,2,1,1-1,2,5,0,0,Santiago Bernabéu,Carmona Méndez,1.364,4.333,7.5,23204
+1,2003-08-30,valencia,Valencia,valladolid,Valladolid,1,1,0-1,3,4,0,0,Mestalla,Ramírez Domínguez,1.4,3.75,8.5,23205
+1,2003-08-31,celta-de-vigo,Celta de Vigo,murcia,Murcia,1,1,1-0,0,3,0,0,Balaídos,Turienzo Álvarez,1.444,3.6,8,23206
+1,2003-08-31,real-racing-club-de-santander,Racing de Santander,mallorca,Mallorca,2,1,1-0,5,2,0,0,El Sardinero,Tristante Oliva,2.375,3.2,2.75,23207
+1,2003-08-31,sevilla,Sevilla,club-atletico-de-madrid,Atlético de Madrid,1,0,1-0,3,2,0,0,Ramón Sánchez-Pizjuán,Pérez Lasa,2.2,3.2,3,23208
+1,2003-08-31,zaragoza,Zaragoza,deportivo-la-coruna,Deportivo de La Coruña,0,1,0-0,2,1,0,0,La Romareda,Iturralde González,3,3.2,2.2,23209
+2,2003-09-02,osasuna,Osasuna,valencia,Valencia,0,1,0-0,2,5,0,0,El Sadar,Rodríguez Santiago,2.87,3.2,2.3,23210
+2,2003-09-02,real-sociedad-de-futbol,Real Sociedad,celta-de-vigo,Celta de Vigo,1,1,1-0,2,3,0,0,Anoeta,Teixeira Vitienes,1.9,3.25,3.75,23211
+2,2003-09-02,villarreal,Villarreal,real-madrid,Real Madrid,1,1,0-0,2,2,0,0,El Madrigal,Pino Zamorano,4,3.4,1.8,23212
+2,2003-09-03,club-atletico-de-madrid,Atlético de Madrid,albacete,Albacete,1,0,0-0,1,2,0,0,Vicente Calderón,Pérez Burrull,1.53,3.4,6.5,23213
+2,2003-09-03,barcelona,Barcelona,sevilla,Sevilla,1,1,0-1,4,3,0,0,Camp Nou,Megía Dávila,1.57,3.4,6,23214
+2,2003-09-03,real-betis-balompie,Betis,espanyol-de-barcelona,Espanyol,2,2,2-0,4,6,1,0,Manuel Ruiz de Lopera,González Vázquez,1.72,3.25,4.75,23215
+2,2003-09-03,deportivo-la-coruna,Deportivo de La Coruña,athletic-club,Athletic Club,2,0,1-0,2,1,0,0,Riazor,Lizondo Cortés,1.57,3.4,6,23216
+2,2003-09-03,mallorca,Mallorca,zaragoza,Zaragoza,2,0,1-0,2,2,0,0,Son Moix,Puentes Leira,1.72,3.4,4.5,23217
+2,2003-09-03,murcia,Murcia,real-racing-club-de-santander,Racing de Santander,1,1,1-1,0,3,0,0,La Condomina,Téllez Sánchez,2.25,3.2,2.9,23218
+2,2003-09-03,valladolid,Valladolid,malaga,Málaga,1,0,1-0,3,2,0,0,José Zorrilla,Losantos Omar,1.9,3.25,3.75,23219
+3,2003-09-13,celta-de-vigo,Celta de Vigo,real-betis-balompie,Betis,0,2,0-1,0,1,0,0,Balaídos,Esquinas Torres,1.8,3.2,4.33,23220
+3,2003-09-13,real-racing-club-de-santander,Racing de Santander,real-sociedad-de-futbol,Real Sociedad,0,1,0-1,3,4,0,0,El Sardinero,Moreno Delgado,2.6,3.2,2.5,23221
+3,2003-09-13,real-madrid,Real Madrid,valladolid,Valladolid,7,2,3-0,1,1,0,0,Santiago Bernabéu,Iturralde González,1.28,4.5,10,23222
+3,2003-09-13,sevilla,Sevilla,deportivo-la-coruna,Deportivo de La Coruña,1,2,0-1,3,3,0,1,Ramón Sánchez-Pizjuán,Rubinos Pérez,2.7,3.2,2.4,23223
+3,2003-09-14,albacete,Albacete,barcelona,Barcelona,1,2,0-1,3,1,1,0,Carlos Belmonte,Lizondo Cortés,4.75,3.25,1.72,23224
+3,2003-09-14,athletic-club,Athletic Club,mallorca,Mallorca,4,0,2-0,1,4,0,1,San Mamés,Daudén Ibáñez,2,3.2,3.5,23225
+3,2003-09-14,espanyol-de-barcelona,Espanyol,villarreal,Villarreal,1,2,1-1,4,4,0,1,Lluís Companys,Turienzo Álvarez,2.25,3.2,2.9,23226
+3,2003-09-14,osasuna,Osasuna,club-atletico-de-madrid,Atlético de Madrid,1,0,1-0,5,2,1,0,El Sadar,Muñiz Fernández,2.37,3.2,2.75,23227
+3,2003-09-14,valencia,Valencia,malaga,Málaga,1,0,1-0,4,4,0,0,Mestalla,Pérez Burrull,1.4,3.75,8.5,23228
+3,2003-09-14,zaragoza,Zaragoza,murcia,Murcia,3,0,3-0,1,1,0,0,La Romareda,Undiano Mallenco,2.1,3.2,3.25,23229
+4,2003-09-20,club-atletico-de-madrid,Atlético de Madrid,valencia,Valencia,0,3,0-0,2,3,0,0,Vicente Calderón,Carmona Méndez,2.37,3.2,2.75,23230
+4,2003-09-20,barcelona,Barcelona,osasuna,Osasuna,1,1,0-0,1,2,0,0,Camp Nou,Mejuto González,1.36,4,8.5,23231
+4,2003-09-21,real-betis-balompie,Betis,real-racing-club-de-santander,Racing de Santander,0,0,0-0,1,4,0,0,Manuel Ruiz de Lopera,Puentes Leira,1.66,3.4,5,23232
+4,2003-09-21,deportivo-la-coruna,Deportivo de La Coruña,albacete,Albacete,3,0,0-0,1,1,1,0,Riazor,Pérez Lasa,1.28,4.5,10,23233
+4,2003-09-21,malaga,Málaga,real-madrid,Real Madrid,1,3,0-1,2,2,0,0,La Rosaleda,Rodríguez Santiago,5,3.4,1.66,23234
+4,2003-09-21,mallorca,Mallorca,sevilla,Sevilla,1,1,1-1,5,3,0,0,Son Moix,Teixeira Vitienes,2.1,3.25,3.2,23235
+4,2003-09-21,murcia,Murcia,athletic-club,Athletic Club,2,2,1-1,3,2,0,0,La Condomina,Ramírez Domínguez,2.37,3.2,2.75,23236
+4,2003-09-21,real-sociedad-de-futbol,Real Sociedad,zaragoza,Zaragoza,3,0,0-0,2,2,0,0,Anoeta,Pino Zamorano,1.57,3.4,6,23237
+4,2003-09-21,valladolid,Valladolid,espanyol-de-barcelona,Espanyol,3,1,2-1,3,2,1,1,José Zorrilla,Tristante Oliva,2,3.2,3.5,23238
+4,2003-09-21,villarreal,Villarreal,celta-de-vigo,Celta de Vigo,1,1,0-0,3,3,0,0,El Madrigal,Téllez Sánchez,2.25,3.2,2.9,23239
+5,2003-09-27,athletic-club,Athletic Club,real-sociedad-de-futbol,Real Sociedad,1,0,0-0,6,6,0,0,San Mamés,Megía Dávila,2.3,3.2,2.7,23240
+5,2003-09-27,celta-de-vigo,Celta de Vigo,valladolid,Valladolid,3,2,0-1,4,4,0,0,Balaídos,Medina Cantalejo,1.72,3.2,4.5,23241
+5,2003-09-27,osasuna,Osasuna,deportivo-la-coruna,Deportivo de La Coruña,3,2,3-1,3,2,0,0,El Sadar,Esquinas Torres,2.8,3.2,2.25,23242
+5,2003-09-27,valencia,Valencia,real-madrid,Real Madrid,2,0,1-0,2,1,0,0,Mestalla,Moreno Delgado,2.62,3.2,2.37,23243
+5,2003-09-28,albacete,Albacete,mallorca,Mallorca,2,0,1-0,2,0,0,0,Carlos Belmonte,Undiano Mallenco,2.6,3.2,2.4,23244
+5,2003-09-28,club-atletico-de-madrid,Atlético de Madrid,barcelona,Barcelona,0,0,0-0,5,5,0,2,Vicente Calderón,Daudén Ibáñez,2.5,3.2,2.5,23245
+5,2003-09-28,espanyol-de-barcelona,Espanyol,malaga,Málaga,1,2,0-1,1,4,0,0,Lluís Companys,Muñiz Fernández,2,3,3.5,23246
+5,2003-09-28,real-racing-club-de-santander,Racing de Santander,villarreal,Villarreal,0,2,0-0,3,2,1,0,El Sardinero,González Vázquez,2.25,3.2,2.8,23247
+5,2003-09-28,sevilla,Sevilla,murcia,Murcia,1,0,0-0,3,1,0,0,Ramón Sánchez-Pizjuán,Pérez Burrull,1.66,3.2,5,23248
+5,2003-09-28,zaragoza,Zaragoza,real-betis-balompie,Betis,0,1,0-0,2,1,0,0,La Romareda,Losantos Omar,2.25,3.2,2.8,23249
+6,2003-10-04,real-betis-balompie,Betis,athletic-club,Athletic Club,1,1,0-0,4,6,0,0,Manuel Ruiz de Lopera,Tristante Oliva,1.9,3.25,3.5,23250
+6,2003-10-04,deportivo-la-coruna,Deportivo de La Coruña,club-atletico-de-madrid,Atlético de Madrid,5,1,2-1,2,3,0,1,Riazor,Turienzo Álvarez,1.44,3.75,6.5,23251
+6,2003-10-04,villarreal,Villarreal,zaragoza,Zaragoza,1,1,1-1,1,4,0,0,El Madrigal,Ramírez Domínguez,1.72,3.2,4.5,23252
+6,2003-10-05,barcelona,Barcelona,valencia,Valencia,0,1,0-1,3,3,0,0,Camp Nou,Muñiz Fernández,2.2,3.25,2.8,23253
+6,2003-10-05,malaga,Málaga,celta-de-vigo,Celta de Vigo,2,1,1-0,3,1,0,0,La Rosaleda,Lizondo Cortés,2.4,3.2,2.6,23254
+6,2003-10-05,mallorca,Mallorca,osasuna,Osasuna,1,1,0-0,2,3,0,0,Son Moix,Carmona Méndez,2,3.25,3.25,23255
+6,2003-10-05,murcia,Murcia,albacete,Albacete,1,0,1-0,0,4,0,0,La Condomina,Puentes Leira,1.9,3.25,3.5,23256
+6,2003-10-05,real-sociedad-de-futbol,Real Sociedad,sevilla,Sevilla,1,1,1-1,3,3,0,0,Anoeta,Téllez Sánchez,1.66,3.2,5,23257
+6,2003-10-05,real-madrid,Real Madrid,espanyol-de-barcelona,Espanyol,2,1,0-0,3,2,0,1,Santiago Bernabéu,Pérez Lasa,1.2,5,12,23258
+6,2003-10-05,valladolid,Valladolid,real-racing-club-de-santander,Racing de Santander,0,4,0-1,2,2,1,0,José Zorrilla,Rubinos Pérez,1.9,3.25,3.5,23259
+7,2003-10-18,albacete,Albacete,real-sociedad-de-futbol,Real Sociedad,3,1,0-0,0,0,0,0,Carlos Belmonte,Rodríguez Santiago,3.25,3.25,2,23260
+7,2003-10-18,barcelona,Barcelona,deportivo-la-coruna,Deportivo de La Coruña,0,2,0-1,3,4,0,0,Camp Nou,Teixeira Vitienes,2.37,3.2,2.62,23261
+7,2003-10-18,celta-de-vigo,Celta de Vigo,real-madrid,Real Madrid,0,2,0-1,2,2,0,0,Balaídos,Pérez Burrull,3.5,3.25,1.9,23262
+7,2003-10-19,athletic-club,Athletic Club,villarreal,Villarreal,2,0,0-0,3,3,0,0,San Mamés,Mejuto González,1.9,3.25,3.5,23263
+7,2003-10-19,club-atletico-de-madrid,Atlético de Madrid,mallorca,Mallorca,2,1,1-1,3,3,0,0,Vicente Calderón,Losantos Omar,2,3.25,3.25,23264
+7,2003-10-19,osasuna,Osasuna,murcia,Murcia,2,1,1-1,2,5,0,3,El Sadar,Daudén Ibáñez,1.72,3.25,4.33,23265
+7,2003-10-19,real-racing-club-de-santander,Racing de Santander,malaga,Málaga,4,2,0-1,1,3,0,0,El Sardinero,Pino Zamorano,2,3.25,3.25,23266
+7,2003-10-19,sevilla,Sevilla,real-betis-balompie,Betis,2,2,0-0,2,2,0,0,Ramón Sánchez-Pizjuán,Moreno Delgado,2.3,3,2.87,23267
+7,2003-10-19,valencia,Valencia,espanyol-de-barcelona,Espanyol,4,0,3-0,0,1,0,0,Mestalla,Medina Cantalejo,1.3,4.33,9,23268
+7,2003-10-19,zaragoza,Zaragoza,valladolid,Valladolid,1,0,1-0,5,4,1,0,La Romareda,González Vázquez,2.1,3.25,3,23269
+8,2003-10-25,deportivo-la-coruna,Deportivo de La Coruña,valencia,Valencia,2,1,1-0,3,4,0,0,Riazor,Undiano Mallenco,2.2,3.1,3,23270
+8,2003-10-25,malaga,Málaga,zaragoza,Zaragoza,2,1,2-0,2,2,0,0,La Rosaleda,Esquinas Torres,2,3.25,3.25,23271
+8,2003-10-25,real-madrid,Real Madrid,real-racing-club-de-santander,Racing de Santander,3,1,1-1,3,3,0,0,Santiago Bernabéu,Turienzo Álvarez,1.22,5,10,23272
+8,2003-10-26,real-betis-balompie,Betis,albacete,Albacete,3,2,2-1,0,3,0,0,Manuel Ruiz de Lopera,Muñiz Fernández,1.57,3.4,5.5,23273
+8,2003-10-26,espanyol-de-barcelona,Espanyol,celta-de-vigo,Celta de Vigo,0,4,0-1,3,1,2,0,Lluís Companys,Daudén Ibáñez,2.37,3.2,2.62,23274
+8,2003-10-26,mallorca,Mallorca,barcelona,Barcelona,1,3,0-2,1,4,0,1,Son Moix,Rubinos Pérez,2.5,3.2,2.5,23275
+8,2003-10-26,murcia,Murcia,club-atletico-de-madrid,Atlético de Madrid,1,3,0-2,1,3,0,0,La Condomina,Iturralde González,2.3,3.2,2.7,23276
+8,2003-10-26,real-sociedad-de-futbol,Real Sociedad,osasuna,Osasuna,1,0,0-0,2,3,0,0,Anoeta,Tristante Oliva,1.72,3.25,4.33,23277
+8,2003-10-26,valladolid,Valladolid,athletic-club,Athletic Club,2,0,1-0,4,1,0,0,José Zorrilla,Lizondo Cortés,2.3,3.2,2.7,23278
+8,2003-10-26,villarreal,Villarreal,sevilla,Sevilla,3,3,1-2,5,5,0,0,El Madrigal,Carmona Méndez,2.1,3.25,3,23279
+9,2003-10-28,zaragoza,Zaragoza,real-madrid,Real Madrid,0,0,0-0,2,2,0,1,La Romareda,Mejuto González,5,3.4,1.61,23280
+9,2003-10-29,albacete,Albacete,villarreal,Villarreal,2,0,0-0,2,1,0,0,Carlos Belmonte,Megía Dávila,2.5,3.2,2.5,23281
+9,2003-10-29,athletic-club,Athletic Club,malaga,Málaga,2,1,0-1,4,3,0,0,San Mamés,Teixeira Vitienes,1.66,3.4,4.5,23282
+9,2003-10-29,barcelona,Barcelona,murcia,Murcia,3,0,1-0,2,1,0,0,Camp Nou,Rodríguez Santiago,1.36,4,7.5,23283
+9,2003-10-29,deportivo-la-coruna,Deportivo de La Coruña,mallorca,Mallorca,0,2,0-0,4,4,0,0,Riazor,Téllez Sánchez,1.3,4.5,8,23284
+9,2003-10-29,osasuna,Osasuna,real-betis-balompie,Betis,2,0,0-0,2,2,0,0,El Sadar,Pérez Lasa,2.2,3.25,2.8,23285
+9,2003-10-29,real-racing-club-de-santander,Racing de Santander,espanyol-de-barcelona,Espanyol,0,1,0-0,2,3,0,1,El Sardinero,Losantos Omar,1.66,3.4,4.5,23286
+9,2003-10-29,sevilla,Sevilla,valladolid,Valladolid,1,1,1-0,3,2,1,1,Ramón Sánchez-Pizjuán,Puentes Leira,1.66,3.4,4.5,23287
+9,2003-10-29,valencia,Valencia,celta-de-vigo,Celta de Vigo,2,2,1-0,1,9,0,0,Mestalla,Pino Zamorano,1.53,3.5,5.5,23288
+9,2003-10-30,club-atletico-de-madrid,Atlético de Madrid,real-sociedad-de-futbol,Real Sociedad,4,0,1-0,3,6,0,0,Vicente Calderón,Ramírez Domínguez,2.3,3.2,2.7,23289
+10,2003-11-01,celta-de-vigo,Celta de Vigo,real-racing-club-de-santander,Racing de Santander,0,1,0-1,3,2,1,0,Balaídos,Muñiz Fernández,1.61,3.4,5,23290
+10,2003-11-01,murcia,Murcia,deportivo-la-coruna,Deportivo de La Coruña,0,0,0-0,2,2,0,0,La Condomina,Daudén Ibáñez,4,3.25,1.8,23291
+10,2003-11-01,real-madrid,Real Madrid,athletic-club,Athletic Club,3,0,1-0,4,5,0,0,Santiago Bernabéu,González Vázquez,1.28,4.5,9,23292
+10,2003-11-02,real-betis-balompie,Betis,club-atletico-de-madrid,Atlético de Madrid,1,2,1-1,5,6,0,0,Manuel Ruiz de Lopera,Lizondo Cortés,1.8,3.25,4,23293
+10,2003-11-02,espanyol-de-barcelona,Espanyol,zaragoza,Zaragoza,0,2,0-2,3,1,1,0,Lluís Companys,Pérez Burrull,2.1,3.25,3,23294
+10,2003-11-02,malaga,Málaga,sevilla,Sevilla,2,0,2-0,5,5,0,0,La Rosaleda,Undiano Mallenco,2.2,3.25,2.8,23295
+10,2003-11-02,mallorca,Mallorca,valencia,Valencia,0,5,0-3,1,3,1,0,Son Moix,Iturralde González,3,3.25,2.1,23296
+10,2003-11-02,real-sociedad-de-futbol,Real Sociedad,barcelona,Barcelona,3,3,0-1,3,3,0,1,Anoeta,Medina Cantalejo,2.3,3.2,2.7,23297
+10,2003-11-02,valladolid,Valladolid,albacete,Albacete,2,0,1-0,3,2,0,1,José Zorrilla,Esquinas Torres,1.8,3.25,4,23298
+10,2003-11-02,villarreal,Villarreal,osasuna,Osasuna,1,0,1-0,5,2,0,0,El Madrigal,Moreno Delgado,2.1,3.25,3,23299
+11,2003-11-08,athletic-club,Athletic Club,espanyol-de-barcelona,Espanyol,1,0,1-0,2,2,0,0,San Mamés,Puentes Leira,1.57,3.4,5.5,23300
+11,2003-11-08,deportivo-la-coruna,Deportivo de La Coruña,real-sociedad-de-futbol,Real Sociedad,2,1,0-1,2,3,0,0,Riazor,Mejuto González,1.66,3.4,4.5,23301
+11,2003-11-08,zaragoza,Zaragoza,celta-de-vigo,Celta de Vigo,1,1,1-1,3,4,0,0,La Romareda,Carmona Méndez,2.25,3.25,2.75,23302
+11,2003-11-09,albacete,Albacete,malaga,Málaga,0,1,0-0,2,6,1,0,Carlos Belmonte,Rubinos Pérez,2.25,3.25,2.75,23303
+11,2003-11-09,club-atletico-de-madrid,Atlético de Madrid,villarreal,Villarreal,1,0,0-0,5,5,0,0,Vicente Calderón,Teixeira Vitienes,1.72,3.25,4.33,23304
+11,2003-11-09,barcelona,Barcelona,real-betis-balompie,Betis,2,1,1-0,2,2,0,1,Camp Nou,Turienzo Álvarez,1.61,3.4,5,23305
+11,2003-11-09,mallorca,Mallorca,murcia,Murcia,4,1,3-1,1,5,0,0,Son Moix,Pino Zamorano,1.83,3.25,3.75,23306
+11,2003-11-09,osasuna,Osasuna,valladolid,Valladolid,1,1,1-1,2,7,1,1,El Sadar,Téllez Sánchez,1.8,3.25,4,23307
+11,2003-11-09,sevilla,Sevilla,real-madrid,Real Madrid,4,1,4-0,6,5,1,1,Ramón Sánchez-Pizjuán,Tristante Oliva,5,3.4,1.61,23308
+11,2003-11-09,valencia,Valencia,real-racing-club-de-santander,Racing de Santander,1,2,1-1,3,4,0,0,Mestalla,Pérez Lasa,1.44,3.75,6.5,23309
+12,2003-11-22,real-betis-balompie,Betis,deportivo-la-coruna,Deportivo de La Coruña,0,0,0-0,3,3,0,0,Manuel Ruiz de Lopera,Megía Dávila,2.62,3.2,2.37,23310
+12,2003-11-22,real-sociedad-de-futbol,Real Sociedad,mallorca,Mallorca,0,1,0-1,4,3,0,0,Anoeta,Pérez Burrull,1.72,3.25,4.33,23311
+12,2003-11-22,villarreal,Villarreal,barcelona,Barcelona,2,1,1-0,1,2,0,0,El Madrigal,Losantos Omar,2.7,3.2,2.3,23312
+12,2003-11-23,celta-de-vigo,Celta de Vigo,athletic-club,Athletic Club,0,2,0-0,4,4,0,0,Balaídos,Rodríguez Santiago,2,3.25,3.25,23313
+12,2003-11-23,espanyol-de-barcelona,Espanyol,sevilla,Sevilla,1,0,0-0,6,5,1,0,Lluís Companys,Lizondo Cortés,2.5,3.2,2.5,23314
+12,2003-11-23,malaga,Málaga,osasuna,Osasuna,0,0,0-0,2,1,0,0,La Rosaleda,González Vázquez,2,3.25,3.25,23315
+12,2003-11-23,murcia,Murcia,valencia,Valencia,2,2,1-1,4,2,0,0,La Condomina,Esquinas Torres,4,3.25,1.8,23316
+12,2003-11-23,real-racing-club-de-santander,Racing de Santander,zaragoza,Zaragoza,1,2,1-1,3,3,0,0,El Sardinero,Medina Cantalejo,1.72,3.25,4.33,23317
+12,2003-11-23,real-madrid,Real Madrid,albacete,Albacete,2,1,1-1,2,2,0,0,Santiago Bernabéu,Ramírez Domínguez,1.14,6.5,12,23318
+12,2003-11-23,valladolid,Valladolid,club-atletico-de-madrid,Atlético de Madrid,3,1,2-1,2,2,0,1,José Zorrilla,Moreno Delgado,2.37,3.2,2.62,23319
+13,2003-11-29,club-atletico-de-madrid,Atlético de Madrid,malaga,Málaga,2,0,1-0,4,2,0,0,Vicente Calderón,Tristante Oliva,1.72,3.25,4.33,23320
+13,2003-11-29,murcia,Murcia,real-sociedad-de-futbol,Real Sociedad,2,2,0-1,5,2,0,0,La Condomina,Muñiz Fernández,2.5,3.2,2.5,23321
+13,2003-11-29,osasuna,Osasuna,real-madrid,Real Madrid,1,1,1-0,3,1,0,0,El Sadar,Daudén Ibáñez,3.75,3.25,1.83,23322
+13,2003-11-29,valencia,Valencia,zaragoza,Zaragoza,3,2,3-0,2,2,0,0,Mestalla,Rubinos Pérez,1.4,3.75,7.5,23323
+13,2003-11-30,albacete,Albacete,espanyol-de-barcelona,Espanyol,2,1,1-1,0,3,0,2,Carlos Belmonte,Teixeira Vitienes,2.2,3.25,2.8,23324
+13,2003-11-30,athletic-club,Athletic Club,real-racing-club-de-santander,Racing de Santander,1,2,1-1,3,5,0,0,San Mamés,Carmona Méndez,1.8,3.25,4,23325
+13,2003-11-30,barcelona,Barcelona,valladolid,Valladolid,0,0,0-0,4,4,0,0,Camp Nou,Undiano Mallenco,1.5,3.5,6,23326
+13,2003-11-30,deportivo-la-coruna,Deportivo de La Coruña,villarreal,Villarreal,0,1,0-0,5,4,1,0,Riazor,Téllez Sánchez,1.44,3.75,6.5,23327
+13,2003-11-30,mallorca,Mallorca,real-betis-balompie,Betis,2,1,1-1,1,3,0,0,Son Moix,Mejuto González,2,3.25,3.25,23328
+13,2003-11-30,sevilla,Sevilla,celta-de-vigo,Celta de Vigo,0,1,0-1,2,5,1,1,Ramón Sánchez-Pizjuán,Turienzo Álvarez,2.1,3,3.25,23329
+14,2003-12-02,real-sociedad-de-futbol,Real Sociedad,valencia,Valencia,0,0,0-0,1,3,0,0,Anoeta,Puentes Leira,2.5,3.25,2.4,23330
+14,2003-12-03,real-betis-balompie,Betis,murcia,Murcia,1,1,0-0,5,2,1,1,Manuel Ruiz de Lopera,Téllez Sánchez,1.61,3.5,4.5,23331
+14,2003-12-03,celta-de-vigo,Celta de Vigo,albacete,Albacete,2,2,1-1,3,3,0,0,Balaídos,Losantos Omar,1.61,3.5,4.5,23332
+14,2003-12-03,espanyol-de-barcelona,Espanyol,osasuna,Osasuna,0,1,0-0,2,4,1,1,Lluís Companys,Ramírez Domínguez,2.37,3.1,2.62,23333
+14,2003-12-03,malaga,Málaga,barcelona,Barcelona,5,1,2-0,2,3,0,0,La Rosaleda,Pérez Lasa,2.5,3.1,2.5,23334
+14,2003-12-03,real-madrid,Real Madrid,club-atletico-de-madrid,Atlético de Madrid,2,0,2-0,2,5,0,0,Santiago Bernabéu,Pino Zamorano,1.44,3.75,6,23335
+14,2003-12-03,valladolid,Valladolid,deportivo-la-coruna,Deportivo de La Coruña,1,1,0-0,2,1,0,0,José Zorrilla,Pérez Burrull,2.5,3.1,2.5,23336
+14,2003-12-03,villarreal,Villarreal,mallorca,Mallorca,0,2,0-0,1,2,0,0,El Madrigal,Esquinas Torres,1.83,3.2,3.75,23337
+14,2003-12-04,real-racing-club-de-santander,Racing de Santander,sevilla,Sevilla,0,4,0-3,4,2,0,0,El Sardinero,Rodríguez Santiago,1.9,3.25,3.4,23338
+14,2003-12-04,zaragoza,Zaragoza,athletic-club,Athletic Club,2,2,1-2,5,4,0,0,La Romareda,Moreno Delgado,2.25,3.2,2.75,23339
+15,2003-12-06,barcelona,Barcelona,real-madrid,Real Madrid,1,2,0-1,5,2,0,0,Camp Nou,Carmona Méndez,2.75,3.25,2.25,23340
+15,2003-12-06,deportivo-la-coruna,Deportivo de La Coruña,malaga,Málaga,1,0,0-0,2,2,0,0,Riazor,Lizondo Cortés,1.5,3.5,6,23341
+15,2003-12-06,osasuna,Osasuna,celta-de-vigo,Celta de Vigo,3,2,1-1,2,1,0,0,El Sadar,Teixeira Vitienes,1.9,3.25,3.5,23342
+15,2003-12-06,real-sociedad-de-futbol,Real Sociedad,real-betis-balompie,Betis,0,4,0-2,2,3,1,0,Anoeta,González Vázquez,1.9,3.25,3.5,23343
+15,2003-12-07,albacete,Albacete,real-racing-club-de-santander,Racing de Santander,4,0,1-0,1,2,0,1,Carlos Belmonte,Rubinos Pérez,2.4,3.2,2.6,23344
+15,2003-12-07,club-atletico-de-madrid,Atlético de Madrid,espanyol-de-barcelona,Espanyol,2,0,1-0,2,5,0,0,Vicente Calderón,Undiano Mallenco,1.44,3.75,6.5,23345
+15,2003-12-07,mallorca,Mallorca,valladolid,Valladolid,1,0,1-0,4,4,0,0,Son Moix,Muñiz Fernández,1.83,3.25,3.75,23346
+15,2003-12-07,murcia,Murcia,villarreal,Villarreal,1,1,1-0,3,5,0,1,La Condomina,Medina Cantalejo,2.5,3.2,2.5,23347
+15,2003-12-07,sevilla,Sevilla,zaragoza,Zaragoza,3,2,1-2,5,5,1,1,Ramón Sánchez-Pizjuán,Megía Dávila,1.9,3.25,3.4,23348
+15,2003-12-07,valencia,Valencia,athletic-club,Athletic Club,2,1,1-0,2,5,1,1,Mestalla,Daudén Ibáñez,1.5,3.4,6,23349
+16,2003-12-13,celta-de-vigo,Celta de Vigo,club-atletico-de-madrid,Atlético de Madrid,2,2,2-1,4,3,0,0,Balaídos,Téllez Sánchez,2.25,3.25,2.75,23350
+16,2003-12-13,espanyol-de-barcelona,Espanyol,barcelona,Barcelona,1,3,1-3,4,4,3,3,Lluís Companys,Pino Zamorano,3,3.25,2.1,23351
+16,2003-12-13,villarreal,Villarreal,real-sociedad-de-futbol,Real Sociedad,2,0,2-0,3,2,0,0,El Madrigal,Turienzo Álvarez,1.909,3.25,3.5,23352
+16,2003-12-14,athletic-club,Athletic Club,sevilla,Sevilla,2,1,2-1,7,3,1,0,San Mamés,Rubinos Pérez,1.909,3.25,3.5,23353
+16,2003-12-14,real-betis-balompie,Betis,valencia,Valencia,0,1,0-1,2,3,0,0,Manuel Ruiz de Lopera,Teixeira Vitienes,2.7,3.2,2.3,23354
+16,2003-12-14,malaga,Málaga,mallorca,Mallorca,3,1,1-1,3,2,0,0,La Rosaleda,Moreno Delgado,2.2,3.25,2.8,23355
+16,2003-12-14,real-racing-club-de-santander,Racing de Santander,osasuna,Osasuna,0,0,0-0,1,1,0,0,El Sardinero,Puentes Leira,2.3,3.2,2.7,23356
+16,2003-12-14,real-madrid,Real Madrid,deportivo-la-coruna,Deportivo de La Coruña,2,1,1-0,1,4,0,0,Santiago Bernabéu,Rodríguez Santiago,1.571,3.4,5.5,23357
+16,2003-12-14,valladolid,Valladolid,murcia,Murcia,0,0,0-0,1,2,0,0,José Zorrilla,Pérez Lasa,1.615,3.4,5,23358
+16,2003-12-14,zaragoza,Zaragoza,albacete,Albacete,0,1,0-0,4,5,0,0,La Romareda,Tristante Oliva,1.833,3.25,3.75,23359
+17,2003-12-20,club-atletico-de-madrid,Atlético de Madrid,real-racing-club-de-santander,Racing de Santander,2,2,0-0,6,5,0,1,Vicente Calderón,González Vázquez,1.667,3.4,4.5,23360
+17,2003-12-20,real-sociedad-de-futbol,Real Sociedad,valladolid,Valladolid,1,3,1-1,4,5,1,0,Anoeta,Megía Dávila,1.909,3.25,3.5,23361
+17,2003-12-20,valencia,Valencia,sevilla,Sevilla,1,0,0-0,3,4,0,0,Mestalla,Losantos Omar,1.444,3.75,6.5,23362
+17,2003-12-21,albacete,Albacete,athletic-club,Athletic Club,1,1,1-1,4,2,0,0,Carlos Belmonte,Pérez Burrull,2.3,3.2,2.7,23363
+17,2003-12-21,barcelona,Barcelona,celta-de-vigo,Celta de Vigo,1,1,0-1,2,4,0,0,Camp Nou,Ramírez Domínguez,1.667,3.4,4.5,23364
+17,2003-12-21,real-betis-balompie,Betis,villarreal,Villarreal,1,3,0-0,1,3,1,0,Manuel Ruiz de Lopera,Undiano Mallenco,2.2,3.25,2.8,23365
+17,2003-12-21,deportivo-la-coruna,Deportivo de La Coruña,espanyol-de-barcelona,Espanyol,2,1,1-1,3,2,0,0,Riazor,Esquinas Torres,1.286,4.5,9,23366
+17,2003-12-21,mallorca,Mallorca,real-madrid,Real Madrid,1,3,1-1,2,1,0,0,Son Moix,Medina Cantalejo,4,3.25,1.8,23367
+17,2003-12-21,murcia,Murcia,malaga,Málaga,1,2,1-1,1,2,0,0,La Condomina,Mejuto González,2.375,3,2.75,23368
+17,2003-12-21,osasuna,Osasuna,zaragoza,Zaragoza,0,1,0-1,6,1,2,0,El Sadar,Lizondo Cortés,1.667,3.4,4.5,23369
+18,2004-01-03,celta-de-vigo,Celta de Vigo,deportivo-la-coruna,Deportivo de La Coruña,0,5,0-2,2,1,0,0,Balaídos,Pérez Lasa,2.6,3.2,2.4,23370
+18,2004-01-03,real-madrid,Real Madrid,murcia,Murcia,1,0,1-0,4,2,0,0,Santiago Bernabéu,Teixeira Vitienes,1.167,5.5,13,23371
+18,2004-01-03,zaragoza,Zaragoza,club-atletico-de-madrid,Atlético de Madrid,0,0,0-0,2,3,0,0,La Romareda,Puentes Leira,2.375,3.2,2.625,23372
+18,2004-01-04,athletic-club,Athletic Club,osasuna,Osasuna,1,1,1-1,2,4,0,0,San Mamés,Muñiz Fernández,2,3.25,3.25,23373
+18,2004-01-04,espanyol-de-barcelona,Espanyol,mallorca,Mallorca,2,0,1-0,2,4,0,1,Lluís Companys,Carmona Méndez,2.6,3.2,2.4,23374
+18,2004-01-04,malaga,Málaga,real-sociedad-de-futbol,Real Sociedad,1,2,1-2,4,3,0,0,La Rosaleda,Daudén Ibáñez,1.909,3.2,3.6,23375
+18,2004-01-04,real-racing-club-de-santander,Racing de Santander,barcelona,Barcelona,3,0,0-0,1,0,0,0,El Sardinero,Iturralde González,2.625,3.2,2.375,23376
+18,2004-01-04,sevilla,Sevilla,albacete,Albacete,2,0,1-0,3,6,0,2,Ramón Sánchez-Pizjuán,Téllez Sánchez,1.727,3.25,4.333,23377
+18,2004-01-04,valencia,Valencia,villarreal,Villarreal,4,2,0-1,2,4,0,1,Mestalla,Tristante Oliva,1.533,3.4,6,23378
+18,2004-01-04,valladolid,Valladolid,real-betis-balompie,Betis,0,0,0-0,2,3,0,0,José Zorrilla,Pino Zamorano,2,3.1,3.4,23379
+19,2004-01-10,albacete,Albacete,valencia,Valencia,0,1,0-1,0,3,0,0,Carlos Belmonte,Moreno Delgado,3.75,3.25,1.83,23380
+19,2004-01-10,mallorca,Mallorca,celta-de-vigo,Celta de Vigo,2,4,1-1,3,4,1,0,Son Moix,Megía Dávila,2,3.25,3.25,23381
+19,2004-01-10,real-sociedad-de-futbol,Real Sociedad,real-madrid,Real Madrid,1,0,0-0,2,1,0,0,Anoeta,Undiano Mallenco,4.33,3.4,1.8,23382
+19,2004-01-11,club-atletico-de-madrid,Atlético de Madrid,athletic-club,Athletic Club,3,0,0-0,4,2,0,0,Vicente Calderón,Turienzo Álvarez,1.9,3.25,4,23383
+19,2004-01-11,barcelona,Barcelona,zaragoza,Zaragoza,3,0,2-0,0,6,0,0,Camp Nou,González Vázquez,1.61,3.4,5,23384
+19,2004-01-11,real-betis-balompie,Betis,malaga,Málaga,3,0,1-0,1,3,0,0,Manuel Ruiz de Lopera,Rodríguez Santiago,2.1,3.25,3,23385
+19,2004-01-11,deportivo-la-coruna,Deportivo de La Coruña,real-racing-club-de-santander,Racing de Santander,1,1,1-0,1,3,0,0,Riazor,Ramírez Domínguez,1.4,3.75,7.5,23386
+19,2004-01-11,murcia,Murcia,espanyol-de-barcelona,Espanyol,0,1,0-1,4,3,1,0,La Condomina,Rubinos Pérez,2.1,3.25,3,23387
+19,2004-01-11,osasuna,Osasuna,sevilla,Sevilla,1,1,0-0,3,4,0,0,El Sadar,Pérez Burrull,1.9,3.2,3.6,23388
+19,2004-01-11,villarreal,Villarreal,valladolid,Valladolid,3,1,1-0,4,1,0,1,El Madrigal,Mejuto González,1.8,3.25,4,23389
+20,2004-01-17,barcelona,Barcelona,athletic-club,Athletic Club,1,1,0-0,3,3,0,0,Camp Nou,Esquinas Torres,1.66,3.4,5.5,23390
+20,2004-01-17,murcia,Murcia,celta-de-vigo,Celta de Vigo,2,2,0-2,0,3,1,1,La Condomina,Moreno Delgado,2.5,3.2,2.5,23391
+20,2004-01-17,valladolid,Valladolid,valencia,Valencia,0,0,0-0,3,2,0,0,José Zorrilla,González Vázquez,1.66,3.4,4.5,23392
+20,2004-01-18,club-atletico-de-madrid,Atlético de Madrid,sevilla,Sevilla,2,1,1-0,6,4,0,0,Vicente Calderón,Iturralde González,1.8,3.2,4,23393
+20,2004-01-18,real-betis-balompie,Betis,real-madrid,Real Madrid,1,1,1-0,2,4,0,0,Manuel Ruiz de Lopera,Losantos Omar,4.5,3.25,1.83,23394
+20,2004-01-18,deportivo-la-coruna,Deportivo de La Coruña,zaragoza,Zaragoza,4,1,1-1,3,2,0,0,Riazor,Muñiz Fernández,1.36,3.6,9.5,23395
+20,2004-01-18,mallorca,Mallorca,real-racing-club-de-santander,Racing de Santander,1,1,0-0,3,5,0,0,Son Moix,Lizondo Cortés,2.2,3.2,2.87,23396
+20,2004-01-18,osasuna,Osasuna,albacete,Albacete,1,1,1-1,2,2,0,0,El Sadar,Turienzo Álvarez,1.66,3.4,4.5,23397
+20,2004-01-18,real-sociedad-de-futbol,Real Sociedad,espanyol-de-barcelona,Espanyol,3,1,1-0,3,3,0,0,Anoeta,Teixeira Vitienes,3.4,3.1,2,23398
+20,2004-01-18,villarreal,Villarreal,malaga,Málaga,2,0,0-0,2,3,0,0,El Madrigal,Puentes Leira,1.8,3.2,4,23399
+21,2004-01-24,albacete,Albacete,club-atletico-de-madrid,Atlético de Madrid,1,1,0-1,1,3,0,0,Carlos Belmonte,Medina Cantalejo,2.6,3.2,2.4,23400
+21,2004-01-24,real-madrid,Real Madrid,villarreal,Villarreal,2,1,1-0,3,6,0,0,Santiago Bernabéu,Daudén Ibáñez,1.36,4,7.5,23401
+21,2004-01-25,athletic-club,Athletic Club,deportivo-la-coruna,Deportivo de La Coruña,1,0,0-0,0,2,0,0,San Mamés,Pino Zamorano,2.7,3.25,2.5,23402
+21,2004-01-25,celta-de-vigo,Celta de Vigo,real-sociedad-de-futbol,Real Sociedad,2,5,1-2,4,4,1,0,Balaídos,Tristante Oliva,2.2,3.25,2.8,23403
+21,2004-01-25,espanyol-de-barcelona,Espanyol,real-betis-balompie,Betis,1,2,0-2,4,3,1,0,Lluís Companys,Pérez Burrull,2.6,3.2,2.4,23404
+21,2004-01-25,malaga,Málaga,valladolid,Valladolid,2,3,1-1,2,1,0,0,La Rosaleda,Carmona Méndez,1.9,3.2,3.6,23405
+21,2004-01-25,real-racing-club-de-santander,Racing de Santander,murcia,Murcia,3,2,1-1,4,4,0,0,El Sardinero,Téllez Sánchez,1.61,3.4,5,23406
+21,2004-01-25,sevilla,Sevilla,barcelona,Barcelona,0,1,0-1,2,4,1,0,Ramón Sánchez-Pizjuán,Mejuto González,2.4,3.2,2.6,23407
+21,2004-01-25,valencia,Valencia,osasuna,Osasuna,0,1,0-1,4,3,1,0,Mestalla,Megía Dávila,1.44,3.6,7,23408
+21,2004-01-25,zaragoza,Zaragoza,mallorca,Mallorca,1,3,0-2,0,1,0,0,La Romareda,Pérez Lasa,2.2,3.25,2.8,23409
+22,2004-01-31,club-atletico-de-madrid,Atlético de Madrid,osasuna,Osasuna,1,1,0-1,1,3,1,0,Vicente Calderón,Teixeira Vitienes,1.833,3.25,3.75,23410
+22,2004-01-31,real-betis-balompie,Betis,celta-de-vigo,Celta de Vigo,1,0,1-0,2,3,0,0,Manuel Ruiz de Lopera,Rubinos Pérez,2,3.2,3.75,23411
+22,2004-01-31,malaga,Málaga,valencia,Valencia,1,6,0-2,3,2,1,0,La Rosaleda,Iturralde González,3.25,3.25,2,23412
+22,2004-02-01,barcelona,Barcelona,albacete,Albacete,5,0,1-0,2,2,0,1,Camp Nou,Puentes Leira,1.444,3.6,7,23413
+22,2004-02-01,deportivo-la-coruna,Deportivo de La Coruña,sevilla,Sevilla,1,0,1-0,1,2,0,0,Riazor,Moreno Delgado,1.533,3.5,5.5,23414
+22,2004-02-01,mallorca,Mallorca,athletic-club,Athletic Club,1,3,1-1,2,3,0,0,Son Moix,Ramírez Domínguez,2.2,3.2,2.875,23415
+22,2004-02-01,murcia,Murcia,zaragoza,Zaragoza,1,0,1-0,4,3,0,0,La Condomina,Losantos Omar,2.3,3,2.875,23416
+22,2004-02-01,real-sociedad-de-futbol,Real Sociedad,real-racing-club-de-santander,Racing de Santander,1,0,0-0,3,3,0,1,Anoeta,Esquinas Torres,1.909,3.25,3.5,23417
+22,2004-02-01,valladolid,Valladolid,real-madrid,Real Madrid,2,3,2-0,4,4,1,1,José Zorrilla,Lizondo Cortés,3.75,3.25,1.833,23418
+22,2004-02-01,villarreal,Villarreal,espanyol-de-barcelona,Espanyol,0,1,0-0,1,3,0,0,El Madrigal,Rodríguez Santiago,1.571,3.4,5.5,23419
+23,2004-02-07,real-madrid,Real Madrid,malaga,Málaga,2,1,1-0,2,5,0,0,Santiago Bernabéu,Téllez Sánchez,1.167,7,13,23420
+23,2004-02-07,valencia,Valencia,club-atletico-de-madrid,Atlético de Madrid,3,0,1-0,1,5,0,1,Mestalla,Turienzo Álvarez,1.615,3.4,5,23421
+23,2004-02-08,albacete,Albacete,deportivo-la-coruna,Deportivo de La Coruña,0,2,0-0,2,4,0,1,Carlos Belmonte,Carmona Méndez,3.6,3.2,1.909,23422
+23,2004-02-08,athletic-club,Athletic Club,murcia,Murcia,2,1,2-1,2,1,0,1,San Mamés,Muñiz Fernández,1.533,3.4,6,23423
+23,2004-02-08,celta-de-vigo,Celta de Vigo,villarreal,Villarreal,2,1,1-0,3,3,0,0,Balaídos,Pérez Lasa,2.2,3.25,2.8,23424
+23,2004-02-08,espanyol-de-barcelona,Espanyol,valladolid,Valladolid,2,0,0-0,2,2,0,0,Lluís Companys,Medina Cantalejo,2.2,3.25,2.8,23425
+23,2004-02-08,osasuna,Osasuna,barcelona,Barcelona,1,2,0-1,1,2,1,1,El Sadar,Pino Zamorano,2.6,3.2,2.4,23426
+23,2004-02-08,real-racing-club-de-santander,Racing de Santander,real-betis-balompie,Betis,1,2,1-1,3,0,0,0,El Sardinero,Daudén Ibáñez,2.25,3.25,2.75,23427
+23,2004-02-08,sevilla,Sevilla,mallorca,Mallorca,3,0,0-0,1,3,0,0,Ramón Sánchez-Pizjuán,González Vázquez,2,3.25,3.25,23428
+23,2004-02-08,zaragoza,Zaragoza,real-sociedad-de-futbol,Real Sociedad,2,1,1-1,0,3,0,0,La Romareda,Moreno Delgado,2.875,3.25,2.375,23429
+24,2004-02-14,murcia,Murcia,sevilla,Sevilla,1,3,0-1,3,3,1,1,La Condomina,Lizondo Cortés,2.375,3.2,2.625,23430
+24,2004-02-14,real-sociedad-de-futbol,Real Sociedad,athletic-club,Athletic Club,1,1,1-1,4,4,0,1,Anoeta,Rodríguez Santiago,2.1,3.25,3.4,23431
+24,2004-02-15,barcelona,Barcelona,club-atletico-de-madrid,Atlético de Madrid,3,1,3-1,1,8,1,0,Camp Nou,Pérez Burrull,1.727,3.25,4.333,23432
+24,2004-02-15,real-betis-balompie,Betis,zaragoza,Zaragoza,2,1,2-1,2,3,0,0,Manuel Ruiz de Lopera,Iturralde González,1.571,3.4,5.5,23433
+24,2004-02-15,deportivo-la-coruna,Deportivo de La Coruña,osasuna,Osasuna,2,0,2-0,2,1,0,1,Riazor,Losantos Omar,1.533,3.5,5.5,23434
+24,2004-02-15,malaga,Málaga,espanyol-de-barcelona,Espanyol,5,2,3-1,3,3,0,0,La Rosaleda,Esquinas Torres,2.1,3.25,3,23435
+24,2004-02-15,mallorca,Mallorca,albacete,Albacete,0,0,0-0,3,4,0,0,Son Moix,Teixeira Vitienes,1.727,3.25,4.333,23436
+24,2004-02-15,real-madrid,Real Madrid,valencia,Valencia,1,1,0-0,4,5,0,0,Santiago Bernabéu,Tristante Oliva,1.727,3.4,5,23437
+24,2004-02-15,valladolid,Valladolid,celta-de-vigo,Celta de Vigo,0,2,0-0,3,2,0,0,José Zorrilla,Mejuto González,2.25,3.25,2.75,23438
+24,2004-02-15,villarreal,Villarreal,real-racing-club-de-santander,Racing de Santander,6,3,3-1,2,1,0,0,El Madrigal,Undiano Mallenco,1.909,3.25,3.5,23439
+25,2004-02-21,club-atletico-de-madrid,Atlético de Madrid,deportivo-la-coruna,Deportivo de La Coruña,0,0,0-0,2,2,0,0,Vicente Calderón,Ramírez Domínguez,2.5,3.2,2.5,23440
+25,2004-02-21,celta-de-vigo,Celta de Vigo,malaga,Málaga,0,2,0-1,1,4,1,0,Balaídos,Turienzo Álvarez,1.8,3.25,4,23441
+25,2004-02-21,espanyol-de-barcelona,Espanyol,real-madrid,Real Madrid,2,4,1-1,4,3,0,0,Lluís Companys,Muñiz Fernández,5,3.4,1.615,23442
+25,2004-02-21,sevilla,Sevilla,real-sociedad-de-futbol,Real Sociedad,1,0,0-0,4,2,0,0,Ramón Sánchez-Pizjuán,Daudén Ibáñez,2.2,3.25,2.8,23443
+25,2004-02-21,valencia,Valencia,barcelona,Barcelona,0,1,0-0,4,1,1,0,Mestalla,Rubinos Pérez,1.909,3.25,4,23444
+25,2004-02-22,albacete,Albacete,murcia,Murcia,1,0,1-0,1,1,0,1,Carlos Belmonte,Esquinas Torres,1.833,3.25,3.75,23445
+25,2004-02-22,athletic-club,Athletic Club,real-betis-balompie,Betis,1,1,0-0,4,2,0,0,San Mamés,Carmona Méndez,2.1,3.25,3.4,23446
+25,2004-02-22,osasuna,Osasuna,mallorca,Mallorca,1,1,1-1,4,4,0,0,El Sadar,Medina Cantalejo,1.833,3.25,3.75,23447
+25,2004-02-22,real-racing-club-de-santander,Racing de Santander,valladolid,Valladolid,1,0,0-0,3,4,0,0,El Sardinero,Puentes Leira,1.909,3.25,3.5,23448
+25,2004-02-22,zaragoza,Zaragoza,villarreal,Villarreal,4,1,3-0,3,3,1,1,La Romareda,Téllez Sánchez,2.4,3.2,2.6,23449
+26,2004-02-28,real-betis-balompie,Betis,sevilla,Sevilla,1,1,1-1,4,4,0,1,Manuel Ruiz de Lopera,Pino Zamorano,2.25,3.2,3.1,23450
+26,2004-02-28,valladolid,Valladolid,zaragoza,Zaragoza,1,2,1-1,2,3,1,0,José Zorrilla,Teixeira Vitienes,2.1,3.25,3,23451
+26,2004-02-29,deportivo-la-coruna,Deportivo de La Coruña,barcelona,Barcelona,2,3,0-2,2,5,0,1,Riazor,Tristante Oliva,2.1,3.25,3.4,23452
+26,2004-02-29,espanyol-de-barcelona,Espanyol,valencia,Valencia,2,1,1-0,3,0,0,0,Lluís Companys,Mejuto González,4.333,3.25,1.727,23453
+26,2004-02-29,malaga,Málaga,real-racing-club-de-santander,Racing de Santander,1,0,1-0,4,3,0,0,La Rosaleda,Pérez Lasa,2,3.25,3.25,23454
+26,2004-02-29,mallorca,Mallorca,club-atletico-de-madrid,Atlético de Madrid,0,1,0-0,3,2,1,0,Son Moix,Rodríguez Santiago,2.3,3.2,2.7,23455
+26,2004-02-29,murcia,Murcia,osasuna,Osasuna,0,1,0-1,0,0,0,0,La Condomina,Iturralde González,2.5,3.2,2.5,23456
+26,2004-02-29,real-sociedad-de-futbol,Real Sociedad,albacete,Albacete,0,1,0-0,1,7,0,0,Anoeta,González Vázquez,1.571,3.4,5.5,23457
+26,2004-02-29,real-madrid,Real Madrid,celta-de-vigo,Celta de Vigo,4,2,0-1,3,2,0,0,Santiago Bernabéu,Undiano Mallenco,1.333,4.5,9,23458
+26,2004-02-29,villarreal,Villarreal,athletic-club,Athletic Club,0,1,0-1,4,3,0,0,El Madrigal,Puentes Leira,2.2,3.25,2.8,23459
+27,2004-03-06,celta-de-vigo,Celta de Vigo,espanyol-de-barcelona,Espanyol,1,5,0-2,1,2,0,0,Balaídos,Losantos Omar,1.8,3.2,4,23460
+27,2004-03-06,osasuna,Osasuna,real-sociedad-de-futbol,Real Sociedad,1,1,1-0,4,1,0,0,El Sadar,Lizondo Cortés,2.1,3.25,3,23461
+27,2004-03-06,real-racing-club-de-santander,Racing de Santander,real-madrid,Real Madrid,1,1,1-1,5,6,0,1,El Sardinero,Medina Cantalejo,5,3.4,1.727,23462
+27,2004-03-06,valencia,Valencia,deportivo-la-coruna,Deportivo de La Coruña,3,0,1-0,3,1,0,1,Mestalla,Esquinas Torres,2.1,3.2,3.5,23463
+27,2004-03-07,albacete,Albacete,real-betis-balompie,Betis,1,0,1-0,4,1,0,0,Carlos Belmonte,Megía Dávila,2.5,3.2,2.5,23464
+27,2004-03-07,athletic-club,Athletic Club,valladolid,Valladolid,1,4,0-3,2,3,0,0,San Mamés,Téllez Sánchez,1.615,3.4,5,23465
+27,2004-03-07,club-atletico-de-madrid,Atlético de Madrid,murcia,Murcia,1,1,0-0,2,5,1,0,Vicente Calderón,Carmona Méndez,1.444,4,7.5,23466
+27,2004-03-07,barcelona,Barcelona,mallorca,Mallorca,3,2,2-0,0,2,0,0,Camp Nou,Turienzo Álvarez,1.364,3.75,8.5,23467
+27,2004-03-07,sevilla,Sevilla,villarreal,Villarreal,2,0,0-0,3,2,0,0,Ramón Sánchez-Pizjuán,Pérez Burrull,1.909,3.25,3.5,23468
+27,2004-03-07,zaragoza,Zaragoza,malaga,Málaga,1,0,0-0,4,5,0,1,La Romareda,Rubinos Pérez,2.1,3.25,3,23469
+28,2004-03-13,real-sociedad-de-futbol,Real Sociedad,club-atletico-de-madrid,Atlético de Madrid,2,1,2-0,1,3,1,0,Anoeta,Mejuto González,2.25,3.2,2.8,23470
+28,2004-03-13,real-madrid,Real Madrid,zaragoza,Zaragoza,1,1,1-1,1,3,0,0,Santiago Bernabéu,Puentes Leira,1.286,4.5,9,23471
+28,2004-03-14,real-betis-balompie,Betis,osasuna,Osasuna,1,1,1-1,1,5,0,0,Manuel Ruiz de Lopera,Rodríguez Santiago,2,3,3.5,23472
+28,2004-03-14,celta-de-vigo,Celta de Vigo,valencia,Valencia,0,2,0-1,2,3,0,0,Balaídos,Ramírez Domínguez,3.4,3.25,2.1,23473
+28,2004-03-14,espanyol-de-barcelona,Espanyol,real-racing-club-de-santander,Racing de Santander,0,1,0-0,0,1,0,0,Lluís Companys,Pino Zamorano,2.1,3.25,3,23474
+28,2004-03-14,malaga,Málaga,athletic-club,Athletic Club,2,1,0-1,3,4,0,0,La Rosaleda,Daudén Ibáñez,2.25,3.2,2.8,23475
+28,2004-03-14,mallorca,Mallorca,deportivo-la-coruna,Deportivo de La Coruña,4,2,2-1,2,1,0,1,Son Moix,Megía Dávila,2.8,3.25,2.2,23476
+28,2004-03-14,murcia,Murcia,barcelona,Barcelona,0,2,0-1,1,1,0,0,La Condomina,González Vázquez,4.5,3.4,1.667,23477
+28,2004-03-14,valladolid,Valladolid,sevilla,Sevilla,2,0,0-0,3,4,0,0,José Zorrilla,Muñiz Fernández,2.25,3.25,2.75,23478
+28,2004-03-14,villarreal,Villarreal,albacete,Albacete,2,1,0-1,6,2,0,0,El Madrigal,Iturralde González,1.8,3.25,4,23479
+29,2004-03-20,athletic-club,Athletic Club,real-madrid,Real Madrid,4,2,2-0,2,3,0,0,San Mamés,Teixeira Vitienes,3,3.25,2.1,23480
+29,2004-03-20,club-atletico-de-madrid,Atlético de Madrid,real-betis-balompie,Betis,2,1,0-0,2,3,0,0,Vicente Calderón,Tristante Oliva,1.909,3.25,3.5,23481
+29,2004-03-20,deportivo-la-coruna,Deportivo de La Coruña,murcia,Murcia,1,0,1-0,1,1,0,0,Riazor,Pérez Lasa,1.286,4.5,8.5,23482
+29,2004-03-21,albacete,Albacete,valladolid,Valladolid,2,0,1-0,1,4,0,0,Carlos Belmonte,Losantos Omar,2.1,3.25,3,23483
+29,2004-03-21,barcelona,Barcelona,real-sociedad-de-futbol,Real Sociedad,1,0,0-0,4,2,0,0,Camp Nou,Carmona Méndez,1.444,4,7.5,23484
+29,2004-03-21,osasuna,Osasuna,villarreal,Villarreal,2,1,1-0,3,3,0,1,El Sadar,Rubinos Pérez,2,3,3.5,23485
+29,2004-03-21,real-racing-club-de-santander,Racing de Santander,celta-de-vigo,Celta de Vigo,4,4,2-1,7,2,1,1,El Sardinero,Megía Dávila,1.909,3.25,3.5,23486
+29,2004-03-21,sevilla,Sevilla,malaga,Málaga,0,1,0-0,3,3,0,0,Ramón Sánchez-Pizjuán,Esquinas Torres,2,3.25,3.25,23487
+29,2004-03-21,valencia,Valencia,mallorca,Mallorca,5,1,1-0,0,2,0,0,Mestalla,Téllez Sánchez,1.4,3.75,7.5,23488
+29,2004-03-21,zaragoza,Zaragoza,espanyol-de-barcelona,Espanyol,1,1,1-1,2,2,0,0,La Romareda,Turienzo Álvarez,1.833,3.25,3.75,23489
+30,2004-03-27,espanyol-de-barcelona,Espanyol,athletic-club,Athletic Club,2,1,1-0,5,3,0,2,Lluís Companys,González Vázquez,2.5,3.25,2.7,23490
+30,2004-03-27,real-sociedad-de-futbol,Real Sociedad,deportivo-la-coruna,Deportivo de La Coruña,1,2,1-1,1,2,0,0,Anoeta,Medina Cantalejo,2.5,3.2,2.5,23491
+30,2004-03-28,celta-de-vigo,Celta de Vigo,zaragoza,Zaragoza,0,2,0-0,3,1,1,0,Balaídos,Rodríguez Santiago,2.1,3.25,3,23492
+30,2004-03-28,malaga,Málaga,albacete,Albacete,1,1,0-1,1,2,0,0,La Rosaleda,Moreno Delgado,1.8,3.25,4,23493
+30,2004-03-28,murcia,Murcia,mallorca,Mallorca,2,0,1-0,0,3,0,0,La Condomina,Pérez Burrull,2.625,3.2,2.375,23494
+30,2004-03-28,real-racing-club-de-santander,Racing de Santander,valencia,Valencia,0,3,0-2,1,2,0,0,El Sardinero,Muñiz Fernández,3.25,3.25,2,23495
+30,2004-03-28,real-madrid,Real Madrid,sevilla,Sevilla,5,1,2-0,4,3,0,0,Santiago Bernabéu,Losantos Omar,1.333,4.5,9,23496
+30,2004-03-28,valladolid,Valladolid,osasuna,Osasuna,1,1,1-0,3,3,0,0,José Zorrilla,Daudén Ibáñez,2.3,3.2,2.7,23497
+30,2004-03-28,villarreal,Villarreal,club-atletico-de-madrid,Atlético de Madrid,0,0,0-0,4,2,0,0,El Madrigal,Pino Zamorano,2.25,3.25,2.75,23498
+30,2004-04-14,real-betis-balompie,Betis,barcelona,Barcelona,1,1,1-1,2,4,0,2,Manuel Ruiz de Lopera,Lizondo Cortés,2.87,3.2,2.2,23499
+31,2004-04-03,albacete,Albacete,real-madrid,Real Madrid,1,2,0-1,3,2,0,0,Carlos Belmonte,Ramírez Domínguez,5,3.4,1.727,23500
+31,2004-04-03,barcelona,Barcelona,villarreal,Villarreal,0,0,0-0,2,2,0,0,Camp Nou,Megía Dávila,1.5,3.75,7,23501
+31,2004-04-03,sevilla,Sevilla,espanyol-de-barcelona,Espanyol,1,0,0-0,4,2,0,0,Ramón Sánchez-Pizjuán,Iturralde González,1.833,3.25,3.75,23502
+31,2004-04-04,athletic-club,Athletic Club,celta-de-vigo,Celta de Vigo,0,0,0-0,1,1,1,0,San Mamés,Esquinas Torres,1.8,3.25,4,23503
+31,2004-04-04,club-atletico-de-madrid,Atlético de Madrid,valladolid,Valladolid,2,1,2-0,4,2,0,0,Vicente Calderón,Pérez Lasa,1.667,3.4,5,23504
+31,2004-04-04,deportivo-la-coruna,Deportivo de La Coruña,real-betis-balompie,Betis,2,2,2-1,3,2,0,1,Riazor,Teixeira Vitienes,1.533,3.4,6,23505
+31,2004-04-04,mallorca,Mallorca,real-sociedad-de-futbol,Real Sociedad,1,1,0-1,0,0,0,0,Son Moix,Puentes Leira,2.25,3.25,2.75,23506
+31,2004-04-04,osasuna,Osasuna,malaga,Málaga,1,1,1-0,1,2,0,0,El Sadar,Mejuto González,1.909,3.2,3.6,23507
+31,2004-04-04,valencia,Valencia,murcia,Murcia,2,0,0-0,2,2,0,0,Mestalla,Undiano Mallenco,1.222,5.5,13,23508
+31,2004-04-04,zaragoza,Zaragoza,real-racing-club-de-santander,Racing de Santander,2,2,1-0,1,2,0,0,La Romareda,Tristante Oliva,1.909,3.2,3.6,23509
+32,2004-04-10,celta-de-vigo,Celta de Vigo,sevilla,Sevilla,0,0,0-0,4,5,1,0,Balaídos,Téllez Sánchez,2.2,3.25,3.2,23510
+32,2004-04-10,malaga,Málaga,club-atletico-de-madrid,Atlético de Madrid,3,1,2-1,3,3,0,1,La Rosaleda,González Vázquez,2.2,3.25,2.8,23511
+32,2004-04-10,valladolid,Valladolid,barcelona,Barcelona,1,3,0-2,2,4,0,1,José Zorrilla,Losantos Omar,3,3.25,2.1,23512
+32,2004-04-11,real-betis-balompie,Betis,mallorca,Mallorca,0,2,0-1,2,4,0,0,Manuel Ruiz de Lopera,Muñiz Fernández,1.833,3.25,3.75,23513
+32,2004-04-11,espanyol-de-barcelona,Espanyol,albacete,Albacete,1,1,0-1,2,4,0,0,Lluís Companys,Daudén Ibáñez,2,3.25,3.25,23514
+32,2004-04-11,real-racing-club-de-santander,Racing de Santander,athletic-club,Athletic Club,1,2,0-1,3,2,0,0,El Sardinero,Lizondo Cortés,2.25,3.25,2.75,23515
+32,2004-04-11,real-sociedad-de-futbol,Real Sociedad,murcia,Murcia,2,0,0-0,3,2,0,0,Anoeta,Rubinos Pérez,1.5,3.5,6,23516
+32,2004-04-11,real-madrid,Real Madrid,osasuna,Osasuna,0,3,0-2,2,3,0,0,Santiago Bernabéu,Carmona Méndez,1.364,4.333,9,23517
+32,2004-04-11,villarreal,Villarreal,deportivo-la-coruna,Deportivo de La Coruña,0,2,0-1,5,2,0,0,El Madrigal,Turienzo Álvarez,2.625,3.2,2.375,23518
+32,2004-04-11,zaragoza,Zaragoza,valencia,Valencia,0,1,0-0,2,3,0,0,La Romareda,Pérez Burrull,3.5,3.25,1.909,23519
+33,2004-04-17,athletic-club,Athletic Club,zaragoza,Zaragoza,4,0,1-0,1,5,0,2,San Mamés,Medina Cantalejo,1.8,3.25,4,23520
+33,2004-04-17,club-atletico-de-madrid,Atlético de Madrid,real-madrid,Real Madrid,1,2,0-1,6,2,0,1,Vicente Calderón,Moreno Delgado,3,3.3,2.25,23521
+33,2004-04-17,deportivo-la-coruna,Deportivo de La Coruña,valladolid,Valladolid,1,1,0-1,5,2,0,0,Riazor,Pino Zamorano,1.444,3.75,6.5,23522
+33,2004-04-18,albacete,Albacete,celta-de-vigo,Celta de Vigo,0,2,0-1,6,3,0,1,Carlos Belmonte,Pérez Lasa,2.2,3.25,2.8,23523
+33,2004-04-18,barcelona,Barcelona,malaga,Málaga,3,0,3-0,0,2,0,0,Camp Nou,Iturralde González,1.5,3.75,7,23524
+33,2004-04-18,mallorca,Mallorca,villarreal,Villarreal,1,2,1-1,1,2,0,0,Son Moix,Mejuto González,2,3.25,3.25,23525
+33,2004-04-18,murcia,Murcia,real-betis-balompie,Betis,0,1,0-1,3,2,0,0,La Condomina,Puentes Leira,,,,23526
+33,2004-04-18,osasuna,Osasuna,espanyol-de-barcelona,Espanyol,1,3,0-1,2,3,0,0,El Sadar,Ramírez Domínguez,1.667,3.4,4.5,23527
+33,2004-04-18,sevilla,Sevilla,real-racing-club-de-santander,Racing de Santander,5,2,2-0,2,3,0,0,Ramón Sánchez-Pizjuán,Rodríguez Santiago,1.909,3.25,3.5,23528
+33,2004-04-18,valencia,Valencia,real-sociedad-de-futbol,Real Sociedad,2,2,0-0,4,2,0,0,Mestalla,Teixeira Vitienes,1.4,3.75,7.5,23529
+34,2004-04-24,espanyol-de-barcelona,Espanyol,club-atletico-de-madrid,Atlético de Madrid,3,1,0-0,2,2,0,0,Lluís Companys,Undiano Mallenco,2.1,3.25,3,23530
+34,2004-04-24,malaga,Málaga,deportivo-la-coruna,Deportivo de La Coruña,1,1,1-1,2,5,0,0,La Rosaleda,Téllez Sánchez,2.6,3.25,2.6,23531
+34,2004-04-25,athletic-club,Athletic Club,valencia,Valencia,1,1,1-1,3,2,0,0,San Mamés,Turienzo Álvarez,3.1,3.2,2.25,23532
+34,2004-04-25,real-betis-balompie,Betis,real-sociedad-de-futbol,Real Sociedad,2,1,2-1,2,3,1,0,Manuel Ruiz de Lopera,Esquinas Torres,2.2,3.25,2.8,23533
+34,2004-04-25,celta-de-vigo,Celta de Vigo,osasuna,Osasuna,1,0,0-0,3,0,0,0,Balaídos,Muñiz Fernández,1.9,3.25,3.5,23534
+34,2004-04-25,real-racing-club-de-santander,Racing de Santander,albacete,Albacete,0,2,0-1,3,2,0,0,El Sardinero,Rubinos Pérez,2.1,3.25,3,23535
+34,2004-04-25,real-madrid,Real Madrid,barcelona,Barcelona,1,2,0-0,4,0,1,0,Santiago Bernabéu,Pérez Burrull,2,3.2,3.75,23536
+34,2004-04-25,valladolid,Valladolid,mallorca,Mallorca,1,3,0-1,1,3,0,0,José Zorrilla,Tristante Oliva,2,3.25,3.25,23537
+34,2004-04-25,villarreal,Villarreal,murcia,Murcia,1,0,0-0,2,1,0,0,El Madrigal,Losantos Omar,1.44,3.75,6.5,23538
+34,2004-04-25,zaragoza,Zaragoza,sevilla,Sevilla,4,4,2-1,5,1,1,0,La Romareda,Megía Dávila,2.25,3.25,2.75,23539
+35,2004-05-01,club-atletico-de-madrid,Atlético de Madrid,celta-de-vigo,Celta de Vigo,3,2,3-1,3,2,0,1,Vicente Calderón,Daudén Ibáñez,2,3.2,3.2,23540
+35,2004-05-01,deportivo-la-coruna,Deportivo de La Coruña,real-madrid,Real Madrid,2,0,1-0,2,4,0,1,Riazor,Rodríguez Santiago,3.2,3.25,2.2,23541
+35,2004-05-02,albacete,Albacete,zaragoza,Zaragoza,3,1,1-0,1,3,0,0,Carlos Belmonte,Lizondo Cortés,2.25,3.2,2.75,23542
+35,2004-05-02,barcelona,Barcelona,espanyol-de-barcelona,Espanyol,4,1,2-1,1,5,0,0,Camp Nou,Medina Cantalejo,1.44,4,7.5,23543
+35,2004-05-02,mallorca,Mallorca,malaga,Málaga,2,1,1-0,2,1,0,0,Son Moix,Pino Zamorano,1.8,3.2,4,23544
+35,2004-05-02,murcia,Murcia,valladolid,Valladolid,2,1,1-1,2,2,0,0,La Condomina,Mejuto González,3.5,3.2,1.9,23545
+35,2004-05-02,osasuna,Osasuna,real-racing-club-de-santander,Racing de Santander,1,2,0-0,4,5,0,0,El Sadar,Moreno Delgado,1.9,3.25,3.4,23546
+35,2004-05-02,real-sociedad-de-futbol,Real Sociedad,villarreal,Villarreal,2,2,1-1,1,2,0,0,Anoeta,Ramírez Domínguez,1.8,3.25,4,23547
+35,2004-05-02,sevilla,Sevilla,athletic-club,Athletic Club,2,0,1-0,2,1,0,0,Ramón Sánchez-Pizjuán,Carmona Méndez,2.1,3.2,3,23548
+35,2004-05-02,valencia,Valencia,real-betis-balompie,Betis,2,0,1-0,1,2,0,0,Mestalla,González Vázquez,1.4,3.75,7,23549
+36,2004-05-08,celta-de-vigo,Celta de Vigo,barcelona,Barcelona,1,0,1-0,2,3,0,0,Balaídos,Undiano Mallenco,3.75,3.5,1.9,23550
+36,2004-05-08,real-madrid,Real Madrid,mallorca,Mallorca,2,3,1-3,3,3,0,0,Santiago Bernabéu,Iturralde González,1.36,4.5,8,23551
+36,2004-05-09,athletic-club,Athletic Club,albacete,Albacete,1,1,0-0,1,4,0,0,San Mamés,Tristante Oliva,1.61,3.5,4.5,23552
+36,2004-05-09,espanyol-de-barcelona,Espanyol,deportivo-la-coruna,Deportivo de La Coruña,2,0,1-0,4,0,0,0,Lluís Companys,Rubinos Pérez,2.2,3.25,2.75,23553
+36,2004-05-09,malaga,Málaga,murcia,Murcia,1,0,0-0,1,2,0,0,La Rosaleda,Teixeira Vitienes,1.4,3.75,7,23554
+36,2004-05-09,real-racing-club-de-santander,Racing de Santander,club-atletico-de-madrid,Atlético de Madrid,2,2,0-1,3,4,0,1,El Sardinero,Losantos Omar,2.2,3.25,2.75,23555
+36,2004-05-09,sevilla,Sevilla,valencia,Valencia,0,2,0-1,2,3,0,0,Ramón Sánchez-Pizjuán,Puentes Leira,3.25,3.2,2.2,23556
+36,2004-05-09,valladolid,Valladolid,real-sociedad-de-futbol,Real Sociedad,2,2,1-2,7,4,3,0,José Zorrilla,Megía Dávila,2.37,3.1,2.62,23557
+36,2004-05-09,villarreal,Villarreal,real-betis-balompie,Betis,1,0,0-0,2,4,0,0,El Madrigal,Pérez Lasa,2.1,3.2,3,23558
+36,2004-05-09,zaragoza,Zaragoza,osasuna,Osasuna,1,0,0-0,2,3,0,0,La Romareda,Esquinas Torres,2,3.2,3.2,23559
+37,2004-05-14,villarreal,Villarreal,valencia,Valencia,2,1,2-1,1,2,0,0,El Madrigal,Medina Cantalejo,,,,23560
+37,2004-05-15,real-betis-balompie,Betis,valladolid,Valladolid,1,0,0-0,1,2,0,0,Manuel Ruiz de Lopera,Moreno Delgado,2.3,3.4,2.5,23561
+37,2004-05-15,deportivo-la-coruna,Deportivo de La Coruña,celta-de-vigo,Celta de Vigo,3,0,3-0,0,2,0,1,Riazor,Lizondo Cortés,2.6,3.4,2.25,23562
+37,2004-05-16,albacete,Albacete,sevilla,Sevilla,1,4,0-1,3,3,2,0,Carlos Belmonte,González Vázquez,2.37,3.1,2.62,23563
+37,2004-05-16,club-atletico-de-madrid,Atlético de Madrid,zaragoza,Zaragoza,1,2,0-0,2,4,0,1,Vicente Calderón,Téllez Sánchez,1.72,3.4,4,23564
+37,2004-05-16,barcelona,Barcelona,real-racing-club-de-santander,Racing de Santander,1,0,1-0,1,2,1,0,Camp Nou,Daudén Ibáñez,1.33,4,8,23565
+37,2004-05-16,mallorca,Mallorca,espanyol-de-barcelona,Espanyol,4,2,0-2,4,3,0,0,Son Moix,Carmona Méndez,,,,23566
+37,2004-05-16,murcia,Murcia,real-madrid,Real Madrid,2,1,2-0,3,5,0,1,La Condomina,Turienzo Álvarez,7,3.75,1.4,23567
+37,2004-05-16,osasuna,Osasuna,athletic-club,Athletic Club,1,2,0-0,2,2,0,0,El Sadar,Pérez Burrull,3,3.2,2.1,23568
+37,2004-05-16,real-sociedad-de-futbol,Real Sociedad,malaga,Málaga,1,1,0-0,2,2,0,0,Anoeta,Muñiz Fernández,1.83,3.4,3.5,23569
+38,2004-05-23,athletic-club,Athletic Club,club-atletico-de-madrid,Atlético de Madrid,3,4,1-3,1,3,0,0,San Mamés,Puentes Leira,2.3,3.4,2.5,23570
+38,2004-05-23,celta-de-vigo,Celta de Vigo,mallorca,Mallorca,1,2,0-0,0,2,0,0,Balaídos,Rubinos Pérez,,,,23571
+38,2004-05-23,espanyol-de-barcelona,Espanyol,murcia,Murcia,2,0,0-0,4,3,1,0,Lluís Companys,Megía Dávila,1.28,4.5,8,23572
+38,2004-05-23,malaga,Málaga,real-betis-balompie,Betis,2,3,2-0,1,2,0,0,La Rosaleda,Rodríguez Santiago,1.9,3.25,3.4,23573
+38,2004-05-23,real-racing-club-de-santander,Racing de Santander,deportivo-la-coruna,Deportivo de La Coruña,0,1,0-1,0,0,0,0,El Sardinero,Tristante Oliva,,,,23574
+38,2004-05-23,real-madrid,Real Madrid,real-sociedad-de-futbol,Real Sociedad,1,4,1-3,3,3,0,0,Santiago Bernabéu,Pino Zamorano,1.4,4.2,6,23575
+38,2004-05-23,sevilla,Sevilla,osasuna,Osasuna,1,0,0-0,4,6,1,2,Ramón Sánchez-Pizjuán,Losantos Omar,2.5,3.25,2.4,23576
+38,2004-05-23,valencia,Valencia,albacete,Albacete,0,1,0-0,0,0,0,0,Mestalla,Mejuto González,1.5,3.6,5.5,23577
+38,2004-05-23,valladolid,Valladolid,villarreal,Villarreal,3,0,1-0,2,2,0,1,José Zorrilla,Esquinas Torres,1.5,3.4,6,23578
+38,2004-05-23,zaragoza,Zaragoza,barcelona,Barcelona,2,1,1-1,1,1,0,0,La Romareda,Ramírez Domínguez,5,3.1,1.66,23579

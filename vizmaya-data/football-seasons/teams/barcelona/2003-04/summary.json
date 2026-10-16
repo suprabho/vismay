@@ -1,0 +1,279 @@
+{
+ "team": "FC Barcelona",
+ "season": "2003-04",
+ "manager": "Frank Rijkaard",
+ "records": {
+  "all": {
+   "played": 52,
+   "won": 29,
+   "drawn": 12,
+   "lost": 11,
+   "gf": 89,
+   "ga": 46,
+   "clean_sheets": 20,
+   "failed_to_score": 11
+  },
+  "La Liga": {
+   "played": 38,
+   "won": 21,
+   "drawn": 9,
+   "lost": 8,
+   "gf": 63,
+   "ga": 39,
+   "clean_sheets": 13,
+   "failed_to_score": 7
+  },
+  "UEFA Cup": {
+   "played": 8,
+   "won": 5,
+   "drawn": 2,
+   "lost": 1,
+   "gf": 17,
+   "ga": 3,
+   "clean_sheets": 5,
+   "failed_to_score": 2
+  },
+  "Copa del Rey": {
+   "played": 6,
+   "won": 3,
+   "drawn": 1,
+   "lost": 2,
+   "gf": 9,
+   "ga": 4,
+   "clean_sheets": 2,
+   "failed_to_score": 2
+  },
+  "league_home": {
+   "played": 19,
+   "won": 10,
+   "drawn": 6,
+   "lost": 3,
+   "gf": 33,
+   "ga": 14,
+   "clean_sheets": 8,
+   "failed_to_score": 4
+  },
+  "league_away": {
+   "played": 19,
+   "won": 11,
+   "drawn": 3,
+   "lost": 5,
+   "gf": 30,
+   "ga": 25,
+   "clean_sheets": 5,
+   "failed_to_score": 3
+  }
+ },
+ "league": {
+  "final_pos": 2,
+  "points": 72,
+  "champion": "Valencia",
+  "pts_behind_champion": 5,
+  "low_point": {
+   "round": 18,
+   "date": "2004-01-04",
+   "pos": 12,
+   "pts": 24,
+   "pts_behind_leader": 18,
+   "pts_above_relegation": 6
+  },
+  "first_half_rounds_1_19": {
+   "points": 27,
+   "pos_after": 7
+  },
+  "second_half_rounds_20_38": {
+   "points": 45,
+   "rank_in_second_half_table": 1
+  },
+  "second_half_table": [
+   {
+    "team": "Barcelona",
+    "pts": 45,
+    "gd": 23
+   },
+   {
+    "team": "Valencia",
+    "pts": 34,
+    "gd": 22
+   },
+   {
+    "team": "Deportivo de La Coruña",
+    "pts": 34,
+    "gd": 9
+   },
+   {
+    "team": "Sevilla",
+    "pts": 30,
+    "gd": 6
+   },
+   {
+    "team": "Athletic Club",
+    "pts": 30,
+    "gd": 5
+   },
+   {
+    "team": "Betis",
+    "pts": 30,
+    "gd": 1
+   }
+  ],
+  "position_by_round": [
+   6,
+   4,
+   3,
+   5,
+   6,
+   9,
+   11,
+   7,
+   5,
+   5,
+   4,
+   5,
+   5,
+   8,
+   11,
+   9,
+   9,
+   12,
+   7,
+   7,
+   7,
+   5,
+   4,
+   4,
+   4,
+   4,
+   4,
+   3,
+   3,
+   4,
+   4,
+   4,
+   3,
+   3,
+   3,
+   3,
+   2,
+   2
+  ]
+ },
+ "streaks": {
+  "unbeaten_league": {
+   "length": 17,
+   "from_": "2004-01-11",
+   "to": "2004-05-02"
+  },
+  "wins_league": {
+   "length": 9,
+   "from_": "2004-01-25",
+   "to": "2004-03-21"
+  },
+  "unbeaten_all": {
+   "length": 10,
+   "from_": "2004-01-25",
+   "to": "2004-03-07"
+  },
+  "winless_league": {
+   "length": 4,
+   "from_": "2003-09-20",
+   "to": "2003-10-18"
+  }
+ },
+ "biggest_win": {
+  "date": "2003-10-15",
+  "competition": "UEFA Cup",
+  "opponent": "Matador Púchov",
+  "venue": "H",
+  "gf": 8,
+  "ga": 0
+ },
+ "heaviest_defeat": {
+  "date": "2003-12-03",
+  "competition": "La Liga",
+  "opponent": "Málaga",
+  "venue": "A",
+  "gf": 1,
+  "ga": 5
+ },
+ "top_scorers_all": [
+  [
+   "Ronaldinho",
+   21
+  ],
+  [
+   "Saviola",
+   19
+  ],
+  [
+   "Kluivert",
+   10
+  ],
+  [
+   "Luis García",
+   8
+  ],
+  [
+   "Cocu",
+   6
+  ],
+  [
+   "Luis Enrique",
+   5
+  ],
+  [
+   "Xavi",
+   5
+  ],
+  [
+   "Overmars",
+   3
+  ]
+ ],
+ "goals_by_15_min": {
+  "for": {
+   "1-15": 16,
+   "16-30": 12,
+   "31-45": 16,
+   "46-60": 15,
+   "61-75": 15,
+   "76-90": 15
+  },
+  "against": {
+   "1-15": 7,
+   "16-30": 2,
+   "31-45": 6,
+   "46-60": 10,
+   "61-75": 8,
+   "76-90": 13
+  }
+ },
+ "players_used": 29,
+ "clasicos": [
+  {
+   "date": "2003-12-06",
+   "venue": "H",
+   "gf": 1,
+   "ga": 2,
+   "scorers_for": "Kluivert 83'",
+   "scorers_against": "Roberto Carlos 37'; Ronaldo 73'"
+  },
+  {
+   "date": "2004-04-25",
+   "venue": "A",
+   "gf": 2,
+   "ga": 1,
+   "scorers_for": "Kluivert 56'; Xavi 86'",
+   "scorers_against": "Solari 53'"
+  }
+ ],
+ "checks": {
+  "league_matches": 380,
+  "league_rows_without_football_data": 0,
+  "club_matches": 52,
+  "squad_vs_bdfutbol_diffs": [
+   "Márquez liga_minutes: lineups 1387 vs BDFutbol 1385",
+   "Márquez copa_minutes: lineups 440 vs BDFutbol 441"
+  ]
+ }
+}

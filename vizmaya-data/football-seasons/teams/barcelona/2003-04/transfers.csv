@@ -1,0 +1,25 @@
+direction,window,player,position,nationality,age,other_club,other_club_country,type,fee,fee_eur_m,source_url
+in,summer,Ronaldinho,FW,BRA,23,Paris Saint-Germain,FRA,Transfer,€27M,27,https://news.bbc.co.uk/sport1/hi/football/teams/m/man_utd/3079815.stm
+in,summer,Ricardo Quaresma,MF,POR,19,Sporting CP,POR,Transfer,€16.25M,16.25,http://www.footballdatabase.com/index.php?page=player&Id=710
+in,summer,Rüştü,GK,TUR,30,Fenerbahçe,TUR,Transfer,Free,,http://www.footballdatabase.com/index.php?page=player&Id=238
+in,summer,Márquez,DF,MEX,24,Monaco,FRA,Transfer,€5.25M,5.25,http://www.footballdatabase.com/index.php?page=player&Id=834&b=true&pn=Rafael_Márquez_Álvarez
+in,summer,Luis García,MF,ESP,24,Atlético Madrid,ESP,Transfer,?,,
+in,summer,Giovanni van Bronckhorst,DF,NED,30,Arsenal,ENG,Loan,N/A }},,
+in,winter,Davids,MF,NED,30,Juventus,,Loan,€2M,2,http://www.footballdatabase.com/index.php?page=player&Id=685&b=true&pn=Edgar_Steven_Davids
+in,summer,Mario,DF,ESP,21,Valladolid,ESP,Loan,N/A,,http://www.bdfutbol.com/en/j/j1905.html
+in,summer,Andrés Iniesta,MF,ESP,19,YS,,Promote,Free,,
+in,summer,Víctor Valdés,GK,ESP,21,YS,,Promote,Free,,
+in,winter,Oleguer,DF,ESP,23,YS,,Promote,Free,,
+out,summer,Fàbregas,MF,ESP,16,Arsenal,ENG,Transfer,€0.25M,0.25,http://www.timesonline.co.uk/tol/sport/football/premier_league/arsenal/article1449871.ece
+out,summer,de Boer,DF,NED,33,Galatasaray,TUR,Contract termination,Free,,http://quicktime.cnnsi.com/soccer/news/2003/07/10/deboer_cimbom_ap/
+out,summer,Bonano,GK,ARG,33,Murcia,ESP,Transfer,Free,,http://sportsillustrated.cnn.com/2003/soccer/12/31/bc.sport.soccer.bonano/index.html
+out,summer,Christanval,DF,FRA,24,Marseille,FRA,Transfer,Free,,http://findarticles.com/p/articles/mi_m0FCN/is_4_26/ai_108597437/
+out,summer,Alfonso,FW,ESP,30,Betis,ESP,Contract termination,Free,,http://futbol.sportec.es/seleccion/ficha_jugador.asp?j=22&n=alfonso%2Falfonso%2Fperez%2Fmu%C3%B1oz
+out,winter,Andersson,DF,SWE,31,Malmö FF,SWE,Contract termination,Free,,http://www.level-k.com/player/P_Andersson.htm
+out,winter,Geovanni,FW,BRA,24,Benfica,POR,Transfer,Free,,http://www.hullcityafc.net/page/ProfilesDetail/0%2C%2C10338~28807%2C00.html
+out,summer,Riquelme,MF,ARG,25,Villarreal,ESP,Loan,N/A,,http://www.uefa.com/competitions/ucl/news/kind=1/newsid=308912.html
+out,summer,Rochemback,MF,BRA,22,Sporting CP,POR,Loan,€2.5M,2.5,http://www.portugoal.net/index.php/player-profiles/124-players-p-r/149-player-profile-fabio-rochemback
+out,winter,Navarro,DF,ESP,21,Albacete,ESP,Loan,N/A,,http://www.footballdatabase.com/index.php?page=player&Id=1887&pn=Fernando_Navarro_Corbacho
+out,summer,Enke,GK,GER,25,Fenerbahçe,TUR,Loan,€0.4M,0.4,http://www.turks.us/article.php?story=20030729165131402&mode=print
+out,summer,Trashorras,MF,ESP,22,Real Madrid,ESP,Transfer,Free,,http://archivo.marca.com/edicion/marca/futbol/2a_division/celta/es/desarrollo/1139062.html
+out,summer,Tortolero,DF,ESP,21,Elche,ESP,Transfer,Free,,http://www.gironafutbolclub.com/castella/jugadors/tortolero.htm
