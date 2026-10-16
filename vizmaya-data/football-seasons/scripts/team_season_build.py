@@ -207,6 +207,7 @@ def build(team, start):
     summary['checks'] = dict(league_matches=len(league_rows), league_rows_without_football_data=len(unmatched_fd),
                              club_matches=len(matches), **squad_checks(team_html, squad))
     json.dump(summary, open(os.path.join(out, 'summary.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=str)
+    write_csv(os.path.join(out, 'key_numbers.csv'), ['metric', 'value'], key_numbers(summary))
     print(json.dumps(summary['checks'], indent=1))
     print('wrote', out)
 
@@ -661,6 +662,23 @@ def timeline(raw, out, matches, goals, lineups, squad, tables, tf, me, me_id, st
                            source_url=t['source_url'], evidence=''))
     ev.sort(key=lambda e: (e['date'], -int(e['importance'] or 0)))
     return ev
+
+def key_numbers(summary):
+    """summary.json flattened to metric / value rows; metric is the dotted path (records.La Liga.won)."""
+    rows = []
+    def walk(path, v):
+        if isinstance(v, dict):
+            for k, x in v.items(): walk(f'{path}.{k}' if path else k, x)
+        elif isinstance(v, list) and v and isinstance(v[0], dict):
+            for i, x in enumerate(v, 1): walk(f'{path}.{i}', x)
+        elif isinstance(v, list) and v and isinstance(v[0], (list, tuple)):
+            for x in v: rows.append(dict(metric=f'{path}.{x[0]}', value=x[1]))
+        elif isinstance(v, list):
+            rows.append(dict(metric=path, value=' '.join(map(str, v))))
+        else:
+            rows.append(dict(metric=path, value=v))
+    walk('', {k: v for k, v in summary.items() if k != 'checks'})
+    return rows
 
 # ---------------------------------------------------------------- summary
 def streaks(seq, ok):

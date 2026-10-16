@@ -1,0 +1,142 @@
+metric,value
+team,FC Barcelona
+season,2003-04
+manager,Frank Rijkaard
+records.all.played,52
+records.all.won,29
+records.all.drawn,12
+records.all.lost,11
+records.all.gf,89
+records.all.ga,46
+records.all.clean_sheets,20
+records.all.failed_to_score,11
+records.La Liga.played,38
+records.La Liga.won,21
+records.La Liga.drawn,9
+records.La Liga.lost,8
+records.La Liga.gf,63
+records.La Liga.ga,39
+records.La Liga.clean_sheets,13
+records.La Liga.failed_to_score,7
+records.UEFA Cup.played,8
+records.UEFA Cup.won,5
+records.UEFA Cup.drawn,2
+records.UEFA Cup.lost,1
+records.UEFA Cup.gf,17
+records.UEFA Cup.ga,3
+records.UEFA Cup.clean_sheets,5
+records.UEFA Cup.failed_to_score,2
+records.Copa del Rey.played,6
+records.Copa del Rey.won,3
+records.Copa del Rey.drawn,1
+records.Copa del Rey.lost,2
+records.Copa del Rey.gf,9
+records.Copa del Rey.ga,4
+records.Copa del Rey.clean_sheets,2
+records.Copa del Rey.failed_to_score,2
+records.league_home.played,19
+records.league_home.won,10
+records.league_home.drawn,6
+records.league_home.lost,3
+records.league_home.gf,33
+records.league_home.ga,14
+records.league_home.clean_sheets,8
+records.league_home.failed_to_score,4
+records.league_away.played,19
+records.league_away.won,11
+records.league_away.drawn,3
+records.league_away.lost,5
+records.league_away.gf,30
+records.league_away.ga,25
+records.league_away.clean_sheets,5
+records.league_away.failed_to_score,3
+league.final_pos,2
+league.points,72
+league.champion,Valencia
+league.pts_behind_champion,5
+league.low_point.round,18
+league.low_point.date,2004-01-04
+league.low_point.pos,12
+league.low_point.pts,24
+league.low_point.pts_behind_leader,18
+league.low_point.pts_above_relegation,6
+league.first_half_rounds_1_19.points,27
+league.first_half_rounds_1_19.pos_after,7
+league.second_half_rounds_20_38.points,45
+league.second_half_rounds_20_38.rank_in_second_half_table,1
+league.second_half_table.1.team,Barcelona
+league.second_half_table.1.pts,45
+league.second_half_table.1.gd,23
+league.second_half_table.2.team,Valencia
+league.second_half_table.2.pts,34
+league.second_half_table.2.gd,22
+league.second_half_table.3.team,Deportivo de La Coruña
+league.second_half_table.3.pts,34
+league.second_half_table.3.gd,9
+league.second_half_table.4.team,Sevilla
+league.second_half_table.4.pts,30
+league.second_half_table.4.gd,6
+league.second_half_table.5.team,Athletic Club
+league.second_half_table.5.pts,30
+league.second_half_table.5.gd,5
+league.second_half_table.6.team,Betis
+league.second_half_table.6.pts,30
+league.second_half_table.6.gd,1
+league.position_by_round,6 4 3 5 6 9 11 7 5 5 4 5 5 8 11 9 9 12 7 7 7 5 4 4 4 4 4 3 3 4 4 4 3 3 3 3 2 2
+streaks.unbeaten_league.length,17
+streaks.unbeaten_league.from_,2004-01-11
+streaks.unbeaten_league.to,2004-05-02
+streaks.wins_league.length,9
+streaks.wins_league.from_,2004-01-25
+streaks.wins_league.to,2004-03-21
+streaks.unbeaten_all.length,10
+streaks.unbeaten_all.from_,2004-01-25
+streaks.unbeaten_all.to,2004-03-07
+streaks.winless_league.length,4
+streaks.winless_league.from_,2003-09-20
+streaks.winless_league.to,2003-10-18
+biggest_win.date,2003-10-15
+biggest_win.competition,UEFA Cup
+biggest_win.opponent,Matador Púchov
+biggest_win.venue,H
+biggest_win.gf,8
+biggest_win.ga,0
+heaviest_defeat.date,2003-12-03
+heaviest_defeat.competition,La Liga
+heaviest_defeat.opponent,Málaga
+heaviest_defeat.venue,A
+heaviest_defeat.gf,1
+heaviest_defeat.ga,5
+top_scorers_all.Ronaldinho,21
+top_scorers_all.Saviola,19
+top_scorers_all.Kluivert,10
+top_scorers_all.Luis García,8
+top_scorers_all.Cocu,6
+top_scorers_all.Luis Enrique,5
+top_scorers_all.Xavi,5
+top_scorers_all.Overmars,3
+goals_by_15_min.for.1-15,16
+goals_by_15_min.for.16-30,12
+goals_by_15_min.for.31-45,16
+goals_by_15_min.for.46-60,15
+goals_by_15_min.for.61-75,15
+goals_by_15_min.for.76-90,15
+goals_by_15_min.against.1-15,7
+goals_by_15_min.against.16-30,2
+goals_by_15_min.against.31-45,6
+goals_by_15_min.against.46-60,10
+goals_by_15_min.against.61-75,8
+goals_by_15_min.against.76-90,13
+players_used,29
+clasicos.1.date,2003-12-06
+clasicos.1.venue,H
+clasicos.1.gf,1
+clasicos.1.ga,2
+clasicos.1.scorers_for,Kluivert 83'
+clasicos.1.scorers_against,Roberto Carlos 37'; Ronaldo 73'
+clasicos.2.date,2004-04-25
+clasicos.2.venue,A
+clasicos.2.gf,2
+clasicos.2.ga,1
+clasicos.2.scorers_for,Kluivert 56'; Xavi 86'
+clasicos.2.scorers_against,Solari 53'
