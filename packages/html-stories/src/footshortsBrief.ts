@@ -19,6 +19,7 @@ import type { BriefSpin } from '@vismay/randomizer/spinBrief'
 import { htmlStoryBrief } from './brief'
 import type { HtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
+import type { HtmlStoryTone } from './tone'
 
 export { MAX_CONTEXT_MATCHES }
 
@@ -32,6 +33,8 @@ export interface FootshortsBriefOptions {
   prompt?: string
   /** The story format (./formats). Default: scroll. */
   format?: HtmlStoryFormat | null
+  /** The story's voice (./tone). Default: straight. */
+  tone?: HtmlStoryTone | null
   /** A Football Desk spin; its fixtures are the match context when `fixtureIds` is empty. */
   spin?: BriefSpin | null
 }
@@ -47,13 +50,14 @@ export async function footshortsHtmlStoryBrief({
   fixtureIds = [],
   prompt,
   format,
+  tone,
   spin,
 }: FootshortsBriefOptions): Promise<string> {
   const picked = fixtureIds.filter(Boolean)
   const ids = picked.length ? picked : spinFixtureIds(spin)
   const angle = prompt ?? (spin && !picked.length ? `Football Desk spin: ${spin.subject.randomizer === 'footshorts' ? spinPrompt(spin.subject) : ''}` : undefined)
   const context = ids.length ? await buildMatchContext(ids, { prompt: angle, siteUrl }) : null
-  return htmlStoryBrief({ app: 'footshorts', siteUrl, style, context, format, spin })
+  return htmlStoryBrief({ app: 'footshorts', siteUrl, style, context, format, spin, tone })
 }
 
 function spinPrompt(s: Extract<BriefSpin['subject'], { randomizer: 'footshorts' }>): string {

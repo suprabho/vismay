@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
+import { parseHtmlStoryTone } from './tone'
 import { draw } from '@vismay/randomizer/draw'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
@@ -276,6 +277,21 @@ assert.ok(fsBook.includes('https://footshorts.com/formats/book@1.js') && !fsBook
   const book = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, format: 'book' })
   assert.ok(!book.includes('## Story format\n') && book.includes('## Story format: a book'))
   assert.ok(book.indexOf('## Format:') < book.indexOf('## Story format: a book'))
+}
+
+// Tone: straight is the default and adds nothing; humorous adds its section
+// after the content rules, with the site's own targets, and keeps accuracy.
+{
+  assert.ok(!viz.includes('## Tone'))
+  assert.equal(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', tone: 'straight' }), viz)
+  const funny = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', tone: 'humorous' })
+  assert.ok(funny.includes('## Tone: humorous, a little sarcastic'))
+  assert.ok(funny.indexOf('## Content') < funny.indexOf('## Tone') && funny.indexOf('## Tone') < funny.indexOf('## Before you post'))
+  assert.ok(funny.includes('Accuracy is not part of the joke'))
+  assert.ok(htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', tone: 'humorous' }).includes('VAR'))
+  assert.equal(parseHtmlStoryTone(null), 'straight')
+  assert.equal(parseHtmlStoryTone('humorous'), 'humorous')
+  assert.equal(parseHtmlStoryTone('snarky'), null)
 }
 
 console.log('brief: ok')

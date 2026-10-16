@@ -20,6 +20,7 @@ import { getTripItinerary, isValidTripSlug, type StopMedia, type TripData } from
 import { htmlStoryBrief } from './brief'
 import type { HtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
+import type { HtmlStoryTone } from './tone'
 
 /** At most this many photos listed per stop (and per day for unassigned ones). */
 export const MAX_TRIP_CONTEXT_MEDIA_PER_STOP = 40
@@ -41,6 +42,8 @@ export interface TravelBriefOptions {
   /** Editorial intent: what the story is, how the day really went. */
   prompt?: string
   format?: HtmlStoryFormat | null
+  /** The story's voice (./tone). Default: straight. */
+  tone?: HtmlStoryTone | null
   /** How to read the trip. Default: the database (loadTripFromDb). */
   loadTrip?: TripLoader
 }
@@ -52,6 +55,7 @@ export async function travelHtmlStoryBrief({
   day,
   prompt,
   format,
+  tone,
   loadTrip = loadTripFromDb,
 }: TravelBriefOptions): Promise<string> {
   let context: string | null = null
@@ -64,7 +68,7 @@ export async function travelHtmlStoryBrief({
     }
     context = buildTripContext(trip, { day, prompt })
   }
-  return htmlStoryBrief({ app: 'travel', siteUrl, style, context, format })
+  return htmlStoryBrief({ app: 'travel', siteUrl, style, context, format, tone })
 }
 
 /**

@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Basketball, Check, Compass, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
+import { Basketball, Check, Compass, Copy, FlagCheckered, MaskHappy, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
+import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
 import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canvas/compose/useComposeFlow'
 import { FormatPicker } from './FormatPicker'
@@ -25,7 +26,9 @@ interface MatchContextPick {
  * "Copy agent brief" plus a story format picker (a scrolling page, or a book,
  * a pinned board or a deck on the site's hosted runtime) and a style
  * randomizer: Shuffle swaps the brief's house style for a palette and font
- * trio drawn from the app's stories' themes.
+ * trio drawn from the app's stories' themes. The Humorous toggle asks for a
+ * wry, sarcastic voice (@vismay/html-stories/tone) under the same accuracy
+ * rules.
  *
  * For footshorts there is also a match picker — by competition, or by team
  * across every competition: tick up to MAX_CONTEXT_MATCHES (and
@@ -56,6 +59,7 @@ interface MatchContextPick {
 export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePool | null }) {
   const [style, setStyle] = useState<StoryStyle | null>(null)
   const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
+  const [humorous, setHumorous] = useState(false)
   const [matches, setMatches] = useState<MatchContextPick | null>(null)
   const [picking, setPicking] = useState(false)
   const [race, setRace] = useState<RaceContextPick | null>(null)
@@ -74,18 +78,19 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
   const isViznba = app === 'viznba'
   const isTravel = app === 'travel'
 
+  const tone: HtmlStoryTone = humorous ? 'humorous' : 'straight'
   const request = useMemo(
     () =>
       JSON.stringify(
         isVizf1
-          ? { app, format, style, sessionKeys: race?.sessionKeys ?? [], drivers: race?.drivers ?? [], prompt: race?.prompt }
+          ? { app, format, tone, style, sessionKeys: race?.sessionKeys ?? [], drivers: race?.drivers ?? [], prompt: race?.prompt }
           : isViznba
-            ? { app, format, style, gameIds: games?.gameIds ?? [], prompt: games?.prompt }
+            ? { app, format, tone, style, gameIds: games?.gameIds ?? [], prompt: games?.prompt }
             : isTravel
-              ? { app, format, style, tripSlug: trip?.tripSlug, day: trip?.day ?? undefined, prompt: trip?.prompt }
-              : { app, format, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt },
+              ? { app, format, tone, style, tripSlug: trip?.tripSlug, day: trip?.day ?? undefined, prompt: trip?.prompt }
+              : { app, format, tone, style, fixtureIds: matches?.fixtureIds ?? [], prompt: matches?.prompt },
       ),
-    [app, isVizf1, isViznba, isTravel, format, style, matches, race, games, trip],
+    [app, isVizf1, isViznba, isTravel, format, tone, style, matches, race, games, trip],
   )
   const building = built?.request !== request
   const brief = building ? null : built?.brief ?? null
@@ -297,6 +302,15 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
         </button>
       )}
       <FormatPicker app={app} value={format} onChange={setFormat} />
+      <button
+        onClick={() => setHumorous((v) => !v)}
+        aria-pressed={humorous}
+        title={humorous ? 'Humorous, a little sarcastic: click for a straight voice' : 'Write it with a wry, sarcastic voice (the facts stay exact)'}
+        className={`${btn} ${humorous ? 'border-amber-400/40 bg-amber-400/10 text-amber-200 hover:text-amber-100' : ''}`}
+      >
+        <MaskHappy size={14} weight={humorous ? 'fill' : 'regular'} />
+        Humorous
+      </button>
       <button
         onClick={() => pool && setStyle((prev) => pickRandomStyle(pool, { previous: prev }))}
         disabled={!canShuffle}

@@ -70,7 +70,8 @@ notes in [`apps/vizmaya-fyi/CLAUDE.md`](../vizmaya-fyi/CLAUDE.md#html-stories-ss
 
 - **Brief:** `GET /api/html-stories/brief` — the footshorts house style
   (classic theme, Forum / Space Grotesk / Space Mono), chrome and posting
-  rules. `?style=random` borrows a palette and fonts from an editorial story.
+  rules. `?style=random` borrows a palette and fonts from an editorial story;
+  `?tone=humorous` asks for a wry, a little sarcastic voice.
   `?fixtures=<id>,<id>&prompt=…` (with the publish token as a bearer) appends
   the **match context** for up to forty matches: Opta facts and the full stat
   set, the timeline, Opta's insights and commentary, the build-up, each side's

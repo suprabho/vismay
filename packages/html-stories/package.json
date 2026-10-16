@@ -22,7 +22,8 @@
     "./formats": "./src/formats.ts",
     "./formatsApi": "./src/formatsApi.ts",
     "./assetsApi": "./src/assetsApi.ts",
-    "./seo": "./src/seo.ts"
+    "./seo": "./src/seo.ts",
+    "./tone": "./src/tone.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -9,6 +9,8 @@
  *     (./formats; default `scroll`): its hosted runtime and authoring rules
  *     replace the scroll format's motion and Mapbox sections. `recap` is
  *     vizf1 only (it frames the race replay); other sites answer 400.
+ *   - `tone=humorous` adds a "Tone" section asking for a wry, sarcastic voice
+ *     under the same accuracy rules (./tone; default `straight`).
  *   - `style=random` swaps the house style for a palette and font trio drawn
  *     from the app's published viz-engine stories (./styles); falls back to the
  *     house style if the stories can't be read.
@@ -57,6 +59,7 @@ import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadStoryStylePool } from './storyStyles'
+import { HTML_STORY_TONES, parseHtmlStoryTone } from './tone'
 import { pickRandomStyle, type StoryStyle } from './styles'
 
 /** A list param as the pickers send it: a comma list, or repeated params. Deduplicated. */
@@ -99,6 +102,8 @@ export async function handleHtmlStoryBriefRequest(
   if (!isFormatForApp(app, format)) {
     return new Response(`the ${format} format isn't available on this site; use one of ${formatsForApp(app).join(', ')}`, { status: 400 })
   }
+  const tone = parseHtmlStoryTone(url.searchParams.get('tone'))
+  if (!tone) return new Response(`tone must be one of ${HTML_STORY_TONES.join(', ')}`, { status: 400 })
 
   let spin: SpinRecord | null = null
   if (spinId) {
@@ -168,14 +173,14 @@ export async function handleHtmlStoryBriefRequest(
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format, spin })
+        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format, spin, tone })
         : app === 'vizf1'
-          ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format })
+          ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format, tone })
           : app === 'viznba'
-            ? await viznbaHtmlStoryBrief({ siteUrl: url.origin, style, gameIds, prompt, format, spin })
+            ? await viznbaHtmlStoryBrief({ siteUrl: url.origin, style, gameIds, prompt, format, spin, tone })
             : app === 'travel'
-              ? await travelHtmlStoryBrief({ siteUrl: url.origin, style, tripSlug, day, prompt, format, loadTrip })
-              : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format })
+              ? await travelHtmlStoryBrief({ siteUrl: url.origin, style, tripSlug, day, prompt, format, loadTrip, tone })
+              : htmlStoryBrief({ app, siteUrl: url.origin, style, spin, format, tone })
   } catch (e) {
     const what =
       app === 'vizf1' ? 'race context' : app === 'viznba' ? 'game context' : app === 'travel' ? 'trip context' : 'match context'

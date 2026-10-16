@@ -20,6 +20,7 @@ import type { BriefSpin } from '@vismay/randomizer/spinBrief'
 import { htmlStoryBrief } from './brief'
 import type { HtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
+import type { HtmlStoryTone } from './tone'
 
 /** At most this many games' box scores in one brief. */
 export const MAX_GAME_CONTEXT = 12
@@ -41,6 +42,8 @@ export interface ViznbaBriefOptions {
   prompt?: string
   /** The story format (./formats). Default: scroll. */
   format?: HtmlStoryFormat | null
+  /** The story's voice (./tone). Default: straight. */
+  tone?: HtmlStoryTone | null
   /** An NBA Desk spin; its games are the context when `gameIds` is empty. */
   spin?: BriefSpin | null
 }
@@ -50,13 +53,13 @@ export function spinGameIds(spin: BriefSpin | null | undefined): string[] {
   return spin?.subject.randomizer === 'viznba' ? spin.subject.gameIds : []
 }
 
-export async function viznbaHtmlStoryBrief({ siteUrl, style, gameIds = [], prompt, format, spin }: ViznbaBriefOptions): Promise<string> {
+export async function viznbaHtmlStoryBrief({ siteUrl, style, gameIds = [], prompt, format, spin, tone }: ViznbaBriefOptions): Promise<string> {
   const picked = gameIds.filter(isGameId)
   const ids = picked.length ? picked : spinGameIds(spin)
   const angle =
     prompt ?? (spin?.subject.randomizer === 'viznba' && !picked.length ? `NBA Desk spin: ${spinPrompt(spin.subject)}` : undefined)
   const context = ids.length ? await buildGameContext(ids.slice(0, MAX_GAME_CONTEXT), { prompt: angle, siteUrl }) : null
-  return htmlStoryBrief({ app: 'viznba', siteUrl, style, context, format, spin })
+  return htmlStoryBrief({ app: 'viznba', siteUrl, style, context, format, spin, tone })
 }
 
 function spinPrompt(s: Extract<BriefSpin['subject'], { randomizer: 'viznba' }>): string {

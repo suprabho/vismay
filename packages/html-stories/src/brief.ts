@@ -71,6 +71,7 @@ import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from '
 import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 import { editorialHubPath } from './seo'
+import { toneSection, type HtmlStoryTone } from './tone'
 
 export interface BriefOptions {
   /** e.g. https://vizmaya.fyi */
@@ -110,6 +111,12 @@ export interface BriefOptions {
    * 'board', 'deck', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
+  /**
+   * The story's voice (./tone): 'straight' (default) or 'humorous', which adds
+   * a "Tone" section asking for a wry, sarcastic voice under the same
+   * accuracy rules.
+   */
+  tone?: HtmlStoryTone | null
 }
 
 /** Pinned with the repo's own mapbox-gl dependency. */
@@ -852,6 +859,7 @@ export function htmlStoryBrief({
   spin,
   mapboxToken,
   format,
+  tone,
 }: BriefOptions): string {
   const site = siteUrl.replace(/\/$/, '')
   const paged = format && format !== 'scroll' ? format : null
@@ -1037,7 +1045,7 @@ ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapbo
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
 ${spin ? spinContentSection(meta.desk, hasContext ? SPIN_CONTEXT_RULES[app] ?? [] : []) : contentSection(app, hasContext)}
-${spin ? `\n${reelScriptSection()}\n` : ''}
+${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${spin ? `\n${reelScriptSection()}\n` : ''}
 ## Before you post: check your own work
 
 If you can run a browser, render the page at 375×812 and 1440×900 and look at
