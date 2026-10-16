@@ -1,18 +1,23 @@
 """Team-season pack — everything for one club in one season, in one folder, for designing a book or story around it.
 
-  python3 -I scripts/team_season.py fetch --team barcelona --season 2003   raw pages → raw/teams/<team>-<season>/ (cached)
+  python3 -I scripts/team_season.py fetch --team barcelona --season 2003   raw pages → raw/teams/<team>-<season>/ (cached;
+                                                                           --wiki no skips Wikipedia, which rate-limits)
   python3 -I scripts/team_season.py build --team barcelona --season 2003   → teams/<team>/<season label>/*.csv + summary.json
 
 Sources (all cached, re-runnable; a page already on disk is never fetched again):
-  BDFutbol            club season page (squad stats per competition), every competitive match page (lineups, subs,
+  BDFutbol            club season page (squad stats per competition), every match it has for the club (lineups, subs,
                       cards, goals with minutes, referee, stadium), the league season page (all league results by
-                      round) and each squad player's page (birth date/place, height)
-  football-data.co.uk the league season CSV (half-time scores, Bet365 / market odds)
-  Transfermarkt       the season squad page (detailed position, height, foot, joined date)
-  Wikipedia           the club season page (transfers in/out with fees and citations) and the season's context pages
+                      round, official standings) and each squad player's page (birth date/place, height, career)
+  football-data.co.uk the league season CSV (half-time, Bet365 odds; shots, corners, fouls where the file has them)
+  Transfermarkt       the season squad page (detailed position, foot, joined date)
+  Wikipedia           the club season page (cup ties BDFutbol lacks, attendances, transfers, friendlies), the league
+                      and cup pages, and each club's people pages for the hand-picked club_events.csv
   ClubElo             the club's and its rivals' rating history (when api.clubelo.com is up)
+  StatsBomb           for clubs with 'statsbomb': True, statsbomb_*.csv from data/statsbomb/<season>/
+                      (scripts/statsbomb.py fetch/build first)
 
-Only Spanish clubs are configured so far (BDFutbol covers La Liga in full); add a TEAMS entry for another.
+Configured: Spanish (La Liga) and English (Premier League) clubs in TEAMS; BDFutbol has no English domestic cups, so
+the FA Cup and League Cup come from Wikipedia (scores and scorers, no lineups).
 """
 import csv, html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request, datetime as dt
 
@@ -22,19 +27,48 @@ BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
 
 TEAMS = {
     'barcelona': {
-        'name': 'FC Barcelona', 'bdf_id': 1, 'bdf_name': 'Barcelona', 'fd_name': 'Barcelona', 'fd_league': 'SP1',
+        'name': 'FC Barcelona', 'bdf_id': 1, 'bdf_name': 'Barcelona', 'fd_league': 'SP1', 'league': 'La Liga',
         'tm_slug': 'fc-barcelona', 'tm_id': 131, 'clubelo': 'Barcelona',
         'wiki_season': '{dash} FC Barcelona season',
         # rivals whose Elo is worth drawing next to the club's
         'elo_rivals': ['RealMadrid', 'Valencia', 'Depor'],
+        # big games: opponent crosswalk id → label
+        'rivals': {'real-madrid': 'El Clásico', 'espanyol-de-barcelona': 'Derbi barceloní'},
+        'context': {2003: ['{dash} La Liga', '{dash} UEFA Cup', '{dash} Copa del Rey', 'Frank Rijkaard', 'Joan Laporta',
+                           'Ronaldinho', 'Sandro Rosell', 'Txiki Begiristain', 'Edgar Davids', '{dash} Real Madrid CF season',
+                           '{dash} Valencia CF season', '{dash} Deportivo de La Coruña season', 'El Clásico', 'Camp Nou',
+                           'Lionel Messi']},
+    },
+    'arsenal': {
+        'name': 'Arsenal', 'bdf_id': 2016, 'bdf_name': 'Arsenal', 'fd_league': 'E0', 'league': 'Premier League',
+        'tm_slug': 'fc-arsenal', 'tm_id': 11, 'clubelo': 'Arsenal', 'elo_rivals': ['Chelsea', 'ManUnited', 'Liverpool'],
+        'wiki_season': '{dash} Arsenal F.C. season', 'statsbomb': True,
+        'rivals': {'tottenham-hotspur': 'North London derby', 'manchester-united': 'Big game', 'chelsea': 'Big game'},
+        'context': {2003: ['Arsène Wenger', 'Thierry Henry', 'Invincibles (football)', 'Battle of Old Trafford',
+                           'Jens Lehmann', 'José Antonio Reyes', 'Cesc Fàbregas', 'Patrick Vieira', 'Robert Pirès']},
+    },
+    'chelsea': {
+        'name': 'Chelsea', 'bdf_id': 2003, 'bdf_name': 'Chelsea', 'fd_league': 'E0', 'league': 'Premier League',
+        'tm_slug': 'fc-chelsea', 'tm_id': 631, 'clubelo': 'Chelsea', 'elo_rivals': ['Arsenal', 'ManUnited', 'Liverpool'],
+        'wiki_season': '{dash} Chelsea F.C. season',
+        'rivals': {'arsenal': 'Big game', 'manchester-united': 'Big game', 'tottenham-hotspur': 'London derby'},
+        'context': {2003: ['Roman Abramovich', 'Claudio Ranieri', 'José Mourinho', 'Peter Kenyon', 'Ken Bates',
+                           'Frank Lampard', 'Wayne Bridge', 'Hernán Crespo', 'Juan Sebastián Verón', 'Damien Duff']},
+    },
+    'manchester-united': {
+        'name': 'Manchester United', 'bdf_id': 2019, 'bdf_name': 'Manchester United', 'fd_league': 'E0',
+        'league': 'Premier League', 'tm_slug': 'manchester-united', 'tm_id': 985, 'clubelo': 'ManUnited',
+        'elo_rivals': ['Arsenal', 'Chelsea', 'Liverpool'], 'wiki_season': '{dash} Manchester United F.C. season',
+        'rivals': {'manchester-city': 'Manchester derby', 'liverpool': 'North West derby', 'arsenal': 'Big game',
+                   'chelsea': 'Big game'},
+        'context': {2003: ['Alex Ferguson', 'Cristiano Ronaldo', 'Rio Ferdinand', 'David Beckham', 'Ruud van Nistelrooy',
+                           '2004 FA Cup final', 'Tim Howard', 'Battle of Old Trafford', 'Louis Saha', 'Kléberson']},
     },
 }
-# Season context pages read for the timeline (cached; a missing page is skipped).
-WIKI_CONTEXT = {
-    2003: ['{dash} La Liga', '{dash} UEFA Cup', '{dash} Copa del Rey', 'Frank Rijkaard', 'Joan Laporta', 'Ronaldinho',
-           '2003 FC Barcelona presidential election', 'Sandro Rosell', 'Txiki Begiristain', 'Edgar Davids',
-           '{dash} Real Madrid CF season', '{dash} Valencia CF season', '{dash} Deportivo de La Coruña season',
-           'El Clásico', 'Camp Nou', 'Lionel Messi'],
+# League-wide context pages shared by every club in that league (cached once in raw/teams/_wikipedia/).
+LEAGUE_CONTEXT = {
+    ('E0', 2003): ['{dash} FA Premier League', '{dash} FA Cup', '{dash} Football League Cup',
+                   '{dash} UEFA Champions League', '2003 FA Community Shield'],
 }
 
 def dash(start): return f'{start}–{str(start + 1)[2:]}'
@@ -63,16 +97,30 @@ def get(url, path, ua=BROWSER_UA, tries=4, pause=1.0):
     print('  MISS', url)
     return None
 
-def wiki(title, folder):
-    q = urllib.parse.urlencode({'action': 'parse', 'page': title, 'prop': 'wikitext', 'format': 'json',
-                                'formatversion': 2, 'redirects': 1})
-    path = os.path.join(folder, 'wikipedia', title.replace('/', '_') + '.json')
-    body = get(f'https://en.wikipedia.org/w/api.php?{q}', path, ua=UA, pause=1.5)
-    if body is None: return None
-    d = json.loads(body)
-    if 'error' in d:
-        os.remove(path); print('  no page', title); return None
-    return d['parse']['wikitext']
+BDF_LEAGUE = {'SP1': '', 'E0': 'eng'}  # BDFutbol league-page prefix (t2003-04.html, teng2003-04.html)
+WIKI_DIR = os.path.join(ROOT, 'raw', 'teams', '_wikipedia')
+
+def wiki(title, hops=0):
+    """A Wikipedia page's wikitext, cached as raw/teams/_wikipedia/<title>.json ({'parse': {'wikitext': …}}, the
+    action=parse shape). Read through index.php?action=raw, which the API's rate limit doesn't throttle; redirects
+    are followed by hand."""
+    path = os.path.join(WIKI_DIR, title.replace('/', '_') + '.json')
+    if os.path.exists(path):
+        return json.load(open(path, encoding='utf-8'))['parse']['wikitext']
+    q = urllib.parse.urlencode({'title': title, 'action': 'raw'})
+    tmp = path + '.raw'
+    body = get(f'https://en.wikipedia.org/w/index.php?{q}', tmp, ua=UA, pause=1.0)
+    if os.path.exists(tmp): os.remove(tmp)
+    if body is None:
+        print('  no page', title); return None
+    redirect = re.match(r'\s*#REDIRECT\s*\[\[([^\]|#]+)', body, re.I)
+    if redirect and hops < 3:
+        text_ = wiki(redirect.group(1).strip(), hops + 1)
+        if text_ is not None:
+            json.dump({'parse': {'title': title, 'wikitext': text_}}, open(path, 'w', encoding='utf-8'), ensure_ascii=False)
+        return text_
+    json.dump({'parse': {'title': title, 'wikitext': body}}, open(path, 'w', encoding='utf-8'), ensure_ascii=False)
+    return body
 
 # ---------------------------------------------------------------- fetch
 def bdf_match_ids(team_html):
@@ -83,12 +131,12 @@ def bdf_squad_json(team_html):
     m = re.search(r"json_data = JSON.parse\('(.*?)'\);", team_html, re.S)
     return json.loads(m.group(1))
 
-def fetch(team, start):
+def fetch(team, start, with_wiki=True):
     cfg, raw = TEAMS[team], raw_dir(team, start)
     bdf = 'https://www.bdfutbol.com/en'
     print('BDFutbol club season + league season')
     team_html = get(f'{bdf}/t/t{label(start)}{cfg["bdf_id"]}.html', os.path.join(raw, 'bdfutbol', 'team.html'))
-    get(f'{bdf}/t/t{label(start)}.html', os.path.join(raw, 'bdfutbol', 'league.html'))
+    get(f'{bdf}/t/t{BDF_LEAGUE[cfg["fd_league"]]}{label(start)}.html', os.path.join(raw, 'bdfutbol', 'league.html'))
     ids = bdf_match_ids(team_html)['tot']
     print(f'BDFutbol {len(ids)} match pages')
     for mid in ids:
@@ -103,9 +151,10 @@ def fetch(team, start):
     print('Transfermarkt squad')
     get(f'https://www.transfermarkt.com/{cfg["tm_slug"]}/kader/verein/{cfg["tm_id"]}/saison_id/{start}/plus/1',
         os.path.join(raw, 'transfermarkt', 'squad.html'))
-    print('Wikipedia')
-    for t in [cfg['wiki_season']] + WIKI_CONTEXT.get(start, []):
-        wiki(t.format(dash=dash(start)), raw)
+    print('Wikipedia' if with_wiki else 'Wikipedia skipped (--wiki no)')
+    pages = [] if not with_wiki else [cfg['wiki_season']] + LEAGUE_CONTEXT.get((cfg['fd_league'], start), []) + cfg.get('context', {}).get(start, [])
+    for t in pages:
+        wiki(t.format(dash=dash(start)))
     print('ClubElo')
     for club in [cfg['clubelo']] + cfg['elo_rivals']:
         get(f'http://api.clubelo.com/{club}', os.path.join(raw, 'clubelo', f'{club}.csv'), tries=2)
@@ -123,7 +172,9 @@ def write_csv(path, header, rows):
 def ddmmyyyy(s):
     return dt.datetime.strptime(s, '%d/%m/%Y').date()
 
-COMP_LABEL = {'lig': 'La Liga', 'uef': 'UEFA Cup', 'cop': 'Copa del Rey'}
+# BDFutbol competition keys ('lig' is the club's own league, labelled from TEAMS[...]['league'])
+COMP_LABEL = {'uef': 'UEFA Cup', 'cop': 'Copa del Rey', 'cha': 'Champions League', 'shi': 'Community Shield',
+              'sup': 'Supercopa de España'}
 
 def parse_match(page):
     """One BDFutbol match page → dict with header, goals and both lineups."""
@@ -194,7 +245,7 @@ if __name__ == '__main__':
     if not args or args[0] not in ('fetch', 'build'): sys.exit(__doc__)
     opt = dict(zip(args[1::2], args[2::2]))
     team, start = opt.get('--team', 'barcelona'), int(opt.get('--season', 2003))
-    if args[0] == 'fetch': fetch(team, start)
+    if args[0] == 'fetch': fetch(team, start, opt.get('--wiki', 'yes') != 'no')
     else:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops the script dir
         from team_season_build import build

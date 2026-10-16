@@ -1,0 +1,426 @@
+{
+ "team": "Arsenal",
+ "season": "2003-04",
+ "competition": "Premier League",
+ "manager": "Wenger",
+ "records": {
+  "all": {
+   "played": 59,
+   "won": 37,
+   "drawn": 16,
+   "lost": 6,
+   "gf": 114,
+   "ga": 48,
+   "clean_sheets": 20,
+   "failed_to_score": 8
+  },
+  "Premier League": {
+   "played": 38,
+   "won": 26,
+   "drawn": 12,
+   "lost": 0,
+   "gf": 73,
+   "ga": 26,
+   "clean_sheets": 15,
+   "failed_to_score": 4
+  },
+  "Community Shield": {
+   "played": 1,
+   "won": 0,
+   "drawn": 1,
+   "lost": 0,
+   "gf": 1,
+   "ga": 1,
+   "clean_sheets": 0,
+   "failed_to_score": 0
+  },
+  "Champions League": {
+   "played": 10,
+   "won": 5,
+   "drawn": 2,
+   "lost": 3,
+   "gf": 16,
+   "ga": 11,
+   "clean_sheets": 4,
+   "failed_to_score": 2
+  },
+  "League Cup": {
+   "played": 5,
+   "won": 2,
+   "drawn": 1,
+   "lost": 2,
+   "gf": 9,
+   "ga": 5,
+   "clean_sheets": 1,
+   "failed_to_score": 1
+  },
+  "FA Cup": {
+   "played": 5,
+   "won": 4,
+   "drawn": 0,
+   "lost": 1,
+   "gf": 15,
+   "ga": 5,
+   "clean_sheets": 0,
+   "failed_to_score": 1
+  },
+  "league_home": {
+   "played": 19,
+   "won": 15,
+   "drawn": 4,
+   "lost": 0,
+   "gf": 40,
+   "ga": 14,
+   "clean_sheets": 7,
+   "failed_to_score": 2
+  },
+  "league_away": {
+   "played": 19,
+   "won": 11,
+   "drawn": 8,
+   "lost": 0,
+   "gf": 33,
+   "ga": 12,
+   "clean_sheets": 8,
+   "failed_to_score": 2
+  }
+ },
+ "league": {
+  "final_pos": 1,
+  "points": 90,
+  "champion": "Arsenal",
+  "pts_behind_champion": 0,
+  "low_point": {
+   "round": 17,
+   "pos": 3,
+   "pts": 39,
+   "date": "2003-12-20",
+   "pts_behind_leader": 1,
+   "pts_above_relegation": 23
+  },
+  "first_half": {
+   "rounds": "1-19",
+   "points": 45,
+   "pos_after": 2
+  },
+  "second_half": {
+   "rounds": "20-38",
+   "points": 45,
+   "rank_in_second_half_table": 1
+  },
+  "second_half_table": [
+   {
+    "team": "Arsenal",
+    "pts": 45,
+    "gd": 24
+   },
+   {
+    "team": "Chelsea",
+    "pts": 37,
+    "gd": 17
+   },
+   {
+    "team": "Liverpool",
+    "pts": 33,
+    "gd": 11
+   },
+   {
+    "team": "Aston Villa",
+    "pts": 32,
+    "gd": 8
+   },
+   {
+    "team": "Newcastle",
+    "pts": 30,
+    "gd": 8
+   },
+   {
+    "team": "Bolton Wanderers",
+    "pts": 30,
+    "gd": 0
+   }
+  ],
+  "position_by_round": [
+   7,
+   1,
+   1,
+   1,
+   1,
+   2,
+   2,
+   2,
+   1,
+   1,
+   1,
+   1,
+   1,
+   2,
+   2,
+   1,
+   3,
+   2,
+   2,
+   2,
+   2,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ]
+ },
+ "streaks": {
+  "unbeaten_league": {
+   "length": 38,
+   "from_": "2003-08-16",
+   "to": "2004-05-15"
+  },
+  "wins_league": {
+   "length": 9,
+   "from_": "2004-01-10",
+   "to": "2004-03-20"
+  },
+  "unbeaten_all": {
+   "length": 20,
+   "from_": "2003-10-26",
+   "to": "2004-01-18"
+  },
+  "winless_league": {
+   "length": 3,
+   "from_": "2004-04-25",
+   "to": "2004-05-04"
+  }
+ },
+ "biggest_win": {
+  "date": "2004-04-16",
+  "competition": "Premier League",
+  "opponent": "Leeds",
+  "venue": "H",
+  "gf": 5,
+  "ga": 0
+ },
+ "heaviest_defeat": {
+  "date": "2003-09-17",
+  "competition": "Champions League",
+  "opponent": "Inter",
+  "venue": "H",
+  "gf": 0,
+  "ga": 3
+ },
+ "top_scorers_all": [
+  [
+   "Henry",
+   39
+  ],
+  [
+   "Pirès",
+   19
+  ],
+  [
+   "Ljungberg",
+   10
+  ],
+  [
+   "Edu",
+   7
+  ],
+  [
+   "Bergkamp",
+   5
+  ],
+  [
+   "Reyes",
+   5
+  ],
+  [
+   "Gilberto Silva",
+   4
+  ],
+  [
+   "Wiltord",
+   4
+  ]
+ ],
+ "goals_by_15_min": {
+  "for": {
+   "1-15": 17,
+   "16-30": 19,
+   "31-45": 17,
+   "46-60": 25,
+   "61-75": 14,
+   "76-90": 22
+  },
+  "against": {
+   "1-15": 8,
+   "16-30": 11,
+   "31-45": 6,
+   "46-60": 4,
+   "61-75": 7,
+   "76-90": 12
+  }
+ },
+ "players_used": 24,
+ "big_games": [
+  {
+   "label": "Big game",
+   "opponent": "Manchester United",
+   "date": "2003-08-10",
+   "competition": "Community Shield",
+   "venue": "N",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "4–3",
+   "scorers_for": "Henry 20'",
+   "scorers_against": "Silvestre 15'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Manchester United",
+   "date": "2003-09-21",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 0,
+   "ga": 0,
+   "penalties": "",
+   "scorers_for": "",
+   "scorers_against": ""
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2003-10-18",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 2,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Edu 5'; Henry 75'",
+   "scorers_against": "Crespo 8'"
+  },
+  {
+   "label": "North London derby",
+   "opponent": "Tottenham",
+   "date": "2003-11-08",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 2,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Pirès 69'; Ljungberg 79'",
+   "scorers_against": "Anderton 5'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2004-02-15",
+   "competition": "FA Cup",
+   "venue": "H",
+   "gf": 2,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Reyes 56'; Reyes 61'",
+   "scorers_against": "Mutu 40'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2004-02-21",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 2,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Vieira 15'; Edu 21'",
+   "scorers_against": "Guðjohnsen 1'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2004-03-24",
+   "competition": "Champions League",
+   "venue": "A",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Pirès 59'",
+   "scorers_against": "Guðjohnsen 53'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Manchester United",
+   "date": "2004-03-28",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Henry 50'",
+   "scorers_against": "Saha 86'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Manchester United",
+   "date": "2004-04-03",
+   "competition": "FA Cup",
+   "venue": "N",
+   "gf": 0,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "",
+   "scorers_against": "Scholes 32'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2004-04-06",
+   "competition": "Champions League",
+   "venue": "H",
+   "gf": 1,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Reyes 46'",
+   "scorers_against": "Lampard 51'; Bridge 87'"
+  },
+  {
+   "label": "North London derby",
+   "opponent": "Tottenham",
+   "date": "2004-04-25",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 2,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Vieira 3'; Pirès 35'",
+   "scorers_against": "Redknapp 62'; Robbie Keane 90' (pen)"
+  }
+ ],
+ "checks": {
+  "league_matches": 380,
+  "league_rows_without_football_data": 0,
+  "club_matches": 59,
+  "statsbomb_matches": 38,
+  "wikipedia_only_matches": 10,
+  "goal_rows_vs_scores": [],
+  "squad_vs_bdfutbol_diffs": [
+   "Bergkamp ucl_minutes: lineups 349 vs BDFutbol 348",
+   "Edu ucl_minutes: lineups 580 vs BDFutbol 581",
+   "Cygan league_minutes: lineups 986 vs BDFutbol 987",
+   "Clichy league_minutes: lineups 654 vs BDFutbol 655",
+   "Keown league_minutes: lineups 340 vs BDFutbol 342",
+   "Aliadière league_minutes: lineups 261 vs BDFutbol 262",
+   "Hoyte league_minutes: lineups 0 vs BDFutbol 1"
+  ]
+ }
+}

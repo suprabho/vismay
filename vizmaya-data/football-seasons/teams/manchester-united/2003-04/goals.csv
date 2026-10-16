@@ -1,0 +1,141 @@
+match_no,date,competition,round,opponent,venue,team,for_club,minute,period,player,player_id,player_link,penalty,own_goal,score_after,club_score_after
+1,2003-08-10,Community Shield,Final,Arsenal,N,Manchester United,1,15,1H,Silvestre,93215,,,,1-0,1-0
+1,2003-08-10,Community Shield,Final,Arsenal,N,Arsenal,0,20,1H,Henry,4095,,,,1-1,1-1
+2,2003-08-16,Premier League,1,Bolton Wanderers,H,Manchester United,1,34,1H,Giggs,93827,,,,1-0,1-0
+2,2003-08-16,Premier League,1,Bolton Wanderers,H,Manchester United,1,73,2H,Giggs,93827,,,,2-0,2-0
+2,2003-08-16,Premier League,1,Bolton Wanderers,H,Manchester United,1,76,2H,Scholes,93825,,,,3-0,3-0
+2,2003-08-16,Premier League,1,Bolton Wanderers,H,Manchester United,1,86,2H,Van Nistelrooy,2428,,,,4-0,4-0
+3,2003-08-23,Premier League,2,Newcastle,A,Newcastle,0,25,1H,Shearer,93843,,,,1-0,0-1
+3,2003-08-23,Premier League,2,Newcastle,A,Manchester United,1,50,2H,Van Nistelrooy,2428,,,,1-1,1-1
+3,2003-08-23,Premier League,2,Newcastle,A,Manchester United,1,58,2H,Scholes,93825,,,,1-2,2-1
+4,2003-08-27,Premier League,3,Wolverhampton,H,Manchester United,1,9,1H,O'Shea,94217,,,,1-0,1-0
+5,2003-08-31,Premier League,4,Southampton,A,Southampton,0,88,2H,Beattie,93676,,,,1-0,0-1
+6,2003-09-13,Premier League,5,Charlton Athletic,A,Manchester United,1,62,2H,Van Nistelrooy,2428,,,,0-1,1-0
+6,2003-09-13,Premier League,5,Charlton Athletic,A,Manchester United,1,81,2H,Van Nistelrooy,2428,,,,0-2,2-0
+7,2003-09-16,Champions League,"Group stage, matchday 1",Panathinaikos,H,Manchester United,1,13,1H,Silvestre,93215,,,,1-0,1-0
+7,2003-09-16,Champions League,"Group stage, matchday 1",Panathinaikos,H,Manchester United,1,14,1H,Fortune,2255,,,,2-0,2-0
+7,2003-09-16,Champions League,"Group stage, matchday 1",Panathinaikos,H,Manchester United,1,33,1H,Solskjær,93829,,,,3-0,3-0
+7,2003-09-16,Champions League,"Group stage, matchday 1",Panathinaikos,H,Manchester United,1,40,1H,Butt,93917,,,,4-0,4-0
+7,2003-09-16,Champions League,"Group stage, matchday 1",Panathinaikos,H,Manchester United,1,83,2H,Djemba-Djemba,94454,,,,5-0,5-0
+9,2003-09-27,Premier League,7,Leicester,A,Leicester,0,73,2H,Sinclair,93982,,,,1-4,4-1
+9,2003-09-27,Premier League,7,Leicester,A,Manchester United,1,15,1H,Keane,93826,,,,0-1,1-0
+9,2003-09-27,Premier League,7,Leicester,A,Manchester United,1,16,1H,Van Nistelrooy,2428,,,,0-2,2-0
+9,2003-09-27,Premier League,7,Leicester,A,Manchester United,1,44,1H,Van Nistelrooy,2428,,,,0-3,3-0
+9,2003-09-27,Premier League,7,Leicester,A,Manchester United,1,57,2H,Van Nistelrooy,2428,,,,0-4,4-0
+10,2003-10-01,Champions League,"Group stage, matchday 2",Stuttgart,A,Stuttgart,0,50,2H,Szabics,92198,,,,1-0,0-1
+10,2003-10-01,Champions League,"Group stage, matchday 2",Stuttgart,A,Stuttgart,0,52,2H,Kurányi,90562,,,,2-0,0-2
+10,2003-10-01,Champions League,"Group stage, matchday 2",Stuttgart,A,Manchester United,1,67,2H,Van Nistelrooy,2428,,1,,2-1,1-2
+11,2003-10-04,Premier League,8,Birmingham,H,Manchester United,1,35,1H,Van Nistelrooy,2428,,1,,1-0,1-0
+11,2003-10-04,Premier League,8,Birmingham,H,Manchester United,1,56,2H,Scholes,93825,,,,2-0,2-0
+11,2003-10-04,Premier League,8,Birmingham,H,Manchester United,1,81,2H,Giggs,93827,,,,3-0,3-0
+12,2003-10-18,Premier League,9,Leeds,A,Manchester United,1,81,2H,Keane,93826,,,,0-1,1-0
+13,2003-10-22,Champions League,"Group stage, matchday 3",Rangers,A,Manchester United,1,5,1H,Phil Neville,93823,,,,0-1,1-0
+14,2003-10-25,Premier League,10,Fulham,H,Manchester United,1,45,1H,Forlán,596,,,,1-1,1-1
+14,2003-10-25,Premier League,10,Fulham,H,Fulham,0,3,1H,Clark,94206,,,,0-1,0-1
+14,2003-10-25,Premier League,10,Fulham,H,Fulham,0,66,2H,Malbranque,94173,,,,1-2,1-2
+14,2003-10-25,Premier League,10,Fulham,H,Fulham,0,79,2H,Inamoto,92771,,,,1-3,1-3
+15,2003-10-28,League Cup,Round 3,Leeds United,A,Manchester United,1,78,2H,Bellion,94185,David Bellion,,,,
+15,2003-10-28,League Cup,Round 3,Leeds United,A,Manchester United,1,108,2H,Forlán,596,Diego Forlán,,,,
+15,2003-10-28,League Cup,Round 3,Leeds United,A,Manchester United,1,117,2H,Djemba-Djemba,94454,Eric Djemba-Djemba,,,,
+16,2003-11-01,Premier League,11,Portsmouth,H,Manchester United,1,37,1H,Forlán,596,,,,1-0,1-0
+16,2003-11-01,Premier League,11,Portsmouth,H,Manchester United,1,80,2H,Cristiano Ronaldo,12429,,,,2-0,2-0
+16,2003-11-01,Premier League,11,Portsmouth,H,Manchester United,1,82,2H,Keane,93826,,,,3-0,3-0
+17,2003-11-04,Champions League,"Group stage, matchday 4",Rangers,H,Manchester United,1,6,1H,Forlán,596,,,,1-0,1-0
+17,2003-11-04,Champions League,"Group stage, matchday 4",Rangers,H,Manchester United,1,43,1H,Van Nistelrooy,2428,,,,2-0,2-0
+17,2003-11-04,Champions League,"Group stage, matchday 4",Rangers,H,Manchester United,1,60,2H,Van Nistelrooy,2428,,,,3-0,3-0
+18,2003-11-09,Premier League,12,Liverpool,A,Liverpool,0,76,2H,Kewell,94028,,,,1-2,2-1
+18,2003-11-09,Premier League,12,Liverpool,A,Manchester United,1,59,2H,Giggs,93827,,,,0-1,1-0
+18,2003-11-09,Premier League,12,Liverpool,A,Manchester United,1,70,2H,Giggs,93827,,,,0-2,2-0
+19,2003-11-22,Premier League,13,Blackburn Rovers,H,Manchester United,1,24,1H,Van Nistelrooy,2428,,,,1-0,1-0
+19,2003-11-22,Premier League,13,Blackburn Rovers,H,Manchester United,1,38,1H,Kléberson,94480,,,,2-0,2-0
+19,2003-11-22,Premier League,13,Blackburn Rovers,H,Blackburn Rovers,0,62,2H,Emerton,94459,,,,2-1,2-1
+20,2003-11-26,Champions League,"Group stage, matchday 5",Panathinaikos,A,Manchester United,1,85,2H,Forlán,596,,,,0-1,1-0
+21,2003-11-30,Premier League,14,Chelsea,A,Chelsea,0,30,1H,Lampard,93616,,1,,1-0,0-1
+23,2003-12-06,Premier League,15,Aston Villa,H,Manchester United,1,16,1H,Van Nistelrooy,2428,,,,1-0,1-0
+23,2003-12-06,Premier League,15,Aston Villa,H,Manchester United,1,45,1H,Van Nistelrooy,2428,,,,2-0,2-0
+23,2003-12-06,Premier League,15,Aston Villa,H,Manchester United,1,90,2H,Forlán,596,,,,3-0,3-0
+23,2003-12-06,Premier League,15,Aston Villa,H,Manchester United,1,90,2H,Forlán,596,,,,4-0,4-0
+24,2003-12-09,Champions League,"Group stage, matchday 6",Stuttgart,H,Manchester United,1,47,2H,Van Nistelrooy,2428,,,,1-0,1-0
+24,2003-12-09,Champions League,"Group stage, matchday 6",Stuttgart,H,Manchester United,1,58,2H,Giggs,93827,,,,2-0,2-0
+25,2003-12-13,Premier League,16,Manchester City,H,Manchester United,1,7,1H,Scholes,93825,,,,1-0,1-0
+25,2003-12-13,Premier League,16,Manchester City,H,Manchester United,1,34,1H,Van Nistelrooy,2428,,,,2-0,2-0
+25,2003-12-13,Premier League,16,Manchester City,H,Manchester United,1,73,2H,Scholes,93825,,,,3-1,3-1
+25,2003-12-13,Premier League,16,Manchester City,H,Manchester City,0,52,2H,Wright-Phillips,93589,,,,2-1,2-1
+26,2003-12-21,Premier League,17,Tottenham,A,Tottenham,0,63,2H,Poyet,1008,,,,1-2,2-1
+26,2003-12-21,Premier League,17,Tottenham,A,Manchester United,1,15,1H,O'Shea,94217,,,,0-1,1-0
+26,2003-12-21,Premier League,17,Tottenham,A,Manchester United,1,25,1H,Van Nistelrooy,2428,,,,0-2,2-0
+27,2003-12-26,Premier League,18,Everton,H,Manchester United,1,9,1H,Butt,93917,,,,1-0,1-0
+27,2003-12-26,Premier League,18,Everton,H,Manchester United,1,44,1H,Kléberson,94480,,,,2-1,2-1
+27,2003-12-26,Premier League,18,Everton,H,Manchester United,1,68,2H,Bellion,94185,,,,3-1,3-1
+27,2003-12-26,Premier League,18,Everton,H,Everton,0,13,1H,Gary Neville,93822,,,1,1-1,1-1
+27,2003-12-26,Premier League,18,Everton,H,Everton,0,90,2H,Ferguson,93701,,,,3-2,3-2
+28,2003-12-28,Premier League,19,Middlesbrough,A,Manchester United,1,14,1H,Mills,93689,,,1,0-1,1-0
+29,2004-01-04,FA Cup,Round 3,Aston Villa,A,Manchester United,1,64,2H,Scholes,93825,Paul Scholes,,,,
+29,2004-01-04,FA Cup,Round 3,Aston Villa,A,Manchester United,1,68,2H,Scholes,93825,Paul Scholes,,,,
+30,2004-01-07,Premier League,20,Bolton Wanderers,A,Bolton Wanderers,0,89,2H,Gary Neville,93822,,,1,1-2,2-1
+30,2004-01-07,Premier League,20,Bolton Wanderers,A,Manchester United,1,24,1H,Scholes,93825,,,,0-1,1-0
+30,2004-01-07,Premier League,20,Bolton Wanderers,A,Manchester United,1,39,1H,Van Nistelrooy,2428,,,,0-2,2-0
+32,2004-01-17,Premier League,22,Wolverhampton,A,Wolverhampton,0,67,2H,Miller,94497,,,,1-0,0-1
+33,2004-01-25,FA Cup,Round 4,Northampton Town,A,Manchester United,1,34,1H,Silvestre,93215,Mikaël Silvestre,,,,
+33,2004-01-25,FA Cup,Round 4,Northampton Town,A,Manchester United,1,47,2H,Hargreaves,,Chris Hargreaves,,1,,
+33,2004-01-25,FA Cup,Round 4,Northampton Town,A,Manchester United,1,68,2H,Forlán,596,Diego Forlán,,,,
+34,2004-01-31,Premier League,23,Southampton,H,Manchester United,1,18,1H,Saha,94178,,,,1-0,1-0
+34,2004-01-31,Premier League,23,Southampton,H,Manchester United,1,37,1H,Scholes,93825,,,,2-0,2-0
+34,2004-01-31,Premier League,23,Southampton,H,Manchester United,1,61,2H,Van Nistelrooy,2428,,,,3-2,3-2
+34,2004-01-31,Premier League,23,Southampton,H,Southampton,0,38,1H,Phillips,93772,,,,2-1,2-1
+34,2004-01-31,Premier League,23,Southampton,H,Southampton,0,53,2H,Phillips,93772,,,,2-2,2-2
+35,2004-02-07,Premier League,24,Everton,A,Everton,0,49,2H,Unsworth,93693,,,,1-3,3-1
+35,2004-02-07,Premier League,24,Everton,A,Everton,0,65,2H,O'Shea,94217,,,1,2-3,3-2
+35,2004-02-07,Premier League,24,Everton,A,Everton,0,75,2H,Kilbane,93769,,,,3-3,3-3
+35,2004-02-07,Premier League,24,Everton,A,Manchester United,1,9,1H,Saha,94178,,,,0-1,1-0
+35,2004-02-07,Premier League,24,Everton,A,Manchester United,1,24,1H,Van Nistelrooy,2428,,,,0-2,2-0
+35,2004-02-07,Premier League,24,Everton,A,Manchester United,1,29,1H,Saha,94178,,,,0-3,3-0
+35,2004-02-07,Premier League,24,Everton,A,Manchester United,1,89,2H,Van Nistelrooy,2428,,,,3-4,4-3
+36,2004-02-11,Premier League,25,Middlesbrough,H,Manchester United,1,45,1H,Van Nistelrooy,2428,,,,1-2,1-2
+36,2004-02-11,Premier League,25,Middlesbrough,H,Manchester United,1,63,2H,Giggs,93827,,,,2-2,2-2
+36,2004-02-11,Premier League,25,Middlesbrough,H,Middlesbrough,0,34,1H,Juninho,2144,,,,0-1,0-1
+36,2004-02-11,Premier League,25,Middlesbrough,H,Middlesbrough,0,38,1H,Juninho,2144,,,,0-2,0-2
+36,2004-02-11,Premier League,25,Middlesbrough,H,Middlesbrough,0,80,2H,Job,93646,,,,2-3,2-3
+37,2004-02-14,FA Cup,Round 5,Manchester City,H,Manchester United,1,34,1H,Scholes,93825,Paul Scholes,,,,
+37,2004-02-14,FA Cup,Round 5,Manchester City,H,Manchester United,1,71,2H,Van Nistelrooy,2428,Ruud van Nistelrooy,,,,
+37,2004-02-14,FA Cup,Round 5,Manchester City,H,Manchester United,1,80,2H,Van Nistelrooy,2428,Ruud van Nistelrooy,,,,
+37,2004-02-14,FA Cup,Round 5,Manchester City,H,Manchester United,1,74,2H,Cristiano Ronaldo,12429,Cristiano Ronaldo,,,,
+38,2004-02-21,Premier League,26,Leeds,H,Manchester United,1,64,2H,Scholes,93825,,,,1-0,1-0
+38,2004-02-21,Premier League,26,Leeds,H,Leeds,0,67,2H,Smith,93691,,,,1-1,1-1
+39,2004-02-25,Champions League,"Round of 16, first leg",Porto,A,Porto,0,29,1H,McCarthy,307,,,,1-1,1-1
+39,2004-02-25,Champions League,"Round of 16, first leg",Porto,A,Porto,0,78,2H,McCarthy,307,,,,2-1,1-2
+39,2004-02-25,Champions League,"Round of 16, first leg",Porto,A,Manchester United,1,14,1H,Fortune,2255,,,,0-1,1-0
+40,2004-02-28,Premier League,27,Fulham,A,Fulham,0,64,2H,Boa Morte,94207,,,,1-1,1-1
+40,2004-02-28,Premier League,27,Fulham,A,Manchester United,1,14,1H,Saha,94178,,,,0-1,1-0
+41,2004-03-06,FA Cup,Round 6,Fulham,H,Manchester United,1,25,1H,Van Nistelrooy,2428,Ruud van Nistelrooy,,,1-1,1-1
+41,2004-03-06,FA Cup,Round 6,Fulham,H,Manchester United,1,62,2H,Van Nistelrooy,2428,Ruud van Nistelrooy,,,2-1,2-1
+41,2004-03-06,FA Cup,Round 6,Fulham,H,Fulham,0,23,1H,Malbranque,,Steed Malbranque,1,,0-1,0-1
+42,2004-03-09,Champions League,"Round of 16, second leg",Porto,H,Manchester United,1,32,1H,Scholes,93825,,,,1-0,1-0
+42,2004-03-09,Champions League,"Round of 16, second leg",Porto,H,Porto,0,90,2H,Costinha,892,,,,1-1,1-1
+43,2004-03-14,Premier League,28,Manchester City,A,Manchester City,0,3,1H,Fowler,93970,,,,1-0,0-1
+43,2004-03-14,Premier League,28,Manchester City,A,Manchester City,0,32,1H,Macken,94397,,,,2-0,0-2
+43,2004-03-14,Premier League,28,Manchester City,A,Manchester City,0,73,2H,Sinclair,93912,,,,3-1,1-3
+43,2004-03-14,Premier League,28,Manchester City,A,Manchester City,0,90,2H,Wright-Phillips,93589,,,,4-1,1-4
+43,2004-03-14,Premier League,28,Manchester City,A,Manchester United,1,35,1H,Scholes,93825,,,,2-1,1-2
+44,2004-03-20,Premier League,29,Tottenham,H,Manchester United,1,30,1H,Giggs,93827,,,,1-0,1-0
+44,2004-03-20,Premier League,29,Tottenham,H,Manchester United,1,89,2H,Cristiano Ronaldo,12429,,,,2-0,2-0
+44,2004-03-20,Premier League,29,Tottenham,H,Manchester United,1,90,2H,Bellion,94185,,,,3-0,3-0
+45,2004-03-28,Premier League,30,Arsenal,A,Arsenal,0,50,2H,Henry,4095,,,,1-0,0-1
+45,2004-03-28,Premier League,30,Arsenal,A,Manchester United,1,86,2H,Saha,94178,,,,1-1,1-1
+46,2004-04-03,FA Cup,Semi-final,Arsenal,N,Manchester United,1,32,1H,Scholes,93825,Paul Scholes,,,1-0,1-0
+47,2004-04-10,Premier League,32,Birmingham,A,Birmingham,0,39,1H,Grainger,94322,,,,1-0,0-1
+47,2004-04-10,Premier League,32,Birmingham,A,Manchester United,1,60,2H,Cristiano Ronaldo,12429,,,,1-1,1-1
+47,2004-04-10,Premier League,32,Birmingham,A,Manchester United,1,78,2H,Saha,94178,,,,1-2,2-1
+48,2004-04-13,Premier League,33,Leicester,H,Manchester United,1,56,2H,Gary Neville,93822,,,,1-0,1-0
+49,2004-04-17,Premier League,34,Portsmouth,A,Portsmouth,0,36,1H,Stone,93724,,,,1-0,0-1
+50,2004-04-20,Premier League,31,Charlton Athletic,H,Manchester United,1,28,1H,Saha,94178,,,,1-0,1-0
+50,2004-04-20,Premier League,31,Charlton Athletic,H,Manchester United,1,65,2H,Gary Neville,93822,,,,2-0,2-0
+51,2004-04-24,Premier League,35,Liverpool,H,Liverpool,0,63,2H,Murphy,93846,,1,,0-1,0-1
+52,2004-05-01,Premier League,36,Blackburn Rovers,A,Blackburn Rovers,0,85,2H,Stead,94531,,,,1-0,0-1
+53,2004-05-08,Premier League,37,Chelsea,H,Manchester United,1,77,2H,Van Nistelrooy,2428,,,,1-1,1-1
+53,2004-05-08,Premier League,37,Chelsea,H,Chelsea,0,19,1H,Grønkjær,1235,,,,0-1,0-1
+54,2004-05-15,Premier League,38,Aston Villa,A,Manchester United,1,4,1H,Cristiano Ronaldo,12429,,,,0-1,1-0
+54,2004-05-15,Premier League,38,Aston Villa,A,Manchester United,1,10,1H,Van Nistelrooy,2428,,,,0-2,2-0
+55,2004-05-22,FA Cup,Final,Millwall,N,Manchester United,1,44,1H,Cristiano Ronaldo,12429,Cristiano Ronaldo,,,1-0,1-0
+55,2004-05-22,FA Cup,Final,Millwall,N,Manchester United,1,65,2H,Van Nistelrooy,2428,Ruud van Nistelrooy,1,,2-0,2-0
+55,2004-05-22,FA Cup,Final,Millwall,N,Manchester United,1,81,2H,Van Nistelrooy,2428,Ruud van Nistelrooy,,,3-0,3-0

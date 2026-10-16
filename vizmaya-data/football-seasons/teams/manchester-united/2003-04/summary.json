@@ -1,0 +1,431 @@
+{
+ "team": "Manchester United",
+ "season": "2003-04",
+ "competition": "Premier League",
+ "manager": "Ferguson",
+ "records": {
+  "all": {
+   "played": 55,
+   "won": 35,
+   "drawn": 8,
+   "lost": 12,
+   "gf": 98,
+   "ga": 49,
+   "clean_sheets": 22,
+   "failed_to_score": 9
+  },
+  "Premier League": {
+   "played": 38,
+   "won": 23,
+   "drawn": 6,
+   "lost": 9,
+   "gf": 64,
+   "ga": 35,
+   "clean_sheets": 14,
+   "failed_to_score": 8
+  },
+  "Community Shield": {
+   "played": 1,
+   "won": 0,
+   "drawn": 1,
+   "lost": 0,
+   "gf": 1,
+   "ga": 1,
+   "clean_sheets": 0,
+   "failed_to_score": 0
+  },
+  "Champions League": {
+   "played": 8,
+   "won": 5,
+   "drawn": 1,
+   "lost": 2,
+   "gf": 15,
+   "ga": 5,
+   "clean_sheets": 5,
+   "failed_to_score": 0
+  },
+  "League Cup": {
+   "played": 2,
+   "won": 1,
+   "drawn": 0,
+   "lost": 1,
+   "gf": 3,
+   "ga": 4,
+   "clean_sheets": 0,
+   "failed_to_score": 1
+  },
+  "FA Cup": {
+   "played": 6,
+   "won": 6,
+   "drawn": 0,
+   "lost": 0,
+   "gf": 15,
+   "ga": 4,
+   "clean_sheets": 3,
+   "failed_to_score": 0
+  },
+  "league_home": {
+   "played": 19,
+   "won": 12,
+   "drawn": 4,
+   "lost": 3,
+   "gf": 37,
+   "ga": 15,
+   "clean_sheets": 10,
+   "failed_to_score": 3
+  },
+  "league_away": {
+   "played": 19,
+   "won": 11,
+   "drawn": 2,
+   "lost": 6,
+   "gf": 27,
+   "ga": 20,
+   "clean_sheets": 4,
+   "failed_to_score": 5
+  }
+ },
+ "league": {
+  "final_pos": 3,
+  "points": 75,
+  "champion": "Arsenal",
+  "pts_behind_champion": 15,
+  "low_point": {
+   "round": 38,
+   "pos": 3,
+   "pts": 75,
+   "date": "2004-05-15",
+   "pts_behind_leader": 15,
+   "pts_above_relegation": 42
+  },
+  "first_half": {
+   "rounds": "1-19",
+   "points": 46,
+   "pos_after": 1
+  },
+  "second_half": {
+   "rounds": "20-38",
+   "points": 29,
+   "rank_in_second_half_table": 7
+  },
+  "second_half_table": [
+   {
+    "team": "Arsenal",
+    "pts": 45,
+    "gd": 24
+   },
+   {
+    "team": "Chelsea",
+    "pts": 37,
+    "gd": 17
+   },
+   {
+    "team": "Liverpool",
+    "pts": 33,
+    "gd": 11
+   },
+   {
+    "team": "Aston Villa",
+    "pts": 32,
+    "gd": 8
+   },
+   {
+    "team": "Newcastle",
+    "pts": 30,
+    "gd": 8
+   },
+   {
+    "team": "Bolton Wanderers",
+    "pts": 30,
+    "gd": 0
+   }
+  ],
+  "position_by_round": [
+   2,
+   2,
+   2,
+   2,
+   2,
+   3,
+   3,
+   3,
+   2,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   2,
+   1,
+   1,
+   1,
+   1,
+   1,
+   2,
+   2,
+   2,
+   2,
+   2,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3
+  ]
+ },
+ "streaks": {
+  "unbeaten_league": {
+   "length": 7,
+   "from_": "2003-12-06",
+   "to": "2004-01-11"
+  },
+  "wins_league": {
+   "length": 6,
+   "from_": "2003-12-06",
+   "to": "2004-01-07"
+  },
+  "unbeaten_all": {
+   "length": 9,
+   "from_": "2003-12-06",
+   "to": "2004-01-11"
+  },
+  "winless_league": {
+   "length": 4,
+   "from_": "2004-02-11",
+   "to": "2004-03-14"
+  }
+ },
+ "biggest_win": {
+  "date": "2003-09-16",
+  "competition": "Champions League",
+  "opponent": "Panathinaikos",
+  "venue": "H",
+  "gf": 5,
+  "ga": 0
+ },
+ "heaviest_defeat": {
+  "date": "2004-03-14",
+  "competition": "Premier League",
+  "opponent": "Manchester City",
+  "venue": "A",
+  "gf": 1,
+  "ga": 4
+ },
+ "top_scorers_all": [
+  [
+   "Van Nistelrooy",
+   30
+  ],
+  [
+   "Scholes",
+   14
+  ],
+  [
+   "Giggs",
+   8
+  ],
+  [
+   "Forlán",
+   8
+  ],
+  [
+   "Saha",
+   7
+  ],
+  [
+   "Cristiano Ronaldo",
+   6
+  ],
+  [
+   "Silvestre",
+   3
+  ],
+  [
+   "Keane",
+   3
+  ]
+ ],
+ "goals_by_15_min": {
+  "for": {
+   "1-15": 16,
+   "16-30": 11,
+   "31-45": 21,
+   "46-60": 11,
+   "61-75": 17,
+   "76-90": 22
+  },
+  "against": {
+   "1-15": 3,
+   "16-30": 6,
+   "31-45": 6,
+   "46-60": 6,
+   "61-75": 11,
+   "76-90": 10
+  }
+ },
+ "players_used": 22,
+ "big_games": [
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2003-08-10",
+   "competition": "Community Shield",
+   "venue": "N",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "4–3",
+   "scorers_for": "Silvestre 15'",
+   "scorers_against": "Henry 20'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2003-09-21",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 0,
+   "ga": 0,
+   "penalties": "",
+   "scorers_for": "",
+   "scorers_against": ""
+  },
+  {
+   "label": "North West derby",
+   "opponent": "Liverpool",
+   "date": "2003-11-09",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 2,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Giggs 59'; Giggs 70'",
+   "scorers_against": "Kewell 76'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2003-11-30",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 0,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "",
+   "scorers_against": "Lampard 30' (pen)"
+  },
+  {
+   "label": "Manchester derby",
+   "opponent": "Manchester City",
+   "date": "2003-12-13",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 3,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Scholes 7'; Van Nistelrooy 34'; Scholes 73'",
+   "scorers_against": "Wright-Phillips 52'"
+  },
+  {
+   "label": "Manchester derby",
+   "opponent": "Manchester City",
+   "date": "2004-02-14",
+   "competition": "FA Cup",
+   "venue": "H",
+   "gf": 4,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Scholes 34'; Van Nistelrooy 71'; Van Nistelrooy 80'; Cristiano Ronaldo 74'",
+   "scorers_against": ""
+  },
+  {
+   "label": "Manchester derby",
+   "opponent": "Manchester City",
+   "date": "2004-03-14",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 1,
+   "ga": 4,
+   "penalties": "",
+   "scorers_for": "Scholes 35'",
+   "scorers_against": "Fowler 3'; Macken 32'; Sinclair 73'; Wright-Phillips 90'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2004-03-28",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Saha 86'",
+   "scorers_against": "Henry 50'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2004-04-03",
+   "competition": "FA Cup",
+   "venue": "N",
+   "gf": 1,
+   "ga": 0,
+   "penalties": "",
+   "scorers_for": "Scholes 32'",
+   "scorers_against": ""
+  },
+  {
+   "label": "North West derby",
+   "opponent": "Liverpool",
+   "date": "2004-04-24",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 0,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "",
+   "scorers_against": "Murphy 63' (pen)"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Chelsea",
+   "date": "2004-05-08",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Van Nistelrooy 77'",
+   "scorers_against": "Grønkjær 19'"
+  }
+ ],
+ "checks": {
+  "league_matches": 380,
+  "league_rows_without_football_data": 0,
+  "club_matches": 55,
+  "statsbomb_matches": 0,
+  "wikipedia_only_matches": 8,
+  "goal_rows_vs_scores": [
+   "2003-10-28 Leeds United: rows 3-0 vs score 3-2",
+   "2003-12-03 West Bromwich Albion: rows 0-0 vs score 0-2",
+   "2004-01-04 Aston Villa: rows 2-0 vs score 2-1",
+   "2004-02-14 Manchester City: rows 4-0 vs score 4-2"
+  ],
+  "squad_vs_bdfutbol_diffs": [
+   "Fortune ucl_minutes: lineups 569 vs BDFutbol 565",
+   "Cristiano Ronaldo ucl_minutes: lineups 294 vs BDFutbol 292",
+   "Fletcher ucl_minutes: lineups 285 vs BDFutbol 286",
+   "Butt league_minutes: lineups 1105 vs BDFutbol 1107",
+   "Forlán league_minutes: lineups 1142 vs BDFutbol 1143",
+   "Djemba-Djemba ucl_minutes: lineups 89 vs BDFutbol 90",
+   "Bellion league_minutes: lineups 456 vs BDFutbol 457"
+  ]
+ }
+}

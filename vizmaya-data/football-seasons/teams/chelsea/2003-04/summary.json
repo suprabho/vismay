@@ -1,0 +1,388 @@
+{
+ "team": "Chelsea",
+ "season": "2003-04",
+ "competition": "Premier League",
+ "manager": "Ranieri",
+ "records": {
+  "all": {
+   "played": 59,
+   "won": 36,
+   "drawn": 12,
+   "lost": 11,
+   "gf": 102,
+   "ga": 48,
+   "clean_sheets": 32,
+   "failed_to_score": 8
+  },
+  "Premier League": {
+   "played": 38,
+   "won": 24,
+   "drawn": 7,
+   "lost": 7,
+   "gf": 67,
+   "ga": 30,
+   "clean_sheets": 21,
+   "failed_to_score": 5
+  },
+  "Champions League": {
+   "played": 14,
+   "won": 8,
+   "drawn": 4,
+   "lost": 2,
+   "gf": 21,
+   "ga": 10,
+   "clean_sheets": 8,
+   "failed_to_score": 3
+  },
+  "League Cup": {
+   "played": 3,
+   "won": 2,
+   "drawn": 0,
+   "lost": 1,
+   "gf": 6,
+   "ga": 4,
+   "clean_sheets": 1,
+   "failed_to_score": 0
+  },
+  "FA Cup": {
+   "played": 4,
+   "won": 2,
+   "drawn": 1,
+   "lost": 1,
+   "gf": 8,
+   "ga": 4,
+   "clean_sheets": 2,
+   "failed_to_score": 0
+  },
+  "league_home": {
+   "played": 19,
+   "won": 12,
+   "drawn": 4,
+   "lost": 3,
+   "gf": 34,
+   "ga": 13,
+   "clean_sheets": 11,
+   "failed_to_score": 4
+  },
+  "league_away": {
+   "played": 19,
+   "won": 12,
+   "drawn": 3,
+   "lost": 4,
+   "gf": 33,
+   "ga": 17,
+   "clean_sheets": 10,
+   "failed_to_score": 1
+  }
+ },
+ "league": {
+  "final_pos": 2,
+  "points": 79,
+  "champion": "Arsenal",
+  "pts_behind_champion": 11,
+  "low_point": {
+   "round": 26,
+   "pos": 3,
+   "pts": 55,
+   "date": "2004-02-21",
+   "pts_behind_leader": 9,
+   "pts_above_relegation": 32
+  },
+  "first_half": {
+   "rounds": "1-19",
+   "points": 42,
+   "pos_after": 3
+  },
+  "second_half": {
+   "rounds": "20-38",
+   "points": 37,
+   "rank_in_second_half_table": 2
+  },
+  "second_half_table": [
+   {
+    "team": "Arsenal",
+    "pts": 45,
+    "gd": 24
+   },
+   {
+    "team": "Chelsea",
+    "pts": 37,
+    "gd": 17
+   },
+   {
+    "team": "Liverpool",
+    "pts": 33,
+    "gd": 11
+   },
+   {
+    "team": "Aston Villa",
+    "pts": 32,
+    "gd": 8
+   },
+   {
+    "team": "Newcastle",
+    "pts": 30,
+    "gd": 8
+   },
+   {
+    "team": "Bolton Wanderers",
+    "pts": 30,
+    "gd": 0
+   }
+  ],
+  "position_by_round": [
+   5,
+   3,
+   5,
+   4,
+   3,
+   1,
+   1,
+   1,
+   3,
+   2,
+   2,
+   2,
+   2,
+   1,
+   1,
+   3,
+   2,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   3,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2
+  ]
+ },
+ "streaks": {
+  "unbeaten_league": {
+   "length": 8,
+   "from_": "2003-08-17",
+   "to": "2003-10-14"
+  },
+  "wins_league": {
+   "length": 5,
+   "from_": "2003-10-25",
+   "to": "2003-11-30"
+  },
+  "unbeaten_all": {
+   "length": 12,
+   "from_": "2003-10-22",
+   "to": "2003-12-09"
+  },
+  "winless_league": {
+   "length": 4,
+   "from_": "2004-04-10",
+   "to": "2004-04-25"
+  }
+ },
+ "biggest_win": {
+  "date": "2003-09-20",
+  "competition": "Premier League",
+  "opponent": "Wolverhampton",
+  "venue": "A",
+  "gf": 5,
+  "ga": 0
+ },
+ "heaviest_defeat": {
+  "date": "2003-12-26",
+  "competition": "Premier League",
+  "opponent": "Charlton Athletic",
+  "venue": "A",
+  "gf": 2,
+  "ga": 4
+ },
+ "top_scorers_all": [
+  [
+   "Hasselbaink",
+   17
+  ],
+  [
+   "Lampard",
+   15
+  ],
+  [
+   "Guðjohnsen",
+   13
+  ],
+  [
+   "Crespo",
+   12
+  ],
+  [
+   "Mutu",
+   10
+  ],
+  [
+   "Duff",
+   6
+  ],
+  [
+   "Johnson",
+   4
+  ],
+  [
+   "Cole",
+   3
+  ]
+ ],
+ "goals_by_15_min": {
+  "for": {
+   "1-15": 14,
+   "16-30": 14,
+   "31-45": 20,
+   "46-60": 8,
+   "61-75": 18,
+   "76-90": 28
+  },
+  "against": {
+   "1-15": 6,
+   "16-30": 10,
+   "31-45": 8,
+   "46-60": 13,
+   "61-75": 2,
+   "76-90": 9
+  }
+ },
+ "players_used": 28,
+ "big_games": [
+  {
+   "label": "London derby",
+   "opponent": "Tottenham",
+   "date": "2003-09-13",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 4,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Lampard 34'; Mutu 36'; Mutu 74'; Hasselbaink 90'",
+   "scorers_against": "Kanouté 24'; Kanouté 86'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2003-10-18",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 1,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Crespo 8'",
+   "scorers_against": "Edu 5'; Henry 75'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Manchester United",
+   "date": "2003-11-30",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 1,
+   "ga": 0,
+   "penalties": "",
+   "scorers_for": "Lampard 30' (pen)",
+   "scorers_against": ""
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2004-02-15",
+   "competition": "FA Cup",
+   "venue": "A",
+   "gf": 1,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Mutu 40'",
+   "scorers_against": "Reyes 56'; Reyes 61'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2004-02-21",
+   "competition": "Premier League",
+   "venue": "H",
+   "gf": 1,
+   "ga": 2,
+   "penalties": "",
+   "scorers_for": "Guðjohnsen 1'",
+   "scorers_against": "Vieira 15'; Edu 21'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2004-03-24",
+   "competition": "Champions League",
+   "venue": "H",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Guðjohnsen 53'",
+   "scorers_against": "Pirès 59'"
+  },
+  {
+   "label": "London derby",
+   "opponent": "Tottenham",
+   "date": "2004-04-03",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 1,
+   "ga": 0,
+   "penalties": "",
+   "scorers_for": "Hasselbaink 38'",
+   "scorers_against": ""
+  },
+  {
+   "label": "Big game",
+   "opponent": "Arsenal",
+   "date": "2004-04-06",
+   "competition": "Champions League",
+   "venue": "A",
+   "gf": 2,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Lampard 51'; Bridge 87'",
+   "scorers_against": "Reyes 46'"
+  },
+  {
+   "label": "Big game",
+   "opponent": "Manchester United",
+   "date": "2004-05-08",
+   "competition": "Premier League",
+   "venue": "A",
+   "gf": 1,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Grønkjær 19'",
+   "scorers_against": "Van Nistelrooy 77'"
+  }
+ ],
+ "checks": {
+  "league_matches": 380,
+  "league_rows_without_football_data": 0,
+  "club_matches": 59,
+  "statsbomb_matches": 0,
+  "wikipedia_only_matches": 7,
+  "goal_rows_vs_scores": [],
+  "squad_vs_bdfutbol_diffs": [
+   "Guðjohnsen league_minutes: lineups 1570 vs BDFutbol 1571",
+   "Parker league_minutes: lineups 604 vs BDFutbol 605",
+   "Nicolas league_minutes: lineups 90 vs BDFutbol 91"
+  ]
+ }
+}

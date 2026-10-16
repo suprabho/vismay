@@ -1,7 +1,8 @@
 {
  "team": "FC Barcelona",
  "season": "2003-04",
- "manager": "Frank Rijkaard",
+ "competition": "La Liga",
+ "manager": "Rijkaard",
  "records": {
   "all": {
    "played": 52,
@@ -71,17 +72,19 @@
   "pts_behind_champion": 5,
   "low_point": {
    "round": 18,
-   "date": "2004-01-04",
    "pos": 12,
    "pts": 24,
+   "date": "2004-01-04",
    "pts_behind_leader": 18,
-   "pts_above_relegation": 6
+   "pts_above_relegation": 7
   },
-  "first_half_rounds_1_19": {
+  "first_half": {
+   "rounds": "1-19",
    "points": 27,
    "pos_after": 7
   },
-  "second_half_rounds_20_38": {
+  "second_half": {
+   "rounds": "20-38",
    "points": 45,
    "rank_in_second_half_table": 1
   },
@@ -249,30 +252,65 @@
   }
  },
  "players_used": 29,
- "clasicos": [
+ "big_games": [
   {
+   "label": "El Clásico",
+   "opponent": "Real Madrid",
    "date": "2003-12-06",
+   "competition": "La Liga",
    "venue": "H",
    "gf": 1,
    "ga": 2,
+   "penalties": "",
    "scorers_for": "Kluivert 83'",
    "scorers_against": "Roberto Carlos 37'; Ronaldo 73'"
   },
   {
+   "label": "Derbi barceloní",
+   "opponent": "Espanyol",
+   "date": "2003-12-13",
+   "competition": "La Liga",
+   "venue": "A",
+   "gf": 3,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Ronaldinho 10'; Kluivert 20'; Kluivert 35'",
+   "scorers_against": "Jordi Cruyff 8'"
+  },
+  {
+   "label": "El Clásico",
+   "opponent": "Real Madrid",
    "date": "2004-04-25",
+   "competition": "La Liga",
    "venue": "A",
    "gf": 2,
    "ga": 1,
+   "penalties": "",
    "scorers_for": "Kluivert 56'; Xavi 86'",
    "scorers_against": "Solari 53'"
+  },
+  {
+   "label": "Derbi barceloní",
+   "opponent": "Espanyol",
+   "date": "2004-05-02",
+   "competition": "La Liga",
+   "venue": "H",
+   "gf": 4,
+   "ga": 1,
+   "penalties": "",
+   "scorers_for": "Ronaldinho 34'; Saviola 43'; Van Bronckhorst 54'; Saviola 57'",
+   "scorers_against": "Tamudo 18' (pen)"
   }
  ],
  "checks": {
   "league_matches": 380,
   "league_rows_without_football_data": 0,
   "club_matches": 52,
+  "statsbomb_matches": 0,
+  "wikipedia_only_matches": 0,
+  "goal_rows_vs_scores": [],
   "squad_vs_bdfutbol_diffs": [
-   "Márquez liga_minutes: lineups 1387 vs BDFutbol 1385",
+   "Márquez league_minutes: lineups 1387 vs BDFutbol 1385",
    "Márquez copa_minutes: lineups 440 vs BDFutbol 441"
   ]
  }

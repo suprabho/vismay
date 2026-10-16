@@ -1,0 +1,16 @@
+direction,window,date,player,position,nationality,age,other_club,other_club_country,type,fee,fee_eur_m,fee_gbp_m,source_url
+in,summer,2003-06-01,Philippe Senderos,DF,,,Servette,,Transfer,Undisclosed,,,https://news.bbc.co.uk/sport2/hi/football/teams/a/arsenal/2595961.stm
+in,summer,2003-07-25,Jens Lehmann,GK,,,Borussia Dortmund,,Transfer,"£1,500,000",,1.5,
+in,summer,2003-08-01,Johan Djourou,DF,,,Étoile Carouge,,Transfer,Free transfer,,,https://www.theguardian.com/football/2008/dec/31/arsenal-johan-djourou-premier-league
+in,summer,2003-08-04,Gaël Clichy,DF,,,Cannes,,Transfer,"£250,000",,0.25,https://news.bbc.co.uk/sport2/hi/football/teams/a/arsenal/3123225.stm
+in,summer,2003-08-19,Cesc Fàbregas,MF,,,Barcelona,,Transfer,Free transfer,,,
+in,winter,2004-01-28,José Antonio Reyes,FW,,,Sevilla,,Transfer,"£10,500,000",,10.5,https://news.bbc.co.uk/sport2/hi/football/teams/a/arsenal/3434355.stm
+in,in-season,2004-04-28,Robin van Persie,FW,,,Feyenoord,,Transfer,"£3,000,000",,3.0,https://news.bbc.co.uk/sport2/hi/football/teams/a/arsenal/3659835.stm
+out,summer,2003-05-30,Graham Barrett,FW,,,Coventry City,,Transfer,Free transfer,,,
+out,summer,2003-06-04,David Seaman,GK,,,Manchester City,,Transfer,Free transfer,,,https://news.bbc.co.uk/sport1/hi/football/teams/m/man_city/2961636.stm
+out,summer,2003-07-22,Oleh Luzhnyi,DF,,,Wolverhampton Wanderers,,Transfer,Free transfer,,,
+out,summer,2003-07-27,Guillaume Warmuz,GK,,,Borussia Dortmund,,Transfer,Undisclosed,,,
+out,winter,2003-12-06,John Halls,DF,,,Stoke City,,Transfer,Undisclosed,,,https://news.bbc.co.uk/sport2/hi/football/3258366.stm
+out,winter,2004-01-16,Moritz Volz,DF,,,Fulham,,Transfer,Undisclosed,,,http://www.fulhamfc.com/news/2004/january/16/volz-signs-for-fulham
+out,winter,2004-02-02,Jerome Thomas,MF,,,Charlton Athletic,,Transfer,"£100,000",,0.1,https://news.bbc.co.uk/sport2/hi/football/teams/c/charlton_athletic/3452433.stm
+out,winter,2004-02-26,Jermaine Brown,FW,,,Boston United,,Transfer,"Released, free transfer",,,

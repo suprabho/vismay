@@ -1,0 +1,381 @@
+round,date,home_id,home,away_id,away,hg,ag,ht,home_shots,away_shots,home_sot,away_sot,home_corners,away_corners,home_fouls,away_fouls,home_yellow,away_yellow,home_red,away_red,stadium,referee,b365_home,b365_draw,b365_away,bdf_match_id
+1,2003-08-16,birmingham-city,Birmingham,tottenham-hotspur,Tottenham,1,0,1-0,10,15,5,7,1,4,20,27,3,5,0,0,St. Andrews,Rob Styles,2.375,3.25,2.75,611143
+1,2003-08-16,portsmouth,Portsmouth,aston-villa,Aston Villa,2,1,1-0,4,9,3,5,7,9,18,22,2,2,0,1,Fratton Park,Graham Barber,2.375,3.25,2.75,611144
+1,2003-08-16,fulham,Fulham,middlesbrough,Middlesbrough,3,2,1-1,17,8,9,5,7,6,18,16,1,1,0,0,Loftus Road,Graham Poll,2.3,3.25,2.8,611145
+1,2003-08-16,leicester-city,Leicester,southampton,Southampton,2,2,2-0,12,13,7,10,2,7,27,15,3,1,0,0,Walkers Stadium,Mike Riley,2.5,3.2,2.6,611146
+1,2003-08-16,manchester-united,Manchester United,bolton-wanderers,Bolton Wanderers,4,0,1-0,13,15,6,5,8,4,12,8,0,5,0,0,Old Trafford,Paul Durkin,1.286,4.5,10,611147
+1,2003-08-16,arsenal,Arsenal,everton,Everton,2,1,1-0,11,13,5,7,6,9,8,15,1,3,1,1,Highbury,Mark Halsey,1.4,3.8,8,611148
+1,2003-08-16,blackburn-rovers,Blackburn Rovers,wolverhampton-wanderers,Wolverhampton,5,1,2-0,25,8,13,5,6,2,8,14,1,1,0,0,Ewood Park,Jeff Winter,1.615,3.4,5.5,611149
+1,2003-08-17,charlton-athletic,Charlton Athletic,manchester-city,Manchester City,0,3,0-2,10,14,5,8,4,7,12,16,2,1,1,0,The Valley,Mike Dean,2.25,3.4,2.75,611150
+1,2003-08-17,leeds,Leeds,newcastle-united,Newcastle,2,2,1-1,8,19,3,10,4,8,19,16,4,2,0,0,Elland Road,Alan Wiley,2.75,3.25,2.375,611151
+1,2003-08-17,liverpool,Liverpool,chelsea,Chelsea,1,2,0-1,12,10,7,6,8,6,13,12,3,1,0,0,Anfield,Stephen Bennett,2.25,3.25,2.875,611152
+2,2003-08-23,newcastle-united,Newcastle,manchester-united,Manchester United,1,2,1-0,7,11,5,8,2,4,18,14,2,2,0,0,St. James' Park,Uriah Rennie,3,3.2,2.2,611153
+2,2003-08-23,wolverhampton-wanderers,Wolverhampton,charlton-athletic,Charlton Athletic,0,4,0-4,10,8,4,6,5,2,11,7,2,1,0,1,Molineux,Phil Dowd,2.375,3.25,2.7,611154
+2,2003-08-23,tottenham-hotspur,Tottenham,leeds,Leeds,2,1,1-1,20,5,4,2,6,0,14,14,1,2,0,0,White Hart Lane,Steve Dunn,2,3.25,3.4,611155
+2,2003-08-23,manchester-city,Manchester City,portsmouth,Portsmouth,1,1,0-1,21,4,11,2,11,7,8,22,2,3,0,0,City of Manchester,Matt Messias,1.667,3.6,4.5,611156
+2,2003-08-23,everton,Everton,fulham,Fulham,3,1,3-0,10,23,8,15,4,10,15,14,2,4,0,0,Goodison Park,Neale Barry,1.8,3.4,4,611157
+2,2003-08-23,southampton,Southampton,birmingham-city,Birmingham,0,0,0-0,14,12,7,5,2,7,15,19,3,1,0,0,St Mary's Stadium,Graham Barber,1.909,3.25,3.75,611158
+2,2003-08-23,bolton-wanderers,Bolton Wanderers,blackburn-rovers,Blackburn Rovers,2,2,2-0,16,10,10,5,9,2,11,15,2,4,0,1,Reebok Stadium,Andy D'Urso,2.5,3.3,2.5,611159
+2,2003-08-23,chelsea,Chelsea,leicester-city,Leicester,2,1,2-1,17,5,7,1,7,2,12,18,0,3,1,2,Stamford Bridge,Rob Styles,1.25,5,10,611160
+2,2003-08-24,aston-villa,Aston Villa,liverpool,Liverpool,0,0,0-0,14,15,9,9,8,9,16,7,0,1,0,0,Villa Park,Paul Durkin,3,3.2,2.2,611161
+2,2003-08-24,middlesbrough,Middlesbrough,arsenal,Arsenal,0,4,0-3,10,14,4,10,3,5,11,7,1,0,0,0,Riverside,Dermot Gallagher,4,3.4,1.8,611162
+3,2003-08-25,blackburn-rovers,Blackburn Rovers,manchester-city,Manchester City,2,3,1-1,14,13,10,5,9,0,14,10,2,1,0,0,Ewood Park,Alan Wiley,2,3.25,3.4,611163
+3,2003-08-26,portsmouth,Portsmouth,bolton-wanderers,Bolton Wanderers,4,0,0-0,13,13,8,4,0,4,12,14,2,4,0,0,Fratton Park,Dermot Gallagher,2.1,3.25,3.2,611164
+3,2003-08-26,leicester-city,Leicester,middlesbrough,Middlesbrough,0,0,0-0,12,13,4,3,6,4,17,16,3,2,0,0,Walkers Stadium,Graham Barber,2.5,3.2,2.6,611165
+3,2003-08-26,leeds,Leeds,southampton,Southampton,0,0,0-0,15,14,6,8,6,10,10,11,2,3,0,0,Elland Road,Paul Durkin,2,3.25,3.4,611166
+3,2003-08-26,charlton-athletic,Charlton Athletic,everton,Everton,2,2,1-1,10,13,4,4,6,8,8,8,1,1,0,0,The Valley,Steve Dunn,2.375,3.2,2.75,611167
+3,2003-08-27,arsenal,Arsenal,aston-villa,Aston Villa,2,0,0-0,14,6,6,3,2,6,16,16,3,4,0,0,Highbury,Mike Dean,1.286,5,8.5,611168
+3,2003-08-27,liverpool,Liverpool,tottenham-hotspur,Tottenham,0,0,0-0,22,9,10,4,8,5,20,27,2,5,0,0,Anfield,Uriah Rennie,1.5,3.5,7,611169
+3,2003-08-27,manchester-united,Manchester United,wolverhampton-wanderers,Wolverhampton,1,0,0-0,14,12,5,2,10,2,6,12,2,2,0,0,Old Trafford,Graham Poll,1.143,6.5,15,611170
+3,2003-10-14,birmingham-city,Birmingham,chelsea,Chelsea,0,0,0-0,6,13,2,8,2,18,10,14,2,4,0,0,St. Andrews,Neale Barry,4.33,3.5,1.72,611171
+3,2003-10-21,fulham,Fulham,newcastle-united,Newcastle,2,3,2-1,4,11,4,7,4,8,14,16,2,2,0,0,Loftus Road,Barry Knight,2.5,3.2,2.6,611172
+4,2003-08-30,everton,Everton,liverpool,Liverpool,0,3,0-1,11,18,5,11,9,5,22,17,3,3,0,0,Goodison Park,Mike Riley,2.6,3.2,2.5,611173
+4,2003-08-30,wolverhampton-wanderers,Wolverhampton,portsmouth,Portsmouth,0,0,0-0,11,9,2,2,4,6,15,16,3,5,0,0,Molineux,Andy D'Urso,2.75,3.2,2.375,611174
+4,2003-08-30,tottenham-hotspur,Tottenham,fulham,Fulham,0,3,0-1,18,9,6,5,9,4,15,13,0,2,0,0,White Hart Lane,Jeff Winter,1.667,3.4,5,611175
+4,2003-08-30,middlesbrough,Middlesbrough,leeds,Leeds,2,3,0-1,27,8,16,4,6,3,17,21,2,3,0,0,Riverside,Neale Barry,2,3.25,3.4,611176
+4,2003-08-30,newcastle-united,Newcastle,birmingham-city,Birmingham,0,1,0-0,19,7,10,3,9,6,15,15,2,1,0,0,St. James' Park,Matt Messias,1.533,3.4,6.5,611177
+4,2003-08-30,aston-villa,Aston Villa,leicester-city,Leicester,3,1,3-0,10,5,8,4,11,1,18,17,1,2,0,1,Villa Park,Stephen Bennett,1.667,3.4,5,611178
+4,2003-08-30,bolton-wanderers,Bolton Wanderers,charlton-athletic,Charlton Athletic,0,0,0-0,13,7,9,1,12,3,18,16,4,2,0,0,Reebok Stadium,Alan Wiley,2.3,3.25,2.8,611179
+4,2003-08-30,chelsea,Chelsea,blackburn-rovers,Blackburn Rovers,2,2,1-1,12,7,5,4,3,4,11,19,1,4,0,0,Stamford Bridge,Mike Dean,1.5,3.6,6.5,611180
+4,2003-08-31,southampton,Southampton,manchester-united,Manchester United,1,0,0-0,12,10,5,9,9,5,8,10,1,0,0,0,St Mary's Stadium,Mark Halsey,5,3.4,1.667,611181
+4,2003-08-31,manchester-city,Manchester City,arsenal,Arsenal,1,2,1-0,11,10,7,5,5,5,12,11,4,3,0,0,City of Manchester,Graham Poll,4,3.4,1.8,611182
+5,2003-09-13,charlton-athletic,Charlton Athletic,manchester-united,Manchester United,0,2,0-0,8,14,3,9,3,3,19,18,2,2,1,0,The Valley,Mike Riley,5,3.6,1.61,611183
+5,2003-09-13,southampton,Southampton,wolverhampton-wanderers,Wolverhampton,2,0,1-0,15,10,10,3,7,3,16,20,3,5,0,0,St Mary's Stadium,Uriah Rennie,1.61,3.4,5.5,611184
+5,2003-09-13,chelsea,Chelsea,tottenham-hotspur,Tottenham,4,2,2-1,12,9,6,3,10,3,16,20,1,4,0,0,Stamford Bridge,Graham Poll,1.53,3.6,6,611185
+5,2003-09-13,everton,Everton,newcastle-united,Newcastle,2,2,0-0,9,4,7,2,6,3,20,21,5,5,1,1,Goodison Park,Rob Styles,2.37,3.2,2.75,611186
+5,2003-09-13,arsenal,Arsenal,portsmouth,Portsmouth,1,1,1-1,12,8,7,2,7,1,11,19,2,3,0,0,Highbury,Alan Wiley,1.28,4.5,10,611187
+5,2003-09-13,blackburn-rovers,Blackburn Rovers,liverpool,Liverpool,1,3,1-1,8,21,5,14,5,10,13,11,2,2,1,0,Ewood Park,Neale Barry,2.8,3.25,2.3,611188
+5,2003-09-13,bolton-wanderers,Bolton Wanderers,middlesbrough,Middlesbrough,2,0,1-0,13,7,8,6,10,1,17,14,3,3,0,0,Reebok Stadium,Phil Dowd,2.3,3.2,2.87,611189
+5,2003-09-14,manchester-city,Manchester City,aston-villa,Aston Villa,4,1,0-1,17,8,9,4,4,3,11,11,0,1,0,0,City of Manchester,Mark Halsey,1.83,3.25,4,611190
+5,2003-09-14,birmingham-city,Birmingham,fulham,Fulham,2,2,1-1,15,8,9,6,8,1,16,21,1,4,1,1,St. Andrews,Steve Dunn,1.83,3.25,4,611191
+5,2003-09-15,leicester-city,Leicester,leeds,Leeds,4,0,2-0,19,14,11,2,9,5,10,10,0,2,0,0,Walkers Stadium,Jeff Winter,2.6,3.2,2.5,611192
+6,2003-09-20,wolverhampton-wanderers,Wolverhampton,chelsea,Chelsea,0,5,0-2,8,14,4,8,1,3,15,15,2,3,0,0,Molineux,Matt Messias,6.5,3.6,1.5,611193
+6,2003-09-20,fulham,Fulham,manchester-city,Manchester City,2,2,0-0,13,7,9,6,2,4,14,19,2,4,0,0,Loftus Road,Phil Dowd,2.3,3.25,2.8,611194
+6,2003-09-20,portsmouth,Portsmouth,blackburn-rovers,Blackburn Rovers,1,2,0-2,9,12,6,10,7,6,17,18,2,3,0,0,Fratton Park,Paul Durkin,2.25,3.25,2.87,611195
+6,2003-09-20,newcastle-united,Newcastle,bolton-wanderers,Bolton Wanderers,0,0,0-0,14,8,7,6,7,5,15,12,1,1,0,0,St. James' Park,Graham Barber,1.5,3.6,6.5,611196
+6,2003-09-20,tottenham-hotspur,Tottenham,southampton,Southampton,1,3,0-2,13,12,6,10,4,7,15,14,1,1,0,0,White Hart Lane,Andy D'Urso,2,3.25,3.4,611197
+6,2003-09-20,aston-villa,Aston Villa,charlton-athletic,Charlton Athletic,2,1,1-0,15,8,6,3,10,2,13,13,3,3,0,0,Villa Park,Chris Foy,1.9,3.25,3.75,611198
+6,2003-09-20,leeds,Leeds,birmingham-city,Birmingham,0,2,0-0,12,7,6,3,6,1,15,14,4,2,1,0,Elland Road,Dermot Gallagher,2.1,3.25,3.2,611199
+6,2003-09-20,liverpool,Liverpool,leicester-city,Leicester,2,1,1-0,19,9,8,3,4,4,10,9,0,0,0,0,Anfield,Mark Halsey,1.3,4.5,9.5,611200
+6,2003-09-21,middlesbrough,Middlesbrough,everton,Everton,1,0,1-0,9,9,4,5,4,6,12,14,2,3,0,0,Riverside,Alan Wiley,2.3,3.25,2.8,611201
+6,2003-09-21,manchester-united,Manchester United,arsenal,Arsenal,0,0,0-0,9,6,7,1,4,3,11,15,4,3,0,1,Old Trafford,Stephen Bennett,2,3.25,3.4,611202
+7,2003-09-26,arsenal,Arsenal,newcastle-united,Newcastle,3,2,1-1,11,5,7,4,3,4,13,17,0,1,0,0,Highbury,Mike Riley,1.53,3.5,5.5,611203
+7,2003-09-27,southampton,Southampton,middlesbrough,Middlesbrough,0,1,0-1,10,12,6,9,4,4,12,19,4,3,1,0,St Mary's Stadium,Barry Knight,1.8,3.2,4.33,611204
+7,2003-09-27,birmingham-city,Birmingham,portsmouth,Portsmouth,2,0,1-0,7,10,5,5,4,4,10,16,1,3,0,0,St. Andrews,Stephen Bennett,1.9,3.25,3.75,611205
+7,2003-09-27,chelsea,Chelsea,aston-villa,Aston Villa,1,0,1-0,10,7,5,1,6,5,7,9,0,2,0,0,Stamford Bridge,Jeff Winter,1.33,4.33,8.5,611206
+7,2003-09-27,leicester-city,Leicester,manchester-united,Manchester United,1,4,0-3,10,11,4,9,7,3,7,11,0,0,0,0,Walkers Stadium,Graham Poll,6.5,3.6,1.5,611207
+7,2003-09-27,bolton-wanderers,Bolton Wanderers,wolverhampton-wanderers,Wolverhampton,1,1,0-1,22,8,14,4,12,3,16,4,2,0,0,0,Reebok Stadium,Mike Dean,1.61,3.6,5,611208
+7,2003-09-28,charlton-athletic,Charlton Athletic,liverpool,Liverpool,3,2,2-1,14,17,5,9,7,5,11,9,3,1,0,0,The Valley,Rob Styles,4.33,3.2,1.8,611209
+7,2003-09-28,everton,Everton,leeds,Leeds,4,0,3-0,20,6,9,2,11,4,11,15,0,2,0,0,Goodison Park,Paul Durkin,1.83,3.25,4,611210
+7,2003-09-28,blackburn-rovers,Blackburn Rovers,fulham,Fulham,0,2,0-1,6,7,0,2,5,5,14,11,2,4,0,0,Ewood Park,Matt Messias,1.8,3.4,4,611211
+7,2003-09-28,manchester-city,Manchester City,tottenham-hotspur,Tottenham,0,0,0-0,21,4,10,2,6,6,7,15,2,1,0,0,City of Manchester,Neale Barry,1.72,3.4,4.5,611212
+8,2003-10-04,liverpool,Liverpool,arsenal,Arsenal,1,2,1-1,13,12,7,8,11,3,12,20,2,2,0,0,Anfield,Graham Barber,2.5,3.3,2.5,611213
+8,2003-10-04,wolverhampton-wanderers,Wolverhampton,manchester-city,Manchester City,1,0,0-0,8,9,4,5,3,10,13,7,3,2,0,0,Molineux,Jeff Winter,3.25,3.5,2,611214
+8,2003-10-04,fulham,Fulham,leicester-city,Leicester,2,0,1-0,16,8,8,4,4,4,14,10,2,1,0,0,Loftus Road,Chris Foy,1.61,3.6,5,611215
+8,2003-10-04,portsmouth,Portsmouth,charlton-athletic,Charlton Athletic,1,2,1-0,16,11,8,6,6,9,20,14,3,2,0,0,Fratton Park,Graham Poll,2.1,3.25,3.2,611216
+8,2003-10-04,manchester-united,Manchester United,birmingham-city,Birmingham,3,0,1-0,10,5,8,2,5,1,13,11,0,1,0,1,Old Trafford,Mike Dean,1.3,4.5,9.5,611217
+8,2003-10-04,newcastle-united,Newcastle,southampton,Southampton,1,0,1-0,14,7,9,4,8,4,14,10,3,2,0,0,St. James' Park,Phil Dowd,1.72,3.5,4.33,611218
+8,2003-10-04,tottenham-hotspur,Tottenham,everton,Everton,3,0,1-0,13,12,7,4,2,6,15,14,2,2,0,0,White Hart Lane,Dermot Gallagher,2.25,3.25,2.87,611219
+8,2003-10-04,leeds,Leeds,blackburn-rovers,Blackburn Rovers,2,1,2-0,15,17,5,9,2,5,18,20,3,1,0,0,Elland Road,Uriah Rennie,2.5,3.3,2.5,611220
+8,2003-10-05,middlesbrough,Middlesbrough,chelsea,Chelsea,1,2,0-1,15,10,6,6,2,8,14,18,1,2,0,0,Riverside,Mark Halsey,4.33,3.5,1.72,611221
+8,2003-10-05,aston-villa,Aston Villa,bolton-wanderers,Bolton Wanderers,1,1,0-0,14,15,8,5,9,5,14,16,1,5,0,0,Villa Park,Rob Styles,1.8,3.4,4,611222
+9,2003-10-18,leeds,Leeds,manchester-united,Manchester United,0,1,0-0,3,18,2,10,7,2,19,8,4,1,0,0,Elland Road,Graham Poll,5,3.6,1.61,611223
+9,2003-10-18,middlesbrough,Middlesbrough,newcastle-united,Newcastle,0,1,0-1,11,4,7,3,8,2,17,12,3,3,0,0,Riverside,Alan Wiley,2.5,3.3,2.5,611224
+9,2003-10-18,portsmouth,Portsmouth,liverpool,Liverpool,1,0,1-0,10,13,6,7,5,3,22,10,2,2,0,0,Fratton Park,Steve Dunn,4,3.25,1.83,611225
+9,2003-10-18,manchester-city,Manchester City,bolton-wanderers,Bolton Wanderers,6,2,1-1,16,12,13,8,7,4,11,8,1,1,1,0,City of Manchester,Stephen Bennett,1.66,3.4,5,611226
+9,2003-10-18,fulham,Fulham,wolverhampton-wanderers,Wolverhampton,0,0,0-0,9,14,4,6,4,11,12,11,2,2,0,0,Loftus Road,Howard Webb,1.57,3.6,5.5,611227
+9,2003-10-18,arsenal,Arsenal,chelsea,Chelsea,2,1,1-1,13,7,9,3,6,3,11,13,1,2,0,0,Highbury,Paul Durkin,2.2,3.2,3,611228
+9,2003-10-19,birmingham-city,Birmingham,aston-villa,Aston Villa,0,0,0-0,4,2,3,1,3,4,16,20,2,1,0,0,St. Andrews,Mike Riley,2.25,3,3.1,611229
+9,2003-10-19,leicester-city,Leicester,tottenham-hotspur,Tottenham,1,2,1-0,22,7,15,4,5,1,12,19,3,3,0,0,Walkers Stadium,Andy D'Urso,2.6,3.2,2.5,611230
+9,2003-10-19,everton,Everton,southampton,Southampton,0,0,0-0,13,19,6,7,8,6,11,6,1,2,0,0,Goodison Park,Matt Messias,2,3.25,3.4,611231
+9,2003-10-20,blackburn-rovers,Blackburn Rovers,charlton-athletic,Charlton Athletic,0,1,0-1,15,10,6,5,5,3,17,12,3,0,0,0,Ewood Park,Graham Barber,1.9,3.25,3.75,611232
+10,2003-10-25,liverpool,Liverpool,leeds,Leeds,3,1,1-1,20,7,9,5,9,3,11,13,0,2,0,0,Anfield,Jeff Winter,1.5,3.5,7,611233
+10,2003-10-25,bolton-wanderers,Bolton Wanderers,birmingham-city,Birmingham,0,1,0-1,16,7,7,3,7,3,14,16,1,2,0,0,Reebok Stadium,Chris Foy,2.4,3.2,2.7,611234
+10,2003-10-25,southampton,Southampton,blackburn-rovers,Blackburn Rovers,2,0,0-0,22,6,15,3,5,3,17,14,0,2,0,1,St Mary's Stadium,Stephen Bennett,2,3.25,3.4,611235
+10,2003-10-25,wolverhampton-wanderers,Wolverhampton,leicester-city,Leicester,4,3,0-3,12,7,8,5,2,6,6,13,0,2,0,0,Molineux,Peter Walton,2.1,3.25,3.2,611236
+10,2003-10-25,manchester-united,Manchester United,fulham,Fulham,1,3,1-1,17,12,9,7,10,2,10,14,4,2,0,0,Old Trafford,Mike Riley,1.25,5,10,611237
+10,2003-10-25,newcastle-united,Newcastle,portsmouth,Portsmouth,3,0,2-0,10,9,8,4,6,6,12,14,0,2,0,0,St. James' Park,Paul Durkin,1.53,3.6,6,611238
+10,2003-10-25,aston-villa,Aston Villa,everton,Everton,0,0,0-0,16,8,6,2,9,3,11,12,0,1,0,0,Villa Park,Andy D'Urso,2,3.25,3.4,611239
+10,2003-10-25,chelsea,Chelsea,manchester-city,Manchester City,1,0,1-0,7,9,4,6,1,5,8,8,0,0,0,0,Stamford Bridge,Phil Dowd,1.5,3.5,7,611240
+10,2003-10-26,charlton-athletic,Charlton Athletic,arsenal,Arsenal,1,1,1-1,6,11,4,6,7,5,15,13,1,1,0,0,The Valley,Steve Dunn,5,3.6,1.61,611241
+10,2003-10-26,tottenham-hotspur,Tottenham,middlesbrough,Middlesbrough,0,0,0-0,12,16,8,10,8,5,14,10,3,2,0,0,White Hart Lane,Mike Dean,1.83,3.25,4,611242
+11,2003-11-01,tottenham-hotspur,Tottenham,bolton-wanderers,Bolton Wanderers,0,1,0-0,10,25,6,15,7,5,18,6,3,0,0,0,White Hart Lane,Uriah Rennie,1.72,3.4,4.5,611243
+11,2003-11-01,middlesbrough,Middlesbrough,wolverhampton-wanderers,Wolverhampton,2,0,0-0,14,9,11,2,7,3,8,12,2,2,0,1,Riverside,Steve Dunn,1.72,3.4,4.5,611244
+11,2003-11-01,manchester-united,Manchester United,portsmouth,Portsmouth,3,0,1-0,10,9,4,3,3,3,13,12,0,3,0,0,Old Trafford,Neale Barry,1.25,5,10,611245
+11,2003-11-01,newcastle-united,Newcastle,aston-villa,Aston Villa,1,1,1-1,22,11,13,6,15,3,9,17,2,3,0,1,St. James' Park,Matt Messias,1.57,3.6,5.5,611246
+11,2003-11-01,southampton,Southampton,manchester-city,Manchester City,0,2,0-1,8,13,5,9,4,6,10,16,1,1,0,0,St Mary's Stadium,Alan Wiley,2.2,3.4,2.87,611247
+11,2003-11-01,everton,Everton,chelsea,Chelsea,0,1,0-0,12,17,4,7,3,1,5,11,0,0,0,0,Goodison Park,Jeff Winter,4.5,3.4,1.72,611248
+11,2003-11-01,leeds,Leeds,arsenal,Arsenal,1,4,0-3,9,13,5,9,4,3,12,11,2,0,0,0,Elland Road,Mike Dean,5.5,3.6,1.57,611249
+11,2003-11-02,fulham,Fulham,liverpool,Liverpool,1,2,1-1,10,10,6,6,4,8,13,10,0,1,1,0,Loftus Road,Rob Styles,2.7,3.25,2.37,611250
+11,2003-11-02,leicester-city,Leicester,blackburn-rovers,Blackburn Rovers,2,0,0-0,4,10,3,2,2,6,11,11,2,1,0,0,Walkers Stadium,Dermot Gallagher,2.5,3.3,2.5,611251
+11,2003-11-03,birmingham-city,Birmingham,charlton-athletic,Charlton Athletic,1,2,0-1,14,13,13,9,15,8,14,18,1,1,0,0,St. Andrews,Phil Dowd,1.9,3.25,3.75,611252
+12,2003-11-08,wolverhampton-wanderers,Wolverhampton,birmingham-city,Birmingham,1,1,0-0,11,4,4,2,8,1,13,12,2,1,0,0,Molineux,Graham Barber,2.6,3.2,2.5,611253
+12,2003-11-08,charlton-athletic,Charlton Athletic,fulham,Fulham,3,1,1-0,12,11,7,7,1,5,10,12,1,2,0,0,The Valley,Andy D'Urso,2.25,3.25,2.87,611254
+12,2003-11-08,bolton-wanderers,Bolton Wanderers,southampton,Southampton,0,0,0-0,18,8,11,5,8,6,10,14,2,2,0,1,Reebok Stadium,Howard Webb,2.37,3.2,2.75,611255
+12,2003-11-08,arsenal,Arsenal,tottenham-hotspur,Tottenham,2,1,0-1,9,5,3,2,9,5,8,22,1,4,0,0,Highbury,Mark Halsey,1.4,3.75,8.5,611256
+12,2003-11-08,aston-villa,Aston Villa,middlesbrough,Middlesbrough,0,2,0-1,12,8,4,3,5,2,19,16,1,2,0,0,Villa Park,Dermot Gallagher,2,3.25,3.4,611257
+12,2003-11-08,portsmouth,Portsmouth,leeds,Leeds,6,1,2-1,14,6,6,5,3,2,9,11,1,4,0,0,Fratton Park,Chris Foy,1.83,3.25,4,611258
+12,2003-11-09,liverpool,Liverpool,manchester-united,Manchester United,1,2,0-0,10,6,4,4,2,6,16,9,1,2,0,0,Anfield,Graham Poll,2.75,3.2,2.37,611259
+12,2003-11-09,manchester-city,Manchester City,leicester-city,Leicester,0,3,0-1,14,6,4,3,12,3,7,12,2,2,0,0,City of Manchester,Mike Riley,1.44,3.8,7,611260
+12,2003-11-09,chelsea,Chelsea,newcastle-united,Newcastle,5,0,3-0,15,4,8,3,2,0,13,5,0,0,0,1,Stamford Bridge,Paul Durkin,1.61,3.6,5,611261
+12,2003-11-10,blackburn-rovers,Blackburn Rovers,everton,Everton,2,1,2-0,18,8,12,2,12,3,16,9,3,2,0,0,Ewood Park,Phil Dowd,2.25,3.25,2.87,611262
+13,2003-11-22,manchester-united,Manchester United,blackburn-rovers,Blackburn Rovers,2,1,2-0,14,13,8,6,7,4,6,15,0,1,0,0,Old Trafford,Mark Halsey,1.25,5,10,611263
+13,2003-11-22,birmingham-city,Birmingham,arsenal,Arsenal,0,3,0-1,7,9,1,6,8,6,8,11,1,2,0,0,St. Andrews,Paul Durkin,4.5,3.4,1.72,611264
+13,2003-11-22,middlesbrough,Middlesbrough,liverpool,Liverpool,0,0,0-0,8,8,3,1,3,4,16,15,2,2,0,0,Riverside,Phil Dowd,2.8,3.25,2.3,611265
+13,2003-11-22,newcastle-united,Newcastle,manchester-city,Manchester City,3,0,0-0,17,5,10,1,4,2,13,16,1,2,0,0,St. James' Park,Neale Barry,1.8,3.4,4,611266
+13,2003-11-22,southampton,Southampton,chelsea,Chelsea,0,1,0-0,13,8,3,4,3,3,7,13,0,1,0,0,St Mary's Stadium,Dermot Gallagher,4.5,3.4,1.72,611267
+13,2003-11-22,everton,Everton,wolverhampton-wanderers,Wolverhampton,2,0,2-0,23,8,15,4,8,3,7,23,2,2,0,0,Goodison Park,Mike Riley,1.66,3.4,5,611268
+13,2003-11-22,leeds,Leeds,bolton-wanderers,Bolton Wanderers,0,2,0-2,13,10,10,5,8,2,15,11,1,0,0,0,Elland Road,Graham Poll,2.2,3.2,3,611269
+13,2003-11-22,leicester-city,Leicester,charlton-athletic,Charlton Athletic,1,1,1-0,13,7,7,4,3,3,15,15,2,1,0,0,Walkers Stadium,Graham Barber,2.7,3.25,2.37,611270
+13,2003-11-23,tottenham-hotspur,Tottenham,aston-villa,Aston Villa,2,1,0-0,10,13,5,6,3,3,14,15,0,1,0,0,White Hart Lane,Jeff Winter,1.9,3.25,3.75,611271
+13,2003-11-24,fulham,Fulham,portsmouth,Portsmouth,2,0,2-0,8,12,4,6,2,11,9,16,0,3,0,1,Loftus Road,Alan Wiley,1.83,3.25,4,611272
+14,2003-11-29,wolverhampton-wanderers,Wolverhampton,newcastle-united,Newcastle,1,1,1-1,10,7,4,4,5,3,14,14,2,1,0,0,Molineux,Stephen Bennett,3.75,3.25,1.9,611273
+14,2003-11-29,charlton-athletic,Charlton Athletic,leeds,Leeds,0,1,0-1,13,12,6,6,3,4,11,17,2,1,0,0,The Valley,Mark Halsey,1.61,3.4,5.5,611274
+14,2003-11-29,portsmouth,Portsmouth,leicester-city,Leicester,0,2,0-1,12,7,7,3,11,4,12,14,5,1,0,0,Fratton Park,Mike Dean,1.8,3.4,4,611275
+14,2003-11-29,bolton-wanderers,Bolton Wanderers,everton,Everton,2,0,1-0,13,7,6,3,7,7,11,18,0,2,0,0,Reebok Stadium,Paul Durkin,2.25,3.25,2.87,611276
+14,2003-11-29,aston-villa,Aston Villa,southampton,Southampton,1,0,1-0,22,7,12,3,9,4,13,13,0,1,0,0,Villa Park,Matt Messias,2.25,3.25,2.87,611277
+14,2003-11-29,blackburn-rovers,Blackburn Rovers,tottenham-hotspur,Tottenham,1,0,0-0,18,9,12,3,9,6,10,13,0,1,0,0,Ewood Park,Graham Poll,2.1,3.25,3.2,611278
+14,2003-11-30,arsenal,Arsenal,fulham,Fulham,0,0,0-0,22,7,14,1,9,0,13,11,1,1,0,0,Highbury,Graham Barber,1.33,4.33,8.5,611279
+14,2003-11-30,manchester-city,Manchester City,middlesbrough,Middlesbrough,0,1,0-1,24,2,14,0,12,0,15,12,0,0,0,0,City of Manchester,Mike Riley,1.9,3.25,3.75,611280
+14,2003-11-30,liverpool,Liverpool,birmingham-city,Birmingham,3,1,1-1,10,7,7,4,6,4,24,17,2,1,0,0,Anfield,Neale Barry,1.57,3.6,5.5,611281
+14,2003-11-30,chelsea,Chelsea,manchester-united,Manchester United,1,0,1-0,12,5,4,3,2,4,11,12,4,1,0,0,Stamford Bridge,Alan Wiley,2.37,3.25,2.7,611282
+15,2003-12-06,newcastle-united,Newcastle,liverpool,Liverpool,1,1,0-1,13,7,6,3,8,1,13,13,1,4,0,0,St. James' Park,Graham Poll,2.25,3.4,2.75,611283
+15,2003-12-06,birmingham-city,Birmingham,blackburn-rovers,Blackburn Rovers,0,4,0-0,6,11,2,7,10,7,23,15,1,1,1,0,St. Andrews,Graham Barber,2.2,3.2,3,611284
+15,2003-12-06,tottenham-hotspur,Tottenham,wolverhampton-wanderers,Wolverhampton,5,2,1-1,12,16,10,8,4,5,14,8,2,0,0,0,White Hart Lane,Uriah Rennie,1.66,3.4,5,611285
+15,2003-12-06,fulham,Fulham,bolton-wanderers,Bolton Wanderers,2,1,0-0,10,10,3,5,3,2,15,11,0,2,0,0,Loftus Road,Andy D'Urso,1.8,3.2,4.33,611286
+15,2003-12-06,middlesbrough,Middlesbrough,portsmouth,Portsmouth,0,0,0-0,5,6,3,2,6,5,17,20,2,3,0,1,Riverside,Stephen Bennett,1.72,3.4,4.5,611287
+15,2003-12-06,manchester-united,Manchester United,aston-villa,Aston Villa,4,0,2-0,12,10,8,3,6,5,6,11,0,1,0,0,Old Trafford,Steve Dunn,1.28,4.5,10,611288
+15,2003-12-06,leeds,Leeds,chelsea,Chelsea,1,1,1-0,8,19,4,10,2,8,14,11,3,2,0,0,Elland Road,Mike Dean,6.5,3.6,1.5,611289
+15,2003-12-06,leicester-city,Leicester,arsenal,Arsenal,1,1,0-0,4,8,1,5,7,5,13,12,1,1,0,1,Walkers Stadium,Rob Styles,6.5,3.4,1.53,611290
+15,2003-12-07,everton,Everton,manchester-city,Manchester City,0,0,0-0,9,15,2,7,3,5,11,13,1,1,0,0,Goodison Park,Jeff Winter,2.3,3.4,2.7,611291
+15,2003-12-07,southampton,Southampton,charlton-athletic,Charlton Athletic,3,2,2-0,18,20,14,14,8,9,12,12,0,0,0,0,St Mary's Stadium,Peter Walton,2.25,3.25,2.87,611292
+16,2003-12-13,leicester-city,Leicester,birmingham-city,Birmingham,0,2,0-1,8,9,5,4,6,7,19,16,2,2,2,0,Walkers Stadium,Mike Riley,2.25,3.25,2.875,611293
+16,2003-12-13,manchester-united,Manchester United,manchester-city,Manchester City,3,1,2-0,10,12,7,9,2,5,8,10,0,2,0,0,Old Trafford,Mark Halsey,1.4,3.75,8.5,611294
+16,2003-12-13,portsmouth,Portsmouth,everton,Everton,1,2,1-2,12,9,10,4,7,10,13,13,1,1,0,0,Fratton Park,Uriah Rennie,2.2,3.2,3,611295
+16,2003-12-13,newcastle-united,Newcastle,tottenham-hotspur,Tottenham,4,0,1-0,19,4,11,4,11,7,10,12,2,2,0,0,St. James' Park,Alan Wiley,1.615,3.4,5.5,611296
+16,2003-12-13,middlesbrough,Middlesbrough,charlton-athletic,Charlton Athletic,0,0,0-0,12,10,6,3,3,7,13,11,1,1,0,0,Riverside,Howard Webb,2.1,3.25,3.2,611297
+16,2003-12-13,liverpool,Liverpool,southampton,Southampton,1,2,0-1,18,8,10,4,9,5,6,8,0,0,0,0,Anfield,Paul Durkin,1.571,3.4,6,611298
+16,2003-12-13,chelsea,Chelsea,bolton-wanderers,Bolton Wanderers,1,2,1-1,9,4,5,2,8,3,13,11,2,2,0,0,Stamford Bridge,Matt Messias,1.286,4.5,10,611299
+16,2003-12-14,aston-villa,Aston Villa,wolverhampton-wanderers,Wolverhampton,3,2,2-1,11,8,8,5,4,6,12,14,3,4,0,0,Villa Park,Graham Poll,1.727,3.4,4.5,611300
+16,2003-12-14,arsenal,Arsenal,blackburn-rovers,Blackburn Rovers,1,0,1-0,11,5,7,1,5,6,14,14,2,4,0,0,Highbury,Andy D'Urso,1.364,4.333,7.5,611301
+16,2003-12-14,leeds,Leeds,fulham,Fulham,3,2,1-0,14,10,11,7,6,5,17,11,2,1,0,0,Elland Road,Neale Barry,2.5,3.2,2.6,611302
+17,2003-12-20,charlton-athletic,Charlton Athletic,newcastle-united,Newcastle,0,0,0-0,18,11,10,5,7,9,11,9,0,0,0,0,The Valley,Stephen Bennett,2.875,3.3,2.375,611303
+17,2003-12-20,fulham,Fulham,chelsea,Chelsea,0,1,0-0,7,11,2,9,2,8,11,10,2,3,0,0,Loftus Road,Mike Riley,4.5,3.4,1.8,611304
+17,2003-12-20,blackburn-rovers,Blackburn Rovers,aston-villa,Aston Villa,0,2,0-0,12,15,5,7,9,1,7,11,1,0,0,0,Ewood Park,Dermot Gallagher,1.909,3.3,4,611305
+17,2003-12-20,bolton-wanderers,Bolton Wanderers,arsenal,Arsenal,1,1,0-0,19,9,13,4,8,1,11,13,2,2,0,0,Reebok Stadium,Graham Poll,5,3.6,1.667,611306
+17,2003-12-20,everton,Everton,leicester-city,Leicester,3,2,1-1,15,6,8,4,11,7,13,18,2,3,0,0,Goodison Park,Phil Dowd,1.8,3.4,4,611307
+17,2003-12-21,southampton,Southampton,portsmouth,Portsmouth,3,0,1-0,12,11,7,7,8,5,7,21,0,3,0,0,St Mary's Stadium,Jeff Winter,1.727,3.4,5,611308
+17,2003-12-21,tottenham-hotspur,Tottenham,manchester-united,Manchester United,1,2,0-2,14,12,8,7,7,8,12,8,2,2,0,0,White Hart Lane,Rob Styles,5.5,3.6,1.615,611309
+17,2003-12-22,manchester-city,Manchester City,leeds,Leeds,1,1,0-1,19,6,11,4,8,5,7,8,0,3,0,0,City of Manchester,Graham Barber,1.909,3.3,4,611310
+17,2004-01-21,wolverhampton-wanderers,Wolverhampton,liverpool,Liverpool,1,1,0-1,9,14,6,10,7,5,14,16,2,1,0,0,Molineux,Barry Knight,4.5,3.4,1.8,611311
+17,2004-03-03,birmingham-city,Birmingham,middlesbrough,Middlesbrough,3,1,1-0,9,8,5,6,4,5,13,20,3,5,0,1,St. Andrews,Rob Styles,2.1,3.25,3.4,611312
+18,2003-12-26,fulham,Fulham,southampton,Southampton,2,0,1-0,14,6,7,2,11,5,13,12,1,2,0,0,Loftus Road,Dermot Gallagher,2.2,3.25,3.2,611313
+18,2003-12-26,arsenal,Arsenal,wolverhampton-wanderers,Wolverhampton,3,0,2-0,15,5,10,1,14,3,15,17,2,5,0,0,Highbury,Phil Dowd,1.167,6.5,15,611314
+18,2003-12-26,charlton-athletic,Charlton Athletic,chelsea,Chelsea,4,2,2-1,8,15,4,8,8,6,14,10,1,1,0,0,The Valley,Graham Poll,5.5,3.4,1.667,611315
+18,2003-12-26,portsmouth,Portsmouth,tottenham-hotspur,Tottenham,2,0,0-0,10,5,8,3,3,6,10,10,1,1,0,0,Fratton Park,Steve Dunn,2.5,3.25,2.7,611316
+18,2003-12-26,birmingham-city,Birmingham,manchester-city,Manchester City,2,1,0-1,5,9,3,5,9,3,18,14,2,1,0,0,St. Andrews,Uriah Rennie,2.25,3.25,3.1,611317
+18,2003-12-26,leicester-city,Leicester,newcastle-united,Newcastle,1,1,0-0,6,12,5,6,6,7,11,10,0,0,0,0,Walkers Stadium,Chris Foy,3.25,3.4,2.1,611318
+18,2003-12-26,liverpool,Liverpool,bolton-wanderers,Bolton Wanderers,3,1,1-0,13,7,8,2,7,1,10,18,0,2,0,0,Anfield,Jeff Winter,1.667,3.6,5,611319
+18,2003-12-26,manchester-united,Manchester United,everton,Everton,3,2,2-1,19,10,11,6,7,2,8,10,0,2,0,0,Old Trafford,Mike Dean,1.25,5.5,10,611320
+18,2003-12-26,blackburn-rovers,Blackburn Rovers,middlesbrough,Middlesbrough,2,2,1-1,13,5,10,3,14,1,11,10,2,1,0,0,Ewood Park,Alan Wiley,2.25,3.25,3.1,611321
+18,2003-12-26,leeds,Leeds,aston-villa,Aston Villa,0,0,0-0,6,13,3,4,7,5,15,13,0,2,0,0,Elland Road,Stephen Bennett,2.3,3.25,3,611322
+19,2003-12-28,chelsea,Chelsea,portsmouth,Portsmouth,3,0,0-0,15,7,8,3,7,1,8,14,0,0,0,0,Stamford Bridge,Graham Barber,1.25,5.5,11,611323
+19,2003-12-28,newcastle-united,Newcastle,blackburn-rovers,Blackburn Rovers,0,1,0-0,15,11,11,3,8,8,6,13,0,1,0,0,St. James' Park,Mark Halsey,1.61,3.6,5.5,611324
+19,2003-12-28,wolverhampton-wanderers,Wolverhampton,leeds,Leeds,3,1,1-1,11,9,4,4,6,10,11,14,1,4,0,1,Molineux,Andy D'Urso,2.62,3.25,2.6,611325
+19,2003-12-28,tottenham-hotspur,Tottenham,charlton-athletic,Charlton Athletic,0,1,0-0,18,10,9,8,11,11,8,13,1,0,0,0,White Hart Lane,Paul Durkin,2.3,3.25,3,611326
+19,2003-12-28,manchester-city,Manchester City,liverpool,Liverpool,2,2,1-0,16,11,8,9,7,7,6,14,1,2,0,0,City of Manchester,Mike Riley,2.87,3.25,2.37,611327
+19,2003-12-28,everton,Everton,birmingham-city,Birmingham,1,0,0-0,16,5,6,2,5,2,7,13,0,0,0,0,Goodison Park,Rob Styles,2.1,3.25,3.4,611328
+19,2003-12-28,aston-villa,Aston Villa,fulham,Fulham,3,0,1-0,12,9,8,3,8,3,17,7,0,0,0,0,Villa Park,Barry Knight,2.2,3.25,3.2,611329
+19,2003-12-28,bolton-wanderers,Bolton Wanderers,leicester-city,Leicester,2,2,1-1,15,7,8,6,3,7,16,17,1,3,0,0,Reebok Stadium,Neale Barry,1.8,3.4,4.5,611330
+19,2003-12-28,middlesbrough,Middlesbrough,manchester-united,Manchester United,0,1,0-1,11,10,2,6,4,2,11,15,3,2,0,1,Riverside,Matt Messias,5,3.6,1.66,611331
+19,2003-12-29,southampton,Southampton,arsenal,Arsenal,0,1,0-1,6,17,3,9,2,3,14,10,1,0,0,0,St Mary's Stadium,Steve Dunn,4.5,3.6,1.72,611332
+20,2004-01-06,aston-villa,Aston Villa,portsmouth,Portsmouth,2,1,1-0,18,11,13,4,9,6,17,14,0,0,0,0,Villa Park,Jeff Winter,1.66,3.4,5.5,611333
+20,2004-01-07,wolverhampton-wanderers,Wolverhampton,blackburn-rovers,Blackburn Rovers,2,2,0-1,10,9,5,5,2,7,13,20,1,1,0,0,Molineux,Neale Barry,2.87,3.25,2.4,611334
+20,2004-01-07,tottenham-hotspur,Tottenham,birmingham-city,Birmingham,4,1,3-0,11,9,7,3,1,6,15,6,0,0,0,0,White Hart Lane,Barry Knight,2.2,3.25,3.2,611335
+20,2004-01-07,middlesbrough,Middlesbrough,fulham,Fulham,2,1,1-0,10,9,5,4,9,1,14,17,1,3,0,0,Riverside,Paul Durkin,2.2,3.25,3.2,611336
+20,2004-01-07,manchester-city,Manchester City,charlton-athletic,Charlton Athletic,1,1,1-0,18,9,10,4,2,2,9,11,0,0,0,0,City of Manchester,Peter Walton,2.3,3.25,3,611337
+20,2004-01-07,newcastle-united,Newcastle,leeds,Leeds,1,0,1-0,13,9,6,5,5,3,14,17,0,1,0,0,St. James' Park,Phil Dowd,1.53,3.6,7,611338
+20,2004-01-07,southampton,Southampton,leicester-city,Leicester,0,0,0-0,14,9,14,8,4,5,12,15,2,1,0,0,St Mary's Stadium,Howard Webb,1.8,3.4,4.5,611339
+20,2004-01-07,everton,Everton,arsenal,Arsenal,1,1,0-1,8,9,4,5,5,4,13,16,0,3,0,0,Goodison Park,Alan Wiley,5.5,3.4,1.66,611340
+20,2004-01-07,bolton-wanderers,Bolton Wanderers,manchester-united,Manchester United,1,2,0-2,15,11,5,7,10,6,4,8,2,0,0,0,Reebok Stadium,Dermot Gallagher,6.5,3.5,1.57,611341
+20,2004-01-07,chelsea,Chelsea,liverpool,Liverpool,0,1,0-1,9,4,2,1,8,3,15,9,0,2,0,1,Stamford Bridge,Steve Dunn,1.8,3.4,4.5,611342
+21,2004-01-10,charlton-athletic,Charlton Athletic,wolverhampton-wanderers,Wolverhampton,2,0,1-0,10,7,4,4,6,5,6,12,1,3,0,0,The Valley,Rob Styles,1.57,3.5,6.5,611343
+21,2004-01-10,fulham,Fulham,everton,Everton,2,1,1-0,14,11,10,5,5,7,19,9,0,0,0,0,Loftus Road,Graham Poll,2.1,3.25,3.4,611344
+21,2004-01-10,portsmouth,Portsmouth,manchester-city,Manchester City,4,2,1-2,11,15,8,6,2,7,7,8,0,2,0,0,Fratton Park,Matt Messias,2.5,3.25,2.7,611345
+21,2004-01-10,birmingham-city,Birmingham,southampton,Southampton,2,1,1-1,11,9,6,6,7,10,14,23,0,1,0,1,St. Andrews,Stephen Bennett,2.1,3.25,3.4,611346
+21,2004-01-10,liverpool,Liverpool,aston-villa,Aston Villa,1,0,1-0,12,8,4,2,3,6,14,15,3,2,0,0,Anfield,Graham Barber,1.66,3.4,5.5,611347
+21,2004-01-10,arsenal,Arsenal,middlesbrough,Middlesbrough,4,1,2-0,20,5,13,4,7,3,12,21,1,1,0,0,Highbury,Andy D'Urso,1.28,5,10,611348
+21,2004-01-10,blackburn-rovers,Blackburn Rovers,bolton-wanderers,Bolton Wanderers,3,4,3-2,8,16,3,10,4,7,15,13,2,3,0,0,Ewood Park,Steve Dunn,2.1,3.25,3.4,611349
+21,2004-01-10,leeds,Leeds,tottenham-hotspur,Tottenham,0,1,0-0,7,15,1,8,4,5,17,13,0,1,0,0,Elland Road,Mark Halsey,2.5,3.25,2.7,611350
+21,2004-01-11,leicester-city,Leicester,chelsea,Chelsea,0,4,0-2,6,11,3,6,6,2,17,7,0,1,0,0,Walkers Stadium,Uriah Rennie,6,3.5,1.61,611351
+21,2004-01-11,manchester-united,Manchester United,newcastle-united,Newcastle,0,0,0-0,12,7,7,3,2,3,13,11,2,0,0,0,Old Trafford,Paul Durkin,1.44,4,7.5,611352
+22,2004-01-17,wolverhampton-wanderers,Wolverhampton,manchester-united,Manchester United,1,0,0-0,11,15,6,6,4,12,13,5,2,0,0,0,Molineux,Andy D'Urso,8.5,4.5,1.36,611353
+22,2004-01-17,tottenham-hotspur,Tottenham,liverpool,Liverpool,2,1,1-0,7,10,3,4,5,6,18,9,1,1,0,0,White Hart Lane,Uriah Rennie,2.87,3.25,2.37,611354
+22,2004-01-17,middlesbrough,Middlesbrough,leicester-city,Leicester,3,3,1-0,13,14,7,8,6,6,15,12,2,4,0,0,Riverside,Barry Knight,1.72,3.3,5,611355
+22,2004-01-17,manchester-city,Manchester City,blackburn-rovers,Blackburn Rovers,1,1,0-0,10,6,7,3,4,2,7,13,2,1,0,0,City of Manchester,Mike Dean,2.1,3.25,3.4,611356
+22,2004-01-17,everton,Everton,charlton-athletic,Charlton Athletic,0,1,0-1,17,7,7,4,10,5,6,14,4,2,0,0,Goodison Park,Mike Riley,2.25,3.25,3.1,611357
+22,2004-01-17,southampton,Southampton,leeds,Leeds,2,1,2-0,18,11,6,6,1,6,16,8,1,1,0,0,St Mary's Stadium,Alan Wiley,1.72,3.3,5,611358
+22,2004-01-17,bolton-wanderers,Bolton Wanderers,portsmouth,Portsmouth,1,0,0-0,13,8,6,3,2,2,9,13,1,1,0,1,Reebok Stadium,Phil Dowd,1.83,3.25,4.5,611359
+22,2004-01-18,aston-villa,Aston Villa,arsenal,Arsenal,0,2,0-1,12,13,5,9,3,2,17,21,4,1,0,0,Villa Park,Mark Halsey,5.5,3.4,1.66,611360
+22,2004-01-18,chelsea,Chelsea,birmingham-city,Birmingham,0,0,0-0,16,2,9,1,6,2,13,8,2,2,0,0,Stamford Bridge,Jeff Winter,1.3,4.5,12,611361
+22,2004-01-19,newcastle-united,Newcastle,fulham,Fulham,3,1,2-0,10,13,9,6,7,4,10,8,0,1,0,0,St. James' Park,Neale Barry,1.66,3.4,5.5,611362
+23,2004-01-31,manchester-united,Manchester United,southampton,Southampton,3,2,2-1,12,17,7,11,1,10,9,11,0,2,0,0,Old Trafford,Graham Barber,1.25,5.5,10,611363
+23,2004-01-31,charlton-athletic,Charlton Athletic,bolton-wanderers,Bolton Wanderers,1,2,1-1,14,14,7,10,5,6,9,9,0,0,0,0,The Valley,Andy D'Urso,1.8,3.3,4.5,611364
+23,2004-01-31,fulham,Fulham,tottenham-hotspur,Tottenham,2,1,1-1,16,4,10,4,10,13,6,12,1,1,0,0,Loftus Road,Matt Messias,2.375,3.25,2.875,611365
+23,2004-01-31,portsmouth,Portsmouth,wolverhampton-wanderers,Wolverhampton,0,0,0-0,17,8,10,4,6,6,9,6,0,1,0,0,Fratton Park,Howard Webb,1.909,3.25,4,611366
+23,2004-01-31,birmingham-city,Birmingham,newcastle-united,Newcastle,1,1,0-1,15,4,5,2,2,3,13,11,1,4,0,0,St. Andrews,Rob Styles,2.7,3.25,2.5,611367
+23,2004-01-31,leicester-city,Leicester,aston-villa,Aston Villa,0,5,0-0,13,14,9,10,5,9,12,7,0,1,0,0,Walkers Stadium,Jeff Winter,2.5,3.25,2.7,611368
+23,2004-01-31,liverpool,Liverpool,everton,Everton,0,0,0-0,21,6,9,4,8,3,7,11,0,1,0,0,Anfield,Stephen Bennett,1.727,3.4,5,611369
+23,2004-01-31,leeds,Leeds,middlesbrough,Middlesbrough,0,3,0-0,8,15,4,6,7,6,14,6,1,1,1,0,Elland Road,Graham Poll,2.5,3.25,2.7,611370
+23,2004-02-01,blackburn-rovers,Blackburn Rovers,chelsea,Chelsea,2,3,1-2,13,17,7,9,5,6,9,14,2,0,0,0,Ewood Park,Dermot Gallagher,4.5,3.3,1.8,611371
+23,2004-02-01,arsenal,Arsenal,manchester-city,Manchester City,2,1,1-0,11,9,9,8,5,4,13,13,3,2,0,1,Highbury,Alan Wiley,1.25,5.5,10,611372
+24,2004-02-07,wolverhampton-wanderers,Wolverhampton,arsenal,Arsenal,1,3,1-1,12,10,5,7,6,4,18,18,3,1,0,0,Molineux,Phil Dowd,9,4,1.4,611373
+24,2004-02-07,tottenham-hotspur,Tottenham,portsmouth,Portsmouth,4,3,2-1,15,16,13,9,6,5,16,13,1,1,0,0,White Hart Lane,Peter Walton,1.667,3.4,5.5,611374
+24,2004-02-07,middlesbrough,Middlesbrough,blackburn-rovers,Blackburn Rovers,0,1,0-1,15,6,7,2,8,3,6,12,0,1,0,0,Riverside,Rob Styles,1.909,3.25,4,611375
+24,2004-02-07,everton,Everton,manchester-united,Manchester United,3,4,0-3,12,19,8,9,7,7,11,14,1,0,0,0,Goodison Park,Neale Barry,5.5,3.6,1.615,611376
+24,2004-02-07,newcastle-united,Newcastle,leicester-city,Leicester,3,1,2-0,15,7,9,3,9,1,17,11,1,2,0,0,St. James' Park,Steve Dunn,1.4,4.333,7.5,611377
+24,2004-02-07,southampton,Southampton,fulham,Fulham,0,0,0-0,11,11,6,8,17,3,12,18,1,2,0,0,St Mary's Stadium,Andy D'Urso,2.1,3.25,3.4,611378
+24,2004-02-07,aston-villa,Aston Villa,leeds,Leeds,2,0,1-0,15,7,7,4,3,10,15,16,2,2,0,0,Villa Park,Uriah Rennie,1.615,3.4,6,611379
+24,2004-02-07,bolton-wanderers,Bolton Wanderers,liverpool,Liverpool,2,2,1-0,12,11,6,6,3,5,15,15,3,2,0,0,Reebok Stadium,Alan Wiley,3.1,3.2,2.25,611380
+24,2004-02-08,manchester-city,Manchester City,birmingham-city,Birmingham,0,0,0-0,21,7,12,2,11,5,11,10,0,1,0,0,City of Manchester,Paul Durkin,2,3.4,3.5,611381
+24,2004-02-08,chelsea,Chelsea,charlton-athletic,Charlton Athletic,1,0,1-0,16,5,6,0,4,3,9,17,2,0,0,0,Stamford Bridge,Stephen Bennett,1.364,4.333,9,611382
+25,2004-02-10,arsenal,Arsenal,southampton,Southampton,2,0,1-0,11,10,6,6,5,9,13,12,2,3,0,0,Highbury,Neale Barry,1.25,5,13,611383
+25,2004-02-10,leeds,Leeds,wolverhampton-wanderers,Wolverhampton,4,1,2-1,20,11,8,5,4,3,15,14,1,2,0,0,Elland Road,Mike Dean,2.1,3.25,3.4,611384
+25,2004-02-10,leicester-city,Leicester,bolton-wanderers,Bolton Wanderers,1,1,1-1,15,9,15,9,8,7,16,13,1,2,0,0,Walkers Stadium,Uriah Rennie,2.7,3.25,2.5,611385
+25,2004-02-11,birmingham-city,Birmingham,everton,Everton,3,0,2-0,15,5,11,3,8,11,10,14,2,0,0,0,St. Andrews,Mark Halsey,2.1,3.25,3.4,611386
+25,2004-02-11,fulham,Fulham,aston-villa,Aston Villa,1,2,1-2,13,10,6,3,6,5,16,17,2,1,1,0,Loftus Road,Barry Knight,2.2,3.25,3.2,611387
+25,2004-02-11,portsmouth,Portsmouth,chelsea,Chelsea,0,2,0-1,11,10,5,4,9,10,8,13,1,2,0,0,Fratton Park,Graham Poll,5.5,3.6,1.61,611388
+25,2004-02-11,charlton-athletic,Charlton Athletic,tottenham-hotspur,Tottenham,2,4,0-2,18,12,14,10,10,4,13,14,3,0,0,0,The Valley,Graham Barber,2.1,3.25,3.4,611389
+25,2004-02-11,blackburn-rovers,Blackburn Rovers,newcastle-united,Newcastle,1,1,0-0,17,14,7,7,8,6,12,10,0,0,0,0,Ewood Park,Matt Messias,2.87,3.25,2.37,611390
+25,2004-02-11,liverpool,Liverpool,manchester-city,Manchester City,2,1,1-0,12,6,7,3,6,3,7,8,0,0,0,0,Anfield,Mike Riley,1.61,3.6,5.5,611391
+25,2004-02-11,manchester-united,Manchester United,middlesbrough,Middlesbrough,2,3,1-2,23,12,13,8,10,5,13,17,1,1,0,0,Old Trafford,Paul Durkin,1.25,5.5,11,611392
+26,2004-02-21,manchester-united,Manchester United,leeds,Leeds,1,1,0-0,24,7,7,3,12,7,12,17,1,2,0,0,Old Trafford,Mark Halsey,1.222,5.5,13,611393
+26,2004-02-21,chelsea,Chelsea,arsenal,Arsenal,1,2,1-2,10,9,4,7,11,5,16,18,4,2,1,0,Stamford Bridge,Mike Riley,2.625,3.2,2.6,611394
+26,2004-02-21,charlton-athletic,Charlton Athletic,blackburn-rovers,Blackburn Rovers,3,2,2-0,11,18,7,12,8,12,7,6,0,0,0,0,The Valley,Uriah Rennie,2.2,3.25,3.2,611395
+26,2004-02-21,southampton,Southampton,everton,Everton,3,3,0-2,9,12,5,6,6,5,14,19,1,0,0,0,St Mary's Stadium,Phil Dowd,2,3.2,3.75,611396
+26,2004-02-21,wolverhampton-wanderers,Wolverhampton,fulham,Fulham,2,1,1-0,12,9,10,5,8,6,13,16,1,0,0,0,Molineux,Howard Webb,2.6,3.2,2.625,611397
+26,2004-02-21,newcastle-united,Newcastle,middlesbrough,Middlesbrough,2,1,0-1,16,8,9,4,7,3,20,21,0,3,0,0,St. James' Park,Graham Poll,1.727,3.4,5,611398
+26,2004-02-21,bolton-wanderers,Bolton Wanderers,manchester-city,Manchester City,1,3,1-2,16,17,11,13,12,11,9,10,0,2,0,0,Reebok Stadium,Steve Dunn,2.2,3.25,3.2,611399
+26,2004-02-22,aston-villa,Aston Villa,birmingham-city,Birmingham,2,2,1-0,11,13,8,9,7,5,15,14,0,1,0,0,Villa Park,Jeff Winter,2.1,3.1,3.6,611400
+26,2004-02-22,tottenham-hotspur,Tottenham,leicester-city,Leicester,4,4,3-1,10,14,9,7,4,3,9,14,1,3,0,1,White Hart Lane,Neale Barry,1.571,3.5,6.5,611401
+26,2004-03-17,liverpool,Liverpool,portsmouth,Portsmouth,3,0,2-0,20,4,13,4,10,8,9,20,0,1,0,0,Anfield,Barry Knight,1.44,4,7.5,611402
+27,2004-02-28,manchester-city,Manchester City,chelsea,Chelsea,0,1,0-0,14,9,4,4,7,1,8,11,0,1,0,0,City of Manchester,Rob Styles,4.333,3.3,1.833,611403
+27,2004-02-28,leicester-city,Leicester,wolverhampton-wanderers,Wolverhampton,0,0,0-0,10,6,6,3,6,3,7,9,0,1,0,0,Walkers Stadium,Jeff Winter,2.2,3.25,3.2,611404
+27,2004-02-28,fulham,Fulham,manchester-united,Manchester United,1,1,0-1,7,13,3,7,4,3,13,19,1,3,0,0,Loftus Road,Alan Wiley,5,3.6,1.667,611405
+27,2004-02-28,arsenal,Arsenal,charlton-athletic,Charlton Athletic,2,1,2-0,21,6,11,3,12,3,8,10,0,0,0,0,Highbury,Graham Barber,1.286,5,10,611406
+27,2004-02-28,blackburn-rovers,Blackburn Rovers,southampton,Southampton,1,1,0-1,16,10,7,6,6,9,10,8,1,1,0,0,Ewood Park,Mike Dean,2.1,3.25,3.4,611407
+27,2004-02-28,everton,Everton,aston-villa,Aston Villa,2,0,0-0,15,12,7,8,5,11,13,18,4,2,0,0,Goodison Park,Matt Messias,2.375,3.25,2.875,611408
+27,2004-02-29,leeds,Leeds,liverpool,Liverpool,2,2,2-2,12,22,6,13,6,8,13,11,0,1,0,0,Elland Road,Paul Durkin,3.2,3.25,2.2,611409
+27,2004-02-29,portsmouth,Portsmouth,newcastle-united,Newcastle,1,1,0-1,18,5,8,2,8,6,9,9,2,2,0,0,Fratton Park,Andy D'Urso,3.2,3.25,2.2,611410
+27,2004-03-06,birmingham-city,Birmingham,bolton-wanderers,Bolton Wanderers,2,0,1-0,10,10,6,2,3,5,10,15,1,1,0,0,St. Andrews,Andy D'Urso,2.1,3.25,3.2,611411
+27,2004-03-09,middlesbrough,Middlesbrough,tottenham-hotspur,Tottenham,1,0,0-0,10,10,6,2,3,5,10,15,0,2,0,0,Riverside,Mark Halsey,2.2,3.25,2.8,611412
+28,2004-03-13,bolton-wanderers,Bolton Wanderers,chelsea,Chelsea,0,2,0-0,20,12,11,8,8,6,8,13,1,0,0,0,Reebok Stadium,Graham Poll,4.5,3.6,1.727,611413
+28,2004-03-13,charlton-athletic,Charlton Athletic,middlesbrough,Middlesbrough,1,0,1-0,14,15,7,9,4,7,13,9,0,0,0,0,The Valley,Mike Dean,2.2,3.25,3.2,611414
+28,2004-03-13,birmingham-city,Birmingham,leicester-city,Leicester,0,1,0-0,6,4,4,2,8,6,12,26,1,2,0,0,St. Andrews,Matt Messias,1.571,3.5,6.5,611415
+28,2004-03-13,fulham,Fulham,leeds,Leeds,2,0,0-0,19,9,10,6,4,7,14,13,4,3,0,0,Loftus Road,Steve Dunn,1.833,3.3,4.333,611416
+28,2004-03-13,blackburn-rovers,Blackburn Rovers,arsenal,Arsenal,0,2,0-0,10,14,5,5,8,3,12,11,1,1,0,0,Ewood Park,Alan Wiley,6.5,3.75,1.533,611417
+28,2004-03-13,everton,Everton,portsmouth,Portsmouth,1,0,0-0,13,5,6,3,6,4,10,12,0,2,0,0,Goodison Park,Neale Barry,1.727,3.4,5,611418
+28,2004-03-14,wolverhampton-wanderers,Wolverhampton,aston-villa,Aston Villa,0,4,0-3,9,15,1,7,8,13,10,14,1,2,0,0,Molineux,Paul Durkin,2.7,3.25,2.5,611419
+28,2004-03-14,manchester-city,Manchester City,manchester-united,Manchester United,4,1,2-1,17,17,11,9,7,4,18,14,1,2,0,0,City of Manchester,Stephen Bennett,4,3.25,1.909,611420
+28,2004-03-14,tottenham-hotspur,Tottenham,newcastle-united,Newcastle,1,0,0-0,11,6,4,4,3,12,13,13,0,0,0,0,White Hart Lane,Howard Webb,2.5,3.25,2.7,611421
+28,2004-03-14,southampton,Southampton,liverpool,Liverpool,2,0,0-0,7,18,3,12,1,7,20,8,3,1,0,0,St Mary's Stadium,Dermot Gallagher,2.875,3.25,2.375,611422
+29,2004-03-20,manchester-united,Manchester United,tottenham-hotspur,Tottenham,3,0,1-0,11,8,6,3,4,2,14,10,1,1,0,0,Old Trafford,Dermot Gallagher,1.444,4,7.5,611423
+29,2004-03-20,middlesbrough,Middlesbrough,birmingham-city,Birmingham,5,3,4-2,13,18,9,12,4,4,11,13,2,0,0,0,Riverside,Uriah Rennie,2.2,3.2,3.25,611424
+29,2004-03-20,leicester-city,Leicester,everton,Everton,1,1,0-0,10,7,4,3,9,2,12,21,1,5,0,1,Walkers Stadium,Barry Knight,2.5,3.25,2.7,611425
+29,2004-03-20,liverpool,Liverpool,wolverhampton-wanderers,Wolverhampton,1,0,0-0,12,8,4,6,14,4,5,12,0,1,0,0,Anfield,Rob Styles,1.364,4.333,9,611426
+29,2004-03-20,arsenal,Arsenal,bolton-wanderers,Bolton Wanderers,2,1,2-1,11,8,8,2,6,1,12,14,1,2,0,0,Highbury,Graham Barber,1.222,5.5,13,611427
+29,2004-03-20,aston-villa,Aston Villa,blackburn-rovers,Blackburn Rovers,0,2,0-2,10,16,7,7,4,6,11,14,0,2,0,0,Villa Park,Andy D'Urso,1.8,3.4,4.5,611428
+29,2004-03-20,chelsea,Chelsea,fulham,Fulham,2,1,2-1,13,5,8,1,9,1,12,13,1,2,0,0,Stamford Bridge,Neale Barry,1.444,4,7.5,611429
+29,2004-03-20,newcastle-united,Newcastle,charlton-athletic,Charlton Athletic,3,1,2-0,15,6,10,2,6,6,11,12,0,2,0,0,St. James' Park,Mike Riley,1.727,3.4,5,611430
+29,2004-03-21,portsmouth,Portsmouth,southampton,Southampton,1,0,0-0,16,13,8,8,6,4,16,12,0,2,0,0,Fratton Park,Mark Halsey,2.6,3.1,2.7,611431
+29,2004-03-22,leeds,Leeds,manchester-city,Manchester City,2,1,1-1,4,21,3,14,4,5,13,14,2,1,0,1,Elland Road,Alan Wiley,2.5,3.25,2.7,611432
+30,2004-03-27,birmingham-city,Birmingham,leeds,Leeds,4,1,1-1,17,11,7,7,7,7,11,18,0,1,0,0,St. Andrews,Mark Halsey,1.833,3.3,4.333,611433
+30,2004-03-27,charlton-athletic,Charlton Athletic,aston-villa,Aston Villa,1,2,1-1,11,19,9,11,3,12,11,14,1,1,0,0,The Valley,Barry Knight,2.2,3.25,3.2,611434
+30,2004-03-27,southampton,Southampton,tottenham-hotspur,Tottenham,1,0,0-0,18,15,11,9,10,6,8,16,0,2,0,0,St Mary's Stadium,Chris Foy,2.25,3.2,3.1,611435
+30,2004-03-27,manchester-city,Manchester City,fulham,Fulham,0,0,0-0,12,5,4,2,3,1,12,10,1,0,0,0,City of Manchester,Jeff Winter,2,3.4,3.5,611436
+30,2004-03-27,chelsea,Chelsea,wolverhampton-wanderers,Wolverhampton,5,2,1-1,15,9,10,4,7,4,6,12,0,2,0,0,Stamford Bridge,Graham Barber,1.25,5,13,611437
+30,2004-03-27,everton,Everton,middlesbrough,Middlesbrough,1,1,0-0,14,10,7,5,8,4,16,13,0,2,0,0,Goodison Park,Stephen Bennett,2.2,3.25,3.2,611438
+30,2004-03-27,blackburn-rovers,Blackburn Rovers,portsmouth,Portsmouth,1,2,1-1,14,8,9,4,5,3,11,10,0,0,0,0,Ewood Park,Paul Durkin,1.8,3.4,4.333,611439
+30,2004-03-28,bolton-wanderers,Bolton Wanderers,newcastle-united,Newcastle,1,0,1-0,20,15,12,7,7,7,11,10,1,2,0,0,Reebok Stadium,Mike Dean,2.875,3.25,2.375,611440
+30,2004-03-28,leicester-city,Leicester,liverpool,Liverpool,0,0,0-0,13,19,9,12,7,10,15,20,4,3,0,0,Walkers Stadium,Phil Dowd,3.4,3.25,2.1,611441
+30,2004-03-28,arsenal,Arsenal,manchester-united,Manchester United,1,1,0-0,17,13,10,8,8,7,15,18,1,1,0,0,Highbury,Graham Poll,2.1,3.25,3.4,611442
+31,2004-04-03,wolverhampton-wanderers,Wolverhampton,southampton,Southampton,1,4,0-1,8,13,3,10,3,6,12,8,2,1,0,0,Molineux,Mark Halsey,2.5,3.4,2.625,611443
+31,2004-04-03,fulham,Fulham,birmingham-city,Birmingham,0,0,0-0,6,6,5,1,4,2,24,22,4,2,0,0,Loftus Road,Mike Riley,2.25,3.2,3.1,611444
+31,2004-04-03,middlesbrough,Middlesbrough,bolton-wanderers,Bolton Wanderers,2,0,1-0,10,13,6,8,7,8,13,15,2,2,0,0,Riverside,Neale Barry,1.909,3.25,4,611445
+31,2004-04-03,newcastle-united,Newcastle,everton,Everton,4,2,2-1,12,13,8,6,5,9,11,7,0,0,0,0,St. James' Park,Dermot Gallagher,1.615,3.4,6,611446
+31,2004-04-03,tottenham-hotspur,Tottenham,chelsea,Chelsea,0,1,0-1,12,10,7,7,5,4,10,10,2,0,0,0,White Hart Lane,Stephen Bennett,4,3.25,1.909,611447
+31,2004-04-04,aston-villa,Aston Villa,manchester-city,Manchester City,1,1,1-0,6,7,3,4,5,4,13,13,1,2,0,0,Villa Park,Uriah Rennie,1.909,3.3,4,611448
+31,2004-04-04,liverpool,Liverpool,blackburn-rovers,Blackburn Rovers,4,0,3-0,24,9,11,2,6,4,8,10,0,1,0,0,Anfield,Jeff Winter,1.615,3.4,6,611449
+31,2004-04-05,leeds,Leeds,leicester-city,Leicester,3,2,2-0,15,14,10,9,7,11,19,14,2,1,1,0,Elland Road,Mike Dean,2,3.3,3.6,611450
+31,2004-04-20,manchester-united,Manchester United,charlton-athletic,Charlton Athletic,2,0,1-0,10,5,6,0,8,3,10,8,1,1,0,0,Old Trafford,Steve Dunn,1.4,4.333,7.5,611451
+31,2004-05-04,portsmouth,Portsmouth,arsenal,Arsenal,1,1,1-0,11,20,6,9,5,12,13,10,0,2,0,0,Fratton Park,Mike Riley,4.5,3.3,1.8,611452
+32,2004-04-09,arsenal,Arsenal,liverpool,Liverpool,4,2,1-2,12,12,7,5,2,8,16,9,3,1,0,0,Highbury,Alan Wiley,1.909,3.1,4.333,611453
+32,2004-04-09,everton,Everton,tottenham-hotspur,Tottenham,3,1,3-0,13,12,10,7,8,4,9,14,1,3,0,1,Goodison Park,Rob Styles,2.2,3.25,3.2,611454
+32,2004-04-10,charlton-athletic,Charlton Athletic,portsmouth,Portsmouth,1,1,1-0,9,10,3,8,6,2,14,8,1,1,0,0,The Valley,Andy D'Urso,1.8,3.5,4.2,611455
+32,2004-04-10,manchester-city,Manchester City,wolverhampton-wanderers,Wolverhampton,3,3,2-2,14,15,8,9,5,6,9,12,0,1,0,0,City of Manchester,Jeff Winter,1.615,3.6,5.5,611456
+32,2004-04-10,birmingham-city,Birmingham,manchester-united,Manchester United,1,2,1-0,11,10,8,6,0,3,11,10,0,0,0,0,St. Andrews,Dermot Gallagher,4.5,3.3,1.8,611457
+32,2004-04-10,chelsea,Chelsea,middlesbrough,Middlesbrough,0,0,0-0,19,9,9,5,6,2,10,8,1,1,0,0,Stamford Bridge,Mark Halsey,1.364,4.5,8.5,611458
+32,2004-04-10,leicester-city,Leicester,fulham,Fulham,0,2,0-0,10,9,7,4,15,4,13,15,2,1,0,0,Walkers Stadium,Peter Walton,2.3,3.25,3,611459
+32,2004-04-10,blackburn-rovers,Blackburn Rovers,leeds,Leeds,1,2,0-1,9,8,7,3,6,4,14,13,2,2,0,0,Ewood Park,Steve Dunn,2.1,3.25,3.4,611460
+32,2004-04-10,bolton-wanderers,Bolton Wanderers,aston-villa,Aston Villa,2,2,0-1,16,7,7,3,6,4,10,12,1,3,0,0,Reebok Stadium,Matt Messias,2.5,3.25,2.7,611461
+32,2004-05-12,southampton,Southampton,newcastle-united,Newcastle,3,3,2-2,15,22,12,12,3,5,13,16,1,2,0,0,St Mary's Stadium,Graham Poll,2.87,3.6,2.2,611462
+33,2004-04-11,newcastle-united,Newcastle,arsenal,Arsenal,0,0,0-0,9,11,5,5,5,4,14,12,0,1,0,0,St. James' Park,Paul Durkin,3.2,3.25,2.2,611463
+33,2004-04-12,wolverhampton-wanderers,Wolverhampton,bolton-wanderers,Bolton Wanderers,1,2,1-1,8,13,3,4,6,9,12,11,2,1,0,0,Molineux,Uriah Rennie,2.4,3.4,2.75,611464
+33,2004-04-12,middlesbrough,Middlesbrough,southampton,Southampton,3,1,2-0,25,16,18,8,6,3,11,14,0,0,0,0,Riverside,Dermot Gallagher,2.1,3.25,3.4,611465
+33,2004-04-12,portsmouth,Portsmouth,birmingham-city,Birmingham,3,1,1-0,12,6,6,2,4,4,19,11,1,2,0,1,Fratton Park,Barry Knight,2.375,3.25,2.875,611466
+33,2004-04-12,tottenham-hotspur,Tottenham,manchester-city,Manchester City,1,1,0-1,15,9,10,8,4,3,10,21,1,1,0,0,White Hart Lane,Chris Foy,2.2,3.25,3.2,611467
+33,2004-04-12,aston-villa,Aston Villa,chelsea,Chelsea,3,2,1-1,5,6,3,2,7,2,8,14,0,1,0,0,Villa Park,Jeff Winter,3.5,3.4,2,611468
+33,2004-04-12,liverpool,Liverpool,charlton-athletic,Charlton Athletic,0,1,0-0,25,6,16,3,7,4,12,17,2,0,0,0,Anfield,Phil Dowd,1.615,3.5,6,611469
+33,2004-04-12,fulham,Fulham,blackburn-rovers,Blackburn Rovers,3,4,2-1,10,11,7,7,6,1,12,14,0,0,0,0,Loftus Road,Mike Dean,2,3.25,3.75,611470
+33,2004-04-13,leeds,Leeds,everton,Everton,1,1,0-1,14,8,7,4,10,5,12,12,2,1,0,0,Elland Road,Paul Durkin,2.2,3.3,3.2,611471
+33,2004-04-13,manchester-united,Manchester United,leicester-city,Leicester,1,0,0-0,16,12,12,5,7,4,11,11,0,3,0,0,Old Trafford,Mark Halsey,1.286,5,10,611472
+34,2004-04-16,arsenal,Arsenal,leeds,Leeds,5,0,3-0,15,7,8,2,3,8,10,10,0,0,0,0,Highbury,Dermot Gallagher,1.333,5,8,611473
+34,2004-04-17,portsmouth,Portsmouth,manchester-united,Manchester United,1,0,1-0,9,19,4,12,3,13,14,8,2,1,0,0,Fratton Park,Neale Barry,4.5,3.6,1.727,611474
+34,2004-04-17,charlton-athletic,Charlton Athletic,birmingham-city,Birmingham,1,1,0-0,12,7,5,4,9,3,14,9,1,0,0,0,The Valley,Chris Foy,2.1,3.25,3.4,611475
+34,2004-04-17,manchester-city,Manchester City,southampton,Southampton,1,3,0-1,15,9,7,5,6,3,11,9,1,1,0,0,City of Manchester,Graham Barber,1.909,3.3,4,611476
+34,2004-04-17,wolverhampton-wanderers,Wolverhampton,middlesbrough,Middlesbrough,2,0,1-0,12,16,8,10,6,8,10,10,1,2,0,0,Molineux,Andy D'Urso,2.75,3.4,2.375,611477
+34,2004-04-17,bolton-wanderers,Bolton Wanderers,tottenham-hotspur,Tottenham,2,0,1-0,15,4,10,0,11,5,18,21,1,2,0,0,Reebok Stadium,Jeff Winter,2.25,3.2,3.1,611478
+34,2004-04-17,chelsea,Chelsea,everton,Everton,0,0,0-0,16,5,6,4,8,4,11,10,0,0,0,0,Stamford Bridge,Graham Poll,1.444,4,7.5,611479
+34,2004-04-17,liverpool,Liverpool,fulham,Fulham,0,0,0-0,18,11,10,7,14,7,16,10,0,3,0,0,Anfield,Stephen Bennett,1.615,3.4,6,611480
+34,2004-04-17,blackburn-rovers,Blackburn Rovers,leicester-city,Leicester,1,0,1-0,12,8,4,4,2,4,16,14,2,1,0,0,Ewood Park,Rob Styles,1.909,3.5,3.75,611481
+34,2004-04-18,aston-villa,Aston Villa,newcastle-united,Newcastle,0,0,0-0,10,5,1,4,7,3,17,13,1,4,0,1,Villa Park,Barry Knight,2.375,3.25,2.875,611482
+35,2004-04-24,fulham,Fulham,charlton-athletic,Charlton Athletic,2,0,1-0,8,8,6,3,4,7,15,13,1,1,0,0,Loftus Road,Matt Messias,2.25,3.3,3,611483
+35,2004-04-24,middlesbrough,Middlesbrough,aston-villa,Aston Villa,1,2,1-1,31,12,21,9,12,8,12,15,1,1,0,1,Riverside,Graham Barber,2.3,3.25,3,611484
+35,2004-04-24,manchester-united,Manchester United,liverpool,Liverpool,0,1,0-0,11,9,4,4,3,4,19,15,2,2,0,0,Old Trafford,Mike Riley,1.8,3.3,4.5,611485
+35,2004-04-24,southampton,Southampton,bolton-wanderers,Bolton Wanderers,1,2,1-0,9,11,3,8,2,2,13,16,4,3,0,0,St Mary's Stadium,Steve Dunn,1.9,3.25,4,611486
+35,2004-04-24,everton,Everton,blackburn-rovers,Blackburn Rovers,0,1,0-0,16,10,9,7,8,5,8,22,0,4,0,0,Goodison Park,Phil Dowd,2.2,3.25,3.2,611487
+35,2004-04-24,leicester-city,Leicester,manchester-city,Manchester City,1,1,0-1,12,11,5,5,4,2,13,14,1,3,0,0,Walkers Stadium,Andy D'Urso,2.5,3.4,2.62,611488
+35,2004-04-25,leeds,Leeds,portsmouth,Portsmouth,1,2,0-1,14,7,6,5,9,2,9,21,2,2,0,0,Elland Road,Uriah Rennie,2.1,3.25,3.4,611489
+35,2004-04-25,birmingham-city,Birmingham,wolverhampton-wanderers,Wolverhampton,2,2,2-1,14,11,9,7,9,2,11,13,1,0,0,0,St. Andrews,Mike Dean,1.61,3.6,5.5,611490
+35,2004-04-25,newcastle-united,Newcastle,chelsea,Chelsea,2,1,1-1,21,17,12,6,7,5,12,12,1,2,0,0,St. James' Park,Rob Styles,2.7,3.25,2.5,611491
+35,2004-04-25,tottenham-hotspur,Tottenham,arsenal,Arsenal,2,2,0-2,13,9,7,7,7,4,14,15,2,1,0,0,White Hart Lane,Mark Halsey,5.5,3.4,1.66,611492
+36,2004-05-01,arsenal,Arsenal,birmingham-city,Birmingham,0,0,0-0,7,3,1,3,2,3,13,16,0,2,0,0,Highbury,Graham Poll,1.36,4.33,9,611493
+36,2004-05-01,charlton-athletic,Charlton Athletic,leicester-city,Leicester,2,2,0-1,8,10,7,5,5,4,15,7,1,0,0,1,The Valley,Rob Styles,1.8,3.4,4.33,611494
+36,2004-05-01,portsmouth,Portsmouth,fulham,Fulham,1,1,0-0,14,11,7,7,10,3,14,13,1,4,0,0,Fratton Park,Steve Dunn,2.2,3.25,3.2,611495
+36,2004-05-01,manchester-city,Manchester City,newcastle-united,Newcastle,1,0,0-0,7,7,3,6,7,5,7,9,1,1,0,0,City of Manchester,Mark Halsey,2.62,3.4,2.5,611496
+36,2004-05-01,wolverhampton-wanderers,Wolverhampton,everton,Everton,2,1,0-1,20,10,11,6,12,7,7,12,0,1,0,0,Molineux,Mike Riley,2.5,3.4,2.62,611497
+36,2004-05-01,chelsea,Chelsea,southampton,Southampton,4,0,0-0,12,5,7,3,12,3,6,5,0,0,0,0,Stamford Bridge,Paul Durkin,1.53,3.6,6.5,611498
+36,2004-05-01,blackburn-rovers,Blackburn Rovers,manchester-united,Manchester United,1,0,0-0,12,9,8,5,5,4,11,10,2,1,0,0,Ewood Park,Mike Dean,3.75,3.5,1.9,611499
+36,2004-05-02,bolton-wanderers,Bolton Wanderers,leeds,Leeds,4,1,0-1,21,6,14,4,9,3,14,20,3,2,0,1,Reebok Stadium,Stephen Bennett,2.25,3.5,2.87,611500
+36,2004-05-02,aston-villa,Aston Villa,tottenham-hotspur,Tottenham,1,0,1-0,11,10,6,5,5,5,15,20,2,1,0,0,Villa Park,Neale Barry,1.66,3.6,5,611501
+36,2004-05-02,liverpool,Liverpool,middlesbrough,Middlesbrough,2,0,0-0,15,12,8,6,7,3,12,14,1,1,0,0,Anfield,Andy D'Urso,1.57,3.5,6.5,611502
+37,2004-05-08,manchester-united,Manchester United,chelsea,Chelsea,1,1,0-1,12,11,7,7,6,2,9,19,3,2,0,1,Old Trafford,Stephen Bennett,2.25,3.2,3.1,611503
+37,2004-05-08,tottenham-hotspur,Tottenham,blackburn-rovers,Blackburn Rovers,1,0,1-0,16,14,13,2,7,7,9,17,0,2,0,0,White Hart Lane,Andy D'Urso,2.3,3.4,2.87,611504
+37,2004-05-08,middlesbrough,Middlesbrough,manchester-city,Manchester City,2,1,2-1,12,14,7,6,5,4,9,14,1,1,0,0,Riverside,Mike Riley,2.1,3.25,3.4,611505
+37,2004-05-08,southampton,Southampton,aston-villa,Aston Villa,1,1,1-1,18,14,10,7,4,4,10,13,1,0,0,0,St Mary's Stadium,Howard Webb,2.87,3.4,2.3,611506
+37,2004-05-08,everton,Everton,bolton-wanderers,Bolton Wanderers,1,2,0-1,16,10,9,3,7,3,14,9,2,0,0,0,Goodison Park,Paul Durkin,2.25,3.3,3,611507
+37,2004-05-08,leeds,Leeds,charlton-athletic,Charlton Athletic,3,3,2-1,13,12,7,6,3,2,12,9,0,0,0,0,Elland Road,Mark Halsey,2.6,3.25,2.6,611508
+37,2004-05-08,leicester-city,Leicester,portsmouth,Portsmouth,3,1,2-0,13,14,9,7,8,3,11,15,0,2,0,0,Walkers Stadium,Graham Poll,2.4,3.4,2.75,611509
+37,2004-05-08,birmingham-city,Birmingham,liverpool,Liverpool,0,3,0-1,3,15,2,8,3,5,11,12,2,0,1,0,St. Andrews,Steve Dunn,3.4,3.25,2.1,611510
+37,2004-05-09,newcastle-united,Newcastle,wolverhampton-wanderers,Wolverhampton,1,1,1-0,19,15,8,7,13,3,13,11,1,2,0,0,St. James' Park,Matt Messias,1.3,5,9,611511
+37,2004-05-09,fulham,Fulham,arsenal,Arsenal,0,1,0-1,12,7,5,5,6,7,13,19,2,3,0,0,Loftus Road,Mike Dean,3.25,3.4,2.1,611512
+38,2004-05-15,charlton-athletic,Charlton Athletic,southampton,Southampton,2,1,1-0,10,12,5,4,7,10,13,10,0,1,0,0,The Valley,Jeff Winter,2,3.3,3.6,611513
+38,2004-05-15,portsmouth,Portsmouth,middlesbrough,Middlesbrough,5,1,3-1,16,19,10,4,7,2,12,8,0,0,0,0,Fratton Park,Mark Halsey,2.25,3.3,3,611514
+38,2004-05-15,manchester-city,Manchester City,everton,Everton,5,1,3-0,13,2,11,0,7,3,5,8,1,1,0,0,City of Manchester,Steve Dunn,2.1,3.25,3.4,611515
+38,2004-05-15,wolverhampton-wanderers,Wolverhampton,tottenham-hotspur,Tottenham,0,2,0-1,18,14,10,12,5,3,6,11,1,1,1,0,Molineux,Stephen Bennett,2.37,3.3,2.8,611516
+38,2004-05-15,bolton-wanderers,Bolton Wanderers,fulham,Fulham,0,2,0-1,17,10,9,6,11,3,9,14,1,1,0,0,Reebok Stadium,Graham Barber,2,3.2,3.75,611517
+38,2004-05-15,chelsea,Chelsea,leeds,Leeds,1,0,1-0,19,4,9,0,9,2,5,9,0,0,0,0,Stamford Bridge,Mike Dean,1.33,4.5,9,611518
+38,2004-05-15,liverpool,Liverpool,newcastle-united,Newcastle,1,1,0-1,8,6,4,5,8,1,11,17,1,1,0,0,Anfield,Mike Riley,2,3.3,3.6,611519
+38,2004-05-15,arsenal,Arsenal,leicester-city,Leicester,2,1,0-1,17,2,10,1,7,5,15,13,0,1,0,0,Highbury,Paul Durkin,1.25,5,13,611520
+38,2004-05-15,aston-villa,Aston Villa,manchester-united,Manchester United,0,2,0-2,16,12,8,8,9,4,21,15,4,3,0,2,Villa Park,Rob Styles,2.2,3.4,3,611521
+38,2004-05-15,blackburn-rovers,Blackburn Rovers,birmingham-city,Birmingham,1,1,1-0,10,9,5,5,6,8,11,12,0,0,0,0,Ewood Park,Dermot Gallagher,2.1,3.4,3.25,611522

@@ -1,0 +1,39 @@
+direction,window,date,player,position,nationality,age,other_club,other_club_country,type,fee,fee_eur_m,fee_gbp_m,source_url
+in,summer,2003-07-01,David Bellion,FW,FRA,,Sunderland,,Transfer,£2m,,2.0,http://menmedia.co.uk/manchestereveningnews/sport/football/manchester_united/s/70/70235_bellion_to_cost_united_at_least_2_million.html?order=replies&submit=Sort
+in,summer,2003-07-03,Eric Djemba-Djemba,MF,CMR,,Nantes,,Transfer,£3.5m,,3.5,https://news.bbc.co.uk/sport1/hi/football/teams/m/man_utd/3038776.stm
+in,summer,2003-07-15,Tim Howard,GK,USA,,MetroStars,,Transfer,£2.3m,,2.3,https://news.bbc.co.uk/sport2/hi/football/teams/m/man_utd/3061333.stm
+in,summer,2003-08-12,Kléberson,MF,BRA,,Atlético Paranaense,,Transfer,£5.93m,,5.93,https://www.theguardian.com/football/2003/aug/12/newsstory.sport10
+in,summer,2003-08-12,Cristiano Ronaldo,MF,POR,,Sporting CP,,Transfer,£12.24m,,12.24,https://news.bbc.co.uk/sport1/hi/football/teams/m/man_utd/3142959.stm
+in,winter,2004-01-12,Dong Fangzhuo,FW,CHN,,Dalian Shide,,Transfer,£3.5m,,3.5,https://news.bbc.co.uk/sport1/hi/football/teams/m/man_utd/3378641.stm
+in,winter,2004-01-23,Louis Saha,FW,FRA,,Fulham,,Transfer,£12.82m,,12.82,
+in,summer,2004-05-26,Alan Smith,FW,ENG,,Leeds United,,Transfer,£7m,,7.0,https://news.bbc.co.uk/sport2/hi/football/teams/m/man_utd/3723993.stm
+in,summer,2004-06-11,Gabriel Heinze,DF,ARG,,Paris Saint-Germain,,Transfer,£6.9m,,6.9,https://news.bbc.co.uk/sport2/hi/football/teams/m/man_utd/3735065.stm
+out,summer,2003-07-02,David Beckham,MF,ENG,,Real Madrid,,Transfer,£17.25m,,17.25,https://news.bbc.co.uk/sport2/hi/front_page/2998868.stm
+out,summer,2003-07-07,Danny Webber,FW,ENG,,Watford,,Transfer,Undisclosed,,,https://news.bbc.co.uk/sport1/hi/football/teams/w/watford/3044714.stm
+out,summer,2003-08-07,Juan Sebastián Verón,MF,ARG,,Chelsea,,Transfer,£15m,,15.0,https://news.bbc.co.uk/sport1/hi/football/teams/c/chelsea/3120081.stm
+out,summer,2003-08-09,Jimmy Davis,FW,ENG,,Deceased,,Transfer,,,,https://news.bbc.co.uk/sport2/hi/football/3137955.stm
+out,winter,2004-02-06,Alan Tate,DF,ENG,,Swansea City,,Transfer,Undisclosed,,,https://news.bbc.co.uk/sport2/hi/football/teams/s/swansea_city/3452661.stm
+out,in-season,2004-04-27,Fabien Barthez,GK,FRA,,Marseille,,Transfer,£5m,,5.0,https://news.bbc.co.uk/sport2/hi/football/teams/m/man_utd/3581391.stm
+out,summer,2004-05-26,Danny Pugh,MF,ENG,,Leeds United,,Transfer,Free,,,https://news.bbc.co.uk/sport2/hi/football/teams/l/leeds_united/3753453.stm
+out,summer,2003-07-08,Jimmy Davis,FW,ENG,,Watford,,Loan,,,,https://news.bbc.co.uk/sport2/hi/football/teams/w/watford/3054232.stm
+out,summer,2003-07-10,Luke Chadwick,MF,ENG,,Burnley,,Loan,,,,https://news.bbc.co.uk/sport2/hi/football/teams/b/burnley/3055507.stm
+out,summer,2003-07-19,Bojan Djordjic,MF,SWE,,Red Star Belgrade,,Loan,,,,http://soccernet.espn.go.com/print?id=271848&type=story
+out,summer,2003-07-27,Colin Heath,FW,ENG,,Royal Antwerp,,Loan,,,,
+out,summer,2003-07-27,David Fox,MF,ENG,,Royal Antwerp,,Loan,,,,
+out,summer,2003-07-29,Michael Stewart,MF,SCO,,Nottingham Forest,,Loan,,,,https://news.bbc.co.uk/sport2/hi/football/teams/n/nottm_forest/3106723.stm
+out,summer,2003-08-24,Ricardo,GK,ESP,,Racing Santander,,Loan,,,,https://news.bbc.co.uk/sport2/hi/football/teams/m/man_utd/3178051.stm
+out,summer,2003-09-12,Neil Wood,FW,ENG,,Peterborough United,,Loan,,,,
+out,summer,2003-09-19,Ben Williams,GK,ENG,,Altrincham,,Loan,,,,
+out,in-season,2003-10-24,Daniel Nardiello,FW,ENG,,Swansea City,,Loan,,,,
+out,in-season,2003-10-24,Alan Tate,DF,ENG,,Swansea City,,Loan,,,,
+out,in-season,2003-11-24,Danny Byrne,FW,ENG,,Hartlepool United,,Loan,,,,
+out,winter,2004-01-02,Fabien Barthez,GK,FRA,,Marseille,,Loan,,,,
+out,winter,2004-01-12,Dong Fangzhuo,FW,CHN,,Royal Antwerp,,Loan,,,,https://news.bbc.co.uk/sport2/hi/football/teams/m/man_utd/6184803.stm
+out,winter,2004-01-27,Daniel Nardiello,FW,ENG,,Barnsley,,Loan,,,,
+out,winter,2004-01-29,Neil Wood,FW,ENG,,Burnley,,Loan,,,,
+out,winter,2004-01-29,Paul Tierney,DF,IRL,,Colchester United,,Loan,,,,
+out,winter,2004-01-30,Phil Bardsley,DF,ENG,,Royal Antwerp,,Loan,,,,
+out,winter,2004-01-30,Eddie Johnson,FW,ENG,,Royal Antwerp,,Loan,,,,
+out,in-season,2004-03-19,Ben Williams,GK,ENG,,Crewe Alexandra,,Loan,,,,
+out,in-season,2004-03-23,Lee Lawrence,DF,ENG,,Shrewsbury Town,,Loan,,,,
+out,in-season,2004-03-24,Mads Timm,FW,DEN,,Viking,,Loan,,,,

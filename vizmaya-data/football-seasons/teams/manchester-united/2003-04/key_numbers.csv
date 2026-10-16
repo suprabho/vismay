@@ -1,0 +1,259 @@
+metric,value
+team,Manchester United
+season,2003-04
+competition,Premier League
+manager,Ferguson
+records.all.played,55
+records.all.won,35
+records.all.drawn,8
+records.all.lost,12
+records.all.gf,98
+records.all.ga,49
+records.all.clean_sheets,22
+records.all.failed_to_score,9
+records.Premier League.played,38
+records.Premier League.won,23
+records.Premier League.drawn,6
+records.Premier League.lost,9
+records.Premier League.gf,64
+records.Premier League.ga,35
+records.Premier League.clean_sheets,14
+records.Premier League.failed_to_score,8
+records.Community Shield.played,1
+records.Community Shield.won,0
+records.Community Shield.drawn,1
+records.Community Shield.lost,0
+records.Community Shield.gf,1
+records.Community Shield.ga,1
+records.Community Shield.clean_sheets,0
+records.Community Shield.failed_to_score,0
+records.Champions League.played,8
+records.Champions League.won,5
+records.Champions League.drawn,1
+records.Champions League.lost,2
+records.Champions League.gf,15
+records.Champions League.ga,5
+records.Champions League.clean_sheets,5
+records.Champions League.failed_to_score,0
+records.League Cup.played,2
+records.League Cup.won,1
+records.League Cup.drawn,0
+records.League Cup.lost,1
+records.League Cup.gf,3
+records.League Cup.ga,4
+records.League Cup.clean_sheets,0
+records.League Cup.failed_to_score,1
+records.FA Cup.played,6
+records.FA Cup.won,6
+records.FA Cup.drawn,0
+records.FA Cup.lost,0
+records.FA Cup.gf,15
+records.FA Cup.ga,4
+records.FA Cup.clean_sheets,3
+records.FA Cup.failed_to_score,0
+records.league_home.played,19
+records.league_home.won,12
+records.league_home.drawn,4
+records.league_home.lost,3
+records.league_home.gf,37
+records.league_home.ga,15
+records.league_home.clean_sheets,10
+records.league_home.failed_to_score,3
+records.league_away.played,19
+records.league_away.won,11
+records.league_away.drawn,2
+records.league_away.lost,6
+records.league_away.gf,27
+records.league_away.ga,20
+records.league_away.clean_sheets,4
+records.league_away.failed_to_score,5
+league.final_pos,3
+league.points,75
+league.champion,Arsenal
+league.pts_behind_champion,15
+league.low_point.round,38
+league.low_point.pos,3
+league.low_point.pts,75
+league.low_point.date,2004-05-15
+league.low_point.pts_behind_leader,15
+league.low_point.pts_above_relegation,42
+league.first_half.rounds,1-19
+league.first_half.points,46
+league.first_half.pos_after,1
+league.second_half.rounds,20-38
+league.second_half.points,29
+league.second_half.rank_in_second_half_table,7
+league.second_half_table.1.team,Arsenal
+league.second_half_table.1.pts,45
+league.second_half_table.1.gd,24
+league.second_half_table.2.team,Chelsea
+league.second_half_table.2.pts,37
+league.second_half_table.2.gd,17
+league.second_half_table.3.team,Liverpool
+league.second_half_table.3.pts,33
+league.second_half_table.3.gd,11
+league.second_half_table.4.team,Aston Villa
+league.second_half_table.4.pts,32
+league.second_half_table.4.gd,8
+league.second_half_table.5.team,Newcastle
+league.second_half_table.5.pts,30
+league.second_half_table.5.gd,8
+league.second_half_table.6.team,Bolton Wanderers
+league.second_half_table.6.pts,30
+league.second_half_table.6.gd,0
+league.position_by_round,2 2 2 2 2 3 3 3 2 3 3 3 3 3 3 2 1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3
+streaks.unbeaten_league.length,7
+streaks.unbeaten_league.from_,2003-12-06
+streaks.unbeaten_league.to,2004-01-11
+streaks.wins_league.length,6
+streaks.wins_league.from_,2003-12-06
+streaks.wins_league.to,2004-01-07
+streaks.unbeaten_all.length,9
+streaks.unbeaten_all.from_,2003-12-06
+streaks.unbeaten_all.to,2004-01-11
+streaks.winless_league.length,4
+streaks.winless_league.from_,2004-02-11
+streaks.winless_league.to,2004-03-14
+biggest_win.date,2003-09-16
+biggest_win.competition,Champions League
+biggest_win.opponent,Panathinaikos
+biggest_win.venue,H
+biggest_win.gf,5
+biggest_win.ga,0
+heaviest_defeat.date,2004-03-14
+heaviest_defeat.competition,Premier League
+heaviest_defeat.opponent,Manchester City
+heaviest_defeat.venue,A
+heaviest_defeat.gf,1
+heaviest_defeat.ga,4
+top_scorers_all.Van Nistelrooy,30
+top_scorers_all.Scholes,14
+top_scorers_all.Giggs,8
+top_scorers_all.Forlán,8
+top_scorers_all.Saha,7
+top_scorers_all.Cristiano Ronaldo,6
+top_scorers_all.Silvestre,3
+top_scorers_all.Keane,3
+goals_by_15_min.for.1-15,16
+goals_by_15_min.for.16-30,11
+goals_by_15_min.for.31-45,21
+goals_by_15_min.for.46-60,11
+goals_by_15_min.for.61-75,17
+goals_by_15_min.for.76-90,22
+goals_by_15_min.against.1-15,3
+goals_by_15_min.against.16-30,6
+goals_by_15_min.against.31-45,6
+goals_by_15_min.against.46-60,6
+goals_by_15_min.against.61-75,11
+goals_by_15_min.against.76-90,10
+players_used,22
+big_games.1.label,Big game
+big_games.1.opponent,Arsenal
+big_games.1.date,2003-08-10
+big_games.1.competition,Community Shield
+big_games.1.venue,N
+big_games.1.gf,1
+big_games.1.ga,1
+big_games.1.penalties,4–3
+big_games.1.scorers_for,Silvestre 15'
+big_games.1.scorers_against,Henry 20'
+big_games.2.label,Big game
+big_games.2.opponent,Arsenal
+big_games.2.date,2003-09-21
+big_games.2.competition,Premier League
+big_games.2.venue,H
+big_games.2.gf,0
+big_games.2.ga,0
+big_games.2.penalties,
+big_games.2.scorers_for,
+big_games.2.scorers_against,
+big_games.3.label,North West derby
+big_games.3.opponent,Liverpool
+big_games.3.date,2003-11-09
+big_games.3.competition,Premier League
+big_games.3.venue,A
+big_games.3.gf,2
+big_games.3.ga,1
+big_games.3.penalties,
+big_games.3.scorers_for,Giggs 59'; Giggs 70'
+big_games.3.scorers_against,Kewell 76'
+big_games.4.label,Big game
+big_games.4.opponent,Chelsea
+big_games.4.date,2003-11-30
+big_games.4.competition,Premier League
+big_games.4.venue,A
+big_games.4.gf,0
+big_games.4.ga,1
+big_games.4.penalties,
+big_games.4.scorers_for,
+big_games.4.scorers_against,Lampard 30' (pen)
+big_games.5.label,Manchester derby
+big_games.5.opponent,Manchester City
+big_games.5.date,2003-12-13
+big_games.5.competition,Premier League
+big_games.5.venue,H
+big_games.5.gf,3
+big_games.5.ga,1
+big_games.5.penalties,
+big_games.5.scorers_for,Scholes 7'; Van Nistelrooy 34'; Scholes 73'
+big_games.5.scorers_against,Wright-Phillips 52'
+big_games.6.label,Manchester derby
+big_games.6.opponent,Manchester City
+big_games.6.date,2004-02-14
+big_games.6.competition,FA Cup
+big_games.6.venue,H
+big_games.6.gf,4
+big_games.6.ga,2
+big_games.6.penalties,
+big_games.6.scorers_for,Scholes 34'; Van Nistelrooy 71'; Van Nistelrooy 80'; Cristiano Ronaldo 74'
+big_games.6.scorers_against,
+big_games.7.label,Manchester derby
+big_games.7.opponent,Manchester City
+big_games.7.date,2004-03-14
+big_games.7.competition,Premier League
+big_games.7.venue,A
+big_games.7.gf,1
+big_games.7.ga,4
+big_games.7.penalties,
+big_games.7.scorers_for,Scholes 35'
+big_games.7.scorers_against,Fowler 3'; Macken 32'; Sinclair 73'; Wright-Phillips 90'
+big_games.8.label,Big game
+big_games.8.opponent,Arsenal
+big_games.8.date,2004-03-28
+big_games.8.competition,Premier League
+big_games.8.venue,A
+big_games.8.gf,1
+big_games.8.ga,1
+big_games.8.penalties,
+big_games.8.scorers_for,Saha 86'
+big_games.8.scorers_against,Henry 50'
+big_games.9.label,Big game
+big_games.9.opponent,Arsenal
+big_games.9.date,2004-04-03
+big_games.9.competition,FA Cup
+big_games.9.venue,N
+big_games.9.gf,1
+big_games.9.ga,0
+big_games.9.penalties,
+big_games.9.scorers_for,Scholes 32'
+big_games.9.scorers_against,
+big_games.10.label,North West derby
+big_games.10.opponent,Liverpool
+big_games.10.date,2004-04-24
+big_games.10.competition,Premier League
+big_games.10.venue,H
+big_games.10.gf,0
+big_games.10.ga,1
+big_games.10.penalties,
+big_games.10.scorers_for,
+big_games.10.scorers_against,Murphy 63' (pen)
+big_games.11.label,Big game
+big_games.11.opponent,Chelsea
+big_games.11.date,2004-05-08
+big_games.11.competition,Premier League
+big_games.11.venue,H
+big_games.11.gf,1
+big_games.11.ga,1
+big_games.11.penalties,
+big_games.11.scorers_for,Van Nistelrooy 77'
+big_games.11.scorers_against,Grønkjær 19'

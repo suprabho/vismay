@@ -1,0 +1,231 @@
+metric,value
+team,Chelsea
+season,2003-04
+competition,Premier League
+manager,Ranieri
+records.all.played,59
+records.all.won,36
+records.all.drawn,12
+records.all.lost,11
+records.all.gf,102
+records.all.ga,48
+records.all.clean_sheets,32
+records.all.failed_to_score,8
+records.Premier League.played,38
+records.Premier League.won,24
+records.Premier League.drawn,7
+records.Premier League.lost,7
+records.Premier League.gf,67
+records.Premier League.ga,30
+records.Premier League.clean_sheets,21
+records.Premier League.failed_to_score,5
+records.Champions League.played,14
+records.Champions League.won,8
+records.Champions League.drawn,4
+records.Champions League.lost,2
+records.Champions League.gf,21
+records.Champions League.ga,10
+records.Champions League.clean_sheets,8
+records.Champions League.failed_to_score,3
+records.League Cup.played,3
+records.League Cup.won,2
+records.League Cup.drawn,0
+records.League Cup.lost,1
+records.League Cup.gf,6
+records.League Cup.ga,4
+records.League Cup.clean_sheets,1
+records.League Cup.failed_to_score,0
+records.FA Cup.played,4
+records.FA Cup.won,2
+records.FA Cup.drawn,1
+records.FA Cup.lost,1
+records.FA Cup.gf,8
+records.FA Cup.ga,4
+records.FA Cup.clean_sheets,2
+records.FA Cup.failed_to_score,0
+records.league_home.played,19
+records.league_home.won,12
+records.league_home.drawn,4
+records.league_home.lost,3
+records.league_home.gf,34
+records.league_home.ga,13
+records.league_home.clean_sheets,11
+records.league_home.failed_to_score,4
+records.league_away.played,19
+records.league_away.won,12
+records.league_away.drawn,3
+records.league_away.lost,4
+records.league_away.gf,33
+records.league_away.ga,17
+records.league_away.clean_sheets,10
+records.league_away.failed_to_score,1
+league.final_pos,2
+league.points,79
+league.champion,Arsenal
+league.pts_behind_champion,11
+league.low_point.round,26
+league.low_point.pos,3
+league.low_point.pts,55
+league.low_point.date,2004-02-21
+league.low_point.pts_behind_leader,9
+league.low_point.pts_above_relegation,32
+league.first_half.rounds,1-19
+league.first_half.points,42
+league.first_half.pos_after,3
+league.second_half.rounds,20-38
+league.second_half.points,37
+league.second_half.rank_in_second_half_table,2
+league.second_half_table.1.team,Arsenal
+league.second_half_table.1.pts,45
+league.second_half_table.1.gd,24
+league.second_half_table.2.team,Chelsea
+league.second_half_table.2.pts,37
+league.second_half_table.2.gd,17
+league.second_half_table.3.team,Liverpool
+league.second_half_table.3.pts,33
+league.second_half_table.3.gd,11
+league.second_half_table.4.team,Aston Villa
+league.second_half_table.4.pts,32
+league.second_half_table.4.gd,8
+league.second_half_table.5.team,Newcastle
+league.second_half_table.5.pts,30
+league.second_half_table.5.gd,8
+league.second_half_table.6.team,Bolton Wanderers
+league.second_half_table.6.pts,30
+league.second_half_table.6.gd,0
+league.position_by_round,5 3 5 4 3 1 1 1 3 2 2 2 2 1 1 3 2 3 3 3 3 3 3 3 3 3 2 2 2 2 2 2 2 2 2 2 2 2
+streaks.unbeaten_league.length,8
+streaks.unbeaten_league.from_,2003-08-17
+streaks.unbeaten_league.to,2003-10-14
+streaks.wins_league.length,5
+streaks.wins_league.from_,2003-10-25
+streaks.wins_league.to,2003-11-30
+streaks.unbeaten_all.length,12
+streaks.unbeaten_all.from_,2003-10-22
+streaks.unbeaten_all.to,2003-12-09
+streaks.winless_league.length,4
+streaks.winless_league.from_,2004-04-10
+streaks.winless_league.to,2004-04-25
+biggest_win.date,2003-09-20
+biggest_win.competition,Premier League
+biggest_win.opponent,Wolverhampton
+biggest_win.venue,A
+biggest_win.gf,5
+biggest_win.ga,0
+heaviest_defeat.date,2003-12-26
+heaviest_defeat.competition,Premier League
+heaviest_defeat.opponent,Charlton Athletic
+heaviest_defeat.venue,A
+heaviest_defeat.gf,2
+heaviest_defeat.ga,4
+top_scorers_all.Hasselbaink,17
+top_scorers_all.Lampard,15
+top_scorers_all.Guðjohnsen,13
+top_scorers_all.Crespo,12
+top_scorers_all.Mutu,10
+top_scorers_all.Duff,6
+top_scorers_all.Johnson,4
+top_scorers_all.Cole,3
+goals_by_15_min.for.1-15,14
+goals_by_15_min.for.16-30,14
+goals_by_15_min.for.31-45,20
+goals_by_15_min.for.46-60,8
+goals_by_15_min.for.61-75,18
+goals_by_15_min.for.76-90,28
+goals_by_15_min.against.1-15,6
+goals_by_15_min.against.16-30,10
+goals_by_15_min.against.31-45,8
+goals_by_15_min.against.46-60,13
+goals_by_15_min.against.61-75,2
+goals_by_15_min.against.76-90,9
+players_used,28
+big_games.1.label,London derby
+big_games.1.opponent,Tottenham
+big_games.1.date,2003-09-13
+big_games.1.competition,Premier League
+big_games.1.venue,H
+big_games.1.gf,4
+big_games.1.ga,2
+big_games.1.penalties,
+big_games.1.scorers_for,Lampard 34'; Mutu 36'; Mutu 74'; Hasselbaink 90'
+big_games.1.scorers_against,Kanouté 24'; Kanouté 86'
+big_games.2.label,Big game
+big_games.2.opponent,Arsenal
+big_games.2.date,2003-10-18
+big_games.2.competition,Premier League
+big_games.2.venue,A
+big_games.2.gf,1
+big_games.2.ga,2
+big_games.2.penalties,
+big_games.2.scorers_for,Crespo 8'
+big_games.2.scorers_against,Edu 5'; Henry 75'
+big_games.3.label,Big game
+big_games.3.opponent,Manchester United
+big_games.3.date,2003-11-30
+big_games.3.competition,Premier League
+big_games.3.venue,H
+big_games.3.gf,1
+big_games.3.ga,0
+big_games.3.penalties,
+big_games.3.scorers_for,Lampard 30' (pen)
+big_games.3.scorers_against,
+big_games.4.label,Big game
+big_games.4.opponent,Arsenal
+big_games.4.date,2004-02-15
+big_games.4.competition,FA Cup
+big_games.4.venue,A
+big_games.4.gf,1
+big_games.4.ga,2
+big_games.4.penalties,
+big_games.4.scorers_for,Mutu 40'
+big_games.4.scorers_against,Reyes 56'; Reyes 61'
+big_games.5.label,Big game
+big_games.5.opponent,Arsenal
+big_games.5.date,2004-02-21
+big_games.5.competition,Premier League
+big_games.5.venue,H
+big_games.5.gf,1
+big_games.5.ga,2
+big_games.5.penalties,
+big_games.5.scorers_for,Guðjohnsen 1'
+big_games.5.scorers_against,Vieira 15'; Edu 21'
+big_games.6.label,Big game
+big_games.6.opponent,Arsenal
+big_games.6.date,2004-03-24
+big_games.6.competition,Champions League
+big_games.6.venue,H
+big_games.6.gf,1
+big_games.6.ga,1
+big_games.6.penalties,
+big_games.6.scorers_for,Guðjohnsen 53'
+big_games.6.scorers_against,Pirès 59'
+big_games.7.label,London derby
+big_games.7.opponent,Tottenham
+big_games.7.date,2004-04-03
+big_games.7.competition,Premier League
+big_games.7.venue,A
+big_games.7.gf,1
+big_games.7.ga,0
+big_games.7.penalties,
+big_games.7.scorers_for,Hasselbaink 38'
+big_games.7.scorers_against,
+big_games.8.label,Big game
+big_games.8.opponent,Arsenal
+big_games.8.date,2004-04-06
+big_games.8.competition,Champions League
+big_games.8.venue,A
+big_games.8.gf,2
+big_games.8.ga,1
+big_games.8.penalties,
+big_games.8.scorers_for,Lampard 51'; Bridge 87'
+big_games.8.scorers_against,Reyes 46'
+big_games.9.label,Big game
+big_games.9.opponent,Manchester United
+big_games.9.date,2004-05-08
+big_games.9.competition,Premier League
+big_games.9.venue,A
+big_games.9.gf,1
+big_games.9.ga,1
+big_games.9.penalties,
+big_games.9.scorers_for,Grønkjær 19'
+big_games.9.scorers_against,Van Nistelrooy 77'

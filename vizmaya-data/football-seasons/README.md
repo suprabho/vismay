@@ -62,8 +62,28 @@ Scope: Big 5 leagues (+ Championship, Eredivisie, Primeira, Scottish Prem as con
 - Publishing requires StatsBomb attribution (logo + credit) per https://github.com/statsbomb/open-data#license.
 
 ## Team-season packs (`teams/<club>/<season>/`, committed)
-Everything for one club in one season, gathered in one folder as the input for designing a book or story: every competitive match with lineups, minutes, goals and cards; the squad with bios and careers; all league results and the table after every round; transfers; friendlies; months; and a timeline of quoted club events plus events read off the data. `scripts/team_season.py` (`fetch` → `build`, stdlib only) caches BDFutbol, football-data.co.uk, Transfermarkt, Wikipedia and ClubElo pages in `raw/teams/<club>-<season>/`. The build checks itself: goals against scores, minutes against BDFutbol's squad table, points against the official standings, and each hand-picked event's quote against its page.
-- **FC Barcelona 2003-04**: [`teams/barcelona/2003-04/`](teams/barcelona/2003-04/README.md). Only Spanish clubs are configured so far (`TEAMS` in the script).
+Everything for one club in one season, gathered in one folder as the input for designing a book or story. Each pack has:
+- every competitive game, with lineups, minutes, goals and cards
+- the squad, with bios and careers
+- all league results and the table after every round
+- the league's top scorers, transfers, friendlies and a month-by-month view
+- a timeline of quoted club events plus events read off the data
+- a README written for a designer
+
+`scripts/team_season.py` (`fetch` → `build`, stdlib only) caches BDFutbol, football-data.co.uk, Transfermarkt, ClubElo and Wikipedia pages in `raw/teams/` (Wikipedia shared in `raw/teams/_wikipedia/`, read via `index.php?action=raw`, which the API's rate limit doesn't throttle). The build checks itself:
+- goals against scores
+- minutes against BDFutbol's squad table
+- points against the official standings
+- each hand-picked event's quote against its page
+
+BDFutbol has no English domestic cups, so the FA Cup and League Cup come from Wikipedia: scores and scorers, no lineups.
+
+| Pack | Highlights |
+|---|---|
+| [FC Barcelona 2003-04](teams/barcelona/2003-04/README.md) | 12th at New Year to 2nd; Ronaldinho's first season |
+| [Arsenal 2003-04](teams/arsenal/2003-04/README.md) | the Invincibles; StatsBomb event data for all 38 league games |
+| [Chelsea 2003-04](teams/chelsea/2003-04/README.md) | the first Abramovich season; Ranieri → Mourinho |
+| [Manchester United 2003-04](teams/manchester-united/2003-04/README.md) | Ronaldo arrives, Ferdinand's ban, the FA Cup |
 
 ## Planning the books (admin)
 The admin **Books** tab (`/footshorts/books`, see [apps/admin/CLAUDE.md](../../apps/admin/CLAUDE.md#books-tab-footshortsbooks)) is where each book is planned in spreads: story beats (with a beat finder over `admin_historical_matches`), the flatplan, a card per spread (headline + chart sketch + stat + body + caption, then bound to real data), chapter thumbnails, and the locked series system (grid, type, chart style, spread templates). Plans live in the private `admin_season_books` table.

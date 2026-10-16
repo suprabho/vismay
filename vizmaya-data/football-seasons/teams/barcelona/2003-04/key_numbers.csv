@@ -1,7 +1,8 @@
 metric,value
 team,FC Barcelona
 season,2003-04
-manager,Frank Rijkaard
+competition,La Liga
+manager,Rijkaard
 records.all.played,52
 records.all.won,29
 records.all.drawn,12
@@ -55,15 +56,17 @@ league.points,72
 league.champion,Valencia
 league.pts_behind_champion,5
 league.low_point.round,18
-league.low_point.date,2004-01-04
 league.low_point.pos,12
 league.low_point.pts,24
+league.low_point.date,2004-01-04
 league.low_point.pts_behind_leader,18
-league.low_point.pts_above_relegation,6
-league.first_half_rounds_1_19.points,27
-league.first_half_rounds_1_19.pos_after,7
-league.second_half_rounds_20_38.points,45
-league.second_half_rounds_20_38.rank_in_second_half_table,1
+league.low_point.pts_above_relegation,7
+league.first_half.rounds,1-19
+league.first_half.points,27
+league.first_half.pos_after,7
+league.second_half.rounds,20-38
+league.second_half.points,45
+league.second_half.rank_in_second_half_table,1
 league.second_half_table.1.team,Barcelona
 league.second_half_table.1.pts,45
 league.second_half_table.1.gd,23
@@ -128,15 +131,43 @@ goals_by_15_min.against.46-60,10
 goals_by_15_min.against.61-75,8
 goals_by_15_min.against.76-90,13
 players_used,29
-clasicos.1.date,2003-12-06
-clasicos.1.venue,H
-clasicos.1.gf,1
-clasicos.1.ga,2
-clasicos.1.scorers_for,Kluivert 83'
-clasicos.1.scorers_against,Roberto Carlos 37'; Ronaldo 73'
-clasicos.2.date,2004-04-25
-clasicos.2.venue,A
-clasicos.2.gf,2
-clasicos.2.ga,1
-clasicos.2.scorers_for,Kluivert 56'; Xavi 86'
-clasicos.2.scorers_against,Solari 53'
+big_games.1.label,El Clásico
+big_games.1.opponent,Real Madrid
+big_games.1.date,2003-12-06
+big_games.1.competition,La Liga
+big_games.1.venue,H
+big_games.1.gf,1
+big_games.1.ga,2
+big_games.1.penalties,
+big_games.1.scorers_for,Kluivert 83'
+big_games.1.scorers_against,Roberto Carlos 37'; Ronaldo 73'
+big_games.2.label,Derbi barceloní
+big_games.2.opponent,Espanyol
+big_games.2.date,2003-12-13
+big_games.2.competition,La Liga
+big_games.2.venue,A
+big_games.2.gf,3
+big_games.2.ga,1
+big_games.2.penalties,
+big_games.2.scorers_for,Ronaldinho 10'; Kluivert 20'; Kluivert 35'
+big_games.2.scorers_against,Jordi Cruyff 8'
+big_games.3.label,El Clásico
+big_games.3.opponent,Real Madrid
+big_games.3.date,2004-04-25
+big_games.3.competition,La Liga
+big_games.3.venue,A
+big_games.3.gf,2
+big_games.3.ga,1
+big_games.3.penalties,
+big_games.3.scorers_for,Kluivert 56'; Xavi 86'
+big_games.3.scorers_against,Solari 53'
+big_games.4.label,Derbi barceloní
+big_games.4.opponent,Espanyol
+big_games.4.date,2004-05-02
+big_games.4.competition,La Liga
+big_games.4.venue,H
+big_games.4.gf,4
+big_games.4.ga,1
+big_games.4.penalties,
+big_games.4.scorers_for,Ronaldinho 34'; Saviola 43'; Van Bronckhorst 54'; Saviola 57'
+big_games.4.scorers_against,Tamudo 18' (pen)

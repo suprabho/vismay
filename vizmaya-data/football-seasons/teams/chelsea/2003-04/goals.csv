@@ -1,0 +1,151 @@
+match_no,date,competition,round,opponent,venue,team,for_club,minute,period,player,player_id,player_link,penalty,own_goal,score_after,club_score_after
+1,2003-08-13,Champions League,"Third qualifying round, first leg",Žilina,A,Chelsea,1,42,1H,Guðjohnsen,654,,,,0-1,1-0
+1,2003-08-13,Champions League,"Third qualifying round, first leg",Žilina,A,Chelsea,1,76,2H,Michal Drahno,,,,1,0-2,2-0
+2,2003-08-17,Premier League,1,Liverpool,A,Liverpool,0,76,2H,Owen,1972,,1,,1-1,1-1
+2,2003-08-17,Premier League,1,Liverpool,A,Chelsea,1,24,1H,Verón,94166,,,,0-1,1-0
+2,2003-08-17,Premier League,1,Liverpool,A,Chelsea,1,87,2H,Hasselbaink,1271,,,,1-2,2-1
+3,2003-08-23,Premier League,2,Leicester,H,Chelsea,1,2,1H,Nalis,94450,,,1,1-0,1-0
+3,2003-08-23,Premier League,2,Leicester,H,Chelsea,1,44,1H,Mutu,94474,,,,2-1,2-1
+3,2003-08-23,Premier League,2,Leicester,H,Leicester,0,39,1H,Scowcroft,93812,,,,1-1,1-1
+4,2003-08-26,Champions League,"Third qualifying round, second leg",Žilina,H,Chelsea,1,32,1H,Johnson,94387,,,,1-0,1-0
+4,2003-08-26,Champions League,"Third qualifying round, second leg",Žilina,H,Chelsea,1,67,2H,Huth,94282,,,,2-0,2-0
+4,2003-08-26,Champions League,"Third qualifying round, second leg",Žilina,H,Chelsea,1,79,2H,Hasselbaink,1271,,,,3-0,3-0
+5,2003-08-30,Premier League,4,Blackburn Rovers,H,Chelsea,1,45,1H,Mutu,94474,,,,1-1,1-1
+5,2003-08-30,Premier League,4,Blackburn Rovers,H,Chelsea,1,63,2H,Hasselbaink,1271,,1,,2-2,2-2
+5,2003-08-30,Premier League,4,Blackburn Rovers,H,Blackburn Rovers,0,1,1H,Cole,93828,,,,0-1,0-1
+5,2003-08-30,Premier League,4,Blackburn Rovers,H,Blackburn Rovers,0,58,2H,Cole,93828,,,,1-2,1-2
+6,2003-09-13,Premier League,5,Tottenham,H,Chelsea,1,34,1H,Lampard,93616,,,,1-1,1-1
+6,2003-09-13,Premier League,5,Tottenham,H,Chelsea,1,36,1H,Mutu,94474,,,,2-1,2-1
+6,2003-09-13,Premier League,5,Tottenham,H,Chelsea,1,74,2H,Mutu,94474,,,,3-1,3-1
+6,2003-09-13,Premier League,5,Tottenham,H,Chelsea,1,90,2H,Hasselbaink,1271,,,,4-2,4-2
+6,2003-09-13,Premier League,5,Tottenham,H,Tottenham,0,24,1H,Kanouté,906,,,,0-1,0-1
+6,2003-09-13,Premier League,5,Tottenham,H,Tottenham,0,86,2H,Kanouté,906,,,,3-2,3-2
+7,2003-09-16,Champions League,"Group stage, matchday 1",Sparta Praha,A,Chelsea,1,85,2H,Gallas,94160,,,,0-1,1-0
+8,2003-09-20,Premier League,6,Wolverhampton,A,Chelsea,1,17,1H,Lampard,93616,,,,0-1,1-0
+8,2003-09-20,Premier League,6,Wolverhampton,A,Chelsea,1,36,1H,Hasselbaink,1271,,,,0-2,2-0
+8,2003-09-20,Premier League,6,Wolverhampton,A,Chelsea,1,53,2H,Duff,94153,,,,0-3,3-0
+8,2003-09-20,Premier League,6,Wolverhampton,A,Chelsea,1,67,2H,Crespo,94482,,,,0-4,4-0
+8,2003-09-20,Premier League,6,Wolverhampton,A,Chelsea,1,90,2H,Crespo,94482,,,,0-5,5-0
+9,2003-09-27,Premier League,7,Aston Villa,H,Chelsea,1,44,1H,Hasselbaink,1271,,,,1-0,1-0
+10,2003-10-01,Champions League,"Group stage, matchday 2",Beşiktaş,H,Beşiktaş,0,24,1H,Yalçın,43790,,,,0-1,0-1
+10,2003-10-01,Champions League,"Group stage, matchday 2",Beşiktaş,H,Beşiktaş,0,29,1H,Yalçın,43790,,,,0-2,0-2
+11,2003-10-05,Premier League,8,Middlesbrough,A,Middlesbrough,0,46,2H,Németh,92670,,,,1-1,1-1
+11,2003-10-05,Premier League,8,Middlesbrough,A,Chelsea,1,17,1H,Guðjohnsen,654,,,,0-1,1-0
+11,2003-10-05,Premier League,8,Middlesbrough,A,Chelsea,1,88,2H,Crespo,94482,,,,1-2,2-1
+13,2003-10-18,Premier League,9,Arsenal,A,Arsenal,0,5,1H,Edu,649,,,,1-0,0-1
+13,2003-10-18,Premier League,9,Arsenal,A,Arsenal,0,75,2H,Henry,4095,,,,2-1,1-2
+13,2003-10-18,Premier League,9,Arsenal,A,Chelsea,1,8,1H,Crespo,94482,,,,1-1,1-1
+14,2003-10-22,Champions League,"Group stage, matchday 3",Lazio,H,Chelsea,1,57,2H,Lampard,93616,,,,1-1,1-1
+14,2003-10-22,Champions League,"Group stage, matchday 3",Lazio,H,Chelsea,1,65,2H,Mutu,94474,,,,2-1,2-1
+14,2003-10-22,Champions League,"Group stage, matchday 3",Lazio,H,Lazio,0,38,1H,Inzaghi,96046,,,,0-1,0-1
+15,2003-10-25,Premier League,10,Manchester City,H,Chelsea,1,34,1H,Hasselbaink,1271,,,,1-0,1-0
+16,2003-10-29,League Cup,Third round,Notts County,H,Chelsea,1,14,1H,Hasselbaink,1271,Jimmy Floyd Hasselbaink,,,1-0,1-0
+16,2003-10-29,League Cup,Third round,Notts County,H,Chelsea,1,36,1H,Guðjohnsen,654,Eiður Guðjohnsen,,,2-1,2-1
+16,2003-10-29,League Cup,Third round,Notts County,H,Chelsea,1,65,2H,Guðjohnsen,654,Eiður Guðjohnsen,1,,3-1,3-1
+16,2003-10-29,League Cup,Third round,Notts County,H,Chelsea,1,87,2H,Cole,94274,Joe Cole,,,4-2,4-2
+16,2003-10-29,League Cup,Third round,Notts County,H,Notts County,0,27,1H,Barras,,Tony Barras,,,1-1,1-1
+16,2003-10-29,League Cup,Third round,Notts County,H,Notts County,0,85,2H,Stallard,,Mark Stallard,,,3-2,3-2
+17,2003-11-01,Premier League,11,Everton,A,Chelsea,1,49,2H,Mutu,94474,,,,0-1,1-0
+18,2003-11-04,Champions League,"Group stage, matchday 4",Lazio,A,Chelsea,1,15,1H,Crespo,94482,,,,0-1,1-0
+18,2003-11-04,Champions League,"Group stage, matchday 4",Lazio,A,Chelsea,1,70,2H,Guðjohnsen,654,,,,0-2,2-0
+18,2003-11-04,Champions League,"Group stage, matchday 4",Lazio,A,Chelsea,1,75,2H,Duff,94153,,,,0-3,3-0
+18,2003-11-04,Champions League,"Group stage, matchday 4",Lazio,A,Chelsea,1,80,2H,Lampard,93616,,,,0-4,4-0
+19,2003-11-09,Premier League,12,Newcastle,H,Chelsea,1,25,1H,Johnson,94387,,,,1-0,1-0
+19,2003-11-09,Premier League,12,Newcastle,H,Chelsea,1,40,1H,Crespo,94482,,,,2-0,2-0
+19,2003-11-09,Premier League,12,Newcastle,H,Chelsea,1,42,1H,Lampard,93616,,1,,3-0,3-0
+19,2003-11-09,Premier League,12,Newcastle,H,Chelsea,1,78,2H,Duff,94153,,,,4-0,4-0
+19,2003-11-09,Premier League,12,Newcastle,H,Chelsea,1,84,2H,Guðjohnsen,654,,,,5-0,5-0
+20,2003-11-22,Premier League,13,Southampton,A,Chelsea,1,47,2H,Melchiot,93598,,,,0-1,1-0
+22,2003-11-30,Premier League,14,Manchester United,H,Chelsea,1,30,1H,Lampard,93616,,1,,1-0,1-0
+23,2003-12-03,League Cup,Fourth round,Reading,A,Chelsea,1,57,2H,Hasselbaink,1271,Jimmy Floyd Hasselbaink,,,0-1,1-0
+24,2003-12-06,Premier League,15,Leeds,A,Leeds,0,18,1H,Pennant,12437,,,,1-0,0-1
+24,2003-12-06,Premier League,15,Leeds,A,Chelsea,1,70,2H,Duff,94153,,,,1-1,1-1
+25,2003-12-09,Champions League,"Group stage, matchday 6",Beşiktaş,A,Chelsea,1,77,2H,Hasselbaink,1271,,,,0-1,1-0
+25,2003-12-09,Champions League,"Group stage, matchday 6",Beşiktaş,A,Chelsea,1,85,2H,Bridge,93665,,,,0-2,2-0
+26,2003-12-13,Premier League,16,Bolton Wanderers,H,Chelsea,1,22,1H,Crespo,94482,,,,1-0,1-0
+26,2003-12-13,Premier League,16,Bolton Wanderers,H,Bolton Wanderers,0,39,1H,N'Gotty,94212,,,,1-1,1-1
+26,2003-12-13,Premier League,16,Bolton Wanderers,H,Bolton Wanderers,0,90,2H,Terry,94007,,,1,1-2,1-2
+27,2003-12-17,League Cup,Quarter-finals,Aston Villa,A,Aston Villa,0,16,1H,Ángel,,Juan Pablo Ángel,,,1-0,0-1
+27,2003-12-17,League Cup,Quarter-finals,Aston Villa,A,Aston Villa,0,78,2H,McCann,,Gavin McCann,,,2-1,1-2
+27,2003-12-17,League Cup,Quarter-finals,Aston Villa,A,Chelsea,1,69,2H,Cole,94274,Joe Cole,,,1-1,1-1
+28,2003-12-20,Premier League,17,Fulham,A,Chelsea,1,62,2H,Crespo,94482,,,,0-1,1-0
+29,2003-12-26,Premier League,18,Charlton Athletic,A,Charlton Athletic,0,1,1H,Hreiðarsson,93807,,,,1-0,0-1
+29,2003-12-26,Premier League,18,Charlton Athletic,A,Charlton Athletic,0,35,1H,Holland,93809,,,,2-1,1-2
+29,2003-12-26,Premier League,18,Charlton Athletic,A,Charlton Athletic,0,48,2H,Johansson,93901,,,,3-1,1-3
+29,2003-12-26,Premier League,18,Charlton Athletic,A,Charlton Athletic,0,53,2H,Euell,94142,,,,4-1,1-4
+29,2003-12-26,Premier League,18,Charlton Athletic,A,Chelsea,1,10,1H,Terry,94007,,,,1-1,1-1
+29,2003-12-26,Premier League,18,Charlton Athletic,A,Chelsea,1,73,2H,Guðjohnsen,654,,,,4-2,2-4
+30,2003-12-28,Premier League,19,Portsmouth,H,Chelsea,1,65,2H,Bridge,93665,,,,1-0,1-0
+30,2003-12-28,Premier League,19,Portsmouth,H,Chelsea,1,73,2H,Lampard,93616,,,,2-0,2-0
+30,2003-12-28,Premier League,19,Portsmouth,H,Chelsea,1,82,2H,Geremi,950,,,,3-0,3-0
+31,2004-01-03,FA Cup,Third round,Watford,A,Watford,0,5,1H,Helguson,,Heidar Helguson,,,1-0,0-1
+31,2004-01-03,FA Cup,Third round,Watford,A,Watford,0,34,1H,Mahon,,Gavin Mahon,,,2-1,1-2
+31,2004-01-03,FA Cup,Third round,Watford,A,Chelsea,1,33,1H,Guðjohnsen,654,Eiður Guðjohnsen,1,,1-1,1-1
+31,2004-01-03,FA Cup,Third round,Watford,A,Chelsea,1,41,1H,Lampard,93616,Frank Lampard,,,2-2,2-2
+32,2004-01-07,Premier League,20,Liverpool,H,Liverpool,0,33,1H,Cheyrou,94337,,,,0-1,0-1
+33,2004-01-11,Premier League,21,Leicester,A,Chelsea,1,11,1H,Hasselbaink,1271,,,,0-1,1-0
+33,2004-01-11,Premier League,21,Leicester,A,Chelsea,1,44,1H,Dabizas,93833,,,1,0-2,2-0
+33,2004-01-11,Premier League,21,Leicester,A,Chelsea,1,88,2H,Mutu,94474,,,,0-3,3-0
+33,2004-01-11,Premier League,21,Leicester,A,Chelsea,1,90,2H,Babayaro,93595,,,,0-4,4-0
+34,2004-01-14,FA Cup,Third round Replay,Watford,H,Chelsea,1,7,1H,Mutu,94474,Adrian Mutu,,,1-0,1-0
+34,2004-01-14,FA Cup,Third round Replay,Watford,H,Chelsea,1,76,2H,Mutu,94474,Adrian Mutu,,,3-0,3-0
+34,2004-01-14,FA Cup,Third round Replay,Watford,H,Chelsea,1,34,1H,Hasselbaink,1271,Jimmy Floyd Hasselbaink,,,2-0,2-0
+34,2004-01-14,FA Cup,Third round Replay,Watford,H,Chelsea,1,84,2H,Guðjohnsen,654,Eiður Guðjohnsen,,,4-0,4-0
+36,2004-01-24,FA Cup,Fourth round,Scarborough,A,Chelsea,1,10,1H,Terry,94007,John Terry,,,0-1,1-0
+37,2004-02-01,Premier League,23,Blackburn Rovers,A,Blackburn Rovers,0,3,1H,Flitcroft,94154,,,,1-0,0-1
+37,2004-02-01,Premier League,23,Blackburn Rovers,A,Blackburn Rovers,0,87,2H,Gallagher,94414,,,,2-2,2-2
+37,2004-02-01,Premier League,23,Blackburn Rovers,A,Chelsea,1,25,1H,Lampard,93616,,,,1-1,1-1
+37,2004-02-01,Premier League,23,Blackburn Rovers,A,Chelsea,1,35,1H,Lampard,93616,,,,1-2,2-1
+37,2004-02-01,Premier League,23,Blackburn Rovers,A,Chelsea,1,88,2H,Johnson,94387,,,,2-3,3-2
+38,2004-02-08,Premier League,24,Charlton Athletic,H,Chelsea,1,28,1H,Hasselbaink,1271,,1,,1-0,1-0
+39,2004-02-11,Premier League,25,Portsmouth,A,Chelsea,1,17,1H,Parker,93857,,,,0-1,1-0
+39,2004-02-11,Premier League,25,Portsmouth,A,Chelsea,1,79,2H,Crespo,94482,,,,0-2,2-0
+40,2004-02-15,FA Cup,Fifth round,Arsenal,A,Arsenal,0,56,2H,Reyes,,José Antonio Reyes,,,1-1,1-1
+40,2004-02-15,FA Cup,Fifth round,Arsenal,A,Arsenal,0,61,2H,Reyes,,José Antonio Reyes,,,2-1,1-2
+40,2004-02-15,FA Cup,Fifth round,Arsenal,A,Chelsea,1,40,1H,Mutu,94474,Adrian Mutu,,,0-1,1-0
+41,2004-02-21,Premier League,26,Arsenal,H,Chelsea,1,1,1H,Guðjohnsen,654,,,,1-0,1-0
+41,2004-02-21,Premier League,26,Arsenal,H,Arsenal,0,15,1H,Vieira,93783,,,,1-1,1-1
+41,2004-02-21,Premier League,26,Arsenal,H,Arsenal,0,21,1H,Edu,649,,,,1-2,1-2
+42,2004-02-25,Champions League,"Round of 16, first leg",Stuttgart,A,Chelsea,1,12,1H,Fernando Meira,13753,,,1,0-1,1-0
+43,2004-02-28,Premier League,27,Manchester City,A,Chelsea,1,82,2H,Guðjohnsen,654,,,,0-1,1-0
+45,2004-03-13,Premier League,28,Bolton Wanderers,A,Chelsea,1,71,2H,Terry,94007,,,,0-1,1-0
+45,2004-03-13,Premier League,28,Bolton Wanderers,A,Chelsea,1,74,2H,Duff,94153,,,,0-2,2-0
+46,2004-03-20,Premier League,29,Fulham,H,Chelsea,1,7,1H,Guðjohnsen,654,,,,1-0,1-0
+46,2004-03-20,Premier League,29,Fulham,H,Chelsea,1,30,1H,Duff,94153,,,,2-1,2-1
+46,2004-03-20,Premier League,29,Fulham,H,Fulham,0,19,1H,Pembridge,93980,,,,1-1,1-1
+47,2004-03-24,Champions League,"Quarter-final, first leg",Arsenal,H,Chelsea,1,53,2H,Guðjohnsen,654,,,,1-0,1-0
+47,2004-03-24,Champions League,"Quarter-final, first leg",Arsenal,H,Arsenal,0,59,2H,Pirès,2345,,,,1-1,1-1
+48,2004-03-27,Premier League,30,Wolverhampton,H,Chelsea,1,4,1H,Melchiot,93598,,,,1-0,1-0
+48,2004-03-27,Premier League,30,Wolverhampton,H,Chelsea,1,70,2H,Lampard,93616,,,,2-2,2-2
+48,2004-03-27,Premier League,30,Wolverhampton,H,Chelsea,1,77,2H,Hasselbaink,1271,,,,3-2,3-2
+48,2004-03-27,Premier League,30,Wolverhampton,H,Chelsea,1,87,2H,Hasselbaink,1271,,,,4-2,4-2
+48,2004-03-27,Premier League,30,Wolverhampton,H,Chelsea,1,90,2H,Hasselbaink,1271,,,,5-2,5-2
+48,2004-03-27,Premier League,30,Wolverhampton,H,Wolverhampton,0,23,1H,Camara,94464,,,,1-1,1-1
+48,2004-03-27,Premier League,30,Wolverhampton,H,Wolverhampton,0,57,2H,Craddock,93887,,,,1-2,1-2
+49,2004-04-03,Premier League,31,Tottenham,A,Chelsea,1,38,1H,Hasselbaink,1271,,,,0-1,1-0
+50,2004-04-06,Champions League,"Quarter-final, second leg",Arsenal,A,Arsenal,0,46,2H,Reyes,1410,,,,1-0,0-1
+50,2004-04-06,Champions League,"Quarter-final, second leg",Arsenal,A,Chelsea,1,51,2H,Lampard,93616,,,,1-1,1-1
+50,2004-04-06,Champions League,"Quarter-final, second leg",Arsenal,A,Chelsea,1,87,2H,Bridge,93665,,,,1-2,2-1
+52,2004-04-12,Premier League,33,Aston Villa,A,Aston Villa,0,39,1H,Vassell,93726,,1,,1-1,1-1
+52,2004-04-12,Premier League,33,Aston Villa,A,Aston Villa,0,49,2H,Hitzlsperger,92449,,,,2-1,1-2
+52,2004-04-12,Premier League,33,Aston Villa,A,Aston Villa,0,52,2H,Hendrie,93729,,,,3-1,1-3
+52,2004-04-12,Premier League,33,Aston Villa,A,Chelsea,1,11,1H,Crespo,94482,,,,0-1,1-0
+52,2004-04-12,Premier League,33,Aston Villa,A,Chelsea,1,90,2H,Crespo,94482,,,,3-2,2-3
+54,2004-04-20,Champions League,"Semi-final, first leg",Monaco,A,Monaco,0,17,1H,Pršo,84802,,,,1-0,0-1
+54,2004-04-20,Champions League,"Semi-final, first leg",Monaco,A,Monaco,0,78,2H,Morientes,764,,,,2-1,1-2
+54,2004-04-20,Champions League,"Semi-final, first leg",Monaco,A,Monaco,0,83,2H,Nonda,94923,,,,3-1,1-3
+54,2004-04-20,Champions League,"Semi-final, first leg",Monaco,A,Chelsea,1,22,1H,Crespo,94482,,,,1-1,1-1
+55,2004-04-25,Premier League,35,Newcastle,A,Newcastle,0,44,1H,Ameobi,93936,,,,1-1,1-1
+55,2004-04-25,Premier League,35,Newcastle,A,Newcastle,0,48,2H,Shearer,93843,,,,2-1,1-2
+55,2004-04-25,Premier League,35,Newcastle,A,Chelsea,1,5,1H,Cole,93614,,,,0-1,1-0
+56,2004-05-01,Premier League,36,Southampton,H,Chelsea,1,59,2H,Cranie,94663,,,1,1-0,1-0
+56,2004-05-01,Premier League,36,Southampton,H,Chelsea,1,75,2H,Lampard,93616,,,,2-0,2-0
+56,2004-05-01,Premier League,36,Southampton,H,Chelsea,1,83,2H,Lampard,93616,,,,3-0,3-0
+56,2004-05-01,Premier League,36,Southampton,H,Chelsea,1,85,2H,Johnson,94387,,,,4-0,4-0
+57,2004-05-05,Champions League,"Semi-final, second leg",Monaco,H,Chelsea,1,22,1H,Grønkjær,1235,,,,1-0,1-0
+57,2004-05-05,Champions League,"Semi-final, second leg",Monaco,H,Chelsea,1,44,1H,Lampard,93616,,,,2-0,2-0
+57,2004-05-05,Champions League,"Semi-final, second leg",Monaco,H,Monaco,0,47,2H,Ibarra,1042,,,,2-1,2-1
+57,2004-05-05,Champions League,"Semi-final, second leg",Monaco,H,Monaco,0,60,2H,Morientes,764,,,,2-2,2-2
+58,2004-05-08,Premier League,37,Manchester United,A,Manchester United,0,77,2H,Van Nistelrooy,2428,,,,1-1,1-1
+58,2004-05-08,Premier League,37,Manchester United,A,Chelsea,1,19,1H,Grønkjær,1235,,,,0-1,1-0
+59,2004-05-15,Premier League,38,Leeds,H,Chelsea,1,20,1H,Grønkjær,1235,,,,1-0,1-0

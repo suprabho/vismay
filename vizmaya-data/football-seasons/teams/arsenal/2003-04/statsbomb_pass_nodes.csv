@@ -1,0 +1,838 @@
+match_no,match_id,team,player,avg_x,avg_y,passes_made,until_minute
+2,3749493,Arsenal,Sylvain Wiltord,76.8,39.5,11,30.1
+2,3749493,Arsenal,Patrick Vieira,54.0,28.0,12,30.1
+2,3749493,Arsenal,Laureano Bisan-Etame Mayer,59.6,67.4,18,30.1
+2,3749493,Arsenal,Fredrik Ljungberg,75.5,67.6,8,30.1
+2,3749493,Arsenal,Gilberto Aparecido da Silva,50.8,46.5,10,30.1
+2,3749493,Arsenal,Kolo Habib Touré,35.0,58.3,11,30.1
+2,3749493,Arsenal,Jens Lehmann,8.5,37.9,9,30.1
+2,3749493,Arsenal,Robert Pirès,61.6,7.2,14,30.1
+2,3749493,Arsenal,Ashley Cole,43.1,5.2,10,30.1
+2,3749493,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,39.5,24.1,6,30.1
+2,3749493,Arsenal,Thierry Henry,74.8,27.1,2,30.1
+2,3749493,Everton,Alan Stubbs,44.2,32.9,12,56.5
+2,3749493,Everton,Nick Chadwick,81.4,29.8,8,56.5
+2,3749493,Everton,Richard Wright,8.6,41.5,8,56.5
+2,3749493,Everton,Mark Pembridge,84.5,19.0,10,56.5
+2,3749493,Everton,David Unsworth,57.5,11.3,14,56.5
+2,3749493,Everton,Tomasz Radziński,82.7,48.1,16,56.5
+2,3749493,Everton,Tobias Linderoth,62.5,51.8,20,56.5
+2,3749493,Everton,Steve Watson,80.2,62.8,7,56.5
+2,3749493,Everton,Thomas Gravesen,63.3,37.0,24,56.5
+2,3749493,Everton,Alessandro Pistone,60.6,71.4,19,56.5
+2,3749493,Everton,Joseph Phillip Yobo,41.9,53.7,10,56.5
+3,3749358,Middlesbrough,Malcolm Christie,75.6,42.5,10,65.7
+3,3749358,Middlesbrough,Szilárd Németh,73.7,32.3,15,65.7
+3,3749358,Middlesbrough,George Boateng,59.0,55.5,30,65.7
+3,3749358,Middlesbrough,Colin Cooper,52.1,29.6,33,65.7
+3,3749358,Middlesbrough,Alan Wright,55.8,9.6,35,65.7
+3,3749358,Middlesbrough,Dorival Guidoni Júnior,55.0,25.9,33,65.7
+3,3749358,Middlesbrough,Chris Riggott,34.5,45.4,17,65.7
+3,3749358,Middlesbrough,Gareth Southgate,38.2,35.7,23,65.7
+3,3749358,Middlesbrough,Stuart Parnaby,63.8,73.3,24,65.7
+3,3749358,Middlesbrough,Oswaldo Giroldo Júnior,71.0,45.1,29,65.7
+3,3749358,Middlesbrough,Mark Schwarzer,11.4,39.4,10,65.7
+3,3749358,Arsenal,Ashley Cole,54.9,12.4,44,74.0
+3,3749358,Arsenal,Gilberto Aparecido da Silva,60.6,52.3,35,74.0
+3,3749358,Arsenal,Jens Lehmann,10.8,43.1,26,74.0
+3,3749358,Arsenal,Laureano Bisan-Etame Mayer,57.1,70.8,46,74.0
+3,3749358,Arsenal,Kolo Habib Touré,35.6,57.2,45,74.0
+3,3749358,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,41.7,33.1,25,74.0
+3,3749358,Arsenal,Patrick Vieira,54.9,36.5,44,74.0
+3,3749358,Arsenal,Fredrik Ljungberg,66.5,61.2,35,74.0
+3,3749358,Arsenal,Thierry Henry,75.0,30.0,24,74.0
+3,3749358,Arsenal,Sylvain Wiltord,70.5,32.9,29,74.0
+3,3749358,Arsenal,Robert Pirès,63.1,22.6,51,74.0
+4,3749108,Arsenal,Jens Lehmann,8.5,40.1,18,66.3
+4,3749108,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,44.5,25.4,31,66.3
+4,3749108,Arsenal,Patrick Vieira,58.2,31.1,54,66.3
+4,3749108,Arsenal,Kolo Habib Touré,40.6,49.9,40,66.3
+4,3749108,Arsenal,Robert Pirès,68.1,20.5,36,66.3
+4,3749108,Arsenal,Thierry Henry,85.1,29.1,13,66.3
+4,3749108,Arsenal,Gilberto Aparecido da Silva,55.7,47.2,37,66.3
+4,3749108,Arsenal,Fredrik Ljungberg,80.6,64.2,14,66.3
+4,3749108,Arsenal,Ashley Cole,49.7,10.6,30,66.3
+4,3749108,Arsenal,Sylvain Wiltord,76.2,27.1,14,66.3
+4,3749108,Arsenal,Laureano Bisan-Etame Mayer,53.1,70.8,32,66.3
+4,3749108,Aston Villa,Juan Pablo Ángel Arango,72.6,33.6,15,59.6
+4,3749108,Aston Villa,Ulises Hernán de la Cruz Bernardo,66.9,68.7,13,59.6
+4,3749108,Aston Villa,Mark Kinsella,49.4,41.5,24,59.6
+4,3749108,Aston Villa,Jlloyd Tafari Samuel,58.3,11.4,27,59.6
+4,3749108,Aston Villa,Thomas Løvendahl Sørensen,9.0,39.1,9,59.6
+4,3749108,Aston Villa,Lee Hendrie,60.7,51.9,15,59.6
+4,3749108,Aston Villa,Mark Anthony Delaney,49.5,73.1,12,59.6
+4,3749108,Aston Villa,Olof Mellberg,35.8,48.5,9,59.6
+4,3749108,Aston Villa,Ronny Johnsen,43.1,30.1,14,59.6
+4,3749108,Aston Villa,Peter Whittingham,70.7,11.2,18,59.6
+4,3749108,Aston Villa,Gareth Barry,63.8,25.4,24,59.6
+5,3749454,Manchester City,Michael Tarnat,51.0,12.3,25,68.0
+5,3749454,Manchester City,Joey Barton,56.9,26.5,21,68.0
+5,3749454,Manchester City,Paul Bosvelt,57.8,44.9,25,68.0
+5,3749454,Manchester City,Nicolas Anelka,75.7,35.9,13,68.0
+5,3749454,Manchester City,Sylvain Distin,43.1,28.7,15,68.0
+5,3749454,Manchester City,Jihai Sun,54.8,68.1,28,68.0
+5,3749454,Manchester City,Antoine Sibierski,72.3,38.1,11,68.0
+5,3749454,Manchester City,David Seaman,13.1,37.7,15,68.0
+5,3749454,Manchester City,Trevor Sinclair,65.9,16.3,11,68.0
+5,3749454,Manchester City,David Sommeil,44.1,60.8,10,68.0
+5,3749454,Manchester City,Shaun Wright-Phillips,71.9,66.2,15,68.0
+5,3749454,Arsenal,Sylvain Wiltord,76.0,40.1,27,75.9
+5,3749454,Arsenal,Thierry Henry,76.9,35.2,14,75.9
+5,3749454,Arsenal,Laureano Bisan-Etame Mayer,54.8,68.1,50,75.9
+5,3749454,Arsenal,Martin Keown,34.3,55.2,22,75.9
+5,3749454,Arsenal,Kolo Habib Touré,40.2,35.1,26,75.9
+5,3749454,Arsenal,Ashley Cole,56.3,15.6,50,75.9
+5,3749454,Arsenal,Fredrik Ljungberg,67.6,64.7,34,75.9
+5,3749454,Arsenal,Gilberto Aparecido da Silva,64.7,48.6,42,75.9
+5,3749454,Arsenal,Patrick Vieira,62.6,39.9,43,75.9
+5,3749454,Arsenal,Robert Pirès,70.0,28.0,49,75.9
+5,3749454,Arsenal,Jens Lehmann,11.7,45.0,19,75.9
+6,3749296,Arsenal,Thierry Henry,79.0,36.9,13,70.2
+6,3749296,Arsenal,Dennis Bergkamp,74.1,40.3,21,70.2
+6,3749296,Arsenal,Eduardo César Daude Gaspar,58.4,30.0,35,70.2
+6,3749296,Arsenal,Ashley Cole,57.4,10.1,26,70.2
+6,3749296,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,45.3,31.5,19,70.2
+6,3749296,Arsenal,Jens Lehmann,11.9,45.1,14,70.2
+6,3749296,Arsenal,Laureano Bisan-Etame Mayer,64.3,70.7,44,70.2
+6,3749296,Arsenal,Patrick Vieira,57.9,49.1,38,70.2
+6,3749296,Arsenal,Robert Pirès,71.1,26.3,30,70.2
+6,3749296,Arsenal,Kolo Habib Touré,41.8,54.1,25,70.2
+6,3749296,Arsenal,Ray Parlour,79.2,69.8,29,70.2
+6,3749296,Portsmouth,Sébastien Schemmel,63.4,73.6,10,34.0
+6,3749296,Portsmouth,Amdy Moustapha Faye,54.0,49.7,15,34.0
+6,3749296,Portsmouth,Arjan de Zeeuw,44.1,50.4,6,34.0
+6,3749296,Portsmouth,Teddy Sheringham,65.1,41.3,15,34.0
+6,3749296,Portsmouth,Steve Stone,65.3,65.5,14,34.0
+6,3749296,Portsmouth,Yakubu Aiyegbeni,91.7,39.9,3,34.0
+6,3749296,Portsmouth,Dejan Stefanovic,35.2,35.8,3,34.0
+6,3749296,Portsmouth,Boris Živković,65.0,15.2,4,34.0
+6,3749296,Portsmouth,Patrik Berger,80.9,19.4,8,34.0
+6,3749296,Portsmouth,Shaka Hislop,11.5,39.8,2,34.0
+6,3749296,Portsmouth,Nigel Quashie,51.3,40.2,7,34.0
+8,3749552,Manchester United,Ryan Giggs,80.6,41.1,24,75.4
+8,3749552,Manchester United,Ruud van Nistelrooy,84.4,40.4,11,75.4
+8,3749552,Manchester United,Roy Keane,50.9,29.8,55,75.4
+8,3749552,Manchester United,Cristiano Ronaldo dos Santos Aveiro,78.7,71.4,18,75.4
+8,3749552,Manchester United,John O''Shea,51.6,10.6,45,75.4
+8,3749552,Manchester United,Rio Ferdinand,36.9,51.6,39,75.4
+8,3749552,Manchester United,Gary Neville,47.5,68.0,33,75.4
+8,3749552,Manchester United,Mikaël Silvestre,32.2,22.9,46,75.4
+8,3749552,Manchester United,Tim Howard,10.4,39.8,24,75.4
+8,3749552,Manchester United,Quinton Fortune Kolobea,66.1,19.8,33,75.4
+8,3749552,Manchester United,Phil Neville,55.9,45.4,20,75.4
+8,3749552,Arsenal,Gilberto Aparecido da Silva,55.5,46.8,43,81.7
+8,3749552,Arsenal,Ray Parlour,66.8,64.5,38,81.7
+8,3749552,Arsenal,Laureano Bisan-Etame Mayer,56.6,70.2,47,81.7
+8,3749552,Arsenal,Dennis Bergkamp,68.1,43.7,27,81.7
+8,3749552,Arsenal,Patrick Vieira,58.1,35.2,49,81.7
+8,3749552,Arsenal,Kolo Habib Touré,41.5,28.8,22,81.7
+8,3749552,Arsenal,Jens Lehmann,10.3,36.8,12,81.7
+8,3749552,Arsenal,Ashley Cole,51.6,9.3,39,81.7
+8,3749552,Arsenal,Martin Keown,38.3,52.5,24,81.7
+8,3749552,Arsenal,Fredrik Ljungberg,67.3,18.6,25,81.7
+8,3749552,Arsenal,Thierry Henry,74.9,40.6,23,81.7
+9,3749528,Arsenal,Sylvain Wiltord,83.2,32.9,6,24.6
+9,3749528,Arsenal,Thierry Henry,84.3,21.3,6,24.6
+9,3749528,Arsenal,Laureano Bisan-Etame Mayer,64.9,64.3,19,24.6
+9,3749528,Arsenal,Martin Keown,45.6,48.4,10,24.6
+9,3749528,Arsenal,Kolo Habib Touré,39.2,24.1,13,24.6
+9,3749528,Arsenal,Ray Parlour,77.1,55.0,12,24.6
+9,3749528,Arsenal,Jens Lehmann,11.7,42.4,5,24.6
+9,3749528,Arsenal,Patrick Vieira,64.2,32.1,17,24.6
+9,3749528,Arsenal,Gilberto Aparecido da Silva,72.1,43.4,16,24.6
+9,3749528,Arsenal,Ashley Cole,70.3,6.8,12,24.6
+9,3749528,Arsenal,Fredrik Ljungberg,72.5,15.0,16,24.6
+9,3749528,Newcastle United,Olivier Bernard,54.9,13.1,16,71.7
+9,3749528,Newcastle United,Jermaine Jenas,59.4,50.7,34,71.7
+9,3749528,Newcastle United,Shay Given,10.9,46.5,14,71.7
+9,3749528,Newcastle United,Titus Malachi Bramble,47.3,29.6,28,71.7
+9,3749528,Newcastle United,Laurent Robert,68.9,17.9,17,71.7
+9,3749528,Newcastle United,Kieron Dyer,70.0,61.4,24,71.7
+9,3749528,Newcastle United,Aaron Hughes,61.0,71.4,32,71.7
+9,3749528,Newcastle United,Alan Shearer,76.2,53.2,11,71.7
+9,3749528,Newcastle United,Lee Bowyer,61.8,34.8,11,71.7
+9,3749528,Newcastle United,"Andy O""Brien",47.3,59.8,19,71.7
+9,3749528,Newcastle United,Craig Bellamy,83.7,40.8,15,71.7
+11,3749253,Liverpool,Steve Finnan,59.7,66.6,22,41.8
+11,3749253,Liverpool,El-Hadji Ousseynou Diouf,74.1,62.4,15,41.8
+11,3749253,Liverpool,Harry Kewell,75.7,43.1,14,41.8
+11,3749253,Liverpool,Steven Gerrard,64.7,48.3,25,41.8
+11,3749253,Liverpool,Sami Hyypiä,36.7,31.0,22,41.8
+11,3749253,Liverpool,John Arne Semundseth Riise,60.2,7.7,18,41.8
+11,3749253,Liverpool,Jerzy Dudek,15.8,39.1,6,41.8
+11,3749253,Liverpool,Salif Alassane Diao,58.9,44.5,14,41.8
+11,3749253,Liverpool,Vladimir Smicer,77.4,30.4,7,41.8
+11,3749253,Liverpool,Igor Bišćan,37.7,56.8,16,41.8
+11,3749253,Liverpool,Michael Owen,88.2,29.0,1,41.8
+11,3749253,Arsenal,Jérémie Aliadière,86.3,21.3,6,72.2
+11,3749253,Arsenal,Thierry Henry,75.2,29.9,18,72.2
+11,3749253,Arsenal,Laureano Bisan-Etame Mayer,59.6,68.7,35,72.2
+11,3749253,Arsenal,Kolo Habib Touré,40.0,50.5,25,72.2
+11,3749253,Arsenal,Ashley Cole,54.3,11.8,38,72.2
+11,3749253,Arsenal,Robert Pirès,63.9,14.2,33,72.2
+11,3749253,Arsenal,Ray Parlour,68.3,60.2,21,72.2
+11,3749253,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,37.6,28.0,17,72.2
+11,3749253,Arsenal,Gilberto Aparecido da Silva,59.2,45.0,25,72.2
+11,3749253,Arsenal,Eduardo César Daude Gaspar,61.7,32.7,35,72.2
+11,3749253,Arsenal,Jens Lehmann,9.7,37.1,8,72.2
+12,3749079,Arsenal,Jens Lehmann,12.4,37.4,12,65.8
+12,3749079,Arsenal,Robert Pirès,64.0,13.2,41,65.8
+12,3749079,Arsenal,Laureano Bisan-Etame Mayer,65.6,70.8,39,65.8
+12,3749079,Arsenal,Eduardo César Daude Gaspar,56.6,28.5,35,65.8
+12,3749079,Arsenal,Ashley Cole,59.0,10.5,38,65.8
+12,3749079,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,43.0,27.2,24,65.8
+12,3749079,Arsenal,Sylvain Wiltord,80.4,36.4,15,65.8
+12,3749079,Arsenal,Thierry Henry,81.7,40.1,9,65.8
+12,3749079,Arsenal,Kolo Habib Touré,42.6,50.5,15,65.8
+12,3749079,Arsenal,Ray Parlour,70.9,66.0,37,65.8
+12,3749079,Arsenal,Gilberto Aparecido da Silva,62.9,50.6,31,65.8
+12,3749079,Chelsea,Adrian Mutu,79.4,25.4,28,66.8
+12,3749079,Chelsea,Claude Makélélé,54.8,39.1,43,66.8
+12,3749079,Chelsea,Mario Melchiot,38.0,58.3,18,66.8
+12,3749079,Chelsea,Robert Huth,39.2,29.1,25,66.8
+12,3749079,Chelsea,Wayne Bridge,64.5,10.2,34,66.8
+12,3749079,Chelsea,"Gérémi Sorele N""Djitap Fotso",61.1,25.6,45,66.8
+12,3749079,Chelsea,Frank Lampard,62.1,43.9,23,66.8
+12,3749079,Chelsea,Damien Duff,79.0,34.9,21,66.8
+12,3749079,Chelsea,Glen Johnson,63.1,69.8,18,66.8
+12,3749079,Chelsea,Carlo Cudicini,13.3,39.6,17,66.8
+12,3749079,Chelsea,Hernán Jorge Crespo,80.1,33.9,6,66.8
+14,3749526,Charlton Athletic,Hermann Hreidarsson,61.7,6.1,15,46.2
+14,3749526,Charlton Athletic,Paolo Di Canio,78.8,28.6,17,46.2
+14,3749526,Charlton Athletic,Graham Stuart,70.9,9.5,16,46.2
+14,3749526,Charlton Athletic,Claus Jensen,61.6,36.2,21,46.2
+14,3749526,Charlton Athletic,Scott Parker,63.2,38.6,15,46.2
+14,3749526,Charlton Athletic,Mark Fish,41.1,29.0,12,46.2
+14,3749526,Charlton Athletic,Jonatan Lillebror Johansson,81.4,35.6,6,46.2
+14,3749526,Charlton Athletic,Dean Kiely,10.8,37.7,7,46.2
+14,3749526,Charlton Athletic,Matt Holland,63.0,69.5,16,46.2
+14,3749526,Charlton Athletic,Radostin Kishishev,45.0,68.0,13,46.2
+14,3749526,Charlton Athletic,Chris Perry,45.3,51.1,6,46.2
+14,3749526,Charlton Athletic,Jason Joseph Euell,80.0,9.9,1,46.2
+14,3749526,Arsenal,Thierry Henry,79.0,35.0,14,70.2
+14,3749526,Arsenal,Dennis Bergkamp,72.9,44.0,28,70.2
+14,3749526,Arsenal,Gilberto Aparecido da Silva,57.7,37.1,46,70.2
+14,3749526,Arsenal,Ashley Cole,61.5,12.0,35,70.2
+14,3749526,Arsenal,Ray Parlour,61.9,50.3,38,70.2
+14,3749526,Arsenal,Kolo Habib Touré,42.3,55.5,26,70.2
+14,3749526,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,43.2,32.4,26,70.2
+14,3749526,Arsenal,Jens Lehmann,9.5,48.1,9,70.2
+14,3749526,Arsenal,Laureano Bisan-Etame Mayer,64.3,71.1,37,70.2
+14,3749526,Arsenal,Fredrik Ljungberg,74.3,54.7,16,70.2
+14,3749526,Arsenal,Robert Pirès,68.1,31.6,35,70.2
+16,3749346,Leeds United,Michael Bridges,83.2,49.0,16,45.0
+16,3749346,Leeds United,Alan Smith,84.3,35.3,20,45.0
+16,3749346,Leeds United,David Batty,64.1,49.5,30,45.0
+16,3749346,Leeds United,Gary Oliver Kelly,57.7,70.2,28,45.0
+16,3749346,Leeds United,Jermaine Pennant,76.9,69.8,17,45.0
+16,3749346,Leeds United,René Salomon Olembé-Olembé,69.7,9.2,19,45.0
+16,3749346,Leeds United,Lamine Sakho,90.0,14.6,9,45.0
+16,3749346,Leeds United,José Vitor Roque Júnior,56.3,32.2,15,45.0
+16,3749346,Leeds United,Seth Johnson,62.8,42.9,20,45.0
+16,3749346,Leeds United,Zoumana Camara,43.7,50.3,13,45.0
+16,3749346,Leeds United,Paul Robinson,8.1,37.2,4,45.0
+16,3749346,Arsenal,Gilberto Aparecido da Silva,52.0,26.4,30,70.8
+16,3749346,Arsenal,Robert Pirès,55.5,21.2,30,70.8
+16,3749346,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,43.4,34.5,13,70.8
+16,3749346,Arsenal,Jens Lehmann,13.0,43.9,16,70.8
+16,3749346,Arsenal,Thierry Henry,69.3,28.7,13,70.8
+16,3749346,Arsenal,Ashley Cole,45.2,11.1,28,70.8
+16,3749346,Arsenal,Kolo Habib Touré,40.1,52.0,25,70.8
+16,3749346,Arsenal,Laureano Bisan-Etame Mayer,63.7,70.6,18,70.8
+16,3749346,Arsenal,Fredrik Ljungberg,65.8,55.3,17,70.8
+16,3749346,Arsenal,Dennis Bergkamp,70.6,44.6,21,70.8
+16,3749346,Arsenal,Ray Parlour,54.6,45.9,30,70.8
+18,3749196,Arsenal,Thierry Henry,82.1,37.8,8,60.4
+18,3749196,Arsenal,Nwankwo Christian Kanu,83.9,54.6,16,60.4
+18,3749196,Arsenal,Gilberto Aparecido da Silva,56.0,29.9,19,60.4
+18,3749196,Arsenal,Ashley Cole,59.1,12.1,19,60.4
+18,3749196,Arsenal,Laureano Bisan-Etame Mayer,65.7,74.0,38,60.4
+18,3749196,Arsenal,Ray Parlour,65.8,53.9,15,60.4
+18,3749196,Arsenal,Kolo Habib Touré,39.2,57.5,18,60.4
+18,3749196,Arsenal,Robert Pirès,79.0,40.9,20,60.4
+18,3749196,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,39.2,34.0,11,60.4
+18,3749196,Arsenal,Fredrik Ljungberg,76.5,71.6,19,60.4
+18,3749196,Arsenal,Jens Lehmann,13.7,40.5,11,60.4
+18,3749196,Tottenham Hotspur,Mauricio Taricco,66.3,7.6,28,75.2
+18,3749196,Tottenham Hotspur,Paul Konchesky,78.5,11.6,10,75.2
+18,3749196,Tottenham Hotspur,Ledley King,63.8,31.8,11,75.2
+18,3749196,Tottenham Hotspur,Hélder Manuel Marques Postiga,79.5,26.7,7,75.2
+18,3749196,Tottenham Hotspur,Stephane Dalmat,63.3,30.8,15,75.2
+18,3749196,Tottenham Hotspur,Darren Anderton,64.2,53.2,8,75.2
+18,3749196,Tottenham Hotspur,Kasey Keller,10.8,43.2,5,75.2
+18,3749196,Tottenham Hotspur,Anthony Gardner,45.6,39.0,9,75.2
+18,3749196,Tottenham Hotspur,Robbie Keane,78.0,28.8,7,75.2
+18,3749196,Tottenham Hotspur,Stephen Carr,51.9,69.9,14,75.2
+18,3749196,Tottenham Hotspur,Dean Richards,52.1,46.1,8,75.2
+19,3749434,Birmingham City,David Dunn,74.0,48.6,31,63.8
+19,3749434,Birmingham City,Aliou Cissé,58.6,39.1,34,63.8
+19,3749434,Birmingham City,Robbie Savage,59.7,46.1,17,63.8
+19,3749434,Birmingham City,Mikael Forssell,79.2,50.9,6,63.8
+19,3749434,Birmingham City,Damien Johnson,59.0,68.4,43,63.8
+19,3749434,Birmingham City,Kenny Cunningham,45.0,53.5,35,63.8
+19,3749434,Birmingham City,Jamie Clapham,61.7,12.1,35,63.8
+19,3749434,Birmingham City,Stephen Clemence,75.2,70.7,20,63.8
+19,3749434,Birmingham City,Maik Taylor,10.3,42.7,5,63.8
+19,3749434,Birmingham City,Matthew Upson,45.9,22.9,31,63.8
+19,3749434,Birmingham City,Stan Lazaridis,84.7,12.2,10,63.8
+19,3749434,Arsenal,Pascal Cygan,38.5,26.6,22,58.6
+19,3749434,Arsenal,Dennis Bergkamp,61.2,31.9,18,58.6
+19,3749434,Arsenal,Thierry Henry,71.3,18.2,12,58.6
+19,3749434,Arsenal,Gaël Clichy,67.7,15.5,25,58.6
+19,3749434,Arsenal,Eduardo César Daude Gaspar,54.3,30.0,39,58.6
+19,3749434,Arsenal,Robert Pirès,57.5,46.4,31,58.6
+19,3749434,Arsenal,Kolo Habib Touré,54.0,73.4,22,58.6
+19,3749434,Arsenal,Fredrik Ljungberg,55.8,64.2,16,58.6
+19,3749434,Arsenal,Ashley Cole,57.9,9.0,39,58.6
+19,3749434,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,49.7,44.8,13,58.6
+19,3749434,Arsenal,Jens Lehmann,10.4,42.5,11,58.6
+21,3749192,Arsenal,Thierry Henry,93.9,24.7,17,66.4
+21,3749192,Arsenal,Dennis Bergkamp,74.6,44.0,24,66.4
+21,3749192,Arsenal,Eduardo César Daude Gaspar,62.0,30.1,46,66.4
+21,3749192,Arsenal,Robert Pirès,72.5,19.1,45,66.4
+21,3749192,Arsenal,Pascal Cygan,44.9,21.9,47,66.4
+21,3749192,Arsenal,Ashley Cole,58.6,10.3,56,66.4
+21,3749192,Arsenal,Fredrik Ljungberg,74.6,58.4,26,66.4
+21,3749192,Arsenal,Gilberto Aparecido da Silva,60.9,48.2,43,66.4
+21,3749192,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,41.6,50.9,37,66.4
+21,3749192,Arsenal,Kolo Habib Touré,59.1,70.8,31,66.4
+21,3749192,Arsenal,Jens Lehmann,11.3,42.0,22,66.4
+21,3749192,Fulham,Steed Malbranque,57.2,19.0,20,75.6
+21,3749192,Fulham,Louis Saha,69.8,44.9,10,75.6
+21,3749192,Fulham,Zat Knight,31.8,45.0,8,75.6
+21,3749192,Fulham,Moritz Volz,41.0,68.7,38,75.6
+21,3749192,Fulham,Jérôme Bonnissel,53.6,10.5,26,75.6
+21,3749192,Fulham,Junichi Inamoto,58.7,66.1,17,75.6
+21,3749192,Fulham,Lee Clark,56.5,47.0,24,75.6
+21,3749192,Fulham,Sean Davis,66.0,34.8,21,75.6
+21,3749192,Fulham,Sylvain Legwinski,47.5,47.4,26,75.6
+21,3749192,Fulham,Andy Melville,33.0,24.5,13,75.6
+21,3749192,Fulham,Edwin van der Sar,8.6,37.7,11,75.6
+23,3749590,Leicester City,Leslie Ferdinand,75.4,44.4,9,58.6
+23,3749590,Leicester City,Marcus Bent,79.4,57.2,12,58.6
+23,3749590,Leicester City,Riccardo Scimeca,47.5,35.1,15,58.6
+23,3749590,Leicester City,Andy Impey,54.1,68.0,23,58.6
+23,3749590,Leicester City,Billy McKinlay,60.9,53.5,16,58.6
+23,3749590,Leicester City,Steve Howey,43.9,54.3,6,58.6
+23,3749590,Leicester City,Ian Walker,14.2,40.0,15,58.6
+23,3749590,Leicester City,James Scowcroft,71.8,66.4,17,58.6
+23,3749590,Leicester City,Callum Davidson,51.5,30.2,8,58.6
+23,3749590,Leicester City,Jordan Stewart,60.0,10.1,8,58.6
+23,3749590,Leicester City,Ben Thatcher,41.9,14.0,7,58.6
+23,3749590,Arsenal,Eduardo César Daude Gaspar,57.6,31.2,38,66.8
+23,3749590,Arsenal,Dennis Bergkamp,72.8,38.6,27,66.8
+23,3749590,Arsenal,Fredrik Ljungberg,69.2,61.0,20,66.8
+23,3749590,Arsenal,Pascal Cygan,35.3,24.7,41,66.8
+23,3749590,Arsenal,Kolo Habib Touré,62.8,72.8,33,66.8
+23,3749590,Arsenal,Ashley Cole,56.7,7.8,49,66.8
+23,3749590,Arsenal,Jérémie Aliadière,78.3,33.5,16,66.8
+23,3749590,Arsenal,Gilberto Aparecido da Silva,63.4,54.0,31,66.8
+23,3749590,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,38.1,54.9,19,66.8
+23,3749590,Arsenal,Jens Lehmann,12.3,43.6,21,66.8
+23,3749590,Arsenal,Robert Pirès,64.7,30.1,35,66.8
+25,3749360,Arsenal,Jens Lehmann,10.2,42.6,19,73.7
+25,3749360,Arsenal,Patrick Vieira,55.6,31.4,49,73.7
+25,3749360,Arsenal,Dennis Bergkamp,68.7,37.3,23,73.7
+25,3749360,Arsenal,Fredrik Ljungberg,66.5,61.6,21,73.7
+25,3749360,Arsenal,Kolo Habib Touré,51.6,65.6,39,73.7
+25,3749360,Arsenal,Pascal Cygan,33.3,21.4,32,73.7
+25,3749360,Arsenal,Gilberto Aparecido da Silva,57.9,43.6,35,73.7
+25,3749360,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,37.9,46.5,17,73.7
+25,3749360,Arsenal,Robert Pirès,61.0,16.0,40,73.7
+25,3749360,Arsenal,Ashley Cole,52.0,6.3,41,73.7
+25,3749360,Arsenal,Thierry Henry,75.7,28.6,17,73.7
+25,3749360,Blackburn Rovers,Paul Gallagher,75.7,53.6,9,45.0
+25,3749360,Blackburn Rovers,Dwight Yorke,78.5,49.4,17,45.0
+25,3749360,Blackburn Rovers,Tugay Kerimoğlu,56.9,42.3,28,45.0
+25,3749360,Blackburn Rovers,Markus Babbel,53.8,70.4,20,45.0
+25,3749360,Blackburn Rovers,Barry Ferguson,60.9,40.9,27,45.0
+25,3749360,Blackburn Rovers,Lucas Neill,71.4,21.0,17,45.0
+25,3749360,Blackburn Rovers,Andy Todd,44.9,58.8,14,45.0
+25,3749360,Blackburn Rovers,Brett Emerton,62.1,67.5,18,45.0
+25,3749360,Blackburn Rovers,Craig Short,40.5,35.3,14,45.0
+25,3749360,Blackburn Rovers,Brad Friedel,10.4,39.4,9,45.0
+25,3749360,Blackburn Rovers,Vratislav Greško,64.5,12.8,15,45.0
+27,3749278,Bolton Wanderers,Per Frandsen,68.2,54.3,12,74.4
+27,3749278,Bolton Wanderers,Youri Djorkaeff,77.3,34.2,19,74.4
+27,3749278,Bolton Wanderers,Nicky Hunt,66.2,71.6,12,74.4
+27,3749278,Bolton Wanderers,Iván Campo Ramos,57.3,41.4,25,74.4
+27,3749278,Bolton Wanderers,Simon Charlton,40.9,23.0,19,74.4
+27,3749278,Bolton Wanderers,Ricardo Wayne Gardner,58.3,13.1,26,74.4
+27,3749278,Bolton Wanderers,Kevin Cyril Davies,84.0,42.0,13,74.4
+27,3749278,Bolton Wanderers,Jussi Jääskeläinen,12.2,40.5,15,74.4
+27,3749278,Bolton Wanderers,Émerson Augusto Thome,35.5,55.6,20,74.4
+27,3749278,Bolton Wanderers,"Augustine Azuka ""Jay-Jay"" Okocha",73.2,29.1,24,74.4
+27,3749278,Bolton Wanderers,Kevin Nolan,68.8,48.5,16,74.4
+27,3749278,Arsenal,Pascal Cygan,43.2,29.8,24,69.1
+27,3749278,Arsenal,Kolo Habib Touré,52.6,69.7,33,69.1
+27,3749278,Arsenal,Fredrik Ljungberg,69.1,62.5,14,69.1
+27,3749278,Arsenal,Patrick Vieira,55.4,24.7,30,69.1
+27,3749278,Arsenal,Gaël Clichy,44.4,8.2,42,69.1
+27,3749278,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,37.0,48.4,21,69.1
+27,3749278,Arsenal,Jens Lehmann,8.7,38.4,17,69.1
+27,3749278,Arsenal,Robert Pirès,65.4,21.1,30,69.1
+27,3749278,Arsenal,Thierry Henry,74.5,34.2,13,69.1
+27,3749278,Arsenal,Gilberto Aparecido da Silva,59.3,51.7,24,69.1
+27,3749278,Arsenal,Dennis Bergkamp,70.6,36.2,21,69.1
+28,3749522,Arsenal,Ray Parlour,62.3,48.2,52,71.3
+28,3749522,Arsenal,Fredrik Ljungberg,76.1,68.7,31,71.3
+28,3749522,Arsenal,Jens Lehmann,10.3,43.0,17,71.3
+28,3749522,Arsenal,Pascal Cygan,43.1,28.2,53,71.3
+28,3749522,Arsenal,Thierry Henry,87.9,17.7,22,71.3
+28,3749522,Arsenal,Patrick Vieira,63.9,30.3,62,71.3
+28,3749522,Arsenal,Robert Pirès,76.3,15.1,27,71.3
+28,3749522,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,44.9,51.6,38,71.3
+28,3749522,Arsenal,Kolo Habib Touré,64.6,70.7,53,71.3
+28,3749522,Arsenal,Gaël Clichy,64.0,9.2,45,71.3
+28,3749522,Arsenal,Dennis Bergkamp,82.6,42.7,37,71.3
+28,3749522,Wolverhampton Wanderers,Henri Camara,73.7,55.3,17,76.0
+28,3749522,Wolverhampton Wanderers,Kenny Miller,64.2,42.2,23,76.0
+28,3749522,Wolverhampton Wanderers,Colin Cameron,56.2,34.3,23,76.0
+28,3749522,Wolverhampton Wanderers,Lee Naylor,57.1,12.5,25,76.0
+28,3749522,Wolverhampton Wanderers,Paul Ince,58.7,40.1,18,76.0
+28,3749522,Wolverhampton Wanderers,Mark Kennedy,67.3,15.9,14,76.0
+28,3749522,Wolverhampton Wanderers,Oleg Luzhny,52.5,72.6,31,76.0
+28,3749522,Wolverhampton Wanderers,Alex Rae,54.0,48.6,30,76.0
+28,3749522,Wolverhampton Wanderers,Jody Craddock,38.1,47.8,11,76.0
+28,3749522,Wolverhampton Wanderers,Paul Butler,37.2,31.6,8,76.0
+28,3749522,Wolverhampton Wanderers,Michael Oakes,9.4,40.7,4,76.0
+29,3749310,Southampton,Chris Baird,48.2,73.4,16,57.1
+29,3749310,Southampton,Kevin Phillips,85.6,33.9,7,57.1
+29,3749310,Southampton,Rory Delap,61.7,56.9,17,57.1
+29,3749310,Southampton,Michael Lennart Svensson,39.9,29.6,17,57.1
+29,3749310,Southampton,James Beattie,72.0,52.7,9,57.1
+29,3749310,Southampton,Danny Higginbotham,54.3,13.1,23,57.1
+29,3749310,Southampton,Léandre Griffit,67.8,13.6,13,57.1
+29,3749310,Southampton,Antti Mikko Niemi,8.7,42.9,8,57.1
+29,3749310,Southampton,David Prutton,60.4,33.1,20,57.1
+29,3749310,Southampton,Paul Telfer,62.1,64.8,14,57.1
+29,3749310,Southampton,Fitz Hall,41.2,52.4,7,57.1
+29,3749310,Arsenal,Dennis Bergkamp,75.7,45.3,20,73.0
+29,3749310,Arsenal,Thierry Henry,74.7,30.0,20,73.0
+29,3749310,Arsenal,Patrick Vieira,60.1,28.0,41,73.0
+29,3749310,Arsenal,Robert Pirès,67.5,18.1,37,73.0
+29,3749310,Arsenal,Kolo Habib Touré,67.1,69.8,50,73.0
+29,3749310,Arsenal,Fredrik Ljungberg,74.4,62.1,40,73.0
+29,3749310,Arsenal,Ray Parlour,64.0,50.1,49,73.0
+29,3749310,Arsenal,Gaël Clichy,52.6,12.3,44,73.0
+29,3749310,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,44.2,54.5,27,73.0
+29,3749310,Arsenal,Pascal Cygan,40.3,29.9,32,73.0
+29,3749310,Arsenal,Jens Lehmann,11.8,41.0,9,73.0
+31,3749117,Everton,Duncan Ferguson,73.0,35.1,8,45.0
+31,3749117,Everton,Wayne Mark Rooney,78.3,19.5,7,45.0
+31,3749117,Everton,Gary Naysmith,59.1,8.2,23,45.0
+31,3749117,Everton,Nigel Martyn,11.8,42.9,13,45.0
+31,3749117,Everton,Tony Hibbert,42.2,64.3,15,45.0
+31,3749117,Everton,Tie Li,59.0,36.7,10,45.0
+31,3749117,Everton,Alan Stubbs,34.2,54.9,11,45.0
+31,3749117,Everton,David Unsworth,36.6,29.2,15,45.0
+31,3749117,Everton,Kevin Kilbane,71.9,20.2,15,45.0
+31,3749117,Everton,Lee Carsley,56.8,56.3,8,45.0
+31,3749117,Everton,Tomasz Radziński,85.0,56.1,5,45.0
+31,3749117,Arsenal,Jens Lehmann,14.9,44.4,7,19.9
+31,3749117,Arsenal,Robert Pirès,66.9,16.7,11,19.9
+31,3749117,Arsenal,Nwankwo Christian Kanu,74.9,42.6,8,19.9
+31,3749117,Arsenal,Ashley Cole,58.4,12.1,12,19.9
+31,3749117,Arsenal,Pascal Cygan,46.7,30.4,5,19.9
+31,3749117,Arsenal,Ray Parlour,60.9,53.1,13,19.9
+31,3749117,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,45.5,55.1,5,19.9
+31,3749117,Arsenal,Patrick Vieira,57.3,36.7,13,19.9
+31,3749117,Arsenal,Fredrik Ljungberg,69.3,61.0,7,19.9
+31,3749117,Arsenal,Thierry Henry,77.8,43.2,5,19.9
+31,3749117,Arsenal,Kolo Habib Touré,60.0,73.7,6,19.9
+32,3749153,Arsenal,Jens Lehmann,9.6,45.7,12,45.0
+32,3749153,Arsenal,Laureano Bisan-Etame Mayer,51.2,62.2,22,45.0
+32,3749153,Arsenal,Patrick Vieira,60.0,26.9,37,45.0
+32,3749153,Arsenal,Jérémie Aliadière,76.3,35.7,8,45.0
+32,3749153,Arsenal,Ashley Cole,56.4,7.8,22,45.0
+32,3749153,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,42.1,46.2,18,45.0
+32,3749153,Arsenal,Gilberto Aparecido da Silva,64.3,36.3,10,45.0
+32,3749153,Arsenal,Fredrik Ljungberg,76.4,49.0,11,45.0
+32,3749153,Arsenal,Pascal Cygan,42.1,24.6,29,45.0
+32,3749153,Arsenal,Robert Pirès,68.8,21.2,21,45.0
+32,3749153,Arsenal,Thierry Henry,79.2,32.3,8,45.0
+32,3749153,Middlesbrough,Joseph-Desiré Job,71.4,29.8,9,45.0
+32,3749153,Middlesbrough,Ugo Ehiogu,46.9,55.6,4,45.0
+32,3749153,Middlesbrough,Boudewijn Zenden,61.5,35.1,17,45.0
+32,3749153,Middlesbrough,Franck Queudrue,51.8,20.5,15,45.0
+32,3749153,Middlesbrough,Stewart Downing,59.8,19.9,12,45.0
+32,3749153,Middlesbrough,George Boateng,51.8,54.1,11,45.0
+32,3749153,Middlesbrough,Gareth Southgate,40.1,39.1,8,45.0
+32,3749153,Middlesbrough,Mark Schwarzer,10.2,36.7,6,45.0
+32,3749153,Middlesbrough,Danny Mills,44.9,72.5,9,45.0
+32,3749153,Middlesbrough,Szilárd Németh,61.8,67.4,7,45.0
+32,3749153,Middlesbrough,Dorival Guidoni Júnior,56.3,46.3,13,45.0
+33,3749133,Aston Villa,Jlloyd Tafari Samuel,61.7,13.5,29,85.6
+33,3749133,Aston Villa,Ronny Johnsen,42.4,34.3,20,85.6
+33,3749133,Aston Villa,Peter Whittingham,59.2,38.5,25,85.6
+33,3749133,Aston Villa,Gareth Barry,72.8,23.1,20,85.6
+33,3749133,Aston Villa,Olof Mellberg,49.6,57.5,31,85.6
+33,3749133,Aston Villa,Marcus Allbäck,80.7,40.4,15,85.6
+33,3749133,Aston Villa,Lee Hendrie,76.9,67.7,29,85.6
+33,3749133,Aston Villa,Mark Anthony Delaney,62.7,71.4,51,85.6
+33,3749133,Aston Villa,Thomas Hitzlsperger,64.8,56.9,35,85.6
+33,3749133,Aston Villa,Juan Pablo Ángel Arango,79.3,42.9,18,85.6
+33,3749133,Aston Villa,Thomas Løvendahl Sørensen,12.2,42.0,15,85.6
+33,3749133,Arsenal,Nwankwo Christian Kanu,65.3,41.9,23,76.1
+33,3749133,Arsenal,Thierry Henry,76.9,28.0,22,76.1
+33,3749133,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,38.2,51.3,24,76.1
+33,3749133,Arsenal,Laureano Bisan-Etame Mayer,52.7,67.3,40,76.1
+33,3749133,Arsenal,Pascal Cygan,40.4,27.2,27,76.1
+33,3749133,Arsenal,Ashley Cole,46.8,14.3,32,76.1
+33,3749133,Arsenal,Robert Pirès,61.7,25.4,29,76.1
+33,3749133,Arsenal,Fredrik Ljungberg,65.8,59.3,26,76.1
+33,3749133,Arsenal,Patrick Vieira,53.4,31.1,44,76.1
+33,3749133,Arsenal,Gilberto Aparecido da Silva,53.3,49.6,33,76.1
+33,3749133,Arsenal,Jens Lehmann,10.5,39.8,16,76.1
+36,3749233,Arsenal,Dennis Bergkamp,76.5,38.7,24,58.7
+36,3749233,Arsenal,Thierry Henry,84.1,23.1,17,58.7
+36,3749233,Arsenal,Laureano Bisan-Etame Mayer,63.6,67.1,51,58.7
+36,3749233,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,37.5,27.3,37,58.7
+36,3749233,Arsenal,Ashley Cole,56.1,10.3,50,58.7
+36,3749233,Arsenal,Gilberto Aparecido da Silva,59.7,23.1,36,58.7
+36,3749233,Arsenal,Kolo Habib Touré,39.3,50.3,31,58.7
+36,3749233,Arsenal,Robert Pirès,71.7,17.3,24,58.7
+36,3749233,Arsenal,Fredrik Ljungberg,73.6,63.0,19,58.7
+36,3749233,Arsenal,Ray Parlour,62.6,51.2,41,58.7
+36,3749233,Arsenal,Jens Lehmann,11.1,37.5,19,58.7
+36,3749233,Manchester City,Richard Dunne,37.8,48.5,22,75.3
+36,3749233,Manchester City,Joey Barton,58.4,38.6,37,75.3
+36,3749233,Manchester City,Paul Bosvelt,60.5,48.2,21,75.3
+36,3749233,Manchester City,Trevor Sinclair,68.7,21.0,19,75.3
+36,3749233,Manchester City,Michael Tarnat,47.6,14.8,26,75.3
+36,3749233,Manchester City,Claudio Reyna,64.5,43.5,23,75.3
+36,3749233,Manchester City,Nicolas Anelka,72.7,47.3,16,75.3
+36,3749233,Manchester City,Sylvain Distin,38.7,25.1,8,75.3
+36,3749233,Manchester City,Jihai Sun,52.8,66.8,20,75.3
+36,3749233,Manchester City,David James,10.7,42.6,9,75.3
+36,3749233,Manchester City,Shaun Wright-Phillips,64.2,65.0,14,75.3
+38,3749052,Wolverhampton Wanderers,Lee Naylor,55.8,18.8,29,75.3
+38,3749052,Wolverhampton Wanderers,Paul Jones,11.3,35.7,18,75.3
+38,3749052,Wolverhampton Wanderers,Alex Rae,64.6,41.9,23,75.3
+38,3749052,Wolverhampton Wanderers,Denis Irwin,60.5,65.8,24,75.3
+38,3749052,Wolverhampton Wanderers,Colin Cameron,72.7,32.3,21,75.3
+38,3749052,Wolverhampton Wanderers,Paul Butler,48.1,33.4,13,75.3
+38,3749052,Wolverhampton Wanderers,Carl Cort,87.4,24.4,14,75.3
+38,3749052,Wolverhampton Wanderers,Kenny Miller,64.7,59.2,12,75.3
+38,3749052,Wolverhampton Wanderers,Jody Craddock,68.0,48.6,6,75.3
+38,3749052,Wolverhampton Wanderers,Ioan Viorel Ganea,81.0,37.7,11,75.3
+38,3749052,Wolverhampton Wanderers,Mark Kennedy,72.8,12.4,12,75.3
+38,3749052,Arsenal,Thierry Henry,78.8,24.2,10,55.0
+38,3749052,Arsenal,Dennis Bergkamp,69.1,47.9,12,55.0
+38,3749052,Arsenal,Eduardo César Daude Gaspar,56.6,38.4,31,55.0
+38,3749052,Arsenal,Ashley Cole,51.3,9.5,30,55.0
+38,3749052,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,38.2,30.9,16,55.0
+38,3749052,Arsenal,Robert Pirès,67.9,32.7,21,55.0
+38,3749052,Arsenal,Kolo Habib Touré,47.6,56.8,19,55.0
+38,3749052,Arsenal,Laureano Bisan-Etame Mayer,57.5,72.6,46,55.0
+38,3749052,Arsenal,Patrick Vieira,58.0,52.1,26,55.0
+38,3749052,Arsenal,Gilberto Aparecido da Silva,65.2,70.6,20,55.0
+38,3749052,Arsenal,Jens Lehmann,8.9,53.5,4,55.0
+39,3749631,Arsenal,José Antonio Reyes Calderón,83.4,39.1,11,73.6
+39,3749631,Arsenal,Thierry Henry,77.5,24.7,14,73.6
+39,3749631,Arsenal,Gilberto Aparecido da Silva,60.8,39.3,39,73.6
+39,3749631,Arsenal,Ashley Cole,59.9,9.1,54,73.6
+39,3749631,Arsenal,Robert Pirès,76.1,17.6,35,73.6
+39,3749631,Arsenal,Kolo Habib Touré,37.7,50.5,39,73.6
+39,3749631,Arsenal,Laureano Bisan-Etame Mayer,60.6,70.0,45,73.6
+39,3749631,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,41.6,23.7,28,73.6
+39,3749631,Arsenal,Ray Parlour,75.4,64.7,28,73.6
+39,3749631,Arsenal,Jens Lehmann,11.8,42.1,12,73.6
+39,3749631,Arsenal,Patrick Vieira,64.2,23.9,33,73.6
+39,3749631,Southampton,Anders Svensson,64.5,42.7,8,26.3
+39,3749631,Southampton,Stephen Crainey,61.9,14.5,11,26.3
+39,3749631,Southampton,Danny Higginbotham,54.2,33.0,7,26.3
+39,3749631,Southampton,Graeme Le Saux,88.2,38.0,10,26.3
+39,3749631,Southampton,Antti Mikko Niemi,11.3,47.3,4,26.3
+39,3749631,Southampton,Rory Delap,71.2,52.7,5,26.3
+39,3749631,Southampton,Kevin Phillips,81.4,42.5,8,26.3
+39,3749631,Southampton,Darren Kenton,28.6,76.6,6,26.3
+39,3749631,Southampton,Paul Telfer,59.7,68.7,11,26.3
+39,3749631,Southampton,Brett Ormerod,78.9,46.6,4,26.3
+39,3749631,Southampton,Michael Lennart Svensson,37.0,61.1,3,26.3
+41,3749276,Chelsea,"Gérémi Sorele N""Djitap Fotso",77.9,16.4,29,62.2
+41,3749276,Chelsea,Adrian Mutu,90.0,49.6,15,62.2
+41,3749276,Chelsea,William Gallas,56.5,56.8,16,62.2
+41,3749276,Chelsea,Frank Lampard,71.4,39.9,29,62.2
+41,3749276,Chelsea,John Terry,45.9,29.3,31,62.2
+41,3749276,Chelsea,Neil Sullivan,13.4,46.0,5,62.2
+41,3749276,Chelsea,Eiður Smári Guðjohnsen,75.8,37.1,14,62.2
+41,3749276,Chelsea,Claude Makélélé,61.9,36.9,30,62.2
+41,3749276,Chelsea,Scott Parker,66.7,54.8,25,62.2
+41,3749276,Chelsea,Mario Melchiot,68.6,67.4,29,62.2
+41,3749276,Chelsea,Wayne Bridge,68.1,11.0,30,62.2
+41,3749276,Arsenal,Dennis Bergkamp,72.5,43.3,32,77.9
+41,3749276,Arsenal,Thierry Henry,73.6,44.1,13,77.9
+41,3749276,Arsenal,Patrick Vieira,57.4,46.7,31,77.9
+41,3749276,Arsenal,Laureano Bisan-Etame Mayer,53.7,65.7,37,77.9
+41,3749276,Arsenal,Robert Pirès,67.3,26.5,32,77.9
+41,3749276,Arsenal,Eduardo César Daude Gaspar,62.4,25.4,30,77.9
+41,3749276,Arsenal,Jens Lehmann,11.7,42.0,12,77.9
+41,3749276,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,37.7,34.4,18,77.9
+41,3749276,Arsenal,Gaël Clichy,56.5,12.5,36,77.9
+41,3749276,Arsenal,Kolo Habib Touré,45.2,54.8,20,77.9
+41,3749276,Arsenal,Gilberto Aparecido da Silva,64.9,65.6,16,77.9
+43,3749642,Arsenal,Eduardo César Daude Gaspar,60.0,30.3,52,73.7
+43,3749642,Arsenal,Patrick Vieira,64.2,42.5,44,73.7
+43,3749642,Arsenal,Fredrik Ljungberg,76.6,61.8,29,73.7
+43,3749642,Arsenal,Laureano Bisan-Etame Mayer,57.9,65.9,47,73.7
+43,3749642,Arsenal,Dennis Bergkamp,74.0,43.1,43,73.7
+43,3749642,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,45.6,31.7,37,73.7
+43,3749642,Arsenal,Thierry Henry,81.2,32.4,28,73.7
+43,3749642,Arsenal,Ashley Cole,58.8,10.7,44,73.7
+43,3749642,Arsenal,Robert Pirès,72.9,17.1,56,73.7
+43,3749642,Arsenal,Kolo Habib Touré,44.3,46.4,26,73.7
+43,3749642,Arsenal,Jens Lehmann,14.0,37.5,13,73.7
+43,3749642,Charlton Athletic,Paolo Di Canio,79.4,39.7,23,77.5
+43,3749642,Charlton Athletic,Matt Holland,56.5,47.5,40,77.5
+43,3749642,Charlton Athletic,Hermann Hreidarsson,59.7,11.0,30,77.5
+43,3749642,Charlton Athletic,Carlton Cole Okirie,87.1,42.0,16,77.5
+43,3749642,Charlton Athletic,Graham Stuart,68.3,21.3,26,77.5
+43,3749642,Charlton Athletic,Mark Fish,45.5,43.9,11,77.5
+43,3749642,Charlton Athletic,Jonathan Fortune,41.6,32.9,7,77.5
+43,3749642,Charlton Athletic,Claus Jensen,66.3,41.0,34,77.5
+43,3749642,Charlton Athletic,Radostin Kishishev,59.4,61.5,25,77.5
+43,3749642,Charlton Athletic,Luke Young,59.7,73.3,28,77.5
+43,3749642,Charlton Athletic,Dean Kiely,9.8,39.6,9,77.5
+46,3749465,Blackburn Rovers,Matt Jansen,86.9,47.1,15,72.0
+46,3749465,Blackburn Rovers,Tugay Kerimoğlu,57.8,47.8,25,72.0
+46,3749465,Blackburn Rovers,Michael Gray,59.9,14.1,30,72.0
+46,3749465,Blackburn Rovers,Brett Emerton,69.4,65.7,27,72.0
+46,3749465,Blackburn Rovers,Lucas Neill,57.9,69.5,44,72.0
+46,3749465,Blackburn Rovers,Andy Todd,37.4,50.0,21,72.0
+46,3749465,Blackburn Rovers,Martin Andresen,66.2,43.1,26,72.0
+46,3749465,Blackburn Rovers,Jonathan Douglas,69.9,20.8,9,72.0
+46,3749465,Blackburn Rovers,Craig Short,52.0,32.9,17,72.0
+46,3749465,Blackburn Rovers,Andy Cole,80.4,45.9,9,72.0
+46,3749465,Blackburn Rovers,Brad Friedel,10.6,43.0,11,72.0
+46,3749465,Arsenal,Gilberto Aparecido da Silva,67.7,65.5,31,77.4
+46,3749465,Arsenal,Patrick Vieira,59.9,44.7,56,77.4
+46,3749465,Arsenal,Kolo Habib Touré,44.1,49.6,43,77.4
+46,3749465,Arsenal,Laureano Bisan-Etame Mayer,53.5,67.1,50,77.4
+46,3749465,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,39.8,24.7,19,77.4
+46,3749465,Arsenal,Jens Lehmann,11.0,40.9,18,77.4
+46,3749465,Arsenal,Robert Pirès,59.7,24.8,58,77.4
+46,3749465,Arsenal,Eduardo César Daude Gaspar,59.0,33.4,51,77.4
+46,3749465,Arsenal,José Antonio Reyes Calderón,68.1,26.9,30,77.4
+46,3749465,Arsenal,Ashley Cole,57.1,8.9,49,77.4
+46,3749465,Arsenal,Thierry Henry,77.8,28.0,24,77.4
+47,3749403,Arsenal,Thierry Henry,78.8,30.7,25,68.4
+47,3749403,Arsenal,Dennis Bergkamp,69.8,42.9,24,68.4
+47,3749403,Arsenal,Eduardo César Daude Gaspar,61.0,28.8,46,68.4
+47,3749403,Arsenal,Ashley Cole,51.5,6.5,41,68.4
+47,3749403,Arsenal,Robert Pirès,68.1,19.6,33,68.4
+47,3749403,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,41.4,25.2,28,68.4
+47,3749403,Arsenal,Kolo Habib Touré,44.9,47.5,41,68.4
+47,3749403,Arsenal,Patrick Vieira,59.2,38.0,48,68.4
+47,3749403,Arsenal,Jens Lehmann,11.1,40.8,18,68.4
+47,3749403,Arsenal,Gilberto Aparecido da Silva,69.9,60.3,39,68.4
+47,3749403,Arsenal,Laureano Bisan-Etame Mayer,51.5,65.4,44,68.4
+47,3749403,Bolton Wanderers,Nicky Hunt,59.6,72.7,24,76.0
+47,3749403,Bolton Wanderers,"Bruno N""Gotty",41.8,43.6,16,76.0
+47,3749403,Bolton Wanderers,Jussi Jääskeläinen,10.7,46.2,9,76.0
+47,3749403,Bolton Wanderers,Stylianos Giannakopoulos,68.6,64.6,21,76.0
+47,3749403,Bolton Wanderers,Kevin Nolan,60.6,53.1,14,76.0
+47,3749403,Bolton Wanderers,Émerson Augusto Thome,44.1,57.1,18,76.0
+47,3749403,Bolton Wanderers,"Augustine Azuka ""Jay-Jay"" Okocha",67.6,30.9,21,76.0
+47,3749403,Bolton Wanderers,Iván Campo Ramos,55.6,43.6,23,76.0
+47,3749403,Bolton Wanderers,Kevin Cyril Davies,87.7,35.5,12,76.0
+47,3749403,Bolton Wanderers,Simon Charlton,55.0,19.7,18,76.0
+47,3749403,Bolton Wanderers,Henrik Pedersen,78.7,29.4,9,76.0
+49,3749246,Arsenal,José Antonio Reyes Calderón,68.8,32.2,11,77.0
+49,3749246,Arsenal,Thierry Henry,80.4,29.7,14,77.0
+49,3749246,Arsenal,Laureano Bisan-Etame Mayer,53.0,68.5,25,77.0
+49,3749246,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,35.3,28.6,15,77.0
+49,3749246,Arsenal,Gaël Clichy,52.0,10.6,31,77.0
+49,3749246,Arsenal,Kolo Habib Touré,44.2,50.3,17,77.0
+49,3749246,Arsenal,Patrick Vieira,60.6,43.2,23,77.0
+49,3749246,Arsenal,Eduardo César Daude Gaspar,53.1,34.8,28,77.0
+49,3749246,Arsenal,Robert Pirès,67.8,21.9,38,77.0
+49,3749246,Arsenal,Fredrik Ljungberg,68.1,56.2,9,77.0
+49,3749246,Arsenal,Jens Lehmann,13.3,44.5,17,77.0
+49,3749246,Manchester United,Gary Neville,61.3,72.0,31,58.5
+49,3749246,Manchester United,Mikaël Silvestre,38.3,26.0,13,58.5
+49,3749246,Manchester United,John O''Shea,57.9,11.4,17,58.5
+49,3749246,Manchester United,Roy Keane,53.6,36.2,31,58.5
+49,3749246,Manchester United,Eric Daniel Djemba-Djemba,67.5,49.1,16,58.5
+49,3749246,Manchester United,Paul Scholes,72.5,40.0,23,58.5
+49,3749246,Manchester United,Wes Brown,47.7,54.9,13,58.5
+49,3749246,Manchester United,Ryan Giggs,74.6,28.5,13,58.5
+49,3749246,Manchester United,Roy Carroll,9.5,45.1,12,58.5
+49,3749246,Manchester United,Darren Fletcher,76.1,70.8,24,58.5
+49,3749246,Manchester United,Ruud van Nistelrooy,75.9,54.5,11,58.5
+52,3749448,Arsenal,Ashley Cole,59.6,8.5,48,71.7
+52,3749448,Arsenal,Patrick Vieira,57.8,30.5,46,71.7
+52,3749448,Arsenal,Jens Lehmann,10.0,33.3,13,71.7
+52,3749448,Arsenal,Thierry Henry,78.9,31.5,12,71.7
+52,3749448,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,46.3,24.4,23,71.7
+52,3749448,Arsenal,Robert Pirès,68.5,20.1,37,71.7
+52,3749448,Arsenal,Dennis Bergkamp,70.0,42.8,24,71.7
+52,3749448,Arsenal,Kolo Habib Touré,43.2,48.1,28,71.7
+52,3749448,Arsenal,Laureano Bisan-Etame Mayer,59.0,66.5,47,71.7
+52,3749448,Arsenal,Gilberto Aparecido da Silva,59.0,48.0,41,71.7
+52,3749448,Arsenal,Fredrik Ljungberg,76.5,67.0,22,71.7
+52,3749448,Liverpool,Steven Gerrard,54.6,39.0,21,65.4
+52,3749448,Liverpool,Michael Owen,84.4,41.2,5,65.4
+52,3749448,Liverpool,Dietmar Hamann,54.9,41.1,21,65.4
+52,3749448,Liverpool,Jamie Carragher,53.7,72.7,26,65.4
+52,3749448,Liverpool,El-Hadji Ousseynou Diouf,65.0,65.3,13,65.4
+52,3749448,Liverpool,Igor Bišćan,40.7,45.2,10,65.4
+52,3749448,Liverpool,Jerzy Dudek,11.5,40.5,11,65.4
+52,3749448,Liverpool,Emile Heskey,65.6,33.9,14,65.4
+52,3749448,Liverpool,Harry Kewell,72.0,30.4,14,65.4
+52,3749448,Liverpool,Sami Hyypiä,42.6,35.3,14,65.4
+52,3749448,Liverpool,John Arne Semundseth Riise,49.7,9.8,16,65.4
+53,3749431,Newcastle United,Jermaine Jenas,62.2,49.9,31,78.1
+53,3749431,Newcastle United,Craig Bellamy,79.2,42.4,12,78.1
+53,3749431,Newcastle United,Gary Speed,62.4,36.1,34,78.1
+53,3749431,Newcastle United,Laurent Robert,66.8,21.7,19,78.1
+53,3749431,Newcastle United,Jonathan Woodgate,40.3,33.4,28,78.1
+53,3749431,Newcastle United,Aaron Hughes,51.5,67.9,38,78.1
+53,3749431,Newcastle United,"Andy O""Brien",40.6,57.1,12,78.1
+53,3749431,Newcastle United,Shay Given,13.6,35.9,20,78.1
+53,3749431,Newcastle United,Alan Shearer,80.3,47.4,6,78.1
+53,3749431,Newcastle United,Olivier Bernard,56.2,15.2,13,78.1
+53,3749431,Newcastle United,Darren Ambrose,62.9,64.3,17,78.1
+53,3749431,Arsenal,Patrick Vieira,62.8,26.9,41,79.0
+53,3749431,Arsenal,Eduardo César Daude Gaspar,64.1,18.3,35,79.0
+53,3749431,Arsenal,Gilberto Aparecido da Silva,55.3,43.3,46,79.0
+53,3749431,Arsenal,Thierry Henry,74.0,31.8,23,79.0
+53,3749431,Arsenal,José Antonio Reyes Calderón,74.2,36.7,14,79.0
+53,3749431,Arsenal,Sylvain Wiltord,67.9,57.0,23,79.0
+53,3749431,Arsenal,Laureano Bisan-Etame Mayer,49.9,67.5,38,79.0
+53,3749431,Arsenal,Kolo Habib Touré,39.2,50.2,22,79.0
+53,3749431,Arsenal,Jens Lehmann,10.1,39.9,13,79.0
+53,3749431,Arsenal,Ashley Cole,56.2,7.6,35,79.0
+53,3749431,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,44.2,28.1,21,79.0
+54,3749453,Arsenal,Jens Lehmann,8.6,41.1,14,68.7
+54,3749453,Arsenal,Gaël Clichy,47.5,9.1,35,68.7
+54,3749453,Arsenal,Patrick Vieira,53.3,34.1,37,68.7
+54,3749453,Arsenal,Thierry Henry,75.0,41.2,16,68.7
+54,3749453,Arsenal,Robert Pirès,62.5,34.8,30,68.7
+54,3749453,Arsenal,Dennis Bergkamp,66.7,40.9,29,68.7
+54,3749453,Arsenal,Laureano Bisan-Etame Mayer,53.8,70.6,44,68.7
+54,3749453,Arsenal,Sylvain Wiltord,68.0,55.1,27,68.7
+54,3749453,Arsenal,Gilberto Aparecido da Silva,52.3,48.3,54,68.7
+54,3749453,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,35.2,29.7,25,68.7
+54,3749453,Arsenal,Kolo Habib Touré,34.7,56.4,22,68.7
+54,3749453,Leeds United,Alan Smith,78.2,41.0,35,71.8
+54,3749453,Leeds United,Mark Viduka,79.9,36.8,19,71.8
+54,3749453,Leeds United,Jermaine Pennant,78.9,67.2,26,71.8
+54,3749453,Leeds United,Lucas Radebe,62.5,51.4,33,71.8
+54,3749453,Leeds United,Michael Duberry,45.6,53.8,12,71.8
+54,3749453,Leeds United,Gary Oliver Kelly,62.8,71.9,29,71.8
+54,3749453,Leeds United,Paul Robinson,14.1,45.8,14,71.8
+54,3749453,Leeds United,Ian Harte,61.8,14.2,27,71.8
+54,3749453,Leeds United,Dominic Matteo,69.6,31.2,24,71.8
+54,3749453,Leeds United,Steven Caldwell,38.9,37.8,15,71.8
+54,3749453,Leeds United,James Philip Milner,77.0,12.5,24,71.8
+55,3749068,Tottenham Hotspur,Kasey Keller,15.0,42.5,10,45.0
+55,3749068,Tottenham Hotspur,Frédéric Oumar Kanouté,84.1,44.2,7,45.0
+55,3749068,Tottenham Hotspur,Mauricio Taricco,63.0,11.7,28,45.0
+55,3749068,Tottenham Hotspur,Jamie Redknapp,60.3,41.1,33,45.0
+55,3749068,Tottenham Hotspur,Ledley King,44.2,37.9,21,45.0
+55,3749068,Tottenham Hotspur,Robbie Keane,74.6,31.0,15,45.0
+55,3749068,Tottenham Hotspur,Johnnie Jackson,70.8,19.3,15,45.0
+55,3749068,Tottenham Hotspur,Stephen Kelly,59.4,73.1,23,45.0
+55,3749068,Tottenham Hotspur,Anthony Gardner,46.0,54.4,15,45.0
+55,3749068,Tottenham Hotspur,Simon Davies,65.7,60.1,10,45.0
+55,3749068,Tottenham Hotspur,Michael Brown,57.8,44.1,20,45.0
+55,3749068,Arsenal,Thierry Henry,73.8,33.8,10,66.7
+55,3749068,Arsenal,Dennis Bergkamp,66.1,37.1,15,66.7
+55,3749068,Arsenal,Patrick Vieira,54.5,33.1,49,66.7
+55,3749068,Arsenal,Ashley Cole,52.9,7.6,35,66.7
+55,3749068,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,36.1,19.8,13,66.7
+55,3749068,Arsenal,Gilberto Aparecido da Silva,52.8,43.5,32,66.7
+55,3749068,Arsenal,Kolo Habib Touré,35.8,48.1,23,66.7
+55,3749068,Arsenal,Laureano Bisan-Etame Mayer,49.0,70.4,31,66.7
+55,3749068,Arsenal,Ray Parlour,68.4,67.4,15,66.7
+55,3749068,Arsenal,Robert Pirès,61.1,18.5,32,66.7
+55,3749068,Arsenal,Jens Lehmann,8.2,41.8,8,66.7
+56,3749462,Arsenal,Kolo Habib Touré,42.7,50.6,44,69.0
+56,3749462,Arsenal,Dennis Bergkamp,68.4,58.0,32,69.0
+56,3749462,Arsenal,José Antonio Reyes Calderón,75.6,33.8,15,69.0
+56,3749462,Arsenal,Jens Lehmann,11.2,42.4,20,69.0
+56,3749462,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,37.3,24.6,52,69.0
+56,3749462,Arsenal,Patrick Vieira,58.3,30.5,57,69.0
+56,3749462,Arsenal,Thierry Henry,74.4,40.2,13,69.0
+56,3749462,Arsenal,Laureano Bisan-Etame Mayer,52.8,66.2,52,69.0
+56,3749462,Arsenal,Fredrik Ljungberg,64.0,30.5,28,69.0
+56,3749462,Arsenal,Ashley Cole,51.1,9.9,58,69.0
+56,3749462,Arsenal,Gilberto Aparecido da Silva,56.9,41.4,60,69.0
+56,3749462,Birmingham City,David Dunn,64.6,46.4,26,71.8
+56,3749462,Birmingham City,Stan Lazaridis,71.5,17.3,15,71.8
+56,3749462,Birmingham City,Robbie Savage,58.1,49.1,38,71.8
+56,3749462,Birmingham City,Jamie Clapham,47.0,10.7,23,71.8
+56,3749462,Birmingham City,Matthew Upson,37.4,26.2,22,71.8
+56,3749462,Birmingham City,Stephen Clemence,51.8,42.3,29,71.8
+56,3749462,Birmingham City,Olivier Tébily,44.0,66.7,30,71.8
+56,3749462,Birmingham City,Damien Johnson,62.5,70.6,18,71.8
+56,3749462,Birmingham City,Kenny Cunningham,35.6,55.1,25,71.8
+56,3749462,Birmingham City,Ian Bennett,12.5,40.6,9,71.8
+56,3749462,Birmingham City,Clinton Morrison,76.2,50.3,12,71.8
+57,3749274,Portsmouth,Richard Hughes,65.5,19.2,25,79.6
+57,3749274,Portsmouth,Nigel Quashie,56.6,28.9,23,79.6
+57,3749274,Portsmouth,Dejan Stefanovic,35.2,26.1,9,79.6
+57,3749274,Portsmouth,Matthew Taylor,62.8,8.5,29,79.6
+57,3749274,Portsmouth,Yakubu Aiyegbeni,78.7,25.0,11,79.6
+57,3749274,Portsmouth,Steve Stone,57.4,60.6,14,79.6
+57,3749274,Portsmouth,John Curtis,48.5,60.3,10,79.6
+57,3749274,Portsmouth,Amdy Moustapha Faye,56.8,47.4,17,79.6
+57,3749274,Portsmouth,Trésor Lomana LuaLua,78.9,42.3,9,79.6
+57,3749274,Portsmouth,Shaka Hislop,9.4,38.5,7,79.6
+57,3749274,Portsmouth,Arjan de Zeeuw,29.4,50.1,11,79.6
+57,3749274,Arsenal,Ashley Cole,59.3,10.2,42,60.9
+57,3749274,Arsenal,Ray Parlour,58.6,46.8,55,60.9
+57,3749274,Arsenal,David Bentley,70.2,66.6,40,60.9
+57,3749274,Arsenal,Thierry Henry,80.5,30.0,26,60.9
+57,3749274,Arsenal,José Antonio Reyes Calderón,72.0,36.2,21,60.9
+57,3749274,Arsenal,Laureano Bisan-Etame Mayer,57.7,70.1,55,60.9
+57,3749274,Arsenal,Patrick Vieira,63.3,35.5,62,60.9
+57,3749274,Arsenal,Kolo Habib Touré,33.9,49.1,27,60.9
+57,3749274,Arsenal,Fredrik Ljungberg,74.5,18.2,30,60.9
+57,3749274,Arsenal,Jens Lehmann,10.8,42.6,16,60.9
+57,3749274,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,42.0,23.0,18,60.9
+58,3749603,Fulham,Junichi Inamoto,70.5,40.0,17,57.7
+58,3749603,Fulham,Martin Djetou,62.5,36.0,30,57.7
+58,3749603,Fulham,Sylvain Legwinski,68.6,51.4,30,57.7
+58,3749603,Fulham,Luís Boa Morte Pereira,87.3,41.2,13,57.7
+58,3749603,Fulham,Steed Malbranque,74.7,24.6,21,57.7
+58,3749603,Fulham,Moritz Volz,69.5,71.3,26,57.7
+58,3749603,Fulham,Sean Davis,69.3,47.8,30,57.7
+58,3749603,Fulham,Edwin van der Sar,10.0,41.4,8,57.7
+58,3749603,Fulham,Carlos Manuel Bocanegra,52.4,16.1,22,57.7
+58,3749603,Fulham,Alain Goma,38.0,24.8,17,57.7
+58,3749603,Fulham,Ian Pearce,44.9,59.8,9,57.7
+58,3749603,Arsenal,José Antonio Reyes Calderón,64.7,28.3,14,70.8
+58,3749603,Arsenal,Thierry Henry,68.3,27.0,18,70.8
+58,3749603,Arsenal,Patrick Vieira,50.3,24.9,43,70.8
+58,3749603,Arsenal,Ashley Cole,48.7,7.8,53,70.8
+58,3749603,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,30.3,25.2,22,70.8
+58,3749603,Arsenal,Laureano Bisan-Etame Mayer,51.3,70.6,40,70.8
+58,3749603,Arsenal,Fredrik Ljungberg,71.2,64.9,17,70.8
+58,3749603,Arsenal,Ray Parlour,57.8,52.2,29,70.8
+58,3749603,Arsenal,Jens Lehmann,8.1,41.4,19,70.8
+58,3749603,Arsenal,Robert Pirès,55.1,13.1,34,70.8
+58,3749603,Arsenal,Kolo Habib Touré,38.5,53.7,24,70.8
+59,3749257,Arsenal,Patrick Vieira,64.9,32.2,73,69.8
+59,3749257,Arsenal,Dennis Bergkamp,82.3,41.2,39,69.8
+59,3749257,Arsenal,Fredrik Ljungberg,80.2,60.1,27,69.8
+59,3749257,Arsenal,Laureano Bisan-Etame Mayer,69.5,69.1,49,69.8
+59,3749257,Arsenal,Gilberto Aparecido da Silva,60.1,46.0,71,69.8
+59,3749257,Arsenal,Kolo Habib Touré,49.5,51.6,25,69.8
+59,3749257,Arsenal,Sulzeer Jeremiah ''Sol' Campbell,39.1,27.0,18,69.8
+59,3749257,Arsenal,Robert Pirès,70.3,24.8,49,69.8
+59,3749257,Arsenal,Thierry Henry,83.0,37.2,23,69.8
+59,3749257,Arsenal,Ashley Cole,59.7,13.7,32,69.8
+59,3749257,Arsenal,Jens Lehmann,11.4,35.1,11,69.8
+59,3749257,Leicester City,Paul Dickov,74.5,39.9,16,75.5
+59,3749257,Leicester City,Marcus Bent,65.8,54.3,21,75.5
+59,3749257,Leicester City,Billy McKinlay,49.0,41.5,24,75.5
+59,3749257,Leicester City,Jordan Stewart,58.5,11.5,23,75.5
+59,3749257,Leicester City,Matt Heath,51.0,29.3,13,75.5
+59,3749257,Leicester City,Ian Walker,11.1,44.4,13,75.5
+59,3749257,Leicester City,Lilian Nalis,57.8,26.9,26,75.5
+59,3749257,Leicester City,Steffen Freund,49.6,55.8,17,75.5
+59,3749257,Leicester City,Frank Mohammed Sinclair,50.8,67.8,29,75.5
+59,3749257,Leicester City,James Scowcroft,69.4,21.1,13,75.5
+59,3749257,Leicester City,Nikos Dabizas,48.2,56.0,15,75.5

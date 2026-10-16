@@ -1,0 +1,163 @@
+match_no,date,competition,round,opponent,venue,team,for_club,minute,period,player,player_id,player_link,penalty,own_goal,score_after,club_score_after
+1,2003-08-10,Community Shield,Final,Manchester United,N,Manchester United,0,15,1H,Silvestre,93215,,,,1-0,0-1
+1,2003-08-10,Community Shield,Final,Manchester United,N,Arsenal,1,20,1H,Henry,4095,,,,1-1,1-1
+2,2003-08-16,Premier League,1,Everton,H,Arsenal,1,33,1H,Henry,4095,,1,,1-0,1-0
+2,2003-08-16,Premier League,1,Everton,H,Arsenal,1,57,2H,Pirès,2345,,,,2-0,2-0
+2,2003-08-16,Premier League,1,Everton,H,Everton,0,83,2H,Radzinski,94208,,,,2-1,2-1
+3,2003-08-24,Premier League,2,Middlesbrough,A,Arsenal,1,5,1H,Henry,4095,,,,0-1,1-0
+3,2003-08-24,Premier League,2,Middlesbrough,A,Arsenal,1,13,1H,Gilberto Silva,94320,,,,0-2,2-0
+3,2003-08-24,Premier League,2,Middlesbrough,A,Arsenal,1,22,1H,Wiltord,93929,,,,0-3,3-0
+3,2003-08-24,Premier League,2,Middlesbrough,A,Arsenal,1,60,2H,Wiltord,93929,,,,0-4,4-0
+4,2003-08-27,Premier League,3,Aston Villa,H,Arsenal,1,56,2H,Campbell,93793,,,,1-0,1-0
+4,2003-08-27,Premier League,3,Aston Villa,H,Arsenal,1,90,2H,Henry,4095,,,,2-0,2-0
+5,2003-08-31,Premier League,4,Manchester City,A,Manchester City,0,10,1H,Lauren,1730,,,1,1-0,0-1
+5,2003-08-31,Premier League,4,Manchester City,A,Arsenal,1,48,2H,Wiltord,93929,,,,1-1,1-1
+5,2003-08-31,Premier League,4,Manchester City,A,Arsenal,1,72,2H,Ljungberg,93785,,,,1-2,2-1
+6,2003-09-13,Premier League,5,Portsmouth,H,Arsenal,1,39,1H,Henry,4095,,1,,1-1,1-1
+6,2003-09-13,Premier League,5,Portsmouth,H,Portsmouth,0,25,1H,Sheringham,93830,,,,0-1,0-1
+7,2003-09-17,Champions League,"Group stage, matchday 1",Inter,H,Inter,0,22,1H,Cruz,95930,,,,0-1,0-1
+7,2003-09-17,Champions League,"Group stage, matchday 1",Inter,H,Inter,0,24,1H,Van der Meyde,94790,,,,0-2,0-2
+7,2003-09-17,Champions League,"Group stage, matchday 1",Inter,H,Inter,0,41,1H,Martins,18036,,,,0-3,0-3
+9,2003-09-26,Premier League,7,Newcastle,H,Arsenal,1,17,1H,Henry,4095,,,,1-0,1-0
+9,2003-09-26,Premier League,7,Newcastle,H,Arsenal,1,66,2H,Gilberto Silva,94320,,,,2-1,2-1
+9,2003-09-26,Premier League,7,Newcastle,H,Arsenal,1,79,2H,Henry,4095,,1,,3-2,3-2
+9,2003-09-26,Premier League,7,Newcastle,H,Newcastle,0,25,1H,Robert,1732,,,,1-1,1-1
+9,2003-09-26,Premier League,7,Newcastle,H,Newcastle,0,70,2H,Bernard,94222,,,,2-2,2-2
+11,2003-10-04,Premier League,8,Liverpool,A,Liverpool,0,13,1H,Kewell,94028,,,,1-0,0-1
+11,2003-10-04,Premier League,8,Liverpool,A,Arsenal,1,31,1H,Hyypiä,93057,,,1,1-1,1-1
+11,2003-10-04,Premier League,8,Liverpool,A,Arsenal,1,68,2H,Pirès,2345,,,,1-2,2-1
+12,2003-10-18,Premier League,9,Chelsea,H,Arsenal,1,5,1H,Edu,649,,,,1-0,1-0
+12,2003-10-18,Premier League,9,Chelsea,H,Arsenal,1,75,2H,Henry,4095,,,,2-1,2-1
+12,2003-10-18,Premier League,9,Chelsea,H,Chelsea,0,8,1H,Crespo,94482,,,,1-1,1-1
+13,2003-10-21,Champions League,"Group stage, matchday 3",Dynamo Kyiv,A,Dynamo Kyiv,0,27,1H,Shatskikh,47477,,,,1-0,0-1
+13,2003-10-21,Champions League,"Group stage, matchday 3",Dynamo Kyiv,A,Dynamo Kyiv,0,64,2H,Belkevich,44752,,,,2-0,0-2
+13,2003-10-21,Champions League,"Group stage, matchday 3",Dynamo Kyiv,A,Arsenal,1,80,2H,Henry,4095,,,,2-1,1-2
+14,2003-10-26,Premier League,10,Charlton Athletic,A,Charlton Athletic,0,28,1H,Di Canio,93618,,1,,1-0,0-1
+14,2003-10-26,Premier League,10,Charlton Athletic,A,Arsenal,1,39,1H,Henry,4095,,,,1-1,1-1
+15,2003-10-28,League Cup,Third round,Rotherham United,H,Arsenal,1,11,1H,Aliadière,94263,Jérémie Aliadière,,,1-0,1-0
+15,2003-10-28,League Cup,Third round,Rotherham United,H,Rotherham United,0,90,2H,Byfield,,Darren Byfield,,,1-1,1-1
+16,2003-11-01,Premier League,11,Leeds,A,Leeds,0,64,2H,Smith,93691,,,,1-4,4-1
+16,2003-11-01,Premier League,11,Leeds,A,Arsenal,1,8,1H,Henry,4095,,,,0-1,1-0
+16,2003-11-01,Premier League,11,Leeds,A,Arsenal,1,17,1H,Pirès,2345,,,,0-2,2-0
+16,2003-11-01,Premier League,11,Leeds,A,Arsenal,1,33,1H,Henry,4095,,,,0-3,3-0
+16,2003-11-01,Premier League,11,Leeds,A,Arsenal,1,50,2H,Gilberto Silva,94320,,,,0-4,4-0
+17,2003-11-05,Champions League,"Group stage, matchday 4",Dynamo Kyiv,H,Arsenal,1,88,2H,Cole,93939,,,,1-0,1-0
+18,2003-11-08,Premier League,12,Tottenham,H,Arsenal,1,69,2H,Pirès,2345,,,,1-1,1-1
+18,2003-11-08,Premier League,12,Tottenham,H,Arsenal,1,79,2H,Ljungberg,93785,,,,2-1,2-1
+18,2003-11-08,Premier League,12,Tottenham,H,Tottenham,0,5,1H,Anderton,93796,,,,0-1,0-1
+19,2003-11-22,Premier League,13,Birmingham,A,Arsenal,1,4,1H,Ljungberg,93785,,,,0-1,1-0
+19,2003-11-22,Premier League,13,Birmingham,A,Arsenal,1,80,2H,Bergkamp,93781,,,,0-2,2-0
+19,2003-11-22,Premier League,13,Birmingham,A,Arsenal,1,88,2H,Pirès,2345,,,,0-3,3-0
+20,2003-11-25,Champions League,"Group stage, matchday 5",Inter,A,Inter,0,33,1H,Vieri,429,,,,1-1,1-1
+20,2003-11-25,Champions League,"Group stage, matchday 5",Inter,A,Arsenal,1,25,1H,Henry,4095,,,,0-1,1-0
+20,2003-11-25,Champions League,"Group stage, matchday 5",Inter,A,Arsenal,1,49,2H,Ljungberg,93785,,,,1-2,2-1
+20,2003-11-25,Champions League,"Group stage, matchday 5",Inter,A,Arsenal,1,85,2H,Henry,4095,,,,1-3,3-1
+20,2003-11-25,Champions League,"Group stage, matchday 5",Inter,A,Arsenal,1,88,2H,Edu,649,,,,1-4,4-1
+20,2003-11-25,Champions League,"Group stage, matchday 5",Inter,A,Arsenal,1,89,2H,Pirès,2345,,,,1-5,5-1
+22,2003-12-02,League Cup,Fourth round,Wolverhampton Wanderers,H,Arsenal,1,24,1H,Aliadière,94263,Jérémie Aliadière,,,1-0,1-0
+22,2003-12-02,League Cup,Fourth round,Wolverhampton Wanderers,H,Arsenal,1,71,2H,Aliadière,94263,Jérémie Aliadière,,,3-0,3-0
+22,2003-12-02,League Cup,Fourth round,Wolverhampton Wanderers,H,Arsenal,1,68,2H,Kanu,93787,Nwankwo Kanu,,,2-0,2-0
+22,2003-12-02,League Cup,Fourth round,Wolverhampton Wanderers,H,Arsenal,1,79,2H,Wiltord,93929,Sylvain Wiltord,,,4-0,4-0
+22,2003-12-02,League Cup,Fourth round,Wolverhampton Wanderers,H,Arsenal,1,88,2H,Fàbregas,10217,Cesc Fàbregas,,,5-1,5-1
+22,2003-12-02,League Cup,Fourth round,Wolverhampton Wanderers,H,Wolverhampton Wanderers,0,81,2H,Rae,,Alex Rae,,,4-1,4-1
+23,2003-12-06,Premier League,15,Leicester,A,Leicester,0,90,2H,Hignett,94156,,,,1-1,1-1
+23,2003-12-06,Premier League,15,Leicester,A,Arsenal,1,60,2H,Gilberto Silva,94320,,,,0-1,1-0
+24,2003-12-10,Champions League,"Group stage, matchday 6",Lokomotiv Moskva,H,Arsenal,1,12,1H,Pirès,2345,,,,1-0,1-0
+24,2003-12-10,Champions League,"Group stage, matchday 6",Lokomotiv Moskva,H,Arsenal,1,67,2H,Ljungberg,93785,,,,2-0,2-0
+25,2003-12-14,Premier League,16,Blackburn Rovers,H,Arsenal,1,11,1H,Bergkamp,93781,,,,1-0,1-0
+26,2003-12-16,League Cup,Fifth round,West Bromwich Albion,A,Arsenal,1,25,1H,Kanu,93787,Nwankwo Kanu,,,0-1,1-0
+26,2003-12-16,League Cup,Fifth round,West Bromwich Albion,A,Arsenal,1,57,2H,Aliadière,94263,Jérémie Aliadière,,,0-2,2-0
+27,2003-12-20,Premier League,17,Bolton Wanderers,A,Bolton Wanderers,0,83,2H,Pedersen,94128,,,,1-1,1-1
+27,2003-12-20,Premier League,17,Bolton Wanderers,A,Arsenal,1,57,2H,Pirès,2345,,,,0-1,1-0
+28,2003-12-26,Premier League,18,Wolverhampton,H,Arsenal,1,13,1H,Craddock,93887,,,1,1-0,1-0
+28,2003-12-26,Premier League,18,Wolverhampton,H,Arsenal,1,20,1H,Henry,4095,,,,2-0,2-0
+28,2003-12-26,Premier League,18,Wolverhampton,H,Arsenal,1,89,2H,Henry,4095,,,,3-0,3-0
+29,2003-12-29,Premier League,19,Southampton,A,Arsenal,1,35,1H,Pirès,2345,,,,0-1,1-0
+30,2004-01-04,FA Cup,Third round,Leeds United,A,Leeds United,0,8,1H,Viduka,,Mark Viduka,,,1-0,0-1
+30,2004-01-04,FA Cup,Third round,Leeds United,A,Arsenal,1,26,1H,Henry,4095,Thierry Henry,,,1-1,1-1
+30,2004-01-04,FA Cup,Third round,Leeds United,A,Arsenal,1,33,1H,Edu,649,Edu,,,1-2,2-1
+30,2004-01-04,FA Cup,Third round,Leeds United,A,Arsenal,1,87,2H,Pirès,2345,Robert Pires,,,1-3,3-1
+30,2004-01-04,FA Cup,Third round,Leeds United,A,Arsenal,1,90,2H,Kolo Touré,94319,Kolo Touré,,,1-4,4-1
+31,2004-01-07,Premier League,20,Everton,A,Everton,0,75,2H,Radzinski,94208,,,,1-1,1-1
+31,2004-01-07,Premier League,20,Everton,A,Arsenal,1,29,1H,Kanu,93787,,,,0-1,1-0
+32,2004-01-10,Premier League,21,Middlesbrough,H,Arsenal,1,38,1H,Henry,4095,,1,,1-0,1-0
+32,2004-01-10,Premier League,21,Middlesbrough,H,Arsenal,1,45,1H,Queudrue,94229,,,1,2-0,2-0
+32,2004-01-10,Premier League,21,Middlesbrough,H,Arsenal,1,57,2H,Pirès,2345,,,,3-0,3-0
+32,2004-01-10,Premier League,21,Middlesbrough,H,Arsenal,1,68,2H,Ljungberg,93785,,,,4-0,4-0
+32,2004-01-10,Premier League,21,Middlesbrough,H,Middlesbrough,0,86,2H,Maccarone,94315,,1,,4-1,4-1
+33,2004-01-18,Premier League,22,Aston Villa,A,Arsenal,1,29,1H,Henry,4095,,,,0-1,1-0
+33,2004-01-18,Premier League,22,Aston Villa,A,Arsenal,1,53,2H,Henry,4095,,1,,0-2,2-0
+34,2004-01-20,League Cup,Semi-finals first leg,Middlesbrough,H,Middlesbrough,0,53,2H,Juninho,,Juninho Paulista,,,0-1,0-1
+35,2004-01-24,FA Cup,Fourth round,Middlesbrough,H,Arsenal,1,19,1H,Bergkamp,93781,Dennis Bergkamp,,,1-0,1-0
+35,2004-01-24,FA Cup,Fourth round,Middlesbrough,H,Arsenal,1,28,1H,Ljungberg,93785,Freddie Ljungberg,,,2-1,2-1
+35,2004-01-24,FA Cup,Fourth round,Middlesbrough,H,Arsenal,1,68,2H,Ljungberg,93785,Freddie Ljungberg,,,3-1,3-1
+35,2004-01-24,FA Cup,Fourth round,Middlesbrough,H,Arsenal,1,90,2H,Bentley,94545,David Bentley,,,4-1,4-1
+35,2004-01-24,FA Cup,Fourth round,Middlesbrough,H,Middlesbrough,0,23,1H,Job,,Joseph-Désiré Job,,,1-1,1-1
+36,2004-02-01,Premier League,23,Manchester City,H,Arsenal,1,37,1H,Tarnat,90183,,,1,1-0,1-0
+36,2004-02-01,Premier League,23,Manchester City,H,Arsenal,1,83,2H,Henry,4095,,,,2-0,2-0
+36,2004-02-01,Premier League,23,Manchester City,H,Manchester City,0,89,2H,Anelka,2086,,,,2-1,2-1
+37,2004-02-03,League Cup,Semi-finals second leg,Middlesbrough,A,Middlesbrough,0,69,2H,Zenden,,Boudewijn Zenden,,,1-0,0-1
+37,2004-02-03,League Cup,Semi-finals second leg,Middlesbrough,A,Middlesbrough,0,85,2H,Reyes,,José Antonio Reyes,,1,2-1,1-2
+37,2004-02-03,League Cup,Semi-finals second leg,Middlesbrough,A,Arsenal,1,77,2H,Edu,649,Edu,,,1-1,1-1
+38,2004-02-07,Premier League,24,Wolverhampton,A,Wolverhampton,0,26,1H,Ganea,90119,,,,1-1,1-1
+38,2004-02-07,Premier League,24,Wolverhampton,A,Arsenal,1,9,1H,Bergkamp,93781,,,,0-1,1-0
+38,2004-02-07,Premier League,24,Wolverhampton,A,Arsenal,1,58,2H,Henry,4095,,,,1-2,2-1
+38,2004-02-07,Premier League,24,Wolverhampton,A,Arsenal,1,63,2H,Kolo Touré,94319,,,,1-3,3-1
+39,2004-02-10,Premier League,25,Southampton,H,Arsenal,1,31,1H,Henry,4095,,,,1-0,1-0
+39,2004-02-10,Premier League,25,Southampton,H,Arsenal,1,90,2H,Henry,4095,,,,2-0,2-0
+40,2004-02-15,FA Cup,Fifth round,Chelsea,H,Arsenal,1,56,2H,Reyes,1410,José Antonio Reyes,,,1-1,1-1
+40,2004-02-15,FA Cup,Fifth round,Chelsea,H,Arsenal,1,61,2H,Reyes,1410,José Antonio Reyes,,,2-1,2-1
+40,2004-02-15,FA Cup,Fifth round,Chelsea,H,Chelsea,0,40,1H,Mutu,,Adrian Mutu,,,0-1,0-1
+41,2004-02-21,Premier League,26,Chelsea,A,Chelsea,0,1,1H,Guðjohnsen,654,,,,1-0,0-1
+41,2004-02-21,Premier League,26,Chelsea,A,Arsenal,1,15,1H,Vieira,93783,,,,1-1,1-1
+41,2004-02-21,Premier League,26,Chelsea,A,Arsenal,1,21,1H,Edu,649,,,,1-2,2-1
+42,2004-02-24,Champions League,"Round of 16, first leg",Celta de Vigo,A,Celta de Vigo,0,27,1H,Edú,1798,,,,1-1,1-1
+42,2004-02-24,Champions League,"Round of 16, first leg",Celta de Vigo,A,Celta de Vigo,0,64,2H,José Ignacio,1440,,,,2-2,2-2
+42,2004-02-24,Champions League,"Round of 16, first leg",Celta de Vigo,A,Arsenal,1,18,1H,Edu,649,,,,0-1,1-0
+42,2004-02-24,Champions League,"Round of 16, first leg",Celta de Vigo,A,Arsenal,1,58,2H,Edu,649,,,,1-2,2-1
+42,2004-02-24,Champions League,"Round of 16, first leg",Celta de Vigo,A,Arsenal,1,80,2H,Pirès,2345,,,,2-3,3-2
+43,2004-02-28,Premier League,27,Charlton Athletic,H,Arsenal,1,2,1H,Pirès,2345,,,,1-0,1-0
+43,2004-02-28,Premier League,27,Charlton Athletic,H,Arsenal,1,4,1H,Henry,4095,,,,2-0,2-0
+43,2004-02-28,Premier League,27,Charlton Athletic,H,Charlton Athletic,0,59,2H,Jensen,93574,,,,2-1,2-1
+44,2004-03-06,FA Cup,Quarter-finals,Portsmouth,N,Portsmouth,0,90,2H,Sheringham,,Teddy Sheringham,,,1-5,5-1
+44,2004-03-06,FA Cup,Quarter-finals,Portsmouth,N,Arsenal,1,25,1H,Henry,4095,Thierry Henry,,,0-1,1-0
+44,2004-03-06,FA Cup,Quarter-finals,Portsmouth,N,Arsenal,1,50,2H,Henry,4095,Thierry Henry,,,0-4,4-0
+44,2004-03-06,FA Cup,Quarter-finals,Portsmouth,N,Arsenal,1,43,1H,Ljungberg,93785,Freddie Ljungberg,,,0-2,2-0
+44,2004-03-06,FA Cup,Quarter-finals,Portsmouth,N,Arsenal,1,57,2H,Ljungberg,93785,Freddie Ljungberg,,,0-5,5-0
+44,2004-03-06,FA Cup,Quarter-finals,Portsmouth,N,Arsenal,1,43,1H,Kolo Touré,94319,Kolo Touré,,,0-3,3-0
+45,2004-03-10,Champions League,"Round of 16, second leg",Celta de Vigo,H,Arsenal,1,14,1H,Henry,4095,,,,1-0,1-0
+45,2004-03-10,Champions League,"Round of 16, second leg",Celta de Vigo,H,Arsenal,1,34,1H,Henry,4095,,,,2-0,2-0
+46,2004-03-13,Premier League,28,Blackburn Rovers,A,Arsenal,1,57,2H,Henry,4095,,,,0-1,1-0
+46,2004-03-13,Premier League,28,Blackburn Rovers,A,Arsenal,1,87,2H,Pirès,2345,,,,0-2,2-0
+47,2004-03-20,Premier League,29,Bolton Wanderers,H,Arsenal,1,16,1H,Pirès,2345,,,,1-0,1-0
+47,2004-03-20,Premier League,29,Bolton Wanderers,H,Arsenal,1,24,1H,Bergkamp,93781,,,,2-0,2-0
+47,2004-03-20,Premier League,29,Bolton Wanderers,H,Bolton Wanderers,0,41,1H,Iván Campo,1137,,,,2-1,2-1
+48,2004-03-24,Champions League,"Quarter-final, first leg",Chelsea,A,Chelsea,0,53,2H,Guðjohnsen,654,,,,1-0,0-1
+48,2004-03-24,Champions League,"Quarter-final, first leg",Chelsea,A,Arsenal,1,59,2H,Pirès,2345,,,,1-1,1-1
+49,2004-03-28,Premier League,30,Manchester United,H,Arsenal,1,50,2H,Henry,4095,,,,1-0,1-0
+49,2004-03-28,Premier League,30,Manchester United,H,Manchester United,0,86,2H,Saha,94178,,,,1-1,1-1
+50,2004-04-03,FA Cup,Semi-finals,Manchester United,N,Manchester United,0,32,1H,Scholes,,Paul Scholes,,,0-1,0-1
+51,2004-04-06,Champions League,"Quarter-final, second leg",Chelsea,H,Arsenal,1,46,2H,Reyes,1410,,,,1-0,1-0
+51,2004-04-06,Champions League,"Quarter-final, second leg",Chelsea,H,Chelsea,0,51,2H,Lampard,93616,,,,1-1,1-1
+51,2004-04-06,Champions League,"Quarter-final, second leg",Chelsea,H,Chelsea,0,87,2H,Bridge,93665,,,,1-2,1-2
+52,2004-04-09,Premier League,32,Liverpool,H,Arsenal,1,31,1H,Henry,4095,,,,1-1,1-1
+52,2004-04-09,Premier League,32,Liverpool,H,Arsenal,1,49,2H,Pirès,2345,,,,2-2,2-2
+52,2004-04-09,Premier League,32,Liverpool,H,Arsenal,1,50,2H,Henry,4095,,,,3-2,3-2
+52,2004-04-09,Premier League,32,Liverpool,H,Arsenal,1,78,2H,Henry,4095,,,,4-2,4-2
+52,2004-04-09,Premier League,32,Liverpool,H,Liverpool,0,5,1H,Hyypiä,93057,,,,0-1,0-1
+52,2004-04-09,Premier League,32,Liverpool,H,Liverpool,0,42,1H,Owen,1972,,,,1-2,1-2
+54,2004-04-16,Premier League,34,Leeds,H,Arsenal,1,6,1H,Pirès,2345,,,,1-0,1-0
+54,2004-04-16,Premier League,34,Leeds,H,Arsenal,1,27,1H,Henry,4095,,,,2-0,2-0
+54,2004-04-16,Premier League,34,Leeds,H,Arsenal,1,33,1H,Henry,4095,,1,,3-0,3-0
+54,2004-04-16,Premier League,34,Leeds,H,Arsenal,1,50,2H,Henry,4095,,,,4-0,4-0
+54,2004-04-16,Premier League,34,Leeds,H,Arsenal,1,67,2H,Henry,4095,,,,5-0,5-0
+55,2004-04-25,Premier League,35,Tottenham,A,Tottenham,0,62,2H,Redknapp,94138,,,,1-2,2-1
+55,2004-04-25,Premier League,35,Tottenham,A,Tottenham,0,90,2H,Robbie Keane,93880,,1,,2-2,2-2
+55,2004-04-25,Premier League,35,Tottenham,A,Arsenal,1,3,1H,Vieira,93783,,,,0-1,1-0
+55,2004-04-25,Premier League,35,Tottenham,A,Arsenal,1,35,1H,Pirès,2345,,,,0-2,2-0
+57,2004-05-04,Premier League,31,Portsmouth,A,Portsmouth,0,30,1H,Yakubu,94446,,,,1-0,0-1
+57,2004-05-04,Premier League,31,Portsmouth,A,Arsenal,1,50,2H,Reyes,1410,,,,1-1,1-1
+58,2004-05-09,Premier League,37,Fulham,A,Arsenal,1,9,1H,Reyes,1410,,,,0-1,1-0
+59,2004-05-15,Premier League,38,Leicester,H,Arsenal,1,47,2H,Henry,4095,,1,,1-1,1-1
+59,2004-05-15,Premier League,38,Leicester,H,Arsenal,1,66,2H,Vieira,93783,,,,2-1,2-1
+59,2004-05-15,Premier League,38,Leicester,H,Leicester,0,26,1H,Dickov,93890,,,,0-1,0-1
