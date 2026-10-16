@@ -21,6 +21,7 @@ import { loadReplayMoments, replayMomentsMarkdown } from '@vismay/f1-viz/recap'
 import { htmlStoryBrief } from './brief'
 import type { HtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
+import type { HtmlStoryTone } from './tone'
 
 export { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS }
 
@@ -36,6 +37,8 @@ export interface Vizf1BriefOptions {
   prompt?: string
   /** The story format (./formats). Default: scroll. */
   format?: HtmlStoryFormat | null
+  /** The story's voice (./tone). Default: straight. */
+  tone?: HtmlStoryTone | null
 }
 
 export async function vizf1HtmlStoryBrief({
@@ -45,12 +48,13 @@ export async function vizf1HtmlStoryBrief({
   drivers = [],
   prompt,
   format,
+  tone,
 }: Vizf1BriefOptions): Promise<string> {
   const keys = sessionKeys.filter(Boolean)
   const db = keys.length ? createServiceClient() : null
   let context = db ? await buildRaceContext(db, { sessionKeys: keys, drivers, prompt, siteUrl }) : null
   if (db && format === 'recap') context = `${context ?? ''}\n\n${await replayMomentsSection(db, keys)}`
-  return htmlStoryBrief({ app: 'vizf1', siteUrl, style, context, format })
+  return htmlStoryBrief({ app: 'vizf1', siteUrl, style, context, format, tone })
 }
 
 /** Races (and sprints) only: a recap frames a race's replay. */

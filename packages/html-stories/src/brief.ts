@@ -71,6 +71,7 @@ import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from '
 import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 import { editorialHubPath } from './seo'
+import { applyToneToVoice, toneBanner, toneChecks, toneSection, type HtmlStoryTone } from './tone'
 
 export interface BriefOptions {
   /** e.g. https://vizmaya.fyi */
@@ -110,6 +111,12 @@ export interface BriefOptions {
    * 'board', 'deck', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
+  /**
+   * The story's voice (./tone): 'straight' (default) or 'humorous', which adds
+   * a "Tone" section asking for a wry, sarcastic voice under the same
+   * accuracy rules.
+   */
+  tone?: HtmlStoryTone | null
 }
 
 /** Pinned with the repo's own mapbox-gl dependency. */
@@ -852,6 +859,7 @@ export function htmlStoryBrief({
   spin,
   mapboxToken,
   format,
+  tone,
 }: BriefOptions): string {
   const site = siteUrl.replace(/\/$/, '')
   const paged = format && format !== 'scroll' ? format : null
@@ -969,7 +977,7 @@ charts. "${formatHeading(paged)}" below says how.
   credited "© OpenStreetMap contributors"). Not MapLibre or another WebGL map
   library: their web workers can't talk to a page in the site's sandbox, so
   the map never gets its tiles. Don't use Mapbox: this deployment has no token for it.`
-  const checks = paged ? formatChecks(paged, app).map((c) => `\n- ${c}`).join('') : ''
+  const checks = [...(paged ? formatChecks(paged, app) : []), ...toneChecks(tone)].map((c) => `\n- ${c}`).join('')
   const tripMeta =
     app === 'travel'
       ? `
@@ -985,7 +993,7 @@ self-contained HTML file. It is hosted exactly as you write it at
 ${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
 charts, and the words.
-${formatIntro}${assignment}
+${toneBanner(tone)}${formatIntro}${assignment}
 ## The hosting contract (must)
 
 1. One complete document: \`<!doctype html>\`, \`<html lang="en">\`, \`<head>\`, \`<body>\`.
@@ -1036,8 +1044,8 @@ ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapbo
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
-${spin ? spinContentSection(meta.desk, hasContext ? SPIN_CONTEXT_RULES[app] ?? [] : []) : contentSection(app, hasContext)}
-${spin ? `\n${reelScriptSection()}\n` : ''}
+${applyToneToVoice(spin ? spinContentSection(meta.desk, hasContext ? SPIN_CONTEXT_RULES[app] ?? [] : []) : contentSection(app, hasContext), tone)}
+${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}\n` : ''}
 ## Before you post: check your own work
 
 If you can run a browser, render the page at 375×812 and 1440×900 and look at

@@ -56,6 +56,7 @@ import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { HTML_STORY_FORMATS } from '@vismay/html-stories/formats'
+import { HTML_STORY_TONES } from '@vismay/html-stories/tone'
 import {
   htmlStoriesToken,
   htmlStoriesUrlFor,
@@ -101,7 +102,8 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
         'case built from many connected pieces), "deck" (slides or a stack of cards; suits an argument ' +
         'made one point at a time) or, for vizf1 with a race in sessionKeys, "recap" (chapters the reader ' +
-        'scrolls while the 3D race replay beside them jumps to each moment; suits a race told through its moments).',
+        'scrolls while the 3D race replay beside them jumps to each moment; suits a race told through its moments). ' +
+        'Pass tone="humorous" for a wry, a little sarcastic voice (the facts stay exact).',
       inputSchema: {
         app: appSchema,
         randomStyle: z
@@ -157,11 +159,15 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck', 'recap'])
           .default('scroll')
           .describe('The story format: scroll (one long page, the default), book, board, deck, or recap (vizf1 only).'),
+        tone: z
+          .enum(HTML_STORY_TONES as unknown as ['straight', 'humorous'])
+          .default('straight')
+          .describe('The voice: straight (plain, the default) or humorous (wry, a little sarcastic; accuracy rules unchanged).'),
       },
     },
-    async ({ app, randomStyle, fixtureIds, sessionKeys, drivers, gameIds, tripSlug, day, prompt, spinId, format }) => {
+    async ({ app, randomStyle, fixtureIds, sessionKeys, drivers, gameIds, tripSlug, day, prompt, spinId, format, tone }) => {
       const site = htmlStoriesUrlFor(config, app)
-      const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format })
+      const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format, tone })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
       const keys = app === 'vizf1' ? (sessionKeys ?? []).filter(Boolean) : []
       const games = app === 'viznba' ? (gameIds ?? []).filter(Boolean) : []
@@ -178,6 +184,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       const url = new URL(`${site}/api/html-stories/brief`)
       if (randomStyle) url.searchParams.set('style', 'random')
       if (format !== 'scroll') url.searchParams.set('format', format)
+      if (tone !== 'straight') url.searchParams.set('tone', tone)
       if (spinId) url.searchParams.set('spin', spinId)
       if (ids.length) {
         url.searchParams.set('fixtures', ids.join(','))

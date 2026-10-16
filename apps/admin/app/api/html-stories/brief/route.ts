@@ -11,6 +11,7 @@ import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from '@vismay/html-s
 import { travelHtmlStoryBrief } from '@vismay/html-stories/travelBrief'
 import { HTML_STORY_FORMATS, isFormatForApp, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
+import { HTML_STORY_TONES, parseHtmlStoryTone } from '@vismay/html-stories/tone'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
@@ -23,9 +24,10 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
  * brief its game context (ESPN box scores) and a travel brief its trip context
  * (the itinerary and curated photos). JSON body:
  *
- *   { app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }
+ *   { app, format?, tone?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }
  *
  * `format` is the story format (scroll, the default, or book, board, deck);
+ * `tone` is the story's voice (straight, the default, or humorous);
  * `style` is the randomizer's pick (the client shows its swatches, so it must
  * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
  * `sessionKeys` + `drivers` (codes) + `prompt` are vizf1-only;
@@ -59,6 +61,8 @@ export async function POST(req: Request) {
   if (!isFormatForApp(app, format)) {
     return NextResponse.json({ error: `the ${format} format isn't available for ${app}` }, { status: 400 })
   }
+  const tone = parseHtmlStoryTone(b.tone)
+  if (!tone) return NextResponse.json({ error: `tone must be one of ${HTML_STORY_TONES.join(', ')}` }, { status: 400 })
   const style = isStyle(b.style) ? b.style : null
   const siteUrl = htmlStorySiteUrl(app)
 
@@ -110,14 +114,14 @@ export async function POST(req: Request) {
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin })
+        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin, tone })
         : app === 'vizf1'
-          ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format })
+          ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format, tone })
           : app === 'viznba'
-            ? await viznbaHtmlStoryBrief({ siteUrl, style, gameIds, prompt, format, spin })
+            ? await viznbaHtmlStoryBrief({ siteUrl, style, gameIds, prompt, format, spin, tone })
             : app === 'travel'
-              ? await travelHtmlStoryBrief({ siteUrl, style, tripSlug, day, prompt, format })
-              : htmlStoryBrief({ app, siteUrl, style, spin, format })
+              ? await travelHtmlStoryBrief({ siteUrl, style, tripSlug, day, prompt, format, tone })
+              : htmlStoryBrief({ app, siteUrl, style, spin, format, tone })
   } catch (e) {
     const what =
       app === 'vizf1' ? 'race context' : app === 'viznba' ? 'game context' : app === 'travel' ? 'trip context' : 'match context'

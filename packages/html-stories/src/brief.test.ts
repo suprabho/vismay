@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
+import { parseHtmlStoryTone } from './tone'
 import { draw } from '@vismay/randomizer/draw'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
@@ -144,6 +145,11 @@ for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
   assert.ok(b.includes('traces to a Verified row in your claims log'))
   assert.ok(!b.includes('Every number has a source. End with a "Sources & method"'))
   assert.equal(b.includes('saves a draft'), randomizer !== 'desk', `${randomizer}: gate note`)
+  // Humorous: the spin's plain-voice rule gives way to the Tone section, which reaches the reel too.
+  const hb = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, tone: 'humorous' })
+  assert.ok(!hb.includes('Write plainly. No hype.') && hb.includes('Voice: funny and sarcastic, per "Tone" below'))
+  assert.ok(hb.indexOf('## Tone') > hb.indexOf('## Content') && hb.indexOf('## Tone') < hb.indexOf('## Reel script'))
+  assert.ok(hb.includes('Write the script in the same funny, sarcastic voice'))
 }
 // A Football Desk spin on footshorts: its sections, the footshorts posting target, and the match-context rules.
 {
@@ -276,6 +282,27 @@ assert.ok(fsBook.includes('https://footshorts.com/formats/book@1.js') && !fsBook
   const book = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, format: 'book' })
   assert.ok(!book.includes('## Story format\n') && book.includes('## Story format: a book'))
   assert.ok(book.indexOf('## Format:') < book.indexOf('## Story format: a book'))
+}
+
+// Tone: straight is the default and adds nothing; humorous adds its section
+// after the content rules, with the site's own targets, and keeps accuracy.
+{
+  assert.ok(!viz.includes('## Tone'))
+  assert.equal(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', tone: 'straight' }), viz)
+  const funny = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', tone: 'humorous' })
+  assert.ok(funny.includes('## Tone: humorous and sarcastic (required)'))
+  // Set up front, never contradicted by the plain-voice line, and checked before posting.
+  assert.ok(funny.indexOf('Voice: humorous and sarcastic (required)') < funny.indexOf('## The hosting contract'))
+  assert.ok(!funny.includes('Write plainly. No hype.'))
+  assert.ok(funny.includes('read the headline, dek, section headings and chart titles aloud'))
+  const funnyFs = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', tone: 'humorous' })
+  assert.ok(!funnyFs.includes('plain, specific, no hype'))
+  assert.ok(funny.indexOf('## Content') < funny.indexOf('## Tone') && funny.indexOf('## Tone') < funny.indexOf('## Before you post'))
+  assert.ok(funny.includes('Accuracy is not part of the joke'))
+  assert.ok(htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', tone: 'humorous' }).includes('VAR'))
+  assert.equal(parseHtmlStoryTone(null), 'straight')
+  assert.equal(parseHtmlStoryTone('humorous'), 'humorous')
+  assert.equal(parseHtmlStoryTone('snarky'), null)
 }
 
 console.log('brief: ok')

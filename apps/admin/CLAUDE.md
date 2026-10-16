@@ -178,11 +178,13 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
-  (`{ app, format?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
+  (`{ app, format?, tone?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
   scroll, book, board, deck, and recap on vizf1 only; also on the Randomizer tab, where it marks the
-  format the spin's kind of story suits), the
+  format the spin's kind of story suits), the Humorous tone toggle
+  ([ToneToggle.tsx](components/html-stories/ToneToggle.tsx), also on the
+  Randomizer tab: a wry, sarcastic voice under the same accuracy rules), the
   style randomizer (palettes/fonts from the app's own stories) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
   Opta scrape and a team search, reused with its own labels and a 40-match cap) — whose picks make the brief carry
