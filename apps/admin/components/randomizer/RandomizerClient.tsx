@@ -21,6 +21,7 @@ import {
 import { suggestedFormatFor, type HtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { DeskHeatTableRow } from '@vismay/html-stories/randomizerApi'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
+import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
@@ -41,6 +42,7 @@ import {
   type SpinStatus,
 } from '@vismay/randomizer/types'
 import { FormatPicker } from '@/components/html-stories/FormatPicker'
+import { ToneToggle } from '@/components/html-stories/ToneToggle'
 
 const ITEM_H = 80
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
@@ -233,6 +235,7 @@ export function RandomizerClient({
   const [otherReason, setOtherReason] = useState('')
   const [style, setStyle] = useState<StoryStyle | null>(null)
   const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
+  const [tone, setTone] = useState<HtmlStoryTone>('straight')
   const [built, setBuilt] = useState<{ request: string; brief: string | null; error: string | null } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
@@ -248,8 +251,8 @@ export function RandomizerClient({
 
   // The composed brief for the spin on screen, built server-side (it reads the spin).
   const request = useMemo(
-    () => (current ? JSON.stringify({ app, format, style, spinId: current.id, v: current.updatedAt }) : null),
-    [app, current, format, style],
+    () => (current ? JSON.stringify({ app, format, tone, style, spinId: current.id, v: current.updatedAt }) : null),
+    [app, current, format, tone, style],
   )
   const building = !!request && built?.request !== request
   const brief = request && !building ? built?.brief ?? null : null
@@ -614,6 +617,7 @@ export function RandomizerClient({
                 <span className="text-xs font-mono text-neutral-400 min-w-0 break-all">assignment · {researchFileName(current).replace('.md', '')}</span>
                 <div className="flex flex-wrap gap-2">
                   <FormatPicker value={format} onChange={setFormat} suggested={suggestedFormatFor(current.randomizer)} />
+                  <ToneToggle value={tone} onChange={setTone} className={btn} />
                   <button
                     type="button"
                     className={btn}
@@ -638,12 +642,19 @@ export function RandomizerClient({
                 <code className="text-neutral-400 break-all">
                   {siteUrl}/api/html-stories/brief?spin={current.id}
                   {format !== 'scroll' ? `&format=${format}` : ''}
+                  {tone !== 'straight' ? `&tone=${tone}` : ''}
                 </code>
                 , or call <code className="text-neutral-400">get_html_story_brief</code> with this <code>spinId</code>
                 {format !== 'scroll' ? (
                   <>
                     {' '}
                     and <code>format: &quot;{format}&quot;</code>
+                  </>
+                ) : null}
+                {tone !== 'straight' ? (
+                  <>
+                    {' '}
+                    and <code>tone: &quot;{tone}&quot;</code>
                   </>
                 ) : null}
                 .

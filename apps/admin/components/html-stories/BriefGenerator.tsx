@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Basketball, Check, Compass, Copy, FlagCheckered, MaskHappy, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
+import { Basketball, Check, Compass, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
@@ -10,6 +10,7 @@ import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
 import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canvas/compose/useComposeFlow'
 import { FormatPicker } from './FormatPicker'
+import { ToneToggle } from './ToneToggle'
 import { GameContextPicker, type GameContextPick } from './GameContextPicker'
 import { RaceContextPicker, type RaceContextPick } from './RaceContextPicker'
 import { TripContextPicker, type TripContextPick } from './TripContextPicker'
@@ -59,7 +60,7 @@ interface MatchContextPick {
 export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePool | null }) {
   const [style, setStyle] = useState<StoryStyle | null>(null)
   const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
-  const [humorous, setHumorous] = useState(false)
+  const [tone, setTone] = useState<HtmlStoryTone>('straight')
   const [matches, setMatches] = useState<MatchContextPick | null>(null)
   const [picking, setPicking] = useState(false)
   const [race, setRace] = useState<RaceContextPick | null>(null)
@@ -78,7 +79,6 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
   const isViznba = app === 'viznba'
   const isTravel = app === 'travel'
 
-  const tone: HtmlStoryTone = humorous ? 'humorous' : 'straight'
   const request = useMemo(
     () =>
       JSON.stringify(
@@ -302,15 +302,7 @@ export function BriefGenerator({ app, pool }: { app: HtmlStoryApp; pool: StylePo
         </button>
       )}
       <FormatPicker app={app} value={format} onChange={setFormat} />
-      <button
-        onClick={() => setHumorous((v) => !v)}
-        aria-pressed={humorous}
-        title={humorous ? 'Humorous, a little sarcastic: click for a straight voice' : 'Write it with a wry, sarcastic voice (the facts stay exact)'}
-        className={`${btn} ${humorous ? 'border-amber-400/40 bg-amber-400/10 text-amber-200 hover:text-amber-100' : ''}`}
-      >
-        <MaskHappy size={14} weight={humorous ? 'fill' : 'regular'} />
-        Humorous
-      </button>
+      <ToneToggle value={tone} onChange={setTone} className={btn} />
       <button
         onClick={() => pool && setStyle((prev) => pickRandomStyle(pool, { previous: prev }))}
         disabled={!canShuffle}
