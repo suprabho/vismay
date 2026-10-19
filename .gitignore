@@ -37,5 +37,8 @@ vizmaya-data/football-seasons/data/*
 !vizmaya-data/football-seasons/data/cup_clubs_overrides.csv
 !vizmaya-data/football-seasons/data/crests.csv
 !vizmaya-data/football-seasons/data/crests_overrides.csv
+!vizmaya-data/football-seasons/data/kits.csv
+!vizmaya-data/football-seasons/data/kits_overrides.csv
+!vizmaya-data/football-seasons/data/club_marks.csv
 vizmaya-data/football-seasons/fetch.log
 vizmaya-data/football-seasons/scripts/__pycache__/

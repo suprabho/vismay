@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     '@vismay/admin-core',
     '@vismay/content-source',
+    '@vismay/club-marks',
     '@vismay/dc-editions',
     '@vismay/html-stories',
     '@vismay/randomizer',

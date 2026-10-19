@@ -4,6 +4,16 @@
 // write these rows or files to entities or any consumer-facing table or bucket.
 export const HISTORY_CRESTS_TABLE = 'admin_season_crests';
 export const HISTORY_CRESTS_BUCKET = 'admin-season-crests';
+/** Club marks per club and season (footshorts migration 20261021000000): kit, review overrides, generated row. */
+export const HISTORY_CLUB_MARKS_TABLE = 'admin_club_marks';
+/** data/kits.csv column → admin_club_marks column. A push writes only these. */
+export const CLUB_MARK_KIT_COLUMNS = {
+  pattern: 'kit_pattern', c1: 'kit_c1', c2: 'kit_c2', confidence: 'kit_confidence', source: 'kit_source', page: 'kit_page',
+  needs_review: 'kit_needs_review', review_note: 'kit_note',
+} as const;
+/** data/club_marks.csv: one row per club per crest era (Club Mark Generator spec), pulled from admin_club_marks. */
+export const CLUB_MARKS_CSV_HEADER = ['season', 'wiki', 'name', 'code', 'crest', 'pattern', 'c1', 'c2', 'league', 'from', 'to',
+  'family_confidence', 'needs_review', 'review_reasons', 'reviewed_by'] as const;
 
 /** Columns that come from crests.csv. A push overwrites only these, so an upload
  * made in the admin (upload_*, uploaded_*) survives. */
