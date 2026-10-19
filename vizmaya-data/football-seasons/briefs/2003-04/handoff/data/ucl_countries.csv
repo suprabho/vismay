@@ -1,0 +1,49 @@
+country,country_name,clubs,First qualifying round,Second qualifying round,Third qualifying round,Group stage,Round of 16,Quarter-finals,Semi-finals,Final,Winners,best
+POR,Portugal,2,0,0,1,0,0,0,0,0,1,Winners
+FRA,France,3,0,0,0,1,0,1,0,1,0,Final
+ENG,England,4,0,0,1,0,1,1,1,0,0,Semi-finals
+ESP,Spain,4,0,0,0,0,2,1,1,0,0,Semi-finals
+ITA,Italy,4,0,0,0,2,1,1,0,0,0,Quarter-finals
+GER,Germany,3,0,0,1,0,2,0,0,0,0,Round of 16
+CZE,Czech Republic,2,0,0,1,0,1,0,0,0,0,Round of 16
+RUS,Russia,2,0,1,0,0,1,0,0,0,0,Round of 16
+GRE,Greece,3,0,0,0,3,0,0,0,0,0,Group stage
+BEL,Belgium,2,0,0,0,2,0,0,0,0,0,Group stage
+NED,Netherlands,2,0,0,0,2,0,0,0,0,0,Group stage
+SCO,Scotland,2,0,0,0,2,0,0,0,0,0,Group stage
+TUR,Turkey,2,0,0,0,2,0,0,0,0,0,Group stage
+UKR,Ukraine,2,0,0,1,1,0,0,0,0,0,Group stage
+SRB,Serbia and Montenegro,1,0,0,0,1,0,0,0,0,0,Group stage
+AUT,Austria,2,0,0,2,0,0,0,0,0,0,Third qualifying round
+BUL,Bulgaria,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+CRO,Croatia,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+DEN,Denmark,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+HUN,Hungary,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+MKD,North Macedonia,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+NOR,Norway,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+POL,Poland,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+SUI,Switzerland,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+SVK,Slovakia,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+ALB,Albania,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+ARM,Armenia,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+BIH,Bosnia and Herzegovina,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+CYP,Cyprus,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+FIN,Finland,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+IRL,Republic of Ireland,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+ISR,Israel,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+LTU,Lithuania,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+MDA,Moldova,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+MLT,Malta,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+ROU,Romania,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+SVN,Slovenia,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+SWE,Sweden,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+BLR,Belarus,1,1,0,0,0,0,0,0,0,0,First qualifying round
+EST,Estonia,1,1,0,0,0,0,0,0,0,0,First qualifying round
+FRO,Faroe Islands,1,1,0,0,0,0,0,0,0,0,First qualifying round
+GEO,Georgia,1,1,0,0,0,0,0,0,0,0,First qualifying round
+ISL,Iceland,1,1,0,0,0,0,0,0,0,0,First qualifying round
+KAZ,Kazakhstan,1,1,0,0,0,0,0,0,0,0,First qualifying round
+LUX,Luxembourg,1,1,0,0,0,0,0,0,0,0,First qualifying round
+LVA,Latvia,1,1,0,0,0,0,0,0,0,0,First qualifying round
+NIR,Northern Ireland,1,1,0,0,0,0,0,0,0,0,First qualifying round
+WAL,Wales,1,1,0,0,0,0,0,0,0,0,First qualifying round

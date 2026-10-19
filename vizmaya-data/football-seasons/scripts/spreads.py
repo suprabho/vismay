@@ -32,6 +32,17 @@ DISPLAY = {
     'Partizan Belgrade': 'Partizan', 'Internazionale': 'Inter', 'Kobenhavn': 'Copenhagen', 'Besiktas': 'Beşiktaş',
 }
 WIKI_PAGES = ['{s} FA Premier League', '{s} UEFA Champions League']
+# engsoccerdata country codes → printed names
+COUNTRY = {
+    'ALB': 'Albania', 'ARM': 'Armenia', 'AUT': 'Austria', 'AZE': 'Azerbaijan', 'BEL': 'Belgium', 'BIH': 'Bosnia and Herzegovina',
+    'BLR': 'Belarus', 'BUL': 'Bulgaria', 'CRO': 'Croatia', 'CYP': 'Cyprus', 'CZE': 'Czech Republic', 'DEN': 'Denmark',
+    'ENG': 'England', 'ESP': 'Spain', 'EST': 'Estonia', 'FIN': 'Finland', 'FRA': 'France', 'FRO': 'Faroe Islands', 'GEO': 'Georgia',
+    'GER': 'Germany', 'GRE': 'Greece', 'HUN': 'Hungary', 'IRL': 'Republic of Ireland', 'ISL': 'Iceland', 'ISR': 'Israel', 'ITA': 'Italy',
+    'KAZ': 'Kazakhstan', 'LTU': 'Lithuania', 'LUX': 'Luxembourg', 'LVA': 'Latvia', 'MDA': 'Moldova', 'MKD': 'North Macedonia',
+    'MLT': 'Malta', 'NED': 'Netherlands', 'NIR': 'Northern Ireland', 'NOR': 'Norway', 'POL': 'Poland', 'POR': 'Portugal',
+    'ROU': 'Romania', 'RUS': 'Russia', 'SCO': 'Scotland', 'SRB': 'Serbia and Montenegro', 'SUI': 'Switzerland', 'SVK': 'Slovakia',
+    'SVN': 'Slovenia', 'SWE': 'Sweden', 'TUR': 'Turkey', 'UKR': 'Ukraine', 'WAL': 'Wales',
+}
 
 def name(t): return DISPLAY.get(t, t)
 def season_label(start): return f'{start}-{str(start + 1)[2:]}'
@@ -311,10 +322,23 @@ def statsbomb_team(start):
         out[(r.date, name(r.team))] = dict(xg=r.xg, xg_against=opp.xg, shots=r.shots, ppda=r.ppda)
     return out
 
+def known_as(match_ids):
+    """StatsBomb full name → the name people know (lineup nickname: Anderson Luís de Souza → Deco)."""
+    out = {}
+    for mid in match_ids:
+        path = os.path.join(ROOT, 'raw', 'statsbomb', 'lineups', f'{mid}.json')
+        if not os.path.exists(path): continue
+        for team in json.load(open(path)):
+            for p in team['lineup']: out[p['player_name']] = p.get('player_nickname') or p['player_name']
+    return out
+
 def statsbomb_tables(start, out):
     d = statsbomb_dir(start)
     if not os.path.exists(d): print('no StatsBomb data; skipping shot maps'); return
     shots = pd.read_csv(os.path.join(d, 'shots.csv'))
+    known = known_as(shots.match_id.unique())
+    for c in ('player', 'assisted_by'): shots.insert(shots.columns.get_loc(c) + 1, f'{c}_known_as', shots[c].map(known).fillna(shots[c]))
+    shots['team'] = shots.team.map(name)
     top = shots[(shots.team == 'Arsenal')].groupby('player').agg(shots=('xg', 'size'), goals=('outcome', lambda s: (s == 'Goal').sum()), xg=('xg', 'sum'))
     scorer = top.sort_values('goals', ascending=False).index[0]
     sc = shots[(shots.team == 'Arsenal') & (shots.player == scorer) & (shots.date < f'{start + 1}-06-01')]
@@ -325,8 +349,12 @@ def statsbomb_tables(start, out):
     if len(final):
         fid = final.iloc[0].match_id
         shots[shots.match_id == fid].to_csv(os.path.join(out, 'ucl_final_shots.csv'), index=False)
-        pd.read_csv(os.path.join(d, 'team_match.csv')).query('match_id == @fid').to_csv(os.path.join(out, 'ucl_final_team.csv'), index=False)
+        tm = pd.read_csv(os.path.join(d, 'team_match.csv')).query('match_id == @fid')
+        tm.assign(team=tm.team.map(name), opponent=tm.opponent.map(name)).to_csv(os.path.join(out, 'ucl_final_team.csv'), index=False)
         nodes = pd.read_csv(os.path.join(d, 'pass_nodes.csv')); edges = pd.read_csv(os.path.join(d, 'pass_network.csv'))
+        nodes.insert(nodes.columns.get_loc('player') + 1, 'player_known_as', nodes.player.map(known).fillna(nodes.player))
+        for c in ('passer', 'recipient'): edges.insert(edges.columns.get_loc(c) + 1, f'{c}_known_as', edges[c].map(known).fillna(edges[c]))
+        nodes['team'] = nodes.team.map(name); edges['team'] = edges.team.map(name)
         nodes[nodes.match_id == fid].to_csv(os.path.join(out, 'ucl_final_pass_nodes.csv'), index=False)
         edges[edges.match_id == fid].to_csv(os.path.join(out, 'ucl_final_pass_network.csv'), index=False)
     print(f'StatsBomb: {scorer} {int(top.loc[scorer].goals)} league goals from {len(sc)} shots; final shots {len(shots[shots.match_id == fid]) if len(final) else 0}')
@@ -395,7 +423,7 @@ def cup(start, out, ids):
         d['date'] = d.Date; d['ht'] = d.ht.fillna('')
         st = group_table(d)
         for _, r in st.iterrows():
-            grp.append(dict(group=gname[5:], **{**r.to_dict(), 'team': name(r.team)}, country=country[r.team],
+            grp.append(dict(group=gname[5:], **{**r.to_dict(), 'team': name(r.team)}, country=country[r.team], country_name=COUNTRY[country[r.team]],
                             result='Round of 16' if r.pos <= 2 else 'UEFA Cup' if r.pos == 3 else 'Out'))
     write(os.path.join(out, 'ucl_groups.csv'), grp)
 
@@ -427,7 +455,7 @@ def cup(start, out, ids):
         for t in (r.home, r.visitor): reach[t] = max(reach.get(t, -1), STAGE_RANK[r.key])
     champ = name(e[e.key == 'final'].iloc[0].tiewinner)
     entered = {t: min(STAGE_RANK[k] for k in e[(e.home == t) | (e.visitor == t)].key) for t in reach}
-    clubs = [dict(team=name(t), team_id=ids.get(t, ''), country=country[t], entered=STAGES[entered[t]][1],
+    clubs = [dict(team=name(t), team_id=ids.get(t, ''), country=country[t], country_name=COUNTRY[country[t]], entered=STAGES[entered[t]][1],
                   reached='Winners' if name(t) == champ else STAGES[reach[t]][1],
                   matches=int(((e.home == t) | (e.visitor == t)).sum())) for t in sorted(reach, key=lambda t: (-reach[t], t))]
     write(os.path.join(out, 'ucl_clubs.csv'), clubs)
@@ -436,7 +464,7 @@ def cup(start, out, ids):
     for c in clubs: by_c[c['country']][c['reached']] += 1
     rows = []
     for c, d in by_c.items():
-        row = dict(country=c, clubs=sum(d.values()), **{l: d.get(l, 0) for l in labels})
+        row = dict(country=c, country_name=COUNTRY[c], clubs=sum(d.values()), **{l: d.get(l, 0) for l in labels})
         row['best'] = next(l for l in reversed(labels) if d.get(l))
         rows.append(row)
     rows.sort(key=lambda r: (-labels.index(r['best']), -r['clubs'], r['country']))

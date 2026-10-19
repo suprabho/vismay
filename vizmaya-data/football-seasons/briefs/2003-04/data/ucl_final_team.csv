@@ -1,3 +1,3 @@
 match_id,date,team,opponent,passes,pass_pct,shots,xg,pressures,pressures_final_third,pressures_middle_third,pressures_defensive_third,counterpresses,ppda
-3752619,2004-05-26,AS Monaco,FC Porto,511,71.4,9,0.68,136,23,76,37,28,6.3
-3752619,2004-05-26,FC Porto,AS Monaco,427,64.6,4,0.5,107,11,48,48,19,8.24
+3752619,2004-05-26,Monaco,Porto,511,71.4,9,0.68,136,23,76,37,28,6.3
+3752619,2004-05-26,Porto,Monaco,427,64.6,4,0.5,107,11,48,48,19,8.24

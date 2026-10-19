@@ -1,0 +1,267 @@
+file,column,meaning,source,rows,used_by
+data/epl_champion_games.csv,game,Game number,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,date,Match date,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,opponent,Opponent,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,venue,H / A,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,score,Arsenal first,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,result,W / D,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,ht,"Half-time score, Arsenal first",football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,behind_at_ht,True if behind at half-time,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,implied_win_pct,Arsenal’s win chance from Bet365 odds (%),football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,xg_for,StatsBomb expected goals for,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,xg_against,StatsBomb expected goals against,football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,shots,Arsenal shots (StatsBomb),football-data.co.uk; StatsBomb open data,38,L13
+data/epl_champion_games.csv,ppda,Passes allowed per defensive action (lower = more pressing),football-data.co.uk; StatsBomb open data,38,L13
+data/epl_goals_by_month.csv,month,YYYY-MM,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,matches,Games played,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,goals,Goals,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,home_wins,Home wins,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,draws,Draws,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,away_wins,Away wins,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,goals_per_game,Goals ÷ matches,football-data.co.uk,10,L10
+data/epl_goals_by_month.csv,home_win_pct,Home wins as % of matches,football-data.co.uk,10,L10
+data/epl_leader_by_date.csv,date,Match date,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,leader,Club top that night,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,leader_pts,Its points,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,leader_played,Its games played,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,second,Club second,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,second_pts,Its points,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,second_played,Its games played,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,margin,Points gap first to second,football-data.co.uk,97,L04 L09
+data/epl_leader_by_date.csv,changed,True if the leader changed that date,football-data.co.uk,97,L04 L09
+data/epl_month_tables.csv,month,YYYY-MM (table as at the last match date of the month),football-data.co.uk,200,L08
+data/epl_month_tables.csv,pos,Position,football-data.co.uk,200,L08
+data/epl_month_tables.csv,team,Club,football-data.co.uk,200,L08
+data/epl_month_tables.csv,P,Played,football-data.co.uk,200,L08
+data/epl_month_tables.csv,W,Won,football-data.co.uk,200,L08
+data/epl_month_tables.csv,D,Drawn,football-data.co.uk,200,L08
+data/epl_month_tables.csv,L,Lost,football-data.co.uk,200,L08
+data/epl_month_tables.csv,GF,Goals for,football-data.co.uk,200,L08
+data/epl_month_tables.csv,GA,Goals against,football-data.co.uk,200,L08
+data/epl_month_tables.csv,Pts,Points,football-data.co.uk,200,L08
+data/epl_month_tables.csv,GD,Goal difference,football-data.co.uk,200,L08
+data/epl_monthly_awards.csv,month,Month (no award in May),"Wikipedia, 2003–04 FA Premier League",9,
+data/epl_monthly_awards.csv,manager,Manager of the Month,"Wikipedia, 2003–04 FA Premier League",9,
+data/epl_monthly_awards.csv,manager_club,His club,"Wikipedia, 2003–04 FA Premier League",9,
+data/epl_monthly_awards.csv,player,Player of the Month (shared in February),"Wikipedia, 2003–04 FA Premier League",9,
+data/epl_monthly_awards.csv,player_club,Club,"Wikipedia, 2003–04 FA Premier League",9,
+data/epl_race.csv,team,Club,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,team_id,Crosswalk id (internal),football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,game,"The club’s game number, 1–38",football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,date,Match date,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,month,YYYY-MM,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,opponent,Opponent,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,venue,H home / A away,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,score,"Score from this club’s side, ""for-against""",football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,result,W / D / L for this club,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,points,Points from this game,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,cum_points,Running points total,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,cum_gd,Running goal difference,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_race.csv,position,Table position at the end of that match date,football-data.co.uk,760,L01 L04 L06 L07 L14
+data/epl_results_grid.csv,home,Home club,football-data.co.uk,380,L15
+data/epl_results_grid.csv,away,Away club,football-data.co.uk,380,L15
+data/epl_results_grid.csv,date,Match date,football-data.co.uk,380,L15
+data/epl_results_grid.csv,hg,Home goals,football-data.co.uk,380,L15
+data/epl_results_grid.csv,ag,Away goals,football-data.co.uk,380,L15
+data/epl_results_grid.csv,result,H home win / D draw / A away win,football-data.co.uk,380,L15
+data/epl_scorers.csv,rank,Rank (ties share one),"Wikipedia, 2003–04 FA Premier League",12,
+data/epl_scorers.csv,player,Player,"Wikipedia, 2003–04 FA Premier League",12,
+data/epl_scorers.csv,club,Club (Saha: both clubs that season),"Wikipedia, 2003–04 FA Premier League",12,
+data/epl_scorers.csv,goals,League goals,"Wikipedia, 2003–04 FA Premier League",12,
+data/epl_summer_signings.csv,date,Date of the move,"Wikipedia, List of English football transfers summer 2003 (via events.csv)",15,L02
+data/epl_summer_signings.csv,player,Player,"Wikipedia, List of English football transfers summer 2003 (via events.csv)",15,L02
+data/epl_summer_signings.csv,from_club,Selling club,"Wikipedia, List of English football transfers summer 2003 (via events.csv)",15,L02
+data/epl_summer_signings.csv,to_club,Buying club,"Wikipedia, List of English football transfers summer 2003 (via events.csv)",15,L02
+data/epl_summer_signings.csv,fee_m_gbp,"Reported fee, £ millions","Wikipedia, List of English football transfers summer 2003 (via events.csv)",15,L02
+data/epl_summer_signings.csv,source_url,Source link where one was recorded,"Wikipedia, List of English football transfers summer 2003 (via events.csv)",15,L02
+data/epl_table_final.csv,pos,"Final position (3/1/0, then goal difference, goals scored)",football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,team,"Club, as printed",football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,team_id,Crosswalk id (internal),football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,P,Played,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,W,Won,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,D,Drawn,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,L,Lost,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,GF,Goals for,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,GA,Goals against,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,GD,Goal difference,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,Pts,Points,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,home_pts,Points from home games,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,away_pts,Points from away games,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,prev_season_pts,Points in 2002-03 (blank = promoted),football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,prev_season_pos,"Position in 2002-03, or ""promoted""",football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,shots,"Shots, season total",football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,shots_on_target,"Shots on target, season total",football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,goals_per_shot_on_target,GF ÷ shots on target,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,yellows,Yellow cards,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,reds,Red cards,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,xpts_from_odds,"Points the Bet365 pre-match odds implied (3 × P(win) + P(draw) per game, bookmaker margin removed)",football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,pts_minus_xpts,Pts − xpts_from_odds: above zero = beat the market,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,trailed_at_ht,Games behind at half-time,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,pts_from_ht_deficit,Points won from those games,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,avg_attendance,Average home league attendance,football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_table_final.csv,status,Champions / Champions League / UEFA Cup / Relegated (blank = none),football-data.co.uk; attendance from worldfootball.net via Wikipedia,20,L03 L05 L17
+data/epl_top_scorer_shots.csv,match_id,StatsBomb match id,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,date,Match date,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,player,StatsBomb full name,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,player_known_as,Name to print,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,period,1 or 2,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,minute,Elapsed minute (print + 1),StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,second,Second,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,x,Shot location x (0–120),StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,y,Shot location y (0–80),StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,end_x,"Where the shot ended, x",StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,end_y,"Where the shot ended, y",StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,xg,Expected goals value of the chance,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,outcome,Goal / Saved / Off T / Blocked / Post / Wayward,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,body_part,Foot / head,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,shot_type,Open Play / Penalty / Free Kick,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,technique,"Volley, half volley, …",StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,under_pressure,True if pressed,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,first_time,True if first-time,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,assisted_by,StatsBomb full name of the passer,StatsBomb open data — logo and credit required,194,L12
+data/epl_top_scorer_shots.csv,assisted_by_known_as,"Passer, name to print",StatsBomb open data — logo and credit required,194,L12
+data/epl_upsets.csv,date,Match date,football-data.co.uk (Bet365 odds),15,L17
+data/epl_upsets.csv,winner,Winning club,football-data.co.uk (Bet365 odds),15,L17
+data/epl_upsets.csv,loser,Losing club,football-data.co.uk (Bet365 odds),15,L17
+data/epl_upsets.csv,venue,"Winner’s venue, H / A",football-data.co.uk (Bet365 odds),15,L17
+data/epl_upsets.csv,score,Winner’s side first,football-data.co.uk (Bet365 odds),15,L17
+data/epl_upsets.csv,odds,Bet365 decimal odds on the winner,football-data.co.uk (Bet365 odds),15,L17
+data/epl_upsets.csv,implied_win_pct,"Win chance those odds implied, margin removed (%)",football-data.co.uk (Bet365 odds),15,L17
+data/ucl_clubs.csv,team,Club,engsoccerdata (jalapic),72,U02
+data/ucl_clubs.csv,team_id,Crosswalk id (internal),engsoccerdata (jalapic),72,U02
+data/ucl_clubs.csv,country,Country code,engsoccerdata (jalapic),72,U02
+data/ucl_clubs.csv,country_name,Country,engsoccerdata (jalapic),72,U02
+data/ucl_clubs.csv,entered,Stage it entered at,engsoccerdata (jalapic),72,U02
+data/ucl_clubs.csv,reached,Furthest stage (Winners for the champions),engsoccerdata (jalapic),72,U02
+data/ucl_clubs.csv,matches,Matches played,engsoccerdata (jalapic),72,U02
+data/ucl_countries.csv,country,Country code,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,country_name,Country,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,clubs,Clubs entered,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,First qualifying round,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Second qualifying round,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Third qualifying round,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Group stage,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Round of 16,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Quarter-finals,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Semi-finals,Clubs out here,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Final,Clubs that lost the final,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,Winners,Clubs that won it,engsoccerdata (jalapic),48,U12
+data/ucl_countries.csv,best,Furthest stage any of its clubs reached,engsoccerdata (jalapic),48,U12
+data/ucl_english_clubs.csv,team,Club,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,n,Game number,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,date,Match date,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,stage,Stage,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,opponent,Opponent,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,venue,H / A,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,score,English club first,engsoccerdata (jalapic),34,U06
+data/ucl_english_clubs.csv,result,W / D / L,engsoccerdata (jalapic),34,U06
+data/ucl_final_pass_network.csv,match_id,StatsBomb match id,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_network.csv,team,Team,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_network.csv,passer,StatsBomb full name,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_network.csv,passer_known_as,Name to print,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_network.csv,recipient,StatsBomb full name,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_network.csv,recipient_known_as,Name to print,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_network.csv,passes,Completed passes passer → recipient,StatsBomb open data — logo and credit required,122,
+data/ucl_final_pass_nodes.csv,match_id,StatsBomb match id,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,team,Team,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,player,StatsBomb full name,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,player_known_as,Name to print,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,avg_x,Average x of his passes,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,avg_y,Average y,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,passes_made,Completed passes,StatsBomb open data — logo and credit required,22,
+data/ucl_final_pass_nodes.csv,until_minute,Network cut-off minute (first substitution),StatsBomb open data — logo and credit required,22,
+data/ucl_final_shots.csv,match_id,StatsBomb match id,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,date,Match date,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,team,Porto / Monaco,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,player,StatsBomb full name,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,player_known_as,Name to print,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,period,1 or 2,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,minute,Elapsed minute (print + 1),StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,second,Second,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,x,Location x (0–120),StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,y,Location y (0–80),StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,end_x,End x,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,end_y,End y,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,xg,Expected goals value,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,outcome,Goal / Saved / Off T / Blocked / Wayward,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,body_part,Foot / head,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,shot_type,Open Play / …,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,technique,Technique,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,under_pressure,True if pressed,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,first_time,True if first-time,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,assisted_by,StatsBomb full name of the passer,StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_shots.csv,assisted_by_known_as,"Passer, name to print",StatsBomb open data — logo and credit required,13,U09
+data/ucl_final_team.csv,match_id,StatsBomb match id,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,date,Match date,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,team,Team,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,opponent,Opponent,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,passes,Passes attempted,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,pass_pct,Pass completion %,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,shots,Shots,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,xg,Expected goals,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,pressures,Pressure events,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,pressures_final_third,In the attacking third,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,pressures_middle_third,In the middle third,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,pressures_defensive_third,In its own third,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,counterpresses,Counter-presses,StatsBomb open data — logo and credit required,2,U09
+data/ucl_final_team.csv,ppda,Passes allowed per defensive action,StatsBomb open data — logo and credit required,2,U09
+data/ucl_finalists_road.csv,team,Finalist,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,n,Game number,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,date,Match date,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,stage,Stage,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,opponent,Opponent,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,opponent_country,Its country code,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,venue,"H / A / N (neutral, the final)",engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,score,Finalist first,engsoccerdata (jalapic),26,U10
+data/ucl_finalists_road.csv,result,W / D / L,engsoccerdata (jalapic),26,U10
+data/ucl_groups.csv,group,A–H,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,team,Club,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,pos,Position,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,P,Played,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,W,Won,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,D,Drawn,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,L,Lost,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,GF,Goals for,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,GA,Goals against,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,Pts,Points,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,GD,Goal difference,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,country,Country code,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,country_name,Country,engsoccerdata (jalapic),32,U05
+data/ucl_groups.csv,result,Round of 16 / UEFA Cup (3rd) / Out,engsoccerdata (jalapic),32,U05
+data/ucl_matches.csv,date,Match date,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,stage,Q-1 / Q-2 / Q-3 / Group / R16 / QF / SF / final,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,group,Group letter (group stage only),engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,leg,1 or 2 (two-legged ties),engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,home,Home club,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,home_country,Home club’s country code,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,away,Away club,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,away_country,Away club’s country code,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,hg,Home goals (after extra time where played),engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,ag,Away goals (after extra time),engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,ht,Half-time score,engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,tie_winner,Who went through (knockouts),engsoccerdata (jalapic),205,U01 U03
+data/ucl_matches.csv,decided_by,"Blank, ""extra time"", ""away goals"" or ""penalties h-a""",engsoccerdata (jalapic),205,U01 U03
+data/ucl_scorers.csv,rank,Rank (ties share one),"UEFA via Wikipedia, 2003–04 UEFA Champions League",19,U08
+data/ucl_scorers.csv,player,Player,"UEFA via Wikipedia, 2003–04 UEFA Champions League",19,U08
+data/ucl_scorers.csv,club,Club,"UEFA via Wikipedia, 2003–04 UEFA Champions League",19,U08
+data/ucl_scorers.csv,goals,Goals,"UEFA via Wikipedia, 2003–04 UEFA Champions League",19,U08
+data/ucl_scorers.csv,minutes,Minutes played,"UEFA via Wikipedia, 2003–04 UEFA Champions League",19,U08
+data/ucl_scorers.csv,minutes_per_goal,Minutes ÷ goals,"UEFA via Wikipedia, 2003–04 UEFA Champions League",19,U08
+data/ucl_stages.csv,stage,Stage,engsoccerdata (jalapic),8,U02
+data/ucl_stages.csv,clubs,Clubs that played in it,engsoccerdata (jalapic),8,U02
+data/ucl_stages.csv,matches,Matches,engsoccerdata (jalapic),8,U02
+data/ucl_stages.csv,goals,Goals,engsoccerdata (jalapic),8,U02
+data/ucl_stages.csv,goals_per_game,Goals ÷ matches,engsoccerdata (jalapic),8,U02
+data/ucl_stages.csv,home_win_pct,Home wins as % of matches (the final was at a neutral ground; Porto were listed home),engsoccerdata (jalapic),8,U02
+data/ucl_ties.csv,stage,Q-1 … final,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,team_a,Home club in leg 1,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,country_a,Its country code,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,team_b,Away club in leg 1,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,country_b,Its country code,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,leg1,"Leg 1, team_a first",engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,leg1_date,Leg 1 date,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,leg2,"Leg 2, team_a first",engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,leg2_date,Leg 2 date,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,agg,"Aggregate, team_a first",engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,winner,Who went through,engsoccerdata (jalapic),55,U01 U07 U14
+data/ucl_ties.csv,decided_by,aggregate / away goals / penalties w-l (winner first) / aggregate after extra time / single match,engsoccerdata (jalapic),55,U01 U07 U14

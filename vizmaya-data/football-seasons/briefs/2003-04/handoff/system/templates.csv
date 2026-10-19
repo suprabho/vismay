@@ -1,0 +1,8 @@
+template,label,role,description,use,body_words,chart_forms,headline_scale
+cover,Cover,frame,"Back cover blurb on the left, the season set as a Display number on the front.","Once, first.",0–80,image big-number,1.0
+intro,Season intro,frame,The season’s argument on the left; the whole season at a glance on the right.,"Once, after the cover: the chart every later spread zooms into.",80–150,line-race table bar strip small-multiples bracket,1.15
+hero,Hero,hero,One big chart across the gutter; the headline makes the claim it proves.,A month’s biggest beat. Opens each month-chapter.,80–150,line-race bar slope strip scatter pitch bracket,1.2
+comparison,Comparison,dense,"One visual in two halves, one per page: this team against that, this month against last.",A head-to-head or a before/after.,80–150,small-multiples bar slope line-race pitch scatter,1.0
+timeline,Timeline,dense,"A horizontal run across both pages: results, events or a lead that changed hands.","A month told in order, or a streak.",80–150,timeline bracket strip line-race,1.0
+table,Table,dense,"The words on the left page, a full-height table or heat table on the right.","Standings at the month’s end, or a ranking to look things up in.",80–150,table heat-table,1.0
+breather,Breather,breather,A photo-style page and a single number: room to turn the page.,After a dense spread. Never two in a row.,0–60,big-number image,0.7

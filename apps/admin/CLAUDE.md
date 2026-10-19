@@ -344,6 +344,9 @@ changes through review (bump `SYSTEM_VERSION`), never per book.
   validates a plan written outside the planner (e.g. the league/cup briefs'
   `vizmaya-data/football-seasons/briefs/<season>/plan.json`) against `planSchema`
   and prints the beat, card and pacing issues; load it with the book's PUT.
+- **System export:** `pnpm --filter admin exec tsx scripts/exportSeasonSystem.ts` prints the
+  locked system as JSON (used by the design-agent handoff,
+  `vizmaya-data/football-seasons/scripts/handoff.py`).
 
 ## VizNBA Pipeline tab (/viznba/pipeline)
 

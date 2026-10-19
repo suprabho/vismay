@@ -55,7 +55,7 @@ Every spread is one claim (the headline) proved by one visual, set on the locked
 - Notes: The chart every later league spread zooms into; keep its scale (0–90) wherever the race returns.
 - Annotate: Game 30, 28 March: “30 unbeaten from the start, a record” (1–1 v Manchester United).
 - Annotate: Game 34, 25 April: title won at White Hart Lane, four games left.
-- Annotate: {'Final point labels at the line end': 'Arsenal 90, Chelsea 79, Man United 75, Liverpool 60.'}
+- Annotate: Final point labels at the line end: Arsenal 90, Chelsea 79, Man United 75, Liverpool 60.
 
 **Body** (105 words)
 
@@ -486,7 +486,7 @@ Every spread is one claim (the headline) proved by one visual, set on the locked
 
 **Check before print**
 
-- [ ] The parade figure (250,000) is from events.csv.
+- [ ] The parade figure (250,000) is from events.csv, not yet hand-verified; confirm.
 
 ### 23 · L14 — Three clubs went down on 33 points. Everton stayed up on 39
 
@@ -554,10 +554,6 @@ Every spread is one claim (the headline) proved by one visual, set on the locked
 
 - The grid fills the right page (x 6.5–12, y 0–7.25); cells about 8mm square, scores in 6.5pt tabular numerals.
 - Team names abbreviated to three letters on the top axis.
-
-**Check before print**
-
-- [ ] Home-win counts (Arsenal 15, Man United and Chelsea 12) recounted from epl_results_grid.csv.
 
 ### 28 · L16 — 1,012 league goals, 2.66 a game
 

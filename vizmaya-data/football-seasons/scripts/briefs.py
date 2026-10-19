@@ -45,7 +45,8 @@ def md_table(df):
 
 def status(s): return 'data' if s.get('chart', {}).get('preset') else 'card'
 
-def brief(s, num, beats):
+def brief(s, num, beats, internal=True):
+    """One spread's brief in Markdown; internal=False drops admin-only details (the Books-tab binding) for handoffs."""
     c = s.get('chart') or {}
     t = s['template']
     title = f"{s['stat']['value']} {s['headline']}" if t == 'breather' else s['headline']  # a breather's headline completes its number
@@ -58,7 +59,7 @@ def brief(s, num, beats):
               f"**Stat** — {s['stat']['value']} · {s['stat']['label']}", '']
     chart = []
     if c.get('data'): chart.append('Data: ' + ', '.join(f'[`{d}`](data/{d})' for d in c['data']))
-    if c.get('preset'):
+    if c.get('preset') and internal:
         p = c['preset']
         chart.append(f"Books-tab binding: `{p['preset']}`" + (f", teams {', '.join(p['teams'])}" if p.get('teams') else '') + (f", month {p['month']}" if p.get('month') else ''))
     for k, label in (('encode', 'Encode'), ('highlight', 'Highlight'), ('notes', 'Notes')):

@@ -1,0 +1,8 @@
+role,label,face,size_pt,leading_pt,weight,tracking,caps,use
+display,Display,Numerals,96.0,88.0,800,,False,"Cover season, breather numbers"
+headline,Headline,Headline,34.0,38.0,700,,False,The claim: one per spread
+stat,Stat,Numerals,54.0,54.0,700,,False,The one supporting number
+deck,Deck,Text,16.0,21.0,500,,False,"Stat label, intro standfirst"
+body,Body,Text,9.5,13.5,400,,False,"80–150 words, never more"
+caption,Caption,Text,7.5,10.0,400,,False,"What the chart shows, how to read it"
+label,Label,Text,6.5,8.0,600,0.08em,True,"Kickers, axis labels, sources, folios"

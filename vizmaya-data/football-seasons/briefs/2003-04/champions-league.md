@@ -372,10 +372,6 @@ Every spread is one claim (the headline) proved by one visual, set on the locked
 
 - Two strips of identical cell size, one per page, at the same height so they read across.
 
-**Check before print**
-
-- [ ] Monaco's 27 goals is the most of any club (Chelsea next on 21), from ucl_matches.csv.
-
 ### 26 · U11 — 7 days from Gelsenkirchen to Stamford Bridge
 
 **May 2004** · Breather (breather) · Big number · kicker “June”

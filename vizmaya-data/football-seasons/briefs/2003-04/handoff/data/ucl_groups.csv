@@ -1,0 +1,33 @@
+group,team,pos,P,W,D,L,GF,GA,Pts,GD,country,country_name,result
+A,Lyon,1,6,3,1,2,7,7,10,0,FRA,France,Round of 16
+A,Bayern Munich,2,6,2,3,1,6,5,9,1,GER,Germany,Round of 16
+A,Celtic,3,6,2,1,3,8,7,7,1,SCO,Scotland,UEFA Cup
+A,Anderlecht,4,6,2,1,3,4,6,7,-2,BEL,Belgium,Out
+B,Arsenal,1,6,3,1,2,9,6,10,3,ENG,England,Round of 16
+B,Lokomotiv Moscow,2,6,2,2,2,7,7,8,0,RUS,Russia,Round of 16
+B,Inter,3,6,2,2,2,8,11,8,-3,ITA,Italy,UEFA Cup
+B,Dynamo Kyiv,4,6,2,1,3,8,8,7,0,UKR,Ukraine,Out
+C,Monaco,1,6,3,2,1,15,6,11,9,FRA,France,Round of 16
+C,Deportivo La Coruña,2,6,3,1,2,12,12,10,0,ESP,Spain,Round of 16
+C,PSV Eindhoven,3,6,3,1,2,8,7,10,1,NED,Netherlands,UEFA Cup
+C,AEK Athens,4,6,0,2,4,1,11,2,-10,GRE,Greece,Out
+D,Juventus,1,6,4,1,1,15,6,13,9,ITA,Italy,Round of 16
+D,Real Sociedad,2,6,2,3,1,8,8,9,0,ESP,Spain,Round of 16
+D,Galatasaray,3,6,2,1,3,6,8,7,-2,TUR,Turkey,UEFA Cup
+D,Olympiacos,4,6,1,1,4,6,13,4,-7,GRE,Greece,Out
+E,Manchester United,1,6,5,0,1,13,2,15,11,ENG,England,Round of 16
+E,VfB Stuttgart,2,6,4,0,2,9,6,12,3,GER,Germany,Round of 16
+E,Panathinaikos,3,6,1,1,4,5,13,4,-8,GRE,Greece,UEFA Cup
+E,Rangers,4,6,1,1,4,4,10,4,-6,SCO,Scotland,Out
+F,Real Madrid,1,6,4,2,0,11,5,14,6,ESP,Spain,Round of 16
+F,Porto,2,6,3,2,1,9,8,11,1,POR,Portugal,Round of 16
+F,Marseille,3,6,1,1,4,9,11,4,-2,FRA,France,UEFA Cup
+F,Partizan,4,6,0,3,3,3,8,3,-5,SRB,Serbia and Montenegro,Out
+G,Chelsea,1,6,4,1,1,9,3,13,6,ENG,England,Round of 16
+G,Sparta Prague,2,6,2,2,2,5,5,8,0,CZE,Czech Republic,Round of 16
+G,Beşiktaş,3,6,2,1,3,5,7,7,-2,TUR,Turkey,UEFA Cup
+G,Lazio,4,6,1,2,3,6,10,5,-4,ITA,Italy,Out
+H,AC Milan,1,6,3,1,2,4,3,10,1,ITA,Italy,Round of 16
+H,Celta Vigo,2,6,2,3,1,7,6,9,1,ESP,Spain,Round of 16
+H,Club Brugge,3,6,2,2,2,5,6,8,-1,BEL,Belgium,UEFA Cup
+H,Ajax,4,6,2,0,4,6,7,6,-1,NED,Netherlands,Out

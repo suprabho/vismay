@@ -257,7 +257,7 @@
    "chart": {
     "form": "line-race",
     "sketch": [],
-    "notes": "x = game number 1–38; y = cumulative points 0–90. One line per club. Arsenal in accent, Chelsea in second; Manchester United and Liverpool labelled in muted; the other 16 clubs as 0.5pt muted context lines, unlabelled. Annotate: Game 30, 28 March: “30 unbeaten from the start, a record” (1–1 v Manchester United). Annotate: Game 34, 25 April: title won at White Hart Lane, four games left. Annotate: {'Final point labels at the line end': 'Arsenal 90, Chelsea 79, Man United 75, Liverpool 60.'} The chart every later league spread zooms into; keep its scale (0–90) wherever the race returns.",
+    "notes": "x = game number 1–38; y = cumulative points 0–90. One line per club. Arsenal in accent, Chelsea in second; Manchester United and Liverpool labelled in muted; the other 16 clubs as 0.5pt muted context lines, unlabelled. Annotate: Game 30, 28 March: “30 unbeaten from the start, a record” (1–1 v Manchester United). Annotate: Game 34, 25 April: title won at White Hart Lane, four games left. Annotate: Final point labels at the line end: Arsenal 90, Chelsea 79, Man United 75, Liverpool 60. The chart every later league spread zooms into; keep its scale (0–90) wherever the race returns.",
     "data": {
      "preset": "points-race",
      "competition": "Premier League",
@@ -730,7 +730,7 @@
    "body": "Arsenal finished the 2003-04 league season with 26 wins, 12 draws and no defeats, 73 goals scored and 26 conceded. They were behind at half-time five times and took 13 points from those games. They went to Old Trafford, Anfield and Stamford Bridge as the bookmakers' underdogs and lost none of the three. Their expected goals, by StatsBomb's model, came to 60.9 for and 30.9 against, a side that made twice the chances it allowed. The last game, 2-1 against Leicester on 15 May, came from a goal down. The next day more than 250,000 people lined the streets of Islington for the parade.",
    "caption": "Arsenal's 38 league results in order. Bars under each result show expected goals for (up) and against (down); ticks mark games they trailed at half-time.",
    "status": "data",
-   "notes": "Design: The same strip cell size as L07 and U06; the xG bars hang from a hairline baseline under the strip.\nDesign: Bookmaker notes as Caption-style annotations on the three underdog games.\nCheck: The parade figure (250,000) is from events.csv.\nSource: Source: football-data.co.uk results and odds; StatsBomb open data (xG). StatsBomb logo and credit required."
+   "notes": "Design: The same strip cell size as L07 and U06; the xG bars hang from a hairline baseline under the strip.\nDesign: Bookmaker notes as Caption-style annotations on the three underdog games.\nCheck: The parade figure (250,000) is from events.csv, not yet hand-verified; confirm.\nSource: Source: football-data.co.uk results and odds; StatsBomb open data (xG). StatsBomb logo and credit required."
   },
   {
    "id": "L14",
@@ -805,7 +805,7 @@
    "body": "The two finalists took different roads to Gelsenkirchen. Porto played thirteen games and lost one, at home to Real Madrid in October; they drew five, including both legs that mattered most, 1-1 at Old Trafford and 2-2 in Lyon. They scored 20 and conceded 12. Monaco lost four times, at Deportivo, in Moscow, in Madrid and in the final itself, and scored 27, more than anyone. They went through two knockout ties on away goals. Porto's road was the steadier one, and the final went the steady side's way.",
    "caption": "Every Champions League game played by Porto (left) and Monaco (right), in order.",
    "status": "card",
-   "notes": "Design: Two strips of identical cell size, one per page, at the same height so they read across.\nCheck: Monaco's 27 goals is the most of any club (Chelsea next on 21), from ucl_matches.csv.\nSource: Source: engsoccerdata (jalapic) Champions League results."
+   "notes": "Design: Two strips of identical cell size, one per page, at the same height so they read across.\nSource: Source: engsoccerdata (jalapic) Champions League results."
   },
   {
    "id": "U11",
@@ -847,7 +847,7 @@
    "body": "Every one of the season's 380 league games is on the right-hand page. Read across a row for a club's home results, down a column for its away results. Home sides won 167, there were 108 draws and the away side won 105. Arsenal's row is the only one with no away-win colour in it, and their column the only one with no home-win colour. Wolves' column, their away games, has no away win in it at all. Arsenal won 15 home games and drew 4; Manchester United and Chelsea won 12 each.",
    "caption": "All 380 Premier League results. Home club down the side, away club across the top, both in final-table order.",
    "status": "card",
-   "notes": "Design: The grid fills the right page (x 6.5–12, y 0–7.25); cells about 8mm square, scores in 6.5pt tabular numerals.\nDesign: Team names abbreviated to three letters on the top axis.\nCheck: Home-win counts (Arsenal 15, Man United and Chelsea 12) recounted from epl_results_grid.csv.\nSource: Source: football-data.co.uk."
+   "notes": "Design: The grid fills the right page (x 6.5–12, y 0–7.25); cells about 8mm square, scores in 6.5pt tabular numerals.\nDesign: Team names abbreviated to three letters on the top axis.\nSource: Source: football-data.co.uk."
   },
   {
    "id": "L16",

@@ -1,0 +1,14 @@
+match_id,date,team,player,player_known_as,period,minute,second,x,y,end_x,end_y,xg,outcome,body_part,shot_type,technique,under_pressure,first_time,assisted_by,assisted_by_known_as
+3752619,2004-05-26,Monaco,Edouard Cissé,Edouard Cissé,1,2,22,102.8,56.8,120.0,32.8,0.037,Off T,Left Foot,Open Play,Normal,True,False,,
+3752619,2004-05-26,Porto,Anderson Luís de Souza,Deco,1,6,45,101.9,53.2,112.9,43.6,0.025,Blocked,Right Foot,Open Play,Half Volley,False,True,,
+3752619,2004-05-26,Porto,Carlos Alberto Gomes de Jesus,Carlos Alberto,1,38,44,107.7,41.2,120.0,43.3,0.067,Goal,Right Foot,Open Play,Half Volley,False,True,Paulo Renato Rebocho Ferreira,Paulo Ferreira
+3752619,2004-05-26,Monaco,Dado Prso,Dado Prso,2,59,13,106.5,42.3,120.0,50.4,0.028,Off T,Head,Open Play,Normal,True,False,Patrice Evra,Patrice Evra
+3752619,2004-05-26,Monaco,Julien Rodriguez,Julien Rodriguez,2,61,35,113.8,40.3,112.5,52.4,0.19,Wayward,Head,Open Play,Normal,True,False,Jérôme Rothen,Jérôme Rothen
+3752619,2004-05-26,Porto,Anderson Luís de Souza,Deco,2,70,20,105.8,36.8,120.0,36.4,0.173,Goal,Right Foot,Open Play,Normal,False,False,Dmitriy Alenichev,Dmitriy Alenichev
+3752619,2004-05-26,Monaco,Fernando Morientes Sánchez,Fernando Morientes,2,72,48,98.2,40.1,120.0,56.5,0.06,Off T,Right Foot,Open Play,Half Volley,False,True,Dado Prso,Dado Prso
+3752619,2004-05-26,Monaco,Sébastien Squillaci,Sébastien Squillaci,2,73,57,111.5,36.2,116.0,51.5,0.058,Wayward,Head,Open Play,Normal,True,False,Jérôme Rothen,Jérôme Rothen
+3752619,2004-05-26,Porto,Dmitriy Alenichev,Dmitriy Alenichev,2,74,40,110.2,29.8,120.0,37.3,0.235,Goal,Right Foot,Open Play,Half Volley,False,True,,
+3752619,2004-05-26,Monaco,Sébastien Squillaci,Sébastien Squillaci,2,76,34,87.8,41.1,120.0,52.3,0.019,Off T,Right Foot,Open Play,Normal,False,True,Fernando Morientes Sánchez,Fernando Morientes
+3752619,2004-05-26,Monaco,Patrice Evra,Patrice Evra,2,84,35,111.4,27.7,120.0,43.4,0.118,Off T,Left Foot,Open Play,Normal,False,True,Shabani Christophe Nonda,Shabani Nonda
+3752619,2004-05-26,Monaco,Sébastien Squillaci,Sébastien Squillaci,2,89,21,111.5,42.5,120.0,36.5,0.061,Off T,Head,Open Play,Normal,True,False,Jérôme Rothen,Jérôme Rothen
+3752619,2004-05-26,Monaco,Sébastien Squillaci,Sébastien Squillaci,2,90,53,113.9,45.0,120.0,46.6,0.113,Off T,Head,Open Play,Normal,True,False,Jérôme Rothen,Jérôme Rothen

@@ -1,0 +1,612 @@
+{
+ "version": 2,
+ "page": {
+  "widthMm": 210,
+  "heightMm": 270,
+  "spreadWidthMm": 420,
+  "margins": {
+   "topMm": 15,
+   "bottomMm": 20,
+   "outerMm": 15,
+   "innerMm": 18
+  },
+  "columns": 12,
+  "rows": 8,
+  "gutterMm": 4,
+  "baselineMm": 4,
+  "bleedMm": 3
+ },
+ "typeScale": [
+  {
+   "role": "display",
+   "label": "Display",
+   "face": "Numerals",
+   "sizePt": 96,
+   "leadingPt": 88,
+   "weight": 800,
+   "use": "Cover season, breather numbers"
+  },
+  {
+   "role": "headline",
+   "label": "Headline",
+   "face": "Headline",
+   "sizePt": 34,
+   "leadingPt": 38,
+   "weight": 700,
+   "use": "The claim: one per spread"
+  },
+  {
+   "role": "stat",
+   "label": "Stat",
+   "face": "Numerals",
+   "sizePt": 54,
+   "leadingPt": 54,
+   "weight": 700,
+   "use": "The one supporting number"
+  },
+  {
+   "role": "deck",
+   "label": "Deck",
+   "face": "Text",
+   "sizePt": 16,
+   "leadingPt": 21,
+   "weight": 500,
+   "use": "Stat label, intro standfirst"
+  },
+  {
+   "role": "body",
+   "label": "Body",
+   "face": "Text",
+   "sizePt": 9.5,
+   "leadingPt": 13.5,
+   "weight": 400,
+   "use": "80–150 words, never more"
+  },
+  {
+   "role": "caption",
+   "label": "Caption",
+   "face": "Text",
+   "sizePt": 7.5,
+   "leadingPt": 10,
+   "weight": 400,
+   "use": "What the chart shows, how to read it"
+  },
+  {
+   "role": "label",
+   "label": "Label",
+   "face": "Text",
+   "sizePt": 6.5,
+   "leadingPt": 8,
+   "weight": 600,
+   "tracking": "0.08em",
+   "caps": true,
+   "use": "Kickers, axis labels, sources, folios"
+  }
+ ],
+ "palette": {
+  "paper": "#F4F1EA",
+  "ink": "#141414",
+  "muted": "#8A8780",
+  "rule": "#CFCAC0",
+  "accent": "#D7372B",
+  "second": "#1F5AA6",
+  "draw": "#B5B0A6"
+ },
+ "resultColours": {
+  "W": "#141414",
+  "D": "#B5B0A6",
+  "L": "#D7372B"
+ },
+ "chartStyle": [
+  {
+   "label": "Highlight",
+   "value": "At most two coloured series: accent, then second. Everything else is context in muted."
+  },
+  {
+   "label": "Lines",
+   "value": "Highlight 1.5pt, context 0.75pt, round joins. No markers except the last point."
+  },
+  {
+   "label": "Labels",
+   "value": "Direct labels at the line end or on the bar. No legends."
+  },
+  {
+   "label": "Axes",
+   "value": "One 0.5pt baseline in ink. Light 0.25pt rules only where a reader must read a value across."
+  },
+  {
+   "label": "Numbers",
+   "value": "Tabular numerals, Label style on axes; the chart’s key value may be set in Stat."
+  },
+  {
+   "label": "Results",
+   "value": "Win ink, draw draw-grey, loss accent: the same three everywhere a result appears."
+  },
+  {
+   "label": "Brackets",
+   "value": "Rounds left to right in time, converging on the final. Winners’ paths continue in ink, losers’ stop at the round they went out. At most two paths coloured. Leg scores in Label, the aggregate in Deck; an open circle marks a tie settled on away goals or penalties."
+  },
+  {
+   "label": "Annotation",
+   "value": "A 0.5pt leader and a Caption-style note at the moment that proves the headline."
+  },
+  {
+   "label": "Source",
+   "value": "Every chart ends with a Label-style source line. StatsBomb data carries its credit."
+  }
+ ],
+ "chartForms": {
+  "line-race": {
+   "label": "Line race",
+   "reads": "who was ahead, and when it changed"
+  },
+  "bar": {
+   "label": "Bars",
+   "reads": "how much, ranked"
+  },
+  "slope": {
+   "label": "Slope",
+   "reads": "before and after, for several teams"
+  },
+  "strip": {
+   "label": "Results strip",
+   "reads": "a run of results, game by game"
+  },
+  "scatter": {
+   "label": "Scatter",
+   "reads": "two measures, every team or player"
+  },
+  "small-multiples": {
+   "label": "Small multiples",
+   "reads": "the same chart for each team, side by side"
+  },
+  "pitch": {
+   "label": "Pitch map",
+   "reads": "where on the pitch (shots, passes, pressing)"
+  },
+  "timeline": {
+   "label": "Timeline",
+   "reads": "what happened in what order"
+  },
+  "bracket": {
+   "label": "Bracket",
+   "reads": "a knockout, tie by tie, round by round to the final"
+  },
+  "table": {
+   "label": "Table",
+   "reads": "the standings, or exact values to look up"
+  },
+  "heat-table": {
+   "label": "Heat table",
+   "reads": "a grid of values, coloured by size"
+  },
+  "big-number": {
+   "label": "Big number",
+   "reads": "one figure, set very large"
+  },
+  "image": {
+   "label": "Photo-style",
+   "reads": "a picture or illustration, little text"
+  }
+ },
+ "roles": {
+  "hero": {
+   "label": "Hero",
+   "letter": "H"
+  },
+  "dense": {
+   "label": "Dense data",
+   "letter": "D"
+  },
+  "breather": {
+   "label": "Breather",
+   "letter": "B"
+  },
+  "frame": {
+   "label": "Frame",
+   "letter": "F"
+  }
+ },
+ "templates": [
+  {
+   "id": "cover",
+   "label": "Cover",
+   "role": "frame",
+   "description": "Back cover blurb on the left, the season set as a Display number on the front.",
+   "use": "Once, first.",
+   "regions": [
+    {
+     "kind": "body",
+     "x": 0.5,
+     "y": 4.5,
+     "w": 4,
+     "h": 2.5
+    },
+    {
+     "kind": "image",
+     "x": 6,
+     "y": 0,
+     "w": 6,
+     "h": 8
+    },
+    {
+     "kind": "title",
+     "x": 6.5,
+     "y": 0.5,
+     "w": 5,
+     "h": 3
+    },
+    {
+     "kind": "kicker",
+     "x": 6.5,
+     "y": 7,
+     "w": 5,
+     "h": 0.5
+    }
+   ],
+   "words": {
+    "min": 0,
+    "max": 80
+   },
+   "forms": [
+    "image",
+    "big-number"
+   ],
+   "headlineScale": 1
+  },
+  {
+   "id": "intro",
+   "label": "Season intro",
+   "role": "frame",
+   "description": "The season’s argument on the left; the whole season at a glance on the right.",
+   "use": "Once, after the cover: the chart every later spread zooms into.",
+   "regions": [
+    {
+     "kind": "kicker",
+     "x": 0,
+     "y": 0,
+     "w": 5,
+     "h": 0.5
+    },
+    {
+     "kind": "headline",
+     "x": 0,
+     "y": 0.75,
+     "w": 5,
+     "h": 2.5
+    },
+    {
+     "kind": "body",
+     "x": 0,
+     "y": 3.75,
+     "w": 4,
+     "h": 3.5
+    },
+    {
+     "kind": "chart",
+     "x": 6.5,
+     "y": 0,
+     "w": 5.5,
+     "h": 6.75
+    },
+    {
+     "kind": "caption",
+     "x": 6.5,
+     "y": 7,
+     "w": 4,
+     "h": 1
+    }
+   ],
+   "words": {
+    "min": 80,
+    "max": 150
+   },
+   "forms": [
+    "line-race",
+    "table",
+    "bar",
+    "strip",
+    "small-multiples",
+    "bracket"
+   ],
+   "headlineScale": 1.15
+  },
+  {
+   "id": "hero",
+   "label": "Hero",
+   "role": "hero",
+   "description": "One big chart across the gutter; the headline makes the claim it proves.",
+   "use": "A month’s biggest beat. Opens each month-chapter.",
+   "regions": [
+    {
+     "kind": "kicker",
+     "x": 0,
+     "y": 0,
+     "w": 4,
+     "h": 0.5
+    },
+    {
+     "kind": "headline",
+     "x": 0,
+     "y": 0.75,
+     "w": 4.5,
+     "h": 2
+    },
+    {
+     "kind": "stat",
+     "x": 0,
+     "y": 3,
+     "w": 3,
+     "h": 1.5
+    },
+    {
+     "kind": "body",
+     "x": 0,
+     "y": 4.75,
+     "w": 3,
+     "h": 3.25
+    },
+    {
+     "kind": "chart",
+     "x": 3.75,
+     "y": 1,
+     "w": 8.25,
+     "h": 6
+    },
+    {
+     "kind": "caption",
+     "x": 8,
+     "y": 7.25,
+     "w": 4,
+     "h": 0.75
+    }
+   ],
+   "words": {
+    "min": 80,
+    "max": 150
+   },
+   "forms": [
+    "line-race",
+    "bar",
+    "slope",
+    "strip",
+    "scatter",
+    "pitch",
+    "bracket"
+   ],
+   "headlineScale": 1.2
+  },
+  {
+   "id": "comparison",
+   "label": "Comparison",
+   "role": "dense",
+   "description": "One visual in two halves, one per page: this team against that, this month against last.",
+   "use": "A head-to-head or a before/after.",
+   "regions": [
+    {
+     "kind": "kicker",
+     "x": 0,
+     "y": 0,
+     "w": 5,
+     "h": 0.5
+    },
+    {
+     "kind": "headline",
+     "x": 0,
+     "y": 0.75,
+     "w": 7,
+     "h": 1.25
+    },
+    {
+     "kind": "chart",
+     "x": 0,
+     "y": 2.25,
+     "w": 12,
+     "h": 3.75
+    },
+    {
+     "kind": "stat",
+     "x": 0,
+     "y": 6.25,
+     "w": 2.5,
+     "h": 1.5
+    },
+    {
+     "kind": "body",
+     "x": 2.75,
+     "y": 6.25,
+     "w": 5.25,
+     "h": 1.75
+    },
+    {
+     "kind": "caption",
+     "x": 8.5,
+     "y": 6.25,
+     "w": 3.5,
+     "h": 1
+    }
+   ],
+   "words": {
+    "min": 80,
+    "max": 150
+   },
+   "forms": [
+    "small-multiples",
+    "bar",
+    "slope",
+    "line-race",
+    "pitch",
+    "scatter"
+   ],
+   "headlineScale": 1
+  },
+  {
+   "id": "timeline",
+   "label": "Timeline",
+   "role": "dense",
+   "description": "A horizontal run across both pages: results, events or a lead that changed hands.",
+   "use": "A month told in order, or a streak.",
+   "regions": [
+    {
+     "kind": "kicker",
+     "x": 0,
+     "y": 0,
+     "w": 5,
+     "h": 0.5
+    },
+    {
+     "kind": "headline",
+     "x": 0,
+     "y": 0.75,
+     "w": 6.5,
+     "h": 1.5
+    },
+    {
+     "kind": "chart",
+     "x": 0,
+     "y": 2.75,
+     "w": 12,
+     "h": 2.75
+    },
+    {
+     "kind": "body",
+     "x": 0,
+     "y": 5.75,
+     "w": 4.5,
+     "h": 2.25
+    },
+    {
+     "kind": "stat",
+     "x": 6.5,
+     "y": 5.75,
+     "w": 2.5,
+     "h": 1.5
+    },
+    {
+     "kind": "caption",
+     "x": 9.25,
+     "y": 5.75,
+     "w": 2.75,
+     "h": 1
+    }
+   ],
+   "words": {
+    "min": 80,
+    "max": 150
+   },
+   "forms": [
+    "timeline",
+    "bracket",
+    "strip",
+    "line-race"
+   ],
+   "headlineScale": 1
+  },
+  {
+   "id": "table",
+   "label": "Table",
+   "role": "dense",
+   "description": "The words on the left page, a full-height table or heat table on the right.",
+   "use": "Standings at the month’s end, or a ranking to look things up in.",
+   "regions": [
+    {
+     "kind": "kicker",
+     "x": 0,
+     "y": 0,
+     "w": 5,
+     "h": 0.5
+    },
+    {
+     "kind": "headline",
+     "x": 0,
+     "y": 0.75,
+     "w": 5,
+     "h": 2
+    },
+    {
+     "kind": "stat",
+     "x": 0,
+     "y": 3,
+     "w": 3,
+     "h": 1.5
+    },
+    {
+     "kind": "body",
+     "x": 0,
+     "y": 4.75,
+     "w": 4.5,
+     "h": 2.5
+    },
+    {
+     "kind": "chart",
+     "x": 6.5,
+     "y": 0,
+     "w": 5.5,
+     "h": 7.25
+    },
+    {
+     "kind": "caption",
+     "x": 0,
+     "y": 7.4,
+     "w": 4.5,
+     "h": 0.6
+    }
+   ],
+   "words": {
+    "min": 80,
+    "max": 150
+   },
+   "forms": [
+    "table",
+    "heat-table"
+   ],
+   "headlineScale": 1
+  },
+  {
+   "id": "breather",
+   "label": "Breather",
+   "role": "breather",
+   "description": "A photo-style page and a single number: room to turn the page.",
+   "use": "After a dense spread. Never two in a row.",
+   "regions": [
+    {
+     "kind": "image",
+     "x": 0,
+     "y": 0,
+     "w": 6,
+     "h": 8
+    },
+    {
+     "kind": "number",
+     "x": 6.5,
+     "y": 1.5,
+     "w": 5.5,
+     "h": 3
+    },
+    {
+     "kind": "headline",
+     "x": 6.5,
+     "y": 4.75,
+     "w": 5,
+     "h": 1.25
+    },
+    {
+     "kind": "caption",
+     "x": 6.5,
+     "y": 6.5,
+     "w": 4,
+     "h": 1
+    }
+   ],
+   "words": {
+    "min": 0,
+    "max": 60
+   },
+   "forms": [
+    "big-number",
+    "image"
+   ],
+   "headlineScale": 0.7
+  }
+ ]
+}

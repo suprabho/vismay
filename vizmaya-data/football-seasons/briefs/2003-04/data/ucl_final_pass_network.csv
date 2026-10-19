@@ -1,123 +1,123 @@
-match_id,team,passer,recipient,passes
-3752619,AS Monaco,Ludovic Giuly,Fernando Morientes Sánchez,1
-3752619,AS Monaco,Fernando Morientes Sánchez,Hugo Benjamín Ibarra,1
-3752619,AS Monaco,Hugo Benjamín Ibarra,Edouard Cissé,4
-3752619,AS Monaco,Hugo Benjamín Ibarra,Fernando Morientes Sánchez,2
-3752619,AS Monaco,Flavio Roma,Fernando Morientes Sánchez,1
-3752619,AS Monaco,Fernando Morientes Sánchez,Ludovic Giuly,1
-3752619,AS Monaco,Jérôme Rothen,Andreas Vasilios Zikos,1
-3752619,AS Monaco,Andreas Vasilios Zikos,Ludovic Giuly,1
-3752619,AS Monaco,Gaël Givet-Viaros,Patrice Evra,3
-3752619,AS Monaco,Patrice Evra,Gaël Givet-Viaros,2
-3752619,AS Monaco,Gaël Givet-Viaros,Julien Rodriguez,1
-3752619,AS Monaco,Julien Rodriguez,Fernando Morientes Sánchez,1
-3752619,AS Monaco,Julien Rodriguez,Edouard Cissé,1
-3752619,AS Monaco,Edouard Cissé,Hugo Benjamín Ibarra,1
-3752619,AS Monaco,Gaël Givet-Viaros,Lucas Bernardi,1
-3752619,AS Monaco,Lucas Bernardi,Jérôme Rothen,1
-3752619,AS Monaco,Jérôme Rothen,Patrice Evra,4
-3752619,AS Monaco,Patrice Evra,Ludovic Giuly,2
-3752619,AS Monaco,Ludovic Giuly,Patrice Evra,1
-3752619,AS Monaco,Patrice Evra,Lucas Bernardi,5
-3752619,AS Monaco,Lucas Bernardi,Fernando Morientes Sánchez,2
-3752619,AS Monaco,Lucas Bernardi,Andreas Vasilios Zikos,1
-3752619,AS Monaco,Andreas Vasilios Zikos,Flavio Roma,1
-3752619,AS Monaco,Gaël Givet-Viaros,Flavio Roma,1
-3752619,AS Monaco,Lucas Bernardi,Hugo Benjamín Ibarra,1
-3752619,AS Monaco,Hugo Benjamín Ibarra,Lucas Bernardi,2
-3752619,AS Monaco,Flavio Roma,Lucas Bernardi,1
-3752619,AS Monaco,Lucas Bernardi,Patrice Evra,1
-3752619,AS Monaco,Fernando Morientes Sánchez,Andreas Vasilios Zikos,1
-3752619,AS Monaco,Hugo Benjamín Ibarra,Julien Rodriguez,2
-3752619,AS Monaco,Julien Rodriguez,Flavio Roma,1
-3752619,AS Monaco,Hugo Benjamín Ibarra,Andreas Vasilios Zikos,1
-3752619,AS Monaco,Andreas Vasilios Zikos,Hugo Benjamín Ibarra,2
-3752619,AS Monaco,Flavio Roma,Edouard Cissé,1
-3752619,AS Monaco,Edouard Cissé,Ludovic Giuly,1
-3752619,AS Monaco,Ludovic Giuly,Edouard Cissé,1
-3752619,AS Monaco,Patrice Evra,Jérôme Rothen,3
-3752619,AS Monaco,Jérôme Rothen,Gaël Givet-Viaros,1
-3752619,AS Monaco,Gaël Givet-Viaros,Andreas Vasilios Zikos,1
-3752619,AS Monaco,Hugo Benjamín Ibarra,Patrice Evra,1
-3752619,AS Monaco,Gaël Givet-Viaros,Hugo Benjamín Ibarra,1
-3752619,AS Monaco,Flavio Roma,Patrice Evra,1
-3752619,AS Monaco,Ludovic Giuly,Jérôme Rothen,1
-3752619,AS Monaco,Gaël Givet-Viaros,Jérôme Rothen,2
-3752619,FC Porto,Jorge Paulo Costa Almeida,Paulo Renato Rebocho Ferreira,3
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Carlos Alberto Gomes de Jesus,3
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Ricardo Alberto Silveira de Carvalho,2
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Nuno Jorge Pereira Silva Valente,4
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Nuno Ricardo de Oliveira Ribeiro,10
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Nuno Jorge Pereira Silva Valente,4
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Vítor Manuel Martins Baía,2
-3752619,FC Porto,Jorge Paulo Costa Almeida,Vanderlei Fernandes Silva,2
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Vítor Manuel Martins Baía,3
-3752619,FC Porto,Vítor Manuel Martins Baía,Paulo Renato Rebocho Ferreira,6
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Paulo Renato Rebocho Ferreira,5
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Vanderlei Fernandes Silva,5
-3752619,FC Porto,Vítor Manuel Martins Baía,Anderson Luís de Souza,1
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Carlos Alberto Gomes de Jesus,2
-3752619,FC Porto,Francisco José Rodrigues da Costa,Nuno Jorge Pereira Silva Valente,7
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Jorge Paulo Costa Almeida,1
-3752619,FC Porto,Jorge Paulo Costa Almeida,Vítor Manuel Martins Baía,2
-3752619,FC Porto,Anderson Luís de Souza,Vanderlei Fernandes Silva,3
-3752619,FC Porto,Vanderlei Fernandes Silva,Anderson Luís de Souza,3
-3752619,FC Porto,Francisco José Rodrigues da Costa,Nuno Ricardo de Oliveira Ribeiro,1
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Ricardo Alberto Silveira de Carvalho,2
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Jorge Paulo Costa Almeida,2
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Ricardo Alberto Silveira de Carvalho,1
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Francisco José Rodrigues da Costa,2
-3752619,FC Porto,Francisco José Rodrigues da Costa,Ricardo Alberto Silveira de Carvalho,2
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Anderson Luís de Souza,8
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Nuno Ricardo de Oliveira Ribeiro,5
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Carlos Alberto Gomes de Jesus,3
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Paulo Renato Rebocho Ferreira,5
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Jorge Paulo Costa Almeida,2
-3752619,FC Porto,Anderson Luís de Souza,Carlos Alberto Gomes de Jesus,6
-3752619,FC Porto,Jorge Paulo Costa Almeida,Francisco José Rodrigues da Costa,1
-3752619,FC Porto,Francisco José Rodrigues da Costa,Paulo Renato Rebocho Ferreira,2
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Ricardo Alberto Silveira de Carvalho,3
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Pedro Miguel da Silva Mendes,1
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Paulo Renato Rebocho Ferreira,2
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Pedro Miguel da Silva Mendes,3
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Anderson Luís de Souza,6
-3752619,FC Porto,Anderson Luís de Souza,Nuno Jorge Pereira Silva Valente,3
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Pedro Miguel da Silva Mendes,1
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Nuno Ricardo de Oliveira Ribeiro,3
-3752619,FC Porto,Carlos Alberto Gomes de Jesus,Pedro Miguel da Silva Mendes,2
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Vanderlei Fernandes Silva,1
-3752619,FC Porto,Vanderlei Fernandes Silva,Nuno Ricardo de Oliveira Ribeiro,1
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Vanderlei Fernandes Silva,4
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Nuno Jorge Pereira Silva Valente,2
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Anderson Luís de Souza,4
-3752619,FC Porto,Anderson Luís de Souza,Nuno Ricardo de Oliveira Ribeiro,3
-3752619,FC Porto,Vanderlei Fernandes Silva,Pedro Miguel da Silva Mendes,1
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Vítor Manuel Martins Baía,1
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Pedro Miguel da Silva Mendes,2
-3752619,FC Porto,Jorge Paulo Costa Almeida,Nuno Ricardo de Oliveira Ribeiro,1
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Nuno Ricardo de Oliveira Ribeiro,1
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Francisco José Rodrigues da Costa,3
-3752619,FC Porto,Francisco José Rodrigues da Costa,Pedro Miguel da Silva Mendes,2
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Anderson Luís de Souza,7
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Carlos Alberto Gomes de Jesus,1
-3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Jorge Paulo Costa Almeida,1
-3752619,FC Porto,Vítor Manuel Martins Baía,Nuno Jorge Pereira Silva Valente,2
-3752619,FC Porto,Carlos Alberto Gomes de Jesus,Anderson Luís de Souza,3
-3752619,FC Porto,Carlos Alberto Gomes de Jesus,Paulo Renato Rebocho Ferreira,1
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Vanderlei Fernandes Silva,1
-3752619,FC Porto,Jorge Paulo Costa Almeida,Nuno Jorge Pereira Silva Valente,1
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Vanderlei Fernandes Silva,2
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Carlos Alberto Gomes de Jesus,3
-3752619,FC Porto,Anderson Luís de Souza,Pedro Miguel da Silva Mendes,4
-3752619,FC Porto,Anderson Luís de Souza,Francisco José Rodrigues da Costa,1
-3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Francisco José Rodrigues da Costa,1
-3752619,FC Porto,Francisco José Rodrigues da Costa,Vítor Manuel Martins Baía,1
-3752619,FC Porto,Vítor Manuel Martins Baía,Vanderlei Fernandes Silva,2
-3752619,FC Porto,Jorge Paulo Costa Almeida,Anderson Luís de Souza,1
-3752619,FC Porto,Anderson Luís de Souza,Ricardo Alberto Silveira de Carvalho,2
-3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Anderson Luís de Souza,1
-3752619,FC Porto,Vanderlei Fernandes Silva,Ricardo Alberto Silveira de Carvalho,1
-3752619,FC Porto,Paulo Renato Rebocho Ferreira,Vítor Manuel Martins Baía,1
-3752619,FC Porto,Anderson Luís de Souza,Paulo Renato Rebocho Ferreira,1
-3752619,FC Porto,Pedro Miguel da Silva Mendes,Nuno Jorge Pereira Silva Valente,1
-3752619,FC Porto,Vítor Manuel Martins Baía,Carlos Alberto Gomes de Jesus,1
+match_id,team,passer,passer_known_as,recipient,recipient_known_as,passes
+3752619,Monaco,Ludovic Giuly,Ludovic Giuly,Fernando Morientes Sánchez,Fernando Morientes,1
+3752619,Monaco,Fernando Morientes Sánchez,Fernando Morientes,Hugo Benjamín Ibarra,Hugo Ibarra,1
+3752619,Monaco,Hugo Benjamín Ibarra,Hugo Ibarra,Edouard Cissé,Edouard Cissé,4
+3752619,Monaco,Hugo Benjamín Ibarra,Hugo Ibarra,Fernando Morientes Sánchez,Fernando Morientes,2
+3752619,Monaco,Flavio Roma,Flavio Roma,Fernando Morientes Sánchez,Fernando Morientes,1
+3752619,Monaco,Fernando Morientes Sánchez,Fernando Morientes,Ludovic Giuly,Ludovic Giuly,1
+3752619,Monaco,Jérôme Rothen,Jérôme Rothen,Andreas Vasilios Zikos,Andreas Vasilios Zikos,1
+3752619,Monaco,Andreas Vasilios Zikos,Andreas Vasilios Zikos,Ludovic Giuly,Ludovic Giuly,1
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Patrice Evra,Patrice Evra,3
+3752619,Monaco,Patrice Evra,Patrice Evra,Gaël Givet-Viaros,Gaël Givet,2
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Julien Rodriguez,Julien Rodriguez,1
+3752619,Monaco,Julien Rodriguez,Julien Rodriguez,Fernando Morientes Sánchez,Fernando Morientes,1
+3752619,Monaco,Julien Rodriguez,Julien Rodriguez,Edouard Cissé,Edouard Cissé,1
+3752619,Monaco,Edouard Cissé,Edouard Cissé,Hugo Benjamín Ibarra,Hugo Ibarra,1
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Lucas Bernardi,Lucas Bernardi,1
+3752619,Monaco,Lucas Bernardi,Lucas Bernardi,Jérôme Rothen,Jérôme Rothen,1
+3752619,Monaco,Jérôme Rothen,Jérôme Rothen,Patrice Evra,Patrice Evra,4
+3752619,Monaco,Patrice Evra,Patrice Evra,Ludovic Giuly,Ludovic Giuly,2
+3752619,Monaco,Ludovic Giuly,Ludovic Giuly,Patrice Evra,Patrice Evra,1
+3752619,Monaco,Patrice Evra,Patrice Evra,Lucas Bernardi,Lucas Bernardi,5
+3752619,Monaco,Lucas Bernardi,Lucas Bernardi,Fernando Morientes Sánchez,Fernando Morientes,2
+3752619,Monaco,Lucas Bernardi,Lucas Bernardi,Andreas Vasilios Zikos,Andreas Vasilios Zikos,1
+3752619,Monaco,Andreas Vasilios Zikos,Andreas Vasilios Zikos,Flavio Roma,Flavio Roma,1
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Flavio Roma,Flavio Roma,1
+3752619,Monaco,Lucas Bernardi,Lucas Bernardi,Hugo Benjamín Ibarra,Hugo Ibarra,1
+3752619,Monaco,Hugo Benjamín Ibarra,Hugo Ibarra,Lucas Bernardi,Lucas Bernardi,2
+3752619,Monaco,Flavio Roma,Flavio Roma,Lucas Bernardi,Lucas Bernardi,1
+3752619,Monaco,Lucas Bernardi,Lucas Bernardi,Patrice Evra,Patrice Evra,1
+3752619,Monaco,Fernando Morientes Sánchez,Fernando Morientes,Andreas Vasilios Zikos,Andreas Vasilios Zikos,1
+3752619,Monaco,Hugo Benjamín Ibarra,Hugo Ibarra,Julien Rodriguez,Julien Rodriguez,2
+3752619,Monaco,Julien Rodriguez,Julien Rodriguez,Flavio Roma,Flavio Roma,1
+3752619,Monaco,Hugo Benjamín Ibarra,Hugo Ibarra,Andreas Vasilios Zikos,Andreas Vasilios Zikos,1
+3752619,Monaco,Andreas Vasilios Zikos,Andreas Vasilios Zikos,Hugo Benjamín Ibarra,Hugo Ibarra,2
+3752619,Monaco,Flavio Roma,Flavio Roma,Edouard Cissé,Edouard Cissé,1
+3752619,Monaco,Edouard Cissé,Edouard Cissé,Ludovic Giuly,Ludovic Giuly,1
+3752619,Monaco,Ludovic Giuly,Ludovic Giuly,Edouard Cissé,Edouard Cissé,1
+3752619,Monaco,Patrice Evra,Patrice Evra,Jérôme Rothen,Jérôme Rothen,3
+3752619,Monaco,Jérôme Rothen,Jérôme Rothen,Gaël Givet-Viaros,Gaël Givet,1
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Andreas Vasilios Zikos,Andreas Vasilios Zikos,1
+3752619,Monaco,Hugo Benjamín Ibarra,Hugo Ibarra,Patrice Evra,Patrice Evra,1
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Hugo Benjamín Ibarra,Hugo Ibarra,1
+3752619,Monaco,Flavio Roma,Flavio Roma,Patrice Evra,Patrice Evra,1
+3752619,Monaco,Ludovic Giuly,Ludovic Giuly,Jérôme Rothen,Jérôme Rothen,1
+3752619,Monaco,Gaël Givet-Viaros,Gaël Givet,Jérôme Rothen,Jérôme Rothen,2
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Paulo Renato Rebocho Ferreira,Paulo Ferreira,3
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Carlos Alberto Gomes de Jesus,Carlos Alberto,3
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,2
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Nuno Jorge Pereira Silva Valente,Nuno Valente,4
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Nuno Ricardo de Oliveira Ribeiro,Maniche,10
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Nuno Jorge Pereira Silva Valente,Nuno Valente,4
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Vítor Manuel Martins Baía,Vítor Baía,2
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Vanderlei Fernandes Silva,Derlei,2
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Vítor Manuel Martins Baía,Vítor Baía,3
+3752619,Porto,Vítor Manuel Martins Baía,Vítor Baía,Paulo Renato Rebocho Ferreira,Paulo Ferreira,6
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Paulo Renato Rebocho Ferreira,Paulo Ferreira,5
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Vanderlei Fernandes Silva,Derlei,5
+3752619,Porto,Vítor Manuel Martins Baía,Vítor Baía,Anderson Luís de Souza,Deco,1
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Carlos Alberto Gomes de Jesus,Carlos Alberto,2
+3752619,Porto,Francisco José Rodrigues da Costa,Costinha,Nuno Jorge Pereira Silva Valente,Nuno Valente,7
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Jorge Paulo Costa Almeida,Jorge Costa,1
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Vítor Manuel Martins Baía,Vítor Baía,2
+3752619,Porto,Anderson Luís de Souza,Deco,Vanderlei Fernandes Silva,Derlei,3
+3752619,Porto,Vanderlei Fernandes Silva,Derlei,Anderson Luís de Souza,Deco,3
+3752619,Porto,Francisco José Rodrigues da Costa,Costinha,Nuno Ricardo de Oliveira Ribeiro,Maniche,1
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,2
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Jorge Paulo Costa Almeida,Jorge Costa,2
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,1
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Francisco José Rodrigues da Costa,Costinha,2
+3752619,Porto,Francisco José Rodrigues da Costa,Costinha,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,2
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Anderson Luís de Souza,Deco,8
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Nuno Ricardo de Oliveira Ribeiro,Maniche,5
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Carlos Alberto Gomes de Jesus,Carlos Alberto,3
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Paulo Renato Rebocho Ferreira,Paulo Ferreira,5
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Jorge Paulo Costa Almeida,Jorge Costa,2
+3752619,Porto,Anderson Luís de Souza,Deco,Carlos Alberto Gomes de Jesus,Carlos Alberto,6
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Francisco José Rodrigues da Costa,Costinha,1
+3752619,Porto,Francisco José Rodrigues da Costa,Costinha,Paulo Renato Rebocho Ferreira,Paulo Ferreira,2
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,3
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Pedro Miguel da Silva Mendes,Pedro Mendes,1
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Paulo Renato Rebocho Ferreira,Paulo Ferreira,2
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Pedro Miguel da Silva Mendes,Pedro Mendes,3
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Anderson Luís de Souza,Deco,6
+3752619,Porto,Anderson Luís de Souza,Deco,Nuno Jorge Pereira Silva Valente,Nuno Valente,3
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Pedro Miguel da Silva Mendes,Pedro Mendes,1
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Nuno Ricardo de Oliveira Ribeiro,Maniche,3
+3752619,Porto,Carlos Alberto Gomes de Jesus,Carlos Alberto,Pedro Miguel da Silva Mendes,Pedro Mendes,2
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Vanderlei Fernandes Silva,Derlei,1
+3752619,Porto,Vanderlei Fernandes Silva,Derlei,Nuno Ricardo de Oliveira Ribeiro,Maniche,1
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Vanderlei Fernandes Silva,Derlei,4
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Nuno Jorge Pereira Silva Valente,Nuno Valente,2
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Anderson Luís de Souza,Deco,4
+3752619,Porto,Anderson Luís de Souza,Deco,Nuno Ricardo de Oliveira Ribeiro,Maniche,3
+3752619,Porto,Vanderlei Fernandes Silva,Derlei,Pedro Miguel da Silva Mendes,Pedro Mendes,1
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Vítor Manuel Martins Baía,Vítor Baía,1
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Pedro Miguel da Silva Mendes,Pedro Mendes,2
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Nuno Ricardo de Oliveira Ribeiro,Maniche,1
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Nuno Ricardo de Oliveira Ribeiro,Maniche,1
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Francisco José Rodrigues da Costa,Costinha,3
+3752619,Porto,Francisco José Rodrigues da Costa,Costinha,Pedro Miguel da Silva Mendes,Pedro Mendes,2
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Anderson Luís de Souza,Deco,7
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Carlos Alberto Gomes de Jesus,Carlos Alberto,1
+3752619,Porto,Nuno Ricardo de Oliveira Ribeiro,Maniche,Jorge Paulo Costa Almeida,Jorge Costa,1
+3752619,Porto,Vítor Manuel Martins Baía,Vítor Baía,Nuno Jorge Pereira Silva Valente,Nuno Valente,2
+3752619,Porto,Carlos Alberto Gomes de Jesus,Carlos Alberto,Anderson Luís de Souza,Deco,3
+3752619,Porto,Carlos Alberto Gomes de Jesus,Carlos Alberto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,1
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Vanderlei Fernandes Silva,Derlei,1
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Nuno Jorge Pereira Silva Valente,Nuno Valente,1
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Vanderlei Fernandes Silva,Derlei,2
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Carlos Alberto Gomes de Jesus,Carlos Alberto,3
+3752619,Porto,Anderson Luís de Souza,Deco,Pedro Miguel da Silva Mendes,Pedro Mendes,4
+3752619,Porto,Anderson Luís de Souza,Deco,Francisco José Rodrigues da Costa,Costinha,1
+3752619,Porto,Nuno Jorge Pereira Silva Valente,Nuno Valente,Francisco José Rodrigues da Costa,Costinha,1
+3752619,Porto,Francisco José Rodrigues da Costa,Costinha,Vítor Manuel Martins Baía,Vítor Baía,1
+3752619,Porto,Vítor Manuel Martins Baía,Vítor Baía,Vanderlei Fernandes Silva,Derlei,2
+3752619,Porto,Jorge Paulo Costa Almeida,Jorge Costa,Anderson Luís de Souza,Deco,1
+3752619,Porto,Anderson Luís de Souza,Deco,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,2
+3752619,Porto,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,Anderson Luís de Souza,Deco,1
+3752619,Porto,Vanderlei Fernandes Silva,Derlei,Ricardo Alberto Silveira de Carvalho,Ricardo Carvalho,1
+3752619,Porto,Paulo Renato Rebocho Ferreira,Paulo Ferreira,Vítor Manuel Martins Baía,Vítor Baía,1
+3752619,Porto,Anderson Luís de Souza,Deco,Paulo Renato Rebocho Ferreira,Paulo Ferreira,1
+3752619,Porto,Pedro Miguel da Silva Mendes,Pedro Mendes,Nuno Jorge Pereira Silva Valente,Nuno Valente,1
+3752619,Porto,Vítor Manuel Martins Baía,Vítor Baía,Carlos Alberto Gomes de Jesus,Carlos Alberto,1

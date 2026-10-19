@@ -1,0 +1,14 @@
+form,label,reads,templates
+line-race,Line race,"who was ahead, and when it changed",intro hero comparison timeline
+bar,Bars,"how much, ranked",intro hero comparison
+slope,Slope,"before and after, for several teams",hero comparison
+strip,Results strip,"a run of results, game by game",intro hero timeline
+scatter,Scatter,"two measures, every team or player",hero comparison
+small-multiples,Small multiples,"the same chart for each team, side by side",intro comparison
+pitch,Pitch map,"where on the pitch (shots, passes, pressing)",hero comparison
+timeline,Timeline,what happened in what order,timeline
+bracket,Bracket,"a knockout, tie by tie, round by round to the final",intro hero timeline
+table,Table,"the standings, or exact values to look up",intro table
+heat-table,Heat table,"a grid of values, coloured by size",table
+big-number,Big number,"one figure, set very large",cover breather
+image,Photo-style,"a picture or illustration, little text",cover breather

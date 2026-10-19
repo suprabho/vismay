@@ -1,0 +1,12 @@
+key,value
+spread_trim,420 × 270 mm (two 210 × 270 mm pages)
+bleed,3 mm
+margin_top,15 mm
+margin_bottom,20 mm
+margin_outer,15 mm
+margin_inner,18 mm
+columns,12 across the spread (6 per page)
+rows,8
+gutter,4 mm
+baseline,4 mm
+grid_to_mm,x ≤ 6: outer + x/6 × 177 mm; x > 6: 210 + inner + (x−6)/6 × 177 mm; y: top + y/8 × 235 mm (template_regions.csv has it done)

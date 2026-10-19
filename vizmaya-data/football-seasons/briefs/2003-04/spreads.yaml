@@ -234,7 +234,7 @@ spreads:
       annotate:
         - 'Game 30, 28 March: “30 unbeaten from the start, a record” (1–1 v Manchester United).'
         - 'Game 34, 25 April: title won at White Hart Lane, four games left.'
-        - Final point labels at the line end: Arsenal 90, Chelsea 79, Man United 75, Liverpool 60.
+        - 'Final point labels at the line end: Arsenal 90, Chelsea 79, Man United 75, Liverpool 60.'
       notes: The chart every later league spread zooms into; keep its scale (0–90) wherever the race returns.
     body: >-
       Six clubs led the Premier League in 2003-04 and the lead changed hands twenty times, most of them before
@@ -870,7 +870,7 @@ spreads:
       - The same strip cell size as L07 and U06; the xG bars hang from a hairline baseline under the strip.
       - Bookmaker notes as Caption-style annotations on the three underdog games.
     checks:
-      - The parade figure (250,000) is from events.csv.
+      - The parade figure (250,000) is from events.csv, not yet hand-verified; confirm.
 
   - id: L14
     competition: Premier League
@@ -962,8 +962,7 @@ spreads:
     source: 'Source: engsoccerdata (jalapic) Champions League results.'
     design:
       - Two strips of identical cell size, one per page, at the same height so they read across.
-    checks:
-      - Monaco's 27 goals is the most of any club (Chelsea next on 21), from ucl_matches.csv.
+    checks: []
 
   - id: U11
     competition: Champions League
@@ -1012,8 +1011,7 @@ spreads:
     design:
       - The grid fills the right page (x 6.5–12, y 0–7.25); cells about 8mm square, scores in 6.5pt tabular numerals.
       - Team names abbreviated to three letters on the top axis.
-    checks:
-      - Home-win counts (Arsenal 15, Man United and Chelsea 12) recounted from epl_results_grid.csv.
+    checks: []
 
   - id: L16
     competition: Premier League

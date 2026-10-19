@@ -1,0 +1,10 @@
+rule,value
+Highlight,"At most two coloured series: accent, then second. Everything else is context in muted."
+Lines,"Highlight 1.5pt, context 0.75pt, round joins. No markers except the last point."
+Labels,Direct labels at the line end or on the bar. No legends.
+Axes,One 0.5pt baseline in ink. Light 0.25pt rules only where a reader must read a value across.
+Numbers,"Tabular numerals, Label style on axes; the chart’s key value may be set in Stat."
+Results,"Win ink, draw draw-grey, loss accent: the same three everywhere a result appears."
+Brackets,"Rounds left to right in time, converging on the final. Winners’ paths continue in ink, losers’ stop at the round they went out. At most two paths coloured. Leg scores in Label, the aggregate in Deck; an open circle marks a tie settled on away goals or penalties."
+Annotation,A 0.5pt leader and a Caption-style note at the moment that proves the headline.
+Source,Every chart ends with a Label-style source line. StatsBomb data carries its credit.

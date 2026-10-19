@@ -1,0 +1,26 @@
+id,month,kind,strength,text,teams,evidence,spreads
+b-unbeaten,2004-05,record,3,"Arsenal went the whole league season unbeaten, 26 wins and 12 draws, and won it by 11 points.",Arsenal,"epl_table_final.csv (26-12-0, 90 pts); epl_leader_by_date.csv (11-point final margin); events.csv 2004-05-15",L01 L11 L13
+b-spend,2003-08,people,3,"Chelsea, bought by Roman Abramovich in July, spent £107.8m on nine £5m-plus signings before September.",Chelsea,"epl_summer_signings.csv (nine deals, £107.8m; the other 19 clubs £42.5m); events.csv 2003-07 ownership",L02
+b-qualifying,2003-08,europe,2,"Newcastle won in Belgrade and still went out of the Champions League in August, on penalties at home to Partizan.","Newcastle United, Partizan","ucl_ties.csv Q-3 Partizan v Newcastle 0-1, 1-0, penalties 4-3",U01
+b-funnel,2003-09,europe,2,Seventy-two clubs from 48 countries entered the Champions League in July; 32 reached the group stage in September.,,"ucl_stages.csv; ucl_clubs.csv (72 clubs, 48 countries)",U02
+b-crowds,2003-09,other,1,"Old Trafford averaged 67,641 a game, four times the crowd Fulham drew at Loftus Road.","Manchester United, Fulham",epl_table_final.csv avg_attendance (Wikipedia / worldfootball.net),L03
+b-close-autumn,2003-10,title-race,2,"Until Christmas, first and third in the Premier League were never more than five points apart.","Arsenal, Chelsea, Manchester United","epl_race.csv, 1 Sep - 31 Dec 2003",L04
+b-shots,2003-10,other,1,"Liverpool took more league shots than anyone, 558, and finished 30 points behind Arsenal.","Liverpool, Arsenal","epl_table_final.csv shots, Pts",L05
+b-eight-three,2003-11,europe,3,"Monaco beat Deportivo 8-3 in the group stage, and Deportivo still reached the semi-finals.","Monaco, Deportivo La Coruña",ucl_matches.csv 2003-11-05; ucl_clubs.csv (Deportivo reached the semi-finals),U03 U04
+b-halfway,2003-12,turning-point,2,"At halfway four points covered the top three, with Manchester United first; by May it was fifteen and United were third.","Manchester United, Arsenal, Chelsea",epl_race.csv game 19 vs game 38,L06
+b-groups,2003-12,europe,2,"Porto, the eventual champions, came through their group second, three points behind Real Madrid.","Porto, Real Madrid",ucl_groups.csv group F,U05
+b-ferdinand,2004-01,collapse,3,United took 2.27 points a game before Rio Ferdinand's eight-month ban began on 20 January and 1.56 after it.,Manchester United,epl_race.csv split at 2004-01-20; events.csv 2003-12-19 (ban handed down),L07 L08
+b-leaders,2004-02,title-race,3,"Six clubs led the Premier League in 2003-04, the lead changed hands 20 times, and after 1 February only Arsenal led.",Arsenal,"epl_leader_by_date.csv (changed = True, 20 rows; last 2004-02-01)",L09
+b-goals-month,2004-02,other,1,"February was the season's highest-scoring month at 3.21 goals a game, and in March home sides won 22 of 34.",,epl_goals_by_month.csv,L10
+b-england-europe,2004-03,europe,2,English clubs won three of the eight Champions League groups and none of them reached the final.,"Arsenal, Chelsea, Manchester United, Newcastle United","ucl_groups.csv (B, E, G winners); ucl_english_clubs.csv",U06
+b-henry,2004-04,record,3,"Thierry Henry scored 30 league goals from 23.9 expected, seven of them in eight days of April.",Arsenal,epl_top_scorer_shots.csv (StatsBomb); epl_scorers.csv,L12
+b-comebacks,2004-04,europe,3,"Two quarter-finals turned in the second leg, Deportivo from 4-1 down against the holders Milan and Monaco from 4-2 down against Real Madrid.","Deportivo La Coruña, AC Milan, Monaco, Real Madrid",ucl_ties.csv QF,U07
+b-monaco-scorers,2004-04,europe,1,"Monaco had the competition's two top scorers, Fernando Morientes with nine and Dado Pršo with seven.",Monaco,ucl_scorers.csv (UEFA via Wikipedia),U08
+b-relegation,2004-05,survival,2,"Leicester, Leeds and Wolves all went down on 33 points while Everton survived on 39.","Leicester City, Leeds United, Wolverhampton Wanderers, Everton",epl_table_final.csv,L14
+b-final,2004-05,europe,3,Porto won the final 3-0 with four shots worth 0.50 expected goals.,"Porto, Monaco","ucl_final_shots.csv, ucl_final_team.csv (StatsBomb)",U09
+b-roads,2004-05,europe,2,Porto lost once in thirteen Champions League games; Monaco lost four times and still reached the final.,"Porto, Monaco",ucl_finalists_road.csv,U10
+b-mourinho,2004-05,people,2,"Seven days after the final, Porto's José Mourinho became Chelsea manager.","Porto, Chelsea",events.csv 2004-06-02 (and 2004-05-31 Ranieri sacked),U11
+b-home,2004-05,other,1,"Home sides won 167 of the 380 league games, and nobody beat Arsenal home or away.",,epl_results_grid.csv,L15 L16
+b-odds,2004-05,other,1,Arsenal took 14 more points than the bookmakers' prices implied and Manchester City about 10 fewer.,"Arsenal, Manchester City","epl_table_final.csv xpts_from_odds (Bet365, margin removed)",L17
+b-countries,2004-05,europe,2,Portugal sent two clubs to the Champions League and one of them won it.,Porto,ucl_countries.csv,U12 U13
+b-knockouts,2004-05,europe,1,"Eight of the fifteen knockout ties were settled by one goal or on away goals, and Monaco went through twice on away goals.",Monaco,ucl_ties.csv R16-final,U14
