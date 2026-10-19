@@ -22,20 +22,21 @@ export async function GET() {
   }
 }
 
-/** Start a book: `{ seasonStart: 2003, title? }` → the 2003-04 book with its cover and intro spreads. */
+/** Start a book: `{ seasonStart: 2003, title?, format? }` → the 2003-04 book with its cover and intro spreads (season spreads unless `format` is `claim-spreads`). */
 export async function POST(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: PRIVATE_HEADERS })
   if (req.headers.get('origin') !== new URL(req.url).origin) {
     return NextResponse.json({ error: 'Invalid request origin' }, { status: 403, headers: PRIVATE_HEADERS })
   }
-  const body = (await req.json().catch(() => null)) as { seasonStart?: unknown; title?: unknown } | null
+  const body = (await req.json().catch(() => null)) as { seasonStart?: unknown; title?: unknown; format?: unknown } | null
   const start = body?.seasonStart
   if (typeof start !== 'number' || !Number.isInteger(start) || start < 2002 || start > new Date().getUTCFullYear()) {
     return NextResponse.json({ error: 'seasonStart must be a year from 2002 on' }, { status: 400, headers: PRIVATE_HEADERS })
   }
   const title = typeof body?.title === 'string' ? body.title.slice(0, 200) : undefined
+  const format = body?.format === 'claim-spreads' ? 'claim-spreads' : 'season-spreads'
   try {
-    return NextResponse.json({ book: await createSeasonBook(start, title, await adminEmail()) }, { status: 201, headers: PRIVATE_HEADERS })
+    return NextResponse.json({ book: await createSeasonBook(start, title, await adminEmail(), format) }, { status: 201, headers: PRIVATE_HEADERS })
   } catch (error) {
     return errorResponse(error)
   }

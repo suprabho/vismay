@@ -107,12 +107,13 @@ export const planSchema = z.object({
 })
 export type Plan = z.infer<typeof planSchema>
 
-/** A book as the API returns it. */
+/** A book as the API returns it. `plan` is a v1 claim-spreads plan or a v2 season-spreads plan (seasonSpreads.ts); `format` says which. */
 export interface SeasonBook {
   slug: string
   seasonStart: number
   title: string
-  plan: Plan
+  plan: Plan | import('./seasonSpreads').PlanV2
+  format: 'claim-spreads' | 'season-spreads'
   revision: number
   updatedAt: string
   updatedBy: string | null
@@ -122,6 +123,7 @@ export interface SeasonBookSummary {
   slug: string
   seasonStart: number
   title: string
+  format: 'claim-spreads' | 'season-spreads'
   beatCount: number
   spreadCount: number
   cardedCount: number
@@ -129,7 +131,7 @@ export interface SeasonBookSummary {
   updatedBy: string | null
 }
 
-/** The planner's views, in workflow order (`?view=`). */
+/** The claim-spreads planner's views, in workflow order (`?view=`). The season-spreads views are in seasonSpreads.ts. */
 export const BOOK_VIEWS = ['beats', 'flatplan', 'cards', 'chapters', 'system'] as const
 export type BookView = (typeof BOOK_VIEWS)[number]
 export const isBookView = (v: unknown): v is BookView => (BOOK_VIEWS as readonly unknown[]).includes(v)
