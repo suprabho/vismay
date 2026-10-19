@@ -14,6 +14,7 @@
     "./espnCups": "./src/espnCups.ts",
     "./espnMatch": "./src/espnMatch.ts",
     "./historicalEvents": "./src/historicalEvents.ts",
+    "./historicalCrests": "./src/historicalCrests.ts",
     "./entityKeys": "./src/entityKeys.ts",
     "./nationalTeams": "./src/nationalTeams.ts"
   },

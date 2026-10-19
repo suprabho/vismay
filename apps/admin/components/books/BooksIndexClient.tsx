@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Plus } from '@phosphor-icons/react'
+import { BookOpen, Plus, ShieldStar } from '@phosphor-icons/react'
 import { BEAT_TARGET, seasonLabel, seasonSlug, type SeasonBookSummary } from '@/lib/seasonBooks/plan'
 import { SYSTEM_VERSION } from '@/lib/seasonBooks/system'
-import { PANEL, PRIMARY, SELECT } from './shared'
+import { BUTTON, PANEL, PRIMARY, SELECT } from './shared'
 
 const API = '/api/footshorts/books'
 const FIRST_SEASON = 2002
@@ -62,6 +62,7 @@ export function BooksIndexClient() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/footshorts/books/crests" className={BUTTON}><ShieldStar size={16} /> Crests</Link>
           <select className={SELECT} value={season} onChange={e => setSeason(Number(e.target.value))} aria-label="Season">
             {seasons.map(s => <option key={s} value={s} disabled={taken.has(s)}>{seasonLabel(s)}{taken.has(s) ? ' (started)' : ''}</option>)}
           </select>
