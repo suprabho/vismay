@@ -1234,14 +1234,14 @@ export interface AssetEntity {
   primary_color: string | null
   /** Dedicated feed avatar-disc background, independent of primary_color. */
   avatar_bg_color: string | null
-  /** Competitions only: the HTML-story palette + font trio (null = none set). */
+  /** The HTML-story palette + font trio for a competition or team (null = none set). */
   story_style: AssetStoryStyle | null
 }
 
 /**
- * A competition's HTML-story look, as `entities.story_style` stores it.
- * Structurally `CompetitionStyle` from @vismay/html-stories/styles, which
- * validates it (parseCompetitionStyle) before it reaches the writer below.
+ * A competition's or team's HTML-story look, as `entities.story_style` stores
+ * it. Structurally `EntityStyle` from @vismay/html-stories/styles, which
+ * validates it (parseEntityStyle) before it reaches the writer below.
  */
 export interface AssetStoryStyle {
   palette: Record<string, string>
@@ -1345,11 +1345,10 @@ export async function updateEntityAvatarBgColor(
 }
 
 /**
- * Set (or clear) a competition's HTML-story style — palette + fonts, offered by
- * the HTML-stories brief's "Competition style" picker. Pass `null` to clear.
- * Callers validate the shape first (parseCompetitionStyle); this refuses
- * non-league entities (the DB check does too). Returns the updated row.
- * SERVER-ONLY.
+ * Set (or clear) a competition's or team's HTML-story style — palette + fonts,
+ * offered by the HTML-stories brief's "Story style" picker. Pass `null` to
+ * clear. Callers validate the shape first (parseEntityStyle); players are
+ * refused (the DB check does too). Returns the updated row. SERVER-ONLY.
  */
 export async function updateEntityStoryStyle(
   id: string,
@@ -1360,35 +1359,36 @@ export async function updateEntityStoryStyle(
     .from('entities')
     .update({ story_style: storyStyle })
     .eq('id', id)
-    .eq('type', 'league')
+    .in('type', ['league', 'team'])
     .select(ASSET_ENTITY_COLS)
     .maybeSingle()
   if (error) throw error
-  if (!data) throw new Error(`competition not found: ${id}`)
+  if (!data) throw new Error(`competition or team not found: ${id}`)
   return data as AssetEntity
 }
 
-/** A competition with a saved HTML-story style, for the brief's picker. */
-export interface CompetitionStoryStyleRow {
+/** A competition or team with a saved HTML-story style, for the brief's picker. */
+export interface EntityStoryStyleRow {
+  type: 'league' | 'team'
   slug: string
   name: string
   crestUrl: string | null
   style: AssetStoryStyle
 }
 
-/** Every competition that has a saved HTML-story style, by name. SERVER-ONLY. */
-export async function listCompetitionStoryStyles(): Promise<CompetitionStoryStyleRow[]> {
+/** Every competition and team that has a saved HTML-story style, by name. SERVER-ONLY. */
+export async function listEntityStoryStyles(): Promise<EntityStoryStyleRow[]> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('entities')
-    .select('slug, name, crest_url, story_style')
-    .eq('type', 'league')
+    .select('type, slug, name, crest_url, story_style')
+    .in('type', ['league', 'team'])
     .not('story_style', 'is', null)
     .order('name', { ascending: true })
   if (error) throw error
-  return ((data ?? []) as Array<{ slug: string; name: string; crest_url: string | null; story_style: AssetStoryStyle }>).map(
-    (r) => ({ slug: r.slug, name: r.name, crestUrl: r.crest_url, style: r.story_style }),
-  )
+  return (
+    (data ?? []) as Array<{ type: 'league' | 'team'; slug: string; name: string; crest_url: string | null; story_style: AssetStoryStyle }>
+  ).map((r) => ({ type: r.type, slug: r.slug, name: r.name, crestUrl: r.crest_url, style: r.story_style }))
 }
 
 // ---------------------------------------------------------------------------

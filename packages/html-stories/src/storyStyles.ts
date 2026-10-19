@@ -8,12 +8,13 @@
  */
 
 import { getAllStories } from '@vismay/content-source/content'
-import { listCompetitionStoryStyles } from '@vismay/content-source/footshortsData'
+import { listEntityStoryStyles } from '@vismay/content-source/footshortsData'
 import { DEFAULT_HTML_STORY_APP, type HtmlStoryApp } from './apps'
 import {
-  parseCompetitionStyle,
+  parseEntityStyle,
   stylePoolFromStories,
-  type CompetitionStyleOption,
+  type EntityStyleKind,
+  type EntityStyleOption,
   type StylePool,
   type ThemedStory,
 } from './styles'
@@ -24,21 +25,23 @@ export async function loadStoryStylePool(app: HtmlStoryApp = DEFAULT_HTML_STORY_
 }
 
 /**
- * The competition styles set in the footshorts Asset Studio
- * (`entities.story_style`), for the brief's "Competition style" picker. Only
- * footshorts has competitions; other apps get an empty list. Rows that no
- * longer validate are skipped rather than handed to an agent.
+ * The competition and team styles set in the footshorts Asset Studio
+ * (`entities.story_style`), for the brief's "Story style" picker. Only
+ * footshorts has them; other apps get an empty list. Rows that no longer
+ * validate are skipped rather than handed to an agent.
  */
-export async function loadCompetitionStyles(app: HtmlStoryApp = DEFAULT_HTML_STORY_APP): Promise<CompetitionStyleOption[]> {
+export async function loadEntityStyles(app: HtmlStoryApp = DEFAULT_HTML_STORY_APP): Promise<EntityStyleOption[]> {
   if (app !== 'footshorts') return []
-  const rows = await listCompetitionStoryStyles()
+  const rows = await listEntityStoryStyles()
   return rows.flatMap((r) => {
-    const parsed = parseCompetitionStyle(r.style)
-    return 'style' in parsed ? [{ slug: r.slug, name: r.name, crestUrl: r.crestUrl, style: parsed.style }] : []
+    const parsed = parseEntityStyle(r.style)
+    if (!('style' in parsed)) return []
+    const kind: EntityStyleKind = r.type === 'league' ? 'competition' : 'team'
+    return [{ kind, slug: r.slug, name: r.name, crestUrl: r.crestUrl, style: parsed.style }]
   })
 }
 
-/** One competition's style by slug (footshorts only), or null when it has none. */
-export async function loadCompetitionStyle(app: HtmlStoryApp, slug: string): Promise<CompetitionStyleOption | null> {
-  return (await loadCompetitionStyles(app)).find((c) => c.slug === slug) ?? null
+/** One competition's or team's style by slug (footshorts only), or null when it has none. */
+export async function loadEntityStyle(app: HtmlStoryApp, kind: EntityStyleKind, slug: string): Promise<EntityStyleOption | null> {
+  return (await loadEntityStyles(app)).find((o) => o.kind === kind && o.slug === slug) ?? null
 }

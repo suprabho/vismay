@@ -83,7 +83,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'contract (one self-contained HTML file), the site\'s house design direction, chart ' +
         'rules, a self-check list, and how to publish. Pass randomStyle=true to swap the house ' +
         'style for a palette and fonts drawn at random from the site\'s existing stories (footshorts: or pass ' +
-        'competitionStyle=<competition slug> for the competition\'s own palette and fonts). For ' +
+        'competitionStyle=<competition slug> or teamStyle=<team slug> for its own palette and fonts). For ' +
         'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
         'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
         'written from, plus an optional editorial prompt. For vizf1, pass sessionKeys (up to 24 telemetry ' +
@@ -118,6 +118,14 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .describe(
             'footshorts only: a competition slug (e.g. premier-league, champions-league) whose palette and fonts, ' +
               'set in the Asset Studio, replace the house style. Wins over randomStyle.',
+          ),
+        teamStyle: z
+          .string()
+          .regex(/^[a-z0-9-]{1,80}$/)
+          .optional()
+          .describe(
+            'footshorts only: a team slug (e.g. arsenal) whose palette and fonts, set in the Asset Studio, ' +
+              'replace the house style. Wins over competitionStyle and randomStyle.',
           ),
         fixtureIds: z
           .array(z.string().min(1))
@@ -174,7 +182,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .describe('The voice: straight (plain, the default) or humorous (wry, a little sarcastic; accuracy rules unchanged).'),
       },
     },
-    async ({ app, randomStyle, competitionStyle, fixtureIds, sessionKeys, drivers, gameIds, tripSlug, day, prompt, spinId, format, tone }) => {
+    async ({ app, randomStyle, competitionStyle, teamStyle, fixtureIds, sessionKeys, drivers, gameIds, tripSlug, day, prompt, spinId, format, tone }) => {
       const site = htmlStoriesUrlFor(config, app)
       const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format, tone })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
@@ -191,8 +199,11 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       // and the Mapbox token from its env, so ask the deployed site for the
       // brief rather than building it here. The local build is the fallback.
       const url = new URL(`${site}/api/html-stories/brief`)
-      if (competitionStyle && app !== 'footshorts') throw new Error('competitionStyle is footshorts only.')
-      if (competitionStyle) url.searchParams.set('style', `competition:${competitionStyle}`)
+      if ((competitionStyle || teamStyle) && app !== 'footshorts') {
+        throw new Error('competitionStyle and teamStyle are footshorts only.')
+      }
+      if (teamStyle) url.searchParams.set('style', `team:${teamStyle}`)
+      else if (competitionStyle) url.searchParams.set('style', `competition:${competitionStyle}`)
       else if (randomStyle) url.searchParams.set('style', 'random')
       if (format !== 'scroll') url.searchParams.set('format', format)
       if (tone !== 'straight') url.searchParams.set('tone', tone)
@@ -251,6 +262,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         if (games.length) throw new Error(`Could not build the game context: ${reason}`)
         if (trip) throw new Error(`Could not build the trip context: ${reason}`)
         if (spinId) throw new Error(`Could not build the brief for spin ${spinId}: ${reason}`)
+        if (teamStyle) throw new Error(`Could not read the ${teamStyle} team style: ${reason}`)
         if (competitionStyle) throw new Error(`Could not read the ${competitionStyle} competition style: ${reason}`)
         if (!randomStyle) return { content: [{ type: 'text', text: houseBrief() }] }
         return {

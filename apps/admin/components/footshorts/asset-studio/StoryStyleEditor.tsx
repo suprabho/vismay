@@ -9,8 +9,8 @@ import {
   PALETTE_OPTIONAL_SLOTS,
   PALETTE_REQUIRED_SLOTS,
   isLightPalette,
-  parseCompetitionStyle,
-  type CompetitionStyle,
+  parseEntityStyle,
+  type EntityStyle,
   type StyleFonts,
   type StylePalette,
 } from '@vismay/html-stories/styles'
@@ -60,14 +60,14 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
 /** The footshorts story presets (Classic / Pitch / Terrace) as starting points. */
 const PRESETS = builtinThemePresetsFor('footshorts').flatMap((p) => {
-  const parsed = parseCompetitionStyle({ palette: p.theme.colors, fonts: p.theme.fonts })
+  const parsed = parseEntityStyle({ palette: p.theme.colors, fonts: p.theme.fonts })
   return 'style' in parsed ? [{ name: p.name, style: parsed.style }] : []
 })
 
 /** Draft colours are kept as typed (so a half-typed hex isn't lost); empty = unset optional slot. */
 type DraftPalette = Record<Slot, string>
 
-function toDraft(style: CompetitionStyle): { palette: DraftPalette; fonts: StyleFonts } {
+function toDraft(style: EntityStyle): { palette: DraftPalette; fonts: StyleFonts } {
   const palette = Object.fromEntries(
     [...PALETTE_REQUIRED_SLOTS, ...PALETTE_OPTIONAL_SLOTS].map((k) => [k, style.palette[k] ?? '']),
   ) as DraftPalette
@@ -75,8 +75,8 @@ function toDraft(style: CompetitionStyle): { palette: DraftPalette; fonts: Style
 }
 
 /** What the editor opens on: the saved style, else Classic with the brand colour as accent. */
-function seedFor(entity: AssetEntity): CompetitionStyle {
-  const saved = entity.story_style ? parseCompetitionStyle(entity.story_style) : null
+function seedFor(entity: AssetEntity): EntityStyle {
+  const saved = entity.story_style ? parseEntityStyle(entity.story_style) : null
   if (saved && 'style' in saved) return saved.style
   const base = PRESETS[0]?.style
   if (!base) {
@@ -105,18 +105,18 @@ function contrast(a: string, b: string): number | null {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
-function sameStyle(a: CompetitionStyle | null, b: CompetitionStyle | null): boolean {
+function sameStyle(a: EntityStyle | null, b: EntityStyle | null): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
 /**
- * A competition's HTML-story style: the full palette (the `vizmaya:theme`
- * slots) and a font trio, saved to `entities.story_style` and offered by the
- * HTML-stories brief as "Competition style", so every story about the
- * competition can share one look. Start from a footshorts preset, tune each
- * slot, check contrast on the live sample, then Save.
+ * A competition's or team's HTML-story style: the full palette (the
+ * `vizmaya:theme` slots) and a font trio, saved to `entities.story_style` and
+ * offered by the HTML-stories brief's "Story style" menu, so every story about
+ * the competition or club can share one look. Start from a footshorts preset,
+ * tune each slot, check contrast on the live sample, then Save.
  */
-export function CompetitionStyleEditor({
+export function StoryStyleEditor({
   entity,
   onSaved,
 }: {
@@ -127,17 +127,17 @@ export function CompetitionStyleEditor({
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null)
 
-  const parsed = useMemo(() => parseCompetitionStyle(draft), [draft])
+  const parsed = useMemo(() => parseEntityStyle(draft), [draft])
   const valid = 'style' in parsed ? parsed.style : null
   const saved = useMemo(() => {
     if (!entity.story_style) return null
-    const p = parseCompetitionStyle(entity.story_style)
+    const p = parseEntityStyle(entity.story_style)
     return 'style' in p ? p.style : null
   }, [entity.story_style])
   const dirty = !!valid && !sameStyle(valid, saved)
 
   // The sample renders the last valid draft so a half-typed hex doesn't blank it.
-  const [shown, setShown] = useState<CompetitionStyle>(() => seedFor(entity))
+  const [shown, setShown] = useState<EntityStyle>(() => seedFor(entity))
   if (valid && !sameStyle(valid, shown)) setShown(valid)
   const fontsUrl = getFontImportUrl(shown.fonts)
   const textRatio = contrast(shown.palette.text, shown.palette.background)
@@ -151,12 +151,12 @@ export function CompetitionStyleEditor({
     setDraft((d) => ({ ...d, fonts: { ...d.fonts, [role]: value } }))
     setMsg(null)
   }
-  function load(style: CompetitionStyle) {
+  function load(style: EntityStyle) {
     setDraft(toDraft(style))
     setMsg(null)
   }
 
-  async function persist(storyStyle: CompetitionStyle | null) {
+  async function persist(storyStyle: EntityStyle | null) {
     setSaving(true)
     setMsg(null)
     try {
@@ -177,6 +177,7 @@ export function CompetitionStyleEditor({
     }
   }
 
+  const isTeam = entity.type === 'team'
   const brand = entity.primary_color && HEX_RE.test(entity.primary_color) ? entity.primary_color.toUpperCase() : null
   const btn =
     'inline-flex items-center gap-1.5 rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40'
@@ -191,8 +192,8 @@ export function CompetitionStyleEditor({
           <div className="text-sm font-semibold text-neutral-100">HTML story style</div>
           <p className="mt-0.5 max-w-xl text-xs text-neutral-400">
             The palette and fonts the HTML-stories brief offers as the{' '}
-            <span className="text-neutral-300">{entity.name}</span> style, so every story about it
-            shares one look. {saved ? 'Saved.' : 'Not set yet.'}
+            <span className="text-neutral-300">{entity.name}</span> style, so every story about this{' '}
+            {entity.type === 'team' ? 'club' : 'competition'} shares one look. {saved ? 'Saved.' : 'Not set yet.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -262,7 +263,7 @@ export function CompetitionStyleEditor({
 
           <div>
             <div className="mb-2 text-xs font-medium text-neutral-300">Fonts (Google Fonts families)</div>
-            <datalist id="competition-style-fonts">
+            <datalist id="story-style-fonts">
               {FONT_SUGGESTIONS.map((f) => (
                 <option key={f} value={f} />
               ))}
@@ -273,7 +274,7 @@ export function CompetitionStyleEditor({
                   <span className="mb-1 block text-[11px] text-neutral-500">{FONT_LABELS[role]}</span>
                   <input
                     type="text"
-                    list="competition-style-fonts"
+                    list="story-style-fonts"
                     value={draft.fonts[role]}
                     onChange={(e) => setFont(role, e.target.value)}
                     spellCheck={false}
@@ -306,11 +307,20 @@ export function CompetitionStyleEditor({
               className="mt-2 text-2xl leading-tight"
               style={{ fontFamily: `'${shown.fonts.serif}', serif` }}
             >
-              The title race tightens at the top
+              {isTeam ? `${entity.name} make it five without defeat` : 'The title race tightens at the top'}
             </div>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: shown.palette.text }}>
-              Three points separate the top three after a weekend of{' '}
-              <span style={{ color: shown.palette.accent }}>late winners</span> and dropped points.
+              {isTeam ? (
+                <>
+                  Another clean sheet and a{' '}
+                  <span style={{ color: shown.palette.accent }}>late winner</span> keep the run going.
+                </>
+              ) : (
+                <>
+                  Three points separate the top three after a weekend of{' '}
+                  <span style={{ color: shown.palette.accent }}>late winners</span> and dropped points.
+                </>
+              )}
             </p>
             <div className="mt-4 rounded-md p-3" style={{ background: shown.palette.surface }}>
               <div className="flex items-end gap-2" style={{ height: 72 }}>

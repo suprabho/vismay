@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { ThemeName } from '@footshorts/brand'
 import { AssetStudioPreview } from './AssetStudioPreview'
-import { CompetitionStyleEditor } from './CompetitionStyleEditor'
+import { StoryStyleEditor } from './StoryStyleEditor'
 import { buildPreviewData } from './previewData'
 import { THEME_LABELS, THEME_NAMES } from './themeVars'
 
@@ -18,7 +18,7 @@ export interface AssetEntity {
   crest_url: string | null
   primary_color: string | null
   avatar_bg_color: string | null
-  /** Competitions only: the HTML-story palette + fonts (see CompetitionStyleEditor). */
+  /** The HTML-story palette + fonts (see StoryStyleEditor). */
   story_style: { palette: Record<string, string>; fonts: { serif: string; sans: string; mono: string } } | null
 }
 
@@ -458,16 +458,14 @@ export function AssetStudio({ initialEntities }: { initialEntities: AssetEntity[
               )}
             </div>
 
-            {selected.type === 'league' ? (
-              <CompetitionStyleEditor
-                key={selected.id}
-                entity={selected}
-                onSaved={(updated) => {
-                  setSelected(updated)
-                  setEntities((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
-                }}
-              />
-            ) : null}
+            <StoryStyleEditor
+              key={selected.id}
+              entity={selected}
+              onSaved={(updated) => {
+                setSelected(updated)
+                setEntities((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
+              }}
+            />
 
             {/* theme switcher */}
             <div className="mt-4 flex items-center gap-2">

@@ -8,7 +8,7 @@ import {
   type AssetEntity,
   type AssetStoryStyle,
 } from '@vismay/content-source/footshortsData'
-import { parseCompetitionStyle, type CompetitionStyle } from '@vismay/html-stories/styles'
+import { parseEntityStyle, type EntityStyle } from '@vismay/html-stories/styles'
 
 /**
  * Set (or clear) an entity's colors. Send whichever field(s) you're editing:
@@ -17,8 +17,8 @@ import { parseCompetitionStyle, type CompetitionStyle } from '@vismay/html-stori
  *             story_style?: { palette, fonts } | null }
  * `primary_color` drives card glow + match tiles; `avatar_bg_color` is the
  * dedicated feed avatar-disc background. Both are read by the live footshorts app.
- * `story_style` (competitions only) is the palette + font trio the HTML-stories
- * brief offers as that competition's style.
+ * `story_style` (competitions and teams) is the palette + font trio the
+ * HTML-stories brief offers as that competition's or team's style.
  */
 
 export const runtime = 'nodejs'
@@ -47,9 +47,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       { status: 400 },
     )
   }
-  let storyStyle: CompetitionStyle | null = null
+  let storyStyle: EntityStyle | null = null
   if (hasStyle && b.story_style !== null) {
-    const parsed = parseCompetitionStyle(b.story_style)
+    const parsed = parseEntityStyle(b.story_style)
     if ('error' in parsed) return NextResponse.json({ error: `story_style: ${parsed.error}` }, { status: 400 })
     storyStyle = parsed.style
   }

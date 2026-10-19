@@ -213,28 +213,31 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   trip's password. The brief is fetched whenever style, matches, races,
   games or the trip change and copied synchronously on click.
 
-## Competition styles (Asset Studio → HTML stories)
+## Competition and team styles (Asset Studio → HTML stories)
 
-Each footshorts competition (a `league` entity) can carry a full HTML-story
-look — palette (the `vizmaya:theme` slots) plus a font trio — in
-`entities.story_style` (jsonb; footshorts migration
-[20261019000000](../../supabase/footshorts/migrations/20261019000000_entity_story_style.sql),
-league rows only).
+Each footshorts competition (a `league` entity) and team can carry a full
+HTML-story look — palette (the `vizmaya:theme` slots) plus a font trio — in
+`entities.story_style` (jsonb; footshorts migrations
+[20261019000000](../../supabase/footshorts/migrations/20261019000000_entity_story_style.sql)
+and [20261019010000](../../supabase/footshorts/migrations/20261019010000_entity_story_style_teams.sql),
+league and team rows only).
 
-- **Set it:** Asset Studio → Leagues → a competition → *HTML story style*
-  ([CompetitionStyleEditor.tsx](components/footshorts/asset-studio/CompetitionStyleEditor.tsx)):
+- **Set it:** Asset Studio → Teams or Leagues → pick one → *HTML story style*
+  ([StoryStyleEditor.tsx](components/footshorts/asset-studio/StoryStyleEditor.tsx)):
   start from Classic / Pitch / Terrace (brand colour as accent), tune each slot
   and font, check contrast on the live sample, Save. `PATCH
   /api/footshorts/assets/entities/[id]` with `{ story_style: {palette, fonts} | null }`,
-  validated by `parseCompetitionStyle` (`@vismay/html-stories/styles`).
-- **Pick it:** the footshorts HTML-stories brief's *Competition style* menu
-  ([CompetitionStylePicker.tsx](components/html-stories/CompetitionStylePicker.tsx),
-  loaded by `loadCompetitionStyles` in `@vismay/html-stories/storyStyles`); the
-  public brief takes `?style=competition:<slug>` and the MCP brief tool
-  `competitionStyle: <slug>`. The brief names the competition instead of
-  "picked at random".
-- Until the migration is applied, the Asset Studio reads every style as unset
-  (`withAssetCols` retries without the column) and saving a style fails.
+  validated by `parseEntityStyle` (`@vismay/html-stories/styles`).
+- **Pick it:** the footshorts HTML-stories brief's *Story style* menu
+  ([StoryStylePicker.tsx](components/html-stories/StoryStylePicker.tsx):
+  Competitions / Teams tabs and a filter; loaded by `loadEntityStyles` in
+  `@vismay/html-stories/storyStyles`); the public brief takes
+  `?style=competition:<slug>` or `?style=team:<slug>` and the MCP brief tool
+  `competitionStyle` / `teamStyle`. The brief names the competition or club
+  instead of "picked at random".
+- Until the migrations are applied, the Asset Studio reads every style as
+  unset (`withAssetCols` retries without the column) and saving a style fails;
+  with only the first one applied, saving a team style fails.
 
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 

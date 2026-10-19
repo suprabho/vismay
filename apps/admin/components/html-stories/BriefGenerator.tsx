@@ -6,20 +6,20 @@ import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
 import {
-  competitionStoryStyle,
+  entityStoryStyle,
   pickRandomStyle,
-  type CompetitionStyleOption,
+  type EntityStyleOption,
   type StoryStyle,
   type StylePool,
 } from '@vismay/html-stories/styles'
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { MatchPicker } from '@/components/canvas/compose/MatchPicker'
 import type { MatchCompetition, MatchOption, MatchTeam } from '@/components/canvas/compose/useComposeFlow'
-import { CompetitionStylePicker } from './CompetitionStylePicker'
 import { FormatPicker } from './FormatPicker'
 import { ToneToggle } from './ToneToggle'
 import { GameContextPicker, type GameContextPick } from './GameContextPicker'
 import { RaceContextPicker, type RaceContextPick } from './RaceContextPicker'
+import { StoryStylePicker } from './StoryStylePicker'
 import { TripContextPicker, type TripContextPick } from './TripContextPicker'
 
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
@@ -38,8 +38,8 @@ interface MatchContextPick {
  * wry, sarcastic voice (@vismay/html-stories/tone) under the same accuracy
  * rules.
  *
- * For footshorts, Competition style (./CompetitionStylePicker) swaps in a
- * competition's own palette and fonts, set in the Asset Studio.
+ * For footshorts, Story style (./StoryStylePicker) swaps in a competition's
+ * or team's own palette and fonts, set in the Asset Studio.
  *
  * For footshorts there is also a match picker — by competition, or by team
  * across every competition: tick up to MAX_CONTEXT_MATCHES (and
@@ -70,11 +70,11 @@ interface MatchContextPick {
 export function BriefGenerator({
   app,
   pool,
-  competitions = [],
+  entityStyles = [],
 }: {
   app: HtmlStoryApp
   pool: StylePool | null
-  competitions?: CompetitionStyleOption[]
+  entityStyles?: EntityStyleOption[]
 }) {
   const [style, setStyle] = useState<StoryStyle | null>(null)
   const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
@@ -96,6 +96,8 @@ export function BriefGenerator({
   const isVizf1 = app === 'vizf1'
   const isViznba = app === 'viznba'
   const isTravel = app === 'travel'
+  // A competition's or team's Asset Studio style, rather than a random draw.
+  const isEntityStyle = style?.paletteFrom.kind === 'competition' || style?.paletteFrom.kind === 'team'
 
   const request = useMemo(
     () =>
@@ -203,12 +205,12 @@ export function BriefGenerator({
         <div
           className={chip}
           title={
-            style.paletteFrom.kind === 'competition'
+            isEntityStyle
               ? `${style.paletteFrom.title} style (Asset Studio)`
               : `Colours: ${style.paletteFrom.title}\nType: ${style.fontsFrom.title}`
           }
         >
-          {style.paletteFrom.kind === 'competition' && <span className="text-neutral-200">{style.paletteFrom.title}</span>}
+          {isEntityStyle && <span className="text-neutral-200">{style.paletteFrom.title}</span>}
           <span className="flex">
             {SWATCHES.map((k) => (
               <span
@@ -330,10 +332,14 @@ export function BriefGenerator({
       <FormatPicker app={app} value={format} onChange={setFormat} />
       <ToneToggle value={tone} onChange={setTone} className={btn} />
       {isFootshorts && (
-        <CompetitionStylePicker
-          options={competitions}
-          selected={style?.paletteFrom.kind === 'competition' ? style.paletteFrom.slug : null}
-          onPick={(o) => setStyle(competitionStoryStyle(o))}
+        <StoryStylePicker
+          options={entityStyles}
+          selected={
+            style && (style.paletteFrom.kind === 'competition' || style.paletteFrom.kind === 'team')
+              ? { kind: style.paletteFrom.kind, slug: style.paletteFrom.slug }
+              : null
+          }
+          onPick={(o) => setStyle(entityStoryStyle(o))}
           className={btn}
         />
       )}
@@ -344,7 +350,7 @@ export function BriefGenerator({
         className={btn}
       >
         <Shuffle size={14} />
-        {style && style.paletteFrom.kind !== 'competition' ? 'Shuffle' : 'Randomize style'}
+        {style && !isEntityStyle ? 'Shuffle' : 'Randomize style'}
       </button>
       <button
         onClick={async () => {

@@ -31,12 +31,12 @@ export interface StyleFonts {
 }
 
 /** Where a palette or font trio came from, for attribution in the UI and the
- *  brief: an existing story (the randomizer), or a competition's style set in
- *  the footshorts Asset Studio. Absent `kind` means a story. */
+ *  brief: an existing story (the randomizer), or a competition's or team's
+ *  style set in the footshorts Asset Studio. Absent `kind` means a story. */
 export interface StyleSource {
   slug: string
   title: string
-  kind?: 'story' | 'competition'
+  kind?: 'story' | EntityStyleKind
 }
 
 export interface PaletteOption {
@@ -153,20 +153,24 @@ export function isLightPalette(palette: StylePalette): boolean {
   return l !== null && l > 0.5
 }
 
-// ── competition styles (footshorts Asset Studio → entities.story_style) ──────
+// ── competition + team styles (footshorts Asset Studio → entities.story_style)
 
-/** A competition's saved look: one palette and one font trio. */
-export interface CompetitionStyle {
+/** A competition's or team's saved look: one palette and one font trio. */
+export interface EntityStyle {
   palette: StylePalette
   fonts: StyleFonts
 }
 
-/** A competition with a saved style, as the brief's picker lists it. */
-export interface CompetitionStyleOption {
+/** Which kind of footshorts entity a saved style belongs to. */
+export type EntityStyleKind = 'competition' | 'team'
+
+/** A competition or team with a saved style, as the brief's picker lists it. */
+export interface EntityStyleOption {
+  kind: EntityStyleKind
   slug: string
   name: string
   crestUrl: string | null
-  style: CompetitionStyle
+  style: EntityStyle
 }
 
 export const PALETTE_REQUIRED_SLOTS = REQUIRED_COLORS
@@ -178,12 +182,12 @@ const STRICT_HEX = /^#[0-9a-fA-F]{6}$/
 const FONT_NAME = /^[A-Za-z0-9][A-Za-z0-9 -]{0,59}$/
 
 /**
- * Validate and normalize a competition style (what `entities.story_style`
+ * Validate and normalize a competition or team style (what `entities.story_style`
  * stores): every required palette slot a `#RRGGBB` hex, optional slots either
  * absent or hex, three font names. Hexes are upper-cased, unknown keys dropped.
  * Returns the cleaned style, or an error message naming the first bad field.
  */
-export function parseCompetitionStyle(value: unknown): { style: CompetitionStyle } | { error: string } {
+export function parseEntityStyle(value: unknown): { style: EntityStyle } | { error: string } {
   if (!value || typeof value !== 'object') return { error: 'style must be an object with palette and fonts' }
   const v = value as { palette?: unknown; fonts?: unknown }
   if (!v.palette || typeof v.palette !== 'object') return { error: 'style.palette must be an object' }
@@ -211,8 +215,8 @@ export function parseCompetitionStyle(value: unknown): { style: CompetitionStyle
   return { style: { palette: palette as StylePalette, fonts: fonts as StyleFonts } }
 }
 
-/** The brief style for a competition's saved look (palette and fonts both from it). */
-export function competitionStoryStyle(option: Pick<CompetitionStyleOption, 'slug' | 'name' | 'style'>): StoryStyle {
-  const from: StyleSource = { slug: option.slug, title: option.name, kind: 'competition' }
+/** The brief style for a competition's or team's saved look (palette and fonts both from it). */
+export function entityStoryStyle(option: Pick<EntityStyleOption, 'kind' | 'slug' | 'name' | 'style'>): StoryStyle {
+  const from: StyleSource = { slug: option.slug, title: option.name, kind: option.kind }
   return { palette: option.style.palette, fonts: option.style.fonts, paletteFrom: from, fontsFrom: from }
 }
