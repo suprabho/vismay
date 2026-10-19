@@ -14,6 +14,9 @@
  *   - `style=random` swaps the house style for a palette and font trio drawn
  *     from the app's published viz-engine stories (./styles); falls back to the
  *     house style if the stories can't be read.
+ *   - `style=competition:<slug>` or `style=team:<slug>` (footshorts) uses that
+ *     competition's or team's style from the Asset Studio
+ *     (`entities.story_style`); 404 when it has none.
  *   - footshorts only: `fixtures=<id>,<id>` (up to MAX_CONTEXT_MATCHES) appends
  *     the match context for those matches (./footshortsBrief), with an optional
  *     `prompt`. The context is read from the match tables with the service
@@ -58,9 +61,9 @@ import { HTML_STORY_FORMATS, formatsForApp, isFormatForApp, parseHtmlStoryFormat
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
-import { loadStoryStylePool } from './storyStyles'
+import { loadEntityStyle, loadStoryStylePool } from './storyStyles'
 import { HTML_STORY_TONES, parseHtmlStoryTone } from './tone'
-import { pickRandomStyle, type StoryStyle } from './styles'
+import { entityStoryStyle, pickRandomStyle, type EntityStyleKind, type StoryStyle } from './styles'
 
 /** A list param as the pickers send it: a comma list, or repeated params. Deduplicated. */
 export function parseListParam(params: URLSearchParams, name: string): string[] {
@@ -88,7 +91,17 @@ export async function handleHtmlStoryBriefRequest(
   { loadTrip }: BriefRequestOptions = {},
 ): Promise<Response> {
   const url = new URL(req.url)
-  const random = url.searchParams.get('style') === 'random'
+  const styleParam = url.searchParams.get('style')?.trim() ?? ''
+  const random = styleParam === 'random'
+  // style=competition:<slug> | team:<slug> — a footshorts competition's or team's Asset Studio style.
+  const entityMatch = /^(competition|team):(.*)$/.exec(styleParam)
+  const entityStyle = entityMatch ? { kind: entityMatch[1] as EntityStyleKind, slug: entityMatch[2]!.trim() } : null
+  if (entityStyle) {
+    if (app !== 'footshorts') return new Response(`${entityStyle.kind} styles are footshorts only`, { status: 400 })
+    if (!/^[a-z0-9-]{1,80}$/.test(entityStyle.slug)) {
+      return new Response(`style=${entityStyle.kind}:<slug> needs a ${entityStyle.kind} slug`, { status: 400 })
+    }
+  }
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
   const sessionKeys = app === 'vizf1' ? parseListParam(url.searchParams, 'sessions') : []
   const drivers = app === 'vizf1' ? parseListParam(url.searchParams, 'drivers').map((d) => d.toUpperCase()) : []
@@ -160,7 +173,17 @@ export async function handleHtmlStoryBriefRequest(
   }
 
   let style: StoryStyle | null = null
-  if (random) {
+  if (entityStyle) {
+    try {
+      const option = await loadEntityStyle(app, entityStyle.kind, entityStyle.slug)
+      if (!option) {
+        return new Response(`no style set for ${entityStyle.kind} ${entityStyle.slug} (set one in the Asset Studio)`, { status: 404 })
+      }
+      style = entityStoryStyle(option)
+    } catch (e) {
+      return new Response(`${entityStyle.kind} style lookup failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
+    }
+  } else if (random) {
     try {
       style = pickRandomStyle(await loadStoryStylePool(app))
     } catch (e) {

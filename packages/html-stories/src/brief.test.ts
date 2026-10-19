@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
 import { parseHtmlStoryTone } from './tone'
+import { entityStoryStyle, parseEntityStyle } from './styles'
 import { draw } from '@vismay/randomizer/draw'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
@@ -118,6 +119,33 @@ const styled = htmlStoryBrief({
 assert.ok(styled.includes('A light page. Background `#FAF7F2`'))
 assert.ok(styled.includes('background:#FAF7F2;'))
 assert.ok(!styled.includes('background:#0B0B0F'))
+
+// A competition or team style (Asset Studio) names its owner instead of a random pick.
+const parsed = parseEntityStyle({
+  palette: { background: '#3d195b', surface: '#4A2370', text: '#FFFFFF', muted: '#C9B8DA', accent: '#00FF85', accent2: '#FF2882', teal: '#04F5FF', line: '' },
+  fonts: { serif: 'Forum', sans: 'Space  Grotesk', mono: 'Space Mono' },
+})
+assert.ok('style' in parsed)
+assert.equal(parsed.style.palette.background, '#3D195B')
+assert.equal(parsed.style.palette.line, undefined)
+assert.equal(parsed.style.fonts.sans, 'Space Grotesk')
+assert.ok('error' in parseEntityStyle({ palette: { background: 'red' }, fonts: {} }))
+assert.ok('error' in parseEntityStyle({ ...parsed.style, fonts: { ...parsed.style.fonts, mono: 'x"); evil' } }))
+const comp = htmlStoryBrief({
+  siteUrl: 'https://footshorts.com',
+  app: 'footshorts',
+  style: entityStoryStyle({ kind: 'competition', slug: 'premier-league', name: 'Premier League', style: parsed.style }),
+})
+assert.ok(comp.includes('the Premier League style, set for that competition'))
+assert.ok(!comp.includes('picked at random'))
+assert.ok(comp.includes('background:#3D195B;'))
+const club = htmlStoryBrief({
+  siteUrl: 'https://footshorts.com',
+  app: 'footshorts',
+  style: entityStoryStyle({ kind: 'team', slug: 'arsenal', name: 'Arsenal', style: parsed.style }),
+})
+assert.ok(club.includes('the Arsenal style, set for that club'))
+assert.ok(!club.includes('picked at random'))
 
 // A randomizer spin adds its sections around the generic ones, and ends with the research stub.
 for (const randomizer of ['desk', 'atlas', 'epics'] as const) {

@@ -1234,11 +1234,41 @@ export interface AssetEntity {
   primary_color: string | null
   /** Dedicated feed avatar-disc background, independent of primary_color. */
   avatar_bg_color: string | null
+  /** The HTML-story palette + font trio for a competition or team (null = none set). */
+  story_style: AssetStoryStyle | null
+}
+
+/**
+ * A competition's or team's HTML-story look, as `entities.story_style` stores
+ * it. Structurally `EntityStyle` from @vismay/html-stories/styles, which
+ * validates it (parseEntityStyle) before it reaches the writer below.
+ */
+export interface AssetStoryStyle {
+  palette: Record<string, string>
+  fonts: { serif: string; sans: string; mono: string }
 }
 
 /** Columns that hydrate an {@link AssetEntity}. One source of truth so the search
  *  and the two color writers below always return the same shape. */
-const ASSET_ENTITY_COLS = 'id, type, slug, name, country, crest_url, primary_color, avatar_bg_color'
+const ASSET_ENTITY_COLS =
+  'id, type, slug, name, country, crest_url, primary_color, avatar_bg_color, story_style'
+
+/**
+ * Run an asset-entity query with {@link ASSET_ENTITY_COLS}. Before migration
+ * 20261019000000 there is no `story_style` column (Postgres 42703): retry
+ * without it so the colour editors keep working, and report the style unset.
+ */
+async function withAssetCols<T>(
+  run: (cols: string) => PromiseLike<{ data: T | null; error: { code?: string } | null }>,
+): Promise<{ data: T | null; error: { code?: string } | null }> {
+  const first = await run(ASSET_ENTITY_COLS)
+  if (first.error?.code !== '42703') return first
+  const retry = await run(ASSET_ENTITY_COLS.replace(', story_style', ''))
+  if (retry.error || retry.data == null) return retry
+  const fill = (e: object) => ({ ...e, story_style: null })
+  const data = (Array.isArray(retry.data) ? retry.data.map(fill) : fill(retry.data as object)) as T
+  return { data, error: null }
+}
 
 /**
  * Search teams / competitions by name for the asset-studio picker. Unlike the
@@ -1253,17 +1283,19 @@ export async function searchAssetEntities(opts: {
 }): Promise<AssetEntity[]> {
   const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100)
   const supabase = createServiceClient()
-  let query = supabase
-    .from('entities')
-    .select(ASSET_ENTITY_COLS)
-    .in('type', opts.type ? [opts.type] : ['team', 'league'])
-    .order('name', { ascending: true })
-    .limit(limit)
-  const q = opts.q?.trim()
-  if (q) query = query.ilike('name', `%${q}%`)
-  const { data, error } = await query
+  const { data, error } = await withAssetCols((cols) => {
+    let query = supabase
+      .from('entities')
+      .select(cols)
+      .in('type', opts.type ? [opts.type] : ['team', 'league'])
+      .order('name', { ascending: true })
+      .limit(limit)
+    const q = opts.q?.trim()
+    if (q) query = query.ilike('name', `%${q}%`)
+    return query
+  })
   if (error) throw error
-  return (data ?? []) as AssetEntity[]
+  return (data ?? []) as unknown as AssetEntity[]
 }
 
 /**
@@ -1280,12 +1312,9 @@ export async function updateEntityPrimaryColor(
   }
   const value = primaryColor === null ? null : primaryColor.trim().toUpperCase()
   const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('entities')
-    .update({ primary_color: value })
-    .eq('id', id)
-    .select(ASSET_ENTITY_COLS)
-    .single()
+  const { data, error } = await withAssetCols((cols) =>
+    supabase.from('entities').update({ primary_color: value }).eq('id', id).select(cols).single(),
+  )
   if (error) throw error
   if (!data) throw new Error(`entity not found: ${id}`)
   return data as AssetEntity
@@ -1307,15 +1336,59 @@ export async function updateEntityAvatarBgColor(
   }
   const value = avatarBgColor === null ? null : avatarBgColor.trim().toUpperCase()
   const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('entities')
-    .update({ avatar_bg_color: value })
-    .eq('id', id)
-    .select(ASSET_ENTITY_COLS)
-    .single()
+  const { data, error } = await withAssetCols((cols) =>
+    supabase.from('entities').update({ avatar_bg_color: value }).eq('id', id).select(cols).single(),
+  )
   if (error) throw error
   if (!data) throw new Error(`entity not found: ${id}`)
   return data as AssetEntity
+}
+
+/**
+ * Set (or clear) a competition's or team's HTML-story style — palette + fonts,
+ * offered by the HTML-stories brief's "Story style" picker. Pass `null` to
+ * clear. Callers validate the shape first (parseEntityStyle); players are
+ * refused (the DB check does too). Returns the updated row. SERVER-ONLY.
+ */
+export async function updateEntityStoryStyle(
+  id: string,
+  storyStyle: AssetStoryStyle | null,
+): Promise<AssetEntity> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entities')
+    .update({ story_style: storyStyle })
+    .eq('id', id)
+    .in('type', ['league', 'team'])
+    .select(ASSET_ENTITY_COLS)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error(`competition or team not found: ${id}`)
+  return data as AssetEntity
+}
+
+/** A competition or team with a saved HTML-story style, for the brief's picker. */
+export interface EntityStoryStyleRow {
+  type: 'league' | 'team'
+  slug: string
+  name: string
+  crestUrl: string | null
+  style: AssetStoryStyle
+}
+
+/** Every competition and team that has a saved HTML-story style, by name. SERVER-ONLY. */
+export async function listEntityStoryStyles(): Promise<EntityStoryStyleRow[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entities')
+    .select('type, slug, name, crest_url, story_style')
+    .in('type', ['league', 'team'])
+    .not('story_style', 'is', null)
+    .order('name', { ascending: true })
+  if (error) throw error
+  return (
+    (data ?? []) as Array<{ type: 'league' | 'team'; slug: string; name: string; crest_url: string | null; story_style: AssetStoryStyle }>
+  ).map((r) => ({ type: r.type, slug: r.slug, name: r.name, crestUrl: r.crest_url, style: r.story_style }))
 }
 
 // ---------------------------------------------------------------------------

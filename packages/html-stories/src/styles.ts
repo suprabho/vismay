@@ -30,10 +30,13 @@ export interface StyleFonts {
   mono: string
 }
 
-/** The story a palette or font trio came from, for attribution in the UI. */
+/** Where a palette or font trio came from, for attribution in the UI and the
+ *  brief: an existing story (the randomizer), or a competition's or team's
+ *  style set in the footshorts Asset Studio. Absent `kind` means a story. */
 export interface StyleSource {
   slug: string
   title: string
+  kind?: 'story' | EntityStyleKind
 }
 
 export interface PaletteOption {
@@ -148,4 +151,72 @@ function luminance(color: string): number | null {
 export function isLightPalette(palette: StylePalette): boolean {
   const l = luminance(palette.background)
   return l !== null && l > 0.5
+}
+
+// ── competition + team styles (footshorts Asset Studio → entities.story_style)
+
+/** A competition's or team's saved look: one palette and one font trio. */
+export interface EntityStyle {
+  palette: StylePalette
+  fonts: StyleFonts
+}
+
+/** Which kind of footshorts entity a saved style belongs to. */
+export type EntityStyleKind = 'competition' | 'team'
+
+/** A competition or team with a saved style, as the brief's picker lists it. */
+export interface EntityStyleOption {
+  kind: EntityStyleKind
+  slug: string
+  name: string
+  crestUrl: string | null
+  style: EntityStyle
+}
+
+export const PALETTE_REQUIRED_SLOTS = REQUIRED_COLORS
+export const PALETTE_OPTIONAL_SLOTS = OPTIONAL_COLORS
+export const FONT_ROLES = FONT_SLOTS
+
+const STRICT_HEX = /^#[0-9a-fA-F]{6}$/
+/** A Google Fonts family name: letters, digits, spaces and hyphens. */
+const FONT_NAME = /^[A-Za-z0-9][A-Za-z0-9 -]{0,59}$/
+
+/**
+ * Validate and normalize a competition or team style (what `entities.story_style`
+ * stores): every required palette slot a `#RRGGBB` hex, optional slots either
+ * absent or hex, three font names. Hexes are upper-cased, unknown keys dropped.
+ * Returns the cleaned style, or an error message naming the first bad field.
+ */
+export function parseEntityStyle(value: unknown): { style: EntityStyle } | { error: string } {
+  if (!value || typeof value !== 'object') return { error: 'style must be an object with palette and fonts' }
+  const v = value as { palette?: unknown; fonts?: unknown }
+  if (!v.palette || typeof v.palette !== 'object') return { error: 'style.palette must be an object' }
+  if (!v.fonts || typeof v.fonts !== 'object') return { error: 'style.fonts must be an object' }
+  const colors = v.palette as Record<string, unknown>
+  const palette: Partial<StylePalette> = {}
+  for (const k of REQUIRED_COLORS) {
+    const c = colors[k]
+    if (typeof c !== 'string' || !STRICT_HEX.test(c.trim())) return { error: `palette.${k} must be a #RRGGBB hex` }
+    palette[k] = c.trim().toUpperCase()
+  }
+  for (const k of OPTIONAL_COLORS) {
+    const c = colors[k]
+    if (c == null || c === '') continue
+    if (typeof c !== 'string' || !STRICT_HEX.test(c.trim())) return { error: `palette.${k} must be a #RRGGBB hex or empty` }
+    palette[k] = c.trim().toUpperCase()
+  }
+  const f = v.fonts as Record<string, unknown>
+  const fonts: Partial<StyleFonts> = {}
+  for (const k of FONT_SLOTS) {
+    const name = typeof f[k] === 'string' ? (f[k] as string).trim().replace(/\s+/g, ' ') : ''
+    if (!FONT_NAME.test(name)) return { error: `fonts.${k} must be a font family name (letters, digits, spaces, hyphens)` }
+    fonts[k] = name
+  }
+  return { style: { palette: palette as StylePalette, fonts: fonts as StyleFonts } }
+}
+
+/** The brief style for a competition's or team's saved look (palette and fonts both from it). */
+export function entityStoryStyle(option: Pick<EntityStyleOption, 'kind' | 'slug' | 'name' | 'style'>): StoryStyle {
+  const from: StyleSource = { slug: option.slug, title: option.name, kind: option.kind }
+  return { palette: option.style.palette, fonts: option.style.fonts, paletteFrom: from, fontsFrom: from }
 }

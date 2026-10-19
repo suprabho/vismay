@@ -3,8 +3,8 @@ import { ArrowSquareOut } from '@phosphor-icons/react/dist/ssr'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from '@vismay/html-stories/apps'
 import { HTML_STORY_FORMAT_META } from '@vismay/html-stories/formats'
 import { listHtmlStoriesForAdmin, type HtmlStorySummary } from '@vismay/html-stories/htmlStories'
-import { loadStoryStylePool } from '@vismay/html-stories/storyStyles'
-import type { StylePool } from '@vismay/html-stories/styles'
+import { loadEntityStyles, loadStoryStylePool } from '@vismay/html-stories/storyStyles'
+import type { EntityStyleOption, StylePool } from '@vismay/html-stories/styles'
 import { htmlStoriesBasePath, htmlStorySiteUrl } from '@/lib/htmlStoryApps'
 import { BriefGenerator } from './BriefGenerator'
 
@@ -25,11 +25,17 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
 
   let stories: HtmlStorySummary[] = []
   let loadError: string | null = null
-  const [storiesResult, poolResult] = await Promise.allSettled([listHtmlStoriesForAdmin(app), loadStoryStylePool(app)])
+  const [storiesResult, poolResult, entityStylesResult] = await Promise.allSettled([
+    listHtmlStoriesForAdmin(app),
+    loadStoryStylePool(app),
+    loadEntityStyles(app),
+  ])
   if (storiesResult.status === 'fulfilled') stories = storiesResult.value
   else loadError = storiesResult.reason instanceof Error ? storiesResult.reason.message : 'load failed'
   // The style randomizer is optional: without a pool the brief keeps the house style.
   const stylePool: StylePool | null = poolResult.status === 'fulfilled' ? poolResult.value : null
+  // Competition and team styles (footshorts Asset Studio) are optional the same way.
+  const entityStyles: EntityStyleOption[] = entityStylesResult.status === 'fulfilled' ? entityStylesResult.value : []
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
@@ -41,7 +47,7 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <BriefGenerator app={app} pool={stylePool} />
+          <BriefGenerator app={app} pool={stylePool} entityStyles={entityStyles} />
           <Link
             href={`${basePath}/new`}
             className="text-sm text-neutral-200 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
@@ -62,6 +68,14 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
             <code>/formats</code> (<code>?format=book</code> on that URL). <em>Randomize style</em>{' '}
             (or <code>?style=random</code> on that URL) swaps the house look for a palette and fonts from an existing{' '}
             {meta.name} story.
+            {isFootshorts && (
+              <>
+                {' '}
+                <em>Story style</em> (or <code>?style=competition:&lt;slug&gt;</code> /{' '}
+                <code>?style=team:&lt;slug&gt;</code>) uses a competition&rsquo;s or team&rsquo;s own palette and
+                fonts, set in the Asset Studio.
+              </>
+            )}
             {isFootshorts && (
               <>
                 {' '}

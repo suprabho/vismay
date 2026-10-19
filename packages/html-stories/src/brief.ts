@@ -278,18 +278,24 @@ const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
 function styleSection(app: HtmlStoryApp, style: StoryStyle | null | undefined): string {
   if (!style) return HOUSE_STYLE[app]
   const { palette: c, fonts } = style
+  const kind = style.paletteFrom.kind
+  const owner = kind === 'competition' ? 'that competition' : kind === 'team' ? 'that club' : null
   const from =
     style.paletteFrom.slug === style.fontsFrom.slug
       ? `the "${style.paletteFrom.title}" story`
       : `existing stories (colours from "${style.paletteFrom.title}", type from "${style.fontsFrom.title}")`
+  const intro = owner
+    ? `Style for this story: the ${style.paletteFrom.title} style, set for ${owner}
+so every story about it shares one look. Use it instead of the house style:`
+    : `Style for this story. It was picked at random from ${from}
+so this page gets its own look. Use it instead of the house style:`
   const status = [
     c.positive && `positive \`${c.positive}\``,
     c.amber && `warning \`${c.amber}\``,
     c.red && `negative \`${c.red}\``,
   ].filter(Boolean)
   const fontsUrl = getFontImportUrl(fonts)
-  return `Style for this story. It was picked at random from ${from}
-so this page gets its own look. Use it instead of the house style:
+  return `${intro}
 - ${isLightPalette(c) ? 'A light page' : 'A dark page'}. Background \`${c.background}\`, surface \`${c.surface}\`, text \`${c.text}\`, muted \`${c.muted}\`${c.line ? `, hairlines \`${c.line}\`` : ''}.
 - Accent \`${c.accent}\` (the one colour that means "look here"), secondary \`${c.accent2}\`, tertiary \`${c.teal}\`.${status.length ? `\n- Status colours: ${status.join(', ')}.` : ''}
 - Type: ${fonts.serif} for headlines and big numbers, ${fonts.sans} for body, ${fonts.mono} for
