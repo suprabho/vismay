@@ -73,6 +73,9 @@ assert.equal(advanceStatus({ ...sketched, chart: { ...sketched.chart, data: { pr
 assert.equal(advanceStatus({ ...hero, status: 'final' }), 'final')
 assert.ok(cardIssues({ ...sketched, body: 'word '.repeat(160) }).some(i => i.message.includes('cut to 150')))
 assert.ok(cardIssues({ ...sketched, chart: { ...sketched.chart, form: 'table' } }).some(i => i.message.startsWith('Hero spreads don’t take')))
+// Brackets (system v2): knockouts on hero, timeline and intro spreads, not on tables.
+assert.ok(!cardIssues({ ...sketched, chart: { ...sketched.chart, form: 'bracket' } }).some(i => i.message.includes('don’t take')))
+assert.ok(cardIssues({ ...sketched, template: 'table', chart: { ...sketched.chart, form: 'bracket' } }).some(i => i.message.startsWith('Table spreads don’t take a bracket')))
 
 // Beats: 15–25, one sentence each.
 const one = beatIssues({ beats: [{ id: 'b-1', text: 'One. Two.', month: null, kind: 'other', strength: 2, teams: '', evidence: '' }], spreads: [] }).map(i => i.message)

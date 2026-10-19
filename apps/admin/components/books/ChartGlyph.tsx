@@ -62,6 +62,18 @@ export function ChartGlyph({ form, className }: { form: ChartForm; className?: s
         </g>)}
       </>
       break
+    case 'bracket':
+      // Eight ties into four, two, the final; one path through in accent.
+      body = <>
+        {[0, 1, 2, 3, 4, 5, 6, 7].map(i => <line key={`r${i}`} x1={10} y1={18 + i * 20} x2={70} y2={18 + i * 20} stroke={i === 2 ? accent : muted} strokeWidth={i === 2 ? 5 : 3} />)}
+        {[0, 1, 2, 3].map(i => <polyline key={`q${i}`} points={`70,${18 + i * 40} 90,${18 + i * 40} 90,${38 + i * 40} 70,${38 + i * 40}`} fill="none" stroke={muted} strokeWidth={2} />)}
+        {[0, 1, 2, 3].map(i => <line key={`s${i}`} x1={90} y1={28 + i * 40} x2={150} y2={28 + i * 40} stroke={i === 1 ? accent : ink} strokeWidth={i === 1 ? 5 : 3} />)}
+        {[0, 1].map(i => <polyline key={`t${i}`} points={`150,${28 + i * 80} 170,${28 + i * 80} 170,${68 + i * 80} 150,${68 + i * 80}`} fill="none" stroke={muted} strokeWidth={2} />)}
+        {[0, 1].map(i => <line key={`f${i}`} x1={170} y1={48 + i * 80} x2={230} y2={48 + i * 80} stroke={i === 0 ? accent : ink} strokeWidth={i === 0 ? 5 : 3} />)}
+        <polyline points="230,48 250,48 250,128 230,128" fill="none" stroke={muted} strokeWidth={2} />
+        <line x1={250} y1={88} x2={290} y2={88} stroke={accent} strokeWidth={5} />
+      </>
+      break
     case 'table':
     case 'heat-table':
       body = Array.from({ length: 10 }, (_, r) => <g key={r}>
@@ -82,7 +94,7 @@ export function ChartGlyph({ form, className }: { form: ChartForm; className?: s
       </>
       break
   }
-  const framed = form === 'image' || form === 'pitch' || form === 'small-multiples' || form === 'table' || form === 'heat-table' || form === 'big-number' || form === 'timeline'
+  const framed = form === 'image' || form === 'pitch' || form === 'small-multiples' || form === 'table' || form === 'heat-table' || form === 'big-number' || form === 'timeline' || form === 'bracket'
   return (
     <svg viewBox="0 0 300 180" className={className} preserveAspectRatio="xMidYMid meet" aria-hidden>
       {body}

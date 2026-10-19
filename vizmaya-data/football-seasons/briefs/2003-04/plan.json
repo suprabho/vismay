@@ -940,9 +940,9 @@
    "beatId": "b-knockouts",
    "headline": "Eight of the fifteen knockout ties came down to one goal or away goals",
    "chart": {
-    "form": "timeline",
+    "form": "bracket",
     "sketch": [],
-    "notes": "The bracket from round of 16 to final, read left to right as a timeline (R16 Feb–Mar, QF Mar–Apr, SF Apr–May, final 26 May); each tie shows both legs and the aggregate. Porto’s path in accent, Monaco’s in second; ties decided by one goal or away goals marked with a small open circle. Annotate: Monaco through on away goals twice: Lokomotiv (2–2) and Real Madrid (5–5). The series system has no bracket form; it is drawn here as a timeline. Propose a `bracket` chart form for SYSTEM_VERSION 2 rather than improvising one per book.",
+    "notes": "Bracket from round of 16 to final, rounds left to right in time (R16 Feb–Mar, QF Mar–Apr, SF Apr–May, final 26 May); each tie shows both leg scores (Label) and the aggregate (Deck). Winners’ paths run on to the next round; losers’ stop. Porto’s path in accent, Monaco’s in second, the other clubs in ink; ties settled by one goal on aggregate or on away goals marked with an open circle (the system marks only away goals and penalties — this spread widens it to one-goal ties, and says so in the caption). Annotate: Monaco through on away goals twice: Lokomotiv (2–2) and Real Madrid (5–5). Uses the `bracket` chart form (system v2) on the timeline template; 16 clubs on the left page converge to the final at the right page's outer margin.",
     "data": null
    },
    "stat": {

@@ -2,7 +2,7 @@
 
 Design briefs for the Premier League spreads of the 2003–04 season book: 17 spreads, numbered by their place in the book (see [flatplan.md](flatplan.md)). Rendered from [spreads.yaml](spreads.yaml) by `scripts/briefs.py`; edit the YAML, not this file.
 
-Every spread is one claim (the headline) proved by one visual, set on the locked series system ([system.ts](../../../apps/admin/lib/seasonBooks/system.ts), SYSTEM_VERSION 1): 12 × 8 spread grid, accent `#D7372B`, second `#1F5AA6`, muted `#8A8780`, results W ink / D draw-grey / L accent, at most two coloured series, direct labels, a Label-style source line under every chart.
+Every spread is one claim (the headline) proved by one visual, set on the locked series system ([system.ts](../../../apps/admin/lib/seasonBooks/system.ts), SYSTEM_VERSION 2): 12 × 8 spread grid, accent `#D7372B`, second `#1F5AA6`, muted `#8A8780`, results W ink / D draw-grey / L accent, at most two coloured series, direct labels, a Label-style source line under every chart.
 
 ## The competition at a glance
 

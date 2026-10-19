@@ -7,13 +7,13 @@
 # A league-level spread is about the whole competition (every club, the table, the race), not one match.
 # A cup-level spread is about the tournament's shape: rounds, ties, roads to the final.
 # Spreads are listed in reading order. Templates, chart forms and colours come from the locked series system
-# (apps/admin/lib/seasonBooks/system.ts, SYSTEM_VERSION 1): accent #D7372B, second #1F5AA6, muted #8A8780,
+# (apps/admin/lib/seasonBooks/system.ts, SYSTEM_VERSION 2): accent #D7372B, second #1F5AA6, muted #8A8780,
 # results W ink / D draw-grey / L accent. Every number below is in briefs/2003-04/data/ (built by scripts/spreads.py).
 #
 # Team names in a `preset` binding are the raw source labels (football-data.co.uk), as admin_historical_matches stores them.
 
 season: 2003
-system_version: 1
+system_version: 2
 
 beats:
   - id: b-unbeaten
@@ -1115,18 +1115,18 @@ spreads:
     competition: Champions League
     chapter: outro
     template: timeline
-    form: timeline
+    form: bracket
     beat: b-knockouts
     kicker: Season in numbers · The knockout rounds
     headline: Eight of the fifteen knockout ties came down to one goal or away goals
     stat: { value: '8 / 15', label: 'Knockout ties decided by one goal on aggregate or on away goals' }
     chart:
       data: [ucl_ties.csv]
-      encode: The bracket from round of 16 to final, read left to right as a timeline (R16 Feb–Mar, QF Mar–Apr, SF Apr–May, final 26 May); each tie shows both legs and the aggregate.
-      highlight: Porto’s path in accent, Monaco’s in second; ties decided by one goal or away goals marked with a small open circle.
+      encode: Bracket from round of 16 to final, rounds left to right in time (R16 Feb–Mar, QF Mar–Apr, SF Apr–May, final 26 May); each tie shows both leg scores (Label) and the aggregate (Deck). Winners’ paths run on to the next round; losers’ stop.
+      highlight: Porto’s path in accent, Monaco’s in second, the other clubs in ink; ties settled by one goal on aggregate or on away goals marked with an open circle (the system marks only away goals and penalties — this spread widens it to one-goal ties, and says so in the caption).
       annotate:
         - 'Monaco through on away goals twice: Lokomotiv (2–2) and Real Madrid (5–5).'
-      notes: The series system has no bracket form; it is drawn here as a timeline. Propose a `bracket` chart form for SYSTEM_VERSION 2 rather than improvising one per book.
+      notes: Uses the `bracket` chart form (system v2) on the timeline template; 16 clubs on the left page converge to the final at the right page's outer margin.
     body: >-
       The knockout rounds of 2003-04 were close. Of the fifteen ties from the round of 16 to the final, eight
       were settled by a single goal or on away goals. Monaco survived twice on away goals, against Lokomotiv

@@ -11,7 +11,7 @@
  * views) on the client and the plan validator on the server.
  */
 
-export const SYSTEM_VERSION = 1
+export const SYSTEM_VERSION = 2
 
 /** Trim and grid, in millimetres. A spread is two pages side by side. */
 export const PAGE = {
@@ -76,6 +76,7 @@ export const CHART_STYLE: readonly ChartRule[] = [
   { label: 'Axes', value: 'One 0.5pt baseline in ink. Light 0.25pt rules only where a reader must read a value across.' },
   { label: 'Numbers', value: 'Tabular numerals, Label style on axes; the chart’s key value may be set in Stat.' },
   { label: 'Results', value: 'Win ink, draw draw-grey, loss accent: the same three everywhere a result appears.' },
+  { label: 'Brackets', value: 'Rounds left to right in time, converging on the final. Winners’ paths continue in ink, losers’ stop at the round they went out. At most two paths coloured. Leg scores in Label, the aggregate in Deck; an open circle marks a tie settled on away goals or penalties.' },
   { label: 'Annotation', value: 'A 0.5pt leader and a Caption-style note at the moment that proves the headline.' },
   { label: 'Source', value: 'Every chart ends with a Label-style source line. StatsBomb data carries its credit.' },
 ]
@@ -98,7 +99,7 @@ export const ROLE_META: Record<SpreadRole, { label: string; letter: string; clas
 
 export type ChartForm =
   | 'line-race' | 'bar' | 'slope' | 'strip' | 'scatter' | 'small-multiples'
-  | 'pitch' | 'timeline' | 'table' | 'heat-table' | 'big-number' | 'image'
+  | 'pitch' | 'timeline' | 'bracket' | 'table' | 'heat-table' | 'big-number' | 'image'
 
 export const CHART_FORMS: Record<ChartForm, { label: string; reads: string }> = {
   'line-race': { label: 'Line race', reads: 'who was ahead, and when it changed' },
@@ -109,6 +110,7 @@ export const CHART_FORMS: Record<ChartForm, { label: string; reads: string }> = 
   'small-multiples': { label: 'Small multiples', reads: 'the same chart for each team, side by side' },
   pitch: { label: 'Pitch map', reads: 'where on the pitch (shots, passes, pressing)' },
   timeline: { label: 'Timeline', reads: 'what happened in what order' },
+  bracket: { label: 'Bracket', reads: 'a knockout, tie by tie, round by round to the final' },
   table: { label: 'Table', reads: 'the standings, or exact values to look up' },
   'heat-table': { label: 'Heat table', reads: 'a grid of values, coloured by size' },
   'big-number': { label: 'Big number', reads: 'one figure, set very large' },
@@ -174,7 +176,7 @@ export const TEMPLATES: Record<TemplateId, SpreadTemplate> = {
       { kind: 'caption', x: 6.5, y: 7, w: 4, h: 1 },
     ],
     words: { min: 80, max: 150 },
-    forms: ['line-race', 'table', 'bar', 'strip', 'small-multiples'],
+    forms: ['line-race', 'table', 'bar', 'strip', 'small-multiples', 'bracket'],
     headlineScale: 1.15,
   },
   hero: {
@@ -192,7 +194,7 @@ export const TEMPLATES: Record<TemplateId, SpreadTemplate> = {
       { kind: 'caption', x: 8, y: 7.25, w: 4, h: 0.75 },
     ],
     words: { min: 80, max: 150 },
-    forms: ['line-race', 'bar', 'slope', 'strip', 'scatter', 'pitch'],
+    forms: ['line-race', 'bar', 'slope', 'strip', 'scatter', 'pitch', 'bracket'],
     headlineScale: 1.2,
   },
   comparison: {
@@ -228,7 +230,7 @@ export const TEMPLATES: Record<TemplateId, SpreadTemplate> = {
       { kind: 'caption', x: 9.25, y: 5.75, w: 2.75, h: 1 },
     ],
     words: { min: 80, max: 150 },
-    forms: ['timeline', 'strip', 'line-race'],
+    forms: ['timeline', 'bracket', 'strip', 'line-race'],
     headlineScale: 1,
   },
   table: {

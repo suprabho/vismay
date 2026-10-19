@@ -37,7 +37,7 @@ Club- and match-level spreads, and the other leagues, slot in between these late
 | 29 | Season in numbers | L17 | Premier League | Comparison | dense | Scatter | Arsenal beat the bookmakers' prices by fourteen points | epl_table_final.csv, epl_upsets.csv | card |
 | 30 | Season in numbers | U12 | Champions League | Table | dense | Heat table | Portugal sent two clubs. One of them won it | ucl_countries.csv | card |
 | 31 | Season in numbers | U13 | Champions League | Breather | breather | Big number | of the four semi-finalists started in August qualifying | — | card |
-| 32 | Season in numbers | U14 | Champions League | Timeline | dense | Timeline | Eight of the fifteen knockout ties came down to one goal or away goals | ucl_ties.csv | card |
+| 32 | Season in numbers | U14 | Champions League | Timeline | dense | Bracket | Eight of the fifteen knockout ties came down to one goal or away goals | ucl_ties.csv | card |
 
 ## Importing into the Books tab
 

@@ -20,7 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROLE = {'cover': 'frame', 'intro': 'frame', 'hero': 'hero', 'comparison': 'dense', 'timeline': 'dense', 'table': 'dense', 'breather': 'breather'}
 TEMPLATE_LABEL = {'cover': 'Cover', 'intro': 'Season intro', 'hero': 'Hero', 'comparison': 'Comparison', 'timeline': 'Timeline', 'table': 'Table', 'breather': 'Breather'}
 FORM_LABEL = {'line-race': 'Line race', 'bar': 'Bars', 'slope': 'Slope', 'strip': 'Results strip', 'scatter': 'Scatter', 'small-multiples': 'Small multiples',
-              'pitch': 'Pitch map', 'timeline': 'Timeline', 'table': 'Table', 'heat-table': 'Heat table', 'big-number': 'Big number', 'image': 'Photo-style'}
+              'pitch': 'Pitch map', 'timeline': 'Timeline', 'bracket': 'Bracket', 'table': 'Table', 'heat-table': 'Heat table', 'big-number': 'Big number', 'image': 'Photo-style'}
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 COMPETITIONS = {'Premier League': ('premier-league.md', 'league'), 'Champions League': ('champions-league.md', 'cup')}
 
