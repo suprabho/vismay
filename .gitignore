@@ -31,5 +31,11 @@ vizmaya-data/football-seasons/data/*
 !vizmaya-data/football-seasons/data/teams_overrides.csv
 # …and the season events, which carry the hand check (verified/notes columns)
 !vizmaya-data/football-seasons/data/events.csv
+# …and the cup ties + crest picks (slow, rate-limited Wikipedia fetch; crests carry the hand check)
+!vizmaya-data/football-seasons/data/cup_matches.csv
+!vizmaya-data/football-seasons/data/cup_clubs.csv
+!vizmaya-data/football-seasons/data/cup_clubs_overrides.csv
+!vizmaya-data/football-seasons/data/crests.csv
+!vizmaya-data/football-seasons/data/crests_overrides.csv
 vizmaya-data/football-seasons/fetch.log
 vizmaya-data/football-seasons/scripts/__pycache__/

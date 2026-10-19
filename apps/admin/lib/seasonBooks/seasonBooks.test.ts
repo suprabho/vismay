@@ -5,6 +5,10 @@ import {
   advanceStatus, beatIssues, cardIssues, chapterForMonth, emptySpread, isBookView, nextTemplate, pacingIssues,
   parseSeasonSlug, planSchema, seasonMonths, seasonSlug, sortSpreads, starterPlan,
 } from './plan'
+import {
+  crestCounts, crestStatus, crestUploadPath, groupCrests, matchesCrestFilter, sniffCrestType, unsafeSvg,
+} from './crests'
+import type { HistoryCrest } from '@footshorts/shared/historicalCrests'
 
 // A four-team league: Blues lead at September's end, Reds overtake in October
 // on goal difference and finish unbeaten (checked by hand).
@@ -78,5 +82,41 @@ assert.ok(cardIssues({ ...sketched, chart: { ...sketched.chart, form: 'table' } 
 const one = beatIssues({ beats: [{ id: 'b-1', text: 'One. Two.', month: null, kind: 'other', strength: 2, teams: '', evidence: '' }], spreads: [] }).map(i => i.message)
 assert.ok(one[0].startsWith('1 beat so far. Find 14 more'))
 assert.ok(one.some(x => x.includes('is more than one sentence')))
+
+// Crests: an upload wins, then a dated pick, then today's crest; nothing = missing.
+const crest = (wiki: string, over: Partial<HistoryCrest> = {}): HistoryCrest => ({
+  season: '2003-04', wiki, name: wiki, canonical_id: '', slug: '', top_flight: '', competitions: 'FA Cup', country: 'England',
+  qid: '', source: 'logopedia', era: 'season', era_label: '1999–2007', file: 'x.svg', file_url: 'https://x/x.svg', thumb_url: '',
+  logopedia_page: '', needs_review: false, review_note: '', upload_path: null, upload_type: null, uploaded_by: null, uploaded_at: null, ...over,
+})
+const crests = [
+  crest('Arsenal F.C.', { top_flight: 'Premier League' }),
+  crest('Juventus FC', { top_flight: 'Serie A', needs_review: true }),
+  crest('Real Zaragoza', { top_flight: 'LaLiga', era: 'current', needs_review: true }),
+  crest('AS Moulins', { file_url: '', file: '', era: '', source: '' }),
+  crest('Aire-sur-la-Lys', { file_url: '', era: '', upload_path: '2003-04/aire.png', needs_review: true }),
+]
+assert.deepEqual(crests.map(crestStatus), ['season', 'season', 'current', 'missing', 'uploaded'])
+assert.deepEqual(crestCounts(crests), { total: 5, uploaded: 1, season: 2, current: 1, missing: 1, flagged: 2 })
+assert.deepEqual(crests.filter(c => matchesCrestFilter(c, 'flagged', '')).map(c => c.wiki), ['Juventus FC', 'Real Zaragoza'])
+assert.deepEqual(crests.filter(c => matchesCrestFilter(c, 'all', 'serie')).map(c => c.wiki), ['Juventus FC'])
+assert.deepEqual(groupCrests(crests).map(g => g.group), ['Premier League', 'LaLiga', 'Serie A', 'Cup opponents'])
+assert.deepEqual(groupCrests(crests).at(-1)!.crests.map(c => c.wiki), ['Aire-sur-la-Lys', 'AS Moulins'])
+assert.match(crestUploadPath('2003-04', 'Real Unión', '', 'png'), /^2003-04\/real-union-[0-9a-f]{8}\.png$/)
+assert.notEqual(crestUploadPath('2003-04', 'Real Unión', '', 'png'), crestUploadPath('2003-04', 'Real Union', '', 'png'))
+assert.equal(crestUploadPath('2003-04', 'name:fr:Aire-sur-la-Lys', 'aire', 'svg').split('/')[1]!.startsWith('aire-'), true)
+
+// Uploads are typed by their bytes; scripted SVGs are refused.
+const bytes = (...b: number[]) => new Uint8Array([...b, ...new Array(16).fill(0)])
+assert.equal(sniffCrestType(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)), 'image/png')
+assert.equal(sniffCrestType(bytes(0xff, 0xd8, 0xff, 0xe0)), 'image/jpeg')
+assert.equal(sniffCrestType(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ')), 'image/webp')
+assert.equal(sniffCrestType(new TextEncoder().encode('<?xml version="1.0"?>\n<!-- crest -->\n<svg xmlns="http://www.w3.org/2000/svg"/>')), 'image/svg+xml')
+assert.equal(sniffCrestType(new TextEncoder().encode('<html><svg></svg></html>')), null)
+assert.equal(sniffCrestType(bytes(0x25, 0x50, 0x44, 0x46)), null)
+assert.ok(unsafeSvg('<svg><script>alert(1)</script></svg>'))
+assert.ok(unsafeSvg('<svg onload="x()"></svg>'))
+assert.ok(unsafeSvg('<svg><a xlink:href="https://evil"/></svg>'))
+assert.ok(!unsafeSvg('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#a"/><path d="M0 0"/></svg>'))
 
 console.log('seasonBooks ok')

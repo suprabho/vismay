@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, CheckCircle, CircleNotch, Lock, Trash, WarningCircle } from '@phosphor-icons/react'
+import { ArrowLeft, CheckCircle, CircleNotch, Lock, ShieldStar, Trash, WarningCircle } from '@phosphor-icons/react'
 import {
-  BEAT_TARGET, beatIssues, type BookView, cardIssues, pacingIssues, seasonLabel, sortSpreads,
+  BEAT_TARGET, beatIssues, type BookView, cardIssues, pacingIssues, seasonLabel, seasonSlug, sortSpreads,
   type Plan, type SeasonBook,
 } from '@/lib/seasonBooks/plan'
 import { SYSTEM_VERSION } from '@/lib/seasonBooks/system'
@@ -192,6 +192,9 @@ export function BookWorkspace({ slug, initialView, initialSpread }: { slug: stri
             <span className="text-2xl font-extrabold tabular-nums text-white">{seasonLabel(book.seasonStart)}</span>
             <input value={title} onChange={e => editTitle(e.target.value)} aria-label="Book title" maxLength={200}
               className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-lg text-neutral-200 hover:border-white/10 focus:border-white/30 focus:outline-none" />
+            <Link href={`/footshorts/books/crests?season=${seasonSlug(book.seasonStart)}`} className={BUTTON} title="This season’s club crests">
+              <ShieldStar size={16} /> Crests
+            </Link>
             <SaveBadge state={saveState} error={saveError} updatedBy={book.updatedBy} onRetry={() => { setSaveState('dirty'); setTick(t => t + 1) }} />
             <button type="button" className={ICON_BUTTON} title="Delete book" onClick={remove}><Trash size={16} /></button>
           </div>

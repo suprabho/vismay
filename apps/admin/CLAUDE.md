@@ -312,6 +312,31 @@ workflow in order:
 4. **Chapters** — a month's spreads (or the whole book) as true-to-grid
    low-fi thumbnails side by side, to judge flow before polishing.
 
+**Crests** (`/footshorts/books/crests?season=2003-04&filter=missing`, linked
+from the Books list and each book's header) shows every club of a season — the
+five top flights, then every cup opponent — with the crest it wore that
+season, filters (missing, current only, flagged, uploaded) and a search. Drop
+an image on a club, or open it, to upload a missing crest or replace a wrong
+one; an upload always wins over the crest `crests.py` picked, and Remove
+upload falls back to it.
+
+- **Storage:** private `admin_season_crests` + private bucket
+  `admin-season-crests` (footshorts migration
+  [20261020000000](../../supabase/footshorts/migrations/20261020000000_admin_season_crests.sql)).
+  Rows come from `crests.csv` via `pnpm --filter @footshorts/worker
+  history:crests-sync -- --season=2003 --push` (never touches an upload);
+  `--pull` copies the uploaded files into `raw/crests/<season>-uploads/`.
+  Uploads are read through 1-hour signed URLs; picked crests hotlink their
+  source (Logopedia, Wikimedia, TheSportsDB).
+- **API (`isAuthed()`-gated, same-origin writes):** `GET
+  /api/footshorts/books/crests?season=`, `POST|DELETE
+  /api/footshorts/books/crests/upload` (multipart `season`, `wiki`, `file` /
+  JSON `{ season, wiki }`). The type comes from the bytes (PNG, SVG, WebP,
+  JPEG, GIF, up to 2 MB); SVGs with scripts, handlers or external links are
+  refused. Helpers in [lib/seasonBooks/crests.ts](lib/seasonBooks/crests.ts)
+  and [crestStore.ts](lib/seasonBooks/crestStore.ts); UI
+  [components/books/CrestsViewer.tsx](components/books/CrestsViewer.tsx).
+
 **System** (read-only) shows the locked series design system: 12-column spread
 grid, type scale, palette, chart style, chart forms and the seven spread
 templates (cover, intro, hero, comparison, timeline, table, breather). It
