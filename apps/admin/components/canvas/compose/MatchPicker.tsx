@@ -244,6 +244,27 @@ export function MatchPicker({
     return matches.filter((m) => normalize(`${m.home} ${m.away} ${m.competitionName}`).includes(q))
   }, [matches, search])
 
+  // Group the (already newest-first) list by matchday so an editor can pick a
+  // round at a time. Knockout rows have no matchday, so they fall back to their
+  // stage; a team's list spans competitions, so its groups name the competition.
+  const groups = useMemo(() => {
+    const out: { key: string; label: string; rows: MatchOption[] }[] = []
+    const byKey = new Map<string, (typeof out)[number]>()
+    for (const m of visible) {
+      const round = m.matchday != null ? `Matchday ${m.matchday}` : (m.stage ?? 'Other fixtures')
+      const label = scope === 'team' ? `${m.competitionName} · ${round}` : round
+      const key = `${m.competition}::${m.season}::${label}`
+      let g = byKey.get(key)
+      if (!g) {
+        g = { key, label, rows: [] }
+        byKey.set(key, g)
+        out.push(g)
+      }
+      g.rows.push(m)
+    }
+    return out
+  }, [visible, scope])
+
   const emptyList =
     scope === 'competition'
       ? 'No fixtures for this competition + season.'
@@ -419,8 +440,19 @@ export function MatchPicker({
                     Nothing in this list matches &ldquo;{search.trim()}&rdquo;.
                   </p>
                 ) : (
-                  <ul className="max-h-64 space-y-1 overflow-y-auto">
-                    {visible.map((m) => {
+                  <div className="max-h-64 overflow-y-auto">
+                    {groups.map((g) => (
+                    <section key={g.key} aria-label={g.label} className="mb-2 last:mb-0">
+                    <h3 className="sticky top-0 z-[1] flex items-baseline justify-between bg-neutral-950 px-1 py-1 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                      <span>{g.label}</span>
+                      <span className="normal-case text-neutral-600">
+                        {g.rows.filter((m) => pickedIds.has(m.id)).length > 0 &&
+                          `${g.rows.filter((m) => pickedIds.has(m.id)).length}/`}
+                        {g.rows.length}
+                      </span>
+                    </h3>
+                    <ul className="space-y-1">
+                    {g.rows.map((m) => {
                       const checked = pickedIds.has(m.id)
                       const played =
                         m.status === 'finished' && m.homeScore != null && m.awayScore != null
@@ -441,9 +473,6 @@ export function MatchPicker({
                             />
                             <span className="min-w-0 flex-1 truncate text-neutral-200">
                               {m.home} {played ? `${m.homeScore}–${m.awayScore}` : 'v'} {m.away}
-                              {scope === 'team' && (
-                                <span className="text-neutral-500"> · {m.competitionName}</span>
-                              )}
                             </span>
                             {m.facts && (
                               <Chip tone="emerald" title="Opta match facts scraped for this match">
@@ -490,7 +519,10 @@ export function MatchPicker({
                         </li>
                       )
                     })}
-                  </ul>
+                    </ul>
+                    </section>
+                    ))}
+                  </div>
                 )}
                 <p className="text-[11px] text-neutral-600">
                   A match with no badges still briefs its scoreline and card — the facts table and
