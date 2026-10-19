@@ -1,0 +1,73 @@
+team,team_id,country,entered,reached,matches
+Monaco,monaco,FRA,Group stage,Final,13
+Porto,porto,POR,Group stage,Winners,13
+Chelsea,chelsea,ENG,Third qualifying round,Semi-finals,14
+Deportivo La Coruña,deportivo-la-coruna,ESP,Third qualifying round,Semi-finals,14
+AC Milan,milan,ITA,Group stage,Quarter-finals,10
+Arsenal,arsenal,ENG,Group stage,Quarter-finals,10
+Lyon,olympique-lyonnais,FRA,Group stage,Quarter-finals,10
+Real Madrid,real-madrid,ESP,Group stage,Quarter-finals,10
+Bayern Munich,bayern-munchen,GER,Group stage,Round of 16,8
+Celta Vigo,celta-de-vigo,ESP,Third qualifying round,Round of 16,10
+Juventus,juventus,ITA,Group stage,Round of 16,8
+Lokomotiv Moscow,lokomotiv-moskva,RUS,Third qualifying round,Round of 16,10
+Manchester United,manchester-united,ENG,Group stage,Round of 16,8
+Real Sociedad,real-sociedad-de-futbol,ESP,Group stage,Round of 16,8
+Sparta Prague,sparta-praha,CZE,Third qualifying round,Round of 16,10
+VfB Stuttgart,stuttgart,GER,Group stage,Round of 16,8
+AEK Athens,aek-athen,GRE,Third qualifying round,Group stage,8
+Ajax,ajax,NED,Third qualifying round,Group stage,8
+Beşiktaş,besiktas,TUR,Group stage,Group stage,6
+Celtic,celtic,SCO,Second qualifying round,Group stage,10
+Club Brugge,club-brugge-kv,BEL,Third qualifying round,Group stage,8
+Dynamo Kyiv,dinamo-kiev,UKR,Third qualifying round,Group stage,8
+Galatasaray,galatasaray-sk,TUR,Third qualifying round,Group stage,8
+Inter,internazionale-milano,ITA,Group stage,Group stage,6
+Lazio,lazio,ITA,Third qualifying round,Group stage,8
+Olympiacos,pae-olympiakos-sfp,GRE,Group stage,Group stage,6
+Marseille,olympique-de-marseille,FRA,Third qualifying round,Group stage,8
+PSV Eindhoven,psv,NED,Group stage,Group stage,6
+Panathinaikos,panathinaikos,GRE,Group stage,Group stage,6
+Partizan,partizan-belgrade,SRB,Second qualifying round,Group stage,10
+Anderlecht,rsc-anderlecht,BEL,Second qualifying round,Group stage,10
+Rangers,rangers,SCO,Third qualifying round,Group stage,8
+Austria Wien,austria-wien,AUT,Third qualifying round,Third qualifying round,2
+Borussia Dortmund,borussia-dortmund,GER,Third qualifying round,Third qualifying round,2
+CSKA Sofia,cska-sofia,BUL,Second qualifying round,Third qualifying round,4
+Dinamo Zagreb,dinamo-zagreb,CRO,Second qualifying round,Third qualifying round,4
+Grasshoppers Zurich,grasshoppers-zurich,SUI,Third qualifying round,Third qualifying round,2
+Grazer AK,grazer-ak,AUT,Second qualifying round,Third qualifying round,4
+Copenhagen,k-benhavn,DEN,Second qualifying round,Third qualifying round,4
+MSK Zilina,msk-zilina,SVK,Second qualifying round,Third qualifying round,4
+MTK,mtk,HUN,Second qualifying round,Third qualifying round,4
+Newcastle United,newcastle-united,ENG,Third qualifying round,Third qualifying round,2
+Rosenborg,rosenborg,NOR,Second qualifying round,Third qualifying round,4
+SL Benfica,sport-lisboa-e-benfica,POR,Third qualifying round,Third qualifying round,2
+Shakhtar Donetsk,shakhtar-donetsk,UKR,Second qualifying round,Third qualifying round,4
+Slavia Prague,sk-slavia-praha,CZE,Second qualifying round,Third qualifying round,4
+Vardar Skopje,vardar-skopje,MKD,First qualifying round,Third qualifying round,6
+Wisla Krakow,wisla-krakow,POL,Second qualifying round,Third qualifying round,4
+Bohemians,bohemians,IRL,First qualifying round,Second qualifying round,4
+CSKA Moscow,cska-moskva,RUS,Second qualifying round,Second qualifying round,2
+Djurgardens IF,djurgardens-if,SWE,Second qualifying round,Second qualifying round,2
+FBK Kaunas,fbk-kaunas,LTU,First qualifying round,Second qualifying round,4
+FK Leotar,leotar,BIH,First qualifying round,Second qualifying round,4
+HJK Helsinki,hjk-helsinki,FIN,First qualifying round,Second qualifying round,4
+KF Tirana,kf-tirana,ALB,First qualifying round,Second qualifying round,4
+Maccabi Tel Aviv,maccabi-tel-aviv,ISR,Second qualifying round,Second qualifying round,2
+NK Maribor,maribor,SVN,Second qualifying round,Second qualifying round,2
+Omonia Nicosia,omonia-nicosia,CYP,First qualifying round,Second qualifying round,4
+Pyunik,pyunik,ARM,First qualifying round,Second qualifying round,4
+Rapid Bucuresti,rapid-bucuresti,ROU,Second qualifying round,Second qualifying round,2
+Sheriff Tiraspol,sheriff,MDA,First qualifying round,Second qualifying round,4
+Sliema Wanderers,sliema-wanderers,MLT,First qualifying round,Second qualifying round,4
+BATE Borisov,bate-borisov,BLR,First qualifying round,First qualifying round,2
+Barry Town,barry-town,WAL,First qualifying round,First qualifying round,2
+Dinamo Tbilisi,dinamo-tbilisi,GEO,First qualifying round,First qualifying round,2
+Flora Tallinn,flora-tallinn,EST,First qualifying round,First qualifying round,2
+Glentoran,glentoran,NIR,First qualifying round,First qualifying round,2
+Grevenmacher,grevenmacher,LUX,First qualifying round,First qualifying round,2
+HB,hb,FRO,First qualifying round,First qualifying round,2
+Irtysh Pavlodar,irtysh-pavlodar,KAZ,First qualifying round,First qualifying round,2
+KR Reykjavik,kr-reykjavik,ISL,First qualifying round,First qualifying round,2
+Skonto,skonto,LVA,First qualifying round,First qualifying round,2

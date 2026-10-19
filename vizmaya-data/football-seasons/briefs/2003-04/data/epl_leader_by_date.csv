@@ -1,0 +1,98 @@
+date,leader,leader_pts,leader_played,second,second_pts,second_played,margin,changed
+2003-08-16,Blackburn Rovers,3,1,Manchester United,3,1,0,False
+2003-08-17,Blackburn Rovers,3,1,Manchester United,3,1,0,False
+2003-08-23,Manchester United,6,2,Chelsea,6,2,0,True
+2003-08-24,Arsenal,6,2,Manchester United,6,2,0,True
+2003-08-25,Manchester City,7,3,Arsenal,6,2,1,True
+2003-08-26,Portsmouth,7,3,Manchester City,7,3,0,True
+2003-08-27,Arsenal,9,3,Manchester United,9,3,0,True
+2003-08-30,Arsenal,9,3,Manchester United,9,3,0,False
+2003-08-31,Arsenal,12,4,Manchester United,9,4,3,False
+2003-09-13,Arsenal,13,5,Manchester United,12,5,1,False
+2003-09-14,Arsenal,13,5,Manchester United,12,5,1,False
+2003-09-15,Arsenal,13,5,Manchester United,12,5,1,False
+2003-09-20,Chelsea,13,5,Arsenal,13,5,0,True
+2003-09-21,Arsenal,14,6,Chelsea,13,5,1,True
+2003-09-26,Arsenal,17,7,Chelsea,13,5,4,False
+2003-09-27,Arsenal,17,7,Chelsea,16,6,1,False
+2003-09-28,Arsenal,17,7,Chelsea,16,6,1,False
+2003-10-04,Arsenal,20,8,Manchester United,19,8,1,False
+2003-10-05,Arsenal,20,8,Manchester United,19,8,1,False
+2003-10-14,Chelsea,20,8,Arsenal,20,8,0,True
+2003-10-18,Arsenal,23,9,Manchester United,22,9,1,True
+2003-10-19,Arsenal,23,9,Manchester United,22,9,1,False
+2003-10-20,Arsenal,23,9,Manchester United,22,9,1,False
+2003-10-21,Arsenal,23,9,Manchester United,22,9,1,False
+2003-10-25,Chelsea,23,10,Arsenal,23,9,0,True
+2003-10-26,Arsenal,24,10,Chelsea,23,10,1,True
+2003-11-01,Arsenal,27,11,Chelsea,26,11,1,False
+2003-11-02,Arsenal,27,11,Chelsea,26,11,1,False
+2003-11-03,Arsenal,27,11,Chelsea,26,11,1,False
+2003-11-08,Arsenal,30,12,Chelsea,26,11,4,False
+2003-11-09,Arsenal,30,12,Chelsea,29,12,1,False
+2003-11-10,Arsenal,30,12,Chelsea,29,12,1,False
+2003-11-22,Arsenal,33,13,Chelsea,32,13,1,False
+2003-11-23,Arsenal,33,13,Chelsea,32,13,1,False
+2003-11-24,Arsenal,33,13,Chelsea,32,13,1,False
+2003-11-29,Arsenal,33,13,Chelsea,32,13,1,False
+2003-11-30,Chelsea,35,14,Arsenal,34,14,1,True
+2003-12-06,Chelsea,36,15,Arsenal,35,15,1,False
+2003-12-07,Chelsea,36,15,Arsenal,35,15,1,False
+2003-12-13,Manchester United,37,16,Chelsea,36,16,1,True
+2003-12-14,Arsenal,38,16,Manchester United,37,16,1,True
+2003-12-20,Arsenal,39,17,Chelsea,39,17,0,False
+2003-12-21,Manchester United,40,17,Arsenal,39,17,1,True
+2003-12-22,Manchester United,40,17,Arsenal,39,17,1,False
+2003-12-26,Manchester United,43,18,Arsenal,42,18,1,False
+2003-12-28,Manchester United,46,19,Arsenal,42,18,4,False
+2003-12-29,Manchester United,46,19,Arsenal,45,19,1,False
+2004-01-06,Manchester United,46,19,Arsenal,45,19,1,False
+2004-01-07,Manchester United,49,20,Arsenal,46,20,3,False
+2004-01-10,Arsenal,49,21,Manchester United,49,20,0,True
+2004-01-11,Manchester United,50,21,Arsenal,49,21,1,True
+2004-01-17,Manchester United,50,22,Arsenal,49,21,1,False
+2004-01-18,Arsenal,52,22,Manchester United,50,22,2,True
+2004-01-19,Arsenal,52,22,Manchester United,50,22,2,False
+2004-01-21,Arsenal,52,22,Manchester United,50,22,2,False
+2004-01-31,Manchester United,53,23,Arsenal,52,22,1,True
+2004-02-01,Arsenal,55,23,Manchester United,53,23,2,True
+2004-02-07,Arsenal,58,24,Manchester United,56,24,2,False
+2004-02-08,Arsenal,58,24,Manchester United,56,24,2,False
+2004-02-10,Arsenal,61,25,Manchester United,56,24,5,False
+2004-02-11,Arsenal,61,25,Manchester United,56,25,5,False
+2004-02-21,Arsenal,64,26,Manchester United,57,26,7,False
+2004-02-22,Arsenal,64,26,Manchester United,57,26,7,False
+2004-02-28,Arsenal,67,27,Chelsea,58,27,9,False
+2004-02-29,Arsenal,67,27,Chelsea,58,27,9,False
+2004-03-03,Arsenal,67,27,Chelsea,58,27,9,False
+2004-03-06,Arsenal,67,27,Chelsea,58,27,9,False
+2004-03-09,Arsenal,67,27,Chelsea,58,27,9,False
+2004-03-13,Arsenal,70,28,Chelsea,61,28,9,False
+2004-03-14,Arsenal,70,28,Chelsea,61,28,9,False
+2004-03-17,Arsenal,70,28,Chelsea,61,28,9,False
+2004-03-20,Arsenal,73,29,Chelsea,64,29,9,False
+2004-03-21,Arsenal,73,29,Chelsea,64,29,9,False
+2004-03-22,Arsenal,73,29,Chelsea,64,29,9,False
+2004-03-27,Arsenal,73,29,Chelsea,67,30,6,False
+2004-03-28,Arsenal,74,30,Chelsea,67,30,7,False
+2004-04-03,Arsenal,74,30,Chelsea,70,31,4,False
+2004-04-04,Arsenal,74,30,Chelsea,70,31,4,False
+2004-04-05,Arsenal,74,30,Chelsea,70,31,4,False
+2004-04-09,Arsenal,77,31,Chelsea,70,31,7,False
+2004-04-10,Arsenal,77,31,Chelsea,71,32,6,False
+2004-04-11,Arsenal,78,32,Chelsea,71,32,7,False
+2004-04-12,Arsenal,78,32,Chelsea,71,33,7,False
+2004-04-13,Arsenal,78,32,Chelsea,71,33,7,False
+2004-04-16,Arsenal,81,33,Chelsea,71,33,10,False
+2004-04-17,Arsenal,81,33,Chelsea,72,34,9,False
+2004-04-18,Arsenal,81,33,Chelsea,72,34,9,False
+2004-04-20,Arsenal,81,33,Chelsea,72,34,9,False
+2004-04-24,Arsenal,81,33,Chelsea,72,34,9,False
+2004-04-25,Arsenal,82,34,Chelsea,72,35,10,False
+2004-05-01,Arsenal,83,35,Chelsea,75,36,8,False
+2004-05-02,Arsenal,83,35,Chelsea,75,36,8,False
+2004-05-04,Arsenal,84,36,Chelsea,75,36,9,False
+2004-05-08,Arsenal,84,36,Chelsea,76,37,8,False
+2004-05-09,Arsenal,87,37,Chelsea,76,37,11,False
+2004-05-12,Arsenal,87,37,Chelsea,76,37,11,False
+2004-05-15,Arsenal,90,38,Chelsea,79,38,11,False

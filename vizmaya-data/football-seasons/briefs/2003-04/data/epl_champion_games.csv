@@ -1,0 +1,39 @@
+game,date,opponent,venue,score,result,ht,behind_at_ht,implied_win_pct,xg_for,xg_against,shots,ppda
+1,2003-08-16,Everton,H,2-1,W,1-0,False,64.8,2.12,1.27,14,7.77
+2,2003-08-24,Middlesbrough,A,4-0,W,3-0,False,50.5,2.76,0.38,14,14.68
+3,2003-08-27,Aston Villa,H,2-0,W,0-0,False,71.0,2.05,0.29,20,6.95
+4,2003-08-31,Manchester City,A,2-1,W,0-1,True,50.5,1.34,0.67,11,6.0
+5,2003-09-13,Portsmouth,H,1-1,D,1-1,False,70.8,2.3,1.28,17,6.09
+6,2003-09-21,Manchester United,A,0-0,D,0-0,False,26.7,0.21,1.06,7,9.55
+7,2003-09-26,Newcastle United,H,3-2,W,1-1,False,58.3,2.22,0.96,16,6.37
+8,2003-10-04,Liverpool,A,2-1,W,1-1,False,36.3,0.64,1.31,12,6.86
+9,2003-10-18,Chelsea,H,2-1,W,1-1,False,41.3,1.87,0.26,15,7.13
+10,2003-10-26,Charlton Athletic,A,1-1,D,1-1,False,56.5,0.32,1.09,11,7.6
+11,2003-11-01,Leeds United,A,4-1,W,3-0,False,58.1,2.36,0.63,13,8.52
+12,2003-11-08,Tottenham Hotspur,H,2-1,W,0-1,True,65.0,1.73,0.84,14,5.02
+13,2003-11-22,Birmingham City,A,3-0,W,1-0,False,53.0,2.07,0.67,8,9.11
+14,2003-11-30,Fulham,H,0-0,D,0-0,False,68.3,2.18,0.33,25,6.98
+15,2003-12-06,Leicester City,A,1-1,D,0-0,False,59.3,0.89,0.35,13,5.95
+16,2003-12-14,Blackburn Rovers,H,1-0,W,1-0,False,66.8,1.98,0.81,15,10.14
+17,2003-12-20,Bolton Wanderers,A,1-1,D,0-0,False,55.7,0.81,1.21,8,6.94
+18,2003-12-26,Wolverhampton Wanderers,H,3-0,W,2-0,False,79.5,1.01,0.61,16,8.17
+19,2003-12-29,Southampton,A,1-0,W,1-0,False,53.8,0.84,0.13,17,6.56
+20,2004-01-07,Everton,A,1-1,D,1-0,False,55.9,1.06,0.96,11,6.95
+21,2004-01-10,Middlesbrough,H,4-1,W,2-0,False,72.3,2.06,0.95,22,6.42
+22,2004-01-18,Aston Villa,A,2-0,W,1-0,False,55.9,1.52,0.65,14,6.51
+23,2004-02-01,Manchester City,H,2-1,W,1-0,False,73.9,1.62,1.3,14,7.49
+24,2004-02-07,Wolverhampton Wanderers,A,3-1,W,1-1,False,66.4,1.86,0.7,11,4.69
+25,2004-02-10,Southampton,H,2-0,W,1-0,False,74.3,1.55,0.88,15,4.86
+26,2004-02-21,Chelsea,A,2-1,W,2-1,False,35.7,1.11,1.51,12,6.8
+27,2004-02-28,Charlton Athletic,H,2-1,W,2-0,False,72.2,2.03,0.6,21,5.88
+28,2004-03-13,Blackburn Rovers,A,2-0,W,0-0,False,60.8,1.01,0.35,13,8.66
+29,2004-03-20,Bolton Wanderers,H,2-1,W,2-1,False,76.0,0.81,1.12,11,7.09
+30,2004-03-28,Manchester United,H,1-1,D,0-0,False,44.2,1.54,1.12,20,6.8
+31,2004-04-09,Liverpool,H,4-2,W,1-2,True,48.6,2.01,1.94,15,7.19
+32,2004-04-11,Newcastle United,A,0-0,D,0-0,False,42.3,1.37,0.45,11,6.86
+33,2004-04-16,Leeds United,H,5-0,W,3-0,False,69.8,3.59,0.15,17,11.39
+34,2004-04-25,Tottenham Hotspur,A,2-2,D,2-0,False,55.9,2.21,1.27,9,7.75
+35,2004-05-01,Birmingham City,H,0-0,D,0-0,False,68.3,0.44,0.12,10,7.73
+36,2004-05-04,Portsmouth,A,1-1,D,0-1,True,51.4,1.67,1.14,20,6.03
+37,2004-05-09,Fulham,A,1-0,W,1-0,False,44.2,1.2,1.4,9,6.6
+38,2004-05-15,Leicester City,H,2-1,W,0-1,True,74.3,2.54,0.11,23,7.29

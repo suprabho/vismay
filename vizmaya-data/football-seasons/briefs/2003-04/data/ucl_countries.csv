@@ -1,0 +1,49 @@
+country,clubs,First qualifying round,Second qualifying round,Third qualifying round,Group stage,Round of 16,Quarter-finals,Semi-finals,Final,Winners,best
+POR,2,0,0,1,0,0,0,0,0,1,Winners
+FRA,3,0,0,0,1,0,1,0,1,0,Final
+ENG,4,0,0,1,0,1,1,1,0,0,Semi-finals
+ESP,4,0,0,0,0,2,1,1,0,0,Semi-finals
+ITA,4,0,0,0,2,1,1,0,0,0,Quarter-finals
+GER,3,0,0,1,0,2,0,0,0,0,Round of 16
+CZE,2,0,0,1,0,1,0,0,0,0,Round of 16
+RUS,2,0,1,0,0,1,0,0,0,0,Round of 16
+GRE,3,0,0,0,3,0,0,0,0,0,Group stage
+BEL,2,0,0,0,2,0,0,0,0,0,Group stage
+NED,2,0,0,0,2,0,0,0,0,0,Group stage
+SCO,2,0,0,0,2,0,0,0,0,0,Group stage
+TUR,2,0,0,0,2,0,0,0,0,0,Group stage
+UKR,2,0,0,1,1,0,0,0,0,0,Group stage
+SRB,1,0,0,0,1,0,0,0,0,0,Group stage
+AUT,2,0,0,2,0,0,0,0,0,0,Third qualifying round
+BUL,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+CRO,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+DEN,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+HUN,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+MKD,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+NOR,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+POL,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+SUI,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+SVK,1,0,0,1,0,0,0,0,0,0,Third qualifying round
+ALB,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+ARM,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+BIH,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+CYP,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+FIN,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+IRL,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+ISR,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+LTU,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+MDA,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+MLT,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+ROU,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+SVN,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+SWE,1,0,1,0,0,0,0,0,0,0,Second qualifying round
+BLR,1,1,0,0,0,0,0,0,0,0,First qualifying round
+EST,1,1,0,0,0,0,0,0,0,0,First qualifying round
+FRO,1,1,0,0,0,0,0,0,0,0,First qualifying round
+GEO,1,1,0,0,0,0,0,0,0,0,First qualifying round
+ISL,1,1,0,0,0,0,0,0,0,0,First qualifying round
+KAZ,1,1,0,0,0,0,0,0,0,0,First qualifying round
+LUX,1,1,0,0,0,0,0,0,0,0,First qualifying round
+LVA,1,1,0,0,0,0,0,0,0,0,First qualifying round
+NIR,1,1,0,0,0,0,0,0,0,0,First qualifying round
+WAL,1,1,0,0,0,0,0,0,0,0,First qualifying round

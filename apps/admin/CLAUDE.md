@@ -340,6 +340,10 @@ changes through review (bump `SYSTEM_VERSION`), never per book.
   the grid, sized in container-query units from the type scale), `DataChart`,
   `SketchPad`, `ChartGlyph`, `MatchData` (one fetch per competition, shared).
 - **Tests:** `pnpm --filter admin exec tsx lib/seasonBooks/seasonBooks.test.ts`.
+- **Plans from files:** `pnpm --filter admin exec tsx scripts/checkSeasonPlan.ts <plan.json> <start year>`
+  validates a plan written outside the planner (e.g. the league/cup briefs'
+  `vizmaya-data/football-seasons/briefs/<season>/plan.json`) against `planSchema`
+  and prints the beat, card and pacing issues; load it with the book's PUT.
 
 ## VizNBA Pipeline tab (/viznba/pipeline)
 

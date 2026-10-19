@@ -1,0 +1,56 @@
+stage,team_a,country_a,team_b,country_b,leg1,leg1_date,leg2,leg2_date,agg,winner,decided_by
+Q-1,Dinamo Tbilisi,GEO,KF Tirana,ALB,3-0,2003-07-16,0-3,2003-07-23,3-3,KF Tirana,penalties 4-2
+Q-1,Sliema Wanderers,MLT,Skonto,LVA,2-0,2003-07-16,1-3,2003-07-23,3-3,Sliema Wanderers,away goals
+Q-1,Vardar Skopje,MKD,Barry Town,WAL,3-0,2003-07-16,1-2,2003-07-23,4-2,Vardar Skopje,aggregate
+Q-1,BATE Borisov,BLR,Bohemians,IRL,1-0,2003-07-16,0-3,2003-07-23,1-3,Bohemians,aggregate
+Q-1,HB,FRO,FBK Kaunas,LTU,0-1,2003-07-16,1-4,2003-07-23,1-5,FBK Kaunas,aggregate
+Q-1,Grevenmacher,LUX,FK Leotar,BIH,0-0,2003-07-16,0-2,2003-07-23,0-2,FK Leotar,aggregate
+Q-1,Sheriff Tiraspol,MDA,Flora Tallinn,EST,1-0,2003-07-16,1-1,2003-07-23,2-1,Sheriff Tiraspol,aggregate
+Q-1,Glentoran,NIR,HJK Helsinki,FIN,0-0,2003-07-16,0-1,2003-07-23,0-1,HJK Helsinki,aggregate
+Q-1,Omonia Nicosia,CYP,Irtysh Pavlodar,KAZ,0-0,2003-07-16,2-1,2003-07-23,2-1,Omonia Nicosia,aggregate
+Q-1,Pyunik,ARM,KR Reykjavik,ISL,1-0,2003-07-16,1-1,2003-07-23,2-1,Pyunik,aggregate
+Q-2,Copenhagen,DEN,Sliema Wanderers,MLT,4-1,2003-07-30,6-0,2003-08-06,10-1,Copenhagen,aggregate
+Q-2,Partizan,SRB,Djurgardens IF,SWE,1-1,2003-07-30,2-2,2003-08-06,3-3,Partizan,away goals
+Q-2,Sheriff Tiraspol,MDA,Shakhtar Donetsk,UKR,0-0,2003-07-30,0-2,2003-08-06,0-2,Shakhtar Donetsk,aggregate
+Q-2,Rapid Bucuresti,ROU,Anderlecht,BEL,0-0,2003-07-30,2-3,2003-08-06,2-3,Anderlecht,aggregate
+Q-2,Wisla Krakow,POL,Omonia Nicosia,CYP,5-2,2003-07-30,2-2,2003-08-06,7-4,Wisla Krakow,aggregate
+Q-2,MSK Zilina,SVK,Maccabi Tel Aviv,ISR,1-0,2003-07-30,1-1,2003-08-06,2-1,MSK Zilina,aggregate
+Q-2,MTK,HUN,HJK Helsinki,FIN,3-1,2003-07-30,0-1,2003-08-06,3-2,MTK,aggregate
+Q-2,FK Leotar,BIH,Slavia Prague,CZE,1-2,2003-07-30,0-2,2003-08-06,1-4,Slavia Prague,aggregate
+Q-2,NK Maribor,SVN,Dinamo Zagreb,CRO,1-1,2003-07-30,1-2,2003-08-06,2-3,Dinamo Zagreb,aggregate
+Q-2,Pyunik,ARM,CSKA Sofia,BUL,0-2,2003-07-30,0-1,2003-08-06,0-3,CSKA Sofia,aggregate
+Q-2,CSKA Moscow,RUS,Vardar Skopje,MKD,1-2,2003-07-30,1-1,2003-08-06,2-3,Vardar Skopje,aggregate
+Q-2,FBK Kaunas,LTU,Celtic,SCO,0-4,2003-07-30,0-1,2003-08-06,0-5,Celtic,aggregate
+Q-2,Bohemians,IRL,Rosenborg,NOR,0-1,2003-07-30,0-4,2003-08-06,0-5,Rosenborg,aggregate
+Q-2,KF Tirana,ALB,Grazer AK,AUT,1-5,2003-07-30,1-2,2003-08-06,2-7,Grazer AK,aggregate
+Q-3,Dynamo Kyiv,UKR,Dinamo Zagreb,CRO,3-1,2003-08-12,2-0,2003-08-20,5-1,Dynamo Kyiv,aggregate
+Q-3,Vardar Skopje,MKD,Sparta Prague,CZE,2-3,2003-08-12,2-2,2003-08-20,4-5,Sparta Prague,aggregate
+Q-3,MSK Zilina,SVK,Chelsea,ENG,0-2,2003-08-12,0-3,2003-08-20,0-5,Chelsea,aggregate
+Q-3,Celta Vigo,ESP,Slavia Prague,CZE,3-0,2003-08-12,0-2,2003-08-20,3-2,Celta Vigo,aggregate
+Q-3,MTK,HUN,Celtic,SCO,0-4,2003-08-12,0-1,2003-08-20,0-5,Celtic,aggregate
+Q-3,Grazer AK,AUT,Ajax,NED,1-1,2003-08-12,1-2,2003-08-20,2-3,Ajax,aggregate after extra time
+Q-3,Anderlecht,BEL,Wisla Krakow,POL,3-1,2003-08-13,1-0,2003-08-19,4-1,Anderlecht,aggregate
+Q-3,Shakhtar Donetsk,UKR,Lokomotiv Moscow,RUS,1-0,2003-08-13,1-3,2003-08-20,2-3,Lokomotiv Moscow,aggregate
+Q-3,Lazio,ITA,SL Benfica,POR,3-1,2003-08-13,1-0,2003-08-19,4-1,Lazio,aggregate
+Q-3,Rangers,SCO,Copenhagen,DEN,1-1,2003-08-13,2-1,2003-08-19,3-2,Rangers,aggregate
+Q-3,Partizan,SRB,Newcastle United,ENG,0-1,2003-08-13,1-0,2003-08-19,1-1,Partizan,penalties 4-3
+Q-3,Galatasaray,TUR,CSKA Sofia,BUL,3-0,2003-08-13,3-0,2003-08-20,6-0,Galatasaray,aggregate
+Q-3,Austria Wien,AUT,Marseille,FRA,0-1,2003-08-13,0-0,2003-08-19,0-1,Marseille,aggregate
+Q-3,Grasshoppers Zurich,SUI,AEK Athens,GRE,1-0,2003-08-13,1-3,2003-08-19,2-3,AEK Athens,aggregate
+Q-3,Club Brugge,BEL,Borussia Dortmund,GER,2-1,2003-08-13,1-2,2003-08-19,3-3,Club Brugge,penalties 4-2
+Q-3,Rosenborg,NOR,Deportivo La Coruña,ESP,0-0,2003-08-13,0-1,2003-08-19,0-1,Deportivo La Coruña,aggregate
+R16,Lokomotiv Moscow,RUS,Monaco,FRA,2-1,2004-02-24,0-1,2004-03-10,2-2,Monaco,away goals
+R16,Sparta Prague,CZE,AC Milan,ITA,0-0,2004-02-24,1-4,2004-03-10,1-4,AC Milan,aggregate
+R16,Celta Vigo,ESP,Arsenal,ENG,2-3,2004-02-24,0-2,2004-03-10,2-5,Arsenal,aggregate
+R16,Bayern Munich,GER,Real Madrid,ESP,1-1,2004-02-24,0-1,2004-03-10,1-2,Real Madrid,aggregate
+R16,Real Sociedad,ESP,Lyon,FRA,0-1,2004-02-25,0-1,2004-03-09,0-2,Lyon,aggregate
+R16,Porto,POR,Manchester United,ENG,2-1,2004-02-25,1-1,2004-03-09,3-2,Porto,aggregate
+R16,VfB Stuttgart,GER,Chelsea,ENG,0-1,2004-02-25,0-0,2004-03-09,0-1,Chelsea,aggregate
+R16,Deportivo La Coruña,ESP,Juventus,ITA,1-0,2004-02-25,1-0,2004-03-09,2-0,Deportivo La Coruña,aggregate
+QF,Porto,POR,Lyon,FRA,2-0,2004-03-23,2-2,2004-04-07,4-2,Porto,aggregate
+QF,AC Milan,ITA,Deportivo La Coruña,ESP,4-1,2004-03-23,0-4,2004-04-07,4-5,Deportivo La Coruña,aggregate
+QF,Real Madrid,ESP,Monaco,FRA,4-2,2004-03-24,1-3,2004-04-06,5-5,Monaco,away goals
+QF,Chelsea,ENG,Arsenal,ENG,1-1,2004-03-24,2-1,2004-04-06,3-2,Chelsea,aggregate
+SF,Monaco,FRA,Chelsea,ENG,3-1,2004-04-20,2-2,2004-05-05,5-3,Monaco,aggregate
+SF,Porto,POR,Deportivo La Coruña,ESP,0-0,2004-04-21,1-0,2004-05-04,1-0,Porto,aggregate
+final,Porto,POR,Monaco,FRA,3-0,2004-05-26,,,3-0,Porto,single match

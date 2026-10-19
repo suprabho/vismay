@@ -1,0 +1,195 @@
+match_id,date,player,period,minute,second,x,y,end_x,end_y,xg,outcome,body_part,shot_type,technique,under_pressure,first_time,assisted_by
+3749493,2003-08-16,Thierry Henry,1,10,31,92.5,11.9,120.0,39.0,0.006,Off T,Right Foot,Free Kick,Normal,False,False,
+3749493,2003-08-16,Thierry Henry,1,15,2,99.0,47.7,120.0,45.9,0.085,Off T,Right Foot,Free Kick,Normal,False,False,
+3749493,2003-08-16,Thierry Henry,1,34,19,107.9,39.7,120.0,38.1,0.783,Goal,Right Foot,Penalty,Normal,False,False,
+3749493,2003-08-16,Thierry Henry,2,57,13,93.6,50.2,117.9,38.7,0.024,Saved,Right Foot,Open Play,Normal,True,False,Robert Pirès
+3749358,2003-08-24,Thierry Henry,1,4,49,115.1,37.1,120.0,37.6,0.795,Goal,Right Foot,Open Play,Normal,False,True,
+3749358,2003-08-24,Thierry Henry,1,17,37,97.5,54.4,116.3,42.1,0.026,Saved,Left Foot,Open Play,Normal,False,False,Fredrik Ljungberg
+3749358,2003-08-24,Thierry Henry,1,33,48,107.2,51.9,114.8,46.1,0.167,Saved,Left Foot,Open Play,Normal,False,False,Fredrik Ljungberg
+3749358,2003-08-24,Thierry Henry,1,40,43,90.5,42.6,120.0,35.3,0.021,Off T,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749358,2003-08-24,Thierry Henry,1,42,39,105.3,43.8,120.0,35.4,0.055,Off T,Head,Open Play,Normal,False,False,Fredrik Ljungberg
+3749358,2003-08-24,Thierry Henry,2,51,44,102.8,55.3,117.9,42.3,0.02,Saved,Right Foot,Open Play,Half Volley,False,False,Kolo Habib Touré
+3749108,2003-08-27,Thierry Henry,1,3,32,109.9,28.5,112.5,30.8,0.132,Saved,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749108,2003-08-27,Thierry Henry,1,12,19,98.6,32.6,120.0,44.9,0.146,Off T,Right Foot,Open Play,Lob,False,False,Kolo Habib Touré
+3749108,2003-08-27,Thierry Henry,1,30,5,104.1,41.3,115.2,47.1,0.039,Wayward,Head,Open Play,Normal,True,False,Patrick Vieira
+3749108,2003-08-27,Thierry Henry,2,68,21,98.5,25.7,119.3,35.0,0.028,Saved Off Target,Right Foot,Open Play,Normal,False,False,
+3749108,2003-08-27,Thierry Henry,2,92,51,115.4,26.5,120.0,42.4,0.331,Goal,Right Foot,Open Play,Normal,False,False,
+3749454,2003-08-31,Thierry Henry,1,17,45,94.8,37.2,120.0,45.3,0.02,Off T,Right Foot,Open Play,Volley,False,True,Robert Pirès
+3749454,2003-08-31,Thierry Henry,2,92,0,99.4,32.3,120.0,47.3,0.059,Off T,Right Foot,Open Play,Normal,False,False,Patrick Vieira
+3749296,2003-09-13,Thierry Henry,1,27,58,82.6,30.7,94.9,34.6,0.007,Blocked,Right Foot,Free Kick,Normal,False,False,
+3749296,2003-09-13,Thierry Henry,1,38,56,107.7,40.0,120.0,41.8,0.783,Goal,Right Foot,Penalty,Normal,False,False,
+3749296,2003-09-13,Thierry Henry,1,45,37,94.4,47.1,120.0,42.9,0.038,Off T,Right Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749296,2003-09-13,Thierry Henry,2,64,43,94.8,39.6,106.6,40.7,0.074,Blocked,Right Foot,Free Kick,Normal,False,False,
+3749296,2003-09-13,Thierry Henry,2,67,32,111.8,38.0,119.6,40.1,0.11,Saved,Head,Open Play,Normal,True,False,Dennis Bergkamp
+3749296,2003-09-13,Thierry Henry,2,92,5,111.8,39.5,116.3,40.2,0.104,Saved,Head,Open Play,Normal,True,False,Patrick Vieira
+3749552,2003-09-21,Thierry Henry,2,50,16,98.8,65.3,120.0,47.0,0.007,Off T,Right Foot,Open Play,Half Volley,False,True,Dennis Bergkamp
+3749552,2003-09-21,Thierry Henry,2,65,3,104.2,30.0,120.0,47.7,0.017,Off T,Head,Open Play,Normal,True,False,Ray Parlour
+3749528,2003-09-26,Thierry Henry,1,6,5,88.1,38.1,106.0,40.0,0.021,Blocked,Left Foot,Open Play,Normal,False,False,
+3749528,2003-09-26,Thierry Henry,1,7,42,116.4,45.3,117.1,44.5,0.105,Blocked,Right Foot,Open Play,Normal,False,True,Sylvain Wiltord
+3749528,2003-09-26,Thierry Henry,1,10,23,104.3,47.0,120.0,49.5,0.048,Off T,Right Foot,Open Play,Volley,False,False,
+3749528,2003-09-26,Thierry Henry,1,13,48,99.0,25.4,116.7,36.1,0.025,Saved,Right Foot,Open Play,Normal,False,False,
+3749528,2003-09-26,Thierry Henry,1,17,33,117.8,35.2,120.0,39.5,0.396,Goal,Left Foot,Open Play,Half Volley,False,True,Laureano Bisan-Etame Mayer
+3749528,2003-09-26,Thierry Henry,1,45,7,94.2,35.7,120.0,49.2,0.045,Off T,Right Foot,Open Play,Normal,True,False,Ashley Cole
+3749528,2003-09-26,Thierry Henry,2,57,22,91.7,35.3,100.7,35.7,0.033,Blocked,Left Foot,Open Play,Normal,False,False,Ray Parlour
+3749528,2003-09-26,Thierry Henry,2,69,11,113.6,37.7,111.9,50.2,0.115,Wayward,Head,Open Play,Normal,True,False,Robert Pirès
+3749528,2003-09-26,Thierry Henry,2,79,11,108.1,40.3,120.0,39.6,0.783,Goal,Right Foot,Penalty,Lob,False,False,
+3749253,2003-10-04,Thierry Henry,1,23,18,93.9,49.9,117.2,43.5,0.026,Saved,Left Foot,Open Play,Normal,False,False,Ray Parlour
+3749253,2003-10-04,Thierry Henry,2,60,34,95.1,40.4,114.5,39.3,0.048,Saved,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749253,2003-10-04,Thierry Henry,2,80,7,83.1,28.7,118.6,38.6,0.007,Saved,Right Foot,Free Kick,Normal,False,False,
+3749079,2003-10-18,Thierry Henry,1,1,45,108.5,33.5,107.7,44.1,0.166,Wayward,Right Foot,Open Play,Normal,False,False,Sylvain Wiltord
+3749079,2003-10-18,Thierry Henry,2,49,49,107.8,38.7,120.0,34.4,0.071,Off T,Head,Open Play,Normal,False,False,Laureano Bisan-Etame Mayer
+3749079,2003-10-18,Thierry Henry,2,72,6,111.1,43.2,114.0,42.7,0.187,Saved,Right Foot,Open Play,Normal,False,False,Eduardo César Daude Gaspar
+3749079,2003-10-18,Thierry Henry,2,74,16,110.6,40.6,120.0,42.4,0.906,Goal,Other,Open Play,Normal,False,False,
+3749079,2003-10-18,Thierry Henry,2,76,18,110.9,33.6,120.0,31.7,0.042,Off T,Head,Open Play,Normal,True,False,Laureano Bisan-Etame Mayer
+3749526,2003-10-26,Thierry Henry,1,8,58,91.1,35.9,101.1,36.8,0.045,Blocked,Right Foot,Free Kick,Normal,False,False,
+3749526,2003-10-26,Thierry Henry,1,32,28,100.1,54.0,120.0,36.1,0.041,Post,Left Foot,Open Play,Normal,False,False,Fredrik Ljungberg
+3749526,2003-10-26,Thierry Henry,1,39,0,97.5,30.9,120.0,43.4,0.069,Goal,Right Foot,Free Kick,Normal,False,False,
+3749526,2003-10-26,Thierry Henry,1,47,27,99.1,58.1,120.0,44.9,0.019,Off T,Right Foot,Free Kick,Normal,False,False,
+3749526,2003-10-26,Thierry Henry,2,79,30,95.2,29.0,120.0,35.1,0.029,Off T,Right Foot,Open Play,Normal,False,False,Nwankwo Christian Kanu
+3749526,2003-10-26,Thierry Henry,2,86,27,87.0,47.0,120.0,38.0,0.021,Off T,Right Foot,Free Kick,Normal,False,False,
+3749346,2003-11-01,Thierry Henry,1,7,17,112.3,29.4,120.0,43.5,0.34,Goal,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749346,2003-11-01,Thierry Henry,1,31,56,110.3,28.1,120.0,38.9,0.143,Goal,Right Foot,Open Play,Normal,False,True,
+3749346,2003-11-01,Thierry Henry,1,44,48,107.8,53.1,120.0,40.4,0.134,Off T,Right Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749346,2003-11-01,Thierry Henry,2,76,27,111.7,32.1,114.4,35.6,0.406,Blocked,Right Foot,Open Play,Normal,False,True,
+3749196,2003-11-08,Thierry Henry,1,5,44,88.1,47.8,118.4,38.7,0.028,Saved,Right Foot,Open Play,Normal,False,False,Nwankwo Christian Kanu
+3749196,2003-11-08,Thierry Henry,1,11,4,109.9,26.1,118.7,39.0,0.056,Saved,Right Foot,Open Play,Normal,False,False,Fredrik Ljungberg
+3749196,2003-11-08,Thierry Henry,1,13,12,94.4,56.7,102.1,52.7,0.015,Blocked,Right Foot,Free Kick,Normal,False,False,
+3749196,2003-11-08,Thierry Henry,1,14,18,101.4,49.3,120.0,36.4,0.087,Off T,Left Foot,Free Kick,Normal,False,False,
+3749196,2003-11-08,Thierry Henry,2,70,7,97.6,46.6,120.0,43.2,0.038,Off T,Right Foot,Open Play,Normal,False,False,
+3749196,2003-11-08,Thierry Henry,2,73,12,112.4,46.1,114.7,43.2,0.522,Saved,Left Foot,Open Play,Normal,False,False,Ray Parlour
+3749196,2003-11-08,Thierry Henry,2,74,52,92.7,50.1,101.2,46.2,0.027,Blocked,Right Foot,Open Play,Normal,False,True,Dennis Bergkamp
+3749434,2003-11-22,Thierry Henry,1,2,9,89.4,44.0,120.0,29.9,0.025,Off T,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749434,2003-11-22,Thierry Henry,1,9,41,104.6,49.5,118.6,43.7,0.188,Saved,Right Foot,Open Play,Normal,False,False,
+3749434,2003-11-22,Thierry Henry,2,47,28,113.4,28.2,117.9,35.3,0.153,Saved,Right Foot,Open Play,Normal,False,False,Eduardo César Daude Gaspar
+3749192,2003-11-30,Thierry Henry,1,23,43,100.7,20.8,120.0,33.4,0.014,Off T,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749192,2003-11-30,Thierry Henry,1,29,9,103.4,38.7,117.8,37.5,0.146,Saved,Right Foot,Open Play,Normal,False,True,Robert Pirès
+3749192,2003-11-30,Thierry Henry,1,33,32,96.3,26.7,118.2,40.6,0.025,Saved,Right Foot,Open Play,Normal,False,False,Fredrik Ljungberg
+3749192,2003-11-30,Thierry Henry,1,35,25,108.3,34.2,119.1,41.4,0.149,Saved,Right Foot,Open Play,Half Volley,True,False,Robert Pirès
+3749192,2003-11-30,Thierry Henry,1,43,5,115.9,41.9,120.0,34.0,0.135,Off T,Head,Open Play,Normal,True,False,Eduardo César Daude Gaspar
+3749192,2003-11-30,Thierry Henry,2,70,35,104.8,27.1,120.0,45.3,0.076,Off T,Right Foot,Open Play,Normal,False,False,Fredrik Ljungberg
+3749192,2003-11-30,Thierry Henry,2,71,40,93.0,38.7,118.2,42.2,0.032,Saved,Right Foot,Open Play,Normal,False,True,Nwankwo Christian Kanu
+3749192,2003-11-30,Thierry Henry,2,76,35,102.8,32.6,103.8,33.1,0.048,Blocked,Right Foot,Open Play,Half Volley,True,False,Kolo Habib Touré
+3749360,2003-12-14,Thierry Henry,1,25,5,85.1,40.7,117.8,36.3,0.018,Saved,Right Foot,Open Play,Normal,False,False,Patrick Vieira
+3749360,2003-12-14,Thierry Henry,1,39,55,105.7,35.7,113.6,38.4,0.269,Saved,Right Foot,Open Play,Normal,True,False,Dennis Bergkamp
+3749360,2003-12-14,Thierry Henry,2,70,20,116.4,35.5,119.4,37.8,0.208,Saved,Head,Open Play,Normal,True,False,Fredrik Ljungberg
+3749360,2003-12-14,Thierry Henry,2,77,35,97.6,29.8,120.0,35.5,0.063,Off T,Right Foot,Free Kick,Normal,False,False,
+3749360,2003-12-14,Thierry Henry,2,85,47,104.2,33.8,117.5,37.3,0.138,Saved,Right Foot,Open Play,Normal,False,True,Eduardo César Daude Gaspar
+3749278,2003-12-20,Thierry Henry,1,13,3,91.9,34.2,120.0,31.9,0.026,Off T,Right Foot,Open Play,Volley,True,False,
+3749278,2003-12-20,Thierry Henry,2,89,56,102.7,56.3,118.8,37.9,0.028,Saved,Left Foot,Open Play,Normal,False,False,Ray Parlour
+3749522,2003-12-26,Thierry Henry,1,3,4,107.6,28.7,114.8,35.6,0.064,Saved,Left Foot,Open Play,Half Volley,False,False,Robert Pirès
+3749522,2003-12-26,Thierry Henry,1,12,22,99.3,57.4,118.7,39.5,0.039,Saved,Right Foot,Free Kick,Normal,False,False,
+3749522,2003-12-26,Thierry Henry,1,19,38,107.6,36.3,120.0,38.3,0.208,Goal,Right Foot,Open Play,Normal,False,True,Patrick Vieira
+3749522,2003-12-26,Thierry Henry,1,27,42,81.4,40.5,120.0,36.0,0.007,Post,Right Foot,Free Kick,Normal,False,False,
+3749522,2003-12-26,Thierry Henry,2,88,51,108.7,26.9,120.0,43.3,0.106,Goal,Left Foot,Open Play,Normal,False,False,Eduardo César Daude Gaspar
+3749310,2003-12-29,Thierry Henry,1,2,50,89.0,32.7,96.7,35.4,0.023,Blocked,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749310,2003-12-29,Thierry Henry,1,13,42,99.2,23.3,117.3,36.3,0.027,Saved,Left Foot,Open Play,Normal,False,False,Pascal Cygan
+3749310,2003-12-29,Thierry Henry,1,33,31,94.0,26.2,120.0,27.6,0.024,Off T,Right Foot,Open Play,Normal,False,False,
+3749310,2003-12-29,Thierry Henry,1,41,46,98.8,27.4,120.0,47.4,0.038,Off T,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749310,2003-12-29,Thierry Henry,2,50,54,88.1,50.2,120.0,50.3,0.024,Off T,Right Foot,Free Kick,Normal,False,False,
+3749310,2003-12-29,Thierry Henry,2,60,15,91.7,24.9,120.0,53.1,0.012,Off T,Right Foot,Open Play,Half Volley,False,False,Dennis Bergkamp
+3749310,2003-12-29,Thierry Henry,2,75,38,95.1,29.5,120.0,53.8,0.028,Off T,Right Foot,Open Play,Normal,True,False,Jens Lehmann
+3749310,2003-12-29,Thierry Henry,2,82,3,99.5,24.9,116.3,36.1,0.027,Saved,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749117,2004-01-07,Thierry Henry,1,40,52,86.4,52.4,102.0,48.4,0.007,Blocked,Right Foot,Free Kick,Normal,False,False,
+3749117,2004-01-07,Thierry Henry,2,45,2,60.1,41.5,120.0,26.2,0.005,Off T,Right Foot,Open Play,Normal,False,True,Nwankwo Christian Kanu
+3749117,2004-01-07,Thierry Henry,2,52,27,85.7,31.4,118.1,39.5,0.011,Saved,Right Foot,Free Kick,Normal,False,False,
+3749117,2004-01-07,Thierry Henry,2,77,50,106.6,35.1,120.0,28.3,0.045,Off T,Head,Open Play,Normal,True,False,Laureano Bisan-Etame Mayer
+3749153,2004-01-10,Thierry Henry,1,2,9,106.1,27.9,116.8,37.4,0.081,Saved,Right Foot,Open Play,Normal,False,False,
+3749153,2004-01-10,Thierry Henry,1,5,34,93.2,23.0,117.2,41.7,0.01,Saved,Right Foot,Open Play,Normal,False,False,
+3749153,2004-01-10,Thierry Henry,1,37,22,108.0,40.1,120.0,42.6,0.783,Goal,Right Foot,Penalty,Normal,False,False,
+3749153,2004-01-10,Thierry Henry,1,40,14,96.1,32.6,99.0,33.6,0.028,Blocked,Left Foot,Open Play,Half Volley,False,False,
+3749153,2004-01-10,Thierry Henry,1,42,10,88.1,29.5,120.0,36.2,0.017,Post,Right Foot,Free Kick,Normal,False,False,
+3749153,2004-01-10,Thierry Henry,1,46,20,100.3,26.1,116.8,41.5,0.06,Blocked,Right Foot,Free Kick,Normal,False,False,
+3749153,2004-01-10,Thierry Henry,2,76,20,108.6,50.1,117.0,43.5,0.044,Saved,Head,Open Play,Normal,True,False,
+3749153,2004-01-10,Thierry Henry,2,88,50,89.0,22.1,119.4,35.5,0.007,Saved,Right Foot,Free Kick,Normal,False,False,
+3749153,2004-01-10,Thierry Henry,2,90,13,86.3,43.7,120.0,42.2,0.023,Off T,Right Foot,Free Kick,Normal,False,False,
+3749133,2004-01-18,Thierry Henry,1,17,4,110.4,51.8,115.9,43.5,0.101,Blocked,Right Foot,Open Play,Normal,True,False,
+3749133,2004-01-18,Thierry Henry,1,28,1,97.4,38.3,120.0,42.8,0.091,Goal,Right Foot,Free Kick,Normal,False,False,
+3749133,2004-01-18,Thierry Henry,1,31,5,104.6,23.4,118.0,37.8,0.022,Saved,Left Foot,Open Play,Half Volley,False,False,Patrick Vieira
+3749133,2004-01-18,Thierry Henry,2,48,57,100.7,29.7,116.7,39.7,0.065,Saved,Right Foot,Open Play,Normal,True,False,Patrick Vieira
+3749133,2004-01-18,Thierry Henry,2,52,34,108.1,40.1,120.0,43.1,0.783,Goal,Right Foot,Penalty,Normal,False,False,
+3749133,2004-01-18,Thierry Henry,2,91,55,98.5,52.1,117.4,40.8,0.034,Saved,Left Foot,Open Play,Normal,False,False,Laureano Bisan-Etame Mayer
+3749233,2004-02-01,Thierry Henry,1,9,10,113.5,45.3,120.0,44.0,0.632,Post,Left Foot,Open Play,Normal,False,True,Laureano Bisan-Etame Mayer
+3749233,2004-02-01,Thierry Henry,2,73,16,92.2,39.5,114.3,37.6,0.032,Saved,Left Foot,Open Play,Normal,False,False,Robert Pirès
+3749233,2004-02-01,Thierry Henry,2,78,58,110.6,40.1,114.0,40.0,0.273,Saved,Right Foot,Open Play,Normal,False,True,
+3749233,2004-02-01,Thierry Henry,2,82,27,98.9,23.0,120.0,43.0,0.023,Goal,Right Foot,Open Play,Normal,True,False,José Antonio Reyes Calderón
+3749052,2004-02-07,Thierry Henry,1,12,19,107.2,18.1,118.7,38.9,0.008,Saved,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749052,2004-02-07,Thierry Henry,2,57,35,106.5,49.2,120.0,38.6,0.316,Goal,Right Foot,Open Play,Normal,True,True,Robert Pirès
+3749052,2004-02-07,Thierry Henry,2,59,38,94.5,28.8,117.7,38.8,0.019,Saved,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749631,2004-02-10,Thierry Henry,1,25,26,98.0,27.2,120.0,44.2,0.029,Off T,Left Foot,Open Play,Half Volley,True,False,Robert Pirès
+3749631,2004-02-10,Thierry Henry,1,30,45,111.9,26.7,120.0,39.7,0.152,Goal,Left Foot,Open Play,Normal,False,False,Robert Pirès
+3749631,2004-02-10,Thierry Henry,1,39,26,95.6,29.9,120.0,53.2,0.03,Off T,Left Foot,Open Play,Normal,False,False,
+3749631,2004-02-10,Thierry Henry,2,89,39,107.7,29.4,120.0,47.7,0.243,Off T,Right Foot,Open Play,Half Volley,False,False,Jens Lehmann
+3749631,2004-02-10,Thierry Henry,2,92,5,107.0,36.2,120.0,43.1,0.262,Goal,Right Foot,Open Play,Normal,False,False,
+3749276,2004-02-21,Thierry Henry,1,3,41,105.3,30.3,111.3,33.1,0.046,Blocked,Right Foot,Open Play,Half Volley,False,True,
+3749276,2004-02-21,Thierry Henry,1,11,24,110.6,19.7,120.0,47.3,0.008,Off T,Left Foot,Open Play,Volley,False,True,Dennis Bergkamp
+3749642,2004-02-28,Thierry Henry,1,3,27,113.4,38.6,120.0,41.9,0.23,Goal,Left Foot,Open Play,Normal,True,False,Patrick Vieira
+3749642,2004-02-28,Thierry Henry,1,34,29,107.8,42.3,118.4,40.0,0.086,Saved,Right Foot,Open Play,Half Volley,False,False,Robert Pirès
+3749642,2004-02-28,Thierry Henry,1,41,44,92.6,28.7,118.0,38.3,0.026,Saved,Right Foot,Open Play,Normal,False,False,Eduardo César Daude Gaspar
+3749642,2004-02-28,Thierry Henry,2,60,7,109.2,52.6,114.5,45.8,0.137,Saved,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749642,2004-02-28,Thierry Henry,2,65,51,87.7,46.7,119.5,44.8,0.027,Saved Off Target,Right Foot,Free Kick,Normal,False,False,
+3749465,2004-03-13,Thierry Henry,1,16,1,78.1,48.3,118.7,42.5,0.007,Saved,Right Foot,Free Kick,Normal,False,False,
+3749465,2004-03-13,Thierry Henry,1,19,10,105.9,27.9,117.8,37.6,0.103,Saved,Left Foot,Open Play,Normal,False,True,Gilberto Aparecido da Silva
+3749465,2004-03-13,Thierry Henry,1,20,13,91.3,29.2,120.0,45.1,0.032,Off T,Right Foot,Free Kick,Normal,False,False,
+3749465,2004-03-13,Thierry Henry,1,28,2,86.1,32.1,120.0,45.5,0.013,Off T,Right Foot,Open Play,Normal,False,False,
+3749465,2004-03-13,Thierry Henry,1,39,8,111.3,40.0,120.0,26.9,0.116,Off T,Head,Open Play,Normal,False,False,Gilberto Aparecido da Silva
+3749465,2004-03-13,Thierry Henry,1,43,21,95.5,33.2,120.0,37.6,0.039,Off T,Left Foot,Open Play,Normal,True,False,José Antonio Reyes Calderón
+3749465,2004-03-13,Thierry Henry,2,55,59,91.8,32.4,120.0,37.5,0.049,Goal,Right Foot,Free Kick,Normal,False,False,
+3749465,2004-03-13,Thierry Henry,2,86,13,108.6,52.8,117.5,42.6,0.107,Saved,Right Foot,Open Play,Normal,True,True,Patrick Vieira
+3749403,2004-03-20,Thierry Henry,1,5,19,92.1,25.7,120.0,38.0,0.017,Post,Right Foot,Open Play,Normal,False,False,Patrick Vieira
+3749403,2004-03-20,Thierry Henry,1,11,49,93.2,26.3,118.1,39.3,0.027,Saved,Right Foot,Open Play,Normal,False,False,Kolo Habib Touré
+3749403,2004-03-20,Thierry Henry,1,17,37,102.7,19.6,116.4,40.4,0.009,Blocked,Right Foot,Open Play,Normal,False,False,Gilberto Aparecido da Silva
+3749403,2004-03-20,Thierry Henry,1,20,57,117.0,30.4,118.0,34.1,0.099,Saved,Left Foot,Open Play,Normal,False,False,Robert Pirès
+3749403,2004-03-20,Thierry Henry,2,59,36,97.5,28.9,118.5,41.9,0.043,Saved,Right Foot,Open Play,Half Volley,False,True,
+3749246,2004-03-28,Thierry Henry,1,5,38,103.1,12.0,120.0,41.3,0.007,Off T,Right Foot,Free Kick,Normal,False,False,
+3749246,2004-03-28,Thierry Henry,1,23,14,100.2,27.2,101.1,28.0,0.034,Blocked,Right Foot,Open Play,Normal,False,True,
+3749246,2004-03-28,Thierry Henry,1,26,37,98.0,26.9,118.1,37.5,0.05,Saved,Right Foot,Free Kick,Normal,False,False,
+3749246,2004-03-28,Thierry Henry,1,27,52,102.6,35.8,117.6,37.0,0.034,Saved,Head,Open Play,Normal,False,False,Gaël Clichy
+3749246,2004-03-28,Thierry Henry,2,49,8,88.4,47.4,120.0,40.9,0.025,Goal,Right Foot,Open Play,Normal,False,False,José Antonio Reyes Calderón
+3749246,2004-03-28,Thierry Henry,2,70,10,89.9,29.2,103.5,33.3,0.02,Blocked,Right Foot,Open Play,Normal,False,False,José Antonio Reyes Calderón
+3749246,2004-03-28,Thierry Henry,2,87,10,104.9,29.1,118.3,36.1,0.084,Saved,Left Foot,Open Play,Normal,True,False,Eduardo César Daude Gaspar
+3749246,2004-03-28,Thierry Henry,2,90,0,111.7,45.9,120.0,45.9,0.162,Off T,Head,Open Play,Normal,False,False,
+3749448,2004-04-09,Thierry Henry,1,26,19,103.1,28.1,120.0,42.0,0.031,Off T,Right Foot,Open Play,Volley,False,False,Robert Pirès
+3749448,2004-04-09,Thierry Henry,1,30,5,104.3,30.3,119.9,43.7,0.314,Goal,Left Foot,Open Play,Normal,False,False,Robert Pirès
+3749448,2004-04-09,Thierry Henry,1,32,19,91.3,26.1,105.9,34.5,0.018,Blocked,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749448,2004-04-09,Thierry Henry,2,45,38,118.3,47.4,120.0,34.0,0.129,Off T,Left Foot,Open Play,Normal,False,True,
+3749448,2004-04-09,Thierry Henry,2,49,43,112.1,30.0,120.0,42.2,0.301,Goal,Right Foot,Open Play,Normal,False,False,Gilberto Aparecido da Silva
+3749448,2004-04-09,Thierry Henry,2,55,35,89.5,28.7,120.0,28.5,0.02,Off T,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749448,2004-04-09,Thierry Henry,2,68,8,111.4,39.2,120.0,41.2,0.112,Off T,Head,Open Play,Normal,False,False,Laureano Bisan-Etame Mayer
+3749448,2004-04-09,Thierry Henry,2,76,54,111.6,41.2,114.0,41.2,0.272,Saved,Right Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749448,2004-04-09,Thierry Henry,2,76,54,112.9,42.7,120.0,37.8,0.244,Goal,Other,Open Play,Normal,False,True,
+3749431,2004-04-11,Thierry Henry,1,17,3,100.2,43.5,120.0,44.9,0.092,Off T,Right Foot,Open Play,Normal,False,True,José Antonio Reyes Calderón
+3749431,2004-04-11,Thierry Henry,1,33,14,95.0,19.1,120.0,33.2,0.008,Off T,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749431,2004-04-11,Thierry Henry,1,37,5,103.8,25.3,120.0,46.5,0.061,Off T,Left Foot,Open Play,Normal,False,False,Patrick Vieira
+3749431,2004-04-11,Thierry Henry,2,62,45,116.9,49.8,120.0,44.1,0.465,Post,Right Foot,Open Play,Normal,False,False,Laureano Bisan-Etame Mayer
+3749431,2004-04-11,Thierry Henry,2,65,13,89.3,32.6,109.1,36.0,0.02,Blocked,Right Foot,Open Play,Normal,False,False,
+3749431,2004-04-11,Thierry Henry,2,77,22,96.6,24.7,120.0,45.4,0.023,Off T,Right Foot,Open Play,Normal,False,False,Patrick Vieira
+3749453,2004-04-16,Thierry Henry,1,11,1,97.6,46.0,120.0,48.6,0.034,Off T,Left Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749453,2004-04-16,Thierry Henry,1,26,47,109.0,45.5,120.0,42.4,0.521,Goal,Left Foot,Open Play,Normal,True,False,Gilberto Aparecido da Silva
+3749453,2004-04-16,Thierry Henry,1,32,20,107.8,40.0,120.0,40.9,0.783,Goal,Right Foot,Penalty,Lob,False,False,
+3749453,2004-04-16,Thierry Henry,1,45,56,85.2,39.8,120.0,44.4,0.014,Off T,Right Foot,Open Play,Volley,False,False,Robert Pirès
+3749453,2004-04-16,Thierry Henry,2,49,2,102.5,30.4,120.0,42.7,0.21,Goal,Right Foot,Open Play,Normal,False,False,Gilberto Aparecido da Silva
+3749453,2004-04-16,Thierry Henry,2,66,14,111.3,33.9,120.0,41.7,0.451,Goal,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749453,2004-04-16,Thierry Henry,2,74,50,98.0,14.6,120.0,46.8,0.007,Off T,Right Foot,Free Kick,Normal,False,False,
+3749453,2004-04-16,Thierry Henry,2,81,9,107.6,32.5,120.0,46.1,0.233,Off T,Left Foot,Open Play,Normal,True,False,José Antonio Reyes Calderón
+3749068,2004-04-25,Thierry Henry,1,43,49,98.4,44.7,113.6,40.9,0.106,Saved,Left Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749068,2004-04-25,Thierry Henry,2,59,4,95.7,23.6,118.9,36.1,0.019,Saved,Right Foot,Open Play,Normal,False,False,
+3749068,2004-04-25,Thierry Henry,2,72,24,108.1,46.8,120.0,44.8,0.499,Off T,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749068,2004-04-25,Thierry Henry,2,78,43,93.9,27.7,100.0,31.4,0.021,Blocked,Right Foot,Open Play,Normal,False,False,Ashley Cole
+3749068,2004-04-25,Thierry Henry,2,84,36,109.8,31.2,113.1,34.4,0.144,Blocked,Right Foot,Open Play,Normal,False,True,Robert Pirès
+3749462,2004-05-01,Thierry Henry,1,23,45,84.6,29.9,120.0,31.6,0.008,Off T,Right Foot,Free Kick,Normal,False,False,
+3749462,2004-05-01,Thierry Henry,1,34,59,90.8,27.6,120.0,45.4,0.022,Off T,Right Foot,Open Play,Normal,False,False,Patrick Vieira
+3749462,2004-05-01,Thierry Henry,2,56,40,91.2,43.1,120.0,45.8,0.043,Off T,Right Foot,Free Kick,Normal,False,False,
+3749462,2004-05-01,Thierry Henry,2,70,44,106.8,25.8,117.0,37.1,0.06,Saved,Left Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749274,2004-05-04,Thierry Henry,1,23,48,97.5,25.4,103.6,29.9,0.025,Blocked,Right Foot,Open Play,Normal,False,False,Patrick Vieira
+3749274,2004-05-04,Thierry Henry,1,32,6,98.7,36.0,108.5,38.3,0.265,Saved,Right Foot,Open Play,Normal,False,True,Ray Parlour
+3749274,2004-05-04,Thierry Henry,2,48,15,103.9,37.1,117.7,40.5,0.075,Saved to Post,Right Foot,Open Play,Normal,False,True,Fredrik Ljungberg
+3749274,2004-05-04,Thierry Henry,2,68,14,108.7,30.7,120.0,45.8,0.076,Off T,Right Foot,Open Play,Normal,False,False,José Antonio Reyes Calderón
+3749603,2004-05-09,Thierry Henry,1,35,42,100.5,18.1,118.9,38.6,0.009,Saved,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749603,2004-05-09,Thierry Henry,2,89,26,93.9,29.7,120.0,37.2,0.051,Saved,Right Foot,Free Kick,Normal,False,False,
+3749603,2004-05-09,Thierry Henry,2,93,27,58.0,77.7,102.6,41.2,0.007,Wayward,Right Foot,Open Play,Normal,False,False,Jens Lehmann
+3749257,2004-05-15,Thierry Henry,1,7,20,87.2,31.6,120.0,30.1,0.016,Off T,Right Foot,Open Play,Normal,False,False,Dennis Bergkamp
+3749257,2004-05-15,Thierry Henry,1,19,49,84.9,24.1,119.0,40.0,0.007,Saved,Right Foot,Free Kick,Normal,False,False,
+3749257,2004-05-15,Thierry Henry,1,38,9,98.6,51.7,108.4,45.3,0.038,Blocked,Right Foot,Open Play,Normal,False,False,
+3749257,2004-05-15,Thierry Henry,1,39,20,97.8,30.0,120.0,40.9,0.034,Off T,Right Foot,Open Play,Normal,False,False,Robert Pirès
+3749257,2004-05-15,Thierry Henry,2,46,45,108.3,40.1,120.0,37.4,0.783,Goal,Right Foot,Penalty,Normal,False,False,
+3749257,2004-05-15,Thierry Henry,2,72,34,98.1,34.2,118.9,42.8,0.056,Saved,Right Foot,Open Play,Normal,False,False,Dennis Bergkamp

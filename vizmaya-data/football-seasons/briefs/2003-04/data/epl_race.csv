@@ -1,0 +1,761 @@
+team,team_id,game,date,month,opponent,venue,score,result,points,cum_points,cum_gd,position
+Arsenal,arsenal,1,2003-08-16,2003-08,Everton,H,2-1,W,3,3,1,4
+Arsenal,arsenal,2,2003-08-24,2003-08,Middlesbrough,A,4-0,W,3,6,5,1
+Arsenal,arsenal,3,2003-08-27,2003-08,Aston Villa,H,2-0,W,3,9,7,1
+Arsenal,arsenal,4,2003-08-31,2003-08,Manchester City,A,2-1,W,3,12,8,1
+Arsenal,arsenal,5,2003-09-13,2003-09,Portsmouth,H,1-1,D,1,13,8,1
+Arsenal,arsenal,6,2003-09-21,2003-09,Manchester United,A,0-0,D,1,14,8,1
+Arsenal,arsenal,7,2003-09-26,2003-09,Newcastle United,H,3-2,W,3,17,9,1
+Arsenal,arsenal,8,2003-10-04,2003-10,Liverpool,A,2-1,W,3,20,10,1
+Arsenal,arsenal,9,2003-10-18,2003-10,Chelsea,H,2-1,W,3,23,11,1
+Arsenal,arsenal,10,2003-10-26,2003-10,Charlton Athletic,A,1-1,D,1,24,11,1
+Arsenal,arsenal,11,2003-11-01,2003-11,Leeds United,A,4-1,W,3,27,14,1
+Arsenal,arsenal,12,2003-11-08,2003-11,Tottenham Hotspur,H,2-1,W,3,30,15,1
+Arsenal,arsenal,13,2003-11-22,2003-11,Birmingham City,A,3-0,W,3,33,18,1
+Arsenal,arsenal,14,2003-11-30,2003-11,Fulham,H,0-0,D,1,34,18,2
+Arsenal,arsenal,15,2003-12-06,2003-12,Leicester City,A,1-1,D,1,35,18,2
+Arsenal,arsenal,16,2003-12-14,2003-12,Blackburn Rovers,H,1-0,W,3,38,19,1
+Arsenal,arsenal,17,2003-12-20,2003-12,Bolton Wanderers,A,1-1,D,1,39,19,1
+Arsenal,arsenal,18,2003-12-26,2003-12,Wolverhampton Wanderers,H,3-0,W,3,42,22,2
+Arsenal,arsenal,19,2003-12-29,2003-12,Southampton,A,1-0,W,3,45,23,2
+Arsenal,arsenal,20,2004-01-07,2004-01,Everton,A,1-1,D,1,46,23,2
+Arsenal,arsenal,21,2004-01-10,2004-01,Middlesbrough,H,4-1,W,3,49,26,1
+Arsenal,arsenal,22,2004-01-18,2004-01,Aston Villa,A,2-0,W,3,52,28,1
+Arsenal,arsenal,23,2004-02-01,2004-02,Manchester City,H,2-1,W,3,55,29,1
+Arsenal,arsenal,24,2004-02-07,2004-02,Wolverhampton Wanderers,A,3-1,W,3,58,31,1
+Arsenal,arsenal,25,2004-02-10,2004-02,Southampton,H,2-0,W,3,61,33,1
+Arsenal,arsenal,26,2004-02-21,2004-02,Chelsea,A,2-1,W,3,64,34,1
+Arsenal,arsenal,27,2004-02-28,2004-02,Charlton Athletic,H,2-1,W,3,67,35,1
+Arsenal,arsenal,28,2004-03-13,2004-03,Blackburn Rovers,A,2-0,W,3,70,37,1
+Arsenal,arsenal,29,2004-03-20,2004-03,Bolton Wanderers,H,2-1,W,3,73,38,1
+Arsenal,arsenal,30,2004-03-28,2004-03,Manchester United,H,1-1,D,1,74,38,1
+Arsenal,arsenal,31,2004-04-09,2004-04,Liverpool,H,4-2,W,3,77,40,1
+Arsenal,arsenal,32,2004-04-11,2004-04,Newcastle United,A,0-0,D,1,78,40,1
+Arsenal,arsenal,33,2004-04-16,2004-04,Leeds United,H,5-0,W,3,81,45,1
+Arsenal,arsenal,34,2004-04-25,2004-04,Tottenham Hotspur,A,2-2,D,1,82,45,1
+Arsenal,arsenal,35,2004-05-01,2004-05,Birmingham City,H,0-0,D,1,83,45,1
+Arsenal,arsenal,36,2004-05-04,2004-05,Portsmouth,A,1-1,D,1,84,45,1
+Arsenal,arsenal,37,2004-05-09,2004-05,Fulham,A,1-0,W,3,87,46,1
+Arsenal,arsenal,38,2004-05-15,2004-05,Leicester City,H,2-1,W,3,90,47,1
+Aston Villa,aston-villa,1,2003-08-16,2003-08,Portsmouth,A,1-2,L,0,0,-1,10
+Aston Villa,aston-villa,2,2003-08-24,2003-08,Liverpool,H,0-0,D,1,1,-1,16
+Aston Villa,aston-villa,3,2003-08-27,2003-08,Arsenal,A,0-2,L,0,1,-3,17
+Aston Villa,aston-villa,4,2003-08-30,2003-08,Leicester City,H,3-1,W,3,4,-1,12
+Aston Villa,aston-villa,5,2003-09-14,2003-09,Manchester City,A,1-4,L,0,4,-4,15
+Aston Villa,aston-villa,6,2003-09-20,2003-09,Charlton Athletic,H,2-1,W,3,7,-3,11
+Aston Villa,aston-villa,7,2003-09-27,2003-09,Chelsea,A,0-1,L,0,7,-4,11
+Aston Villa,aston-villa,8,2003-10-05,2003-10,Bolton Wanderers,H,1-1,D,1,8,-4,13
+Aston Villa,aston-villa,9,2003-10-19,2003-10,Birmingham City,A,0-0,D,1,9,-4,14
+Aston Villa,aston-villa,10,2003-10-25,2003-10,Everton,H,0-0,D,1,10,-4,14
+Aston Villa,aston-villa,11,2003-11-01,2003-11,Newcastle United,A,1-1,D,1,11,-4,13
+Aston Villa,aston-villa,12,2003-11-08,2003-11,Middlesbrough,H,0-2,L,0,11,-6,15
+Aston Villa,aston-villa,13,2003-11-23,2003-11,Tottenham Hotspur,A,1-2,L,0,11,-7,18
+Aston Villa,aston-villa,14,2003-11-29,2003-11,Southampton,H,1-0,W,3,14,-6,17
+Aston Villa,aston-villa,15,2003-12-06,2003-12,Manchester United,A,0-4,L,0,14,-10,17
+Aston Villa,aston-villa,16,2003-12-14,2003-12,Wolverhampton Wanderers,H,3-2,W,3,17,-9,16
+Aston Villa,aston-villa,17,2003-12-20,2003-12,Blackburn Rovers,A,2-0,W,3,20,-7,13
+Aston Villa,aston-villa,18,2003-12-26,2003-12,Leeds United,A,0-0,D,1,21,-7,12
+Aston Villa,aston-villa,19,2003-12-28,2003-12,Fulham,H,3-0,W,3,24,-4,10
+Aston Villa,aston-villa,20,2004-01-06,2004-01,Portsmouth,H,2-1,W,3,27,-3,6
+Aston Villa,aston-villa,21,2004-01-10,2004-01,Liverpool,A,0-1,L,0,27,-4,10
+Aston Villa,aston-villa,22,2004-01-18,2004-01,Arsenal,H,0-2,L,0,27,-6,12
+Aston Villa,aston-villa,23,2004-01-31,2004-01,Leicester City,A,5-0,W,3,30,-1,11
+Aston Villa,aston-villa,24,2004-02-07,2004-02,Leeds United,H,2-0,W,3,33,1,8
+Aston Villa,aston-villa,25,2004-02-11,2004-02,Fulham,A,2-1,W,3,36,2,7
+Aston Villa,aston-villa,26,2004-02-22,2004-02,Birmingham City,H,2-2,D,1,37,2,7
+Aston Villa,aston-villa,27,2004-02-28,2004-02,Everton,A,0-2,L,0,37,0,7
+Aston Villa,aston-villa,28,2004-03-14,2004-03,Wolverhampton Wanderers,A,4-0,W,3,40,4,7
+Aston Villa,aston-villa,29,2004-03-20,2004-03,Blackburn Rovers,H,0-2,L,0,40,2,8
+Aston Villa,aston-villa,30,2004-03-27,2004-03,Charlton Athletic,A,2-1,W,3,43,3,7
+Aston Villa,aston-villa,31,2004-04-04,2004-04,Manchester City,H,1-1,D,1,44,3,7
+Aston Villa,aston-villa,32,2004-04-10,2004-04,Bolton Wanderers,A,2-2,D,1,45,3,7
+Aston Villa,aston-villa,33,2004-04-12,2004-04,Chelsea,H,3-2,W,3,48,4,6
+Aston Villa,aston-villa,34,2004-04-18,2004-04,Newcastle United,H,0-0,D,1,49,4,6
+Aston Villa,aston-villa,35,2004-04-24,2004-04,Middlesbrough,A,2-1,W,3,52,5,5
+Aston Villa,aston-villa,36,2004-05-02,2004-05,Tottenham Hotspur,H,1-0,W,3,55,6,5
+Aston Villa,aston-villa,37,2004-05-08,2004-05,Southampton,A,1-1,D,1,56,6,5
+Aston Villa,aston-villa,38,2004-05-15,2004-05,Manchester United,H,0-2,L,0,56,4,6
+Birmingham City,birmingham-city,1,2003-08-16,2003-08,Tottenham Hotspur,H,1-0,W,3,3,1,6
+Birmingham City,birmingham-city,2,2003-08-23,2003-08,Southampton,A,0-0,D,1,4,1,6
+Birmingham City,birmingham-city,3,2003-08-30,2003-08,Newcastle United,A,1-0,W,3,7,2,6
+Birmingham City,birmingham-city,4,2003-09-14,2003-09,Fulham,H,2-2,D,1,8,2,8
+Birmingham City,birmingham-city,5,2003-09-20,2003-09,Leeds United,A,2-0,W,3,11,4,7
+Birmingham City,birmingham-city,6,2003-09-27,2003-09,Portsmouth,H,2-0,W,3,14,6,4
+Birmingham City,birmingham-city,7,2003-10-04,2003-10,Manchester United,A,0-3,L,0,14,3,5
+Birmingham City,birmingham-city,8,2003-10-14,2003-10,Chelsea,H,0-0,D,1,15,3,4
+Birmingham City,birmingham-city,9,2003-10-19,2003-10,Aston Villa,H,0-0,D,1,16,3,4
+Birmingham City,birmingham-city,10,2003-10-25,2003-10,Bolton Wanderers,A,1-0,W,3,19,4,4
+Birmingham City,birmingham-city,11,2003-11-03,2003-11,Charlton Athletic,H,1-2,L,0,19,3,4
+Birmingham City,birmingham-city,12,2003-11-08,2003-11,Wolverhampton Wanderers,A,1-1,D,1,20,3,5
+Birmingham City,birmingham-city,13,2003-11-22,2003-11,Arsenal,H,0-3,L,0,20,0,5
+Birmingham City,birmingham-city,14,2003-11-30,2003-11,Liverpool,A,1-3,L,0,20,-2,8
+Birmingham City,birmingham-city,15,2003-12-06,2003-12,Blackburn Rovers,H,0-4,L,0,20,-6,8
+Birmingham City,birmingham-city,16,2003-12-13,2003-12,Leicester City,A,2-0,W,3,23,-4,8
+Birmingham City,birmingham-city,17,2003-12-26,2003-12,Manchester City,H,2-1,W,3,26,-3,8
+Birmingham City,birmingham-city,18,2003-12-28,2003-12,Everton,A,0-1,L,0,26,-4,9
+Birmingham City,birmingham-city,19,2004-01-07,2004-01,Tottenham Hotspur,A,1-4,L,0,26,-7,10
+Birmingham City,birmingham-city,20,2004-01-10,2004-01,Southampton,H,2-1,W,3,29,-6,8
+Birmingham City,birmingham-city,21,2004-01-18,2004-01,Chelsea,A,0-0,D,1,30,-6,9
+Birmingham City,birmingham-city,22,2004-01-31,2004-01,Newcastle United,H,1-1,D,1,31,-6,9
+Birmingham City,birmingham-city,23,2004-02-08,2004-02,Manchester City,A,0-0,D,1,32,-6,10
+Birmingham City,birmingham-city,24,2004-02-11,2004-02,Everton,H,3-0,W,3,35,-3,9
+Birmingham City,birmingham-city,25,2004-02-22,2004-02,Aston Villa,A,2-2,D,1,36,-3,8
+Birmingham City,birmingham-city,26,2004-03-03,2004-03,Middlesbrough,H,3-1,W,3,39,-1,7
+Birmingham City,birmingham-city,27,2004-03-06,2004-03,Bolton Wanderers,H,2-0,W,3,42,1,5
+Birmingham City,birmingham-city,28,2004-03-13,2004-03,Leicester City,H,0-1,L,0,42,0,6
+Birmingham City,birmingham-city,29,2004-03-20,2004-03,Middlesbrough,A,3-5,L,0,42,-2,7
+Birmingham City,birmingham-city,30,2004-03-27,2004-03,Leeds United,H,4-1,W,3,45,1,6
+Birmingham City,birmingham-city,31,2004-04-03,2004-04,Fulham,A,0-0,D,1,46,1,6
+Birmingham City,birmingham-city,32,2004-04-10,2004-04,Manchester United,H,1-2,L,0,46,0,6
+Birmingham City,birmingham-city,33,2004-04-12,2004-04,Portsmouth,A,1-3,L,0,46,-2,8
+Birmingham City,birmingham-city,34,2004-04-17,2004-04,Charlton Athletic,A,1-1,D,1,47,-2,8
+Birmingham City,birmingham-city,35,2004-04-25,2004-04,Wolverhampton Wanderers,H,2-2,D,1,48,-2,9
+Birmingham City,birmingham-city,36,2004-05-01,2004-05,Arsenal,A,0-0,D,1,49,-2,9
+Birmingham City,birmingham-city,37,2004-05-08,2004-05,Liverpool,H,0-3,L,0,49,-5,10
+Birmingham City,birmingham-city,38,2004-05-15,2004-05,Blackburn Rovers,A,1-1,D,1,50,-5,10
+Blackburn Rovers,blackburn-rovers,1,2003-08-16,2003-08,Wolverhampton Wanderers,H,5-1,W,3,3,4,1
+Blackburn Rovers,blackburn-rovers,2,2003-08-23,2003-08,Bolton Wanderers,A,2-2,D,1,4,4,3
+Blackburn Rovers,blackburn-rovers,3,2003-08-25,2003-08,Manchester City,H,2-3,L,0,4,3,5
+Blackburn Rovers,blackburn-rovers,4,2003-08-30,2003-08,Chelsea,A,2-2,D,1,5,3,8
+Blackburn Rovers,blackburn-rovers,5,2003-09-13,2003-09,Liverpool,H,1-3,L,0,5,1,10
+Blackburn Rovers,blackburn-rovers,6,2003-09-20,2003-09,Portsmouth,A,2-1,W,3,8,2,9
+Blackburn Rovers,blackburn-rovers,7,2003-09-28,2003-09,Fulham,H,0-2,L,0,8,0,11
+Blackburn Rovers,blackburn-rovers,8,2003-10-04,2003-10,Leeds United,A,1-2,L,0,8,-1,11
+Blackburn Rovers,blackburn-rovers,9,2003-10-20,2003-10,Charlton Athletic,H,0-1,L,0,8,-2,15
+Blackburn Rovers,blackburn-rovers,10,2003-10-25,2003-10,Southampton,A,0-2,L,0,8,-4,16
+Blackburn Rovers,blackburn-rovers,11,2003-11-02,2003-11,Leicester City,A,0-2,L,0,8,-6,19
+Blackburn Rovers,blackburn-rovers,12,2003-11-10,2003-11,Everton,H,2-1,W,3,11,-5,16
+Blackburn Rovers,blackburn-rovers,13,2003-11-22,2003-11,Manchester United,A,1-2,L,0,11,-6,17
+Blackburn Rovers,blackburn-rovers,14,2003-11-29,2003-11,Tottenham Hotspur,H,1-0,W,3,14,-5,16
+Blackburn Rovers,blackburn-rovers,15,2003-12-06,2003-12,Birmingham City,A,4-0,W,3,17,-1,14
+Blackburn Rovers,blackburn-rovers,16,2003-12-14,2003-12,Arsenal,A,0-1,L,0,17,-2,14
+Blackburn Rovers,blackburn-rovers,17,2003-12-20,2003-12,Aston Villa,H,0-2,L,0,17,-4,16
+Blackburn Rovers,blackburn-rovers,18,2003-12-26,2003-12,Middlesbrough,H,2-2,D,1,18,-4,16
+Blackburn Rovers,blackburn-rovers,19,2003-12-28,2003-12,Newcastle United,A,1-0,W,3,21,-3,14
+Blackburn Rovers,blackburn-rovers,20,2004-01-07,2004-01,Wolverhampton Wanderers,A,2-2,D,1,22,-3,15
+Blackburn Rovers,blackburn-rovers,21,2004-01-10,2004-01,Bolton Wanderers,H,3-4,L,0,22,-4,16
+Blackburn Rovers,blackburn-rovers,22,2004-01-17,2004-01,Manchester City,A,1-1,D,1,23,-4,16
+Blackburn Rovers,blackburn-rovers,23,2004-02-01,2004-02,Chelsea,H,2-3,L,0,23,-5,16
+Blackburn Rovers,blackburn-rovers,24,2004-02-07,2004-02,Middlesbrough,A,1-0,W,3,26,-4,14
+Blackburn Rovers,blackburn-rovers,25,2004-02-11,2004-02,Newcastle United,H,1-1,D,1,27,-4,14
+Blackburn Rovers,blackburn-rovers,26,2004-02-21,2004-02,Charlton Athletic,A,2-3,L,0,27,-5,15
+Blackburn Rovers,blackburn-rovers,27,2004-02-28,2004-02,Southampton,H,1-1,D,1,28,-5,15
+Blackburn Rovers,blackburn-rovers,28,2004-03-13,2004-03,Arsenal,H,0-2,L,0,28,-7,15
+Blackburn Rovers,blackburn-rovers,29,2004-03-20,2004-03,Aston Villa,A,2-0,W,3,31,-5,15
+Blackburn Rovers,blackburn-rovers,30,2004-03-27,2004-03,Portsmouth,H,1-2,L,0,31,-6,16
+Blackburn Rovers,blackburn-rovers,31,2004-04-04,2004-04,Liverpool,A,0-4,L,0,31,-10,16
+Blackburn Rovers,blackburn-rovers,32,2004-04-10,2004-04,Leeds United,H,1-2,L,0,31,-11,16
+Blackburn Rovers,blackburn-rovers,33,2004-04-12,2004-04,Fulham,A,4-3,W,3,34,-10,16
+Blackburn Rovers,blackburn-rovers,34,2004-04-17,2004-04,Leicester City,H,1-0,W,3,37,-9,15
+Blackburn Rovers,blackburn-rovers,35,2004-04-24,2004-04,Everton,A,1-0,W,3,40,-8,13
+Blackburn Rovers,blackburn-rovers,36,2004-05-01,2004-05,Manchester United,H,1-0,W,3,43,-7,13
+Blackburn Rovers,blackburn-rovers,37,2004-05-08,2004-05,Tottenham Hotspur,A,0-1,L,0,43,-8,13
+Blackburn Rovers,blackburn-rovers,38,2004-05-15,2004-05,Birmingham City,H,1-1,D,1,44,-8,15
+Bolton Wanderers,bolton-wanderers,1,2003-08-16,2003-08,Manchester United,A,0-4,L,0,0,-4,14
+Bolton Wanderers,bolton-wanderers,2,2003-08-23,2003-08,Blackburn Rovers,H,2-2,D,1,1,-4,16
+Bolton Wanderers,bolton-wanderers,3,2003-08-26,2003-08,Portsmouth,A,0-4,L,0,1,-8,19
+Bolton Wanderers,bolton-wanderers,4,2003-08-30,2003-08,Charlton Athletic,H,0-0,D,1,2,-8,17
+Bolton Wanderers,bolton-wanderers,5,2003-09-13,2003-09,Middlesbrough,H,2-0,W,3,5,-6,14
+Bolton Wanderers,bolton-wanderers,6,2003-09-20,2003-09,Newcastle United,A,0-0,D,1,6,-6,12
+Bolton Wanderers,bolton-wanderers,7,2003-09-27,2003-09,Wolverhampton Wanderers,H,1-1,D,1,7,-6,13
+Bolton Wanderers,bolton-wanderers,8,2003-10-05,2003-10,Aston Villa,A,1-1,D,1,8,-6,15
+Bolton Wanderers,bolton-wanderers,9,2003-10-18,2003-10,Manchester City,A,2-6,L,0,8,-10,16
+Bolton Wanderers,bolton-wanderers,10,2003-10-25,2003-10,Birmingham City,H,0-1,L,0,8,-11,17
+Bolton Wanderers,bolton-wanderers,11,2003-11-01,2003-11,Tottenham Hotspur,A,1-0,W,3,11,-10,15
+Bolton Wanderers,bolton-wanderers,12,2003-11-08,2003-11,Southampton,H,0-0,D,1,12,-10,14
+Bolton Wanderers,bolton-wanderers,13,2003-11-22,2003-11,Leeds United,A,2-0,W,3,15,-8,13
+Bolton Wanderers,bolton-wanderers,14,2003-11-29,2003-11,Everton,H,2-0,W,3,18,-6,10
+Bolton Wanderers,bolton-wanderers,15,2003-12-06,2003-12,Fulham,A,1-2,L,0,18,-7,12
+Bolton Wanderers,bolton-wanderers,16,2003-12-13,2003-12,Chelsea,A,2-1,W,3,21,-6,10
+Bolton Wanderers,bolton-wanderers,17,2003-12-20,2003-12,Arsenal,H,1-1,D,1,22,-6,10
+Bolton Wanderers,bolton-wanderers,18,2003-12-26,2003-12,Liverpool,A,1-3,L,0,22,-8,10
+Bolton Wanderers,bolton-wanderers,19,2003-12-28,2003-12,Leicester City,H,2-2,D,1,23,-8,12
+Bolton Wanderers,bolton-wanderers,20,2004-01-07,2004-01,Manchester United,H,1-2,L,0,23,-9,13
+Bolton Wanderers,bolton-wanderers,21,2004-01-10,2004-01,Blackburn Rovers,A,4-3,W,3,26,-8,11
+Bolton Wanderers,bolton-wanderers,22,2004-01-17,2004-01,Portsmouth,H,1-0,W,3,29,-7,10
+Bolton Wanderers,bolton-wanderers,23,2004-01-31,2004-01,Charlton Athletic,A,2-1,W,3,32,-6,8
+Bolton Wanderers,bolton-wanderers,24,2004-02-07,2004-02,Liverpool,H,2-2,D,1,33,-6,9
+Bolton Wanderers,bolton-wanderers,25,2004-02-10,2004-02,Leicester City,A,1-1,D,1,34,-6,8
+Bolton Wanderers,bolton-wanderers,26,2004-02-21,2004-02,Manchester City,H,1-3,L,0,34,-8,10
+Bolton Wanderers,bolton-wanderers,27,2004-03-06,2004-03,Birmingham City,A,0-2,L,0,34,-10,11
+Bolton Wanderers,bolton-wanderers,28,2004-03-13,2004-03,Chelsea,H,0-2,L,0,34,-12,12
+Bolton Wanderers,bolton-wanderers,29,2004-03-20,2004-03,Arsenal,A,1-2,L,0,34,-13,13
+Bolton Wanderers,bolton-wanderers,30,2004-03-28,2004-03,Newcastle United,H,1-0,W,3,37,-12,13
+Bolton Wanderers,bolton-wanderers,31,2004-04-03,2004-04,Middlesbrough,A,0-2,L,0,37,-14,13
+Bolton Wanderers,bolton-wanderers,32,2004-04-10,2004-04,Aston Villa,H,2-2,D,1,38,-14,12
+Bolton Wanderers,bolton-wanderers,33,2004-04-12,2004-04,Wolverhampton Wanderers,A,2-1,W,3,41,-13,12
+Bolton Wanderers,bolton-wanderers,34,2004-04-17,2004-04,Tottenham Hotspur,H,2-0,W,3,44,-11,12
+Bolton Wanderers,bolton-wanderers,35,2004-04-24,2004-04,Southampton,A,2-1,W,3,47,-10,10
+Bolton Wanderers,bolton-wanderers,36,2004-05-02,2004-05,Leeds United,H,4-1,W,3,50,-7,7
+Bolton Wanderers,bolton-wanderers,37,2004-05-08,2004-05,Everton,A,2-1,W,3,53,-6,7
+Bolton Wanderers,bolton-wanderers,38,2004-05-15,2004-05,Fulham,H,0-2,L,0,53,-8,8
+Charlton Athletic,charlton-athletic,1,2003-08-17,2003-08,Manchester City,H,0-3,L,0,0,-3,18
+Charlton Athletic,charlton-athletic,2,2003-08-23,2003-08,Wolverhampton Wanderers,A,4-0,W,3,3,1,7
+Charlton Athletic,charlton-athletic,3,2003-08-26,2003-08,Everton,H,2-2,D,1,4,1,7
+Charlton Athletic,charlton-athletic,4,2003-08-30,2003-08,Bolton Wanderers,A,0-0,D,1,5,1,10
+Charlton Athletic,charlton-athletic,5,2003-09-13,2003-09,Manchester United,H,0-2,L,0,5,-1,12
+Charlton Athletic,charlton-athletic,6,2003-09-20,2003-09,Aston Villa,A,1-2,L,0,5,-2,15
+Charlton Athletic,charlton-athletic,7,2003-09-28,2003-09,Liverpool,H,3-2,W,3,8,-1,12
+Charlton Athletic,charlton-athletic,8,2003-10-04,2003-10,Portsmouth,A,2-1,W,3,11,0,9
+Charlton Athletic,charlton-athletic,9,2003-10-20,2003-10,Blackburn Rovers,A,1-0,W,3,14,1,7
+Charlton Athletic,charlton-athletic,10,2003-10-26,2003-10,Arsenal,H,1-1,D,1,15,1,9
+Charlton Athletic,charlton-athletic,11,2003-11-03,2003-11,Birmingham City,A,2-1,W,3,18,2,7
+Charlton Athletic,charlton-athletic,12,2003-11-08,2003-11,Fulham,H,3-1,W,3,21,4,4
+Charlton Athletic,charlton-athletic,13,2003-11-22,2003-11,Leicester City,A,1-1,D,1,22,4,4
+Charlton Athletic,charlton-athletic,14,2003-11-29,2003-11,Leeds United,H,0-1,L,0,22,3,4
+Charlton Athletic,charlton-athletic,15,2003-12-07,2003-12,Southampton,A,2-3,L,0,22,2,6
+Charlton Athletic,charlton-athletic,16,2003-12-13,2003-12,Middlesbrough,A,0-0,D,1,23,2,7
+Charlton Athletic,charlton-athletic,17,2003-12-20,2003-12,Newcastle United,H,0-0,D,1,24,2,6
+Charlton Athletic,charlton-athletic,18,2003-12-26,2003-12,Chelsea,H,4-2,W,3,27,4,5
+Charlton Athletic,charlton-athletic,19,2003-12-28,2003-12,Tottenham Hotspur,A,1-0,W,3,30,5,4
+Charlton Athletic,charlton-athletic,20,2004-01-07,2004-01,Manchester City,A,1-1,D,1,31,5,4
+Charlton Athletic,charlton-athletic,21,2004-01-10,2004-01,Wolverhampton Wanderers,H,2-0,W,3,34,7,4
+Charlton Athletic,charlton-athletic,22,2004-01-17,2004-01,Everton,A,1-0,W,3,37,8,4
+Charlton Athletic,charlton-athletic,23,2004-01-31,2004-01,Bolton Wanderers,H,1-2,L,0,37,7,4
+Charlton Athletic,charlton-athletic,24,2004-02-08,2004-02,Chelsea,A,0-1,L,0,37,6,5
+Charlton Athletic,charlton-athletic,25,2004-02-11,2004-02,Tottenham Hotspur,H,2-4,L,0,37,4,6
+Charlton Athletic,charlton-athletic,26,2004-02-21,2004-02,Blackburn Rovers,H,3-2,W,3,40,5,5
+Charlton Athletic,charlton-athletic,27,2004-02-28,2004-02,Arsenal,A,1-2,L,0,40,4,5
+Charlton Athletic,charlton-athletic,28,2004-03-13,2004-03,Middlesbrough,H,1-0,W,3,43,5,4
+Charlton Athletic,charlton-athletic,29,2004-03-20,2004-03,Newcastle United,A,1-3,L,0,43,3,6
+Charlton Athletic,charlton-athletic,30,2004-03-27,2004-03,Aston Villa,H,1-2,L,0,43,2,8
+Charlton Athletic,charlton-athletic,31,2004-04-10,2004-04,Portsmouth,H,1-1,D,1,44,2,9
+Charlton Athletic,charlton-athletic,32,2004-04-12,2004-04,Liverpool,A,1-0,W,3,47,3,7
+Charlton Athletic,charlton-athletic,33,2004-04-17,2004-04,Birmingham City,H,1-1,D,1,48,3,7
+Charlton Athletic,charlton-athletic,34,2004-04-20,2004-04,Manchester United,A,0-2,L,0,48,1,7
+Charlton Athletic,charlton-athletic,35,2004-04-24,2004-04,Fulham,A,0-2,L,0,48,-1,8
+Charlton Athletic,charlton-athletic,36,2004-05-01,2004-05,Leicester City,H,2-2,D,1,49,-1,8
+Charlton Athletic,charlton-athletic,37,2004-05-08,2004-05,Leeds United,A,3-3,D,1,50,-1,8
+Charlton Athletic,charlton-athletic,38,2004-05-15,2004-05,Southampton,H,2-1,W,3,53,0,7
+Chelsea,chelsea,1,2003-08-17,2003-08,Liverpool,A,2-1,W,3,3,1,6
+Chelsea,chelsea,2,2003-08-23,2003-08,Leicester City,H,2-1,W,3,6,2,2
+Chelsea,chelsea,3,2003-08-30,2003-08,Blackburn Rovers,H,2-2,D,1,7,2,5
+Chelsea,chelsea,4,2003-09-13,2003-09,Tottenham Hotspur,H,4-2,W,3,10,4,3
+Chelsea,chelsea,5,2003-09-20,2003-09,Wolverhampton Wanderers,A,5-0,W,3,13,9,1
+Chelsea,chelsea,6,2003-09-27,2003-09,Aston Villa,H,1-0,W,3,16,10,2
+Chelsea,chelsea,7,2003-10-05,2003-10,Middlesbrough,A,2-1,W,3,19,11,3
+Chelsea,chelsea,8,2003-10-14,2003-10,Birmingham City,A,0-0,D,1,20,11,1
+Chelsea,chelsea,9,2003-10-18,2003-10,Arsenal,A,1-2,L,0,20,10,3
+Chelsea,chelsea,10,2003-10-25,2003-10,Manchester City,H,1-0,W,3,23,11,1
+Chelsea,chelsea,11,2003-11-01,2003-11,Everton,A,1-0,W,3,26,12,2
+Chelsea,chelsea,12,2003-11-09,2003-11,Newcastle United,H,5-0,W,3,29,17,2
+Chelsea,chelsea,13,2003-11-22,2003-11,Southampton,A,1-0,W,3,32,18,2
+Chelsea,chelsea,14,2003-11-30,2003-11,Manchester United,H,1-0,W,3,35,19,1
+Chelsea,chelsea,15,2003-12-06,2003-12,Leeds United,A,1-1,D,1,36,19,1
+Chelsea,chelsea,16,2003-12-13,2003-12,Bolton Wanderers,H,1-2,L,0,36,18,2
+Chelsea,chelsea,17,2003-12-20,2003-12,Fulham,A,1-0,W,3,39,19,2
+Chelsea,chelsea,18,2003-12-26,2003-12,Charlton Athletic,A,2-4,L,0,39,17,3
+Chelsea,chelsea,19,2003-12-28,2003-12,Portsmouth,H,3-0,W,3,42,20,3
+Chelsea,chelsea,20,2004-01-07,2004-01,Liverpool,H,0-1,L,0,42,19,3
+Chelsea,chelsea,21,2004-01-11,2004-01,Leicester City,A,4-0,W,3,45,23,3
+Chelsea,chelsea,22,2004-01-18,2004-01,Birmingham City,H,0-0,D,1,46,23,3
+Chelsea,chelsea,23,2004-02-01,2004-02,Blackburn Rovers,A,3-2,W,3,49,24,3
+Chelsea,chelsea,24,2004-02-08,2004-02,Charlton Athletic,H,1-0,W,3,52,25,3
+Chelsea,chelsea,25,2004-02-11,2004-02,Portsmouth,A,2-0,W,3,55,27,3
+Chelsea,chelsea,26,2004-02-21,2004-02,Arsenal,H,1-2,L,0,55,26,3
+Chelsea,chelsea,27,2004-02-28,2004-02,Manchester City,A,1-0,W,3,58,27,2
+Chelsea,chelsea,28,2004-03-13,2004-03,Bolton Wanderers,A,2-0,W,3,61,29,2
+Chelsea,chelsea,29,2004-03-20,2004-03,Fulham,H,2-1,W,3,64,30,2
+Chelsea,chelsea,30,2004-03-27,2004-03,Wolverhampton Wanderers,H,5-2,W,3,67,33,2
+Chelsea,chelsea,31,2004-04-03,2004-04,Tottenham Hotspur,A,1-0,W,3,70,34,2
+Chelsea,chelsea,32,2004-04-10,2004-04,Middlesbrough,H,0-0,D,1,71,34,2
+Chelsea,chelsea,33,2004-04-12,2004-04,Aston Villa,A,2-3,L,0,71,33,2
+Chelsea,chelsea,34,2004-04-17,2004-04,Everton,H,0-0,D,1,72,33,2
+Chelsea,chelsea,35,2004-04-25,2004-04,Newcastle United,A,1-2,L,0,72,32,2
+Chelsea,chelsea,36,2004-05-01,2004-05,Southampton,H,4-0,W,3,75,36,2
+Chelsea,chelsea,37,2004-05-08,2004-05,Manchester United,A,1-1,D,1,76,36,2
+Chelsea,chelsea,38,2004-05-15,2004-05,Leeds United,H,1-0,W,3,79,37,2
+Everton,everton,1,2003-08-16,2003-08,Arsenal,A,1-2,L,0,0,-1,11
+Everton,everton,2,2003-08-23,2003-08,Fulham,H,3-1,W,3,3,1,8
+Everton,everton,3,2003-08-26,2003-08,Charlton Athletic,A,2-2,D,1,4,1,8
+Everton,everton,4,2003-08-30,2003-08,Liverpool,H,0-3,L,0,4,-2,13
+Everton,everton,5,2003-09-13,2003-09,Newcastle United,H,2-2,D,1,5,-2,13
+Everton,everton,6,2003-09-21,2003-09,Middlesbrough,A,0-1,L,0,5,-3,15
+Everton,everton,7,2003-09-28,2003-09,Leeds United,H,4-0,W,3,8,1,10
+Everton,everton,8,2003-10-04,2003-10,Tottenham Hotspur,A,0-3,L,0,8,-2,12
+Everton,everton,9,2003-10-19,2003-10,Southampton,H,0-0,D,1,9,-2,13
+Everton,everton,10,2003-10-25,2003-10,Aston Villa,A,0-0,D,1,10,-2,13
+Everton,everton,11,2003-11-01,2003-11,Chelsea,H,0-1,L,0,10,-3,16
+Everton,everton,12,2003-11-10,2003-11,Blackburn Rovers,A,1-2,L,0,10,-4,18
+Everton,everton,13,2003-11-22,2003-11,Wolverhampton Wanderers,H,2-0,W,3,13,-2,14
+Everton,everton,14,2003-11-29,2003-11,Bolton Wanderers,A,0-2,L,0,13,-4,18
+Everton,everton,15,2003-12-07,2003-12,Manchester City,H,0-0,D,1,14,-4,17
+Everton,everton,16,2003-12-13,2003-12,Portsmouth,A,2-1,W,3,17,-3,15
+Everton,everton,17,2003-12-20,2003-12,Leicester City,H,3-2,W,3,20,-2,11
+Everton,everton,18,2003-12-26,2003-12,Manchester United,A,2-3,L,0,20,-3,14
+Everton,everton,19,2003-12-28,2003-12,Birmingham City,H,1-0,W,3,23,-2,11
+Everton,everton,20,2004-01-07,2004-01,Arsenal,H,1-1,D,1,24,-2,11
+Everton,everton,21,2004-01-10,2004-01,Fulham,A,1-2,L,0,24,-3,12
+Everton,everton,22,2004-01-17,2004-01,Charlton Athletic,H,0-1,L,0,24,-4,14
+Everton,everton,23,2004-01-31,2004-01,Liverpool,A,0-0,D,1,25,-4,14
+Everton,everton,24,2004-02-07,2004-02,Manchester United,H,3-4,L,0,25,-5,15
+Everton,everton,25,2004-02-11,2004-02,Birmingham City,A,0-3,L,0,25,-8,15
+Everton,everton,26,2004-02-21,2004-02,Southampton,A,3-3,D,1,26,-8,16
+Everton,everton,27,2004-02-28,2004-02,Aston Villa,H,2-0,W,3,29,-6,14
+Everton,everton,28,2004-03-13,2004-03,Portsmouth,H,1-0,W,3,32,-5,14
+Everton,everton,29,2004-03-20,2004-03,Leicester City,A,1-1,D,1,33,-5,14
+Everton,everton,30,2004-03-27,2004-03,Middlesbrough,H,1-1,D,1,34,-5,13
+Everton,everton,31,2004-04-03,2004-04,Newcastle United,A,2-4,L,0,34,-7,14
+Everton,everton,32,2004-04-09,2004-04,Tottenham Hotspur,H,3-1,W,3,37,-5,12
+Everton,everton,33,2004-04-13,2004-04,Leeds United,A,1-1,D,1,38,-5,13
+Everton,everton,34,2004-04-17,2004-04,Chelsea,A,0-0,D,1,39,-5,13
+Everton,everton,35,2004-04-24,2004-04,Blackburn Rovers,H,0-1,L,0,39,-6,14
+Everton,everton,36,2004-05-01,2004-05,Wolverhampton Wanderers,A,1-2,L,0,39,-7,15
+Everton,everton,37,2004-05-08,2004-05,Bolton Wanderers,H,1-2,L,0,39,-8,16
+Everton,everton,38,2004-05-15,2004-05,Manchester City,A,1-5,L,0,39,-12,17
+Fulham,fulham,1,2003-08-16,2003-08,Middlesbrough,H,3-2,W,3,3,1,3
+Fulham,fulham,2,2003-08-23,2003-08,Everton,A,1-3,L,0,3,-1,11
+Fulham,fulham,3,2003-08-30,2003-08,Tottenham Hotspur,A,3-0,W,3,6,2,7
+Fulham,fulham,4,2003-09-14,2003-09,Birmingham City,A,2-2,D,1,7,2,9
+Fulham,fulham,5,2003-09-20,2003-09,Manchester City,H,2-2,D,1,8,2,10
+Fulham,fulham,6,2003-09-28,2003-09,Blackburn Rovers,A,2-0,W,3,11,4,7
+Fulham,fulham,7,2003-10-04,2003-10,Leicester City,H,2-0,W,3,14,6,4
+Fulham,fulham,8,2003-10-18,2003-10,Wolverhampton Wanderers,H,0-0,D,1,15,6,5
+Fulham,fulham,9,2003-10-21,2003-10,Newcastle United,H,2-3,L,0,15,5,6
+Fulham,fulham,10,2003-10-25,2003-10,Manchester United,A,3-1,W,3,18,7,5
+Fulham,fulham,11,2003-11-02,2003-11,Liverpool,H,1-2,L,0,18,6,6
+Fulham,fulham,12,2003-11-08,2003-11,Charlton Athletic,A,1-3,L,0,18,4,7
+Fulham,fulham,13,2003-11-24,2003-11,Portsmouth,H,2-0,W,3,21,6,5
+Fulham,fulham,14,2003-11-30,2003-11,Arsenal,A,0-0,D,1,22,6,4
+Fulham,fulham,15,2003-12-06,2003-12,Bolton Wanderers,H,2-1,W,3,25,7,4
+Fulham,fulham,16,2003-12-14,2003-12,Leeds United,A,2-3,L,0,25,6,4
+Fulham,fulham,17,2003-12-20,2003-12,Chelsea,H,0-1,L,0,25,5,4
+Fulham,fulham,18,2003-12-26,2003-12,Southampton,H,2-0,W,3,28,7,4
+Fulham,fulham,19,2003-12-28,2003-12,Aston Villa,A,0-3,L,0,28,4,5
+Fulham,fulham,20,2004-01-07,2004-01,Middlesbrough,A,1-2,L,0,28,3,7
+Fulham,fulham,21,2004-01-10,2004-01,Everton,H,2-1,W,3,31,4,6
+Fulham,fulham,22,2004-01-19,2004-01,Newcastle United,A,1-3,L,0,31,2,7
+Fulham,fulham,23,2004-01-31,2004-01,Tottenham Hotspur,H,2-1,W,3,34,3,7
+Fulham,fulham,24,2004-02-07,2004-02,Southampton,A,0-0,D,1,35,3,7
+Fulham,fulham,25,2004-02-11,2004-02,Aston Villa,H,1-2,L,0,35,2,8
+Fulham,fulham,26,2004-02-21,2004-02,Wolverhampton Wanderers,A,1-2,L,0,35,1,8
+Fulham,fulham,27,2004-02-28,2004-02,Manchester United,H,1-1,D,1,36,1,8
+Fulham,fulham,28,2004-03-13,2004-03,Leeds United,H,2-0,W,3,39,3,8
+Fulham,fulham,29,2004-03-20,2004-03,Chelsea,A,1-2,L,0,39,2,9
+Fulham,fulham,30,2004-03-27,2004-03,Manchester City,A,0-0,D,1,40,2,9
+Fulham,fulham,31,2004-04-03,2004-04,Birmingham City,H,0-0,D,1,41,2,10
+Fulham,fulham,32,2004-04-10,2004-04,Leicester City,A,2-0,W,3,44,4,8
+Fulham,fulham,33,2004-04-12,2004-04,Blackburn Rovers,H,3-4,L,0,44,3,10
+Fulham,fulham,34,2004-04-17,2004-04,Liverpool,A,0-0,D,1,45,3,10
+Fulham,fulham,35,2004-04-24,2004-04,Charlton Athletic,H,2-0,W,3,48,5,7
+Fulham,fulham,36,2004-05-01,2004-05,Portsmouth,A,1-1,D,1,49,5,7
+Fulham,fulham,37,2004-05-09,2004-05,Arsenal,H,0-1,L,0,49,4,9
+Fulham,fulham,38,2004-05-15,2004-05,Bolton Wanderers,A,2-0,W,3,52,6,9
+Leeds United,leeds,1,2003-08-17,2003-08,Newcastle United,H,2-2,D,1,1,0,9
+Leeds United,leeds,2,2003-08-23,2003-08,Tottenham Hotspur,A,1-2,L,0,1,-1,13
+Leeds United,leeds,3,2003-08-26,2003-08,Southampton,H,0-0,D,1,2,-1,13
+Leeds United,leeds,4,2003-08-30,2003-08,Middlesbrough,A,3-2,W,3,5,0,11
+Leeds United,leeds,5,2003-09-15,2003-09,Leicester City,A,0-4,L,0,5,-4,14
+Leeds United,leeds,6,2003-09-20,2003-09,Birmingham City,H,0-2,L,0,5,-6,16
+Leeds United,leeds,7,2003-09-28,2003-09,Everton,A,0-4,L,0,5,-10,18
+Leeds United,leeds,8,2003-10-04,2003-10,Blackburn Rovers,H,2-1,W,3,8,-9,14
+Leeds United,leeds,9,2003-10-18,2003-10,Manchester United,H,0-1,L,0,8,-10,17
+Leeds United,leeds,10,2003-10-25,2003-10,Liverpool,A,1-3,L,0,8,-12,18
+Leeds United,leeds,11,2003-11-01,2003-11,Arsenal,H,1-4,L,0,8,-15,19
+Leeds United,leeds,12,2003-11-08,2003-11,Portsmouth,A,1-6,L,0,8,-20,20
+Leeds United,leeds,13,2003-11-22,2003-11,Bolton Wanderers,H,0-2,L,0,8,-22,20
+Leeds United,leeds,14,2003-11-29,2003-11,Charlton Athletic,A,1-0,W,3,11,-21,20
+Leeds United,leeds,15,2003-12-06,2003-12,Chelsea,H,1-1,D,1,12,-21,19
+Leeds United,leeds,16,2003-12-14,2003-12,Fulham,H,3-2,W,3,15,-20,19
+Leeds United,leeds,17,2003-12-22,2003-12,Manchester City,A,1-1,D,1,16,-20,19
+Leeds United,leeds,18,2003-12-26,2003-12,Aston Villa,H,0-0,D,1,17,-20,19
+Leeds United,leeds,19,2003-12-28,2003-12,Wolverhampton Wanderers,A,1-3,L,0,17,-22,19
+Leeds United,leeds,20,2004-01-07,2004-01,Newcastle United,A,0-1,L,0,17,-23,19
+Leeds United,leeds,21,2004-01-10,2004-01,Tottenham Hotspur,H,0-1,L,0,17,-24,19
+Leeds United,leeds,22,2004-01-17,2004-01,Southampton,A,1-2,L,0,17,-25,20
+Leeds United,leeds,23,2004-01-31,2004-01,Middlesbrough,H,0-3,L,0,17,-28,20
+Leeds United,leeds,24,2004-02-07,2004-02,Aston Villa,A,0-2,L,0,17,-30,20
+Leeds United,leeds,25,2004-02-10,2004-02,Wolverhampton Wanderers,H,4-1,W,3,20,-27,19
+Leeds United,leeds,26,2004-02-21,2004-02,Manchester United,A,1-1,D,1,21,-27,20
+Leeds United,leeds,27,2004-02-29,2004-02,Liverpool,H,2-2,D,1,22,-27,20
+Leeds United,leeds,28,2004-03-13,2004-03,Fulham,A,0-2,L,0,22,-29,20
+Leeds United,leeds,29,2004-03-22,2004-03,Manchester City,H,2-1,W,3,25,-28,19
+Leeds United,leeds,30,2004-03-27,2004-03,Birmingham City,A,1-4,L,0,25,-31,19
+Leeds United,leeds,31,2004-04-05,2004-04,Leicester City,H,3-2,W,3,28,-30,19
+Leeds United,leeds,32,2004-04-10,2004-04,Blackburn Rovers,A,2-1,W,3,31,-29,18
+Leeds United,leeds,33,2004-04-13,2004-04,Everton,H,1-1,D,1,32,-29,18
+Leeds United,leeds,34,2004-04-16,2004-04,Arsenal,A,0-5,L,0,32,-34,18
+Leeds United,leeds,35,2004-04-25,2004-04,Portsmouth,H,1-2,L,0,32,-35,18
+Leeds United,leeds,36,2004-05-02,2004-05,Bolton Wanderers,A,1-4,L,0,32,-38,19
+Leeds United,leeds,37,2004-05-08,2004-05,Charlton Athletic,H,3-3,D,1,33,-38,19
+Leeds United,leeds,38,2004-05-15,2004-05,Chelsea,A,0-1,L,0,33,-39,19
+Leicester City,leicester-city,1,2003-08-16,2003-08,Southampton,H,2-2,D,1,1,0,7
+Leicester City,leicester-city,2,2003-08-23,2003-08,Chelsea,A,1-2,L,0,1,-1,14
+Leicester City,leicester-city,3,2003-08-26,2003-08,Middlesbrough,H,0-0,D,1,2,-1,14
+Leicester City,leicester-city,4,2003-08-30,2003-08,Aston Villa,A,1-3,L,0,2,-3,16
+Leicester City,leicester-city,5,2003-09-15,2003-09,Leeds United,H,4-0,W,3,5,1,11
+Leicester City,leicester-city,6,2003-09-20,2003-09,Liverpool,A,1-2,L,0,5,0,13
+Leicester City,leicester-city,7,2003-09-27,2003-09,Manchester United,H,1-4,L,0,5,-3,15
+Leicester City,leicester-city,8,2003-10-04,2003-10,Fulham,A,0-2,L,0,5,-5,19
+Leicester City,leicester-city,9,2003-10-19,2003-10,Tottenham Hotspur,H,1-2,L,0,5,-6,20
+Leicester City,leicester-city,10,2003-10-25,2003-10,Wolverhampton Wanderers,A,3-4,L,0,5,-7,20
+Leicester City,leicester-city,11,2003-11-02,2003-11,Blackburn Rovers,H,2-0,W,3,8,-5,18
+Leicester City,leicester-city,12,2003-11-09,2003-11,Manchester City,A,3-0,W,3,11,-2,15
+Leicester City,leicester-city,13,2003-11-22,2003-11,Charlton Athletic,H,1-1,D,1,12,-2,15
+Leicester City,leicester-city,14,2003-11-29,2003-11,Portsmouth,A,2-0,W,3,15,0,12
+Leicester City,leicester-city,15,2003-12-06,2003-12,Arsenal,H,1-1,D,1,16,0,15
+Leicester City,leicester-city,16,2003-12-13,2003-12,Birmingham City,H,0-2,L,0,16,-2,16
+Leicester City,leicester-city,17,2003-12-20,2003-12,Everton,A,2-3,L,0,16,-3,17
+Leicester City,leicester-city,18,2003-12-26,2003-12,Newcastle United,H,1-1,D,1,17,-3,18
+Leicester City,leicester-city,19,2003-12-28,2003-12,Bolton Wanderers,A,2-2,D,1,18,-3,17
+Leicester City,leicester-city,20,2004-01-07,2004-01,Southampton,A,0-0,D,1,19,-3,17
+Leicester City,leicester-city,21,2004-01-11,2004-01,Chelsea,H,0-4,L,0,19,-7,18
+Leicester City,leicester-city,22,2004-01-17,2004-01,Middlesbrough,A,3-3,D,1,20,-7,18
+Leicester City,leicester-city,23,2004-01-31,2004-01,Aston Villa,H,0-5,L,0,20,-12,18
+Leicester City,leicester-city,24,2004-02-07,2004-02,Newcastle United,A,1-3,L,0,20,-14,18
+Leicester City,leicester-city,25,2004-02-10,2004-02,Bolton Wanderers,H,1-1,D,1,21,-14,18
+Leicester City,leicester-city,26,2004-02-22,2004-02,Tottenham Hotspur,A,4-4,D,1,22,-14,19
+Leicester City,leicester-city,27,2004-02-28,2004-02,Wolverhampton Wanderers,H,0-0,D,1,23,-14,19
+Leicester City,leicester-city,28,2004-03-13,2004-03,Birmingham City,A,1-0,W,3,26,-13,17
+Leicester City,leicester-city,29,2004-03-20,2004-03,Everton,H,1-1,D,1,27,-13,17
+Leicester City,leicester-city,30,2004-03-28,2004-03,Liverpool,H,0-0,D,1,28,-13,18
+Leicester City,leicester-city,31,2004-04-05,2004-04,Leeds United,A,2-3,L,0,28,-14,18
+Leicester City,leicester-city,32,2004-04-10,2004-04,Fulham,H,0-2,L,0,28,-16,19
+Leicester City,leicester-city,33,2004-04-13,2004-04,Manchester United,A,0-1,L,0,28,-17,19
+Leicester City,leicester-city,34,2004-04-17,2004-04,Blackburn Rovers,A,0-1,L,0,28,-18,19
+Leicester City,leicester-city,35,2004-04-24,2004-04,Manchester City,H,1-1,D,1,29,-18,19
+Leicester City,leicester-city,36,2004-05-01,2004-05,Charlton Athletic,A,2-2,D,1,30,-18,20
+Leicester City,leicester-city,37,2004-05-08,2004-05,Portsmouth,H,3-1,W,3,33,-16,18
+Leicester City,leicester-city,38,2004-05-15,2004-05,Arsenal,A,1-2,L,0,33,-17,18
+Liverpool,liverpool,1,2003-08-17,2003-08,Chelsea,H,1-2,L,0,0,-1,16
+Liverpool,liverpool,2,2003-08-24,2003-08,Aston Villa,A,0-0,D,1,1,-1,17
+Liverpool,liverpool,3,2003-08-27,2003-08,Tottenham Hotspur,H,0-0,D,1,2,-1,15
+Liverpool,liverpool,4,2003-08-30,2003-08,Everton,A,3-0,W,3,5,2,9
+Liverpool,liverpool,5,2003-09-13,2003-09,Blackburn Rovers,A,3-1,W,3,8,4,6
+Liverpool,liverpool,6,2003-09-20,2003-09,Leicester City,H,2-1,W,3,11,5,6
+Liverpool,liverpool,7,2003-09-28,2003-09,Charlton Athletic,A,2-3,L,0,11,4,8
+Liverpool,liverpool,8,2003-10-04,2003-10,Arsenal,H,1-2,L,0,11,3,8
+Liverpool,liverpool,9,2003-10-18,2003-10,Portsmouth,A,0-1,L,0,11,2,9
+Liverpool,liverpool,10,2003-10-25,2003-10,Leeds United,H,3-1,W,3,14,4,9
+Liverpool,liverpool,11,2003-11-02,2003-11,Fulham,A,2-1,W,3,17,5,7
+Liverpool,liverpool,12,2003-11-09,2003-11,Manchester United,H,1-2,L,0,17,4,8
+Liverpool,liverpool,13,2003-11-22,2003-11,Middlesbrough,A,0-0,D,1,18,4,9
+Liverpool,liverpool,14,2003-11-30,2003-11,Birmingham City,H,3-1,W,3,21,6,6
+Liverpool,liverpool,15,2003-12-06,2003-12,Newcastle United,A,1-1,D,1,22,6,5
+Liverpool,liverpool,16,2003-12-13,2003-12,Southampton,H,1-2,L,0,22,5,9
+Liverpool,liverpool,17,2003-12-26,2003-12,Bolton Wanderers,H,3-1,W,3,25,7,9
+Liverpool,liverpool,18,2003-12-28,2003-12,Manchester City,A,2-2,D,1,26,7,6
+Liverpool,liverpool,19,2004-01-07,2004-01,Chelsea,A,1-0,W,3,29,8,5
+Liverpool,liverpool,20,2004-01-10,2004-01,Aston Villa,H,1-0,W,3,32,9,5
+Liverpool,liverpool,21,2004-01-17,2004-01,Tottenham Hotspur,A,1-2,L,0,32,8,5
+Liverpool,liverpool,22,2004-01-21,2004-01,Wolverhampton Wanderers,A,1-1,D,1,33,8,5
+Liverpool,liverpool,23,2004-01-31,2004-01,Everton,H,0-0,D,1,34,8,5
+Liverpool,liverpool,24,2004-02-07,2004-02,Bolton Wanderers,A,2-2,D,1,35,8,6
+Liverpool,liverpool,25,2004-02-11,2004-02,Manchester City,H,2-1,W,3,38,9,4
+Liverpool,liverpool,26,2004-02-29,2004-02,Leeds United,A,2-2,D,1,39,9,6
+Liverpool,liverpool,27,2004-03-14,2004-03,Southampton,A,0-2,L,0,39,7,8
+Liverpool,liverpool,28,2004-03-17,2004-03,Portsmouth,H,3-0,W,3,42,10,5
+Liverpool,liverpool,29,2004-03-20,2004-03,Wolverhampton Wanderers,H,1-0,W,3,45,11,4
+Liverpool,liverpool,30,2004-03-28,2004-03,Leicester City,A,0-0,D,1,46,11,4
+Liverpool,liverpool,31,2004-04-04,2004-04,Blackburn Rovers,H,4-0,W,3,49,15,4
+Liverpool,liverpool,32,2004-04-09,2004-04,Arsenal,A,2-4,L,0,49,13,4
+Liverpool,liverpool,33,2004-04-12,2004-04,Charlton Athletic,H,0-1,L,0,49,12,4
+Liverpool,liverpool,34,2004-04-17,2004-04,Fulham,H,0-0,D,1,50,12,4
+Liverpool,liverpool,35,2004-04-24,2004-04,Manchester United,A,1-0,W,3,53,13,4
+Liverpool,liverpool,36,2004-05-02,2004-05,Middlesbrough,H,2-0,W,3,56,15,4
+Liverpool,liverpool,37,2004-05-08,2004-05,Birmingham City,A,3-0,W,3,59,18,4
+Liverpool,liverpool,38,2004-05-15,2004-05,Newcastle United,H,1-1,D,1,60,18,4
+Manchester City,manchester-city,1,2003-08-17,2003-08,Charlton Athletic,A,3-0,W,3,3,3,3
+Manchester City,manchester-city,2,2003-08-23,2003-08,Portsmouth,H,1-1,D,1,4,3,4
+Manchester City,manchester-city,3,2003-08-25,2003-08,Blackburn Rovers,A,3-2,W,3,7,4,1
+Manchester City,manchester-city,4,2003-08-31,2003-08,Arsenal,H,1-2,L,0,7,3,4
+Manchester City,manchester-city,5,2003-09-14,2003-09,Aston Villa,H,4-1,W,3,10,6,3
+Manchester City,manchester-city,6,2003-09-20,2003-09,Fulham,A,2-2,D,1,11,6,5
+Manchester City,manchester-city,7,2003-09-28,2003-09,Tottenham Hotspur,H,0-0,D,1,12,6,5
+Manchester City,manchester-city,8,2003-10-04,2003-10,Wolverhampton Wanderers,A,0-1,L,0,12,5,6
+Manchester City,manchester-city,9,2003-10-18,2003-10,Bolton Wanderers,H,6-2,W,3,15,9,4
+Manchester City,manchester-city,10,2003-10-25,2003-10,Chelsea,A,0-1,L,0,15,8,7
+Manchester City,manchester-city,11,2003-11-01,2003-11,Southampton,A,2-0,W,3,18,10,5
+Manchester City,manchester-city,12,2003-11-09,2003-11,Leicester City,H,0-3,L,0,18,7,6
+Manchester City,manchester-city,13,2003-11-22,2003-11,Newcastle United,A,0-3,L,0,18,4,8
+Manchester City,manchester-city,14,2003-11-30,2003-11,Middlesbrough,H,0-1,L,0,18,3,9
+Manchester City,manchester-city,15,2003-12-07,2003-12,Everton,A,0-0,D,1,19,3,10
+Manchester City,manchester-city,16,2003-12-13,2003-12,Manchester United,A,1-3,L,0,19,1,12
+Manchester City,manchester-city,17,2003-12-22,2003-12,Leeds United,H,1-1,D,1,20,1,11
+Manchester City,manchester-city,18,2003-12-26,2003-12,Birmingham City,A,1-2,L,0,20,0,13
+Manchester City,manchester-city,19,2003-12-28,2003-12,Liverpool,H,2-2,D,1,21,0,13
+Manchester City,manchester-city,20,2004-01-07,2004-01,Charlton Athletic,H,1-1,D,1,22,0,14
+Manchester City,manchester-city,21,2004-01-10,2004-01,Portsmouth,A,2-4,L,0,22,-2,15
+Manchester City,manchester-city,22,2004-01-17,2004-01,Blackburn Rovers,H,1-1,D,1,23,-2,15
+Manchester City,manchester-city,23,2004-02-01,2004-02,Arsenal,A,1-2,L,0,23,-3,15
+Manchester City,manchester-city,24,2004-02-08,2004-02,Birmingham City,H,0-0,D,1,24,-3,16
+Manchester City,manchester-city,25,2004-02-11,2004-02,Liverpool,A,1-2,L,0,24,-4,16
+Manchester City,manchester-city,26,2004-02-21,2004-02,Bolton Wanderers,A,3-1,W,3,27,-2,14
+Manchester City,manchester-city,27,2004-02-28,2004-02,Chelsea,H,0-1,L,0,27,-3,16
+Manchester City,manchester-city,28,2004-03-14,2004-03,Manchester United,H,4-1,W,3,30,0,15
+Manchester City,manchester-city,29,2004-03-22,2004-03,Leeds United,A,1-2,L,0,30,-1,16
+Manchester City,manchester-city,30,2004-03-27,2004-03,Fulham,H,0-0,D,1,31,-1,15
+Manchester City,manchester-city,31,2004-04-04,2004-04,Aston Villa,A,1-1,D,1,32,-1,15
+Manchester City,manchester-city,32,2004-04-10,2004-04,Wolverhampton Wanderers,H,3-3,D,1,33,-1,15
+Manchester City,manchester-city,33,2004-04-12,2004-04,Tottenham Hotspur,A,1-1,D,1,34,-1,15
+Manchester City,manchester-city,34,2004-04-17,2004-04,Southampton,H,1-3,L,0,34,-3,17
+Manchester City,manchester-city,35,2004-04-24,2004-04,Leicester City,A,1-1,D,1,35,-3,17
+Manchester City,manchester-city,36,2004-05-01,2004-05,Newcastle United,H,1-0,W,3,38,-2,17
+Manchester City,manchester-city,37,2004-05-08,2004-05,Middlesbrough,A,1-2,L,0,38,-3,17
+Manchester City,manchester-city,38,2004-05-15,2004-05,Everton,H,5-1,W,3,41,1,16
+Manchester United,manchester-united,1,2003-08-16,2003-08,Bolton Wanderers,H,4-0,W,3,3,4,2
+Manchester United,manchester-united,2,2003-08-23,2003-08,Newcastle United,A,2-1,W,3,6,5,1
+Manchester United,manchester-united,3,2003-08-27,2003-08,Wolverhampton Wanderers,H,1-0,W,3,9,6,2
+Manchester United,manchester-united,4,2003-08-31,2003-08,Southampton,A,0-1,L,0,9,5,2
+Manchester United,manchester-united,5,2003-09-13,2003-09,Charlton Athletic,A,2-0,W,3,12,7,2
+Manchester United,manchester-united,6,2003-09-21,2003-09,Arsenal,H,0-0,D,1,13,7,3
+Manchester United,manchester-united,7,2003-09-27,2003-09,Leicester City,A,4-1,W,3,16,10,3
+Manchester United,manchester-united,8,2003-10-04,2003-10,Birmingham City,H,3-0,W,3,19,13,2
+Manchester United,manchester-united,9,2003-10-18,2003-10,Leeds United,A,1-0,W,3,22,14,2
+Manchester United,manchester-united,10,2003-10-25,2003-10,Fulham,H,1-3,L,0,22,12,3
+Manchester United,manchester-united,11,2003-11-01,2003-11,Portsmouth,H,3-0,W,3,25,15,3
+Manchester United,manchester-united,12,2003-11-09,2003-11,Liverpool,A,2-1,W,3,28,16,3
+Manchester United,manchester-united,13,2003-11-22,2003-11,Blackburn Rovers,H,2-1,W,3,31,17,3
+Manchester United,manchester-united,14,2003-11-30,2003-11,Chelsea,A,0-1,L,0,31,16,3
+Manchester United,manchester-united,15,2003-12-06,2003-12,Aston Villa,H,4-0,W,3,34,20,3
+Manchester United,manchester-united,16,2003-12-13,2003-12,Manchester City,H,3-1,W,3,37,22,1
+Manchester United,manchester-united,17,2003-12-21,2003-12,Tottenham Hotspur,A,2-1,W,3,40,23,1
+Manchester United,manchester-united,18,2003-12-26,2003-12,Everton,H,3-2,W,3,43,24,1
+Manchester United,manchester-united,19,2003-12-28,2003-12,Middlesbrough,A,1-0,W,3,46,25,1
+Manchester United,manchester-united,20,2004-01-07,2004-01,Bolton Wanderers,A,2-1,W,3,49,26,1
+Manchester United,manchester-united,21,2004-01-11,2004-01,Newcastle United,H,0-0,D,1,50,26,1
+Manchester United,manchester-united,22,2004-01-17,2004-01,Wolverhampton Wanderers,A,0-1,L,0,50,25,1
+Manchester United,manchester-united,23,2004-01-31,2004-01,Southampton,H,3-2,W,3,53,26,1
+Manchester United,manchester-united,24,2004-02-07,2004-02,Everton,A,4-3,W,3,56,27,2
+Manchester United,manchester-united,25,2004-02-11,2004-02,Middlesbrough,H,2-3,L,0,56,26,2
+Manchester United,manchester-united,26,2004-02-21,2004-02,Leeds United,H,1-1,D,1,57,26,2
+Manchester United,manchester-united,27,2004-02-28,2004-02,Fulham,A,1-1,D,1,58,26,3
+Manchester United,manchester-united,28,2004-03-14,2004-03,Manchester City,A,1-4,L,0,58,23,3
+Manchester United,manchester-united,29,2004-03-20,2004-03,Tottenham Hotspur,H,3-0,W,3,61,26,3
+Manchester United,manchester-united,30,2004-03-28,2004-03,Arsenal,A,1-1,D,1,62,26,3
+Manchester United,manchester-united,31,2004-04-10,2004-04,Birmingham City,A,2-1,W,3,65,27,3
+Manchester United,manchester-united,32,2004-04-13,2004-04,Leicester City,H,1-0,W,3,68,28,3
+Manchester United,manchester-united,33,2004-04-17,2004-04,Portsmouth,A,0-1,L,0,68,27,3
+Manchester United,manchester-united,34,2004-04-20,2004-04,Charlton Athletic,H,2-0,W,3,71,29,3
+Manchester United,manchester-united,35,2004-04-24,2004-04,Liverpool,H,0-1,L,0,71,28,3
+Manchester United,manchester-united,36,2004-05-01,2004-05,Blackburn Rovers,A,0-1,L,0,71,27,3
+Manchester United,manchester-united,37,2004-05-08,2004-05,Chelsea,H,1-1,D,1,72,27,3
+Manchester United,manchester-united,38,2004-05-15,2004-05,Aston Villa,A,2-0,W,3,75,29,3
+Middlesbrough,middlesbrough,1,2003-08-16,2003-08,Fulham,A,2-3,L,0,0,-1,9
+Middlesbrough,middlesbrough,2,2003-08-24,2003-08,Arsenal,H,0-4,L,0,0,-5,19
+Middlesbrough,middlesbrough,3,2003-08-26,2003-08,Leicester City,A,0-0,D,1,1,-5,18
+Middlesbrough,middlesbrough,4,2003-08-30,2003-08,Leeds United,H,2-3,L,0,1,-6,19
+Middlesbrough,middlesbrough,5,2003-09-13,2003-09,Bolton Wanderers,A,0-2,L,0,1,-8,19
+Middlesbrough,middlesbrough,6,2003-09-21,2003-09,Everton,H,1-0,W,3,4,-7,17
+Middlesbrough,middlesbrough,7,2003-09-27,2003-09,Southampton,A,1-0,W,3,7,-6,12
+Middlesbrough,middlesbrough,8,2003-10-05,2003-10,Chelsea,H,1-2,L,0,7,-7,17
+Middlesbrough,middlesbrough,9,2003-10-18,2003-10,Newcastle United,H,0-1,L,0,7,-8,18
+Middlesbrough,middlesbrough,10,2003-10-26,2003-10,Tottenham Hotspur,A,0-0,D,1,8,-8,17
+Middlesbrough,middlesbrough,11,2003-11-01,2003-11,Wolverhampton Wanderers,H,2-0,W,3,11,-6,14
+Middlesbrough,middlesbrough,12,2003-11-08,2003-11,Aston Villa,A,2-0,W,3,14,-4,12
+Middlesbrough,middlesbrough,13,2003-11-22,2003-11,Liverpool,H,0-0,D,1,15,-4,12
+Middlesbrough,middlesbrough,14,2003-11-30,2003-11,Manchester City,A,1-0,W,3,18,-3,10
+Middlesbrough,middlesbrough,15,2003-12-06,2003-12,Portsmouth,H,0-0,D,1,19,-3,9
+Middlesbrough,middlesbrough,16,2003-12-13,2003-12,Charlton Athletic,H,0-0,D,1,20,-3,11
+Middlesbrough,middlesbrough,17,2003-12-26,2003-12,Blackburn Rovers,A,2-2,D,1,21,-3,11
+Middlesbrough,middlesbrough,18,2003-12-28,2003-12,Manchester United,H,0-1,L,0,21,-4,15
+Middlesbrough,middlesbrough,19,2004-01-07,2004-01,Fulham,H,2-1,W,3,24,-3,12
+Middlesbrough,middlesbrough,20,2004-01-10,2004-01,Arsenal,A,1-4,L,0,24,-6,14
+Middlesbrough,middlesbrough,21,2004-01-17,2004-01,Leicester City,H,3-3,D,1,25,-6,13
+Middlesbrough,middlesbrough,22,2004-01-31,2004-01,Leeds United,A,3-0,W,3,28,-3,12
+Middlesbrough,middlesbrough,23,2004-02-07,2004-02,Blackburn Rovers,H,0-1,L,0,28,-4,13
+Middlesbrough,middlesbrough,24,2004-02-11,2004-02,Manchester United,A,3-2,W,3,31,-3,13
+Middlesbrough,middlesbrough,25,2004-02-21,2004-02,Newcastle United,A,1-2,L,0,31,-4,13
+Middlesbrough,middlesbrough,26,2004-03-03,2004-03,Birmingham City,A,1-3,L,0,31,-6,13
+Middlesbrough,middlesbrough,27,2004-03-09,2004-03,Tottenham Hotspur,H,1-0,W,3,34,-5,11
+Middlesbrough,middlesbrough,28,2004-03-13,2004-03,Charlton Athletic,A,0-1,L,0,34,-6,11
+Middlesbrough,middlesbrough,29,2004-03-20,2004-03,Birmingham City,H,5-3,W,3,37,-4,10
+Middlesbrough,middlesbrough,30,2004-03-27,2004-03,Everton,A,1-1,D,1,38,-4,11
+Middlesbrough,middlesbrough,31,2004-04-03,2004-04,Bolton Wanderers,H,2-0,W,3,41,-2,11
+Middlesbrough,middlesbrough,32,2004-04-10,2004-04,Chelsea,A,0-0,D,1,42,-2,11
+Middlesbrough,middlesbrough,33,2004-04-12,2004-04,Southampton,H,3-1,W,3,45,0,9
+Middlesbrough,middlesbrough,34,2004-04-17,2004-04,Wolverhampton Wanderers,A,0-2,L,0,45,-2,11
+Middlesbrough,middlesbrough,35,2004-04-24,2004-04,Aston Villa,H,1-2,L,0,45,-3,12
+Middlesbrough,middlesbrough,36,2004-05-02,2004-05,Liverpool,A,0-2,L,0,45,-5,12
+Middlesbrough,middlesbrough,37,2004-05-08,2004-05,Manchester City,H,2-1,W,3,48,-4,11
+Middlesbrough,middlesbrough,38,2004-05-15,2004-05,Portsmouth,A,1-5,L,0,48,-8,11
+Newcastle United,newcastle-united,1,2003-08-17,2003-08,Leeds United,A,2-2,D,1,1,0,11
+Newcastle United,newcastle-united,2,2003-08-23,2003-08,Manchester United,H,1-2,L,0,1,-1,15
+Newcastle United,newcastle-united,3,2003-08-30,2003-08,Birmingham City,H,0-1,L,0,1,-2,18
+Newcastle United,newcastle-united,4,2003-09-13,2003-09,Everton,A,2-2,D,1,2,-2,17
+Newcastle United,newcastle-united,5,2003-09-20,2003-09,Bolton Wanderers,H,0-0,D,1,3,-2,18
+Newcastle United,newcastle-united,6,2003-09-26,2003-09,Arsenal,A,2-3,L,0,3,-3,19
+Newcastle United,newcastle-united,7,2003-10-04,2003-10,Southampton,H,1-0,W,3,6,-2,18
+Newcastle United,newcastle-united,8,2003-10-18,2003-10,Middlesbrough,A,1-0,W,3,9,-1,11
+Newcastle United,newcastle-united,9,2003-10-21,2003-10,Fulham,A,3-2,W,3,12,0,10
+Newcastle United,newcastle-united,10,2003-10-25,2003-10,Portsmouth,H,3-0,W,3,15,3,8
+Newcastle United,newcastle-united,11,2003-11-01,2003-11,Aston Villa,H,1-1,D,1,16,3,7
+Newcastle United,newcastle-united,12,2003-11-09,2003-11,Chelsea,A,0-5,L,0,16,-2,10
+Newcastle United,newcastle-united,13,2003-11-22,2003-11,Manchester City,H,3-0,W,3,19,1,6
+Newcastle United,newcastle-united,14,2003-11-29,2003-11,Wolverhampton Wanderers,A,1-1,D,1,20,1,6
+Newcastle United,newcastle-united,15,2003-12-06,2003-12,Liverpool,H,1-1,D,1,21,1,7
+Newcastle United,newcastle-united,16,2003-12-13,2003-12,Tottenham Hotspur,H,4-0,W,3,24,5,5
+Newcastle United,newcastle-united,17,2003-12-20,2003-12,Charlton Athletic,A,0-0,D,1,25,5,5
+Newcastle United,newcastle-united,18,2003-12-26,2003-12,Leicester City,A,1-1,D,1,26,5,6
+Newcastle United,newcastle-united,19,2003-12-28,2003-12,Blackburn Rovers,H,0-1,L,0,26,4,7
+Newcastle United,newcastle-united,20,2004-01-07,2004-01,Leeds United,H,1-0,W,3,29,5,6
+Newcastle United,newcastle-united,21,2004-01-11,2004-01,Manchester United,A,0-0,D,1,30,5,7
+Newcastle United,newcastle-united,22,2004-01-19,2004-01,Fulham,H,3-1,W,3,33,7,5
+Newcastle United,newcastle-united,23,2004-01-31,2004-01,Birmingham City,A,1-1,D,1,34,7,6
+Newcastle United,newcastle-united,24,2004-02-07,2004-02,Leicester City,H,3-1,W,3,37,9,4
+Newcastle United,newcastle-united,25,2004-02-11,2004-02,Blackburn Rovers,A,1-1,D,1,38,9,5
+Newcastle United,newcastle-united,26,2004-02-21,2004-02,Middlesbrough,H,2-1,W,3,41,10,4
+Newcastle United,newcastle-united,27,2004-02-29,2004-02,Portsmouth,A,1-1,D,1,42,10,4
+Newcastle United,newcastle-united,28,2004-03-14,2004-03,Tottenham Hotspur,A,0-1,L,0,42,9,5
+Newcastle United,newcastle-united,29,2004-03-20,2004-03,Charlton Athletic,H,3-1,W,3,45,11,5
+Newcastle United,newcastle-united,30,2004-03-28,2004-03,Bolton Wanderers,A,0-1,L,0,45,10,5
+Newcastle United,newcastle-united,31,2004-04-03,2004-04,Everton,H,4-2,W,3,48,12,4
+Newcastle United,newcastle-united,32,2004-04-11,2004-04,Arsenal,H,0-0,D,1,49,12,5
+Newcastle United,newcastle-united,33,2004-04-18,2004-04,Aston Villa,A,0-0,D,1,50,12,5
+Newcastle United,newcastle-united,34,2004-04-25,2004-04,Chelsea,H,2-1,W,3,53,13,5
+Newcastle United,newcastle-united,35,2004-05-01,2004-05,Manchester City,A,0-1,L,0,53,12,5
+Newcastle United,newcastle-united,36,2004-05-09,2004-05,Wolverhampton Wanderers,H,1-1,D,1,54,12,6
+Newcastle United,newcastle-united,37,2004-05-12,2004-05,Southampton,A,3-3,D,1,55,12,6
+Newcastle United,newcastle-united,38,2004-05-15,2004-05,Liverpool,A,1-1,D,1,56,12,5
+Portsmouth,portsmouth,1,2003-08-16,2003-08,Aston Villa,H,2-1,W,3,3,1,5
+Portsmouth,portsmouth,2,2003-08-23,2003-08,Manchester City,A,1-1,D,1,4,1,5
+Portsmouth,portsmouth,3,2003-08-26,2003-08,Bolton Wanderers,H,4-0,W,3,7,5,1
+Portsmouth,portsmouth,4,2003-08-30,2003-08,Wolverhampton Wanderers,A,0-0,D,1,8,5,3
+Portsmouth,portsmouth,5,2003-09-13,2003-09,Arsenal,A,1-1,D,1,9,5,4
+Portsmouth,portsmouth,6,2003-09-20,2003-09,Blackburn Rovers,H,1-2,L,0,9,4,8
+Portsmouth,portsmouth,7,2003-09-27,2003-09,Birmingham City,A,0-2,L,0,9,2,8
+Portsmouth,portsmouth,8,2003-10-04,2003-10,Charlton Athletic,H,1-2,L,0,9,1,10
+Portsmouth,portsmouth,9,2003-10-18,2003-10,Liverpool,H,1-0,W,3,12,2,8
+Portsmouth,portsmouth,10,2003-10-25,2003-10,Newcastle United,A,0-3,L,0,12,-1,11
+Portsmouth,portsmouth,11,2003-11-01,2003-11,Manchester United,A,0-3,L,0,12,-4,11
+Portsmouth,portsmouth,12,2003-11-08,2003-11,Leeds United,H,6-1,W,3,15,1,11
+Portsmouth,portsmouth,13,2003-11-24,2003-11,Fulham,A,0-2,L,0,15,-1,11
+Portsmouth,portsmouth,14,2003-11-29,2003-11,Leicester City,H,0-2,L,0,15,-3,13
+Portsmouth,portsmouth,15,2003-12-06,2003-12,Middlesbrough,A,0-0,D,1,16,-3,16
+Portsmouth,portsmouth,16,2003-12-13,2003-12,Everton,H,1-2,L,0,16,-4,17
+Portsmouth,portsmouth,17,2003-12-21,2003-12,Southampton,A,0-3,L,0,16,-7,18
+Portsmouth,portsmouth,18,2003-12-26,2003-12,Tottenham Hotspur,H,2-0,W,3,19,-5,15
+Portsmouth,portsmouth,19,2003-12-28,2003-12,Chelsea,A,0-3,L,0,19,-8,16
+Portsmouth,portsmouth,20,2004-01-06,2004-01,Aston Villa,A,1-2,L,0,19,-9,16
+Portsmouth,portsmouth,21,2004-01-10,2004-01,Manchester City,H,4-2,W,3,22,-7,17
+Portsmouth,portsmouth,22,2004-01-17,2004-01,Bolton Wanderers,A,0-1,L,0,22,-8,17
+Portsmouth,portsmouth,23,2004-01-31,2004-01,Wolverhampton Wanderers,H,0-0,D,1,23,-8,17
+Portsmouth,portsmouth,24,2004-02-07,2004-02,Tottenham Hotspur,A,3-4,L,0,23,-9,17
+Portsmouth,portsmouth,25,2004-02-11,2004-02,Chelsea,H,0-2,L,0,23,-11,17
+Portsmouth,portsmouth,26,2004-02-29,2004-02,Newcastle United,H,1-1,D,1,24,-11,17
+Portsmouth,portsmouth,27,2004-03-13,2004-03,Everton,A,0-1,L,0,24,-12,18
+Portsmouth,portsmouth,28,2004-03-17,2004-03,Liverpool,A,0-3,L,0,24,-15,18
+Portsmouth,portsmouth,29,2004-03-21,2004-03,Southampton,H,1-0,W,3,27,-14,18
+Portsmouth,portsmouth,30,2004-03-27,2004-03,Blackburn Rovers,A,2-1,W,3,30,-13,17
+Portsmouth,portsmouth,31,2004-04-10,2004-04,Charlton Athletic,A,1-1,D,1,31,-13,17
+Portsmouth,portsmouth,32,2004-04-12,2004-04,Birmingham City,H,3-1,W,3,34,-11,17
+Portsmouth,portsmouth,33,2004-04-17,2004-04,Manchester United,H,1-0,W,3,37,-10,16
+Portsmouth,portsmouth,34,2004-04-25,2004-04,Leeds United,A,2-1,W,3,40,-9,14
+Portsmouth,portsmouth,35,2004-05-01,2004-05,Fulham,H,1-1,D,1,41,-9,14
+Portsmouth,portsmouth,36,2004-05-04,2004-05,Arsenal,H,1-1,D,1,42,-9,14
+Portsmouth,portsmouth,37,2004-05-08,2004-05,Leicester City,A,1-3,L,0,42,-11,14
+Portsmouth,portsmouth,38,2004-05-15,2004-05,Middlesbrough,H,5-1,W,3,45,-7,13
+Southampton,southampton,1,2003-08-16,2003-08,Leicester City,A,2-2,D,1,1,0,8
+Southampton,southampton,2,2003-08-23,2003-08,Birmingham City,H,0-0,D,1,2,0,12
+Southampton,southampton,3,2003-08-26,2003-08,Leeds United,A,0-0,D,1,3,0,10
+Southampton,southampton,4,2003-08-31,2003-08,Manchester United,H,1-0,W,3,6,1,8
+Southampton,southampton,5,2003-09-13,2003-09,Wolverhampton Wanderers,H,2-0,W,3,9,3,5
+Southampton,southampton,6,2003-09-20,2003-09,Tottenham Hotspur,A,3-1,W,3,12,5,4
+Southampton,southampton,7,2003-09-27,2003-09,Middlesbrough,H,0-1,L,0,12,4,5
+Southampton,southampton,8,2003-10-04,2003-10,Newcastle United,A,0-1,L,0,12,3,7
+Southampton,southampton,9,2003-10-19,2003-10,Everton,A,0-0,D,1,13,3,7
+Southampton,southampton,10,2003-10-25,2003-10,Blackburn Rovers,H,2-0,W,3,16,5,6
+Southampton,southampton,11,2003-11-01,2003-11,Manchester City,H,0-2,L,0,16,3,8
+Southampton,southampton,12,2003-11-08,2003-11,Bolton Wanderers,A,0-0,D,1,17,3,9
+Southampton,southampton,13,2003-11-22,2003-11,Chelsea,H,0-1,L,0,17,2,10
+Southampton,southampton,14,2003-11-29,2003-11,Aston Villa,A,0-1,L,0,17,1,11
+Southampton,southampton,15,2003-12-07,2003-12,Charlton Athletic,H,3-2,W,3,20,2,8
+Southampton,southampton,16,2003-12-13,2003-12,Liverpool,A,2-1,W,3,23,3,6
+Southampton,southampton,17,2003-12-21,2003-12,Portsmouth,H,3-0,W,3,26,6,4
+Southampton,southampton,18,2003-12-26,2003-12,Fulham,A,0-2,L,0,26,4,7
+Southampton,southampton,19,2003-12-29,2003-12,Arsenal,H,0-1,L,0,26,3,8
+Southampton,southampton,20,2004-01-07,2004-01,Leicester City,H,0-0,D,1,27,3,8
+Southampton,southampton,21,2004-01-10,2004-01,Birmingham City,A,1-2,L,0,27,2,9
+Southampton,southampton,22,2004-01-17,2004-01,Leeds United,H,2-1,W,3,30,3,8
+Southampton,southampton,23,2004-01-31,2004-01,Manchester United,A,2-3,L,0,30,2,10
+Southampton,southampton,24,2004-02-07,2004-02,Fulham,H,0-0,D,1,31,2,10
+Southampton,southampton,25,2004-02-10,2004-02,Arsenal,A,0-2,L,0,31,0,11
+Southampton,southampton,26,2004-02-21,2004-02,Everton,H,3-3,D,1,32,0,12
+Southampton,southampton,27,2004-02-28,2004-02,Blackburn Rovers,A,1-1,D,1,33,0,12
+Southampton,southampton,28,2004-03-14,2004-03,Liverpool,H,2-0,W,3,36,2,11
+Southampton,southampton,29,2004-03-21,2004-03,Portsmouth,A,0-1,L,0,36,1,12
+Southampton,southampton,30,2004-03-27,2004-03,Tottenham Hotspur,H,1-0,W,3,39,2,10
+Southampton,southampton,31,2004-04-03,2004-04,Wolverhampton Wanderers,A,4-1,W,3,42,5,9
+Southampton,southampton,32,2004-04-12,2004-04,Middlesbrough,A,1-3,L,0,42,3,11
+Southampton,southampton,33,2004-04-17,2004-04,Manchester City,A,3-1,W,3,45,5,9
+Southampton,southampton,34,2004-04-24,2004-04,Bolton Wanderers,H,1-2,L,0,45,4,11
+Southampton,southampton,35,2004-05-01,2004-05,Chelsea,A,0-4,L,0,45,0,11
+Southampton,southampton,36,2004-05-08,2004-05,Aston Villa,H,1-1,D,1,46,0,12
+Southampton,southampton,37,2004-05-12,2004-05,Newcastle United,H,3-3,D,1,47,0,12
+Southampton,southampton,38,2004-05-15,2004-05,Charlton Athletic,A,1-2,L,0,47,-1,12
+Tottenham Hotspur,tottenham-hotspur,1,2003-08-16,2003-08,Birmingham City,A,0-1,L,0,0,-1,12
+Tottenham Hotspur,tottenham-hotspur,2,2003-08-23,2003-08,Leeds United,H,2-1,W,3,3,0,10
+Tottenham Hotspur,tottenham-hotspur,3,2003-08-27,2003-08,Liverpool,A,0-0,D,1,4,0,10
+Tottenham Hotspur,tottenham-hotspur,4,2003-08-30,2003-08,Fulham,H,0-3,L,0,4,-3,14
+Tottenham Hotspur,tottenham-hotspur,5,2003-09-13,2003-09,Chelsea,A,2-4,L,0,4,-5,16
+Tottenham Hotspur,tottenham-hotspur,6,2003-09-20,2003-09,Southampton,H,1-3,L,0,4,-7,17
+Tottenham Hotspur,tottenham-hotspur,7,2003-09-28,2003-09,Manchester City,A,0-0,D,1,5,-7,17
+Tottenham Hotspur,tottenham-hotspur,8,2003-10-04,2003-10,Everton,H,3-0,W,3,8,-4,13
+Tottenham Hotspur,tottenham-hotspur,9,2003-10-19,2003-10,Leicester City,A,2-1,W,3,11,-3,11
+Tottenham Hotspur,tottenham-hotspur,10,2003-10-26,2003-10,Middlesbrough,H,0-0,D,1,12,-3,12
+Tottenham Hotspur,tottenham-hotspur,11,2003-11-01,2003-11,Bolton Wanderers,H,0-1,L,0,12,-4,12
+Tottenham Hotspur,tottenham-hotspur,12,2003-11-08,2003-11,Arsenal,A,1-2,L,0,12,-5,13
+Tottenham Hotspur,tottenham-hotspur,13,2003-11-23,2003-11,Aston Villa,H,2-1,W,3,15,-4,12
+Tottenham Hotspur,tottenham-hotspur,14,2003-11-29,2003-11,Blackburn Rovers,A,0-1,L,0,15,-5,15
+Tottenham Hotspur,tottenham-hotspur,15,2003-12-06,2003-12,Wolverhampton Wanderers,H,5-2,W,3,18,-2,11
+Tottenham Hotspur,tottenham-hotspur,16,2003-12-13,2003-12,Newcastle United,A,0-4,L,0,18,-6,13
+Tottenham Hotspur,tottenham-hotspur,17,2003-12-21,2003-12,Manchester United,H,1-2,L,0,18,-7,15
+Tottenham Hotspur,tottenham-hotspur,18,2003-12-26,2003-12,Portsmouth,A,0-2,L,0,18,-9,17
+Tottenham Hotspur,tottenham-hotspur,19,2003-12-28,2003-12,Charlton Athletic,H,0-1,L,0,18,-10,18
+Tottenham Hotspur,tottenham-hotspur,20,2004-01-07,2004-01,Birmingham City,H,4-1,W,3,21,-7,16
+Tottenham Hotspur,tottenham-hotspur,21,2004-01-10,2004-01,Leeds United,A,1-0,W,3,24,-6,13
+Tottenham Hotspur,tottenham-hotspur,22,2004-01-17,2004-01,Liverpool,H,2-1,W,3,27,-5,12
+Tottenham Hotspur,tottenham-hotspur,23,2004-01-31,2004-01,Fulham,A,1-2,L,0,27,-6,13
+Tottenham Hotspur,tottenham-hotspur,24,2004-02-07,2004-02,Portsmouth,H,4-3,W,3,30,-5,12
+Tottenham Hotspur,tottenham-hotspur,25,2004-02-11,2004-02,Charlton Athletic,A,4-2,W,3,33,-3,11
+Tottenham Hotspur,tottenham-hotspur,26,2004-02-22,2004-02,Leicester City,H,4-4,D,1,34,-3,10
+Tottenham Hotspur,tottenham-hotspur,27,2004-03-09,2004-03,Middlesbrough,A,0-1,L,0,34,-4,10
+Tottenham Hotspur,tottenham-hotspur,28,2004-03-14,2004-03,Newcastle United,H,1-0,W,3,37,-3,10
+Tottenham Hotspur,tottenham-hotspur,29,2004-03-20,2004-03,Manchester United,A,0-3,L,0,37,-6,11
+Tottenham Hotspur,tottenham-hotspur,30,2004-03-27,2004-03,Southampton,A,0-1,L,0,37,-7,12
+Tottenham Hotspur,tottenham-hotspur,31,2004-04-03,2004-04,Chelsea,H,0-1,L,0,37,-8,12
+Tottenham Hotspur,tottenham-hotspur,32,2004-04-09,2004-04,Everton,A,1-3,L,0,37,-10,13
+Tottenham Hotspur,tottenham-hotspur,33,2004-04-12,2004-04,Manchester City,H,1-1,D,1,38,-10,13
+Tottenham Hotspur,tottenham-hotspur,34,2004-04-17,2004-04,Bolton Wanderers,A,0-2,L,0,38,-12,14
+Tottenham Hotspur,tottenham-hotspur,35,2004-04-25,2004-04,Arsenal,H,2-2,D,1,39,-12,16
+Tottenham Hotspur,tottenham-hotspur,36,2004-05-02,2004-05,Aston Villa,A,0-1,L,0,39,-13,16
+Tottenham Hotspur,tottenham-hotspur,37,2004-05-08,2004-05,Blackburn Rovers,H,1-0,W,3,42,-12,15
+Tottenham Hotspur,tottenham-hotspur,38,2004-05-15,2004-05,Wolverhampton Wanderers,A,2-0,W,3,45,-10,14
+Wolverhampton Wanderers,wolverhampton-wanderers,1,2003-08-16,2003-08,Blackburn Rovers,A,1-5,L,0,0,-4,13
+Wolverhampton Wanderers,wolverhampton-wanderers,2,2003-08-23,2003-08,Charlton Athletic,H,0-4,L,0,0,-8,20
+Wolverhampton Wanderers,wolverhampton-wanderers,3,2003-08-27,2003-08,Manchester United,A,0-1,L,0,0,-9,20
+Wolverhampton Wanderers,wolverhampton-wanderers,4,2003-08-30,2003-08,Portsmouth,H,0-0,D,1,1,-9,20
+Wolverhampton Wanderers,wolverhampton-wanderers,5,2003-09-13,2003-09,Southampton,A,0-2,L,0,1,-11,20
+Wolverhampton Wanderers,wolverhampton-wanderers,6,2003-09-20,2003-09,Chelsea,H,0-5,L,0,1,-16,20
+Wolverhampton Wanderers,wolverhampton-wanderers,7,2003-09-27,2003-09,Bolton Wanderers,A,1-1,D,1,2,-16,20
+Wolverhampton Wanderers,wolverhampton-wanderers,8,2003-10-04,2003-10,Manchester City,H,1-0,W,3,5,-15,20
+Wolverhampton Wanderers,wolverhampton-wanderers,9,2003-10-18,2003-10,Fulham,A,0-0,D,1,6,-15,19
+Wolverhampton Wanderers,wolverhampton-wanderers,10,2003-10-25,2003-10,Leicester City,H,4-3,W,3,9,-14,15
+Wolverhampton Wanderers,wolverhampton-wanderers,11,2003-11-01,2003-11,Middlesbrough,A,0-2,L,0,9,-16,17
+Wolverhampton Wanderers,wolverhampton-wanderers,12,2003-11-08,2003-11,Birmingham City,H,1-1,D,1,10,-16,17
+Wolverhampton Wanderers,wolverhampton-wanderers,13,2003-11-22,2003-11,Everton,A,0-2,L,0,10,-18,19
+Wolverhampton Wanderers,wolverhampton-wanderers,14,2003-11-29,2003-11,Newcastle United,H,1-1,D,1,11,-18,19
+Wolverhampton Wanderers,wolverhampton-wanderers,15,2003-12-06,2003-12,Tottenham Hotspur,A,2-5,L,0,11,-21,20
+Wolverhampton Wanderers,wolverhampton-wanderers,16,2003-12-14,2003-12,Aston Villa,A,2-3,L,0,11,-22,20
+Wolverhampton Wanderers,wolverhampton-wanderers,17,2003-12-26,2003-12,Arsenal,A,0-3,L,0,11,-25,20
+Wolverhampton Wanderers,wolverhampton-wanderers,18,2003-12-28,2003-12,Leeds United,H,3-1,W,3,14,-23,20
+Wolverhampton Wanderers,wolverhampton-wanderers,19,2004-01-07,2004-01,Blackburn Rovers,H,2-2,D,1,15,-23,20
+Wolverhampton Wanderers,wolverhampton-wanderers,20,2004-01-10,2004-01,Charlton Athletic,A,0-2,L,0,15,-25,20
+Wolverhampton Wanderers,wolverhampton-wanderers,21,2004-01-17,2004-01,Manchester United,H,1-0,W,3,18,-24,19
+Wolverhampton Wanderers,wolverhampton-wanderers,22,2004-01-21,2004-01,Liverpool,H,1-1,D,1,19,-24,19
+Wolverhampton Wanderers,wolverhampton-wanderers,23,2004-01-31,2004-01,Portsmouth,A,0-0,D,1,20,-24,19
+Wolverhampton Wanderers,wolverhampton-wanderers,24,2004-02-07,2004-02,Arsenal,H,1-3,L,0,20,-26,19
+Wolverhampton Wanderers,wolverhampton-wanderers,25,2004-02-10,2004-02,Leeds United,A,1-4,L,0,20,-29,20
+Wolverhampton Wanderers,wolverhampton-wanderers,26,2004-02-21,2004-02,Fulham,H,2-1,W,3,23,-28,18
+Wolverhampton Wanderers,wolverhampton-wanderers,27,2004-02-28,2004-02,Leicester City,A,0-0,D,1,24,-28,17
+Wolverhampton Wanderers,wolverhampton-wanderers,28,2004-03-14,2004-03,Aston Villa,H,0-4,L,0,24,-32,19
+Wolverhampton Wanderers,wolverhampton-wanderers,29,2004-03-20,2004-03,Liverpool,A,0-1,L,0,24,-33,19
+Wolverhampton Wanderers,wolverhampton-wanderers,30,2004-03-27,2004-03,Chelsea,A,2-5,L,0,24,-36,20
+Wolverhampton Wanderers,wolverhampton-wanderers,31,2004-04-03,2004-04,Southampton,H,1-4,L,0,24,-39,20
+Wolverhampton Wanderers,wolverhampton-wanderers,32,2004-04-10,2004-04,Manchester City,A,3-3,D,1,25,-39,20
+Wolverhampton Wanderers,wolverhampton-wanderers,33,2004-04-12,2004-04,Bolton Wanderers,H,1-2,L,0,25,-40,20
+Wolverhampton Wanderers,wolverhampton-wanderers,34,2004-04-17,2004-04,Middlesbrough,H,2-0,W,3,28,-38,20
+Wolverhampton Wanderers,wolverhampton-wanderers,35,2004-04-25,2004-04,Birmingham City,A,2-2,D,1,29,-38,20
+Wolverhampton Wanderers,wolverhampton-wanderers,36,2004-05-01,2004-05,Everton,H,2-1,W,3,32,-37,19
+Wolverhampton Wanderers,wolverhampton-wanderers,37,2004-05-09,2004-05,Newcastle United,A,1-1,D,1,33,-37,19
+Wolverhampton Wanderers,wolverhampton-wanderers,38,2004-05-15,2004-05,Tottenham Hotspur,H,0-2,L,0,33,-39,20

@@ -1,0 +1,21 @@
+pos,team,team_id,P,W,D,L,GF,GA,GD,Pts,home_pts,away_pts,prev_season_pts,prev_season_pos,shots,shots_on_target,goals_per_shot_on_target,yellows,reds,xpts_from_odds,pts_minus_xpts,trailed_at_ht,pts_from_ht_deficit,avg_attendance,status
+1,Arsenal,arsenal,38,26,12,0,73,26,47,90,49,41,78,2,471,273,0.267,52,3,76.0,14.0,5,13,38079,Champions
+2,Chelsea,chelsea,38,24,7,7,67,30,37,79,40,39,67,4,481,244,0.275,45,3,73.3,5.7,4,1,41235,Champions League
+3,Manchester United,manchester-united,38,23,6,9,64,35,29,75,40,35,83,1,494,284,0.225,43,3,76.0,-1.0,7,7,67641,Champions League
+4,Liverpool,liverpool,38,16,12,10,55,37,18,60,34,26,64,5,558,300,0.183,47,1,63.8,-3.8,8,3,42677,Champions League
+5,Newcastle United,newcastle-united,38,13,17,8,52,40,12,56,38,18,69,3,448,262,0.198,46,3,59.9,-3.9,5,7,51440,UEFA Cup
+6,Aston Villa,aston-villa,38,15,11,12,48,44,4,56,33,23,45,16,445,230,0.209,52,3,50.7,5.3,8,0,36622,
+7,Charlton Athletic,charlton-athletic,38,14,11,13,51,51,0,53,27,26,49,12,384,200,0.255,36,3,47.8,5.2,15,7,26350,
+8,Bolton Wanderers,bolton-wanderers,38,14,11,13,48,56,-8,53,26,27,44,17,533,290,0.166,66,0,44.4,8.6,14,11,26795,
+9,Fulham,fulham,38,14,10,14,52,46,6,52,31,21,48,14,402,221,0.235,61,3,47.2,4.8,11,1,16342,
+10,Birmingham City,birmingham-city,38,12,14,12,43,48,-5,50,29,21,48,13,328,176,0.244,45,5,47.7,2.3,11,6,28735,
+11,Middlesbrough,middlesbrough,38,13,9,16,44,52,-8,48,28,20,49,11,461,254,0.173,57,1,47.7,0.3,12,0,30977,
+12,Southampton,southampton,38,12,11,15,44,45,-1,47,30,17,52,8,457,265,0.166,52,3,48.0,-1.0,12,2,31351,
+13,Portsmouth,portsmouth,38,12,9,17,47,54,-7,45,34,11,,promoted,403,217,0.217,62,3,42.4,2.6,16,5,20108,
+14,Tottenham Hotspur,tottenham-hotspur,38,13,6,19,47,57,-10,45,31,14,50,10,421,234,0.201,60,1,49.0,-4.0,14,5,34939,
+15,Blackburn Rovers,blackburn-rovers,38,12,8,18,51,59,-8,44,19,25,60,6,451,232,0.22,61,3,48.3,-4.3,13,5,24376,
+16,Manchester City,manchester-city,38,9,14,15,55,54,1,41,24,17,51,9,515,292,0.188,47,3,50.9,-9.9,12,6,46834,
+17,Everton,everton,38,9,12,17,45,57,-12,39,29,10,59,7,430,215,0.209,53,3,48.0,-9.0,15,1,38837,
+18,Leicester City,leicester-city,38,6,15,17,48,65,-17,33,19,14,,promoted,366,214,0.224,59,7,38.6,-5.6,13,3,30983,Relegated
+19,Leeds United,leeds,38,8,9,21,40,79,-39,33,22,11,47,15,362,181,0.221,71,5,42.7,-9.7,12,1,36666,Relegated
+20,Wolverhampton Wanderers,wolverhampton-wanderers,38,7,12,19,38,77,-39,33,26,7,,promoted,398,191,0.199,66,2,36.6,-3.6,18,10,28874,Relegated

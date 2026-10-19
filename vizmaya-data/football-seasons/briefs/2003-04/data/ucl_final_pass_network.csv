@@ -1,0 +1,123 @@
+match_id,team,passer,recipient,passes
+3752619,AS Monaco,Ludovic Giuly,Fernando Morientes Sánchez,1
+3752619,AS Monaco,Fernando Morientes Sánchez,Hugo Benjamín Ibarra,1
+3752619,AS Monaco,Hugo Benjamín Ibarra,Edouard Cissé,4
+3752619,AS Monaco,Hugo Benjamín Ibarra,Fernando Morientes Sánchez,2
+3752619,AS Monaco,Flavio Roma,Fernando Morientes Sánchez,1
+3752619,AS Monaco,Fernando Morientes Sánchez,Ludovic Giuly,1
+3752619,AS Monaco,Jérôme Rothen,Andreas Vasilios Zikos,1
+3752619,AS Monaco,Andreas Vasilios Zikos,Ludovic Giuly,1
+3752619,AS Monaco,Gaël Givet-Viaros,Patrice Evra,3
+3752619,AS Monaco,Patrice Evra,Gaël Givet-Viaros,2
+3752619,AS Monaco,Gaël Givet-Viaros,Julien Rodriguez,1
+3752619,AS Monaco,Julien Rodriguez,Fernando Morientes Sánchez,1
+3752619,AS Monaco,Julien Rodriguez,Edouard Cissé,1
+3752619,AS Monaco,Edouard Cissé,Hugo Benjamín Ibarra,1
+3752619,AS Monaco,Gaël Givet-Viaros,Lucas Bernardi,1
+3752619,AS Monaco,Lucas Bernardi,Jérôme Rothen,1
+3752619,AS Monaco,Jérôme Rothen,Patrice Evra,4
+3752619,AS Monaco,Patrice Evra,Ludovic Giuly,2
+3752619,AS Monaco,Ludovic Giuly,Patrice Evra,1
+3752619,AS Monaco,Patrice Evra,Lucas Bernardi,5
+3752619,AS Monaco,Lucas Bernardi,Fernando Morientes Sánchez,2
+3752619,AS Monaco,Lucas Bernardi,Andreas Vasilios Zikos,1
+3752619,AS Monaco,Andreas Vasilios Zikos,Flavio Roma,1
+3752619,AS Monaco,Gaël Givet-Viaros,Flavio Roma,1
+3752619,AS Monaco,Lucas Bernardi,Hugo Benjamín Ibarra,1
+3752619,AS Monaco,Hugo Benjamín Ibarra,Lucas Bernardi,2
+3752619,AS Monaco,Flavio Roma,Lucas Bernardi,1
+3752619,AS Monaco,Lucas Bernardi,Patrice Evra,1
+3752619,AS Monaco,Fernando Morientes Sánchez,Andreas Vasilios Zikos,1
+3752619,AS Monaco,Hugo Benjamín Ibarra,Julien Rodriguez,2
+3752619,AS Monaco,Julien Rodriguez,Flavio Roma,1
+3752619,AS Monaco,Hugo Benjamín Ibarra,Andreas Vasilios Zikos,1
+3752619,AS Monaco,Andreas Vasilios Zikos,Hugo Benjamín Ibarra,2
+3752619,AS Monaco,Flavio Roma,Edouard Cissé,1
+3752619,AS Monaco,Edouard Cissé,Ludovic Giuly,1
+3752619,AS Monaco,Ludovic Giuly,Edouard Cissé,1
+3752619,AS Monaco,Patrice Evra,Jérôme Rothen,3
+3752619,AS Monaco,Jérôme Rothen,Gaël Givet-Viaros,1
+3752619,AS Monaco,Gaël Givet-Viaros,Andreas Vasilios Zikos,1
+3752619,AS Monaco,Hugo Benjamín Ibarra,Patrice Evra,1
+3752619,AS Monaco,Gaël Givet-Viaros,Hugo Benjamín Ibarra,1
+3752619,AS Monaco,Flavio Roma,Patrice Evra,1
+3752619,AS Monaco,Ludovic Giuly,Jérôme Rothen,1
+3752619,AS Monaco,Gaël Givet-Viaros,Jérôme Rothen,2
+3752619,FC Porto,Jorge Paulo Costa Almeida,Paulo Renato Rebocho Ferreira,3
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Carlos Alberto Gomes de Jesus,3
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Ricardo Alberto Silveira de Carvalho,2
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Nuno Jorge Pereira Silva Valente,4
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Nuno Ricardo de Oliveira Ribeiro,10
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Nuno Jorge Pereira Silva Valente,4
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Vítor Manuel Martins Baía,2
+3752619,FC Porto,Jorge Paulo Costa Almeida,Vanderlei Fernandes Silva,2
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Vítor Manuel Martins Baía,3
+3752619,FC Porto,Vítor Manuel Martins Baía,Paulo Renato Rebocho Ferreira,6
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Paulo Renato Rebocho Ferreira,5
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Vanderlei Fernandes Silva,5
+3752619,FC Porto,Vítor Manuel Martins Baía,Anderson Luís de Souza,1
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Carlos Alberto Gomes de Jesus,2
+3752619,FC Porto,Francisco José Rodrigues da Costa,Nuno Jorge Pereira Silva Valente,7
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Jorge Paulo Costa Almeida,1
+3752619,FC Porto,Jorge Paulo Costa Almeida,Vítor Manuel Martins Baía,2
+3752619,FC Porto,Anderson Luís de Souza,Vanderlei Fernandes Silva,3
+3752619,FC Porto,Vanderlei Fernandes Silva,Anderson Luís de Souza,3
+3752619,FC Porto,Francisco José Rodrigues da Costa,Nuno Ricardo de Oliveira Ribeiro,1
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Ricardo Alberto Silveira de Carvalho,2
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Jorge Paulo Costa Almeida,2
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Ricardo Alberto Silveira de Carvalho,1
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Francisco José Rodrigues da Costa,2
+3752619,FC Porto,Francisco José Rodrigues da Costa,Ricardo Alberto Silveira de Carvalho,2
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Anderson Luís de Souza,8
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Nuno Ricardo de Oliveira Ribeiro,5
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Carlos Alberto Gomes de Jesus,3
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Paulo Renato Rebocho Ferreira,5
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Jorge Paulo Costa Almeida,2
+3752619,FC Porto,Anderson Luís de Souza,Carlos Alberto Gomes de Jesus,6
+3752619,FC Porto,Jorge Paulo Costa Almeida,Francisco José Rodrigues da Costa,1
+3752619,FC Porto,Francisco José Rodrigues da Costa,Paulo Renato Rebocho Ferreira,2
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Ricardo Alberto Silveira de Carvalho,3
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Pedro Miguel da Silva Mendes,1
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Paulo Renato Rebocho Ferreira,2
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Pedro Miguel da Silva Mendes,3
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Anderson Luís de Souza,6
+3752619,FC Porto,Anderson Luís de Souza,Nuno Jorge Pereira Silva Valente,3
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Pedro Miguel da Silva Mendes,1
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Nuno Ricardo de Oliveira Ribeiro,3
+3752619,FC Porto,Carlos Alberto Gomes de Jesus,Pedro Miguel da Silva Mendes,2
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Vanderlei Fernandes Silva,1
+3752619,FC Porto,Vanderlei Fernandes Silva,Nuno Ricardo de Oliveira Ribeiro,1
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Vanderlei Fernandes Silva,4
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Nuno Jorge Pereira Silva Valente,2
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Anderson Luís de Souza,4
+3752619,FC Porto,Anderson Luís de Souza,Nuno Ricardo de Oliveira Ribeiro,3
+3752619,FC Porto,Vanderlei Fernandes Silva,Pedro Miguel da Silva Mendes,1
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Vítor Manuel Martins Baía,1
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Pedro Miguel da Silva Mendes,2
+3752619,FC Porto,Jorge Paulo Costa Almeida,Nuno Ricardo de Oliveira Ribeiro,1
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Nuno Ricardo de Oliveira Ribeiro,1
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Francisco José Rodrigues da Costa,3
+3752619,FC Porto,Francisco José Rodrigues da Costa,Pedro Miguel da Silva Mendes,2
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Anderson Luís de Souza,7
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Carlos Alberto Gomes de Jesus,1
+3752619,FC Porto,Nuno Ricardo de Oliveira Ribeiro,Jorge Paulo Costa Almeida,1
+3752619,FC Porto,Vítor Manuel Martins Baía,Nuno Jorge Pereira Silva Valente,2
+3752619,FC Porto,Carlos Alberto Gomes de Jesus,Anderson Luís de Souza,3
+3752619,FC Porto,Carlos Alberto Gomes de Jesus,Paulo Renato Rebocho Ferreira,1
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Vanderlei Fernandes Silva,1
+3752619,FC Porto,Jorge Paulo Costa Almeida,Nuno Jorge Pereira Silva Valente,1
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Vanderlei Fernandes Silva,2
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Carlos Alberto Gomes de Jesus,3
+3752619,FC Porto,Anderson Luís de Souza,Pedro Miguel da Silva Mendes,4
+3752619,FC Porto,Anderson Luís de Souza,Francisco José Rodrigues da Costa,1
+3752619,FC Porto,Nuno Jorge Pereira Silva Valente,Francisco José Rodrigues da Costa,1
+3752619,FC Porto,Francisco José Rodrigues da Costa,Vítor Manuel Martins Baía,1
+3752619,FC Porto,Vítor Manuel Martins Baía,Vanderlei Fernandes Silva,2
+3752619,FC Porto,Jorge Paulo Costa Almeida,Anderson Luís de Souza,1
+3752619,FC Porto,Anderson Luís de Souza,Ricardo Alberto Silveira de Carvalho,2
+3752619,FC Porto,Ricardo Alberto Silveira de Carvalho,Anderson Luís de Souza,1
+3752619,FC Porto,Vanderlei Fernandes Silva,Ricardo Alberto Silveira de Carvalho,1
+3752619,FC Porto,Paulo Renato Rebocho Ferreira,Vítor Manuel Martins Baía,1
+3752619,FC Porto,Anderson Luís de Souza,Paulo Renato Rebocho Ferreira,1
+3752619,FC Porto,Pedro Miguel da Silva Mendes,Nuno Jorge Pereira Silva Valente,1
+3752619,FC Porto,Vítor Manuel Martins Baía,Carlos Alberto Gomes de Jesus,1
