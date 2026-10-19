@@ -265,6 +265,35 @@ export function MatchPicker({
     return out
   }, [visible, scope])
 
+  // Left nav: jump to a group, and highlight the group at the top of the list.
+  const listRef = useRef<HTMLDivElement>(null)
+  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const currentKey = activeKey && groups.some((g) => g.key === activeKey) ? activeKey : groups[0]?.key
+
+  function groupEl(key: string): HTMLElement | null {
+    return Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-group]') ?? []).find(
+      (el) => el.dataset.group === key,
+    ) ?? null
+  }
+
+  function jumpTo(key: string) {
+    const list = listRef.current
+    const el = groupEl(key)
+    if (!list || !el) return
+    list.scrollTo({ top: el.offsetTop, behavior: 'smooth' })
+    setActiveKey(key)
+  }
+
+  function syncActive() {
+    const list = listRef.current
+    if (!list) return
+    let key: string | null = null
+    for (const el of list.querySelectorAll<HTMLElement>('[data-group]')) {
+      if (el.offsetTop <= list.scrollTop + 8) key = el.dataset.group ?? null
+    }
+    if (key) setActiveKey(key)
+  }
+
   const emptyList =
     scope === 'competition'
       ? 'No fixtures for this competition + season.'
@@ -440,9 +469,43 @@ export function MatchPicker({
                     Nothing in this list matches &ldquo;{search.trim()}&rdquo;.
                   </p>
                 ) : (
-                  <div className="max-h-64 overflow-y-auto">
+                  <div className="flex gap-2">
+                  <nav
+                    aria-label="Jump to matchday"
+                    className="max-h-64 w-28 shrink-0 space-y-0.5 overflow-y-auto border-r border-white/10 pr-1.5"
+                  >
+                    {groups.map((g) => {
+                      const n = g.rows.filter((m) => pickedIds.has(m.id)).length
+                      return (
+                        <button
+                          key={g.key}
+                          type="button"
+                          onClick={() => jumpTo(g.key)}
+                          title={g.label}
+                          aria-current={currentKey === g.key}
+                          className={`flex w-full items-center justify-between gap-1 rounded-md px-2 py-1 text-left text-[11px] transition-colors ${
+                            currentKey === g.key
+                              ? 'bg-white/10 text-neutral-100'
+                              : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-200'
+                          }`}
+                        >
+                          <span className="min-w-0 truncate">{g.label}</span>
+                          {n > 0 && (
+                            <span className="shrink-0 rounded-full bg-white/15 px-1.5 text-[10px] text-neutral-200">
+                              {n}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </nav>
+                  <div
+                    ref={listRef}
+                    onScroll={syncActive}
+                    className="relative max-h-64 min-w-0 flex-1 overflow-y-auto"
+                  >
                     {groups.map((g) => (
-                    <section key={g.key} aria-label={g.label} className="mb-2 last:mb-0">
+                    <section key={g.key} data-group={g.key} aria-label={g.label} className="mb-2 last:mb-0">
                     <h3 className="sticky top-0 z-[1] flex items-baseline justify-between bg-neutral-950 px-1 py-1 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
                       <span>{g.label}</span>
                       <span className="normal-case text-neutral-600">
@@ -522,6 +585,7 @@ export function MatchPicker({
                     </ul>
                     </section>
                     ))}
+                  </div>
                   </div>
                 )}
                 <p className="text-[11px] text-neutral-600">
