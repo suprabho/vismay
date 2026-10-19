@@ -41,7 +41,9 @@ export default async function AssetStudioPage({ params }: Props) {
           gradients, previewed below across each theme) and a dedicated{' '}
           <span className="text-neutral-300">avatar background</span> for the feed story-ring and
           card disc behind the crest. Leave the avatar background unset to fall back to the primary
-          color.
+          color. Competitions also get an <span className="text-neutral-300">HTML story style</span>
+          — a full palette and font trio that the HTML-stories brief offers as that competition&rsquo;s
+          look.
         </p>
         <div className="mt-5">
           <AssetStudio initialEntities={initialEntities} />

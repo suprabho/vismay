@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
 import { parseHtmlStoryTone } from './tone'
+import { competitionStoryStyle, parseCompetitionStyle } from './styles'
 import { draw } from '@vismay/randomizer/draw'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
@@ -118,6 +119,26 @@ const styled = htmlStoryBrief({
 assert.ok(styled.includes('A light page. Background `#FAF7F2`'))
 assert.ok(styled.includes('background:#FAF7F2;'))
 assert.ok(!styled.includes('background:#0B0B0F'))
+
+// A competition style (Asset Studio) names the competition instead of a random pick.
+const parsed = parseCompetitionStyle({
+  palette: { background: '#3d195b', surface: '#4A2370', text: '#FFFFFF', muted: '#C9B8DA', accent: '#00FF85', accent2: '#FF2882', teal: '#04F5FF', line: '' },
+  fonts: { serif: 'Forum', sans: 'Space  Grotesk', mono: 'Space Mono' },
+})
+assert.ok('style' in parsed)
+assert.equal(parsed.style.palette.background, '#3D195B')
+assert.equal(parsed.style.palette.line, undefined)
+assert.equal(parsed.style.fonts.sans, 'Space Grotesk')
+assert.ok('error' in parseCompetitionStyle({ palette: { background: 'red' }, fonts: {} }))
+assert.ok('error' in parseCompetitionStyle({ ...parsed.style, fonts: { ...parsed.style.fonts, mono: 'x"); evil' } }))
+const comp = htmlStoryBrief({
+  siteUrl: 'https://footshorts.com',
+  app: 'footshorts',
+  style: competitionStoryStyle({ slug: 'premier-league', name: 'Premier League', style: parsed.style }),
+})
+assert.ok(comp.includes('the Premier League style, set for that competition'))
+assert.ok(!comp.includes('picked at random'))
+assert.ok(comp.includes('background:#3D195B;'))
 
 // A randomizer spin adds its sections around the generic ones, and ends with the research stub.
 for (const randomizer of ['desk', 'atlas', 'epics'] as const) {
