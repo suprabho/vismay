@@ -276,12 +276,15 @@ def build(start):
         if how == 'search': notes.append(f'Logopedia page found by search: "{page}"')
         if re.search(r'\s+II$', c['wiki']) and page: notes.append("reserve side: the first team's crest")
         if era != 'season':  # Wikidata dated logos, then its current one
-            wlogos = [(f, f'{a or "?"}–{b or "present"}', int(a) if a else None, int(b) if b else None) for f, a, b, _ in w.get('logos', [])]
+            # P154 sometimes holds a photo ("Nuevo Mirador detalle (cropped).jpg"): a JPEG must name itself a logo
+            logos = [x for x in w.get('logos', []) if not re.search(r'\.jpe?g$', x[0], re.I)
+                     or re.search(r'logo|crest|escudo|wappen|emblem|badge|stemma|blason|herb|znak', x[0], re.I)]
+            wlogos = [(f, f'{a or "?"}–{b or "present"}', int(a) if a else None, int(b) if b else None) for f, a, b, _ in logos]
             dated = [x for x in wlogos if x[2] or x[3]]
             wpick, wera, wnotes = pick(start, dated)
             if wera == 'season': chosen, era, source, notes = wpick, 'season', 'wikidata', wnotes + notes
             elif not chosen and wlogos:
-                preferred = [x for x, (_, _, _, r) in zip(wlogos, w['logos']) if r == 'PreferredRank'] or wlogos
+                preferred = [x for x, (_, _, _, r) in zip(wlogos, logos) if r == 'PreferredRank'] or wlogos
                 chosen, era, source = preferred[0], 'current', 'wikidata'
         sdb = None
         if not chosen and (sdb := sportsdb_crest(c['wiki'], c['name'], w.get('country', ''))):
@@ -305,13 +308,15 @@ def build(start):
         if ch and p['source'] == 'logopedia':
             i = infos.get(ch[0].replace('_', ' ')) or infos.get(ch[0]) or {}
             url = i.get('url', '')
-            # Fandom omits thumburl when the file is narrower than asked; its scaler still returns a PNG
-            thumb = url.replace('/revision/latest', '/revision/latest/scale-to-width-down/256', 1) if url else ''
+            # Fandom serves WebP unless told otherwise; it omits thumburl when the file is narrower than asked,
+            # but its scaler still answers
+            thumb = url.replace('/revision/latest', '/revision/latest/scale-to-width-down/256', 1) + '&format=png' if url else ''
+            url += '&format=original' if url else ''
             if not url: p['notes'].append(f'Logopedia file missing: {ch[0]}')
         elif ch and p['source'] == 'thesportsdb':
             url, thumb = p['sdb'][1:]
         elif ch:
-            url, thumb = commons_url(ch[0]), commons_url(ch[0], 256)
+            url, thumb = commons_url(ch[0]), commons_url(ch[0], 250)  # Wikimedia serves standard widths only
         slug = c['canonical_id'] or slugify(c['wiki'])
         review = bool(p['notes']) and not (p['override'])
         rows.append(dict(season=s, wiki=c['wiki'], name=c['name'], canonical_id=c['canonical_id'], slug=slug, top_flight=c['top_flight'],
@@ -338,8 +343,9 @@ def download(start):
     out = os.path.join(RAW, s); os.makedirs(out, exist_ok=True)
     manifest_path = os.path.join(out, '_manifest.json')  # path → url it came from, so a changed pick re-downloads
     manifest = json.load(open(manifest_path)) if os.path.exists(manifest_path) else {}
-    got, wanted = 0, set()
-    for r in crest_rows(s):
+    got, wanted, failed, throttled = 0, set(), [], False
+    # Wikimedia's upload host throttles shared IPs for minutes at a time: everything else first
+    for r in sorted(crest_rows(s), key=lambda r: 'wikimedia.org' in r['file_url']):
         if not r['file_url']: continue
         ext = os.path.splitext(r['file'])[1].lower() if re.search(r'\.(svg|png|gif|jpe?g)$', r['file'], re.I) else '.png'
         for url, name in ((r['file_url'], r['slug'] + ext), (r['thumb_url'], r['slug'] + '.thumb.png')):
@@ -347,13 +353,21 @@ def download(start):
             wanted.add(name)
             path = os.path.join(out, name)
             if os.path.exists(path) and manifest.get(name) == url: continue
-            open(path, 'wb').write(get(url)); manifest[name] = url; got += 1
+            wikimedia = 'wikimedia.org' in url
+            if wikimedia and throttled:
+                failed.append(f'{name}: skipped, Wikimedia is throttling this IP — rerun later'); continue
+            try: body = get(url, tries=1 if wikimedia else 10)  # one try: its Retry-After runs to 10 minutes
+            except Exception as e:
+                throttled |= wikimedia and '429' in str(e)
+                failed.append(f'{name}: {e}'); continue
+            open(path, 'wb').write(body); manifest[name] = url; got += 1
             json.dump(manifest, open(manifest_path, 'w'), indent=0)
             time.sleep(0.3)
     for name in set(os.listdir(out)) - wanted - {'_manifest.json'}:  # crests no longer picked
         os.remove(os.path.join(out, name)); manifest.pop(name, None)
     json.dump(manifest, open(manifest_path, 'w'), indent=0)
-    print(f'{got} files downloaded, {len(wanted)} in {out}')
+    print(f'{got} files downloaded, {len(wanted) - len(failed)} of {len(wanted)} in {out}')
+    for f in failed: print(f'  failed {f}', file=sys.stderr)
 
 def review(start):
     """Contact sheet: every crest at thumbnail size, top flight by league, then opponents; flags inline."""
