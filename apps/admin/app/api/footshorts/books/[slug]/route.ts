@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { adminEmail } from '@/lib/adminIdentity'
-import { planSchema } from '@/lib/seasonBooks/plan'
+import { parseAnyPlan } from '@/lib/seasonBooks/seasonSpreads'
 import { BookStoreError, deleteSeasonBook, getSeasonBook, saveSeasonBook } from '@/lib/seasonBooks/store'
 
 export const runtime = 'nodejs'
@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: Ctx) {
   }
 }
 
-/** Save `{ revision, title, plan }`; 409 when someone else saved since `revision`. */
+/** Save `{ revision, title, plan }` (a v1 or v2 plan, by its `version`); 409 when someone else saved since `revision`. */
 export async function PUT(req: Request, { params }: Ctx) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: PRIVATE_HEADERS })
   if (req.headers.get('origin') !== new URL(req.url).origin) {
@@ -48,11 +48,8 @@ export async function PUT(req: Request, { params }: Ctx) {
   }
   const title = typeof body.title === 'string' ? body.title.trim().slice(0, 200) : ''
   if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400, headers: PRIVATE_HEADERS })
-  const plan = planSchema.safeParse(body.plan)
-  if (!plan.success) {
-    const first = plan.error.issues[0]
-    return NextResponse.json({ error: `Invalid plan at ${first.path.join('.')}: ${first.message}` }, { status: 400, headers: PRIVATE_HEADERS })
-  }
+  const plan = parseAnyPlan(body.plan)
+  if (!plan.success) return NextResponse.json({ error: plan.error }, { status: 400, headers: PRIVATE_HEADERS })
   const { slug } = await params
   try {
     const book = await saveSeasonBook(slug, body.revision, { plan: plan.data, title }, await adminEmail())

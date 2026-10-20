@@ -1,6 +1,7 @@
 import 'server-only'
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { planSchema, planSummary, seasonLabel, seasonSlug, starterPlan, type Plan, type SeasonBook, type SeasonBookSummary } from './plan'
+import { planSummary, seasonLabel, seasonSlug, starterPlan, type SeasonBook, type SeasonBookSummary } from './plan'
+import { isPlanV2, parseAnyPlan, planFormat, planV2Summary, starterPlanV2, type AnyPlan, type BookFormat } from './seasonSpreads'
 import type { MatchRow } from './matches'
 
 /**
@@ -13,7 +14,8 @@ import type { MatchRow } from './matches'
 
 const TABLE = 'admin_season_books'
 const MATCHES = 'admin_historical_matches'
-const SUMMARY_COLUMNS = 'slug,season_start,title,beat_count,spread_count,carded_count,updated_at,updated_by'
+// `plan->version` reads the plan's version out of the JSONB without shipping the plan: 2 = season spreads, null = claim spreads.
+const SUMMARY_COLUMNS = 'slug,season_start,title,beat_count,spread_count,carded_count,updated_at,updated_by,version:plan->version'
 
 export class BookStoreError extends Error {
   constructor(message: string, readonly status: number) {
@@ -45,7 +47,12 @@ interface BookRow {
 }
 
 function toBook(row: BookRow): SeasonBook {
-  const parsed = planSchema.safeParse(row.plan)
+  const parsed = parseAnyPlan(row.plan)
+  // A season-spreads plan that no longer validates must not open as an empty
+  // claim-spreads book: the next save would overwrite it. Say what broke instead.
+  if (!parsed.success && (row.plan as { version?: unknown } | null)?.version !== undefined) {
+    throw new BookStoreError(`The ${row.slug} plan no longer validates (${parsed.error}). Fix the stored plan before opening it.`, 500)
+  }
   return {
     slug: row.slug,
     seasonStart: row.season_start,
@@ -53,6 +60,7 @@ function toBook(row: BookRow): SeasonBook {
     // A plan written by an older planner that no longer validates still opens:
     // the editor shows what parses and the next save writes it back clean.
     plan: parsed.success ? parsed.data : { beats: [], spreads: [] },
+    format: parsed.success ? planFormat(parsed.data) : 'claim-spreads',
     revision: row.revision,
     updatedAt: row.updated_at,
     updatedBy: row.updated_by,
@@ -66,6 +74,7 @@ export async function listSeasonBooks(): Promise<SeasonBookSummary[]> {
     slug: r.slug,
     seasonStart: r.season_start,
     title: r.title,
+    format: (r as { version?: unknown }).version === 2 ? 'season-spreads' as const : 'claim-spreads' as const,
     beatCount: r.beat_count,
     spreadCount: r.spread_count,
     cardedCount: r.carded_count,
@@ -81,8 +90,8 @@ export async function getSeasonBook(slug: string): Promise<SeasonBook | null> {
   return data ? toBook(data as BookRow) : null
 }
 
-export async function createSeasonBook(seasonStart: number, title: string | undefined, by: string | null): Promise<SeasonBook> {
-  const plan = starterPlan()
+export async function createSeasonBook(seasonStart: number, title: string | undefined, by: string | null, format: BookFormat = 'season-spreads'): Promise<SeasonBook> {
+  const plan: AnyPlan = format === 'season-spreads' ? starterPlanV2(seasonStart) : starterPlan()
   const { data, error } = await createServiceClient().from(TABLE).insert({
     slug: seasonSlug(seasonStart),
     season_start: seasonStart,
@@ -98,8 +107,8 @@ export async function createSeasonBook(seasonStart: number, title: string | unde
   return toBook(data as BookRow)
 }
 
-function counts(plan: Plan) {
-  const s = planSummary(plan)
+function counts(plan: AnyPlan) {
+  const s = isPlanV2(plan) ? planV2Summary(plan) : planSummary(plan)
   return { beat_count: s.beatCount, spread_count: s.spreadCount, carded_count: s.cardedCount }
 }
 
@@ -107,7 +116,7 @@ function counts(plan: Plan) {
  * Save the plan (and title) if nobody has saved since `revision`. On a
  * conflict the caller gets 409 and reloads; nothing is merged silently.
  */
-export async function saveSeasonBook(slug: string, revision: number, patch: { plan: Plan; title: string }, by: string | null): Promise<SeasonBook> {
+export async function saveSeasonBook(slug: string, revision: number, patch: { plan: AnyPlan; title: string }, by: string | null): Promise<SeasonBook> {
   const { data, error } = await createServiceClient().from(TABLE).update({
     plan: patch.plan,
     title: patch.title,

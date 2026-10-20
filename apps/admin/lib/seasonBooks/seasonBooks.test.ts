@@ -1,6 +1,6 @@
 // Run: pnpm --filter admin exec tsx lib/seasonBooks/seasonBooks.test.ts
 import assert from 'node:assert/strict'
-import { findBeats, goalsByMonth, monthEnd, pointsRace, resultsStrip, standings, type MatchRow } from './matches'
+import { findBeats, goalsByMonth, leaderByDate, monthEnd, pointsRace, positionsByRound, resultsStrip, standings, type MatchRow } from './matches'
 import {
   advanceStatus, beatIssues, cardIssues, chapterForMonth, emptySpread, isBookView, nextTemplate, pacingIssues,
   parseSeasonSlug, planSchema, seasonMonths, seasonSlug, sortSpreads, starterPlan,
@@ -30,6 +30,9 @@ assert.equal(monthEnd('2004-02'), '2004-02-29')
 assert.deepEqual(pointsRace(league, ['Reds'])[0].points.map(p => p.pts), [1, 2, 3, 6, 9, 12, 13])
 assert.deepEqual(resultsStrip(league, 'Blues').map(g => g.r), ['W', 'W', 'W', 'L', 'L', 'L', 'D'])
 assert.equal(goalsByMonth(league).find(x => x.month === '2003-11')!.goals, 11)
+assert.deepEqual(positionsByRound(league, 'Reds').map(r => r.pos), [2, 2, 2, 2, 1, 1, 1])
+assert.deepEqual(leaderByDate(league).map(l => l.leader), ['Blues', 'Blues', 'Blues', 'Blues', 'Reds', 'Reds', 'Reds'])
+assert.deepEqual(leaderByDate(league).map(l => l.margin).slice(4), [0, 3, 3])
 
 const beats = findBeats(2003, 'Test League', league, true)
 const texts = beats.map(b => b.text)
@@ -120,3 +123,78 @@ assert.ok(unsafeSvg('<svg><a xlink:href="https://evil"/></svg>'))
 assert.ok(!unsafeSvg('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#a"/><path d="M0 0"/></svg>'))
 
 console.log('seasonBooks ok')
+
+// ---------------------------------------------------------------------------
+// Season spreads (plan v2): conversion, the book's spreads, pages, tabs and checks.
+import {
+  bookIssues, bookSpreads, convertToSeasonSpreads, editorTabsFor, fillLeaguePart, headlineLines, isSeasonBookView, pageCount, parseAnyPlan,
+  planV2Schema, proposeHonourable, sameClub, spreadIssues, spreadKeyFor, spreadRow, starterPlanV2, withScope, openBlockers, advanceBookStatus,
+  type LeaguePart,
+} from './seasonSpreads'
+
+const v1 = {
+  beats: [
+    { id: 'b-1', text: 'Reds went unbeaten.', month: '2004-05', kind: 'record' as const, strength: 3 as const, teams: 'Reds', evidence: '' },
+    { id: 'b-2', text: 'Reds took top spot from Blues.', month: '2003-10', kind: 'title-race' as const, strength: 2 as const, teams: 'Reds | Blues', evidence: '' },
+  ],
+  spreads: [emptySpread('cover', 'cover'), emptySpread('intro', 'intro'), emptySpread('2003-10', 'hero'), emptySpread('2003-11', 'breather')],
+}
+const v2 = convertToSeasonSpreads(v1, 2003)
+assert.ok(planV2Schema.safeParse(v2).success)
+assert.equal(v2.legacy!.length, 2)
+assert.equal(v2.frame.cover.template, 'cover')
+assert.deepEqual(v2.beats.map(b => b.spreadKey), ['team:reds', null])
+assert.deepEqual(v2.scope.leagues, ['Premier League', 'LaLiga', 'Serie A', 'Bundesliga', 'Ligue 1'])
+assert.deepEqual(v2.scope.european, ['Champions League', 'UEFA Cup'])
+assert.deepEqual(v2.parts.map(p => p.kind), ['intro', 'league', 'league', 'league', 'league', 'league', 'european', 'domestic', 'honourable', 'outro'])
+assert.equal(pageCount(v2), (3 + 5 + 2 + 7) * 2)
+assert.ok(parseAnyPlan(v2).success && parseAnyPlan(v1).success && !parseAnyPlan({ version: 2 }).success)
+assert.equal(parseAnyPlan({ version: 3, beats: [], spreads: [] }).success, false)
+
+// The roster fills clubs by final position, keeps exclusions, and a manual order survives a rebuild.
+const epl = v2.parts.find((p): p is LeaguePart => p.kind === 'league' && p.league === 'Premier League')!
+const filled = fillLeaguePart({ ...epl, excluded: [{ teamId: 'Greens', reason: 'folded' }] }, ['Reds', 'Blues', 'Whites', 'Greens'])
+assert.deepEqual(filled.teams, ['Reds', 'Blues', 'Whites'])
+assert.deepEqual(fillLeaguePart({ ...filled, order: 'manual', teams: ['Whites', 'Reds'] }, ['Reds', 'Blues', 'Whites', 'Greens']).teams, ['Whites', 'Reds', 'Blues'])
+const withClubs = { ...v2, parts: v2.parts.map(p => p === epl ? filled : p) }
+const planned = bookSpreads(withClubs)
+assert.deepEqual(planned.slice(0, 4).map(s => s.key), ['league:premier-league', 'team:reds', 'team:blues', 'team:whites'])
+assert.equal(planned.filter(s => s.kind === 'competition').length, 9)
+assert.equal(spreadKeyFor('team', 'Deportivo La Coruña'), 'team:deportivo-la-coruna')
+assert.ok(bookIssues(withClubs, new Map([['Premier League', ['Reds', 'Blues', 'Whites', 'Greens', 'Pinks']]])).some(i => i.check === 'roster-complete' && i.message.includes('Pinks')))
+assert.ok(!bookIssues(withClubs, new Map([['Premier League', ['Reds', 'Blues', 'Whites', 'Greens']]])).some(i => i.check === 'roster-complete'))
+const narrowed = withScope(withClubs, { ...withClubs.scope, leagues: ['LaLiga', 'Premier League'] })
+assert.deepEqual(narrowed.parts.filter((p): p is LeaguePart => p.kind === 'league').map(p => [p.league, p.teams.length]), [['LaLiga', 0], ['Premier League', 3]])
+
+// Honourable mentions: clubs outside the leagues that won, reached the final or a Champions League semi-final.
+const ucl: MatchRow[] = [
+  { d: '2004-05-05', s: 'SF', h: 'Monaco', a: 'Chelsea', hg: 2, ag: 2 }, { d: '2004-05-05', s: 'SF', h: 'Porto', a: 'Deportivo', hg: 1, ag: 0 },
+  { d: '2004-05-26', s: 'final', h: 'Monaco', a: 'Porto', hg: 0, ag: 3 },
+]
+assert.deepEqual(proposeHonourable('Champions League', ucl, ['Chelsea', 'AS Monaco', 'Deportivo La Coruna']).map(p => [p.teamId, p.reason]), [['Porto', 'Won the Champions League']])
+assert.ok(sameClub('Man United', 'Manchester United FC') && sameClub('Porto', 'FC Porto') && !sameClub('Porto', 'Sporting'))
+
+// Editor tabs per template, and the checks that run on the row alone.
+assert.deepEqual(editorTabsFor('team').map(t => t.id), ['story', 'moments', 'cups', 'side', 'people', 'modules', 'colour-marks', 'checks'])
+assert.deepEqual(editorTabsFor('league').map(t => t.id), ['story', 'moments', 'race-lead', 'players', 'modules', 'colour-marks', 'checks'])
+assert.deepEqual(editorTabsFor('competition').map(t => t.id), ['story', 'moments', 'field-bracket', 'oddities', 'modules', 'colour-marks', 'checks'])
+assert.ok(isSeasonBookView('roster') && isSeasonBookView('legacy') && !isSeasonBookView('cards'))
+assert.equal(headlineLines('NOBODY BEAT ARSENAL'), 2)
+assert.equal(headlineLines('THE OUTSIDERS'), 2)
+assert.equal(headlineLines('HALF A TITLE'), 1)
+assert.equal(headlineLines('TWENTY SIX WINS TWELVE DRAWS NO DEFEATS'), 4)
+const reds = spreadRow(withClubs, planned[1])
+assert.equal(reds.kind, 'team')
+assert.equal(advanceBookStatus(reds), 'data')
+const drafted = { ...reds, editorial: { ...reds.editorial, headline: 'TWENTY SIX WINS TWELVE DRAWS NO DEFEATS', story: 'word '.repeat(31) }, team: { ...reds.team!, coach: { ...reds.team!.coach, context: 'Second season in charge.' } } }
+assert.equal(advanceBookStatus(drafted), 'draft')
+const issues = spreadIssues(drafted, 2003)
+assert.deepEqual(issues.map(i => i.check), ['headline-fit', 'copy-length', 'sourced'])
+assert.equal(openBlockers(drafted, 2003).length, 1)
+assert.equal(openBlockers({ ...drafted, checkOverrides: [{ check: 'sourced', reason: 'club programme, offline', by: '' }] }, 2003).length, 0)
+assert.ok(spreadIssues({ ...reds, editorial: { ...reds.editorial, moments: [{ date: '2005-01-01', text: 'x', eventId: null }] } }, 2003).some(i => i.check === 'moments'))
+assert.ok(spreadIssues({ ...reds, palette: { text: '#888888', page1Ground: '#999999' } }, 2003).some(i => i.check === 'contrast'))
+assert.ok(planV2Schema.safeParse(starterPlanV2(2003)).success)
+assert.ok(!planV2Schema.safeParse({ ...v2, spreads: { 'nope:x': reds } }).success)
+
+console.log('seasonSpreads ok')

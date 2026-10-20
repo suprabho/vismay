@@ -284,12 +284,109 @@ story links.
 
 ## Books tab (/footshorts/books)
 
-The production desk for the season-book series (one season per book, one
-month per chapter; data in
+The production desk for the season-book series (one season per book; data in
 [vizmaya-data/football-seasons](../../vizmaya-data/football-seasons/README.md)).
-Work in spreads, not pages: each spread is one claim with one visual. The
-book page (`/footshorts/books/<2003-04>`, `?view=` deep-links) walks the
-workflow in order:
+A book has one of two formats, told apart by its plan's `version` (read from
+the JSONB as `plan->version` for the shelf, so no column was added):
+
+- **Season spreads** (plan v2, the default for new books; spec: *Spread
+  planner & builder*). The book is built from data spreads in the team-spread
+  visual language: a **league spread** per league, **one team spread per
+  club** in its colours, a **competition spread** per European and domestic
+  cup, and **honourable mentions** (team spreads for clubs outside the covered
+  leagues, each with a stated reason). Fixed part order: Introduction → per
+  league (league spread, then its clubs by final position unless pinned) →
+  European competitions → domestic competitions (by country in league order)
+  → honourable mentions → Season in numbers. Model and maths in
+  [lib/seasonBooks/seasonSpreads.ts](lib/seasonBooks/seasonSpreads.ts):
+  `planV2Schema` (scope, parts, the three frame spreads in the v1 card shape,
+  beats with a `spreadKey`, archived `legacy` spreads), `bookSpreadSchema`
+  (one spread's editorial row: headline ≤ 40 chars, story stat, story ≤ 30
+  words, up to four moments, template-specific fields, module settings,
+  palette overrides, pack ref, check overrides, status data → draft → checked
+  → approved → handed-off), `bookSpreads()` (parts → spreads in reading
+  order), page count against the KDP 550-page limit, `EDITOR_TABS`,
+  `SPREAD_MODULES` and `SPREAD_CHECKS` from the spec, the checks that run on
+  the row alone, and the one-way `convertToSeasonSpreads()`.
+  **Interim storage:** each spread's editorial row sits on the book plan under
+  `spreads[key]` in the row's own shape until the spec's `admin_book_spreads`
+  table (per-spread `revision`), `admin_spread_packs` and the builder land;
+  moving it is a data move. The render (`season/SpreadCanvas`) follows the six
+  reference spreads on the design canvas: the shared page-1 frame (kicker,
+  two-line headline at 55 pt, kit-derived mark, story stat at 53 pt, story
+  copy, season record, marks line, running line) and each template's modules
+  at the reference positions, in Archivo (loaded with `next/font` on the book
+  page), with the reference palettes for the six reference spreads and the
+  series navy and gold standing in for the rest. Modules the admin's match
+  data can draw draw it (team: climb, calendar, season record, radar; league:
+  race, lead strip, days at the top, table with result pips; competition:
+  bracket, groups, finalists, season record); lineups, minutes, transfers,
+  awards, scorers, cup ties and the choropleth keep the reference's form as
+  dashed placeholders until the data packs land, and the Spreads grid shows
+  every pack as "not built". The geometry, type scale, icons, position
+  colours and reference palettes are data in
+  [lib/seasonBooks/spreadLayouts.ts](lib/seasonBooks/spreadLayouts.ts)
+  (`SPREAD_CANVAS`, `SPREAD_TEMPLATES` with every region in pt,
+  `SPREAD_TYPE_SCALE`, `SPREAD_ICONS`, `REFERENCE_PALETTES`), the builder's
+  system v2 exports until system.ts moves there.
+- **Claim spreads** (plan v1): one claim with one visual per spread, about 60
+  a season, the workflow below. Existing books keep opening here unchanged;
+  **Convert to season spreads** in the book header is the explicit one-way
+  action (cover and intro become frame spreads, beats keep their text and gain
+  a `spreadKey` when they name one club, month spreads move to a read-only
+  Legacy view).
+
+**Season-spreads views** (`/footshorts/books/<2003-04>?view=`, in workflow
+order; `?spread=<key>&tab=<tab>` deep-links the editor):
+
+1. **Roster** (`roster`, meta `114 spreads · 228 pp`) — leagues in order (the
+   five big leagues by default; the context leagues can be added), clubs per
+   league from its table in `admin_historical_matches` (included by final
+   position, or left out with a reason, or reordered by hand; a manual order
+   survives a rebuild), European and domestic competitions as toggles (only
+   the Champions League has match data in the admin; cups come from
+   `cup_matches.csv` later), honourable mentions proposed by the rule
+   (European winner, European finalist or Champions League semi-finalist
+   from outside the in-scope leagues, matched loosely across source
+   spellings) and confirmed with a reason, or added by hand, up to six.
+2. **Spreads** (`spreads`, meta `12/114 approved`) — every spread as a
+   thumbnail grouped by part: kind, status, pack freshness, check count;
+   filters by kind and status.
+3. **Editor** (`editor&spread=<key>`) — the spread list on the left, the
+   render in the middle (clicking a module opens the tab and field that drive
+   it), and on the right **Angles** (the beat finder pointed at the subject's
+   matches, plus the book beats keyed to it: moment and story candidates that
+   never write on their own) above the **editor tabs**. Every template has
+   Story (headline with a live two-line fit at 55 pt, story stat with
+   suggestions from the match data, story copy with a 30-word meter, the
+   names drawn in colour), Moments (up to four dated moments, picked from the
+   season's verified `admin_historical_events` rows or typed), Modules
+   (enable, variant, nudge ± pt, note, reset per module), Colour and marks
+   (the stand-in palette, per-role overrides with contrast readouts, every
+   mark the spread uses as placeholders until `admin_club_marks` exists) and
+   Checks (the registry for the template: the row-level checks run live,
+   the rest wait for the builder; a blocking failure takes an override with a
+   reason, and `checked` is only selectable when none is open). Team spreads
+   add Cups (a paragraph and rail/ladder variant per competition in scope),
+   Side (turning point, coach with context, assistants and a source URL, XI
+   split date) and People (story players, heatmap players, module notes);
+   league spreads add Race and lead (clubs in colour, two dated lead
+   annotations, the halfway note) and Players (awards with source URLs);
+   competition spreads add Field and bracket (highlighted and pinned clubs,
+   finalists by default; map grouping by country or division) and Oddities
+   (six one-liners tied to their proving stat, candidates from the results).
+   Status advances itself data → draft from the row's content, never back.
+4. **Flatplan** (`flatplan`, meta `228 pp`) — page pairs in reading order
+   with part dividers, page numbers and the total against the KDP limit.
+5. **System** (`system`) — the season-spread design system, read-only
+   (`season/SeasonSystemView`): the canvas, each template's regions outlined
+   on a sample render with a region table, the type scale, the reference and
+   stand-in palettes with the position and result colours, the icons and
+   marks rules, the module registry and the checks; the series system v1 the
+   frame spreads use sits below it. **Legacy** shows a converted book's
+   archived month spreads, read-only.
+
+**Claim-spreads views** (plan v1) walk the older workflow in order:
 
 1. **Beats** — the season's 15–25 one-sentence moments, each in a month, with
    strength 1–3 (3 = could open a chapter). The **beat finder** proposes
@@ -345,11 +442,12 @@ changes through review (bump `SYSTEM_VERSION`), never per book.
 
 - **Storage:** `admin_season_books` (footshorts Supabase, migration
   [20261014000000](../../supabase/footshorts/migrations/20261014000000_admin_season_books.sql)),
-  private and RLS-locked: one row per book, the plan (beats + spreads) as
-  JSONB, validated by `planSchema` in
-  [lib/seasonBooks/plan.ts](lib/seasonBooks/plan.ts). Saves are optimistic
-  on `revision` (409 on a stale write; the page asks to reload, nothing is
-  merged). Autosaves 1.2s after the last edit.
+  private and RLS-locked: one row per book, the plan as JSONB, validated by
+  `parseAnyPlan` (v1 `planSchema` in
+  [lib/seasonBooks/plan.ts](lib/seasonBooks/plan.ts), v2 `planV2Schema` in
+  [seasonSpreads.ts](lib/seasonBooks/seasonSpreads.ts), by the plan's
+  `version`). Saves are optimistic on `revision` (409 on a stale write; the
+  page asks to reload, nothing is merged). Autosaves 1.2s after the last edit.
 - **Match data:** `admin_historical_matches` (migration 20261013000000,
   loaded by `pnpm --filter @footshorts/worker history:import`). The API ships
   one competition-season's played matches; standings, races, strips and the
@@ -357,13 +455,22 @@ changes through review (bump `SYSTEM_VERSION`), never per book.
   [lib/seasonBooks/matches.ts](lib/seasonBooks/matches.ts) (3/1/0, no
   deductions; tie-break GD, GF, name). Team names are the raw source labels.
 - **API (`isAuthed()`-gated, same-origin writes):** `GET|POST
-  /api/footshorts/books`, `GET|PUT|DELETE /api/footshorts/books/[slug]`,
+  /api/footshorts/books` (`POST { seasonStart, title?, format? }`, season
+  spreads unless `format: 'claim-spreads'`), `GET|PUT|DELETE
+  /api/footshorts/books/[slug]` (`PUT` takes a v1 or v2 plan),
   `GET /api/footshorts/books/matches?season=&competition=` (competition from
   `BOOK_COMPETITIONS`). Missing tables answer 503 with the migration to apply.
+  The spec's per-spread, pack, draft, render and export routes are not built.
 - **UI:** [components/books/](components/books/) — `BookWorkspace` (load,
-  autosave, views), one component per view, `SpreadThumb` (template regions on
-  the grid, sized in container-query units from the type scale), `DataChart`,
-  `SketchPad`, `ChartGlyph`, `MatchData` (one fetch per competition, shared).
+  autosave, header, the convert action; hands the plan to
+  `ClaimSpreadsPlanner` or `season/SeasonSpreadsPlanner` by format), one
+  component per view (`season/RosterView`, `SpreadsView`, `SpreadEditorView`
+  with its tab panels in `EditorTabs`, `BookFlatplanView`, `LegacyView`;
+  `SpreadCanvas` is the 1190 × 842 pt render stand-in), `SpreadThumb`
+  (v1 template regions on the grid, sized in container-query units from the
+  type scale), `DataChart`, `SketchPad`, `ChartGlyph`, `MatchData` (one fetch
+  per competition, shared; `season/useBookData` reads several at once for the
+  roster, proposals and a spread's subject).
 - **Tests:** `pnpm --filter admin exec tsx lib/seasonBooks/seasonBooks.test.ts`.
 
 ## VizNBA Pipeline tab (/viznba/pipeline)
