@@ -311,10 +311,24 @@ the JSONB as `plan->version` for the shelf, so no column was added):
   **Interim storage:** each spread's editorial row sits on the book plan under
   `spreads[key]` in the row's own shape until the spec's `admin_book_spreads`
   table (per-spread `revision`), `admin_spread_packs` and the builder land;
-  moving it is a data move. There is no data pack, builder, derived palette or
-  club-marks table yet: the render is the templates' module layout on the
-  1190 × 842 pt canvas with the editorial fields live and the charts as
-  labelled blocks, and the Spreads grid shows every pack as "not built".
+  moving it is a data move. The render (`season/SpreadCanvas`) follows the six
+  reference spreads on the design canvas: the shared page-1 frame (kicker,
+  two-line headline at 55 pt, kit-derived mark, story stat at 53 pt, story
+  copy, season record, marks line, running line) and each template's modules
+  at the reference positions, in Archivo (loaded with `next/font` on the book
+  page), with the reference palettes for the six reference spreads and the
+  series navy and gold standing in for the rest. Modules the admin's match
+  data can draw draw it (team: climb, calendar, season record, radar; league:
+  race, lead strip, days at the top, table with result pips; competition:
+  bracket, groups, finalists, season record); lineups, minutes, transfers,
+  awards, scorers, cup ties and the choropleth keep the reference's form as
+  dashed placeholders until the data packs land, and the Spreads grid shows
+  every pack as "not built". The geometry, type scale, icons, position
+  colours and reference palettes are data in
+  [lib/seasonBooks/spreadLayouts.ts](lib/seasonBooks/spreadLayouts.ts)
+  (`SPREAD_CANVAS`, `SPREAD_TEMPLATES` with every region in pt,
+  `SPREAD_TYPE_SCALE`, `SPREAD_ICONS`, `REFERENCE_PALETTES`), the builder's
+  system v2 exports until system.ts moves there.
 - **Claim spreads** (plan v1): one claim with one visual per spread, about 60
   a season, the workflow below. Existing books keep opening here unchanged;
   **Convert to season spreads** in the book header is the explicit one-way
@@ -364,9 +378,13 @@ order; `?spread=<key>&tab=<tab>` deep-links the editor):
    Status advances itself data → draft from the row's content, never back.
 4. **Flatplan** (`flatplan`, meta `228 pp`) — page pairs in reading order
    with part dividers, page numbers and the total against the KDP limit.
-5. **System** (`system`) — the locked series system v1 (the three
-   season-spread templates arrive with system v2), and **Legacy** for a
-   converted book's archived month spreads, read-only.
+5. **System** (`system`) — the season-spread design system, read-only
+   (`season/SeasonSystemView`): the canvas, each template's regions outlined
+   on a sample render with a region table, the type scale, the reference and
+   stand-in palettes with the position and result colours, the icons and
+   marks rules, the module registry and the checks; the series system v1 the
+   frame spreads use sits below it. **Legacy** shows a converted book's
+   archived month spreads, read-only.
 
 **Claim-spreads views** (plan v1) walk the older workflow in order:
 

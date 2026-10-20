@@ -11,6 +11,7 @@ import {
   type BookSpread, type EditorTabId, type PaletteRole, type SpreadIssue,
 } from '@/lib/seasonBooks/seasonSpreads'
 import { BUTTON, ICON_BUTTON, INPUT, LABEL, SELECT, WordMeter } from '../shared'
+import { REFERENCE_PALETTES } from '@/lib/seasonBooks/spreadLayouts'
 import { spreadPalette } from './SpreadCanvas'
 import type { TabProps } from './SpreadEditorView'
 
@@ -514,8 +515,10 @@ function ColourMarksTab({ row, update, spread, data }: TabProps) {
   return (
     <>
       <p className="text-xs text-neutral-500">
-        The palette derives from {spread.kind === 'team' ? 'the kit colours' : spread.kind === 'league' ? 'the league’s flag tile, with the champion’s palette for its line' : 'the competition mark'} once the marks data lands; the stand-in below colours the render until then.
-        Override a role only where the derivation goes wrong.
+        {REFERENCE_PALETTES[row.key]
+          ? 'This spread has a reference palette from the design canvas; the roles below are it, plus your overrides.'
+          : `The palette derives from ${spread.kind === 'team' ? 'the kit colours' : spread.kind === 'league' ? 'the league’s flag tile, with the champion’s palette for its line' : 'the competition mark'} once the marks data lands; the series navy and gold stand in until then.`}
+        {' '}Override a role only where the derivation goes wrong.
       </p>
       <div className="grid grid-cols-3 gap-2">
         {PALETTE_ROLES.map(role => (

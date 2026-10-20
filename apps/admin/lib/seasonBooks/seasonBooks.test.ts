@@ -1,6 +1,6 @@
 // Run: pnpm --filter admin exec tsx lib/seasonBooks/seasonBooks.test.ts
 import assert from 'node:assert/strict'
-import { findBeats, goalsByMonth, monthEnd, pointsRace, resultsStrip, standings, type MatchRow } from './matches'
+import { findBeats, goalsByMonth, leaderByDate, monthEnd, pointsRace, positionsByRound, resultsStrip, standings, type MatchRow } from './matches'
 import {
   advanceStatus, beatIssues, cardIssues, chapterForMonth, emptySpread, isBookView, nextTemplate, pacingIssues,
   parseSeasonSlug, planSchema, seasonMonths, seasonSlug, sortSpreads, starterPlan,
@@ -30,6 +30,9 @@ assert.equal(monthEnd('2004-02'), '2004-02-29')
 assert.deepEqual(pointsRace(league, ['Reds'])[0].points.map(p => p.pts), [1, 2, 3, 6, 9, 12, 13])
 assert.deepEqual(resultsStrip(league, 'Blues').map(g => g.r), ['W', 'W', 'W', 'L', 'L', 'L', 'D'])
 assert.equal(goalsByMonth(league).find(x => x.month === '2003-11')!.goals, 11)
+assert.deepEqual(positionsByRound(league, 'Reds').map(r => r.pos), [2, 2, 2, 2, 1, 1, 1])
+assert.deepEqual(leaderByDate(league).map(l => l.leader), ['Blues', 'Blues', 'Blues', 'Blues', 'Reds', 'Reds', 'Reds'])
+assert.deepEqual(leaderByDate(league).map(l => l.margin).slice(4), [0, 3, 3])
 
 const beats = findBeats(2003, 'Test League', league, true)
 const texts = beats.map(b => b.text)
@@ -177,8 +180,9 @@ assert.deepEqual(editorTabsFor('league').map(t => t.id), ['story', 'moments', 'r
 assert.deepEqual(editorTabsFor('competition').map(t => t.id), ['story', 'moments', 'field-bracket', 'oddities', 'modules', 'colour-marks', 'checks'])
 assert.ok(isSeasonBookView('roster') && isSeasonBookView('legacy') && !isSeasonBookView('cards'))
 assert.equal(headlineLines('NOBODY BEAT ARSENAL'), 2)
-assert.equal(headlineLines('THE OUTSIDERS'), 1)
-assert.equal(headlineLines('TWENTY SIX WINS TWELVE DRAWS NO DEFEATS'), 3)
+assert.equal(headlineLines('THE OUTSIDERS'), 2)
+assert.equal(headlineLines('HALF A TITLE'), 1)
+assert.equal(headlineLines('TWENTY SIX WINS TWELVE DRAWS NO DEFEATS'), 4)
 const reds = spreadRow(withClubs, planned[1])
 assert.equal(reds.kind, 'team')
 assert.equal(advanceBookStatus(reds), 'data')

@@ -13,6 +13,7 @@ import { SystemView } from '../SystemView'
 import { BookFlatplanView } from './BookFlatplanView'
 import { LegacyView } from './LegacyView'
 import { RosterView } from './RosterView'
+import { SeasonSystemView } from './SeasonSystemView'
 import { SpreadEditorView } from './SpreadEditorView'
 import { SpreadsView } from './SpreadsView'
 import { clubsByLeague, useLeagueData, usePlannedSpreads } from './useBookData'
@@ -74,7 +75,7 @@ export function SeasonSpreadsPlanner({ plan, seasonStart, title, edit, initial, 
     { id: 'spreads', label: '2 · Spreads', meta: `${counts.approved}/${spreads.length} approved`, warn: counts.blocked },
     { id: 'editor', label: '3 · Editor', meta: current ? current.label : 'no spread', warn: counts.current },
     { id: 'flatplan', label: '4 · Flatplan', meta: `${pageCount(plan)} pp`, warn: counts.pages },
-    { id: 'system', label: 'System', meta: `v${SYSTEM_VERSION}`, locked: true },
+    { id: 'system', label: 'System', meta: 'templates v1.2 / 1.0', locked: true },
   ]
   if (plan.legacy?.length) tabs.push({ id: 'legacy', label: 'Legacy', meta: `${plan.legacy.length} spreads` })
 
@@ -93,13 +94,11 @@ export function SeasonSpreadsPlanner({ plan, seasonStart, title, edit, initial, 
         {view === 'flatplan' && <BookFlatplanView {...viewProps} spreads={spreads} issues={issues} />}
         {view === 'system' && (
           <>
-            <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+            <SeasonSystemView seasonStart={seasonStart} />
+            <div className="mx-auto max-w-7xl px-4 pt-2 sm:px-6">
               <div className={`${PANEL} flex items-start gap-3 p-4 text-sm text-neutral-300`}>
                 <Lock size={18} className="mt-0.5 shrink-0 text-amber-300" />
-                <p>
-                  A season-spreads book is set on the <span className="text-white">league, team and competition</span> templates (1190 × 842 pt canvas, fold at 595), which arrive with system v2.
-                  Until then this is the series system v{SYSTEM_VERSION} the frame spreads use; the editor’s Modules tab lists each template’s modules.
-                </p>
+                <p>Below: the series system v{SYSTEM_VERSION} the three frame spreads (cover, intro, season in numbers) are still set in.</p>
               </div>
             </div>
             <SystemView />

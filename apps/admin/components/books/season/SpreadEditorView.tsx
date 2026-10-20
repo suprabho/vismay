@@ -103,11 +103,11 @@ export function SpreadEditorView({ plan, seasonStart, edit, spreads, spread, tab
             ))}
           </select>
         </header>
-        <SpreadCanvas spread={spread} row={row} seasonStart={seasonStart} onModule={onModule} activeModule={activeModule}
+        <SpreadCanvas spread={spread} row={row} seasonStart={seasonStart} data={{ rows: data.rows, competition: data.competition }} onModule={onModule} activeModule={activeModule}
           className="w-full rounded-md shadow-lg shadow-black/40" />
         <p className="text-xs text-neutral-500">
           {data.competition
-            ? data.entry?.status === 'ready' ? `${data.rows.length} ${data.competition} matches loaded; charts draw from the spread’s data pack once the pack worker runs.` : data.entry?.status === 'error' ? data.entry.error : `Reading ${data.competition}…`
+            ? data.entry?.status === 'ready' ? `${data.rows.length} ${data.competition} matches drawn; lineups, minutes, transfers, awards and cup ties arrive with the spread’s data pack.` : data.entry?.status === 'error' ? data.entry.error : `Reading ${data.competition}…`
             : 'No competition data for this spread.'}
           {' '}Click a module to open the tab that drives it.
         </p>

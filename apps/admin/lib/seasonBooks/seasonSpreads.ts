@@ -612,8 +612,8 @@ export interface SpreadIssue {
   field?: string
 }
 
-/** Headline at 55 pt, 800, uppercase, in a 515 pt column: about 0.62 em a character, so ~15 characters a line. */
-export const HEADLINE_CHARS_PER_LINE = 15
+/** Headline at 55 pt, 800, uppercase, in the 420 pt column beside the mark: about 0.62 em a character, so ~12 characters a line. */
+export const HEADLINE_CHARS_PER_LINE = 12
 export const HEADLINE_LINES = 2
 
 /** How many lines a headline takes at 55 pt in the identity block, breaking at spaces. */
