@@ -13,6 +13,7 @@
  * components and the MCP server can all use it.
  */
 
+import type { RandomizerId } from '@vismay/randomizer/types'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 
 export type HtmlStoryFormat = 'scroll' | 'book' | 'board' | 'deck' | 'recap'
@@ -142,8 +143,8 @@ export function formatExampleUrl(app: HtmlStoryApp, format: PagedHtmlStoryFormat
 /**
  * Which format a randomizer spin's story tends to suit, for the brief's hint:
  * an epic is a journey told in order (a book), an Atlas spin a place built
- * from many pieces (a board), a Desk, Football Desk or NBA Desk spin an argument (a deck).
+ * from many pieces (a board), a Desk, Football Desk, NBA Desk or OCW Desk spin an argument (a deck).
  */
-export function suggestedFormatFor(randomizer: 'desk' | 'atlas' | 'epics' | 'footshorts' | 'viznba'): Exclude<PagedHtmlStoryFormat, 'recap'> {
+export function suggestedFormatFor(randomizer: RandomizerId): Exclude<PagedHtmlStoryFormat, 'recap'> {
   return randomizer === 'epics' ? 'book' : randomizer === 'atlas' ? 'board' : 'deck'
 }

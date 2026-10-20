@@ -1,0 +1,603 @@
+{
+  "fields": [
+    {
+      "id": 675,
+      "name": "Art, Design & Architecture"
+    },
+    {
+      "id": 684,
+      "name": "Business & Management"
+    },
+    {
+      "id": 698,
+      "name": "Data Science, Analytics & Computer Technology"
+    },
+    {
+      "id": 725,
+      "name": "Education & Teaching"
+    },
+    {
+      "id": 738,
+      "name": "Energy, Climate & Sustainability"
+    },
+    {
+      "id": 747,
+      "name": "Engineering"
+    },
+    {
+      "id": 774,
+      "name": "Health & Medicine"
+    },
+    {
+      "id": 759,
+      "name": "Humanities"
+    },
+    {
+      "id": 767,
+      "name": "Innovation & Entrepreneurship"
+    },
+    {
+      "id": 731,
+      "name": "Science & Math"
+    },
+    {
+      "id": 712,
+      "name": "Social Sciences"
+    }
+  ],
+  "topics": [
+    {
+      "id": 676,
+      "field": 675,
+      "name": "Architecture"
+    },
+    {
+      "id": 683,
+      "field": 675,
+      "name": "Art History"
+    },
+    {
+      "id": 677,
+      "field": 675,
+      "name": "Environmental Design"
+    },
+    {
+      "id": 678,
+      "field": 675,
+      "name": "Game Design"
+    },
+    {
+      "id": 681,
+      "field": 675,
+      "name": "Media Studies"
+    },
+    {
+      "id": 679,
+      "field": 675,
+      "name": "Performing Arts"
+    },
+    {
+      "id": 682,
+      "field": 675,
+      "name": "Real Estate"
+    },
+    {
+      "id": 680,
+      "field": 675,
+      "name": "Visual Arts"
+    },
+    {
+      "id": 693,
+      "field": 684,
+      "name": "Business Analytics"
+    },
+    {
+      "id": 696,
+      "field": 684,
+      "name": "Digital Business & IT"
+    },
+    {
+      "id": 685,
+      "field": 684,
+      "name": "Entrepreneurship"
+    },
+    {
+      "id": 692,
+      "field": 684,
+      "name": "Family Enterprise"
+    },
+    {
+      "id": 690,
+      "field": 684,
+      "name": "Finance & Accounting"
+    },
+    {
+      "id": 697,
+      "field": 684,
+      "name": "Management"
+    },
+    {
+      "id": 688,
+      "field": 684,
+      "name": "Marketing"
+    },
+    {
+      "id": 687,
+      "field": 684,
+      "name": "Negotiation & Communication"
+    },
+    {
+      "id": 691,
+      "field": 684,
+      "name": "Operations"
+    },
+    {
+      "id": 686,
+      "field": 684,
+      "name": "Organizations & Leadership"
+    },
+    {
+      "id": 695,
+      "field": 684,
+      "name": "Strategy & Innovation"
+    },
+    {
+      "id": 689,
+      "field": 684,
+      "name": "Supply Chain"
+    },
+    {
+      "id": 694,
+      "field": 684,
+      "name": "Systems Thinking"
+    },
+    {
+      "id": 699,
+      "field": 698,
+      "name": "AI"
+    },
+    {
+      "id": 702,
+      "field": 698,
+      "name": "Algorithms and Data Structures"
+    },
+    {
+      "id": 706,
+      "field": 698,
+      "name": "AR/VR/MR/XR"
+    },
+    {
+      "id": 705,
+      "field": 698,
+      "name": "Blockchain"
+    },
+    {
+      "id": 710,
+      "field": 698,
+      "name": "Computer Science"
+    },
+    {
+      "id": 707,
+      "field": 698,
+      "name": "CyberSecurity"
+    },
+    {
+      "id": 711,
+      "field": 698,
+      "name": "Data Science"
+    },
+    {
+      "id": 708,
+      "field": 698,
+      "name": "Machine Learning"
+    },
+    {
+      "id": 703,
+      "field": 698,
+      "name": "Networks and Security"
+    },
+    {
+      "id": 700,
+      "field": 698,
+      "name": "Programming & Coding"
+    },
+    {
+      "id": 701,
+      "field": 698,
+      "name": "Software Design and Engineering"
+    },
+    {
+      "id": 704,
+      "field": 698,
+      "name": "User Experience"
+    },
+    {
+      "id": 709,
+      "field": 698,
+      "name": "Visualization"
+    },
+    {
+      "id": 713,
+      "field": 712,
+      "name": "Anthropology"
+    },
+    {
+      "id": 714,
+      "field": 712,
+      "name": "Communication"
+    },
+    {
+      "id": 715,
+      "field": 712,
+      "name": "Economics"
+    },
+    {
+      "id": 723,
+      "field": 712,
+      "name": "Gender Studies"
+    },
+    {
+      "id": 716,
+      "field": 712,
+      "name": "Geography"
+    },
+    {
+      "id": 724,
+      "field": 712,
+      "name": "International Development"
+    },
+    {
+      "id": 717,
+      "field": 712,
+      "name": "Law"
+    },
+    {
+      "id": 720,
+      "field": 712,
+      "name": "Policy and Administration"
+    },
+    {
+      "id": 718,
+      "field": 712,
+      "name": "Political Science"
+    },
+    {
+      "id": 719,
+      "field": 712,
+      "name": "Psychology"
+    },
+    {
+      "id": 721,
+      "field": 712,
+      "name": "Sociology"
+    },
+    {
+      "id": 722,
+      "field": 712,
+      "name": "Urban Studies"
+    },
+    {
+      "id": 729,
+      "field": 725,
+      "name": "Digital Learning"
+    },
+    {
+      "id": 727,
+      "field": 725,
+      "name": "Education Policy"
+    },
+    {
+      "id": 728,
+      "field": 725,
+      "name": "Educational Technology"
+    },
+    {
+      "id": 730,
+      "field": 725,
+      "name": "Faculty Leadership"
+    },
+    {
+      "id": 726,
+      "field": 725,
+      "name": "Pedagogy and Curriculum"
+    },
+    {
+      "id": 732,
+      "field": 731,
+      "name": "Biology"
+    },
+    {
+      "id": 733,
+      "field": 731,
+      "name": "Chemistry"
+    },
+    {
+      "id": 734,
+      "field": 731,
+      "name": "Cognitive Science"
+    },
+    {
+      "id": 735,
+      "field": 731,
+      "name": "Earth Science"
+    },
+    {
+      "id": 737,
+      "field": 731,
+      "name": "Mathematics"
+    },
+    {
+      "id": 736,
+      "field": 731,
+      "name": "Physics"
+    },
+    {
+      "id": 744,
+      "field": 738,
+      "name": "Adaptation and Resilience"
+    },
+    {
+      "id": 742,
+      "field": 738,
+      "name": "Built Environment"
+    },
+    {
+      "id": 745,
+      "field": 738,
+      "name": "Climate and Energy Policy"
+    },
+    {
+      "id": 741,
+      "field": 738,
+      "name": "Climate Science"
+    },
+    {
+      "id": 784,
+      "field": 738,
+      "name": "Ecosystems"
+    },
+    {
+      "id": 739,
+      "field": 738,
+      "name": "Energy"
+    },
+    {
+      "id": 740,
+      "field": 738,
+      "name": "Environmental and Climate Justice"
+    },
+    {
+      "id": 743,
+      "field": 738,
+      "name": "Natural Systems"
+    },
+    {
+      "id": 746,
+      "field": 738,
+      "name": "Sustainable Business"
+    },
+    {
+      "id": 748,
+      "field": 747,
+      "name": "Aerospace Engineering"
+    },
+    {
+      "id": 749,
+      "field": 747,
+      "name": "Biological Engineering"
+    },
+    {
+      "id": 750,
+      "field": 747,
+      "name": "Chemical Engineering"
+    },
+    {
+      "id": 751,
+      "field": 747,
+      "name": "Civil Engineering"
+    },
+    {
+      "id": 752,
+      "field": 747,
+      "name": "Electrical Engineering"
+    },
+    {
+      "id": 753,
+      "field": 747,
+      "name": "Environmental Engineering"
+    },
+    {
+      "id": 783,
+      "field": 747,
+      "name": "Manufacturing"
+    },
+    {
+      "id": 754,
+      "field": 747,
+      "name": "Materials Science and Engineering"
+    },
+    {
+      "id": 758,
+      "field": 747,
+      "name": "Mechanical Engineering"
+    },
+    {
+      "id": 755,
+      "field": 747,
+      "name": "Nuclear Engineering"
+    },
+    {
+      "id": 756,
+      "field": 747,
+      "name": "Ocean Engineering"
+    },
+    {
+      "id": 757,
+      "field": 747,
+      "name": "Systems Engineering"
+    },
+    {
+      "id": 760,
+      "field": 759,
+      "name": "History"
+    },
+    {
+      "id": 761,
+      "field": 759,
+      "name": "Language"
+    },
+    {
+      "id": 762,
+      "field": 759,
+      "name": "Linguistics"
+    },
+    {
+      "id": 763,
+      "field": 759,
+      "name": "Literature"
+    },
+    {
+      "id": 765,
+      "field": 759,
+      "name": "Music"
+    },
+    {
+      "id": 764,
+      "field": 759,
+      "name": "Philosophy"
+    },
+    {
+      "id": 766,
+      "field": 759,
+      "name": "Religion"
+    },
+    {
+      "id": 769,
+      "field": 767,
+      "name": "Corporate Innovation"
+    },
+    {
+      "id": 773,
+      "field": 767,
+      "name": "Innovation Ecosystems"
+    },
+    {
+      "id": 770,
+      "field": 767,
+      "name": "Innovation Process"
+    },
+    {
+      "id": 772,
+      "field": 767,
+      "name": "Inventions & Patents"
+    },
+    {
+      "id": 771,
+      "field": 767,
+      "name": "Product Innovation"
+    },
+    {
+      "id": 768,
+      "field": 767,
+      "name": "Startups/New Enterprises"
+    },
+    {
+      "id": 775,
+      "field": 774,
+      "name": "Biomedical Technologies"
+    },
+    {
+      "id": 776,
+      "field": 774,
+      "name": "Health Care Management"
+    },
+    {
+      "id": 778,
+      "field": 774,
+      "name": "Imaging"
+    },
+    {
+      "id": 777,
+      "field": 774,
+      "name": "Immunology"
+    },
+    {
+      "id": 779,
+      "field": 774,
+      "name": "Mental Health"
+    },
+    {
+      "id": 780,
+      "field": 774,
+      "name": "Pathology and Pathophysiology"
+    },
+    {
+      "id": 781,
+      "field": 774,
+      "name": "Pharmacology & Toxicology"
+    },
+    {
+      "id": 782,
+      "field": 774,
+      "name": "Public Health"
+    }
+  ],
+  "kinds": [
+    {
+      "name": "Lecture Notes",
+      "hands_on": false,
+      "description": "The notes or slides for one lecture: one idea, as the instructor laid it out."
+    },
+    {
+      "name": "Readings",
+      "hands_on": false,
+      "description": "An assigned reading or reading list: what the course asks students to read for a session."
+    },
+    {
+      "name": "Lecture Videos",
+      "hands_on": false,
+      "description": "A recorded lecture, with its transcript on the OCW page."
+    },
+    {
+      "name": "Problem Sets",
+      "hands_on": true,
+      "description": "A problem set: questions students solve, often with a solutions file alongside."
+    },
+    {
+      "name": "Exams",
+      "hands_on": true,
+      "description": "An exam paper, often with solutions: what the course decided mattered most."
+    },
+    {
+      "name": "Projects",
+      "hands_on": true,
+      "description": "A project brief or student project: the course applied to something real."
+    }
+  ],
+  "lenses": [
+    {
+      "name": "The one idea",
+      "description": "Explain the single idea the resource turns on, for a reader who has not taken the course, with the resource as the only source for what it says."
+    },
+    {
+      "name": "Work the problem",
+      "description": "Pick one problem (or the hardest exam question) and solve it on the page, step by step, with the arithmetic shown."
+    },
+    {
+      "name": "Chart it",
+      "description": "Find the quantity the resource is about and chart it from a real dataset: 8 or more points, sourced, with the resource explaining what the chart shows."
+    },
+    {
+      "name": "Where it came from",
+      "description": "The history of the idea: who found it, when, what it replaced, and how the course teaches it differently from how it was discovered."
+    },
+    {
+      "name": "Why it matters now",
+      "description": "Tie the idea to something dated in this month's news, and let the resource do the explaining."
+    },
+    {
+      "name": "Across the river",
+      "description": "The same idea as another field sees it: a physics note read by an economist, a planning case read by an engineer."
+    }
+  ]
+}

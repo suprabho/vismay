@@ -8,6 +8,7 @@
  * contract, design direction, icons, charts and content sections stay.
  */
 
+import type { RandomizerId } from '@vismay/randomizer/types'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import {
   HTML_STORY_FORMAT_META,
@@ -627,7 +628,7 @@ export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): 
  * A spin's brief is a scroll brief unless it asks for a format; say which
  * paged format its kind of story tends to suit, and how to ask for it.
  */
-export function formatHintSection(randomizer: 'desk' | 'atlas' | 'epics' | 'footshorts' | 'viznba', format: HtmlStoryFormat): string | null {
+export function formatHintSection(randomizer: RandomizerId, format: HtmlStoryFormat): string | null {
   if (format !== 'scroll') return null
   const s = suggestedFormatFor(randomizer)
   const label = HTML_STORY_FORMAT_META[s].label.toLowerCase()

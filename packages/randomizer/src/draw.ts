@@ -40,11 +40,24 @@
  * re-drawn once; no news inside the drawn window shifts Last night to This
  * week to Evergreen; the head-to-head option prefers an opponent from the
  * team's games on ESPN's schedule.
+ *
+ * The OCW Desk draws from MIT OpenCourseWare in two stages that share one
+ * seeded rng, because its course and resource reels come from a live pool
+ * (the MIT Learn API behind ocw.mit.edu/search) that depends on the first
+ * stage. planOcw() is pure: a field (re-drawn once when it repeats the last
+ * spin's, like the Atlas region), a topic in it (minus topics spun in the
+ * last 30 days), a resource kind (at least one in three spins hands-on:
+ * problem sets, exams or projects), a lens, and one rng draw that picks
+ * where in the pool to look. spins.ts fetches that page of files, and
+ * draw() runs the plan again from the same seed (so it comes out the same)
+ * and picks the file: courses spun in the last 30 days are left out, the
+ * full combination (topic, kind, course, lens) is blocked for 90 days, and
+ * sequence mode walks to the next file of the previous spin's course.
  */
 
-import { ATLAS, DESK, EPICS, FOOTSHORTS, VIZNBA, epicRoute, isPhilosophical } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
-import { gameSummary } from './stub'
+import { gameSummary, ocwCourseLabel } from './stub'
 import {
   GEO_STATUS_TEXT,
   RANDOMIZER_META,
@@ -67,6 +80,16 @@ import {
   type FootshortsNews,
   type FootshortsPicks,
   type FootshortsTeamNews,
+  type NamedOption,
+  type OcwCourse,
+  type OcwDataset,
+  type OcwField,
+  type OcwFile,
+  type OcwKind,
+  type OcwPicks,
+  type OcwPlan,
+  type OcwPool,
+  type OcwTopic,
   type RandomizerId,
   type RuleFired,
   type SpinHistoryEntry,
@@ -108,6 +131,11 @@ export const DRAW_RULES = {
   maxSpinFixtures: 8,
   /** NBA Desk: at most this many games' box scores in a spin's brief. */
   maxSpinGames: 6,
+  /** OCW Desk: files per pool page (one API call), and the search endpoint's hard limit on offset + page. */
+  ocwPageSize: 30,
+  ocwSearchCap: 10000,
+  /** OCW Desk: at most this many sibling files (same course, same kind) kept on a spin. */
+  maxOcwSiblings: 40,
 } as const
 
 const DAY = 864e5
@@ -131,8 +159,10 @@ export interface DrawInput {
   news?: FootshortsNews | null
   /** NBA Desk: the live news snapshot (franchises, their heat, headlines and games). Required. */
   nbaNews?: ViznbaNews | null
+  /** OCW Desk: the page of files planOcw() asked for (spins.ts loadOcwPool). Required. */
+  ocwPool?: OcwPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -219,7 +249,8 @@ function list(names: string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
-export function draw(input: DrawInput): DrawResult {
+/** The seeded context every draw (and the OCW plan) starts from. */
+function context(input: DrawInput): Ctx {
   const now = (input.now ?? new Date()).getTime()
   const locks = new Set(normalizeLocks(input.randomizer, input.locks))
   const prev = input.prev ?? null
@@ -236,6 +267,22 @@ export function draw(input: DrawInput): DrawResult {
     within: (e, days) => now - Date.parse(e.createdAt) < days * DAY,
   }
   if (locks.size && !prev) rule(ctx, 'lock', 'info', 'Locks need a spin on screen to keep values from. Drawing every reel fresh.')
+  return ctx
+}
+
+/**
+ * The OCW Desk's first stage, on its own: what the pool loader needs before
+ * draw() can finish. Pure; the same input gives the same plan draw() will
+ * reproduce. The rules it fires are repeated by draw(), so they are dropped here.
+ */
+export function planOcw(input: DrawInput): OcwPlan {
+  const ctx = context(input)
+  return ocwPlan(ctx, input.datasets?.ocw ?? OCW, input.prev?.picks as OcwPicks | undefined, !!input.sequence)
+}
+
+export function draw(input: DrawInput): DrawResult {
+  const ctx = context(input)
+  const prev = input.prev ?? null
 
   if (input.randomizer === 'desk') return drawDesk(ctx, input.datasets?.desk ?? DESK, prev?.picks as DeskPicks | undefined, input.heat ?? [])
   if (input.randomizer === 'atlas') return drawAtlas(ctx, input.datasets?.atlas ?? ATLAS, prev?.picks as AtlasPicks | undefined, !!input.pair)
@@ -244,6 +291,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'viznba') {
     return drawViznba(ctx, input.datasets?.viznba ?? VIZNBA, prev?.picks as ViznbaPicks | undefined, input.nbaNews ?? null, !!input.pair)
+  }
+  if (input.randomizer === 'ocw') {
+    return drawOcw(ctx, input.datasets?.ocw ?? OCW, prev?.picks as OcwPicks | undefined, input.ocwPool ?? null, !!input.sequence)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -630,6 +680,301 @@ function drawEpics(ctx: Ctx, data: EpicsDataset, prev: EpicsPicks | undefined, s
     summary: `${epic.title} · ${place.name}`,
     rules: ctx.rules,
     meta: { tradition: epic.tradition, types: epic.types },
+  }
+}
+
+/* ---------- OCW Desk ---------- */
+
+/** The course record the pool's file fields give; spins.ts enriches it with the course page afterwards. */
+export function ocwCourseFromFile(f: OcwFile): OcwCourse {
+  return {
+    id: f.courseId,
+    readableId: f.courseReadableId,
+    number: f.courseNumber,
+    title: f.courseTitle,
+    url: `https://ocw.mit.edu/${f.courseSlug.replace(/^\/+|\/+$/g, '')}/`,
+    slug: f.courseSlug,
+    departments: f.departments,
+    year: f.year,
+    semester: f.semester,
+    instructors: [],
+    level: [],
+    courseFeatures: [],
+  }
+}
+
+function lastOcw(ctx: Ctx): { entry: SpinHistoryEntry; picks: OcwPicks } | null {
+  const entry = ctx.kept[ctx.kept.length - 1]
+  const picks = entry?.picks as Partial<OcwPicks> | undefined
+  return entry && picks && typeof picks.fileId === 'number' && typeof picks.courseId === 'number' ? { entry, picks: picks as OcwPicks } : null
+}
+
+/**
+ * Stage one: the reels the dataset fills, and the pool query. Deterministic
+ * for a seed, and run twice per spin (planOcw, then draw) with the same rng
+ * sequence, so the pool spins.ts fetched is the one the draw expects.
+ */
+function ocwPlan(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, sequence: boolean): OcwPlan {
+  const { rng } = ctx
+  const fieldById = (id: number) => data.fields.find((f) => f.id === id)
+  const topicById = (id: number) => data.topics.find((t) => t.id === id)
+  const kindByName = (name: string) => data.kinds.find((k) => k.name === name)
+  const lensByName = (name: string) => data.lenses.find((l) => l.name === name)
+  const last = ctx.kept[ctx.kept.length - 1]
+
+  // Sequence mode: stay in the previous spin's course and walk to its next file of that kind.
+  if (sequence && !ctx.locked('course')) {
+    const from = lastOcw(ctx)
+    const topic = from ? topicById(from.picks.topic) : undefined
+    const field = topic ? fieldById(topic.field) : undefined
+    const kind = from ? kindByName(from.picks.kind) : undefined
+    if (from && topic && field && kind) {
+      const lens = (ctx.locked('lens') && prev && lensByName(prev.lens)) || pick(data.lenses, rng)
+      rule(ctx, 'sequence', 'good', `Sequence mode: continuing ${from.entry.primary} with its next ${kind.name.toLowerCase()} file. The 30-day course block and the balancing rules pause while a course is being followed.`)
+      return {
+        field,
+        topic,
+        kind,
+        lens,
+        u: rng(),
+        query: { topic: topic.name, kind: kind.name, courseId: from.picks.courseId },
+        keepFile: null,
+        afterFile: from.picks.fileId,
+      }
+    }
+    rule(ctx, 'sequence', 'info', 'Sequence mode needs a previous OCW Desk spin to continue from. Drawing fresh.')
+  }
+
+  // Field: uniform, re-drawn once when it repeats the last spin's (the Atlas region rule).
+  let field: OcwField
+  const prevField = prev ? fieldById(prev.field) : undefined
+  if (ctx.locked('field') && prevField) {
+    field = prevField
+    rule(ctx, 'lock', 'info', `Field locked to ${field.name}.`)
+  } else {
+    field = pick(data.fields, rng)
+    if (last?.meta.field === field.id && data.fields.length > 1) {
+      const again = pick(data.fields, rng)
+      rule(
+        ctx,
+        'balance',
+        'warn',
+        again === field
+          ? `${field.name} came up twice in a row, so the field was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+          : `${field.name} came up twice in a row, so the field was re-drawn once, now ${again.name}.`,
+      )
+      field = again
+    }
+  }
+
+  // Topic: uniform inside the field, minus topics spun in the last 30 days.
+  let topic: OcwTopic
+  const inField = data.topics.filter((t) => t.field === field.id)
+  if (!inField.length) throw new Error(`The OCW taxonomy has no topics under ${field.name}. Re-run scripts/randomizer/ocw-taxonomy.mts.`)
+  const prevTopic = prev ? topicById(prev.topic) : undefined
+  if (ctx.locked('topic') && prevTopic && prevTopic.field === field.id) {
+    topic = prevTopic
+    rule(ctx, 'lock', 'info', `Topic locked to ${topic.name}.`)
+  } else {
+    const r30 = new Set(ctx.kept.filter((e) => ctx.within(e, DRAW_RULES.primaryBlockDays)).map((e) => e.meta.topic))
+    const blocked = inField.filter((t) => r30.has(t.id))
+    const cands = inField.filter((t) => !r30.has(t.id))
+    if (blocked.length) {
+      rule(
+        ctx,
+        '30 days',
+        cands.length ? 'block' : 'warn',
+        cands.length
+          ? `Left out ${list(blocked.map((t) => t.name))}: spun in the last 30 days.`
+          : `Every ${field.name} topic was spun in the last 30 days, so the block is lifted for this draw.`,
+      )
+    }
+    topic = pick(cands.length ? cands : inField, rng)
+    rule(ctx, 'balance', 'good', `Field first (${field.name}, 1 in ${data.fields.length}), then a topic inside it (${topic.name}, 1 in ${cands.length || inField.length}).`)
+  }
+
+  // Kind: uniform, with the one-in-three hands-on quota.
+  let kind: OcwKind
+  const prevKind = prev ? kindByName(prev.kind) : undefined
+  if (ctx.locked('kind') && prevKind) {
+    kind = prevKind
+    rule(ctx, 'lock', 'info', `Resource kind locked to ${kind.name}.`)
+  } else {
+    let pool = data.kinds
+    const lastTwo = ctx.kept.slice(-2)
+    if (lastTwo.length === 2 && lastTwo.every((e) => !isHandsOn(e.meta.kind, data)) && data.kinds.some((k) => k.hands_on)) {
+      pool = data.kinds.filter((k) => k.hands_on)
+      rule(ctx, 'quota', 'warn', 'The last two spins were reading kinds. To keep one in three hands-on, this draw only uses problem sets, exams and projects.')
+    }
+    kind = pick(pool, rng)
+  }
+
+  const lens = (ctx.locked('lens') && prev && lensByName(prev.lens)) || pick(data.lenses, rng)
+  const u = rng()
+
+  // A course or resource lock narrows the pool to that course's files of the kind.
+  const keepCourse = ctx.locked('course') && prev ? prev.courseId : null
+  const keepFile = ctx.locked('resource') && prev ? prev.fileId : null
+  if (keepCourse !== null) rule(ctx, 'lock', 'info', keepFile !== null ? 'Resource locked: the spin keeps its course and file.' : 'Course locked: the resource is drawn from its files of the chosen kind.')
+
+  return {
+    field,
+    topic,
+    kind,
+    lens,
+    u,
+    query: { topic: topic.name, kind: kind.name, courseId: keepCourse },
+    keepFile,
+    afterFile: null,
+  }
+}
+
+function sameQuery(a: OcwPool['query'], b: OcwPool['query']): boolean {
+  return a.topic === b.topic && a.kind === b.kind && (a.courseId ?? null) === (b.courseId ?? null)
+}
+
+function drawOcw(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, pool: OcwPool | null, sequence: boolean): DrawResult {
+  const { rng } = ctx
+  const plan = ocwPlan(ctx, data, prev, sequence)
+  if (!pool) throw new Error('The OCW Desk draws from a pool of OCW files (planOcw, then loadOcwPool), and none was given.')
+  if (!sameQuery(pool.query, plan.query)) {
+    throw new Error(
+      `The OCW pool (${pool.query.topic} · ${pool.query.kind}${pool.query.courseId ? ` · course ${pool.query.courseId}` : ''}) is not the one the plan asked for (${plan.query.topic} · ${plan.query.kind}${plan.query.courseId ? ` · course ${plan.query.courseId}` : ''}). Same seed, same history, same locks: load the pool from planOcw() of this draw.`,
+    )
+  }
+  const { field, topic, kind, lens: plannedLens } = plan
+  let lens: NamedOption = plannedLens
+  const files = pool.files.filter((f) => f.kinds.includes(kind.name))
+  if (!files.length) {
+    throw new Error(`No ${kind.name.toLowerCase()} files on OCW for ${topic.name}${pool.query.courseId ? ' in this course' : ''}. Re-spin: the next plan draws another topic or kind.`)
+  }
+  const byKey = (a: OcwFile, b: OcwFile) => a.key.localeCompare(b.key) || a.id - b.id
+  const label = (f: OcwFile) => `${f.courseNumber} ${f.courseTitle}`
+  const spunFiles = new Set(ctx.kept.map((e) => (e.picks as Partial<OcwPicks>).fileId).filter((id): id is number => typeof id === 'number'))
+
+  let file: OcwFile | undefined
+  let continued = false
+  if (plan.afterFile !== null) {
+    // Sequence mode: the next file in key order after the previous spin's; past the end, the first one not yet spun.
+    const sorted = [...files].sort(byKey)
+    const at = sorted.findIndex((f) => f.id === plan.afterFile)
+    const next = at >= 0 ? sorted[at + 1] : undefined
+    if (next) {
+      file = next
+      continued = true
+      rule(ctx, 'sequence', 'good', `Next in ${label(file)}: ${file.title} (${at + 2} of ${sorted.length} ${kind.name.toLowerCase()} files).`)
+    } else {
+      const unseen = sorted.filter((f) => !spunFiles.has(f.id))
+      file = unseen[0] ?? sorted[0]!
+      continued = !!unseen.length
+      rule(
+        ctx,
+        'sequence',
+        unseen.length ? 'info' : 'warn',
+        unseen.length
+          ? `${at >= 0 ? 'The previous file was the last in key order' : 'The previous file is no longer in the course'}, so this is the first ${kind.name.toLowerCase()} file not yet spun: ${file.title}.`
+          : `Every ${kind.name.toLowerCase()} file in ${label(file)} has been spun. Turn sequence mode off for a fresh course; this spin repeats the first.`,
+      )
+    }
+  } else if (plan.keepFile !== null) {
+    file = files.find((f) => f.id === plan.keepFile)
+    if (file) rule(ctx, 'lock', 'info', `Resource locked to ${file.title}.`)
+    else rule(ctx, 'lock', 'warn', 'The locked resource is not in the pool any more (OCW changed, or its kind did). Drawing another file from the course.')
+  }
+
+  if (!file) {
+    // The 30-day block on courses (unless the course is locked), and never a file already spun.
+    const r30 = new Set(ctx.kept.filter((e) => ctx.within(e, DRAW_RULES.primaryBlockDays)).map((e) => e.primary))
+    const keepCourse = plan.query.courseId !== null
+    const fresh = files.filter((f) => !spunFiles.has(f.id))
+    const unblocked = keepCourse ? fresh : fresh.filter((f) => !r30.has(f.courseReadableId))
+    const open = unblocked.length ? unblocked : null
+    const blockedCourses = uniq(files.filter((f) => r30.has(f.courseReadableId)).map(label))
+    if (!keepCourse && blockedCourses.length) {
+      rule(
+        ctx,
+        '30 days',
+        open ? 'block' : 'warn',
+        open
+          ? `Left out ${list(blockedCourses)}: spun in the last 30 days.`
+          : `Every course on this page was spun in the last 30 days, so the block is lifted for this draw.`,
+      )
+    }
+    const cands = open ?? (fresh.length ? fresh : files)
+    if (!open && !fresh.length) rule(ctx, '30 days', 'warn', 'Every file on this page has been spun before. One repeats; re-spin for another page.')
+    file = pick(cands, rng)
+  }
+
+  // 90-day block on the full combination: re-draw the lens, then (if free) the file.
+  const combo = () => `${topic.id}|${kind.name}|${file!.courseReadableId}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    let tries = 0
+    const others = files.filter((f) => f.courseId !== file!.courseId && !spunFiles.has(f.id))
+    while (r90.has(combo()) && tries < 16) {
+      tries++
+      if (!ctx.locked('lens')) lens = pick(data.lenses, rng)
+      else if (!ctx.locked('course') && !continued && others.length) file = pick(others, rng)
+      else break
+    }
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${label(file)} with the ${lens.name} lens ran in the last 90 days, and the reels that could change are locked. It repeats.`
+        : `The first draw repeated a course and lens from the last 90 days. Re-drawn.`,
+    )
+  }
+
+  const siblings = files
+    .filter((f) => f.courseId === file!.courseId && f.id !== file!.id)
+    .sort(byKey)
+    .slice(0, DRAW_RULES.maxOcwSiblings)
+  const course = ocwCourseFromFile(file)
+  const pageCourses = uniq(files.map((f) => f.courseId)).length
+  rule(
+    ctx,
+    'pool',
+    'info',
+    pool.query.courseId
+      ? `${label(file)} has ${pool.count} ${kind.name.toLowerCase()} ${pool.count === 1 ? 'file' : 'files'} on OCW, read ${pool.asOf.slice(0, 10)}.`
+      : `${topic.name} · ${kind.name}: ${pool.count.toLocaleString('en-US')} files on OCW; this page starts at ${pool.offset.toLocaleString('en-US')} (${files.length} files from ${pageCourses} ${pageCourses === 1 ? 'course' : 'courses'}), read ${pool.asOf.slice(0, 10)}.`,
+  )
+  rule(ctx, 'read first', 'info', `Mandatory next step: read ${file.title} at ${file.url} end to end, then the course page, and apply the ${lens.name} lens to the resource, not to the course or the field.`)
+  rule(ctx, 'licence', 'info', 'OCW is CC BY-NC-SA 4.0: credit the course, its instructors and the term with a link to the course page, and no sponsored placement on the page.')
+
+  const picks: OcwPicks = { field: field.id, topic: topic.id, kind: kind.name, lens: lens.name, courseId: file.courseId, fileId: file.id }
+  const term = [file.semester, file.year].filter(Boolean).join(' ')
+  const { files: _files, ...poolMeta } = pool
+  return {
+    randomizer: 'ocw',
+    picks,
+    subject: {
+      randomizer: 'ocw',
+      field,
+      topic,
+      kind,
+      lens,
+      course,
+      file,
+      siblings,
+      pool: { ...poolMeta, pageSize: pool.files.length },
+      sequence: continued,
+    },
+    reels: {
+      field: { value: field.name },
+      topic: { value: topic.name },
+      kind: { value: kind.name, sub: kind.hands_on ? 'hands-on' : 'reading' },
+      course: { value: course.title, sub: [course.number, term].filter(Boolean).join(' · ') },
+      resource: { value: file.title, sub: `${file.contentType}${siblings.length ? ` · ${siblings.length + 1} ${kind.name.toLowerCase()} files in the course` : ''}` },
+      lens: { value: lens.name },
+    },
+    primary: file.courseReadableId,
+    combo: combo(),
+    summary: `${course.number} ${course.title} · ${file.title}`,
+    rules: ctx.rules,
+    meta: { field: field.id, topic: topic.id, kind: kind.name },
   }
 }
 

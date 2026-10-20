@@ -4,7 +4,9 @@
  * claims log, and the HERO INSIGHT section everything public is written from.
  * Footshorts spins get a football template: the news, the match record from
  * the snapshot, the table, the angle read and the data pull. NBA Desk spins
- * get the same in basketball terms: the game log and the standings.
+ * get the same in basketball terms: the game log and the standings. OCW Desk
+ * spins get a study template: what the resource says, where it sits in the
+ * course, the lens read, the data pull and the credit line.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
@@ -18,6 +20,7 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type OcwSubject,
   type SpinRecord,
   type ViznbaGameRef,
   type ViznbaSubject,
@@ -33,6 +36,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'desk') return s.sub.name
   if (s.randomizer === 'atlas') return s.pair ? `${s.country.name} and ${s.pair.name}` : s.country.name
   if (s.randomizer === 'footshorts' || s.randomizer === 'viznba') return s.opponent ? `${s.team.name} v ${s.opponent.name}` : s.team.name
+  if (s.randomizer === 'ocw') return `${s.course.number} ${s.file.title}`
   return s.epic.title
 }
 
@@ -307,6 +311,81 @@ function viznbaTemplate(s: ViznbaSubject): string[] {
   ].filter((l, i, a) => !(l === '' && a[i - 1] === ''))
 }
 
+/** "8.03SC Physics III: Vibrations and Waves (Fall 2016)" */
+export function ocwCourseLabel(c: Pick<OcwSubject['course'], 'number' | 'title' | 'semester' | 'year'>): string {
+  const term = [c.semester, c.year].filter(Boolean).join(' ')
+  return `${c.number} ${c.title}${term ? ` (${term})` : ''}`
+}
+
+/** The credit OCW's CC BY-NC-SA 4.0 licence asks for, written out. */
+export function ocwCreditLine(s: Pick<OcwSubject, 'course'>): string {
+  const c = s.course
+  const term = [c.semester, c.year].filter(Boolean).join(' ')
+  const who = c.instructors.length ? `, ${c.instructors.join(', ')}` : ''
+  return `Credit: "Source: MIT OpenCourseWare, ${c.number} ${c.title}${who}${term ? `, ${term}` : ''}. Licence: CC BY-NC-SA 4.0" with a link to ${c.url}.`
+}
+
+/** What to chart per OCW lens, when the data exists. */
+export const OCW_LENS_METRICS: Record<string, string[]> = {
+  'The one idea': ['the quantity the idea predicts, against what is observed', 'the idea\'s key parameter across the cases the resource names', 'the resource\'s own table or worked example'],
+  'Work the problem': ['the worked solution\'s intermediate values, step by step', 'the answer as the inputs change (a sensitivity line)', 'the same problem across the resource\'s cases'],
+  'Chart it': ['the quantity the resource is about, over time, from a public dataset', 'the same quantity across countries, firms or materials', 'the quantity against the driver the resource says explains it'],
+  'Where it came from': ['the idea\'s milestones on a timeline, dated and sourced', 'the measured value of the key quantity as instruments improved', 'how often the idea appears in the literature by decade'],
+  'Why it matters now': ['the number in this month\'s news, over the last 10 years', 'the resource\'s quantity for the case in the news against the textbook case', 'the forecast the idea makes against the latest reading'],
+  'Across the river': ['the same quantity as each field measures it', 'the two fields\' key parameters side by side', 'the outcomes each field\'s model predicts for one shared case'],
+}
+
+export function ocwLensMetrics(lens: string): string[] {
+  return OCW_LENS_METRICS[lens] ?? ['the quantity the resource is about, over time', 'the same quantity across cases', 'the resource\'s own numbers']
+}
+
+function ocwTemplate(s: OcwSubject): string[] {
+  const term = [s.course.semester, s.course.year].filter(Boolean).join(' ')
+  return [
+    '## The resource',
+    '',
+    `${s.file.title} (${s.kind.name}, ${s.file.contentType}): ${s.file.url}`,
+    `From ${s.course.number} ${s.course.title}${term ? ` (${term})` : ''}: ${s.course.url}`,
+    '',
+    '## The one idea',
+    '',
+    'Two sentences: what the resource turns on, for a reader who has not taken the course.',
+    '',
+    '## What the resource says',
+    '',
+    'Its own structure, section by section (or problem by problem), each cited to a page, slide or timestamp.',
+    '',
+    '| Part | Says | Page, slide or time |',
+    '|------|------|---------------------|',
+    '| | | |',
+    '',
+    '## Where it sits in the course',
+    '',
+    'From the course page: the session, what came before it, what it leads to, and the textbook or paper it draws on.',
+    s.siblings.length ? `Other ${s.kind.name.toLowerCase()} files seen: ${s.siblings.slice(0, 8).map((f) => f.title).join('; ')}.` : '',
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `${s.lens.description} Applied to the resource, not to ${s.topic.name} in general.`,
+    '',
+    '## Data pull',
+    '',
+    'At least 8 data points per series where possible: the resource\'s own numbers (cited to the page), then a public dataset for anything about the world.',
+    '',
+    '| Metric | Period or case | Value | Unit | Source |',
+    '|--------|----------------|-------|------|--------|',
+    ...ocwLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    '',
+    '## Where it breaks',
+    '',
+    'The assumption the resource makes that does not always hold, and a case where it fails.',
+    '',
+    '## Credit',
+    '',
+    ocwCreditLine(s),
+  ].filter((l, i, a) => !(l === '' && a[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -324,7 +403,9 @@ export function researchStub(spin: StubSpin): string {
           ? footshortsTemplate(s)
           : s.randomizer === 'viznba'
             ? viznbaTemplate(s)
-            : epicsTemplate(s)
+            : s.randomizer === 'ocw'
+              ? ocwTemplate(s)
+              : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -338,7 +419,9 @@ export function researchStub(spin: StubSpin): string {
       ? '> (official match data, a club or league statement, club accounts). Mark each claim Verified, Contested or'
       : s.randomizer === 'viznba'
         ? '> (an official box score, NBA.com stats, a team or league statement). Mark each claim Verified, Contested or'
-        : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+        : s.randomizer === 'ocw'
+          ? '> (the resource itself with its page or slide, a government statistic, a peer-reviewed paper). Mark each claim Verified, Contested or'
+          : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

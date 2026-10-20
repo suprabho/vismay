@@ -1,0 +1,143 @@
+/**
+ * Refresh the OCW Desk's taxonomy (packages/randomizer/src/data/ocw.json)
+ * from the MIT Learn API, the public API behind ocw.mit.edu/search.
+ *
+ * The randomizer's field and topic reels are MIT Learn's two-level topic
+ * tree (11 fields, about 100 topics); its resource kinds are a hand-picked
+ * subset of MIT Learn's course features (the ones that make a story), and
+ * its lenses are the playbook's. Fields and topics are rewritten from the
+ * API on every run; kinds and lenses are kept from the file (or seeded on
+ * the first run) and only validated: every kind must still be a course
+ * feature the API knows, or the run fails.
+ *
+ * The file is committed so the slot machine's reel strips and the draw's
+ * plan never need the network; only the course and resource reels do, per
+ * spin (see packages/randomizer/src/draw.ts, drawOcw).
+ *
+ * Usage:
+ *   pnpm randomizer:ocw-taxonomy           # rewrite the file
+ *   pnpm randomizer:ocw-taxonomy --check   # exit non-zero if fields or topics are stale (CI)
+ */
+
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const API = 'https://api.learn.mit.edu/api/v1'
+const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../../packages/randomizer/src/data/ocw.json')
+
+interface ApiTopic {
+  id: number
+  name: string
+  parent: number | null
+}
+
+interface OcwField {
+  id: number
+  name: string
+}
+
+interface OcwTopic {
+  id: number
+  field: number
+  name: string
+}
+
+interface OcwKind {
+  name: string
+  hands_on: boolean
+  description: string
+}
+
+interface NamedOption {
+  name: string
+  description: string
+}
+
+interface OcwDataset {
+  fields: OcwField[]
+  topics: OcwTopic[]
+  kinds: OcwKind[]
+  lenses: NamedOption[]
+}
+
+/** The resource kinds worth a story, with MIT Learn's exact feature names. */
+const SEED_KINDS: OcwKind[] = [
+  { name: 'Lecture Notes', hands_on: false, description: 'The notes or slides for one lecture: one idea, as the instructor laid it out.' },
+  { name: 'Readings', hands_on: false, description: 'An assigned reading or reading list: what the course asks students to read for a session.' },
+  { name: 'Lecture Videos', hands_on: false, description: 'A recorded lecture, with its transcript on the OCW page.' },
+  { name: 'Problem Sets', hands_on: true, description: 'A problem set: questions students solve, often with a solutions file alongside.' },
+  { name: 'Exams', hands_on: true, description: 'An exam paper, often with solutions: what the course decided mattered most.' },
+  { name: 'Projects', hands_on: true, description: 'A project brief or student project: the course applied to something real.' },
+]
+
+/** What the story does with the resource (playbook lenses, OCW variant). */
+const SEED_LENSES: NamedOption[] = [
+  { name: 'The one idea', description: 'Explain the single idea the resource turns on, for a reader who has not taken the course, with the resource as the only source for what it says.' },
+  { name: 'Work the problem', description: 'Pick one problem (or the hardest exam question) and solve it on the page, step by step, with the arithmetic shown.' },
+  { name: 'Chart it', description: 'Find the quantity the resource is about and chart it from a real dataset: 8 or more points, sourced, with the resource explaining what the chart shows.' },
+  { name: 'Where it came from', description: 'The history of the idea: who found it, when, what it replaced, and how the course teaches it differently from how it was discovered.' },
+  { name: 'Why it matters now', description: 'Tie the idea to something dated in this month\'s news, and let the resource do the explaining.' },
+  { name: 'Across the river', description: 'The same idea as another field sees it: a physics note read by an economist, a planning case read by an engineer.' },
+]
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${API}${path}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(20_000) })
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`)
+  return (await res.json()) as T
+}
+
+async function main(): Promise<void> {
+  const check = process.argv.includes('--check')
+  const existing: OcwDataset | null = existsSync(OUT) ? (JSON.parse(readFileSync(OUT, 'utf8')) as OcwDataset) : null
+
+  const [topics, features] = await Promise.all([
+    get<{ count: number; results: ApiTopic[] }>('/topics/?limit=500'),
+    get<{ count: number; results: Array<{ name: string }> }>('/course_features/?limit=500'),
+  ])
+  if (topics.results.length !== topics.count) throw new Error(`topics: got ${topics.results.length} of ${topics.count}`)
+  if (features.results.length !== features.count) throw new Error(`course_features: got ${features.results.length} of ${features.count}`)
+
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
+  const fields: OcwField[] = topics.results
+    .filter((t) => t.parent === null)
+    .map((t) => ({ id: t.id, name: t.name }))
+    .sort(byName)
+  const fieldIds = new Set(fields.map((f) => f.id))
+  const children: OcwTopic[] = topics.results
+    .filter((t): t is ApiTopic & { parent: number } => t.parent !== null && fieldIds.has(t.parent))
+    .map((t) => ({ id: t.id, field: t.parent, name: t.name }))
+    .sort((a, b) => a.field - b.field || a.name.localeCompare(b.name))
+  const orphans = topics.results.filter((t) => t.parent !== null && !fieldIds.has(t.parent))
+  if (orphans.length) throw new Error(`topics with an unknown parent: ${orphans.map((t) => t.name).join(', ')}`)
+  for (const f of fields) {
+    if (!children.some((t) => t.field === f.id)) throw new Error(`field without topics: ${f.name}`)
+  }
+
+  const kinds = existing?.kinds ?? SEED_KINDS
+  const lenses = existing?.lenses ?? SEED_LENSES
+  const known = new Set(features.results.map((f) => f.name))
+  for (const k of kinds) {
+    if (!known.has(k.name)) throw new Error(`kind "${k.name}" is not a course feature the API knows`)
+  }
+
+  const next: OcwDataset = { fields, topics: children, kinds, lenses }
+  const text = `${JSON.stringify(next, null, 2)}\n`
+  const stale = !existing || JSON.stringify(existing.fields) !== JSON.stringify(fields) || JSON.stringify(existing.topics) !== JSON.stringify(children)
+
+  if (check) {
+    if (stale) {
+      console.error(`${OUT} is stale: run pnpm randomizer:ocw-taxonomy`)
+      process.exit(1)
+    }
+    console.log(`ocw.json is current: ${fields.length} fields, ${children.length} topics, ${kinds.length} kinds, ${lenses.length} lenses`)
+    return
+  }
+  writeFileSync(OUT, text)
+  console.log(`wrote ${join('packages/randomizer/src/data', 'ocw.json')}: ${fields.length} fields, ${children.length} topics, ${kinds.length} kinds, ${lenses.length} lenses${stale ? '' : ' (unchanged)'}`)
+}
+
+main().catch((e) => {
+  console.error(e instanceof Error ? e.message : e)
+  process.exit(1)
+})

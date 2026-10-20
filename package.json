@@ -14,6 +14,7 @@
     "mcp:dev": "tsx scripts/mcp-dev.mts",
     "mcp:catalog": "PORT=3100 pnpm --filter @vismay/catalog dev",
     "gen:sources": "tsx scripts/gen-tailwind-sources.mts",
+    "randomizer:ocw-taxonomy": "tsx scripts/randomizer/ocw-taxonomy.mts",
     "travel:import": "tsx scripts/travel/import-pro-trip.ts",
     "travel:prepare-media": "tsx scripts/travel/prepare-media.ts",
     "travel:upload-media": "tsx scripts/travel/upload-media.ts",

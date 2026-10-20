@@ -1,15 +1,16 @@
 /**
- * Types for the story randomizers: the three Vizmaya ones (the playbook's
- * Desk, Atlas and Epics), the Footshorts one (teams, tournaments and their
- * news) and the VizNBA one (franchises, conferences and their news), their
- * datasets (./data/*.json) and the spins they produce.
+ * Types for the story randomizers: the four Vizmaya ones (the playbook's
+ * Desk, Atlas and Epics, and the OCW Desk on MIT OpenCourseWare), the
+ * Footshorts one (teams, tournaments and their news) and the VizNBA one
+ * (franchises, conferences and their news), their datasets (./data/*.json)
+ * and the spins they produce.
  *
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -30,6 +31,8 @@ export interface ReelDef {
   parents?: string[]
   /** Shown only when an option is on (the Atlas pair reel, the Footshorts and NBA opponents). Never lockable. */
   option?: 'pair'
+  /** Filled per spin from a live pool (the OCW course and resource), not from the dataset. */
+  live?: boolean
 }
 
 export interface RandomizerMeta {
@@ -41,7 +44,7 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics sequence mode, Footshorts and NBA head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics and OCW sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
@@ -98,6 +101,23 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     ],
     option: { key: 'sequence', label: 'Sequence mode (continue the route)' },
     gated: true,
+  },
+  ocw: {
+    id: 'ocw',
+    app: 'vizmaya-fyi',
+    name: 'OCW Desk',
+    hint: 'Fields · courses · resources',
+    format: 'Study note with charts',
+    reels: [
+      { key: 'field', label: 'Field' },
+      { key: 'topic', label: 'Topic', parents: ['field'] },
+      { key: 'kind', label: 'Resource kind' },
+      { key: 'course', label: 'Course', parents: ['topic', 'field'], live: true },
+      { key: 'resource', label: 'Resource', parents: ['course', 'topic', 'field', 'kind'], live: true },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: { key: 'sequence', label: 'Continue the course (next resource)' },
+    gated: false,
   },
   footshorts: {
     id: 'footshorts',
@@ -300,6 +320,162 @@ export interface EpicsDataset {
   traditions: string[]
   epics: Epic[]
   lenses: NamedOption[]
+}
+
+/* ---------- OCW Desk ---------- */
+
+/** A top-level MIT Learn topic ("Science & Math"), the field reel. */
+export interface OcwField {
+  /** MIT Learn topic id. */
+  id: number
+  name: string
+}
+
+/** A child topic ("Physics"), the topic reel; the API's `topic=` filter takes its name. */
+export interface OcwTopic {
+  id: number
+  /** OcwField.id */
+  field: number
+  name: string
+}
+
+/** A resource kind: one of MIT Learn's course features, the `content_feature_type=` filter. */
+export interface OcwKind {
+  name: string
+  /** Problem sets, exams and projects: the kinds the one-in-three quota keeps coming. */
+  hands_on: boolean
+  description: string
+}
+
+export interface OcwDataset {
+  fields: OcwField[]
+  topics: OcwTopic[]
+  kinds: OcwKind[]
+  lenses: NamedOption[]
+}
+
+/** One OCW content file, as the pool keeps it (a content_file_search hit, trimmed). */
+export interface OcwFile {
+  /** MIT Learn content file id. */
+  id: number
+  /** The file's path on OCW ("courses/8-03sc-.../resources/mit8_03scf16_lec21/"): the sequence order. */
+  key: string
+  /** The resource page on ocw.mit.edu. */
+  url: string
+  title: string
+  /** pdf, video, page… */
+  contentType: string
+  /** The MIME type, when known. */
+  fileType: string | null
+  /** The feature types the file carries; the pool filters on the drawn kind. */
+  kinds: string[]
+  /** The YouTube id, for Lecture Videos. */
+  youtubeId: string | null
+  /** The course: MIT Learn learning resource id, readable id ("8.03SC+fall_2016"), title, OCW slug and number. */
+  courseId: number
+  courseReadableId: string
+  courseTitle: string
+  /** "courses/8-03sc-physics-iii-vibrations-and-waves-fall-2016" */
+  courseSlug: string
+  /** "8.03SC" (the first of the course numbers). */
+  courseNumber: string
+  departments: string[]
+  year: number | null
+  semester: string | null
+}
+
+/**
+ * What the pool knows about the drawn course: from the file's own fields
+ * at draw time, enriched by spins.ts with the course record afterwards
+ * (instructors, level, feature list), which the brief reads.
+ */
+export interface OcwCourse {
+  id: number
+  readableId: string
+  number: string
+  title: string
+  /** The course page on ocw.mit.edu. */
+  url: string
+  slug: string
+  departments: string[]
+  year: number | null
+  semester: string | null
+  /** Filled by the enrichment; empty until then. */
+  instructors: string[]
+  level: string[]
+  courseFeatures: string[]
+}
+
+/**
+ * What the plan asks the pool for: either a page of one topic's files of one
+ * kind, or every file of one kind in one course (sequence mode, and a course
+ * or resource lock).
+ */
+export interface OcwQuery {
+  topic: string
+  kind: string
+  /** Set when the pool is one course's files. */
+  courseId: number | null
+}
+
+/**
+ * The pure first stage of an OCW draw (draw.ts planOcw): the reels the
+ * dataset can fill, and where in the live pool to look. spins.ts turns it
+ * into an OcwPool, then the draw finishes with the same seed.
+ */
+export interface OcwPlan {
+  field: OcwField
+  topic: OcwTopic
+  kind: OcwKind
+  lens: NamedOption
+  /** One rng draw in [0, 1): the pool page's offset is floor(u * count). */
+  u: number
+  query: OcwQuery
+  /** The file to keep (a resource lock), by id. */
+  keepFile: number | null
+  /** Sequence mode: the previous spin's file, by id, to walk on from in key order. */
+  afterFile: number | null
+}
+
+/** The live pool one OCW draw reads: a page of files (frozen into the spin's subject). */
+export interface OcwPool {
+  /** ISO timestamp the pool was read. */
+  asOf: string
+  query: OcwQuery
+  /** Files matching the query on OCW, before paging. */
+  count: number
+  /** The page's offset into them. */
+  offset: number
+  files: OcwFile[]
+}
+
+export interface OcwPicks {
+  /** OcwField.id */
+  field: number
+  /** OcwTopic.id */
+  topic: number
+  kind: string
+  lens: string
+  /** OcwFile.courseId */
+  courseId: number
+  /** OcwFile.id */
+  fileId: number
+}
+
+export interface OcwSubject {
+  randomizer: 'ocw'
+  field: OcwField
+  topic: OcwTopic
+  kind: OcwKind
+  lens: NamedOption
+  course: OcwCourse
+  file: OcwFile
+  /** The course's other files of this kind that the pool saw, in key order: context for the brief, the route for sequence mode. */
+  siblings: OcwFile[]
+  /** The pool the file came from: its query, size, offset and when it was read. */
+  pool: Omit<OcwPool, 'files'> & { pageSize: number }
+  /** Continued from the previous spin's resource (sequence mode). */
+  sequence: boolean
 }
 
 /* ---------- Footshorts ---------- */
@@ -663,8 +839,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -677,6 +853,10 @@ export interface SpinMeta {
   tradition?: string
   types?: EpicType[]
   heat?: number
+  /** OCW Desk: the field and topic ids and the kind, for the field re-draw, the topic block and the hands-on quota. */
+  field?: number
+  topic?: number
+  kind?: string
 }
 
 export interface DrawResult {
