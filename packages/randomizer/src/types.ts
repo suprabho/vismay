@@ -337,6 +337,12 @@ export interface OcwTopic {
   /** OcwField.id */
   field: number
   name: string
+  /**
+   * OCW files of each kind under the topic (by OcwKind.name) at the last
+   * taxonomy refresh: the plan skips a topic with none, and a kind with none
+   * for the topic. Counts drift; the pool read is what counts on the day.
+   */
+  files: Record<string, number>
 }
 
 /** A resource kind: one of MIT Learn's course features, the `content_feature_type=` filter. */

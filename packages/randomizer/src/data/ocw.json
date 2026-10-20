@@ -49,497 +49,1289 @@
     {
       "id": 676,
       "field": 675,
-      "name": "Architecture"
+      "name": "Architecture",
+      "files": {
+        "Lecture Notes": 1716,
+        "Readings": 119,
+        "Lecture Videos": 0,
+        "Problem Sets": 3,
+        "Exams": 35,
+        "Projects": 577
+      }
     },
     {
       "id": 683,
       "field": 675,
-      "name": "Art History"
+      "name": "Art History",
+      "files": {
+        "Lecture Notes": 38,
+        "Readings": 10,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 41
+      }
     },
     {
       "id": 677,
       "field": 675,
-      "name": "Environmental Design"
+      "name": "Environmental Design",
+      "files": {
+        "Lecture Notes": 176,
+        "Readings": 45,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 15,
+        "Projects": 295
+      }
     },
     {
       "id": 678,
       "field": 675,
-      "name": "Game Design"
+      "name": "Game Design",
+      "files": {
+        "Lecture Notes": 115,
+        "Readings": 13,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 5,
+        "Projects": 73
+      }
     },
     {
       "id": 681,
       "field": 675,
-      "name": "Media Studies"
+      "name": "Media Studies",
+      "files": {
+        "Lecture Notes": 382,
+        "Readings": 192,
+        "Lecture Videos": 72,
+        "Problem Sets": 0,
+        "Exams": 39,
+        "Projects": 347
+      }
     },
     {
       "id": 679,
       "field": 675,
-      "name": "Performing Arts"
+      "name": "Performing Arts",
+      "files": {
+        "Lecture Notes": 65,
+        "Readings": 91,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 5,
+        "Projects": 24
+      }
     },
     {
       "id": 682,
       "field": 675,
-      "name": "Real Estate"
+      "name": "Real Estate",
+      "files": {
+        "Lecture Notes": 64,
+        "Readings": 13,
+        "Lecture Videos": 0,
+        "Problem Sets": 17,
+        "Exams": 6,
+        "Projects": 18
+      }
     },
     {
       "id": 680,
       "field": 675,
-      "name": "Visual Arts"
+      "name": "Visual Arts",
+      "files": {
+        "Lecture Notes": 314,
+        "Readings": 71,
+        "Lecture Videos": 1,
+        "Problem Sets": 15,
+        "Exams": 15,
+        "Projects": 310
+      }
     },
     {
       "id": 693,
       "field": 684,
-      "name": "Business Analytics"
+      "name": "Business Analytics",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 696,
       "field": 684,
-      "name": "Digital Business & IT"
+      "name": "Digital Business & IT",
+      "files": {
+        "Lecture Notes": 594,
+        "Readings": 90,
+        "Lecture Videos": 43,
+        "Problem Sets": 27,
+        "Exams": 31,
+        "Projects": 195
+      }
     },
     {
       "id": 685,
       "field": 684,
-      "name": "Entrepreneurship"
+      "name": "Entrepreneurship",
+      "files": {
+        "Lecture Notes": 279,
+        "Readings": 82,
+        "Lecture Videos": 85,
+        "Problem Sets": 1,
+        "Exams": 22,
+        "Projects": 194
+      }
     },
     {
       "id": 692,
       "field": 684,
-      "name": "Family Enterprise"
+      "name": "Family Enterprise",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 690,
       "field": 684,
-      "name": "Finance & Accounting"
+      "name": "Finance & Accounting",
+      "files": {
+        "Lecture Notes": 499,
+        "Readings": 59,
+        "Lecture Videos": 34,
+        "Problem Sets": 62,
+        "Exams": 53,
+        "Projects": 9
+      }
     },
     {
       "id": 697,
       "field": 684,
-      "name": "Management"
+      "name": "Management",
+      "files": {
+        "Lecture Notes": 1794,
+        "Readings": 369,
+        "Lecture Videos": 50,
+        "Problem Sets": 364,
+        "Exams": 59,
+        "Projects": 237
+      }
     },
     {
       "id": 688,
       "field": 684,
-      "name": "Marketing"
+      "name": "Marketing",
+      "files": {
+        "Lecture Notes": 212,
+        "Readings": 23,
+        "Lecture Videos": 1,
+        "Problem Sets": 4,
+        "Exams": 6,
+        "Projects": 5
+      }
     },
     {
       "id": 687,
       "field": 684,
-      "name": "Negotiation & Communication"
+      "name": "Negotiation & Communication",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 691,
       "field": 684,
-      "name": "Operations"
+      "name": "Operations",
+      "files": {
+        "Lecture Notes": 840,
+        "Readings": 179,
+        "Lecture Videos": 41,
+        "Problem Sets": 123,
+        "Exams": 61,
+        "Projects": 147
+      }
     },
     {
       "id": 686,
       "field": 684,
-      "name": "Organizations & Leadership"
+      "name": "Organizations & Leadership",
+      "files": {
+        "Lecture Notes": 785,
+        "Readings": 235,
+        "Lecture Videos": 41,
+        "Problem Sets": 33,
+        "Exams": 18,
+        "Projects": 40
+      }
     },
     {
       "id": 695,
       "field": 684,
-      "name": "Strategy & Innovation"
+      "name": "Strategy & Innovation",
+      "files": {
+        "Lecture Notes": 259,
+        "Readings": 83,
+        "Lecture Videos": 55,
+        "Problem Sets": 4,
+        "Exams": 8,
+        "Projects": 84
+      }
     },
     {
       "id": 689,
       "field": 684,
-      "name": "Supply Chain"
+      "name": "Supply Chain",
+      "files": {
+        "Lecture Notes": 267,
+        "Readings": 26,
+        "Lecture Videos": 0,
+        "Problem Sets": 19,
+        "Exams": 9,
+        "Projects": 15
+      }
     },
     {
       "id": 694,
       "field": 684,
-      "name": "Systems Thinking"
+      "name": "Systems Thinking",
+      "files": {
+        "Lecture Notes": 1142,
+        "Readings": 275,
+        "Lecture Videos": 98,
+        "Problem Sets": 194,
+        "Exams": 157,
+        "Projects": 412
+      }
     },
     {
       "id": 699,
       "field": 698,
-      "name": "AI"
+      "name": "AI",
+      "files": {
+        "Lecture Notes": 882,
+        "Readings": 87,
+        "Lecture Videos": 36,
+        "Problem Sets": 137,
+        "Exams": 101,
+        "Projects": 158
+      }
     },
     {
       "id": 702,
       "field": 698,
-      "name": "Algorithms and Data Structures"
+      "name": "Algorithms and Data Structures",
+      "files": {
+        "Lecture Notes": 1805,
+        "Readings": 178,
+        "Lecture Videos": 22,
+        "Problem Sets": 340,
+        "Exams": 138,
+        "Projects": 129
+      }
     },
     {
       "id": 706,
       "field": 698,
-      "name": "AR/VR/MR/XR"
+      "name": "AR/VR/MR/XR",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 705,
       "field": 698,
-      "name": "Blockchain"
+      "name": "Blockchain",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 710,
       "field": 698,
-      "name": "Computer Science"
+      "name": "Computer Science",
+      "files": {
+        "Lecture Notes": 4974,
+        "Readings": 638,
+        "Lecture Videos": 65,
+        "Problem Sets": 1080,
+        "Exams": 470,
+        "Projects": 780
+      }
     },
     {
       "id": 707,
       "field": 698,
-      "name": "CyberSecurity"
+      "name": "CyberSecurity",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 711,
       "field": 698,
-      "name": "Data Science"
+      "name": "Data Science",
+      "files": {
+        "Lecture Notes": 600,
+        "Readings": 119,
+        "Lecture Videos": 0,
+        "Problem Sets": 111,
+        "Exams": 60,
+        "Projects": 157
+      }
     },
     {
       "id": 708,
       "field": 698,
-      "name": "Machine Learning"
+      "name": "Machine Learning",
+      "files": {
+        "Lecture Notes": 882,
+        "Readings": 87,
+        "Lecture Videos": 36,
+        "Problem Sets": 137,
+        "Exams": 101,
+        "Projects": 158
+      }
     },
     {
       "id": 703,
       "field": 698,
-      "name": "Networks and Security"
+      "name": "Networks and Security",
+      "files": {
+        "Lecture Notes": 528,
+        "Readings": 55,
+        "Lecture Videos": 0,
+        "Problem Sets": 186,
+        "Exams": 37,
+        "Projects": 34
+      }
     },
     {
       "id": 700,
       "field": 698,
-      "name": "Programming & Coding"
+      "name": "Programming & Coding",
+      "files": {
+        "Lecture Notes": 641,
+        "Readings": 31,
+        "Lecture Videos": 6,
+        "Problem Sets": 162,
+        "Exams": 71,
+        "Projects": 89
+      }
     },
     {
       "id": 701,
       "field": 698,
-      "name": "Software Design and Engineering"
+      "name": "Software Design and Engineering",
+      "files": {
+        "Lecture Notes": 1164,
+        "Readings": 141,
+        "Lecture Videos": 0,
+        "Problem Sets": 246,
+        "Exams": 199,
+        "Projects": 307
+      }
     },
     {
       "id": 704,
       "field": 698,
-      "name": "User Experience"
+      "name": "User Experience",
+      "files": {
+        "Lecture Notes": 205,
+        "Readings": 35,
+        "Lecture Videos": 0,
+        "Problem Sets": 10,
+        "Exams": 2,
+        "Projects": 57
+      }
     },
     {
       "id": 709,
       "field": 698,
-      "name": "Visualization"
+      "name": "Visualization",
+      "files": {
+        "Lecture Notes": 291,
+        "Readings": 33,
+        "Lecture Videos": 29,
+        "Problem Sets": 73,
+        "Exams": 32,
+        "Projects": 97
+      }
     },
     {
       "id": 713,
       "field": 712,
-      "name": "Anthropology"
+      "name": "Anthropology",
+      "files": {
+        "Lecture Notes": 569,
+        "Readings": 280,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 18,
+        "Projects": 49
+      }
     },
     {
       "id": 714,
       "field": 712,
-      "name": "Communication"
+      "name": "Communication",
+      "files": {
+        "Lecture Notes": 372,
+        "Readings": 195,
+        "Lecture Videos": 20,
+        "Problem Sets": 24,
+        "Exams": 6,
+        "Projects": 103
+      }
     },
     {
       "id": 715,
       "field": 712,
-      "name": "Economics"
+      "name": "Economics",
+      "files": {
+        "Lecture Notes": 2044,
+        "Readings": 364,
+        "Lecture Videos": 163,
+        "Problem Sets": 392,
+        "Exams": 250,
+        "Projects": 293
+      }
     },
     {
       "id": 723,
       "field": 712,
-      "name": "Gender Studies"
+      "name": "Gender Studies",
+      "files": {
+        "Lecture Notes": 124,
+        "Readings": 77,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 2
+      }
     },
     {
       "id": 716,
       "field": 712,
-      "name": "Geography"
+      "name": "Geography",
+      "files": {
+        "Lecture Notes": 139,
+        "Readings": 5,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 4
+      }
     },
     {
       "id": 724,
       "field": 712,
-      "name": "International Development"
+      "name": "International Development",
+      "files": {
+        "Lecture Notes": 504,
+        "Readings": 198,
+        "Lecture Videos": 0,
+        "Problem Sets": 3,
+        "Exams": 30,
+        "Projects": 197
+      }
     },
     {
       "id": 717,
       "field": 712,
-      "name": "Law"
+      "name": "Law",
+      "files": {
+        "Lecture Notes": 86,
+        "Readings": 196,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 12,
+        "Projects": 63
+      }
     },
     {
       "id": 720,
       "field": 712,
-      "name": "Policy and Administration"
+      "name": "Policy and Administration",
+      "files": {
+        "Lecture Notes": 1100,
+        "Readings": 494,
+        "Lecture Videos": 0,
+        "Problem Sets": 49,
+        "Exams": 58,
+        "Projects": 140
+      }
     },
     {
       "id": 718,
       "field": 712,
-      "name": "Political Science"
+      "name": "Political Science",
+      "files": {
+        "Lecture Notes": 502,
+        "Readings": 239,
+        "Lecture Videos": 0,
+        "Problem Sets": 14,
+        "Exams": 26,
+        "Projects": 96
+      }
     },
     {
       "id": 719,
       "field": 712,
-      "name": "Psychology"
+      "name": "Psychology",
+      "files": {
+        "Lecture Notes": 381,
+        "Readings": 110,
+        "Lecture Videos": 18,
+        "Problem Sets": 5,
+        "Exams": 48,
+        "Projects": 28
+      }
     },
     {
       "id": 721,
       "field": 712,
-      "name": "Sociology"
+      "name": "Sociology",
+      "files": {
+        "Lecture Notes": 1687,
+        "Readings": 425,
+        "Lecture Videos": 72,
+        "Problem Sets": 6,
+        "Exams": 41,
+        "Projects": 239
+      }
     },
     {
       "id": 722,
       "field": 712,
-      "name": "Urban Studies"
+      "name": "Urban Studies",
+      "files": {
+        "Lecture Notes": 1015,
+        "Readings": 271,
+        "Lecture Videos": 15,
+        "Problem Sets": 10,
+        "Exams": 86,
+        "Projects": 368
+      }
     },
     {
       "id": 729,
       "field": 725,
-      "name": "Digital Learning"
+      "name": "Digital Learning",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 727,
       "field": 725,
-      "name": "Education Policy"
+      "name": "Education Policy",
+      "files": {
+        "Lecture Notes": 25,
+        "Readings": 15,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 8,
+        "Projects": 8
+      }
     },
     {
       "id": 728,
       "field": 725,
-      "name": "Educational Technology"
+      "name": "Educational Technology",
+      "files": {
+        "Lecture Notes": 74,
+        "Readings": 26,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 11,
+        "Projects": 96
+      }
     },
     {
       "id": 730,
       "field": 725,
-      "name": "Faculty Leadership"
+      "name": "Faculty Leadership",
+      "files": {
+        "Lecture Notes": 5,
+        "Readings": 10,
+        "Lecture Videos": 1,
+        "Problem Sets": 2,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 726,
       "field": 725,
-      "name": "Pedagogy and Curriculum"
+      "name": "Pedagogy and Curriculum",
+      "files": {
+        "Lecture Notes": 39,
+        "Readings": 21,
+        "Lecture Videos": 1,
+        "Problem Sets": 7,
+        "Exams": 0,
+        "Projects": 31
+      }
     },
     {
       "id": 732,
       "field": 731,
-      "name": "Biology"
+      "name": "Biology",
+      "files": {
+        "Lecture Notes": 1311,
+        "Readings": 358,
+        "Lecture Videos": 22,
+        "Problem Sets": 248,
+        "Exams": 221,
+        "Projects": 84
+      }
     },
     {
       "id": 733,
       "field": 731,
-      "name": "Chemistry"
+      "name": "Chemistry",
+      "files": {
+        "Lecture Notes": 1223,
+        "Readings": 141,
+        "Lecture Videos": 129,
+        "Problem Sets": 293,
+        "Exams": 323,
+        "Projects": 40
+      }
     },
     {
       "id": 734,
       "field": 731,
-      "name": "Cognitive Science"
+      "name": "Cognitive Science",
+      "files": {
+        "Lecture Notes": 909,
+        "Readings": 251,
+        "Lecture Videos": 0,
+        "Problem Sets": 110,
+        "Exams": 76,
+        "Projects": 74
+      }
     },
     {
       "id": 735,
       "field": 731,
-      "name": "Earth Science"
+      "name": "Earth Science",
+      "files": {
+        "Lecture Notes": 1808,
+        "Readings": 221,
+        "Lecture Videos": 4,
+        "Problem Sets": 97,
+        "Exams": 61,
+        "Projects": 254
+      }
     },
     {
       "id": 737,
       "field": 731,
-      "name": "Mathematics"
+      "name": "Mathematics",
+      "files": {
+        "Lecture Notes": 6574,
+        "Readings": 926,
+        "Lecture Videos": 182,
+        "Problem Sets": 2550,
+        "Exams": 941,
+        "Projects": 480
+      }
     },
     {
       "id": 736,
       "field": 731,
-      "name": "Physics"
+      "name": "Physics",
+      "files": {
+        "Lecture Notes": 3862,
+        "Readings": 564,
+        "Lecture Videos": 107,
+        "Problem Sets": 1156,
+        "Exams": 662,
+        "Projects": 409
+      }
     },
     {
       "id": 744,
       "field": 738,
-      "name": "Adaptation and Resilience"
+      "name": "Adaptation and Resilience",
+      "files": {
+        "Lecture Notes": 330,
+        "Readings": 57,
+        "Lecture Videos": 0,
+        "Problem Sets": 14,
+        "Exams": 18,
+        "Projects": 108
+      }
     },
     {
       "id": 742,
       "field": 738,
-      "name": "Built Environment"
+      "name": "Built Environment",
+      "files": {
+        "Lecture Notes": 196,
+        "Readings": 21,
+        "Lecture Videos": 0,
+        "Problem Sets": 26,
+        "Exams": 15,
+        "Projects": 16
+      }
     },
     {
       "id": 745,
       "field": 738,
-      "name": "Climate and Energy Policy"
+      "name": "Climate and Energy Policy",
+      "files": {
+        "Lecture Notes": 381,
+        "Readings": 95,
+        "Lecture Videos": 0,
+        "Problem Sets": 32,
+        "Exams": 21,
+        "Projects": 54
+      }
     },
     {
       "id": 741,
       "field": 738,
-      "name": "Climate Science"
+      "name": "Climate Science",
+      "files": {
+        "Lecture Notes": 607,
+        "Readings": 99,
+        "Lecture Videos": 0,
+        "Problem Sets": 35,
+        "Exams": 23,
+        "Projects": 135
+      }
     },
     {
       "id": 784,
       "field": 738,
-      "name": "Ecosystems"
+      "name": "Ecosystems",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 739,
       "field": 738,
-      "name": "Energy"
+      "name": "Energy",
+      "files": {
+        "Lecture Notes": 877,
+        "Readings": 148,
+        "Lecture Videos": 69,
+        "Problem Sets": 94,
+        "Exams": 106,
+        "Projects": 56
+      }
     },
     {
       "id": 740,
       "field": 738,
-      "name": "Environmental and Climate Justice"
+      "name": "Environmental and Climate Justice",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 743,
       "field": 738,
-      "name": "Natural Systems"
+      "name": "Natural Systems",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 746,
       "field": 738,
-      "name": "Sustainable Business"
+      "name": "Sustainable Business",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 748,
       "field": 747,
-      "name": "Aerospace Engineering"
+      "name": "Aerospace Engineering",
+      "files": {
+        "Lecture Notes": 1432,
+        "Readings": 179,
+        "Lecture Videos": 41,
+        "Problem Sets": 415,
+        "Exams": 63,
+        "Projects": 296
+      }
     },
     {
       "id": 749,
       "field": 747,
-      "name": "Biological Engineering"
+      "name": "Biological Engineering",
+      "files": {
+        "Lecture Notes": 1027,
+        "Readings": 146,
+        "Lecture Videos": 1,
+        "Problem Sets": 99,
+        "Exams": 114,
+        "Projects": 96
+      }
     },
     {
       "id": 750,
       "field": 747,
-      "name": "Chemical Engineering"
+      "name": "Chemical Engineering",
+      "files": {
+        "Lecture Notes": 891,
+        "Readings": 169,
+        "Lecture Videos": 24,
+        "Problem Sets": 215,
+        "Exams": 227,
+        "Projects": 65
+      }
     },
     {
       "id": 751,
       "field": 747,
-      "name": "Civil Engineering"
+      "name": "Civil Engineering",
+      "files": {
+        "Lecture Notes": 784,
+        "Readings": 173,
+        "Lecture Videos": 0,
+        "Problem Sets": 57,
+        "Exams": 85,
+        "Projects": 219
+      }
     },
     {
       "id": 752,
       "field": 747,
-      "name": "Electrical Engineering"
+      "name": "Electrical Engineering",
+      "files": {
+        "Lecture Notes": 2310,
+        "Readings": 434,
+        "Lecture Videos": 73,
+        "Problem Sets": 691,
+        "Exams": 372,
+        "Projects": 585
+      }
     },
     {
       "id": 753,
       "field": 747,
-      "name": "Environmental Engineering"
+      "name": "Environmental Engineering",
+      "files": {
+        "Lecture Notes": 586,
+        "Readings": 65,
+        "Lecture Videos": 32,
+        "Problem Sets": 41,
+        "Exams": 70,
+        "Projects": 106
+      }
     },
     {
       "id": 783,
       "field": 747,
-      "name": "Manufacturing"
+      "name": "Manufacturing",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 754,
       "field": 747,
-      "name": "Materials Science and Engineering"
+      "name": "Materials Science and Engineering",
+      "files": {
+        "Lecture Notes": 1253,
+        "Readings": 187,
+        "Lecture Videos": 12,
+        "Problem Sets": 264,
+        "Exams": 290,
+        "Projects": 482
+      }
     },
     {
       "id": 758,
       "field": 747,
-      "name": "Mechanical Engineering"
+      "name": "Mechanical Engineering",
+      "files": {
+        "Lecture Notes": 2898,
+        "Readings": 461,
+        "Lecture Videos": 32,
+        "Problem Sets": 853,
+        "Exams": 388,
+        "Projects": 921
+      }
     },
     {
       "id": 755,
       "field": 747,
-      "name": "Nuclear Engineering"
+      "name": "Nuclear Engineering",
+      "files": {
+        "Lecture Notes": 302,
+        "Readings": 152,
+        "Lecture Videos": 26,
+        "Problem Sets": 33,
+        "Exams": 89,
+        "Projects": 24
+      }
     },
     {
       "id": 756,
       "field": 747,
-      "name": "Ocean Engineering"
+      "name": "Ocean Engineering",
+      "files": {
+        "Lecture Notes": 668,
+        "Readings": 111,
+        "Lecture Videos": 0,
+        "Problem Sets": 115,
+        "Exams": 60,
+        "Projects": 72
+      }
     },
     {
       "id": 757,
       "field": 747,
-      "name": "Systems Engineering"
+      "name": "Systems Engineering",
+      "files": {
+        "Lecture Notes": 2988,
+        "Readings": 476,
+        "Lecture Videos": 127,
+        "Problem Sets": 594,
+        "Exams": 330,
+        "Projects": 666
+      }
     },
     {
       "id": 760,
       "field": 759,
-      "name": "History"
+      "name": "History",
+      "files": {
+        "Lecture Notes": 991,
+        "Readings": 500,
+        "Lecture Videos": 25,
+        "Problem Sets": 0,
+        "Exams": 60,
+        "Projects": 32
+      }
     },
     {
       "id": 761,
       "field": 759,
-      "name": "Language"
+      "name": "Language",
+      "files": {
+        "Lecture Notes": 100,
+        "Readings": 218,
+        "Lecture Videos": 5,
+        "Problem Sets": 0,
+        "Exams": 14,
+        "Projects": 46
+      }
     },
     {
       "id": 762,
       "field": 759,
-      "name": "Linguistics"
+      "name": "Linguistics",
+      "files": {
+        "Lecture Notes": 727,
+        "Readings": 48,
+        "Lecture Videos": 0,
+        "Problem Sets": 36,
+        "Exams": 3,
+        "Projects": 9
+      }
     },
     {
       "id": 763,
       "field": 759,
-      "name": "Literature"
+      "name": "Literature",
+      "files": {
+        "Lecture Notes": 387,
+        "Readings": 611,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 29,
+        "Projects": 84
+      }
     },
     {
       "id": 765,
       "field": 759,
-      "name": "Music"
+      "name": "Music",
+      "files": {
+        "Lecture Notes": 218,
+        "Readings": 93,
+        "Lecture Videos": 46,
+        "Problem Sets": 0,
+        "Exams": 83,
+        "Projects": 74
+      }
     },
     {
       "id": 764,
       "field": 759,
-      "name": "Philosophy"
+      "name": "Philosophy",
+      "files": {
+        "Lecture Notes": 650,
+        "Readings": 369,
+        "Lecture Videos": 1,
+        "Problem Sets": 10,
+        "Exams": 37,
+        "Projects": 46
+      }
     },
     {
       "id": 766,
       "field": 759,
-      "name": "Religion"
+      "name": "Religion",
+      "files": {
+        "Lecture Notes": 102,
+        "Readings": 23,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 1,
+        "Projects": 11
+      }
     },
     {
       "id": 769,
       "field": 767,
-      "name": "Corporate Innovation"
+      "name": "Corporate Innovation",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 773,
       "field": 767,
-      "name": "Innovation Ecosystems"
+      "name": "Innovation Ecosystems",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 770,
       "field": 767,
-      "name": "Innovation Process"
+      "name": "Innovation Process",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 772,
       "field": 767,
-      "name": "Inventions & Patents"
+      "name": "Inventions & Patents",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 771,
       "field": 767,
-      "name": "Product Innovation"
+      "name": "Product Innovation",
+      "files": {
+        "Lecture Notes": 0,
+        "Readings": 0,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 0
+      }
     },
     {
       "id": 768,
       "field": 767,
-      "name": "Startups/New Enterprises"
+      "name": "Startups/New Enterprises",
+      "files": {
+        "Lecture Notes": 279,
+        "Readings": 82,
+        "Lecture Videos": 85,
+        "Problem Sets": 1,
+        "Exams": 22,
+        "Projects": 194
+      }
     },
     {
       "id": 775,
       "field": 774,
-      "name": "Biomedical Technologies"
+      "name": "Biomedical Technologies",
+      "files": {
+        "Lecture Notes": 538,
+        "Readings": 112,
+        "Lecture Videos": 7,
+        "Problem Sets": 36,
+        "Exams": 63,
+        "Projects": 94
+      }
     },
     {
       "id": 776,
       "field": 774,
-      "name": "Health Care Management"
+      "name": "Health Care Management",
+      "files": {
+        "Lecture Notes": 89,
+        "Readings": 38,
+        "Lecture Videos": 73,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 85
+      }
     },
     {
       "id": 778,
       "field": 774,
-      "name": "Imaging"
+      "name": "Imaging",
+      "files": {
+        "Lecture Notes": 158,
+        "Readings": 24,
+        "Lecture Videos": 0,
+        "Problem Sets": 15,
+        "Exams": 12,
+        "Projects": 10
+      }
     },
     {
       "id": 777,
       "field": 774,
-      "name": "Immunology"
+      "name": "Immunology",
+      "files": {
+        "Lecture Notes": 55,
+        "Readings": 4,
+        "Lecture Videos": 0,
+        "Problem Sets": 14,
+        "Exams": 12,
+        "Projects": 0
+      }
     },
     {
       "id": 779,
       "field": 774,
-      "name": "Mental Health"
+      "name": "Mental Health",
+      "files": {
+        "Lecture Notes": 33,
+        "Readings": 4,
+        "Lecture Videos": 0,
+        "Problem Sets": 0,
+        "Exams": 0,
+        "Projects": 1
+      }
     },
     {
       "id": 780,
       "field": 774,
-      "name": "Pathology and Pathophysiology"
+      "name": "Pathology and Pathophysiology",
+      "files": {
+        "Lecture Notes": 196,
+        "Readings": 72,
+        "Lecture Videos": 0,
+        "Problem Sets": 17,
+        "Exams": 31,
+        "Projects": 13
+      }
     },
     {
       "id": 781,
       "field": 774,
-      "name": "Pharmacology & Toxicology"
+      "name": "Pharmacology & Toxicology",
+      "files": {
+        "Lecture Notes": 85,
+        "Readings": 23,
+        "Lecture Videos": 0,
+        "Problem Sets": 2,
+        "Exams": 23,
+        "Projects": 12
+      }
     },
     {
       "id": 782,
       "field": 774,
-      "name": "Public Health"
+      "name": "Public Health",
+      "files": {
+        "Lecture Notes": 295,
+        "Readings": 94,
+        "Lecture Videos": 39,
+        "Problem Sets": 0,
+        "Exams": 6,
+        "Projects": 134
+      }
     }
   ],
   "kinds": [

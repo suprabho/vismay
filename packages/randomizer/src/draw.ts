@@ -767,10 +767,11 @@ function ocwPlan(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, sequenc
     }
   }
 
-  // Topic: uniform inside the field, minus topics spun in the last 30 days.
+  // Topic: uniform inside the field, among topics with files, minus topics spun in the last 30 days.
   let topic: OcwTopic
-  const inField = data.topics.filter((t) => t.field === field.id)
-  if (!inField.length) throw new Error(`The OCW taxonomy has no topics under ${field.name}. Re-run scripts/randomizer/ocw-taxonomy.mts.`)
+  const stocked = (t: OcwTopic) => data.kinds.some((k) => (t.files[k.name] ?? 0) > 0)
+  const inField = data.topics.filter((t) => t.field === field.id && stocked(t))
+  if (!inField.length) throw new Error(`No ${field.name} topic has files of the OCW Desk's kinds. Re-run scripts/randomizer/ocw-taxonomy.mts, or take the field out.`)
   const prevTopic = prev ? topicById(prev.topic) : undefined
   if (ctx.locked('topic') && prevTopic && prevTopic.field === field.id) {
     topic = prevTopic
@@ -793,17 +794,21 @@ function ocwPlan(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, sequenc
     rule(ctx, 'balance', 'good', `Field first (${field.name}, 1 in ${data.fields.length}), then a topic inside it (${topic.name}, 1 in ${cands.length || inField.length}).`)
   }
 
-  // Kind: uniform, with the one-in-three hands-on quota.
+  // Kind: uniform among the kinds the topic has files of, with the one-in-three hands-on quota.
   let kind: OcwKind
   const prevKind = prev ? kindByName(prev.kind) : undefined
+  const has = (k: OcwKind) => (topic.files[k.name] ?? 0) > 0
   if (ctx.locked('kind') && prevKind) {
     kind = prevKind
     rule(ctx, 'lock', 'info', `Resource kind locked to ${kind.name}.`)
+    if (!has(kind)) rule(ctx, 'pool', 'warn', `${topic.name} had no ${kind.name.toLowerCase()} files at the last taxonomy refresh. The pool may come back empty.`)
   } else {
-    let pool = data.kinds
+    let pool = data.kinds.filter(has)
+    const missing = data.kinds.filter((k) => !has(k))
+    if (missing.length) rule(ctx, 'pool', 'info', `${topic.name} has no ${list(missing.map((k) => k.name.toLowerCase()))} on OCW, so those kinds are out.`)
     const lastTwo = ctx.kept.slice(-2)
-    if (lastTwo.length === 2 && lastTwo.every((e) => !isHandsOn(e.meta.kind, data)) && data.kinds.some((k) => k.hands_on)) {
-      pool = data.kinds.filter((k) => k.hands_on)
+    if (lastTwo.length === 2 && lastTwo.every((e) => !isHandsOn(e.meta.kind, data)) && pool.some((k) => k.hands_on)) {
+      pool = pool.filter((k) => k.hands_on)
       rule(ctx, 'quota', 'warn', 'The last two spins were reading kinds. To keep one in three hands-on, this draw only uses problem sets, exams and projects.')
     }
     kind = pick(pool, rng)

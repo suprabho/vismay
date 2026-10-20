@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { ATLAS, DESK, EPICS, FOOTSHORTS, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planOcw } from './draw'
+import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
 import { extractHeroInsight, gameSummary, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
@@ -28,6 +29,8 @@ import {
 } from './types'
 
 const NOW = new Date('2026-10-05T12:00:00Z')
+/** Async checks, awaited before the file reports ok. */
+const pending: Promise<void>[] = []
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 864e5).toISOString()
 const entry = (r: DrawResult, d: number, status: SpinHistoryEntry['status'] = 'spun'): SpinHistoryEntry => ({
   status,
@@ -438,6 +441,24 @@ for (const t of OCW.topics) assert.ok(OCW.fields.some((f) => f.id === t.field), 
 for (const f of OCW.fields) assert.ok(OCW.topics.some((t) => t.field === f.id), `${f.name}: no topics`)
 assert.equal(OCW.kinds.length, 6)
 assert.ok(OCW.kinds.some((k) => k.hands_on) && OCW.kinds.some((k) => !k.hands_on))
+for (const t of OCW.topics) for (const k of OCW.kinds) assert.equal(typeof t.files[k.name], 'number', `${t.name}: no count for ${k.name}`)
+assert.ok(OCW.topics.some((t) => OCW.kinds.every((k) => t.files[k.name] === 0)), 'the taxonomy records topics with no files')
+{
+  // The plan never lands on a topic without files, nor on a kind the topic has none of.
+  for (let seed = 0; seed < 300; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW })
+    assert.ok(plan.topic.files[plan.kind.name]! > 0, `${plan.topic.name} has no ${plan.kind.name}`)
+  }
+  // A topic with only reading kinds: the quota cannot force a hands-on kind, so it yields.
+  const readingOnly = OCW.topics.find((t) => OCW.kinds.some((k) => !k.hands_on && t.files[k.name]! > 0) && OCW.kinds.every((k) => !k.hands_on || t.files[k.name] === 0))
+  if (readingOnly) {
+    const prev = { picks: { field: readingOnly.field, topic: readingOnly.id, kind: 'Lecture Notes', lens: 'The one idea', courseId: 1, fileId: 1 } }
+    const past = (d: number): SpinHistoryEntry => ({ status: 'spun', primary: 'x', combo: 'x', meta: { kind: 'Readings', topic: 0, field: 0 }, picks: prev.picks, createdAt: daysAgo(d) })
+    const plan = planOcw({ randomizer: 'ocw', seed: 5, now: NOW, prev, locks: ['topic'], history: [past(2), past(1)] })
+    assert.equal(plan.topic.id, readingOnly.id)
+    assert.ok(!plan.kind.hands_on && plan.topic.files[plan.kind.name]! > 0)
+  }
+}
 assert.ok(isHandsOn('Problem Sets') && !isHandsOn('Lecture Notes') && !isHandsOn(undefined))
 assert.deepEqual(normalizeLocks('ocw', ['resource']), ['field', 'topic', 'kind', 'course', 'resource'])
 assert.deepEqual(normalizeLocks('ocw', ['course', 'lens']), ['field', 'topic', 'course', 'lens'])
@@ -533,10 +554,12 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
   // Balancing: the field is re-drawn once after a repeat; a topic spun in the last 30 days is left out; two reading spins force a hands-on kind.
   const first = spinOcw({ seed: 2, now: NOW })
   let sameField = 0
+  const stockedIn = (field: number) => OCW.topics.filter((t) => t.field === field && OCW.kinds.some((k) => t.files[k.name]! > 0)).length
   for (let seed = 0; seed < 400; seed++) {
     const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [entry(first, 1)] })
     if (plan.field.id === first.meta.field) sameField++
-    if (plan.field.id === first.meta.field) assert.notEqual(plan.topic.id, first.meta.topic, 'topic blocked for 30 days')
+    // The topic block holds unless the field has only that one topic with files (then it lifts, and says so).
+    if (plan.field.id === first.meta.field && stockedIn(plan.field.id) > 1) assert.notEqual(plan.topic.id, first.meta.topic, 'topic blocked for 30 days')
   }
   // Without the re-draw a field repeats 1 in 11; one re-draw makes it about 1 in 121.
   assert.ok(sameField < 400 / 30, `field repeated ${sameField} times in 400`)
@@ -550,7 +573,8 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
   })
   for (let seed = 0; seed < 100; seed++) {
     const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [reading(2), reading(1)] })
-    assert.ok(plan.kind.hands_on, `quota forces a hands-on kind, got ${plan.kind.name}`)
+    const canHandsOn = OCW.kinds.some((k) => k.hands_on && plan.topic.files[k.name]! > 0)
+    assert.ok(plan.kind.hands_on || !canHandsOn, `quota forces a hands-on kind, got ${plan.kind.name} for ${plan.topic.name}`)
   }
 }
 {
@@ -603,6 +627,95 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
   assert.equal(fresh.query.courseId, null)
 }
 
+// OCW pool: the hit mapping, the page offset, the enrichment and the loader on a fake API.
+{
+  const hit: OcwHit = {
+    id: 8525629,
+    key: 'courses/2-61-internal-combustion-engines-spring-2017/resources/mit2_61s17_ps6/',
+    url: 'https://ocw.mit.edu/courses/2-61-internal-combustion-engines-spring-2017/resources/mit2_61s17_ps6/',
+    title: 'Internal Combustion Engines, Problem set 6',
+    content_type: 'pdf',
+    file_type: 'application/pdf',
+    content_feature_type: ['Problem Sets'],
+    resource_id: '3661',
+    resource_readable_id: '2.61+spring_2017',
+    run_title: 'Internal Combustion Engines',
+    run_slug: 'courses/2-61-internal-combustion-engines-spring-2017',
+    course_number: ['2.61'],
+    departments: [{ name: 'Mechanical Engineering' }],
+    year: 2017,
+    semester: 'Spring',
+  }
+  const f = ocwFileFromHit(hit)!
+  assert.equal(f.courseId, 3661)
+  assert.equal(f.courseNumber, '2.61')
+  assert.equal(f.courseSlug, 'courses/2-61-internal-combustion-engines-spring-2017')
+  assert.deepEqual(f.departments, ['Mechanical Engineering'])
+  assert.deepEqual(f.kinds, ['Problem Sets'])
+  // A bare file name title and a missing course number fall back to the key and the readable id.
+  const bare = ocwFileFromHit({ ...hit, title: '', content_title: 'lec15.pdf', course_number: null, run_title: null })!
+  assert.equal(bare.title, 'lec15.pdf')
+  assert.equal(bare.courseNumber, '2.61')
+  assert.equal(bare.courseTitle, '2.61')
+  assert.equal(ocwFileFromHit({ ...hit, resource_id: null }), null)
+  assert.equal(ocwFileFromHit({ ...hit, key: null }), null)
+
+  assert.equal(ocwPageOffset(0, 3862), 0)
+  assert.equal(ocwPageOffset(1, 3862), 3832, 'the last page still fits')
+  assert.equal(ocwPageOffset(0.5, 10), 0, 'fewer files than a page: the page starts at 0')
+  assert.equal(ocwPageOffset(1, 50000), 10000 - DRAW_RULES.ocwPageSize, 'the search cap holds')
+  for (let i = 0; i < 100; i++) {
+    const o = ocwPageOffset(i / 100, 3862)
+    assert.ok(o >= 0 && o + DRAW_RULES.ocwPageSize <= 3862)
+  }
+
+  const course = enrichedOcwCourse(
+    { id: 3661, readableId: '2.61+spring_2017', number: '2.61', title: 'x', url: 'u', slug: 's', departments: [], year: 2017, semester: 'Spring', instructors: [], level: [], courseFeatures: [] },
+    { id: 3661, title: 'Internal Combustion Engines', url: 'https://ocw.mit.edu/courses/2-61/', course_feature: ['Problem Sets'], runs: [{ instructors: [{ full_name: 'Prof. Wai Cheng' }, { first_name: 'A', last_name: 'B' }], level: [{ name: 'Graduate' }] }] },
+  )
+  assert.deepEqual(course.instructors, ['Prof. Wai Cheng', 'A B'])
+  assert.deepEqual(course.level, ['Graduate'])
+  assert.equal(course.title, 'Internal Combustion Engines')
+
+  // The loader: a topic page needs the count then the page at the plan's offset; a course pool pages the course's files.
+  // (The file runs as CommonJS, so the async part is collected and awaited at the end.)
+  const calls: string[] = []
+  const fakeFetch = (async (url: string | URL | Request) => {
+    const u = String(url)
+    calls.push(u)
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+    if (u.includes('/content_file_search/') && u.includes('limit=0')) return json({ count: 3862, results: [] })
+    if (u.includes('/content_file_search/')) {
+      const offset = Number(new URL(u).searchParams.get('offset'))
+      return json({ count: 3862, results: [...Array(30).keys()].map((i) => ({ ...hit, id: offset + i, key: `${hit.key}${i}/` }))})
+    }
+    if (u.includes('/learning_resources/3661/contentfiles/')) {
+      const offset = Number(new URL(u).searchParams.get('offset'))
+      const n = Math.max(0, Math.min(100, 130 - offset))
+      return json({ count: 130, results: [...Array(n).keys()].map((i) => ({ ...hit, id: 50000 + offset + i, key: `${hit.key}${offset + i}/` })) })
+    }
+    return new Response('nope', { status: 404 })
+  }) as typeof fetch
+  const plan = planOcw({ randomizer: 'ocw', seed: 7, now: NOW })
+  pending.push(
+    (async () => {
+      const pool = await loadOcwPool({ ...plan, query: { ...plan.query, kind: 'Problem Sets' } }, { now: NOW, fetch: fakeFetch })
+      assert.equal(pool.count, 3862)
+      assert.equal(pool.offset, ocwPageOffset(plan.u, 3862))
+      assert.equal(pool.files.length, 30)
+      assert.equal(calls.length, 2)
+      assert.ok(calls[0]!.includes(`topic=${encodeURIComponent(plan.topic.name)}`) && calls[0]!.includes('platform=ocw'))
+      assert.ok(calls[1]!.includes(`offset=${pool.offset}`) && calls[1]!.includes(`limit=${DRAW_RULES.ocwPageSize}`))
+      calls.length = 0
+      const inCourse = await loadOcwPool({ ...plan, query: { topic: plan.topic.name, kind: 'Problem Sets', courseId: 3661 } }, { now: NOW, fetch: fakeFetch })
+      assert.equal(inCourse.count, 130)
+      assert.equal(inCourse.files.length, 130)
+      assert.equal(calls.length, 2)
+      await assert.rejects(loadOcwPool({ ...plan, query: { topic: plan.topic.name, kind: 'Problem Sets', courseId: 1 } }, { fetch: fakeFetch }), /HTTP 404/)
+    })(),
+  )
+}
+
 // Stub and brief sections.
 const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
 for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'footshorts', 'viznba'] as const) {
@@ -624,4 +737,10 @@ for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'footshorts', 'viznba
 assert.equal(extractHeroInsight('# R\n\n## HERO INSIGHT\n\n**Bold claim.**\n\nSupporting claims:\n1. a'), 'Bold claim.')
 assert.equal(extractHeroInsight('# R\n\n## Notes'), null)
 
-console.log('randomizer: ok')
+Promise.all(pending).then(
+  () => console.log('randomizer: ok'),
+  (e) => {
+    console.error(e)
+    process.exit(1)
+  },
+)

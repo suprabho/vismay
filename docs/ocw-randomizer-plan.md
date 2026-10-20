@@ -6,13 +6,17 @@ on vizmaya.fyi as a fourth tab next to Desk, Atlas and Epics. It draws one
 OCW's catalogue, under the same 30/90-day repeat blocks, locks and re-spins
 the other randomizers use, and the agent brief then carries the resource.
 
-Status: steps 1 to 3 of section 6 are built (the taxonomy script and
+Status: steps 1 to 4 of section 6 are built (the taxonomy script and
 `data/ocw.json`, the types and dataset exports, `planOcw` / `drawOcw` with
-tests). The brief and stub branches from step 5 came with them, because the
-brief's and stub's dispatch is exhaustive over the randomizer ids. Steps 4
-(the pool loader and the two-pass `createSpin`), 6 to 9 are not built: an
-OCW Desk spin from admin or the API fails with a clear 503 until step 4
-lands.
+tests, and `ocwPool.ts` with the two-pass `createSpin`). The brief and stub
+branches from step 5 came with step 3, because the brief's and stub's
+dispatch is exhaustive over the randomizer ids. Two things changed from the
+plan as written: the taxonomy now records how many files of each kind every
+topic has (a quarter of the topic-and-kind pairs are empty on OCW, and 17
+topics have no files at all), so the plan never asks for an empty pool; and
+`createSpin` re-plans from a fresh seed up to twice when a pool still comes
+back empty. Steps 6 to 9 are not built: an OCW Desk spin needs migration
+093 before the log accepts it.
 
 > On the count: the repo already has five randomizer ids (`desk`, `atlas`,
 > `epics`, `footshorts`, `viznba`), three of them on vizmaya. The OCW one is

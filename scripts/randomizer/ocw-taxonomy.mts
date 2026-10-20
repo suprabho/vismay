@@ -6,9 +6,12 @@
  * tree (11 fields, about 100 topics); its resource kinds are a hand-picked
  * subset of MIT Learn's course features (the ones that make a story), and
  * its lenses are the playbook's. Fields and topics are rewritten from the
- * API on every run; kinds and lenses are kept from the file (or seeded on
- * the first run) and only validated: every kind must still be a course
- * feature the API knows, or the run fails.
+ * API on every run, each topic with how many OCW files of each kind it has
+ * (one aggregation call per kind), so the draw never plans a topic and
+ * kind that have nothing: about a quarter of the combinations are empty,
+ * and 17 topics have no files at all. Kinds and lenses are kept from the
+ * file (or seeded on the first run) and only validated: every kind must
+ * still be a course feature the API knows, or the run fails.
  *
  * The file is committed so the slot machine's reel strips and the draw's
  * plan never need the network; only the course and resource reels do, per
@@ -41,6 +44,8 @@ interface OcwTopic {
   id: number
   field: number
   name: string
+  /** OCW files of each kind under the topic, by kind name, at the last refresh. */
+  files: Record<string, number>
 }
 
 interface OcwKind {
@@ -106,7 +111,7 @@ async function main(): Promise<void> {
   const fieldIds = new Set(fields.map((f) => f.id))
   const children: OcwTopic[] = topics.results
     .filter((t): t is ApiTopic & { parent: number } => t.parent !== null && fieldIds.has(t.parent))
-    .map((t) => ({ id: t.id, field: t.parent, name: t.name }))
+    .map((t) => ({ id: t.id, field: t.parent, name: t.name, files: {} as Record<string, number> }))
     .sort((a, b) => a.field - b.field || a.name.localeCompare(b.name))
   const orphans = topics.results.filter((t) => t.parent !== null && !fieldIds.has(t.parent))
   if (orphans.length) throw new Error(`topics with an unknown parent: ${orphans.map((t) => t.name).join(', ')}`)
@@ -121,20 +126,39 @@ async function main(): Promise<void> {
     if (!known.has(k.name)) throw new Error(`kind "${k.name}" is not a course feature the API knows`)
   }
 
+  // How many OCW files of each kind each topic has: one aggregation per kind.
+  const counts = new Map<string, Map<string, number>>()
+  for (const k of kinds) {
+    const agg = await get<{ metadata?: { aggregations?: { topic?: Array<{ key: string; doc_count: number }> } } }>(
+      `/content_file_search/?platform=ocw&limit=0&aggregations=topic&content_feature_type=${encodeURIComponent(k.name)}`,
+    )
+    const buckets = agg.metadata?.aggregations?.topic
+    if (!buckets) throw new Error(`no topic aggregation for ${k.name}`)
+    counts.set(k.name, new Map(buckets.map((b) => [b.key, b.doc_count])))
+  }
+  for (const t of children) {
+    t.files = Object.fromEntries(kinds.map((k) => [k.name, counts.get(k.name)!.get(t.name) ?? 0]))
+  }
+  const empty = children.filter((t) => Object.values(t.files).every((n) => n === 0))
+
   const next: OcwDataset = { fields, topics: children, kinds, lenses }
   const text = `${JSON.stringify(next, null, 2)}\n`
-  const stale = !existing || JSON.stringify(existing.fields) !== JSON.stringify(fields) || JSON.stringify(existing.topics) !== JSON.stringify(children)
+  const same = (a: OcwTopic[], b: OcwTopic[]) => JSON.stringify(a.map((t) => [t.id, t.field, t.name])) === JSON.stringify(b.map((t) => [t.id, t.field, t.name]))
+  // Counts drift daily and are not what --check is for; the tree is.
+  const stale = !existing || JSON.stringify(existing.fields) !== JSON.stringify(fields) || !same(existing.topics, children)
 
   if (check) {
     if (stale) {
       console.error(`${OUT} is stale: run pnpm randomizer:ocw-taxonomy`)
       process.exit(1)
     }
-    console.log(`ocw.json is current: ${fields.length} fields, ${children.length} topics, ${kinds.length} kinds, ${lenses.length} lenses`)
+    console.log(`ocw.json is current: ${fields.length} fields, ${children.length} topics (${empty.length} with no files), ${kinds.length} kinds, ${lenses.length} lenses`)
     return
   }
   writeFileSync(OUT, text)
-  console.log(`wrote ${join('packages/randomizer/src/data', 'ocw.json')}: ${fields.length} fields, ${children.length} topics, ${kinds.length} kinds, ${lenses.length} lenses${stale ? '' : ' (unchanged)'}`)
+  console.log(
+    `wrote ${join('packages/randomizer/src/data', 'ocw.json')}: ${fields.length} fields, ${children.length} topics (${empty.length} with no files of any kind), ${kinds.length} kinds, ${lenses.length} lenses${stale ? '' : ' (tree unchanged)'}`,
+  )
 }
 
 main().catch((e) => {
