@@ -937,7 +937,8 @@ function drawOcw(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, pool: O
     .sort(byKey)
     .slice(0, DRAW_RULES.maxOcwSiblings)
   const course = ocwCourseFromFile(file)
-  const pageCourses = uniq(files.map((f) => f.courseId)).length
+  const pageCourseTitles = uniq(files.map((f) => `${f.courseNumber} ${f.courseTitle}`))
+  const pageCourses = pageCourseTitles.length
   rule(
     ctx,
     'pool',
@@ -964,7 +965,7 @@ function drawOcw(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, pool: O
       course,
       file,
       siblings,
-      pool: { ...poolMeta, pageSize: pool.files.length },
+      pool: { ...poolMeta, pageSize: pool.files.length, courses: pageCourseTitles },
       sequence: continued,
     },
     reels: {

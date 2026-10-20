@@ -478,8 +478,8 @@ export interface OcwSubject {
   file: OcwFile
   /** The course's other files of this kind that the pool saw, in key order: context for the brief, the route for sequence mode. */
   siblings: OcwFile[]
-  /** The pool the file came from: its query, size, offset and when it was read. */
-  pool: Omit<OcwPool, 'files'> & { pageSize: number }
+  /** The pool the file came from: its query, size, offset, when it was read, and the courses on the page (titles). */
+  pool: Omit<OcwPool, 'files'> & { pageSize: number; courses: string[] }
   /** Continued from the previous spin's resource (sequence mode). */
   sequence: boolean
 }
