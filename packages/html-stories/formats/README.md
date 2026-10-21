@@ -11,7 +11,7 @@ model of a place and beside a 3D race replay that their runtimes drive:
 | **Book** | Turns pages: tap, drag a page across, or the arrow keys. A two-page spread on wide screens, one page at a time on phones. | `book@1.css` + `book@1.js` |
 | **Board** | Follows a guided tour while the camera flies between pinned items, or pans and zooms freely. Felt board or whiteboard. | `board@1.css` + `board@1.js` |
 | **Deck** | Steps through slides, or switches to a stack of cards and swipes them away. | `deck@1.css` + `deck@1.js` |
-| **Diorama** | Scrolls while the camera moves over a tilted model of the place: terrain strata, routes, certainty markers and data props that rise off the plate. | `diorama@1.css` + `diorama@1.js` |
+| **Diorama** | Scrolls while the camera moves over a tilted model of the place: terrain strata, routes, certainty markers and data objects on the plinth (rulers, cutaways, trays, groves, crates, arcs, split stages, time-lapse plates, towers). | `diorama@1.css` + `diorama@1.js` |
 | **Recap** (vizf1) | Scrolls chapters while the 3D race replay beside them jumps to each moment, camera and car. | `recap@1.css` + `recap@1.js` |
 
 `examples/` tells the same story (`vizmaya-data/odyssey-voyage`) as a book, a
@@ -281,8 +281,10 @@ A diorama is one model seen from many camera positions, in six layers:
 **01 sea and plinth** (the plate, a box with a caption on its front face),
 **02 terrain** (real coastlines, projected and stacked as paper strata),
 **03 routes and labels** (one layer per theory; markers show certainty),
-**04 props** (objects whose height, size or position is the data: towers,
-rings, lines, pulses, a ship), **05 atmosphere** (fog over what can't be
+**04 props** (data objects whose height, size or position is the data: a
+deep-time ruler, a section cutaway, specimen trays, a unit grove, crate
+stacks, flow arcs, a split stage, time-lapse plates, towers, rings, pulses;
+plus leader lines and a ship), **05 atmosphere** (fog over what can't be
 mapped) and **06 the proscenium** (the HTML copy, which never tilts). The
 design reference is the Odyssey Diorama design canvas; `examples/odyssey-diorama.html`
 is it built.
@@ -359,7 +361,27 @@ beat gets its toggles in `.dio-chips`. `<footer class="dio-end">` after
   every source is linked, keys put where the runtime doesn't read them (a
   `fog` on the beat instead of under `layers`), colour tokens that aren't
   hex, and a land colour that disappears into the ground (under 3:1) or the
-  sea (under 2:1).
+  sea (under 2:1); references inside objects (a span's or row's place, every
+  `value`), a story with fewer than three object kinds or more than half
+  its beats led by the map alone, and prop kinds the runtime doesn't draw
+  that the page doesn't register.
+- **Data objects (`Story.props`).** Beside `Story.charts`, a registry of
+  prop kinds: `{ layout(spec, api), play?(prop, k) }`. `layout` places the
+  object in plate pixels as parts (`box: [x, y, z, w, d, h]`, a lifted
+  `path: [[x, y, z], …]`, or a `land: [x, y, scale]` copy of the plate) with
+  an entrance (`delay`, `span`) and an optional `alt` state it turns into
+  (height, colour, lift, opacity: a grove's trees toppling, a tray row
+  lifting), plus captions at a point or on a part. Both renderers draw the
+  same parts: WebGL boxes with hand-shaded faces, ribbons for paths, the
+  land extrusion reused for copies; CSS cuboids, flat SVG paths and small
+  SVG plates without WebGL. The built-ins are `ruler`, `section`, `trays`,
+  `grove`, `stack`, `arc`, `split` and `lapse` (tower, ring, line, pulse and
+  ship keep their own code). Objects that aren't on the map (ruler, trays,
+  split, lapse) stand on a shelf in front of the plinth; every object
+  threads back to its place. A layout runs twice: once to check it and frame
+  `camera.target: "props"`, again once the plate's relief is in, so it stands
+  on the ground. Values share one scale per kind and unit across the story.
+  A page can register its own kinds after the runtime's script.
 - **Reduced motion:** no breathing, swell, dash flow, fog drift or bobbing;
   camera moves become cuts behind a fade; props stand at full height.
 

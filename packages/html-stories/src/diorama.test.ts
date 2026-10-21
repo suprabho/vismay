@@ -81,6 +81,35 @@ assert.ok(warns(html.replace('"type": "stepper"', '"type": "slideshow"')).some((
   assert.ok(w.includes('A plate has "shading"') && !w.includes('"relief"') && !w.includes('"borders",'))
 }
 
+// The object vocabulary: references inside objects are checked, and the map can't lead the story.
+{
+  const x = s()
+  x.beats[1]!.props = [
+    { kind: 'ruler', spans: [{ label: 'Troy', from: -1250, to: 'sack-year', at: 'troy' }, { label: 'Nowhere', from: -900, to: -800, at: 'atlantis' }] },
+    { kind: 'trays', rows: [{ label: 'Troy', at: 'troy' }], cols: ['x'], cells: [[1]] },
+    { kind: 'stack', at: 'troy', items: [{ label: 'Ships', value: 'ships-n' }] },
+    { kind: 'lapse', frames: [{ label: 'a', places: ['troy', 'erewhon'] }, { label: 'b', places: [] }] },
+  ]
+  x.beats[1]!.camera = { target: 'props', zoom: 1.2 }
+  const w = checkDioramaStory(x).join('\n')
+  assert.ok(w.includes('a ruler at "atlantis"') && w.includes('a ruler sized by "sack-year"'))
+  assert.ok(w.includes('a stack sized by "ships-n"') && w.includes('a lapse at "erewhon"'))
+  assert.ok(!w.includes('points the camera at "props"'))
+}
+{
+  const x = s()
+  for (const b of x.beats) b.props = (b.props ?? []).filter((p) => p.kind === 'ship' || p.kind === 'line' || p.kind === 'tower')
+  const w = checkDioramaStory(x).join('\n')
+  assert.ok(w.includes('The story uses tower: give each data shape its object'))
+  assert.ok(w.includes('6 of 8 beats are led by the map alone'))
+}
+// A kind the runtime doesn't draw is named, unless the page registers it.
+{
+  const custom = html.replace('"kind": "pulse"', '"kind": "orrery"')
+  assert.ok(warns(custom).some((w) => w.includes('"orrery" prop')))
+  assert.ok(!warns(custom.replace('</body>', '<script>Story.props.orrery = { layout: function () {} }</script></body>')).some((w) => w.includes('"orrery"')))
+}
+
 // The palette: dark land on a dark ground vanishes; non-hex tokens fall back.
 assert.ok(contrast('#ffffff', '#000000') > 20 && contrast('#120E16', '#120E16') === 1)
 assert.deepEqual(checkDioramaPalette(html), [])

@@ -186,16 +186,21 @@ ${skeleton(
 function dioramaSection(app: HtmlStoryApp): string {
   return `The story is one physical-feeling model of its subject, seen from many
 camera positions: a tilted map plate on a plinth, real coastlines cut as paper
-strata, routes and place markers on it, data props that stand up off it
-(towers, rings), fog over what can't be mapped, and a flat proscenium of words
-in front. The reader scrolls; the camera scrubs from one beat's pose to the
-next and the layers fade at the beat threshold. Pick it when the story has a
-place, a route or a spatial comparison at its heart.
+strata, routes and place markers on it, data objects that stand on the plinth
+(a deep-time ruler, a cutaway, specimen trays, a grove of 100, crates, flow
+arcs, two accounts side by side, small multiples of the plate, towers), fog
+over what can't be mapped, and a flat proscenium of words in front. The reader
+scrolls; the camera scrubs from one beat's pose to the next and the layers
+fade at the beat threshold. Pick it when the story has a place, a route or a
+spatial comparison at its heart.
+
+**The map is the stage, not the story.** Every beat puts a new data object on
+the plinth; a camera move alone is not a beat.
 
 A hosted runtime does the stage: the 3D model (three.js; a CSS 3D plate where
 WebGL is missing), projecting your places with d3-geo, the land from
-world-atlas, the camera rail, markers by certainty, labels, props that rise
-once, fog, the stepper's Back / Next and timeline, the layer toggles, a legend,
+world-atlas, the camera rail, markers by certainty, labels, the data objects
+and their entrances, fog, the stepper's Back / Next and timeline, the layer toggles, a legend,
 progress, "Read as one page" (the beats as one column, which is also what
 readers without JavaScript get), keys (←/→), deep links (\`#beat=3\`), reduced
 motion (no loops, cuts instead of camera moves, props at full height) and a
@@ -231,19 +236,59 @@ ${skeleton(
 
 1. **Extract.** Read the research end to end: places (name, lat/lon, how sure
    anyone is, who proposed it), sequences or routes, every quantity with its
-   unit, quotes with attribution, every caveat.
+   unit, quotes with attribution, every caveat. List every data shape in it:
+   dates, items × attributes, shares, quantities, flows, rival accounts.
 2. **Fact-check before designing.** Recompute every distance from the
    coordinates (haversine) and every sum or share from its parts. A research
    figure more than 10% off is replaced by the computed value and flagged.
    Keep the log, and put each computed figure in \`quantities\` with its
    \`derivation\`: the lint recomputes every one when you post.
-3. **Find the spine:** the finding as one sentence with its number, then the
+3. **Assign objects** before you write beats: give each data shape its
+   object from the vocabulary below.
+4. **Find the spine:** the finding as one sentence with its number, then the
    one or two comparisons that make it land. Turn it into 6 to 10 beats, one
-   claim and one visual change per beat.
-4. **Fit the plate:** the extent of every place plus about 5%. Mercator for
+   claim and one new data object per beat.
+5. **Fit the plate:** the extent of every place plus about 5%. Mercator for
    an extent under about 30° of latitude, \`conic-equal-area\` otherwise.
-5. **Write the JSON**, then the copy, then the design; check it at 1440 and
+6. **Write the JSON**, then the copy, then the design; check it at 1440 and
    390px wide.
+
+### Beyond the map: the object vocabulary
+
+| Data shape | Object | \`kind\` | How it stands |
+| --- | --- | --- | --- |
+| Dates and periods | Deep-time ruler | \`ruler\` | A slab in front of the plate; spans rise from it, threads run up to each place |
+| Where things were found, by layer | Section cutaway | \`section\` | A block beside its place, cut open on two faces, strata as bands, finds set in them |
+| Presence across items × categories | Specimen trays | \`trays\` | A grid of shallow trays, filled or empty; a selected row lifts |
+| A share, or a count out of 100 | Unit grove | \`grove\` | 100 objects by its place; the share topples, fades or empties |
+| Quantities compared | Stacks | \`stack\` | Crates or sacks at true scale, the unit printed on the plinth |
+| Movement between places | Flow arcs | \`arc\` | Arcs lifting off the plate; width is volume only when volume is known |
+| Two accounts of one thing | Split stage | \`split\` | Two plinths side by side, same scale |
+| Change across eras | Time-lapse plates | \`lapse\` | The same plate as small multiples, one per period |
+| One value at one place | Tower, ring, pulse | \`tower\`, \`ring\`, \`pulse\` | For single numbers and distances |
+
+- **Mix:** three object kinds or more per story, and no more than half the
+  beats led by the map alone (the lint counts both).
+- **Tie back to place:** every object connects to the plate by a thread, a
+  leader line or a shared plinth (the runtime draws them from \`at\`,
+  \`anchor\` and each row's or span's \`at\`), so the map stays the index.
+- **Composite beats:** a beat may stage two or three objects when they answer
+  one question (a harvest: crates for two years and the import arc).
+- **On the stage, not in the copy:** a chart belongs on the plinth as an
+  object, never flat in the text column.
+
+A story built map-first and then rebuilt with objects (Kazakhstan's first
+grain and the apple):
+
+| Beat | Map-first | Objects |
+| --- | --- | --- |
+| Begash | Map zoom and a pulse | Section cutaway: the grain in the burial pit |
+| The route | Stepper on the map | The map threaded to a deep-time ruler |
+| The crops | (none) | Specimen trays: six crops × four sites |
+| The apple | Map and one tower | Unit grove: 80 of 100 trees fall |
+| The numbers | Two flat bars in the text column | Crate stacks and the import arc on one plinth |
+| Who tells it | Route layers | Split stage: the story told vs the record dug |
+| Insight | The map spinning | Time-lapse plates: the sites appearing, period by period |
 
 ### The data: \`<script type="application/json" class="diorama-data">\`
 
@@ -323,7 +368,7 @@ fact-check all read it.
 - **Beats**, 6 to 10, in the order of the sections. \`type\` is one of
   ${DIORAMA_BEAT_TYPES.map((t) => `\`${t}\``).join(', ')}:
   - \`cover\`: the whole model and the one-line hook.
-  - \`reveal\`: a data prop grows out of the plate (towers, rings).
+  - \`reveal\`: a data object grows out of the plate.
   - \`hinge\`: a threshold where certainty changes: \`"fog": { "west": 23.19,
     "labels": { "west": "Wonderland", "east": "Geography" }, "caption": "…" }\`
     under the beat's \`layers\` hazes everything west (or east) of a
@@ -344,18 +389,51 @@ fact-check all read it.
   - \`close-up\`: a second, smaller plate (an \`inset\`) for one place in detail.
   - \`epilogue\`: the takeaway; \`"camera": { "spin": true }\` turns the plinth
     slowly.
-- **Camera.** \`target\` is a place id or \`[lon, lat]\` (default: the plate's
-  centre), \`zoom\` (1 frames the whole plate), \`tilt\` 38–52° and \`azimuth\`
-  −2 to −12°. Small moves between neighbouring beats read best.
+- **Camera.** \`target\` is a place id, \`[lon, lat]\` or \`"props"\` (where the
+  beat's objects stand; default: the plate's centre), \`zoom\` (1 frames the
+  whole plate), \`tilt\` 38–52° and \`azimuth\` −2 to −12°. Objects on the shelf
+  (ruler, trays, split, lapse) stand in front of the plinth: target
+  \`"props"\` at about zoom 1.1–1.2 and tilt 50–54° so plate and shelf both
+  show. Small moves between neighbouring beats read best.
 - **Layers.** \`routes\` to show, \`labels\` (at most 8 names; the current stop
   is set in the display serif), \`labelsSm\` (at most 4, for phones),
   \`places\` (markers to show besides the routes' stops) and \`fog\`.
-- **Props.** \`tower\` (\`at\`, \`value\`: a quantity; heights share one scale per
-  unit across the story; \`label\`, \`caption\`, \`color\`), \`ring\` (\`at\`, \`value\` or
-  \`range: [q1, q2]\`: distances drawn to scale from the place; \`label\`,
-  \`labelAngle\` in degrees, 0 = east, clockwise), \`line\` (\`from\`, \`to\`:
-  places or \`[lon, lat]\`; \`label\`), \`pulse\` (\`at\`, \`radius\`) and \`ship\`
-  (\`at\`, \`ship\`).
+- **Props**, the data objects, each with its data. Every number one shows is a
+  quantity id (or a row of years for a ruler), and its values share one scale
+  per unit across the story. \`color\` is a palette name, as for routes.
+  - \`ruler\`: \`spans: [{ label, from, to, at }]\`, years as numbers (negative
+    is BCE) or quantity ids (a unit of \`BCE\` counts back); \`from\`/\`to\` fix
+    the ends. Overlapping spans take lanes; each span threads to its \`at\`.
+  - \`section\`: \`at\`, \`strata: [{ label, depth }]\` from the top down
+    (\`depth\` is relative), \`finds: [{ label, in, x }]\` (\`in\`: a stratum's
+    label or index; \`x\`: 0–1 across the face), \`label\`, \`caption\`,
+    \`offset: [dx, dy]\` in plate pixels.
+  - \`trays\`: \`rows: [{ label, at }]\`, \`cols: [label]\` (six or fewer, short
+    words: they share a phone's width), \`cells\` (rows × cols: 1 present, 0
+    absent, a fraction, \`null\` not known), \`select\` (a row to lift),
+    \`label\`.
+  - \`grove\`: \`at\`, \`value\` (a % quantity, or a count with \`of\`),
+    \`show: "lost"\` (default) or \`"left"\`, \`mode\`: \`topple\` (default),
+    \`fade\` or \`empty\`, \`unit\` (what one object stands for), \`label\`.
+  - \`stack\`: \`at\`, \`items: [{ label, value }]\`, \`per\` (units per crate;
+    default: a round number that keeps the biggest pile under about 24),
+    \`shape\`: \`crate\` or \`sack\`.
+  - \`arc\`: \`from\`, \`to\` (places or \`[lon, lat]\`; one may lie off the
+    plate, and the arc comes in at its edge, named by \`fromLabel\`), \`value\`
+    (sets the width; leave it out when the volume isn't known), \`label\`.
+  - \`split\`: \`anchor\`, \`sides: [{ label, sub, items: [{ label, value }] }]\`
+    (two; an item with a value stands taller, on one scale for both).
+  - \`lapse\`: \`frames: [{ label, places }]\` (two to six); earlier places stay,
+    dimmed, unless \`"cumulative": false\`.
+  - \`tower\` (\`at\`, \`value\`, \`label\`, \`caption\`), \`ring\` (\`at\`, \`value\` or
+    \`range: [q1, q2]\`: distances drawn to scale from the place; \`label\`,
+    \`labelAngle\` in degrees, 0 = east, clockwise), \`pulse\` (\`at\`, \`radius\`),
+    and the leader \`line\` (\`from\`, \`to\`, \`label\`) and marker \`ship\` (\`at\`,
+    \`ship\`).
+  - A shape none of these fits: register your own kind in a script after the
+    runtime's, \`Story.props.<kind> = { layout: function (spec, api) { … } }\`,
+    returning boxes, paths and captions in plate pixels (the comment by
+    \`Story.props\` in diorama@1.js has the contract). Use it rarely.
 
 ### The proscenium
 
@@ -632,8 +710,9 @@ chapter becomes the one being read`
 ${unit} is ${verb}`
   const maps =
     format === 'diorama'
-      ? `- The model is the story's map: don't draw another map of the same place. A
-  chart in a beat's copy (a timeline, a strip, small multiples) is fine.`
+      ? `- The model is the story's map: don't draw another map of the same place.
+  Data goes on the plinth as an object (see "Beyond the map"), not as a chart
+  flat in a beat's copy; a small key or a counter in the copy is fine.`
       : format === 'recap'
       ? `- The replay is the race's map: don't add a Mapbox or MapLibre map of the
   circuit. A map of somewhere else (the calendar, a driver's home) is a D3-geo
@@ -840,6 +919,7 @@ export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): 
     return [
       'any warning the lint gives on the diorama: a computed figure that doesn\'t match its derivation, a place without a certainty or a source, a beat without its section, a key in the wrong place, a land colour that disappears into the ground',
       'a model you haven\'t looked at: open the page and check the land, its relief and every route and marker are plain to see in each beat',
+      'a beat with no new data object, fewer than three object kinds in the story, an object with no thread or leader back to its place, or a chart sitting flat in the text column',
       'a marker that looks more certain than its evidence, or anything past the hinge marked as more than tradition',
       'beats you haven\'t scrolled through at 1440 and 390px wide (and with reduced motion), and the one-column view ("Read as one page")',
     ]
