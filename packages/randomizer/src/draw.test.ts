@@ -439,9 +439,22 @@ assert.ok(OCW.topics.length >= 90)
 assert.equal(new Set(OCW.topics.map((t) => t.id)).size, OCW.topics.length)
 for (const t of OCW.topics) assert.ok(OCW.fields.some((f) => f.id === t.field), t.name)
 for (const f of OCW.fields) assert.ok(OCW.topics.some((t) => t.field === f.id), `${f.name}: no topics`)
-assert.equal(OCW.kinds.length, 6)
-assert.ok(OCW.kinds.some((k) => k.hands_on) && OCW.kinds.some((k) => !k.hands_on))
+assert.deepEqual(OCW.kinds.map((k) => k.name), ['Lecture Notes'], 'the OCW Desk draws lecture notes only, for now')
 for (const t of OCW.topics) for (const k of OCW.kinds) assert.equal(typeof t.files[k.name], 'number', `${t.name}: no count for ${k.name}`)
+/** A dataset with several kinds, for the rules that need a choice (the hands-on quota, a kind the topic lacks). */
+const OCW_KINDS = {
+  ...OCW,
+  kinds: [
+    { name: 'Lecture Notes', hands_on: false, description: 'notes' },
+    { name: 'Readings', hands_on: false, description: 'readings' },
+    { name: 'Problem Sets', hands_on: true, description: 'problems' },
+    { name: 'Exams', hands_on: true, description: 'exams' },
+  ],
+  topics: OCW.topics.map((t, i) => ({
+    ...t,
+    files: { 'Lecture Notes': t.files['Lecture Notes']!, Readings: i % 3 ? 40 : 0, 'Problem Sets': i % 2 ? 25 : 0, Exams: i % 5 ? 10 : 0 },
+  })),
+}
 assert.ok(OCW.topics.some((t) => OCW.kinds.every((k) => t.files[k.name] === 0)), 'the taxonomy records topics with no files')
 {
   // The plan never lands on a topic without files, nor on a kind the topic has none of.
@@ -449,18 +462,22 @@ assert.ok(OCW.topics.some((t) => OCW.kinds.every((k) => t.files[k.name] === 0)),
     const plan = planOcw({ randomizer: 'ocw', seed, now: NOW })
     assert.ok(plan.topic.files[plan.kind.name]! > 0, `${plan.topic.name} has no ${plan.kind.name}`)
   }
-  // A topic with only reading kinds: the quota cannot force a hands-on kind, so it yields.
-  const readingOnly = OCW.topics.find((t) => OCW.kinds.some((k) => !k.hands_on && t.files[k.name]! > 0) && OCW.kinds.every((k) => !k.hands_on || t.files[k.name] === 0))
-  if (readingOnly) {
-    const prev = { picks: { field: readingOnly.field, topic: readingOnly.id, kind: 'Lecture Notes', lens: 'The one idea', courseId: 1, fileId: 1 } }
-    const past = (d: number): SpinHistoryEntry => ({ status: 'spun', primary: 'x', combo: 'x', meta: { kind: 'Readings', topic: 0, field: 0 }, picks: prev.picks, createdAt: daysAgo(d) })
-    const plan = planOcw({ randomizer: 'ocw', seed: 5, now: NOW, prev, locks: ['topic'], history: [past(2), past(1)] })
-    assert.equal(plan.topic.id, readingOnly.id)
-    assert.ok(!plan.kind.hands_on && plan.topic.files[plan.kind.name]! > 0)
+  // With several kinds (a synthetic dataset): a kind the topic has none of is never planned, and a topic
+  // with only reading kinds yields the quota.
+  const D = { ocw: OCW_KINDS }
+  for (let seed = 0; seed < 300; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, datasets: D })
+    assert.ok(plan.topic.files[plan.kind.name]! > 0, `${plan.topic.name} has no ${plan.kind.name}`)
   }
+  const readingOnly = OCW_KINDS.topics.find((t) => t.files['Lecture Notes']! > 0 && t.files['Problem Sets'] === 0 && t.files.Exams === 0)!
+  const prev = { picks: { field: readingOnly.field, topic: readingOnly.id, kind: 'Lecture Notes', lens: 'The one idea', courseId: 1, fileId: 1 } }
+  const past = (d: number): SpinHistoryEntry => ({ status: 'spun', primary: 'x', combo: 'x', meta: { kind: 'Readings', topic: 0, field: 0 }, picks: prev.picks, createdAt: daysAgo(d) })
+  const plan = planOcw({ randomizer: 'ocw', seed: 5, now: NOW, prev, locks: ['topic'], history: [past(2), past(1)], datasets: D })
+  assert.equal(plan.topic.id, readingOnly.id)
+  assert.ok(!plan.kind.hands_on && plan.topic.files[plan.kind.name]! > 0)
 }
-assert.ok(isHandsOn('Problem Sets') && !isHandsOn('Lecture Notes') && !isHandsOn(undefined))
-assert.deepEqual(normalizeLocks('ocw', ['resource']), ['field', 'topic', 'kind', 'course', 'resource'])
+assert.ok(isHandsOn('Problem Sets', OCW_KINDS) && !isHandsOn('Lecture Notes') && !isHandsOn(undefined))
+assert.deepEqual(normalizeLocks('ocw', ['resource']), ['field', 'topic', 'course', 'resource'])
 assert.deepEqual(normalizeLocks('ocw', ['course', 'lens']), ['field', 'topic', 'course', 'lens'])
 assert.equal(reelPool('ocw', 'field').length, 11)
 assert.deepEqual(reelPool('ocw', 'course', ['A', 'B']), ['A', 'B'])
@@ -514,7 +531,7 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
   assert.ok(a.subject.randomizer === 'ocw' && a.subject.siblings.every((f) => f.courseId === p.courseId && f.id !== p.fileId))
   assert.ok(a.subject.randomizer === 'ocw' && a.subject.pool.count === 3862 && a.subject.pool.pageSize === 30)
   assert.equal(a.primary, a.subject.randomizer === 'ocw' ? a.subject.file.courseReadableId : '')
-  assert.ok(a.reels.course && a.reels.resource && a.reels.kind.sub)
+  assert.ok(a.reels.course && a.reels.resource && a.reels.lens && !a.reels.kind, 'no kind reel while the dataset holds one kind')
   assert.ok(a.rules.some((r) => r.tag === 'pool') && a.rules.some((r) => r.tag === 'licence'))
   for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
   // A pool for another query is refused, so a stale or wrong fetch can never be drawn from.
@@ -531,7 +548,7 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
   const first = spinOcw({ seed: 3, now: NOW })
   const fp = first.picks as OcwPicks
   for (let seed = 10; seed < 40; seed++) {
-    const kept = spinOcw({ seed, now: NOW, prev: first, locks: ['topic', 'kind', 'lens'] })
+    const kept = spinOcw({ seed, now: NOW, prev: first, locks: ['topic', 'lens'] })
     const kp = kept.picks as OcwPicks
     assert.equal(kp.field, fp.field)
     assert.equal(kp.topic, fp.topic)
@@ -572,9 +589,14 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
     createdAt: daysAgo(d),
   })
   for (let seed = 0; seed < 100; seed++) {
-    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [reading(2), reading(1)] })
-    const canHandsOn = OCW.kinds.some((k) => k.hands_on && plan.topic.files[k.name]! > 0)
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [reading(2), reading(1)], datasets: { ocw: OCW_KINDS } })
+    const canHandsOn = OCW_KINDS.kinds.some((k) => k.hands_on && plan.topic.files[k.name]! > 0)
     assert.ok(plan.kind.hands_on || !canHandsOn, `quota forces a hands-on kind, got ${plan.kind.name} for ${plan.topic.name}`)
+  }
+  // With one kind in the dataset, every plan is that kind and the quota never fires.
+  for (let seed = 0; seed < 50; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [reading(2), reading(1)] })
+    assert.equal(plan.kind.name, 'Lecture Notes')
   }
 }
 {
@@ -582,20 +604,20 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
   const first = spinOcw({ seed: 5, now: NOW })
   const fp = first.picks as OcwPicks
   for (let seed = 0; seed < 100; seed++) {
-    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['topic', 'kind'], history: [entry(first, 3)] })
-    const r = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['topic', 'kind'], history: [entry(first, 3)], ocwPool: poolFor(plan) })
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)] })
+    const r = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)], ocwPool: poolFor(plan) })
     assert.notEqual((r.picks as OcwPicks).courseId, fp.courseId, 'a course spun in the last 30 days is left out')
     assert.ok(r.rules.some((x) => x.tag === '30 days' && x.kind === 'block'))
   }
   // Every course on the page spun this month: the block lifts, and says so.
-  const plan = planOcw({ randomizer: 'ocw', seed: 6, now: NOW, prev: first, locks: ['topic', 'kind'], history: [entry(first, 3)] })
+  const plan = planOcw({ randomizer: 'ocw', seed: 6, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)] })
   const onlyThatCourse = { ...poolFor(plan, 10), files: [...Array(10).keys()].map((i) => ocwFile(i, fp.courseId, plan.query.kind)) }
-  const lifted = draw({ randomizer: 'ocw', seed: 6, now: NOW, prev: first, locks: ['topic', 'kind'], history: [entry(first, 3)], ocwPool: onlyThatCourse })
+  const lifted = draw({ randomizer: 'ocw', seed: 6, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)], ocwPool: onlyThatCourse })
   assert.ok(lifted.rules.some((x) => x.tag === '30 days' && x.kind === 'warn'))
   // The combination is blocked for 90 days: with the course locked, the lens changes.
   for (let seed = 0; seed < 60; seed++) {
-    const p2 = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course', 'kind'], history: [entry(first, 40)] })
-    const r = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course', 'kind'], history: [entry(first, 40)], ocwPool: poolFor(p2, 8) })
+    const p2 = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course'], history: [entry(first, 40)] })
+    const r = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course'], history: [entry(first, 40)], ocwPool: poolFor(p2, 8) })
     assert.notEqual(r.combo, first.combo)
     assert.equal((r.picks as OcwPicks).courseId, fp.courseId)
   }

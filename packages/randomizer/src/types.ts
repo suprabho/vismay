@@ -108,12 +108,14 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     name: 'OCW Desk',
     hint: 'Fields · courses · resources',
     format: 'Study note with charts',
+    // The resource kind is drawn too (OcwPicks.kind) but is not a reel while
+    // the dataset holds one kind (Lecture Notes): add kinds to ocw.json and
+    // put `{ key: 'kind', label: 'Resource kind' }` back here to spin it.
     reels: [
       { key: 'field', label: 'Field' },
       { key: 'topic', label: 'Topic', parents: ['field'] },
-      { key: 'kind', label: 'Resource kind' },
       { key: 'course', label: 'Course', parents: ['topic', 'field'], live: true },
-      { key: 'resource', label: 'Resource', parents: ['course', 'topic', 'field', 'kind'], live: true },
+      { key: 'resource', label: 'Resource', parents: ['course', 'topic', 'field'], live: true },
       { key: 'lens', label: 'Lens' },
     ],
     option: { key: 'sequence', label: 'Continue the course (next resource)' },
@@ -345,7 +347,11 @@ export interface OcwTopic {
   files: Record<string, number>
 }
 
-/** A resource kind: one of MIT Learn's course features, the `content_feature_type=` filter. */
+/**
+ * A resource kind: one of MIT Learn's course features, the
+ * `content_feature_type=` filter. The dataset holds Lecture Notes alone for
+ * now; the draw, the pool and the brief take any number.
+ */
 export interface OcwKind {
   name: string
   /** Problem sets, exams and projects: the kinds the one-in-three quota keeps coming. */

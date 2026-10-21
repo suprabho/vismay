@@ -92,7 +92,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         '"viznba" (the NBA Desk: a conference, a franchise in it, an angle and a news freshness, weighted by how much ' +
         'VizNBA news each has, a player\'s or coach\'s stories counting for his team; basketball explainer whose brief ' +
         'carries the box scores of the team\'s recent and next games from ESPN). For vizmaya.fyi again, "ocw" (the ' +
-        'OCW Desk: a field, a topic in it, a resource kind, then a course and one resource from MIT OpenCourseWare, ' +
+        'OCW Desk: a field, a topic in it, then a course and one lecture-notes file from MIT OpenCourseWare, ' +
         'read live from MIT Learn\'s API, and a lens; study note with charts, CC BY-NC-SA credit required; ' +
         'sequence: true walks to the next resource of the previous spin\'s course). The draw applies ' +
         'the playbook rules: 30 and 90 day repeat blocks, heat weighting, region, tradition and tournament ' +
@@ -109,7 +109,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
           .optional()
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
-              'lens. epics: epic, episode, place, lens. ocw: field, topic, kind, course, resource, lens. footshorts: ' +
+              'lens. epics: epic, episode, place, lens. ocw: field, topic, course, resource, lens. footshorts: ' +
               'competition, team, angle, fresh. viznba: conference, team, angle, fresh. A child lock ' +
               'implies its parents.',
           ),
@@ -301,12 +301,13 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'With `topic` and `kind`: a page of up to 30 OCW files of that kind under that topic (title, URL on ocw.mit.edu, ' +
         'course, term), with the total count and the page\'s offset; `u` in [0, 1) picks where the page starts. With ' +
         '`course` (a MIT Learn course id, as a spin\'s subject carries it) and `kind`: every file of that kind in the ' +
-        'course, in order. With nothing: the taxonomy (11 fields, their topics with file counts per kind, the six ' +
-        'kinds and the lenses). Use it to look before locking a topic or course on spin_randomizer; it logs nothing. ' +
+        'course, in order. With nothing: the taxonomy (11 fields, their topics with file counts per kind, the ' +
+        'kinds the desk draws, Lecture Notes for now, and the lenses). Use it to look before locking a topic or ' +
+        'course on spin_randomizer; it logs nothing. ' +
         'Needs the vizmaya publish token.',
       inputSchema: {
         topic: z.string().optional().describe('A topic name from the taxonomy, e.g. "Physics".'),
-        kind: z.string().optional().describe('Lecture Notes, Readings, Lecture Videos, Problem Sets, Exams or Projects.'),
+        kind: z.string().optional().describe('A resource kind the desk draws: Lecture Notes (the only one for now).'),
         course: z.number().int().positive().optional().describe('A MIT Learn course id, for that course\'s files of the kind.'),
         u: z.number().min(0).max(0.999999).optional().describe('Where in the topic\'s files the page starts, 0 to 1. Random when omitted.'),
       },

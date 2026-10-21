@@ -259,7 +259,8 @@ story links.
   (stale and failed refreshes shown) and, on the OCW Desk tab, the **OCW pool**
   panel: the page of MIT OpenCourseWare files the spin was drawn from (query,
   count, offset), the course card with links, the resource, the course's other
-  files of the kind, and the other courses on the page. The OCW course and
+  lecture-notes files, and the other courses on the page (the desk draws
+  lecture notes only for now, so there is no kind reel). The OCW course and
   resource reels blur through that page's titles. Nothing is loaded up front
   for it: a cron on vizmaya-fyi spins it each morning, and the page lives on
   the spin.

@@ -66,14 +66,20 @@ interface OcwDataset {
   lenses: NamedOption[]
 }
 
-/** The resource kinds worth a story, with MIT Learn's exact feature names. */
+/**
+ * The resource kinds the OCW Desk draws from, with MIT Learn's exact feature
+ * names: Lecture Notes alone for now. To add a kind, append it to `kinds` in
+ * ocw.json (the file wins over this seed) and re-run; the draw, the pool and
+ * the brief take any number, and the one-in-three hands-on quota wakes up
+ * once a `hands_on: true` kind is in. Candidates that make a story, with
+ * their OCW file counts in October 2026: Readings (5,545), Lecture Videos
+ * (865), Problem Sets (5,855, hands-on), Exams (3,138, hands-on), Projects
+ * (4,370, hands-on), Problem Set Solutions (2,398), Exam Solutions (953),
+ * Laboratory Assignments (2,403). Put `{ key: 'kind', label: 'Resource
+ * kind' }` back in RANDOMIZER_META.ocw.reels (types.ts) to spin it.
+ */
 const SEED_KINDS: OcwKind[] = [
   { name: 'Lecture Notes', hands_on: false, description: 'The notes or slides for one lecture: one idea, as the instructor laid it out.' },
-  { name: 'Readings', hands_on: false, description: 'An assigned reading or reading list: what the course asks students to read for a session.' },
-  { name: 'Lecture Videos', hands_on: false, description: 'A recorded lecture, with its transcript on the OCW page.' },
-  { name: 'Problem Sets', hands_on: true, description: 'A problem set: questions students solve, often with a solutions file alongside.' },
-  { name: 'Exams', hands_on: true, description: 'An exam paper, often with solutions: what the course decided mattered most.' },
-  { name: 'Projects', hands_on: true, description: 'A project brief or student project: the course applied to something real.' },
 ]
 
 /** What the story does with the resource (playbook lenses, OCW variant). */

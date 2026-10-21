@@ -1063,7 +1063,7 @@ function OcwPool({ spin }: { spin: SpinRecord | null }) {
           OCW pool
         </span>
         <span>
-          {OCW.fields.length} fields, {stocked} topics with files, {OCW.kinds.length} resource kinds. A spin reads one page of MIT OpenCourseWare
+          {OCW.fields.length} fields, {stocked} topics with files, {OCW.kinds.map((k) => k.name.toLowerCase()).join(', ')} only. A spin reads one page of MIT OpenCourseWare
           live (MIT Learn&rsquo;s API) for its course and resource; the page is kept on the spin, so a logged spin replays without the network.
         </span>
       </section>

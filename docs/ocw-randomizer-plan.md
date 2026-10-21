@@ -14,8 +14,13 @@ so the plan never asks for an empty pool, and `createSpin` re-plans from a
 fresh seed up to twice when one still comes back empty; the cron is a
 handler in `randomizerApi.ts` behind a vizmaya route, not a GitHub Action;
 and the pool preview is `GET /api/randomizer/ocw` with `get_ocw_pool` on
-the MCP server. To go live: apply migration 093 and deploy vizmaya-fyi (the
-cron entry is in its `vercel.json`; `CRON_SECRET` is already set).
+the MCP server. After review, the desk was narrowed to **Lecture Notes
+only**: the kind stays in the plan, the picks and the pool query, but the
+dataset holds one kind and the kind reel is off the slot machine; the
+taxonomy script's comment says how to add kinds back (and the hands-on
+quota wakes up with the first `hands_on` kind). To go live: apply migration
+093 and deploy vizmaya-fyi (the cron entry is in its `vercel.json`;
+`CRON_SECRET` is already set).
 
 > On the count: the repo already has five randomizer ids (`desk`, `atlas`,
 > `epics`, `footshorts`, `viznba`), three of them on vizmaya. The OCW one is

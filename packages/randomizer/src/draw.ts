@@ -971,7 +971,8 @@ function drawOcw(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, pool: O
     reels: {
       field: { value: field.name },
       topic: { value: topic.name },
-      kind: { value: kind.name, sub: kind.hands_on ? 'hands-on' : 'reading' },
+      // The kind reel exists only when the dataset offers a choice (RANDOMIZER_META.ocw.reels).
+      ...(RANDOMIZER_META.ocw.reels.some((r) => r.key === 'kind') ? { kind: { value: kind.name, sub: kind.hands_on ? 'hands-on' : 'reading' } } : {}),
       course: { value: course.title, sub: [course.number, term].filter(Boolean).join(' · ') },
       resource: { value: file.title, sub: `${file.contentType}${siblings.length ? ` · ${siblings.length + 1} ${kind.name.toLowerCase()} files in the course` : ''}` },
       lens: { value: lens.name },
