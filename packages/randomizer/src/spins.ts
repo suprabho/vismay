@@ -236,7 +236,13 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
       if (landmarkPool.awards.length || input.seed !== undefined || tries >= LANDMARK_SPIN_RULES.replans) break
       seed = randomSeed()
     }
-    const planned = planLandmark({ ...planInput, seed }, landmarkPool!.awards)
+    let planned: ReturnType<typeof planLandmark>
+    try {
+      planned = planLandmark({ ...planInput, seed }, landmarkPool!.awards)
+    } catch (e) {
+      // No award of that prize in that era could be read (the taxonomy counts drifted, or the source is thin today).
+      throw new SpinError(e instanceof Error ? e.message : String(e), 503)
+    }
     if (planned.award) {
       const award = await enrichLandmarkAward(planned.award, planned.prize)
       const works = await loadLandmarkWorks(award, planned.prize)
