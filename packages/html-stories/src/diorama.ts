@@ -18,6 +18,18 @@ export type DioramaBeatType = (typeof DIORAMA_BEAT_TYPES)[number]
 
 export const DIORAMA_QUANTITY_STATUSES = ['sourced', 'computed', 'reconstructed', 'estimate'] as const
 
+/**
+ * Props the runtime draws. The data objects are every kind but line and ship
+ * (a leader and a marker): the object vocabulary is ruler (dates), section
+ * (finds by layer), trays (items × categories), grove (a share of 100), stack
+ * (quantities at true scale), arc (flows), split (two accounts), lapse
+ * (change across eras), and tower, ring and pulse for single values. A page
+ * may register more with Story.props.<kind>.
+ */
+export const DIORAMA_PROP_KINDS = ['tower', 'ring', 'line', 'pulse', 'ship', 'ruler', 'section', 'trays', 'grove', 'stack', 'arc', 'split', 'lapse'] as const
+export type DioramaPropKind = (typeof DIORAMA_PROP_KINDS)[number]
+export const DIORAMA_OBJECT_KINDS: readonly DioramaPropKind[] = DIORAMA_PROP_KINDS.filter((k) => k !== 'line' && k !== 'ship')
+
 export interface DioramaPlate {
   bbox: [[number, number], [number, number]]
   projection?: 'mercator' | 'conic-equal-area'
@@ -66,6 +78,7 @@ export interface DioramaBeat {
   id: string
   type: DioramaBeatType
   plate?: string
+  /** target: a place id, [lon, lat], or "props" (where the beat's objects stand). */
   camera?: { target?: string | [number, number]; zoom?: number; tilt?: number; azimuth?: number; spin?: boolean }
   layers?: {
     routes?: string[]
@@ -75,7 +88,7 @@ export interface DioramaBeat {
     places?: string[]
     fog?: boolean | { west?: number; east?: number; labels?: { west?: string; east?: string }; caption?: string }
   }
-  props?: Array<{ kind: 'tower' | 'ring' | 'line' | 'pulse' | 'ship'; [k: string]: unknown }>
+  props?: Array<{ kind: DioramaPropKind | (string & {}); [k: string]: unknown }>
   stepper?: { route?: string; next?: string }
 }
 export interface DioramaStory {
@@ -257,17 +270,65 @@ export function checkDioramaStory(story: DioramaStory): string[] {
     for (const r of [...(L.routes ?? []), ...(L.on ?? [])]) if (!routeIds.has(r)) out.push(`Beat "${b.id}" shows route "${r}", which isn't in routes.`)
     for (const p of [...(L.labels ?? []), ...(L.labelsSm ?? []), ...(L.places ?? [])]) if (!placeIds.has(p)) out.push(`Beat "${b.id}" labels "${p}", which isn't in places.`)
     if ((L.labels?.length ?? 0) > 8) out.push(`Beat "${b.id}" labels ${L.labels!.length} places: at most 8 (and 4 on phones, via labelsSm).`)
-    if (typeof b.camera?.target === 'string' && !placeIds.has(b.camera.target)) out.push(`Beat "${b.id}" points the camera at "${b.camera.target}", which isn't in places.`)
+    const target = b.camera?.target
+    if (typeof target === 'string' && target !== 'props' && !placeIds.has(target)) out.push(`Beat "${b.id}" points the camera at "${target}", which isn't in places.`)
     for (const p of b.props ?? []) {
-      for (const k of ['at', 'from', 'to'] as const) {
-        const v = p[k]
-        if (typeof v === 'string' && !placeIds.has(v)) out.push(`Beat "${b.id}": a ${p.kind} at "${v}", which isn't in places.`)
-      }
-      for (const v of [p.value, ...((p.range as unknown[]) ?? [])]) {
-        if (typeof v === 'string' && !quantities.some((q) => q.id === v)) out.push(`Beat "${b.id}": a ${p.kind} sized by "${v}", which isn't in quantities.`)
+      for (const v of propPlaces(p)) if (!placeIds.has(v)) out.push(`Beat "${b.id}": a ${p.kind} at "${v}", which isn't in places.`)
+      for (const v of propQuantities(p)) {
+        if (!quantities.some((q) => q.id === v)) out.push(`Beat "${b.id}": a ${p.kind} sized by "${v}", which isn't in quantities.`)
       }
     }
     if (b.type === 'stepper' && b.stepper?.route && !routeIds.has(b.stepper.route)) out.push(`Beat "${b.id}" steps along "${b.stepper.route}", which isn't in routes.`)
+  }
+  out.push(...checkDioramaObjects(beats))
+  return out
+}
+
+type Prop = NonNullable<DioramaBeat['props']>[number]
+const list = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object') : [])
+/** The place ids a prop stands on or threads back to. */
+function propPlaces(p: Prop): string[] {
+  const ids: unknown[] = [p.at, p.from, p.to, p.anchor]
+  for (const r of list(p.rows)) ids.push(r.at)
+  for (const s of list(p.spans)) ids.push(s.at)
+  for (const f of list(p.frames)) ids.push(...(Array.isArray(f.places) ? f.places : []))
+  return ids.filter((v): v is string => typeof v === 'string')
+}
+/** The quantity ids a prop is sized by: every `value` in it, a ring's range, a grove's `of`, a ruler's dates given as ids. */
+function propQuantities(p: Prop): string[] {
+  const ids: unknown[] = [...((p.range as unknown[]) ?? []), p.of]
+  if (p.kind === 'ruler') {
+    ids.push(p.from, p.to)
+    for (const s of list(p.spans)) ids.push(s.from, s.to)
+  }
+  const walk = (o: unknown) => {
+    if (!o || typeof o !== 'object') return
+    for (const [k, v] of Object.entries(o)) {
+      if (k === 'value') ids.push(v)
+      else if (typeof v === 'object') walk(v)
+    }
+  }
+  walk(p)
+  return ids.filter((v): v is string => typeof v === 'string')
+}
+
+/**
+ * The map is the stage, not the story: a story needs three kinds of data
+ * object or more, and no more than half its beats may be led by the map
+ * alone (no object on the plinth).
+ */
+export function checkDioramaObjects(beats: DioramaBeat[]): string[] {
+  const out: string[] = []
+  const objects = (b: DioramaBeat) => (b.props ?? []).filter((p) => p.kind !== 'line' && p.kind !== 'ship')
+  const kinds = new Set(beats.flatMap((b) => objects(b).map((p) => p.kind)))
+  if (beats.length && kinds.size < 3) {
+    out.push(
+      `The story uses ${kinds.size ? [...kinds].join(', ') : 'no data objects'}: give each data shape its object (ruler, section, trays, grove, stack, arc, split, lapse, tower, ring, pulse), three kinds or more.`,
+    )
+  }
+  const mapOnly = beats.filter((b) => b.type !== 'interstitial' && !objects(b).length)
+  if (mapOnly.length > beats.length / 2) {
+    out.push(`${mapOnly.length} of ${beats.length} beats are led by the map alone (${mapOnly.map((b) => `"${b.id}"`).join(', ')}): no more than half; put a data object on the plinth.`)
   }
   return out
 }
@@ -328,6 +389,16 @@ export function lintDiorama(html: string, warnings: string[]): void {
   }
   for (const w of checkDioramaStory(story)) warnings.push(`Diorama: ${w}`)
   for (const w of checkDioramaPalette(html)) warnings.push(`Diorama: ${w}`)
+  // A kind the runtime doesn't draw needs the page to register it.
+  for (const b of story.beats ?? []) {
+    for (const p of b.props ?? []) {
+      if ((DIORAMA_PROP_KINDS as readonly string[]).includes(p.kind)) continue
+      const k = String(p.kind).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      if (!new RegExp(`Story\\.props(?:\\.${k}\\b|\\[['"]${k}['"]\\])`).test(html)) {
+        warnings.push(`Diorama: beat "${b.id}" has a "${p.kind}" prop, which isn't a kind the runtime draws (${DIORAMA_PROP_KINDS.join(', ')}); register it with Story.props.${p.kind} in the page, or the stage leaves it out.`)
+      }
+    }
+  }
   const sections = [...html.matchAll(/<section\b[^>]*\bdata-beat="([^"]+)"/gi)].map((m) => m[1]!)
   const beatIds = (story.beats ?? []).map((b) => b.id)
   for (const id of beatIds) if (!sections.includes(id)) warnings.push(`Diorama: beat "${id}" has no <section class="beat" data-beat="${id}"> with its words.`)

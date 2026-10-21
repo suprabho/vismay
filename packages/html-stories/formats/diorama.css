@@ -224,3 +224,30 @@ html:not(.diorama-on) .stops > li { margin: 0 0 22px }
   .dio-ship svg, html.diorama-on .stops > li.dio-cur { animation: none }
   .dio-chip, html.diorama-on .beat > .copy { transition: none }
 }
+
+/* ── Data objects' captions (Story.props) ───────────────────────────── */
+.dio-tag.is-obj { font-size: 11px; text-shadow: 0 0 3px var(--dio-ground), 0 0 6px var(--dio-ground), 0 0 12px var(--dio-ground) }
+.dio-tag.is-obj b { display: block; font: 400 20px/1.05 var(--dio-serif); letter-spacing: 0; text-transform: none }
+.dio-tag.is-obj small { display: block; margin-top: 3px; letter-spacing: .12em; color: var(--dio-accent) }
+.dio-tag.is-obj.is-sm b { font-size: 16px }
+.dio-tag.is-span, .dio-tag.is-find { translate: 0 -100% }
+.dio-tag.is-find { color: var(--dio-accent) }
+.dio-tag.is-left { align-items: flex-end; translate: -100% -50%; text-align: right }
+.dio-tag.is-right { align-items: flex-start; translate: 0 -50%; text-align: left }
+.dio-tag.is-left b { font: 600 11px/1.2 var(--dio-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dio-accent) }
+.dio-tag.is-left.is-sm b { font: 400 16px/1.05 var(--dio-serif); letter-spacing: 0; text-transform: none; color: var(--dio-paper) }
+.dio-tag.is-col { translate: 0 -100%; color: var(--dio-muted) }
+.dio-tag.is-col.is-under { translate: 0 0 }
+.dio-tag.is-col.is-under b { font-size: 16px }
+.dio-tag.is-tick { translate: 0 0; font-size: 10px; color: var(--dio-muted) }
+.dio-tag.is-unit { translate: 0 0; font-size: 10px; letter-spacing: .14em; color: var(--dio-muted) }
+.dio-tag.is-title { translate: 0 0 }
+.dio-tag.is-title b { font-size: 22px }
+.dio-tag.is-title small { color: var(--dio-muted) }
+.dio-css-land { position: absolute; transform-style: preserve-3d }
+.dio-css-land > svg { display: block }
+@media (max-width: 719px) {
+  .dio-tag.is-obj b { font-size: 15px }
+  .dio-tag.is-obj.is-sm b, .dio-tag.is-left.is-sm b, .dio-tag.is-col.is-under b { font-size: 13px }
+  .dio-tag.is-obj, .dio-tag.is-tick, .dio-tag.is-unit { font-size: 9px }
+}
