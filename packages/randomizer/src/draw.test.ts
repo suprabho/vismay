@@ -5,7 +5,7 @@ import { ATLAS, DESK, EPICS, FOOTSHORTS, OCW, VIZNBA, epicRoute, isHandsOn, isPh
 import { DRAW_RULES, draw, normalizeLocks, planOcw } from './draw'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { extractHeroInsight, gameSummary, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { OCW_LENS_METRICS, extractHeroInsight, gameSummary, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -440,6 +440,8 @@ assert.equal(new Set(OCW.topics.map((t) => t.id)).size, OCW.topics.length)
 for (const t of OCW.topics) assert.ok(OCW.fields.some((f) => f.id === t.field), t.name)
 for (const f of OCW.fields) assert.ok(OCW.topics.some((t) => t.field === f.id), `${f.name}: no topics`)
 assert.deepEqual(OCW.kinds.map((k) => k.name), ['Lecture Notes'], 'the OCW Desk draws lecture notes only, for now')
+assert.equal(OCW.lenses.length, 7)
+for (const l of OCW.lenses) assert.ok(OCW_LENS_METRICS[l.name]?.length === 3, `${l.name}: no chart metrics`)
 for (const t of OCW.topics) for (const k of OCW.kinds) assert.equal(typeof t.files[k.name], 'number', `${t.name}: no count for ${k.name}`)
 /** A dataset with several kinds, for the rules that need a choice (the hands-on quota, a kind the topic lacks). */
 const OCW_KINDS = {

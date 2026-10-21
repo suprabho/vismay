@@ -90,6 +90,11 @@ const SEED_LENSES: NamedOption[] = [
   { name: 'Where it came from', description: 'The history of the idea: who found it, when, what it replaced, and how the course teaches it differently from how it was discovered.' },
   { name: 'Why it matters now', description: 'Tie the idea to something dated in this month\'s news, and let the resource do the explaining.' },
   { name: 'Across the river', description: 'The same idea as another field sees it: a physics note read by an economist, a planning case read by an engineer.' },
+  {
+    name: "Explain like I'm 5",
+    description:
+      'Explain the idea to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the notes as the source for the real thing.',
+  },
 ]
 
 async function get<T>(path: string): Promise<T> {

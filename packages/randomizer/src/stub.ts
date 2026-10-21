@@ -333,6 +333,7 @@ export const OCW_LENS_METRICS: Record<string, string[]> = {
   'Where it came from': ['the idea\'s milestones on a timeline, dated and sourced', 'the measured value of the key quantity as instruments improved', 'how often the idea appears in the literature by decade'],
   'Why it matters now': ['the number in this month\'s news, over the last 10 years', 'the resource\'s quantity for the case in the news against the textbook case', 'the forecast the idea makes against the latest reading'],
   'Across the river': ['the same quantity as each field measures it', 'the two fields\' key parameters side by side', 'the outcomes each field\'s model predicts for one shared case'],
+  "Explain like I'm 5": ['the quantity in everyday units (steps, spoons, minutes), as a picture chart', 'the everyday stand-in against the real thing, side by side', 'the one number that changes when the idea is switched on and off'],
 }
 
 export function ocwLensMetrics(lens: string): string[] {

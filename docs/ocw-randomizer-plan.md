@@ -96,6 +96,7 @@ Lenses (what the story does with the resource), in `data/ocw.json`:
 | Where it came from | The history: who found this, when, what it replaced. |
 | Why it matters now | Tie the idea to something in this month's news. |
 | Across the river | The same idea as another field sees it (a physics note read by an economist). |
+| Explain like I'm 5 | The idea for a five-year-old: one everyday object stands in for it, then where the picture stops being true. (Added after review.) |
 
 ### The draw (`drawOcw` in `draw.ts`)
 

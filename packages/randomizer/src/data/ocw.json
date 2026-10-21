@@ -870,6 +870,10 @@
     {
       "name": "Across the river",
       "description": "The same idea as another field sees it: a physics note read by an economist, a planning case read by an engineer."
+    },
+    {
+      "name": "Explain like I'm 5",
+      "description": "Explain the idea to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the notes as the source for the real thing."
     }
   ]
 }
