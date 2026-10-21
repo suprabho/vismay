@@ -1,0 +1,218 @@
+/*
+ * vizmaya diorama format, v1. Pair with diorama@1.js.
+ *
+ * html.diorama-on: the model sits in a sticky view behind the beats; each
+ * beat's .copy (the proscenium) scrolls over it, pinned to the left on wide
+ * screens and as a bottom sheet on phones. Otherwise (no JS, or "Read as
+ * one page"): the beats in reading order, as one column.
+ *
+ * Tokens (set them in your own :root; the stage reads the colours once):
+ *   --dio-ground --dio-paper --dio-muted --dio-accent     page, text, the one accent
+ *   --dio-sea-1 --dio-sea-2 --dio-sea-3                   the sea's radial gradient
+ *   --dio-land --dio-strata-1 --dio-strata-2 --dio-strata-3   paper top, then strata
+ *   --dio-route-2 --dio-route-3 --dio-route-4             competing routes
+ *   --dio-plinth --dio-plinth-side --dio-fog
+ *   --dio-serif --dio-sans --dio-mono                     labels, sheet text, counters
+ *   --dio-sheet                                           the phone sheet's background
+ */
+:where(:root) {
+  --dio-ground: #120E16; --dio-paper: #EFE6D6; --dio-muted: #B9AE9C; --dio-accent: #D3A04D;
+  --dio-sea-1: #30346E; --dio-sea-2: #241B45; --dio-sea-3: #2E0F22;
+  --dio-land: #EDE3CF; --dio-strata-1: #BFA27A; --dio-strata-2: #74563E; --dio-strata-3: #22101A;
+  --dio-route-2: #7CC4C9; --dio-route-3: #EE8A6B; --dio-route-4: #9EA3C9;
+  --dio-plinth: #3A1C24; --dio-plinth-side: #22101A; --dio-fog: #CFC8DE;
+  --dio-serif: 'Instrument Serif', Georgia, serif; --dio-sans: 'IBM Plex Sans', system-ui, sans-serif; --dio-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --dio-sheet: color-mix(in srgb, var(--dio-ground) 90%, transparent);
+}
+
+/* ── The stage: model behind, beats in front ──────────────────────────── */
+html.diorama-on .stage {
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative;
+  background: var(--dio-ground); color: var(--dio-paper);
+}
+html.vz-aura.diorama-on .stage { background: transparent }
+html.diorama-on .dio-view {
+  grid-area: 1 / 1; position: sticky; top: var(--vz-chrome-h); z-index: 0;
+  height: calc(100svh - var(--vz-chrome-h)); overflow: hidden; contain: strict;
+}
+html.diorama-on .beats { grid-area: 1 / 1; position: relative; z-index: 1; pointer-events: none }
+/* The proscenium's shadow: the model dims where the copy sits. */
+html.diorama-on .dio-view::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--dio-ground) 86%, transparent) 0, color-mix(in srgb, var(--dio-ground) 74%, transparent) 30vw, color-mix(in srgb, var(--dio-ground) 30%, transparent) 46vw, transparent 60vw);
+}
+html.diorama-on .dio-overlay { z-index: 1 }
+html.diorama-on .dio-tools {
+  grid-area: 1 / 1; align-self: end; justify-self: end; position: sticky; bottom: 0; z-index: 3;
+  padding: 12px 16px; pointer-events: none;
+}
+html.diorama-on .dio-tools > * { pointer-events: auto }
+.dio-gl, .dio-overlay, .dio-css-cam { position: absolute; inset: 0 }
+.dio-gl canvas { display: block; width: 100% !important; height: 100% !important }
+.dio-overlay { pointer-events: none; overflow: hidden; font-family: var(--dio-sans) }
+.dio-plate-layer { position: absolute; inset: 0 }
+.dio-sampler { position: absolute; width: 0; height: 0; overflow: hidden }
+.dio-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+
+/* ── 03 · Markers by certainty, and labels ───────────────────────────── */
+.dio-mark, .dio-tag, .dio-ship { position: absolute; left: 0; top: 0; width: 0; height: 0; visibility: hidden; will-change: transform }
+.dio-dot { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; box-sizing: border-box; border-radius: 50% }
+.is-excavated > .dio-dot, .dio-dot.is-excavated { background: var(--dio-accent); box-shadow: 0 0 0 2px var(--dio-ground), 0 0 0 3.5px var(--dio-paper) }
+.is-hinge > .dio-dot, .dio-dot.is-hinge { left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 0; transform: rotate(45deg); background: var(--dio-ground); border: 2px solid var(--dio-accent) }
+.is-tradition > .dio-dot, .dio-dot.is-tradition { background: var(--dio-ground); border: 2px solid var(--dio-paper) }
+.is-contested > .dio-dot, .dio-dot.is-contested { left: -6px; top: -6px; width: 12px; height: 12px; background: var(--dio-ground); border: 2px dashed var(--dio-paper) }
+/* A stop a route only borrows from another reading: hollow, in its colour. */
+.dio-mark.gap > .dio-dot { left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; transform: none; background: var(--dio-ground); border: 2px dotted var(--dio-gap); box-shadow: none }
+.dio-name {
+  position: absolute; top: 0; left: 11px; transform: translateY(-50%); white-space: nowrap; display: none;
+  font-size: 13px; font-weight: 500; letter-spacing: .01em; color: var(--dio-paper);
+  text-shadow: 0 0 3px var(--dio-ground), 0 0 6px var(--dio-ground), 0 0 10px var(--dio-ground);
+}
+.dio-mark.named .dio-name { display: block }
+.dio-mark.side-l .dio-name { left: auto; right: 11px }
+.dio-mark.side-t .dio-name { left: 0; top: -15px; transform: translate(-50%, -50%) }
+.dio-mark.side-b .dio-name { left: 0; top: 16px; transform: translate(-50%, -50%) }
+.dio-mark.current .dio-name { font-family: var(--dio-serif); font-weight: 400; font-size: 26px; line-height: 1; text-shadow: 0 0 4px var(--dio-ground), 0 0 10px var(--dio-ground), 0 0 16px var(--dio-ground) }
+.dio-mark.current .dio-dot { box-shadow: 0 0 0 2px var(--dio-ground), 0 0 0 3.5px var(--dio-accent), 0 0 0 9px color-mix(in srgb, var(--dio-accent) 30%, transparent) }
+
+/* Prop captions: tower tops, ring and line labels, fog areas. Each is a
+   zero-width box at its anchor; its lines centre on it. */
+.dio-tag {
+  height: auto; display: flex; flex-direction: column; align-items: center; white-space: nowrap; text-align: center;
+  color: var(--dio-paper); text-shadow: 0 0 3px var(--dio-ground), 0 0 8px var(--dio-ground);
+  font: 500 12px/1.2 var(--dio-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.dio-tag.is-tower { translate: 0 -100% }
+.dio-tag.is-tower b { font: 400 26px/1 var(--dio-serif); letter-spacing: 0; text-transform: none }
+.dio-tag.is-tower small { margin-top: 4px; font-size: 12px; letter-spacing: .14em; color: var(--dio-accent) }
+.dio-tag.is-ring, .dio-tag.is-line { translate: 0 -150% }
+.dio-tag.is-cut { align-items: flex-start; translate: 8px -50%; color: var(--dio-accent); letter-spacing: .14em }
+.dio-tag.is-area { translate: 0 -50%; font: italic 400 38px/1 var(--dio-serif); letter-spacing: .2em; text-transform: none; text-shadow: 0 0 4px var(--dio-sea-2), 0 0 12px var(--dio-sea-2) }
+.dio-tag.is-area.is-east { font-style: normal; font-size: 30px }
+
+.dio-ship svg { position: absolute; left: -20px; top: -38px; width: 40px; height: 30px; overflow: visible; animation: dio-bob 2.4s ease-in-out infinite }
+.dio-ship .hull { fill: var(--dio-ground); stroke: var(--dio-paper); stroke-width: 1 }
+.dio-ship .mast { stroke: var(--dio-paper); stroke-width: 1.3 }
+.dio-ship .sail { fill: var(--dio-paper) }
+.dio-ship .raft { fill: var(--dio-strata-2); stroke: var(--dio-paper); stroke-width: 1 }
+@keyframes dio-bob { 50% { transform: translateY(-2.5px) } }
+
+/* ── Progress, legend ───────────────────────────────────────────────── */
+.dio-progress {
+  position: absolute; right: clamp(16px, 4vw, 56px); top: 22px; z-index: 2; display: flex; align-items: center; gap: 14px;
+  font: 500 12px/1 var(--dio-mono); letter-spacing: .16em; color: var(--dio-muted);
+}
+.dio-ticks { display: flex; gap: 4px }
+.dio-tick { width: 18px; height: 3px; background: color-mix(in srgb, var(--dio-paper) 18%, transparent) }
+.dio-tick.on { background: var(--dio-accent) }
+.dio-legend {
+  position: absolute; right: clamp(16px, 4vw, 56px); bottom: 70px; z-index: 2; max-width: 300px; font: 13px/1.35 var(--dio-sans); color: var(--dio-paper);
+  background: color-mix(in srgb, var(--dio-ground) 82%, transparent); border-radius: 10px;
+}
+.dio-legend:not(:empty) { padding: 10px 12px }
+.dio-legend ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.dio-legend li { display: flex; align-items: center; gap: 10px; text-shadow: 0 0 6px var(--dio-ground) }
+.dio-legend .dio-dot { position: relative; left: 0; top: 0; flex: none }
+.dio-legend .dio-dot.is-hinge, .dio-legend .dio-dot.is-contested { left: 0; top: 0 }
+.dio-swatch { width: 34px; height: 12px; flex: none }
+
+/* ── The proscenium: each beat's copy ───────────────────────────────── */
+html.diorama-on .beat { position: relative; min-height: 150svh; box-sizing: border-box; padding-top: 9svh }
+html.diorama-on .beat > .copy {
+  pointer-events: auto; position: sticky; top: calc(var(--vz-chrome-h) + 9svh); box-sizing: border-box;
+  width: min(470px, 38vw); margin: 0 0 0 clamp(16px, 5vw, 72px);
+}
+html.diorama-on .beat > .copy { transition: opacity .4s }
+html.diorama-on .beat:not(.dio-cur):not(.dio-interstitial) > .copy { opacity: .18 }
+html.diorama-on .dio-epilogue { min-height: 170svh }
+/* Anything after .beats (sources, credits) sits below the model. */
+html.diorama-on .dio-end { position: relative; z-index: 2; background: var(--dio-ground) }
+/* An interstitial covers the model: full screen, its own design. */
+html.diorama-on .beat.dio-interstitial {
+  z-index: 2; padding-top: 0; pointer-events: auto; min-height: 120svh; display: grid; align-items: center;
+  background: var(--dio-ground);
+}
+html.diorama-on .beat.dio-interstitial > .copy {
+  position: relative; top: auto; width: auto; max-width: 1180px; max-height: none; overflow: visible; margin: 0 auto; padding: 12svh clamp(16px, 5vw, 72px);
+  background: none; border: 0; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
+/* Stepper: one stop card at a time, with Back / Next and a timeline. */
+html.diorama-on .stops { list-style: none; margin: 0; padding: 0 }
+html.diorama-on .stops > li { display: none }
+html.diorama-on .stops > li.dio-cur { display: block; animation: dio-in .35s ease-out }
+@keyframes dio-in { from { opacity: 0; transform: translateY(6px) } }
+.dio-stepnav { display: flex; align-items: center; gap: 10px; margin-top: 18px }
+.dio-stepnav .vz-btn { height: 44px; min-width: 44px; border-radius: 22px }
+.dio-stopcount { flex: 1; text-align: center; font: 500 12px/1 var(--dio-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dio-muted) }
+.dio-timeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 14px }
+.dio-stopbtn {
+  appearance: none; min-height: 44px; padding: 4px 6px; border: 0; border-top: 2px solid color-mix(in srgb, var(--dio-paper) 18%, transparent);
+  background: transparent; color: var(--dio-muted); font: 12px/1.2 var(--dio-sans); text-align: left; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dio-stopbtn span { display: block; font: 500 10px/1.4 var(--dio-mono); letter-spacing: .1em }
+.dio-stopbtn.dio-past { border-top-color: color-mix(in srgb, var(--dio-accent) 55%, transparent) }
+.dio-stopbtn[aria-current] { border-top-color: var(--dio-accent); color: var(--dio-paper); background: color-mix(in srgb, var(--dio-paper) 7%, transparent) }
+.dio-stopbtn:hover { color: var(--dio-paper) }
+.dio-stopbtn:focus-visible, .dio-chip:focus-visible { outline: 2px solid var(--dio-accent); outline-offset: 2px }
+
+/* Layers: one toggle per route. */
+.dio-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px }
+.dio-chip {
+  appearance: none; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px 0 10px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--dio-paper) 22%, transparent); background: transparent; color: var(--dio-muted);
+  font: 14px/1.2 var(--dio-sans); text-align: left; transition: background .25s, border-color .25s, color .25s;
+}
+.dio-chip[aria-pressed="true"] { background: color-mix(in srgb, var(--dio-paper) 9%, transparent); border-color: var(--dio-accent); color: var(--dio-paper) }
+.dio-chip[aria-pressed="false"] .dio-swatch { opacity: .4 }
+.dio-chip-t b { display: block; font-weight: 600 }
+.dio-chip-t small { display: block; font-size: 11px; color: var(--dio-muted) }
+
+/* ── The CSS 3D plate (no WebGL) ────────────────────────────────────── */
+.dio-css-cam { overflow: hidden }
+.dio-css-plate { position: absolute; left: 0; top: 0; transform-origin: 0 0; transform-style: preserve-3d }
+.dio-css-plate > svg { position: absolute; inset: 0; display: block }
+.dio-css-front {
+  position: absolute; left: 0; top: 100%; width: 100%; height: 32px; transform-origin: top; transform: rotateX(-90deg);
+  display: flex; align-items: center; justify-content: center; background: var(--dio-plinth);
+  font: 500 12px/1 var(--dio-mono); letter-spacing: .4em; text-transform: uppercase; color: var(--dio-muted);
+}
+.dio-css-side { position: absolute; left: 100%; top: 0; width: 32px; height: 100%; transform-origin: left; transform: rotateY(90deg); background: var(--dio-plinth-side) }
+.dio-css-tower { position: absolute; transform-style: preserve-3d; transform-origin: center }
+.dio-css-tower > i { position: absolute; display: block }
+
+/* ── Phones: the plate on top, the copy as a bottom sheet ───────────── */
+@media (max-width: 719px) {
+  html.diorama-on .beat { padding-top: 52svh }
+  html.diorama-on .beat > .copy {
+    width: auto; margin: 0 8px; top: calc(var(--vz-chrome-h) + 50svh);
+    max-height: calc(50svh - var(--vz-chrome-h) - 8px); overflow: auto; padding: 18px 18px 20px;
+    background: var(--dio-sheet); border: 1px solid color-mix(in srgb, var(--dio-paper) 12%, transparent); border-radius: 18px;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  }
+  html.diorama-on .beat.dio-interstitial { padding-top: 0 }
+  .dio-legend, .dio-timeline { display: none }
+  html.diorama-on .dio-view::after { background: linear-gradient(180deg, transparent 0 46%, color-mix(in srgb, var(--dio-ground) 70%, transparent) 62%) }
+  .dio-progress { top: 14px; right: 12px; gap: 8px }
+  .dio-tick { width: 10px }
+  .dio-name { font-size: 12px }
+  .dio-mark.current .dio-name { font-size: 20px }
+  .dio-tag.is-tower b { font-size: 18px }
+  .dio-tag.is-area { font-size: 24px }
+  .dio-tag.is-area.is-east { font-size: 20px }
+  .dio-tag.is-ring, .dio-tag.is-line, .dio-tag.is-cut { font-size: 10px }
+  html.diorama-on .dio-tools { padding: 8px }
+}
+
+/* ── One column (no JS, or "Read as one page") ──────────────────────── */
+:where(html:not(.diorama-on)) :where(.beats) { max-width: 700px; margin: 0 auto; padding: 32px 20px 96px }
+:where(html:not(.diorama-on)) :where(.beat) { margin: 0 0 72px }
+html:not(.diorama-on) .dio-view, html:not(.diorama-on) .dio-stepnav, html:not(.diorama-on) .dio-timeline, html:not(.diorama-on) .dio-chips { display: none }
+html:not(.diorama-on) .stops { padding-left: 0; list-style: none }
+html:not(.diorama-on) .stops > li { margin: 0 0 22px }
+
+@media (prefers-reduced-motion: reduce) {
+  .dio-ship svg, html.diorama-on .stops > li.dio-cur { animation: none }
+  .dio-chip, html.diorama-on .beat > .copy { transition: none }
+}

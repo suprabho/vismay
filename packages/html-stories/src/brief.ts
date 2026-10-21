@@ -108,7 +108,7 @@ export interface BriefOptions {
   mapboxToken?: string | null
   /**
    * The story format: 'scroll' (default) or a runtime-driven format ('book',
-   * 'board', 'deck', and on vizf1 'recap') built on the site's hosted runtime.
+   * 'board', 'deck', 'diorama', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
   /**
@@ -981,6 +981,8 @@ charts. "${formatHeading(paged)}" below says how.
   const mapsLine =
     paged === 'recap'
       ? `The 3D replay is the race's map (see "${formatHeading(paged)}").`
+      : paged === 'diorama'
+        ? `The model is the story's map: places, routes and props go in its JSON (see "${formatHeading(paged)}").`
       : travelBoard
         ? `The day's map is a chart on the board's paper sheet (see "${formatHeading(paged)}").`
         : paged
