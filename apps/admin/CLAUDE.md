@@ -242,21 +242,28 @@ league and team rows only).
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088, 090 and 092;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092 and 093;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
-Desk, Atlas and Epics on `/vizmaya/randomizer`, the Football Desk on
+Desk, Atlas, Epics and the OCW Desk on `/vizmaya/randomizer`, the Football Desk on
 `/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
-  three tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
-  with a one-tap reason, the Atlas pair / Epics sequence toggle, the style die,
-  the rules that fired, the spin log, the hero insight gate (approve / send back
-  with a note, paste research), the composed brief's assignment with Copy agent
-  brief and Copy research stub, and the Desk heat table (stale and failed
-  refreshes shown).
+  four tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course
+  toggle, the style die, the rules that fired, the spin log, the hero insight
+  gate (approve / send back with a note, paste research), the composed brief's
+  assignment with Copy agent brief and Copy research stub, the Desk heat table
+  (stale and failed refreshes shown) and, on the OCW Desk tab, the **OCW pool**
+  panel: the page of MIT OpenCourseWare files the spin was drawn from (query,
+  count, offset), the course card with links, the resource, the course's other
+  lecture-notes files, and the other courses on the page (the desk draws
+  lecture notes only for now, so there is no kind reel). The OCW course and
+  resource reels blur through that page's titles. Nothing is loaded up front
+  for it: a cron on vizmaya-fyi spins it each morning, and the page lives on
+  the spin.
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel

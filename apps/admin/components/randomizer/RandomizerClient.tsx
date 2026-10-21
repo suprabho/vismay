@@ -9,6 +9,7 @@ import {
   ClipboardText,
   Copy,
   Fire,
+  GraduationCap,
   LockSimple,
   Newspaper,
   LockSimpleOpen,
@@ -25,13 +26,14 @@ import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { FOOTSHORTS, VIZNBA } from '@vismay/randomizer/datasets'
+import { FOOTSHORTS, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
   RESPIN_REASONS,
   randomizersFor,
   type FootshortsNews,
+  type OcwFile,
   type ViznbaGameRef,
   type ViznbaNews,
   type RandomizerApp,
@@ -192,9 +194,24 @@ const perRandomizer = <T,>(value: (r: RandomizerId) => T) =>
   Object.fromEntries(RANDOMIZERS.map((r) => [r, value(r)])) as Record<RandomizerId, T>
 
 /**
- * One slot machine for a site's randomizers: Desk, Atlas and Epics on
- * vizmaya (with the Desk heat table), the Football Desk on footshorts (with
- * its live news table), the NBA Desk on viznba (with its news and games).
+ * The values a live reel's spin animation blurs through: the Football Desk's
+ * team names from the news snapshot, the OCW Desk's course titles and file
+ * titles from the spin's own pool (the page it was drawn from).
+ */
+function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: FootshortsNews | null): string[] | undefined {
+  if (tab === 'ocw' && spin.subject.randomizer === 'ocw') {
+    if (key === 'course') return spin.subject.pool.courses
+    if (key === 'resource') return [spin.subject.file, ...spin.subject.siblings].map((f) => f.title)
+    return undefined
+  }
+  return news?.teams.map((t) => t.name)
+}
+
+/**
+ * One slot machine for a site's randomizers: Desk, Atlas, Epics and the OCW
+ * Desk on vizmaya (with the Desk heat table and the OCW pool panel), the
+ * Football Desk on footshorts (with its live news table), the NBA Desk on
+ * viznba (with its news and games).
  */
 export function RandomizerClient({
   app = 'vizmaya-fyi',
@@ -309,7 +326,7 @@ export function RandomizerClient({
       const strips: Record<string, string[]> = {}
       RANDOMIZER_META[tab].reels.forEach((r, i) => {
         if (lockedNow.has(r.key)) return
-        const values = reelPool(tab, r.key, news?.teams.map((t) => t.name))
+        const values = reelPool(tab, r.key, liveReelValues(tab, r.key, spin, news))
         if (values.length) strips[r.key] = Array.from({ length: 10 + i * 3 }, () => values[Math.floor(Math.random() * values.length)]!)
       })
       setSpins((prev) => [
@@ -395,9 +412,10 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, three reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
-                  tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The agent brief then carries the
-                  spin.
+                  One slot machine, four reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
+                  MIT OpenCourseWare live for its course and resource reels, and a cron spins it once a morning. The agent brief then
+                  carries the spin.
                 </>
               )}
             </p>
@@ -407,7 +425,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ''} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk)'} been applied?
           </div>
         )}
 
@@ -665,6 +683,7 @@ export function RandomizerClient({
 
         {tab === 'footshorts' && <FootballNews news={news} />}
         {tab === 'viznba' && <NbaNews news={nbaNews} />}
+        {tab === 'ocw' && <OcwPool spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -1033,6 +1052,90 @@ function gameLine(g: ViznbaGameRef, teamId: string): string {
 }
 
 /** The NBA Desk's live news: what its 60% branch weights by, and the games a spin attaches. */
+function OcwPool({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'ocw' ? spin.subject : null
+  const stocked = OCW.topics.filter((t) => OCW.kinds.some((k) => (t.files[k.name] ?? 0) > 0)).length
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-neutral-300 inline-flex items-center gap-1.5">
+          <GraduationCap size={15} className="text-orange-400" />
+          OCW pool
+        </span>
+        <span>
+          {OCW.fields.length} fields, {stocked} topics with files, {OCW.kinds.map((k) => k.name.toLowerCase()).join(', ')} only. A spin reads one page of MIT OpenCourseWare
+          live (MIT Learn&rsquo;s API) for its course and resource; the page is kept on the spin, so a logged spin replays without the network.
+        </span>
+      </section>
+    )
+  }
+  const term = [s.course.semester, s.course.year].filter(Boolean).join(' ')
+  const files: OcwFile[] = [s.file, ...s.siblings].sort((a, b) => a.key.localeCompare(b.key))
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <GraduationCap size={15} className="text-orange-400" />
+          OCW pool
+        </h2>
+        <span className="text-xs text-neutral-500">
+          {s.topic.name} · {s.kind.name}:{' '}
+          {s.pool.query.courseId
+            ? `${s.pool.count} ${s.kind.name.toLowerCase()} files in the course`
+            : `${s.pool.count.toLocaleString('en-US')} files on OCW, this page from ${s.pool.offset.toLocaleString('en-US')} (${s.pool.pageSize} files, ${s.pool.courses.length} ${s.pool.courses.length === 1 ? 'course' : 'courses'})`}
+          , read {new Date(s.pool.asOf).toLocaleString()}.
+          {s.sequence ? ' Continued from the previous spin.' : ''}
+        </span>
+      </div>
+      <div className="px-4 py-3 border-b border-white/5 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-center">Course</span>
+        <div>
+          <a href={s.course.url} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+            {s.course.number} {s.course.title}
+            <ArrowSquareOut size={13} className="text-neutral-500" />
+          </a>
+          <div className="text-xs text-neutral-500">
+            {[term, s.course.level.join(' / '), s.course.departments.join(', ')].filter(Boolean).join(' · ')}
+            {s.course.instructors.length ? ` · ${s.course.instructors.join(', ')}` : ' · instructors on the course page'}
+          </div>
+        </div>
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-center">Resource</span>
+        <div>
+          <a href={s.file.url} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+            {s.file.title}
+            <ArrowSquareOut size={13} className="text-neutral-500" />
+          </a>
+          <div className="text-xs text-neutral-500">
+            {s.kind.name} · {s.file.contentType}
+            {s.file.youtubeId ? ' · video' : ''}
+          </div>
+        </div>
+      </div>
+      {files.length > 1 && (
+        <div className="px-4 py-3">
+          <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono mb-1.5">
+            {s.kind.name} in the course the pool saw ({files.length})
+          </div>
+          <ol className="text-xs text-neutral-400 grid gap-0.5 sm:grid-cols-2 lg:grid-cols-3">
+            {files.map((f) => (
+              <li key={f.id} className={f.id === s.file.id ? 'text-orange-300' : ''}>
+                <a href={f.url} target="_blank" rel="noreferrer" className="hover:underline">
+                  {f.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {s.pool.courses.length > 1 && (
+        <div className="px-4 pb-3 text-xs text-neutral-500">
+          Other courses on the page: {s.pool.courses.filter((c) => c !== `${s.course.number} ${s.course.title}`).join('; ')}.
+        </div>
+      )}
+    </section>
+  )
+}
+
 function NbaNews({ news }: { news: ViznbaNews | null }) {
   const [all, setAll] = useState(false)
   if (!news) {

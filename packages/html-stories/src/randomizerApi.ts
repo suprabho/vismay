@@ -22,6 +22,12 @@
  *                                                     tournaments and teams with heat, headlines, fixtures
  *                                                     (on viznba: the NBA Desk's, conferences and
  *                                                     franchises with heat, headlines, games)
+ *   GET  /api/randomizer/ocw?topic=&kind=&course=&u=  a page of the OCW Desk's pool (vizmaya only):
+ *                                                     the files of one kind under one topic, or in one
+ *                                                     course, as a spin would see them; without a query,
+ *                                                     the taxonomy (fields, topics with their file counts, kinds)
+ *   GET  /api/randomizer/cron/ocw                   the OCW Desk's daily spin (Vercel Cron, CRON_SECRET):
+ *                                                     spins once per UTC day unless a kept spin exists
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -30,8 +36,9 @@
  * Server only.
  */
 
-import { DESK } from '@vismay/randomizer/datasets'
+import { DESK, OCW } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
+import { loadOcwPool } from '@vismay/randomizer/ocwPool'
 import { assignmentSection } from '@vismay/randomizer/spinBrief'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { suggestedFormatFor } from './formats'
@@ -47,6 +54,7 @@ import {
   refreshDeskHeat,
   saveSpinResearch,
   SpinError,
+  spunOn,
   type HeatFailure,
   type HeatRefresh,
 } from '@vismay/randomizer/spins'
@@ -280,6 +288,83 @@ export async function handleViznbaNewsRequest(req: Request): Promise<Response> {
   if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
   try {
     return json(await loadViznbaNews())
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+/**
+ * GET /api/randomizer/ocw on vizmaya: a page of the OCW Desk's pool, read
+ * the way a spin reads it (packages/randomizer ocwPool.ts), for an agent
+ * that wants to look before locking a topic or a course. `topic` (a topic
+ * name from the taxonomy) and `kind` (a resource kind) select the page;
+ * `course` (a MIT Learn course id) reads that course's files of the kind
+ * instead; `u` in [0, 1) picks where the page starts (random otherwise).
+ * Without `topic` or `course` it answers the taxonomy: fields, topics with
+ * their file counts per kind, kinds and lenses. Read-only.
+ */
+export async function handleOcwPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const url = new URL(req.url)
+  const topicName = url.searchParams.get('topic')?.trim() || null
+  const kindName = url.searchParams.get('kind')?.trim() || null
+  const courseParam = url.searchParams.get('course')?.trim() || null
+  if (!topicName && !courseParam) {
+    return json({
+      fields: OCW.fields,
+      topics: OCW.topics,
+      kinds: OCW.kinds,
+      lenses: OCW.lenses,
+      note: 'Pass topic and kind (or course and kind) for a page of files, as a spin would read it.',
+    })
+  }
+  const kind = kindName ? OCW.kinds.find((k) => k.name.toLowerCase() === kindName.toLowerCase()) : undefined
+  if (!kind) return json({ error: `kind must be one of ${OCW.kinds.map((k) => k.name).join(', ')}` }, 400)
+  const topic = topicName ? OCW.topics.find((t) => t.name.toLowerCase() === topicName.toLowerCase()) : undefined
+  if (topicName && !topic) return json({ error: `unknown topic "${topicName}": see GET /api/randomizer/ocw for the taxonomy` }, 400)
+  const courseId = courseParam ? Number(courseParam) : null
+  if (courseParam && !(courseId! > 0 && Number.isInteger(courseId))) return json({ error: 'course must be a MIT Learn course id' }, 400)
+  const uParam = url.searchParams.get('u')
+  const u = uParam === null ? Math.random() : Number(uParam)
+  if (!(u >= 0 && u < 1)) return json({ error: 'u must be in [0, 1)' }, 400)
+  const field = topic ? OCW.fields.find((f) => f.id === topic.field)! : OCW.fields[0]!
+  try {
+    const pool = await loadOcwPool({
+      field,
+      topic: topic ?? { id: 0, field: field.id, name: '', files: {} },
+      kind,
+      lens: OCW.lenses[0]!,
+      u,
+      query: { topic: topic?.name ?? '', kind: kind.name, courseId },
+      keepFile: null,
+      afterFile: null,
+    })
+    return json(pool)
+  } catch (e) {
+    return json({ error: `The OCW pool could not be read: ${e instanceof Error ? e.message : String(e)}` }, 503)
+  }
+}
+
+/**
+ * GET /api/randomizer/cron/ocw on vizmaya: the OCW Desk's daily spin. Vercel
+ * Cron calls it (apps/vizmaya-fyi/vercel.json) with `Authorization: Bearer
+ * $CRON_SECRET`; it fails closed without the secret. One spin per UTC day:
+ * when a kept OCW spin already exists today (someone spun by hand), it
+ * answers with that one and spins nothing.
+ */
+export async function handleOcwDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return json({ error: 'CRON_SECRET is not set on this project' }, 503)
+  if (req.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401)
+  if (!hasRandomizerEnv()) return json({ error: 'the randomizer needs Supabase service credentials' }, 503)
+  try {
+    const existing = await spunOn('ocw')
+    if (existing) return json({ ok: true, spun: false, ...spinPayload(existing, origin) })
+    const spin = await createSpin({ randomizer: 'ocw', createdBy: 'cron' })
+    console.log(`[randomizer] ocw daily spin ${spin.id}: ${spin.summary}`)
+    return json({ ok: true, spun: true, ...spinPayload(spin, origin) })
   } catch (e) {
     return fail(e)
   }

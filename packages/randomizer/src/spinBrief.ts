@@ -9,7 +9,7 @@
  * playbook bans them in everything generated.
  */
 
-import { fixtureSummary, footshortsAngleMetrics, gameSummary, researchFileName, researchStub, viznbaAngleMetrics } from './stub'
+import { fixtureSummary, footshortsAngleMetrics, gameSummary, ocwCourseLabel, ocwCreditLine, ocwLensMetrics, researchFileName, researchStub, viznbaAngleMetrics } from './stub'
 import {
   RANDOMIZER_META,
   type AtlasSubject,
@@ -17,6 +17,7 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type OcwSubject,
   type SpinRecord,
   type ViznbaGameRef,
   type ViznbaSubject,
@@ -218,6 +219,36 @@ function viznbaAssignment(s: ViznbaSubject): string[] {
   return out
 }
 
+function ocwAssignment(s: OcwSubject): string[] {
+  const course = ocwCourseLabel(s.course)
+  const who = s.course.instructors.length ? `, ${s.course.instructors.join(', ')}` : ''
+  const out = [
+    `- Field: ${s.field.name} › Topic: ${s.topic.name}`,
+    `- Course: ${course}${who}. ${s.course.url}`,
+    `- Resource: ${s.file.title} (${s.kind.name}, ${s.file.contentType}). ${s.file.url}`,
+    `- Lens: ${s.lens.name}. ${s.lens.description}`,
+    '',
+    '### Do this first',
+    '',
+    '1. Read the resource at its OCW URL end to end: the PDF, or the video and the transcript on its page. It is the only source for what the page explains.',
+    '2. Read the course page (syllabus and calendar) for where this resource sits in the course and what came before it.',
+    `3. Apply the ${s.lens.name} lens to the resource itself, not to the course or to ${s.topic.name} in general.`,
+    `4. ${ocwCreditLine(s)} Non-commercial applies: no sponsored placement on the page.`,
+  ]
+  if (s.sequence) out.push('5. This spin continues the previous one in the same course: link back to that story and do not re-explain what it covered.')
+  if (s.siblings.length) {
+    out.push('', `Other ${s.kind.name.toLowerCase()} files in the course (context, not to cover):`)
+    for (const f of s.siblings.slice(0, 12)) out.push(`- [${f.title}](${f.url})`)
+    if (s.siblings.length > 12) out.push(`- and ${s.siblings.length - 12} more on the course page`)
+  }
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${ocwLensMetrics(s.lens.name).join(', ')}.`,
+    'Start from: the resource, the course page and its other files, the textbook or paper the resource cites, and a public dataset for any chart.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -231,7 +262,9 @@ export function assignmentSection(spin: BriefSpin): string {
           ? footshortsAssignment(s)
           : s.randomizer === 'viznba'
             ? viznbaAssignment(s)
-            : epicsAssignment(s)
+            : s.randomizer === 'ocw'
+              ? ocwAssignment(s)
+              : epicsAssignment(s)
   const ready = insightReady(spin)
   const lead = ready
     ? [
@@ -265,7 +298,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
           ? '\n8. Transfer talk, injury timelines and dressing-room stories are Unverified until the club, the league or the player confirms them, or two independent outlets with named sourcing report them. A rumour never goes on the page as fact.'
           : spin.randomizer === 'viznba'
             ? '\n8. Trade talk, injury timelines and locker-room stories are Unverified until the team, the league or the player confirms them, or two independent outlets with named sourcing report them. A rumour never goes on the page as fact.'
-            : ''
+            : spin.randomizer === 'ocw'
+              ? '\n8. The resource is the primary source for what it says; quote it with its page or slide number. Anything about the world outside the resource (a number, a date, a history) follows the two-source rule like any other claim.'
+              : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -356,6 +391,23 @@ Built like a good analysis piece: numbers first, skimmable, one argument. These 
 10. **Sources and claims log summary.**`
 }
 
+function ocwFormat(s: OcwSubject): string {
+  return `## Format: study note with charts
+
+Built like the best page of a study guide: one idea, explained so a reader who has not taken the course gets it, with the numbers that make it concrete. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the idea in plain words) and **dek** (one line, why a reader outside ${s.topic.name} should care).
+2. **The resource:** what it is (${s.kind.name.toLowerCase()} from ${ocwCourseLabel(s.course)}), one line, linked.
+3. **The one idea:** 150 words at most, from the resource, cited to its page or slide.
+4. **Chart 1, the quantity:** the thing the resource is about, charted from real data (8 or more points), or the worked example's numbers.
+5. **Chart 2, the comparison or the history:** the idea against its alternative, or how the number moved over time.
+6. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+7. **Where it breaks:** the assumption the resource makes that does not always hold.
+8. **Go further:** the course page and the resource's own references, linked.
+9. **Credit:** ${ocwCreditLine(s)}
+10. **Sources and claims log summary.**`
+}
+
 function atlasFormat(s: AtlasSubject): string {
   return `## Format: geography (route table)
 
@@ -398,6 +450,7 @@ export function formatSection(spin: BriefSpin): string {
   const s = spin.subject
   if (s.randomizer === 'footshorts') return footshortsFormat(s)
   if (s.randomizer === 'viznba') return viznbaFormat(s)
+  if (s.randomizer === 'ocw') return ocwFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -419,6 +472,12 @@ export function chartRules(spin: BriefSpin): string[] {
     return [
       'Basketball series rules: one message per chart, the title states the takeaway, the season (and regular season or playoffs) on every chart, source in the footer.',
       'Game numbers come from the box scores verbatim. Give each team its own colour consistently (the team colour in the brief reads on a dark background), and grey for the rest of the league.',
+    ]
+  }
+  if (spin.randomizer === 'ocw') {
+    return [
+      'Study-note series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
+      'A chart of the resource\'s own numbers (a worked example, a table in the notes) says so in its footer and cites the page; a chart from a public dataset names the dataset.',
     ]
   }
   return [
@@ -462,11 +521,12 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'viznba' ? ['Every score and stat line matches the box scores; no rumour is stated as fact.'] : []),
+    ...(spin.randomizer === 'ocw' ? ['The resource and the course page are linked, the CC BY-NC-SA credit names the course, the instructors and the term, and nothing on the page is sponsored.'] : []),
     'Contested claims are labelled and both sides stated fairly.',
     'The first 3 seconds of the script open on the surprising claim.',
     'No em dashes. No unverified claims on the page or in the script.',

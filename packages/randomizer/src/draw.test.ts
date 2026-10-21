@@ -1,10 +1,11 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, DESK, EPICS, FOOTSHORTS, VIZNBA, epicRoute, isPhilosophical, reelPool } from './datasets'
-import { DRAW_RULES, draw, normalizeLocks } from './draw'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical, reelPool } from './datasets'
+import { DRAW_RULES, draw, normalizeLocks, planOcw } from './draw'
+import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { extractHeroInsight, gameSummary, researchFileName, researchStub } from './stub'
+import { OCW_LENS_METRICS, extractHeroInsight, gameSummary, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -16,6 +17,10 @@ import {
   type FootshortsNews,
   type FootshortsPicks,
   type FootshortsTeamNews,
+  type OcwFile,
+  type OcwPicks,
+  type OcwPlan,
+  type OcwPool,
   type SpinHistoryEntry,
   type SpinRecord,
   type ViznbaGameRef,
@@ -24,6 +29,8 @@ import {
 } from './types'
 
 const NOW = new Date('2026-10-05T12:00:00Z')
+/** Async checks, awaited before the file reports ok. */
+const pending: Promise<void>[] = []
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 864e5).toISOString()
 const entry = (r: DrawResult, d: number, status: SpinHistoryEntry['status'] = 'spun'): SpinHistoryEntry => ({
   status,
@@ -279,7 +286,7 @@ const NEWS: FootshortsNews = {
 NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
 
 assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
-assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw'])
 assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
 assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
@@ -425,9 +432,318 @@ assert.equal(gameSummary(game('g', 'bos', 'ny', 2)), `Boston Celtics 112 @ New Y
   assert.ok(h2h.rules.some((x) => x.tag === 'pair' && x.kind === 'good'))
 }
 
+
+// OCW Desk: the committed taxonomy, then a synthetic pool (no network).
+assert.equal(OCW.fields.length, 11)
+assert.ok(OCW.topics.length >= 90)
+assert.equal(new Set(OCW.topics.map((t) => t.id)).size, OCW.topics.length)
+for (const t of OCW.topics) assert.ok(OCW.fields.some((f) => f.id === t.field), t.name)
+for (const f of OCW.fields) assert.ok(OCW.topics.some((t) => t.field === f.id), `${f.name}: no topics`)
+assert.deepEqual(OCW.kinds.map((k) => k.name), ['Lecture Notes'], 'the OCW Desk draws lecture notes only, for now')
+assert.equal(OCW.lenses.length, 7)
+for (const l of OCW.lenses) assert.ok(OCW_LENS_METRICS[l.name]?.length === 3, `${l.name}: no chart metrics`)
+for (const t of OCW.topics) for (const k of OCW.kinds) assert.equal(typeof t.files[k.name], 'number', `${t.name}: no count for ${k.name}`)
+/** A dataset with several kinds, for the rules that need a choice (the hands-on quota, a kind the topic lacks). */
+const OCW_KINDS = {
+  ...OCW,
+  kinds: [
+    { name: 'Lecture Notes', hands_on: false, description: 'notes' },
+    { name: 'Readings', hands_on: false, description: 'readings' },
+    { name: 'Problem Sets', hands_on: true, description: 'problems' },
+    { name: 'Exams', hands_on: true, description: 'exams' },
+  ],
+  topics: OCW.topics.map((t, i) => ({
+    ...t,
+    files: { 'Lecture Notes': t.files['Lecture Notes']!, Readings: i % 3 ? 40 : 0, 'Problem Sets': i % 2 ? 25 : 0, Exams: i % 5 ? 10 : 0 },
+  })),
+}
+assert.ok(OCW.topics.some((t) => OCW.kinds.every((k) => t.files[k.name] === 0)), 'the taxonomy records topics with no files')
+{
+  // The plan never lands on a topic without files, nor on a kind the topic has none of.
+  for (let seed = 0; seed < 300; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW })
+    assert.ok(plan.topic.files[plan.kind.name]! > 0, `${plan.topic.name} has no ${plan.kind.name}`)
+  }
+  // With several kinds (a synthetic dataset): a kind the topic has none of is never planned, and a topic
+  // with only reading kinds yields the quota.
+  const D = { ocw: OCW_KINDS }
+  for (let seed = 0; seed < 300; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, datasets: D })
+    assert.ok(plan.topic.files[plan.kind.name]! > 0, `${plan.topic.name} has no ${plan.kind.name}`)
+  }
+  const readingOnly = OCW_KINDS.topics.find((t) => t.files['Lecture Notes']! > 0 && t.files['Problem Sets'] === 0 && t.files.Exams === 0)!
+  const prev = { picks: { field: readingOnly.field, topic: readingOnly.id, kind: 'Lecture Notes', lens: 'The one idea', courseId: 1, fileId: 1 } }
+  const past = (d: number): SpinHistoryEntry => ({ status: 'spun', primary: 'x', combo: 'x', meta: { kind: 'Readings', topic: 0, field: 0 }, picks: prev.picks, createdAt: daysAgo(d) })
+  const plan = planOcw({ randomizer: 'ocw', seed: 5, now: NOW, prev, locks: ['topic'], history: [past(2), past(1)], datasets: D })
+  assert.equal(plan.topic.id, readingOnly.id)
+  assert.ok(!plan.kind.hands_on && plan.topic.files[plan.kind.name]! > 0)
+}
+assert.ok(isHandsOn('Problem Sets', OCW_KINDS) && !isHandsOn('Lecture Notes') && !isHandsOn(undefined))
+assert.deepEqual(normalizeLocks('ocw', ['resource']), ['field', 'topic', 'course', 'resource'])
+assert.deepEqual(normalizeLocks('ocw', ['course', 'lens']), ['field', 'topic', 'course', 'lens'])
+assert.equal(reelPool('ocw', 'field').length, 11)
+assert.deepEqual(reelPool('ocw', 'course', ['A', 'B']), ['A', 'B'])
+assert.throws(() => draw({ randomizer: 'ocw', seed: 1, now: NOW }), /pool/)
+
+/** A pool page for a plan: `n` files spread over `courses` courses, every file of the plan's kind. */
+const ocwFile = (i: number, course: number, kind: string, courseTitle = `Course ${course}`): OcwFile => ({
+  id: 1000 + i,
+  key: `courses/c-${course}/resources/f-${String(i).padStart(3, '0')}/`,
+  url: `https://ocw.mit.edu/courses/c-${course}/resources/f-${i}/`,
+  title: `File ${i}`,
+  contentType: 'pdf',
+  fileType: 'application/pdf',
+  kinds: [kind],
+  youtubeId: null,
+  courseId: course,
+  courseReadableId: `${course}.000+fall_2020`,
+  courseTitle,
+  courseSlug: `courses/c-${course}`,
+  courseNumber: `${course}.000`,
+  departments: ['Physics'],
+  year: 2020,
+  semester: 'Fall',
+})
+const poolFor = (plan: OcwPlan, n = 30, courses = 6): OcwPool => ({
+  asOf: NOW.toISOString(),
+  query: plan.query,
+  count: plan.query.courseId === null ? 3862 : n,
+  offset: plan.query.courseId === null ? Math.floor(plan.u * 3862) : 0,
+  files: [...Array(n).keys()].map((i) => ocwFile(i, plan.query.courseId ?? 1 + (i % courses), plan.query.kind)),
+})
+const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool'>, n?: number, courses?: number) => {
+  const plan = planOcw({ ...input, randomizer: 'ocw' })
+  return draw({ ...input, randomizer: 'ocw', ocwPool: poolFor(plan, n, courses) })
+}
+{
+  // The plan is deterministic, and the draw reproduces it from the same seed.
+  const plan = planOcw({ randomizer: 'ocw', seed: 7, now: NOW })
+  assert.deepEqual(plan, planOcw({ randomizer: 'ocw', seed: 7, now: NOW }))
+  assert.equal(plan.topic.field, plan.field.id)
+  assert.ok(plan.u >= 0 && plan.u < 1)
+  assert.deepEqual(plan.query, { topic: plan.topic.name, kind: plan.kind.name, courseId: null })
+  const a = draw({ randomizer: 'ocw', seed: 7, now: NOW, ocwPool: poolFor(plan) })
+  assert.deepEqual(a, draw({ randomizer: 'ocw', seed: 7, now: NOW, ocwPool: poolFor(plan) }))
+  const p = a.picks as OcwPicks
+  assert.equal(p.field, plan.field.id)
+  assert.equal(p.topic, plan.topic.id)
+  assert.equal(p.kind, plan.kind.name)
+  assert.equal(p.lens, plan.lens.name)
+  assert.ok(a.subject.randomizer === 'ocw' && a.subject.file.id === p.fileId && a.subject.course.id === p.courseId)
+  assert.ok(a.subject.randomizer === 'ocw' && a.subject.siblings.every((f) => f.courseId === p.courseId && f.id !== p.fileId))
+  assert.ok(a.subject.randomizer === 'ocw' && a.subject.pool.count === 3862 && a.subject.pool.pageSize === 30)
+  assert.equal(a.primary, a.subject.randomizer === 'ocw' ? a.subject.file.courseReadableId : '')
+  assert.ok(a.reels.course && a.reels.resource && a.reels.lens && !a.reels.kind, 'no kind reel while the dataset holds one kind')
+  assert.ok(a.rules.some((r) => r.tag === 'pool') && a.rules.some((r) => r.tag === 'licence'))
+  for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  // A pool for another query is refused, so a stale or wrong fetch can never be drawn from.
+  const other = planOcw({ randomizer: 'ocw', seed: 8, now: NOW })
+  assert.notDeepEqual(other.query, plan.query)
+  assert.throws(() => draw({ randomizer: 'ocw', seed: 7, now: NOW, ocwPool: poolFor(other) }), /not the one the plan asked for/)
+  // A page with none of the kind is said.
+  assert.throws(() => draw({ randomizer: 'ocw', seed: 7, now: NOW, ocwPool: { ...poolFor(plan), files: [] } }), /No .* files on OCW/)
+  assert.equal(ocwCourseLabel(a.subject.randomizer === 'ocw' ? a.subject.course : { number: '', title: '', semester: null, year: null }).endsWith('(Fall 2020)'), true)
+  assert.ok(ocwCreditLine(a.subject as { course: OcwFile extends never ? never : any }).includes('CC BY-NC-SA 4.0'))
+}
+{
+  // Locks: field, topic, kind and lens keep their values; a course lock narrows the pool to the course; a resource lock keeps the file.
+  const first = spinOcw({ seed: 3, now: NOW })
+  const fp = first.picks as OcwPicks
+  for (let seed = 10; seed < 40; seed++) {
+    const kept = spinOcw({ seed, now: NOW, prev: first, locks: ['topic', 'lens'] })
+    const kp = kept.picks as OcwPicks
+    assert.equal(kp.field, fp.field)
+    assert.equal(kp.topic, fp.topic)
+    assert.equal(kp.kind, fp.kind)
+    assert.equal(kp.lens, fp.lens)
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course'] })
+    assert.equal(plan.query.courseId, fp.courseId)
+    assert.equal(plan.keepFile, null)
+    const course = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course'], ocwPool: poolFor(plan, 12) })
+    assert.equal((course.picks as OcwPicks).courseId, fp.courseId)
+    const res = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['resource'] })
+    assert.equal(res.keepFile, fp.fileId)
+    const pool = poolFor(res, 12)
+    pool.files.push(ocwFile(fp.fileId - 1000, fp.courseId, res.query.kind))
+    const same = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['resource'], ocwPool: pool })
+    assert.equal((same.picks as OcwPicks).fileId, fp.fileId)
+  }
+}
+{
+  // Balancing: the field is re-drawn once after a repeat; a topic spun in the last 30 days is left out; two reading spins force a hands-on kind.
+  const first = spinOcw({ seed: 2, now: NOW })
+  let sameField = 0
+  const stockedIn = (field: number) => OCW.topics.filter((t) => t.field === field && OCW.kinds.some((k) => t.files[k.name]! > 0)).length
+  for (let seed = 0; seed < 400; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [entry(first, 1)] })
+    if (plan.field.id === first.meta.field) sameField++
+    // The topic block holds unless the field has only that one topic with files (then it lifts, and says so).
+    if (plan.field.id === first.meta.field && stockedIn(plan.field.id) > 1) assert.notEqual(plan.topic.id, first.meta.topic, 'topic blocked for 30 days')
+  }
+  // Without the re-draw a field repeats 1 in 11; one re-draw makes it about 1 in 121.
+  assert.ok(sameField < 400 / 30, `field repeated ${sameField} times in 400`)
+  const reading = (d: number): SpinHistoryEntry => ({
+    status: 'spun',
+    primary: `9.000+fall_2020`,
+    combo: `x|Lecture Notes|9.000+fall_2020|y`,
+    meta: { field: OCW.fields[0]!.id, topic: OCW.topics[0]!.id, kind: 'Lecture Notes' },
+    picks: { field: OCW.fields[0]!.id, topic: OCW.topics[0]!.id, kind: 'Lecture Notes', lens: 'The one idea', courseId: 9, fileId: 9 },
+    createdAt: daysAgo(d),
+  })
+  for (let seed = 0; seed < 100; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [reading(2), reading(1)], datasets: { ocw: OCW_KINDS } })
+    const canHandsOn = OCW_KINDS.kinds.some((k) => k.hands_on && plan.topic.files[k.name]! > 0)
+    assert.ok(plan.kind.hands_on || !canHandsOn, `quota forces a hands-on kind, got ${plan.kind.name} for ${plan.topic.name}`)
+  }
+  // With one kind in the dataset, every plan is that kind and the quota never fires.
+  for (let seed = 0; seed < 50; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, history: [reading(2), reading(1)] })
+    assert.equal(plan.kind.name, 'Lecture Notes')
+  }
+}
+{
+  // The 30-day block on courses, and the 90-day block on the combination.
+  const first = spinOcw({ seed: 5, now: NOW })
+  const fp = first.picks as OcwPicks
+  for (let seed = 0; seed < 100; seed++) {
+    const plan = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)] })
+    const r = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)], ocwPool: poolFor(plan) })
+    assert.notEqual((r.picks as OcwPicks).courseId, fp.courseId, 'a course spun in the last 30 days is left out')
+    assert.ok(r.rules.some((x) => x.tag === '30 days' && x.kind === 'block'))
+  }
+  // Every course on the page spun this month: the block lifts, and says so.
+  const plan = planOcw({ randomizer: 'ocw', seed: 6, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)] })
+  const onlyThatCourse = { ...poolFor(plan, 10), files: [...Array(10).keys()].map((i) => ocwFile(i, fp.courseId, plan.query.kind)) }
+  const lifted = draw({ randomizer: 'ocw', seed: 6, now: NOW, prev: first, locks: ['topic'], history: [entry(first, 3)], ocwPool: onlyThatCourse })
+  assert.ok(lifted.rules.some((x) => x.tag === '30 days' && x.kind === 'warn'))
+  // The combination is blocked for 90 days: with the course locked, the lens changes.
+  for (let seed = 0; seed < 60; seed++) {
+    const p2 = planOcw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course'], history: [entry(first, 40)] })
+    const r = draw({ randomizer: 'ocw', seed, now: NOW, prev: first, locks: ['course'], history: [entry(first, 40)], ocwPool: poolFor(p2, 8) })
+    assert.notEqual(r.combo, first.combo)
+    assert.equal((r.picks as OcwPicks).courseId, fp.courseId)
+  }
+}
+{
+  // Sequence mode: the next file of the course in key order; past the end, the first not yet spun; a full course warns.
+  const first = spinOcw({ seed: 9, now: NOW })
+  const fp = first.picks as OcwPicks
+  const plan = planOcw({ randomizer: 'ocw', seed: 1, now: NOW, history: [entry(first, 1)], sequence: true })
+  assert.deepEqual(plan.query, { topic: plan.topic.name, kind: fp.kind, courseId: fp.courseId })
+  assert.equal(plan.afterFile, fp.fileId)
+  const course = poolFor(plan, 5)
+  const sorted = [...course.files].sort((a, b) => a.key.localeCompare(b.key))
+  course.files.push(ocwFile(fp.fileId - 1000, fp.courseId, fp.kind))
+  const prevKey = course.files[course.files.length - 1]!.key
+  const next = draw({ randomizer: 'ocw', seed: 1, now: NOW, history: [entry(first, 1)], sequence: true, ocwPool: course })
+  const expected = [...course.files].sort((a, b) => a.key.localeCompare(b.key)).find((f) => f.key > prevKey) ?? sorted[0]!
+  assert.equal((next.picks as OcwPicks).fileId, expected.id)
+  assert.ok(next.subject.randomizer === 'ocw' && next.subject.sequence)
+  assert.ok(next.rules.some((x) => x.tag === 'sequence' && x.kind === 'good'))
+  // A full course: every file spun, the last in key order most recently.
+  const byKey = [...course.files].sort((a, b) => a.key.localeCompare(b.key))
+  const all = byKey.map((f, i) => ({ ...entry(next, byKey.length - i), primary: f.courseReadableId, picks: { ...(next.picks as OcwPicks), fileId: f.id } }))
+  const done = draw({ randomizer: 'ocw', seed: 1, now: NOW, history: all, sequence: true, ocwPool: course })
+  assert.ok(done.rules.some((x) => x.tag === 'sequence' && x.kind === 'warn'))
+  // No OCW spin to continue from: a fresh draw.
+  const fresh = planOcw({ randomizer: 'ocw', seed: 1, now: NOW, sequence: true })
+  assert.equal(fresh.afterFile, null)
+  assert.equal(fresh.query.courseId, null)
+}
+
+// OCW pool: the hit mapping, the page offset, the enrichment and the loader on a fake API.
+{
+  const hit: OcwHit = {
+    id: 8525629,
+    key: 'courses/2-61-internal-combustion-engines-spring-2017/resources/mit2_61s17_ps6/',
+    url: 'https://ocw.mit.edu/courses/2-61-internal-combustion-engines-spring-2017/resources/mit2_61s17_ps6/',
+    title: 'Internal Combustion Engines, Problem set 6',
+    content_type: 'pdf',
+    file_type: 'application/pdf',
+    content_feature_type: ['Problem Sets'],
+    resource_id: '3661',
+    resource_readable_id: '2.61+spring_2017',
+    run_title: 'Internal Combustion Engines',
+    run_slug: 'courses/2-61-internal-combustion-engines-spring-2017',
+    course_number: ['2.61'],
+    departments: [{ name: 'Mechanical Engineering' }],
+    year: 2017,
+    semester: 'Spring',
+  }
+  const f = ocwFileFromHit(hit)!
+  assert.equal(f.courseId, 3661)
+  assert.equal(f.courseNumber, '2.61')
+  assert.equal(f.courseSlug, 'courses/2-61-internal-combustion-engines-spring-2017')
+  assert.deepEqual(f.departments, ['Mechanical Engineering'])
+  assert.deepEqual(f.kinds, ['Problem Sets'])
+  // A bare file name title and a missing course number fall back to the key and the readable id.
+  const bare = ocwFileFromHit({ ...hit, title: '', content_title: 'lec15.pdf', course_number: null, run_title: null })!
+  assert.equal(bare.title, 'lec15.pdf')
+  assert.equal(bare.courseNumber, '2.61')
+  assert.equal(bare.courseTitle, '2.61')
+  assert.equal(ocwFileFromHit({ ...hit, resource_id: null }), null)
+  assert.equal(ocwFileFromHit({ ...hit, key: null }), null)
+
+  assert.equal(ocwPageOffset(0, 3862), 0)
+  assert.equal(ocwPageOffset(1, 3862), 3832, 'the last page still fits')
+  assert.equal(ocwPageOffset(0.5, 10), 0, 'fewer files than a page: the page starts at 0')
+  assert.equal(ocwPageOffset(1, 50000), 10000 - DRAW_RULES.ocwPageSize, 'the search cap holds')
+  for (let i = 0; i < 100; i++) {
+    const o = ocwPageOffset(i / 100, 3862)
+    assert.ok(o >= 0 && o + DRAW_RULES.ocwPageSize <= 3862)
+  }
+
+  const course = enrichedOcwCourse(
+    { id: 3661, readableId: '2.61+spring_2017', number: '2.61', title: 'x', url: 'u', slug: 's', departments: [], year: 2017, semester: 'Spring', instructors: [], level: [], courseFeatures: [] },
+    { id: 3661, title: 'Internal Combustion Engines', url: 'https://ocw.mit.edu/courses/2-61/', course_feature: ['Problem Sets'], runs: [{ instructors: [{ full_name: 'Prof. Wai Cheng' }, { first_name: 'A', last_name: 'B' }], level: [{ name: 'Graduate' }] }] },
+  )
+  assert.deepEqual(course.instructors, ['Prof. Wai Cheng', 'A B'])
+  assert.deepEqual(course.level, ['Graduate'])
+  assert.equal(course.title, 'Internal Combustion Engines')
+
+  // The loader: a topic page needs the count then the page at the plan's offset; a course pool pages the course's files.
+  // (The file runs as CommonJS, so the async part is collected and awaited at the end.)
+  const calls: string[] = []
+  const fakeFetch = (async (url: string | URL | Request) => {
+    const u = String(url)
+    calls.push(u)
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+    if (u.includes('/content_file_search/') && u.includes('limit=0')) return json({ count: 3862, results: [] })
+    if (u.includes('/content_file_search/')) {
+      const offset = Number(new URL(u).searchParams.get('offset'))
+      return json({ count: 3862, results: [...Array(30).keys()].map((i) => ({ ...hit, id: offset + i, key: `${hit.key}${i}/` }))})
+    }
+    if (u.includes('/learning_resources/3661/contentfiles/')) {
+      const offset = Number(new URL(u).searchParams.get('offset'))
+      const n = Math.max(0, Math.min(100, 130 - offset))
+      return json({ count: 130, results: [...Array(n).keys()].map((i) => ({ ...hit, id: 50000 + offset + i, key: `${hit.key}${offset + i}/` })) })
+    }
+    return new Response('nope', { status: 404 })
+  }) as typeof fetch
+  const plan = planOcw({ randomizer: 'ocw', seed: 7, now: NOW })
+  pending.push(
+    (async () => {
+      const pool = await loadOcwPool({ ...plan, query: { ...plan.query, kind: 'Problem Sets' } }, { now: NOW, fetch: fakeFetch })
+      assert.equal(pool.count, 3862)
+      assert.equal(pool.offset, ocwPageOffset(plan.u, 3862))
+      assert.equal(pool.files.length, 30)
+      assert.equal(calls.length, 2)
+      assert.ok(calls[0]!.includes(`topic=${encodeURIComponent(plan.topic.name)}`) && calls[0]!.includes('platform=ocw'))
+      assert.ok(calls[1]!.includes(`offset=${pool.offset}`) && calls[1]!.includes(`limit=${DRAW_RULES.ocwPageSize}`))
+      calls.length = 0
+      const inCourse = await loadOcwPool({ ...plan, query: { topic: plan.topic.name, kind: 'Problem Sets', courseId: 3661 } }, { now: NOW, fetch: fakeFetch })
+      assert.equal(inCourse.count, 130)
+      assert.equal(inCourse.files.length, 130)
+      assert.equal(calls.length, 2)
+      await assert.rejects(loadOcwPool({ ...plan, query: { topic: plan.topic.name, kind: 'Problem Sets', courseId: 1 } }, { fetch: fakeFetch }), /HTTP 404/)
+    })(),
+  )
+}
+
 // Stub and brief sections.
-for (const randomizer of ['desk', 'atlas', 'epics', 'footshorts', 'viznba'] as const) {
-  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA }))
+const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
+for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'footshorts', 'viznba'] as const) {
+  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))
   assert.ok(stub.includes('## HERO INSIGHT'))
@@ -445,4 +761,10 @@ for (const randomizer of ['desk', 'atlas', 'epics', 'footshorts', 'viznba'] as c
 assert.equal(extractHeroInsight('# R\n\n## HERO INSIGHT\n\n**Bold claim.**\n\nSupporting claims:\n1. a'), 'Bold claim.')
 assert.equal(extractHeroInsight('# R\n\n## Notes'), null)
 
-console.log('randomizer: ok')
+Promise.all(pending).then(
+  () => console.log('randomizer: ok'),
+  (e) => {
+    console.error(e)
+    process.exit(1)
+  },
+)
