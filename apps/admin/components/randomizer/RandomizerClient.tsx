@@ -11,6 +11,7 @@ import {
   Fire,
   GraduationCap,
   LockSimple,
+  Medal,
   Newspaper,
   LockSimpleOpen,
   Basketball,
@@ -26,13 +27,15 @@ import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { FOOTSHORTS, OCW, VIZNBA } from '@vismay/randomizer/datasets'
+import { FOOTSHORTS, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
   RESPIN_REASONS,
   randomizersFor,
   type FootshortsNews,
+  type LandmarkSources,
+  type LandmarkWork,
   type OcwFile,
   type ViznbaGameRef,
   type ViznbaNews,
@@ -196,7 +199,8 @@ const perRandomizer = <T,>(value: (r: RandomizerId) => T) =>
 /**
  * The values a live reel's spin animation blurs through: the Football Desk's
  * team names from the news snapshot, the OCW Desk's course titles and file
- * titles from the spin's own pool (the page it was drawn from).
+ * titles from the spin's own pool (the page it was drawn from), the Landmark
+ * Desk's laureate names and work titles from its pool.
  */
 function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: FootshortsNews | null): string[] | undefined {
   if (tab === 'ocw' && spin.subject.randomizer === 'ocw') {
@@ -204,14 +208,20 @@ function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: 
     if (key === 'resource') return [spin.subject.file, ...spin.subject.siblings].map((f) => f.title)
     return undefined
   }
+  if (tab === 'landmark' && spin.subject.randomizer === 'landmark') {
+    if (key === 'laureate') return spin.subject.pool.laureates
+    if (key === 'work') return [spin.subject.work, ...spin.subject.related].flatMap((w) => (w ? [w.title] : []))
+    return undefined
+  }
   return news?.teams.map((t) => t.name)
 }
 
 /**
- * One slot machine for a site's randomizers: Desk, Atlas, Epics and the OCW
- * Desk on vizmaya (with the Desk heat table and the OCW pool panel), the
- * Football Desk on footshorts (with its live news table), the NBA Desk on
- * viznba (with its news and games).
+ * One slot machine for a site's randomizers: Desk, Atlas, Epics, the OCW
+ * Desk and the Landmark Desk on vizmaya (with the Desk heat table, the OCW
+ * pool panel and the Landmark pool panel), the Football Desk on footshorts
+ * (with its live news table), the NBA Desk on viznba (with its news and
+ * games).
  */
 export function RandomizerClient({
   app = 'vizmaya-fyi',
@@ -412,10 +422,11 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, four reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  One slot machine, five reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
                   tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
-                  MIT OpenCourseWare live for its course and resource reels, and a cron spins it once a morning. The agent brief then
-                  carries the spin.
+                  MIT OpenCourseWare live for its course and resource reels; the Landmark Desk reads the prize lists (the Nobel Prize
+                  API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; a
+                  cron spins each once a morning. The agent brief then carries the spin.
                 </>
               )}
             </p>
@@ -425,7 +436,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk)'} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk)'} been applied?
           </div>
         )}
 
@@ -684,6 +695,7 @@ export function RandomizerClient({
         {tab === 'footshorts' && <FootballNews news={news} />}
         {tab === 'viznba' && <NbaNews news={nbaNews} />}
         {tab === 'ocw' && <OcwPool spin={current} />}
+        {tab === 'landmark' && <LandmarkPool spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -1051,7 +1063,7 @@ function gameLine(g: ViznbaGameRef, teamId: string): string {
   return `${home ? 'v' : '@'} ${oppShort}`
 }
 
-/** The NBA Desk's live news: what its 60% branch weights by, and the games a spin attaches. */
+/** The OCW Desk's pool: the page of OCW files the spin was drawn from, the course and the resource. */
 function OcwPool({ spin }: { spin: SpinRecord | null }) {
   const s = spin && spin.subject.randomizer === 'ocw' ? spin.subject : null
   const stocked = OCW.topics.filter((t) => OCW.kinds.some((k) => (t.files[k.name] ?? 0) > 0)).length
@@ -1136,6 +1148,173 @@ function OcwPool({ spin }: { spin: SpinRecord | null }) {
   )
 }
 
+const SOURCE_TONE: Record<LandmarkSources['wikidata'], string> = {
+  ok: 'text-emerald-300 border-emerald-400/40',
+  failed: 'text-red-300 border-red-400/40',
+  'no key': 'text-amber-300 border-amber-400/40',
+  'no email': 'text-amber-300 border-amber-400/40',
+  skipped: 'text-neutral-500 border-white/10',
+}
+
+function basisLabel(w: LandmarkWork): string {
+  if (w.type === 'subject') return 'named as a subject'
+  if (w.basis === 'citation') return 'named by the award'
+  if (w.basis === 'notable') return 'notable work'
+  if (w.basis === 'book') return 'book, by year'
+  return 'top-cited'
+}
+
+/** The Landmark Desk's pool: the award the spin drew, the work and how it was tied to the award, the other works, the laureates in the era, and how the sources fared. */
+function LandmarkPool({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'landmark' ? spin.subject : null
+  const total = LANDMARK.prizes.reduce((n, p) => n + Object.values(p.awards).reduce((a, b) => a + b, 0), 0)
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-neutral-300 inline-flex items-center gap-1.5">
+          <Medal size={15} className="text-orange-400" />
+          Landmark pool
+        </span>
+        <span>
+          {LANDMARK.fields.length} fields, {LANDMARK.prizes.length} prizes, {total.toLocaleString('en-US')} awards on record across {LANDMARK.eras.length} eras. A spin reads the
+          prize&rsquo;s awards live (the Nobel Prize API, Wikidata) and the laureate&rsquo;s works (Wikidata, OpenAlex, Open Library, Unpaywall); what it read is kept on the
+          spin, so a logged spin replays without the network.
+        </span>
+      </section>
+    )
+  }
+  const a = s.award
+  const w = s.work
+  const sources = (['wikidata', 'openalex', 'openlibrary', 'unpaywall'] as const).map((k) => [k, s.pool.sources[k]] as const)
+  const links = [
+    ['prize summary', a.links.summary],
+    ['scientific background', a.links.background],
+    ['lecture', a.links.lecture],
+    ['Wikipedia', a.links.wikipedia],
+  ].filter((l): l is [string, string] => !!l[1])
+  const others = s.pool.laureates.filter((n) => n !== a.name)
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Medal size={15} className="text-orange-400" />
+          Landmark pool
+        </h2>
+        <span className="text-xs text-neutral-500">
+          {s.prize.name} · {s.era.name}: {s.pool.count} {s.pool.count === 1 ? 'award' : 'awards'} read {new Date(s.pool.asOf).toLocaleString()}.
+          {s.sequence ? ' Followed back a year from the previous spin.' : ''}
+        </span>
+        <span className="flex flex-wrap gap-1.5 sm:ml-auto">
+          {sources.map(([k, state]) => (
+            <span key={k} className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${SOURCE_TONE[state]}`} title={k === 'openalex' && state === 'no key' ? 'Set OPENALEX_API_KEY on vizmaya-fyi for top-cited works' : k === 'unpaywall' && state === 'no email' ? 'Set UNPAYWALL_EMAIL on vizmaya-fyi for free-to-read links' : undefined}>
+              {k === 'openlibrary' ? 'Open Library' : k === 'openalex' ? 'OpenAlex' : k === 'wikidata' ? 'Wikidata' : 'Unpaywall'} · {state}
+            </span>
+          ))}
+        </span>
+      </div>
+      <div className="px-4 py-3 border-b border-white/5 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Award</span>
+        <div className="min-w-0">
+          <a href={a.url} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+            {a.name}, {s.prize.name} {a.year}
+            <ArrowSquareOut size={13} className="text-neutral-500" />
+          </a>
+          <div className="text-xs text-neutral-500">
+            {[a.share ? `share ${a.share}` : null, a.coLaureates.length ? `with ${a.coLaureates.join(', ')}` : null, s.prize.awarder].filter(Boolean).join(' · ')}
+          </div>
+          {a.motivation ? (
+            <blockquote className="mt-1 font-serif text-[15px] leading-snug text-neutral-200 border-l-2 border-white/15 pl-3">&ldquo;{a.motivation}&rdquo;</blockquote>
+          ) : (
+            <div className="mt-1 text-xs text-neutral-500">
+              No motivation on record here: the citation is on the{' '}
+              <a href={s.prize.url} target="_blank" rel="noreferrer" className="hover:text-white underline decoration-white/20">
+                official list
+              </a>
+              .
+            </div>
+          )}
+          {links.length > 0 && (
+            <div className="mt-1 text-xs text-neutral-500 flex flex-wrap gap-x-3">
+              {links.map(([k, v]) => (
+                <a key={k} href={v} target="_blank" rel="noreferrer" className="hover:text-white underline decoration-white/20">
+                  {k}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Work</span>
+        <div className="min-w-0">
+          {w ? (
+            <>
+              <a href={w.url} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+                {w.title}
+                <ArrowSquareOut size={13} className="text-neutral-500" />
+              </a>
+              <div className="text-xs text-neutral-500">
+                {[w.year ? String(w.year) : null, w.venue, w.authors.length ? w.authors.join(', ') : null, w.doi ? `DOI ${w.doi}` : null].filter(Boolean).join(' · ')}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wider">
+                <span className={`px-2 py-0.5 rounded-full border ${w.representative || w.type === 'subject' ? 'text-amber-300 border-amber-400/40' : 'text-emerald-300 border-emerald-400/40'}`}>{basisLabel(w)}</span>
+                {w.oaUrl ? (
+                  <a href={w.oaUrl} target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded-full border text-emerald-300 border-emerald-400/40 hover:bg-emerald-400/10">
+                    free to read · {w.oaStatus ?? 'open'}
+                  </a>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full border text-neutral-400 border-white/10">no free copy{w.oaStatus ? ` · ${w.oaStatus}` : ''}</span>
+                )}
+                {w.citedBy !== null && (
+                  <span className="px-2 py-0.5 rounded-full border text-neutral-300 border-white/10 normal-case tracking-normal font-mono tabular-nums">
+                    {w.citedBy.toLocaleString('en-US')} citations{w.fwci !== null ? ` · FWCI ${w.fwci}` : ''}{w.topOnePercent ? ' · top 1%' : ''}
+                  </span>
+                )}
+                {w.retracted && <span className="px-2 py-0.5 rounded-full border text-red-300 border-red-400/40">retracted</span>}
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-neutral-400">No work resolved. The brief says to reconstruct it from the award&rsquo;s own account.</div>
+          )}
+        </div>
+      </div>
+      {s.related.length > 0 && (
+        <div className="px-4 py-3 border-b border-white/5">
+          <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono mb-1.5">Other works the loader found ({s.related.length})</div>
+          <ol className="text-xs text-neutral-400 grid gap-0.5 sm:grid-cols-2">
+            {s.related.map((r) => (
+              <li key={r.id} className="min-w-0 truncate">
+                <a href={r.url} target="_blank" rel="noreferrer" className="hover:underline">
+                  {r.title}
+                </a>
+                <span className="text-neutral-600">
+                  {' '}
+                  · {[r.year, basisLabel(r), r.oaUrl ? 'free' : null].filter(Boolean).join(' · ')}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {(others.length > 0 || s.pool.sources.notes.length > 0 || s.pool.sources.errors.length > 0) && (
+        <div className="px-4 py-3 text-xs text-neutral-500 flex flex-col gap-1">
+          {others.length > 0 && (
+            <div>
+              Other {s.prize.name} laureates of {s.era.name}: {others.slice(0, 40).join('; ')}
+              {others.length > 40 ? ` and ${others.length - 40} more` : ''}.
+            </div>
+          )}
+          {s.pool.sources.notes.map((n, i) => (
+            <div key={`n${i}`} className="text-amber-300/90">{n}</div>
+          ))}
+          {s.pool.sources.errors.map((e, i) => (
+            <div key={`e${i}`} className="text-red-300/90">{e}</div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** The NBA Desk's live news: what its 60% branch weights by, and the games a spin attaches. */
 function NbaNews({ news }: { news: ViznbaNews | null }) {
   const [all, setAll] = useState(false)
   if (!news) {
