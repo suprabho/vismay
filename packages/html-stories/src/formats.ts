@@ -1,8 +1,9 @@
 /**
  * Story formats for agent-authored HTML stories. `scroll` is the classic
- * long page; `book`, `board`, `deck` and `recap` are formats whose mechanics
- * (page turns, the board's camera, slides and cards, the race replay beside
- * the chapters, the one-column view) come from versioned runtimes each site
+ * long page; `book`, `board`, `deck`, `diorama` and `recap` are formats whose
+ * mechanics (page turns, the board's camera, slides and cards, the tilted
+ * model the diorama's camera scrolls over, the race replay beside the
+ * chapters, the one-column view) come from versioned runtimes each site
  * hosts at /formats/<name>@<major>.js and .css (sources in ../formats, served
  * by ./formatsApi). `recap` is vizf1's: it frames the site's 3D race replay. The agent writes
  * the content markup, its design and its charts; a page declares its format
@@ -16,15 +17,15 @@
 import type { RandomizerId } from '@vismay/randomizer/types'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 
-export type HtmlStoryFormat = 'scroll' | 'book' | 'board' | 'deck' | 'recap'
+export type HtmlStoryFormat = 'scroll' | 'book' | 'board' | 'deck' | 'diorama' | 'recap'
 /**
  * The formats a hosted runtime drives. (The name predates `recap`, which
  * scrolls like a page but is driven by a runtime all the same.)
  */
 export type PagedHtmlStoryFormat = Exclude<HtmlStoryFormat, 'scroll'>
 
-export const HTML_STORY_FORMATS: readonly HtmlStoryFormat[] = ['scroll', 'book', 'board', 'deck', 'recap']
-export const PAGED_HTML_STORY_FORMATS: readonly PagedHtmlStoryFormat[] = ['book', 'board', 'deck', 'recap']
+export const HTML_STORY_FORMATS: readonly HtmlStoryFormat[] = ['scroll', 'book', 'board', 'deck', 'diorama', 'recap']
+export const PAGED_HTML_STORY_FORMATS: readonly PagedHtmlStoryFormat[] = ['book', 'board', 'deck', 'diorama', 'recap']
 
 /**
  * Formats only some sites can host: `recap` needs vizf1's race replay. Every
@@ -87,6 +88,12 @@ export const HTML_STORY_FORMAT_META: Record<HtmlStoryFormat, HtmlStoryFormatMeta
     suits: 'an argument made one point at a time',
     unit: 'slide',
   },
+  diorama: {
+    label: 'Diorama',
+    reader: 'Scrolls while the camera moves over a tilted 3D model of the place: terrain, routes and data props that rise off the map.',
+    suits: 'a story with a place, a route or a spatial comparison at its heart',
+    unit: 'beat',
+  },
   recap: {
     label: 'Race recap',
     reader: 'Scrolls the story while the 3D race replay beside it jumps to each moment, camera and car.',
@@ -129,12 +136,13 @@ export const FORMAT_EXAMPLES: Record<PagedHtmlStoryFormat, string> = {
   book: 'odyssey-book.html',
   board: 'odyssey-board.html',
   deck: 'odyssey-deck.html',
+  diorama: 'odyssey-diorama.html',
   recap: 'austria-2024-recap.html',
 }
 
 /**
- * The reference page for a format: the Odyssey voyage told as a book, a board
- * or a deck; the 2024 Austrian Grand Prix as a race recap.
+ * The reference page for a format: the Odyssey voyage told as a book, a board,
+ * a deck or a diorama; the 2024 Austrian Grand Prix as a race recap.
  */
 export function formatExampleUrl(app: HtmlStoryApp, format: PagedHtmlStoryFormat): string {
   return `${formatsBaseUrl(app)}/examples/${FORMAT_EXAMPLES[format]}`
@@ -145,6 +153,6 @@ export function formatExampleUrl(app: HtmlStoryApp, format: PagedHtmlStoryFormat
  * an epic is a journey told in order (a book), an Atlas spin a place built
  * from many pieces (a board), a Desk, Football Desk, NBA Desk or OCW Desk spin an argument (a deck).
  */
-export function suggestedFormatFor(randomizer: RandomizerId): Exclude<PagedHtmlStoryFormat, 'recap'> {
+export function suggestedFormatFor(randomizer: RandomizerId): Exclude<PagedHtmlStoryFormat, 'recap' | 'diorama'> {
   return randomizer === 'epics' ? 'book' : randomizer === 'atlas' ? 'board' : 'deck'
 }

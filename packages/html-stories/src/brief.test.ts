@@ -227,8 +227,13 @@ assert.ok(!viz.includes('## Your assignment') && !viz.includes('Research stub'))
 // Story formats. The default (and an explicit 'scroll') is the scroll brief.
 assert.equal(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi/', format: 'scroll' }), viz)
 assert.ok(viz.includes('## Motion and scroll animation') && !viz.includes('## Story format'))
-const runtimes = { book: 'https://vizmaya.fyi/formats/book@1', board: 'https://vizmaya.fyi/formats/board@1', deck: 'https://vizmaya.fyi/formats/deck@1' }
-for (const format of ['book', 'board', 'deck'] as const) {
+const runtimes = {
+  book: 'https://vizmaya.fyi/formats/book@1',
+  board: 'https://vizmaya.fyi/formats/board@1',
+  deck: 'https://vizmaya.fyi/formats/deck@1',
+  diorama: 'https://vizmaya.fyi/formats/diorama@1',
+}
+for (const format of ['book', 'board', 'deck', 'diorama'] as const) {
   // From a preview deployment, with a Mapbox token: neither leaks into a paged brief.
   const b = htmlStoryBrief({ siteUrl: 'https://vizmaya-git-x.vercel.app', format, mapboxToken: pk })
   const at = (h: string) => b.indexOf(h)
@@ -247,6 +252,19 @@ for (const format of ['book', 'board', 'deck'] as const) {
   assert.ok(b.includes('## Before you post') && b.indexOf('## Before you post') < at('## Posting'))
 }
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).includes('One idea per page.'))
+
+// The diorama: the data contract, certainty, derivations the lint recomputes; the model is the map.
+{
+  const d = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'diorama' })
+  assert.ok(d.includes('## Story format: a diorama') && d.includes('This story is a diorama'))
+  assert.ok(d.includes('class="diorama-data"') && d.includes('data-beat=') && d.includes('class="stops"'))
+  for (const c of ['excavated', 'hinge', 'tradition', 'contested']) assert.ok(d.includes(`\`${c}\``), `diorama brief: certainty ${c}`)
+  for (const fn of ['haversine(a, b)', 'route(a, b, c…)', 'sum(q1, q2…)']) assert.ok(d.includes(fn), `diorama brief: ${fn}`)
+  assert.ok(d.includes('Fact-check before designing') && d.includes('data-q'))
+  assert.ok(d.includes("The model is the story's map"))
+  assert.ok(d.includes('Make it look like a model') && d.includes('"relief": false') && d.includes('"borders": true'))
+  assert.ok(!/\\`/.test(d), 'no double-escaped backticks')
+}
 
 // The recap (vizf1): the replay, cues, its own example; no scroll sections, no maps of its own.
 {
