@@ -202,6 +202,8 @@
     view.appendChild(overlay)
     view.appendChild(progress)
     view.appendChild(legend)
+    var credit = el('div', 'dio-credit')
+    view.appendChild(credit)
     view.appendChild(placeList())
     stage.insertBefore(view, beatsEl)
     var tools = el('div', 'vz-controls dio-tools')
@@ -313,6 +315,219 @@
         rings = rings.filter(function (r) { return r.length > 2 && Math.abs(area(r)) > 1 })
         return { rings: rings, d: d3.geoPath(plate.proj)(geom) || '', geom: geom }
       })
+    }
+    // ── the land's surface: relief and borders, draped ───────────────────
+    // Elevation comes from the Terrarium tiles (Mapzen terrain on AWS Open
+    // Data, CORS-open), sampled on a grid over the plate's land. Heights are
+    // exaggerated so the highest ground stands about 7% of the plate's
+    // height (relief.exaggeration overrides). The grid is shaded and tinted
+    // into a texture, so the surface reads as layered paper; modern borders
+    // (plate.borders) are drawn into it so they follow the ground.
+    var TERRAIN = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/'
+    function prepare(plate) {
+      return landFor(plate).then(null, function (e) {
+        ui.warn('diorama: land for plate "' + plate.id + '" failed to load', e)
+        return { rings: [], d: '', geom: null }
+      }).then(function (land) {
+        plate.land = land
+        return Promise.all([
+          reliefFor(plate).then(null, function (e) { ui.warn('diorama: no relief for plate "' + plate.id + '" (' + (e && e.message) + '); the land stays flat'); return null }),
+          plate.def.borders ? bordersFor(plate).then(null, function () { return null }) : null
+        ])
+      }).then(function (parts) {
+        var relief = parts[0], borders = parts[1]
+        if (relief || borders) plate.surface = surfaceFor(plate, relief, borders)
+        credits(plate, !!relief, !!borders)
+      })
+    }
+    function lon2tile(lon, z) { return Math.floor(((lon + 180) / 360) * Math.pow(2, z)) }
+    function lat2tile(lat, z) {
+      var r = (clamp(lat, -85, 85) * Math.PI) / 180
+      return Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * Math.pow(2, z))
+    }
+    function image(src) {
+      return new Promise(function (resolve, reject) {
+        var im = new Image()
+        im.crossOrigin = 'anonymous'
+        im.onload = function () { resolve(im) }
+        im.onerror = function () { reject(new Error('tile failed: ' + src)) }
+        im.src = src
+      })
+    }
+    function reliefFor(plate) {
+      var opt = plate.def.relief
+      if (opt === false || !plate.land || !plate.land.geom) return Promise.resolve(null)
+      opt = opt && typeof opt === 'object' ? opt : {}
+      var bb = plate.bbox, z = 12, x0 = 0, x1 = 0, y0 = 0, y1 = 0
+      for (; z > 1; z--) {
+        x0 = lon2tile(bb[0], z); x1 = lon2tile(bb[2], z); y0 = lat2tile(bb[3], z); y1 = lat2tile(bb[1], z)
+        if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 12) break
+      }
+      var mos = doc.createElement('canvas')
+      mos.width = (x1 - x0 + 1) * 256
+      mos.height = (y1 - y0 + 1) * 256
+      var mg = mos.getContext('2d', { willReadFrequently: true })
+      var loads = []
+      for (var ty = y0; ty <= y1; ty++) {
+        for (var tx = x0; tx <= x1; tx++) {
+          ;(function (tx, ty) {
+            loads.push(image(TERRAIN + z + '/' + tx + '/' + ty + '.png').then(function (im) { mg.drawImage(im, (tx - x0) * 256, (ty - y0) * 256) }))
+          })(tx, ty)
+        }
+      }
+      return Promise.all(loads).then(function () {
+        var data = mg.getImageData(0, 0, mos.width, mos.height).data
+        var n = Math.pow(2, z) * 256, mw = mos.width, mh = mos.height
+        function px(i, j) {
+          i = clamp(i, 0, mw - 1); j = clamp(j, 0, mh - 1)
+          var o = (j * mw + i) * 4
+          return data[o] * 256 + data[o + 1] + data[o + 2] / 256 - 32768
+        }
+        function elev(lon, lat) {
+          var r = (lat * Math.PI) / 180
+          var x = ((lon + 180) / 360) * n - x0 * 256 - 0.5
+          var y = ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n - y0 * 256 - 0.5
+          var i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j
+          return lerp(lerp(px(i, j), px(i + 1, j), fx), lerp(px(i, j + 1), px(i + 1, j + 1), fx), fy)
+        }
+        var W = plate.W, H = plate.H
+        var gw = clamp(Math.round(W / 4), 120, 320), gh = Math.max(2, Math.round((gw * H) / W))
+        var mask = landMask(plate, gw, gh)
+        var E = new Float32Array(gw * gh), max = 0
+        for (var j = 0; j < gh; j++) {
+          for (var i = 0; i < gw; i++) {
+            var k = j * gw + i
+            if (!mask[k]) continue
+            var ll = plate.proj.invert([(i * W) / (gw - 1), (j * H) / (gh - 1)])
+            var e = ll ? Math.max(0, elev(ll[0], ll[1])) : 0
+            E[k] = e
+            if (e > max) max = e
+          }
+        }
+        var c = plate.proj.invert([W / 2, H / 2])
+        var kmPx = c ? plate.kmPx(c, 100) / 100 : 1
+        var ex = +opt.exaggeration || clamp((0.07 * H) / Math.max(0.05, (max / 1000) * kmPx), 1, 40)
+        var per = (kmPx / 1000) * ex
+        var h = new Float32Array(gw * gh)
+        for (var q = 0; q < h.length; q++) h[q] = E[q] * per
+        return { gw: gw, gh: gh, e: E, h: h, max: max, exaggeration: ex, maxH: max * per }
+      })
+    }
+    // 1 where the plate is land, at the grid's resolution.
+    function landMask(plate, gw, gh) {
+      var cv = doc.createElement('canvas')
+      cv.width = gw
+      cv.height = gh
+      var g = cv.getContext('2d', { willReadFrequently: true })
+      g.scale((gw - 1) / plate.W, (gh - 1) / plate.H)
+      g.beginPath()
+      d3.geoPath(plate.proj, g)(plate.land.geom)
+      g.fillStyle = '#000'
+      g.fill()
+      var d = g.getImageData(0, 0, gw, gh).data, out = new Uint8Array(gw * gh)
+      for (var k = 0; k < out.length; k++) out[k] = d[k * 4 + 3] > 96 ? 1 : 0
+      return out
+    }
+    function bordersFor(plate) {
+      if (!atlas.countries) {
+        atlas.countries = fetch(LIB.atlas + 'countries-50m.json')
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json() })
+          .then(function (t) { return w.topojson.mesh(t, t.objects.countries, function (a, b) { return a !== b }) })
+      }
+      return atlas.countries
+    }
+    // The land's top as a texture: tinted by height, shaded from the
+    // north-west, borders and the coast drawn on, transparent over the sea.
+    function surfaceFor(plate, relief, borders) {
+      var W = plate.W, H = plate.H
+      var tw = Math.min(2048, Math.round(W * 1.8)), th = Math.round((tw * H) / W)
+      var cv = doc.createElement('canvas')
+      cv.width = tw
+      cv.height = th
+      var g = cv.getContext('2d')
+      var path = d3.geoPath(plate.proj, g)
+      g.save()
+      g.scale(tw / W, th / H)
+      g.beginPath()
+      path(plate.land.geom)
+      g.fillStyle = tok.land
+      g.fill()
+      g.restore()
+      if (relief) {
+        var gw = relief.gw, gh = relief.gh, hh = relief.h
+        var small = doc.createElement('canvas')
+        small.width = gw
+        small.height = gh
+        var sg = small.getContext('2d')
+        var img = sg.createImageData(gw, gh)
+        var lo = rgb(tok.land), hi = rgb(tok['strata-1'])
+        var dx = W / (gw - 1), dy = H / (gh - 1)
+        var L = [-0.55, -0.6, 0.58], ln = Math.hypot(L[0], L[1], L[2])
+        for (var j = 0; j < gh; j++) {
+          for (var i = 0; i < gw; i++) {
+            var k = j * gw + i
+            var hx = (hh[j * gw + Math.min(gw - 1, i + 1)] - hh[j * gw + Math.max(0, i - 1)]) / (2 * dx)
+            var hy = (hh[Math.min(gh - 1, j + 1) * gw + i] - hh[Math.max(0, j - 1) * gw + i]) / (2 * dy)
+            // Normal of z = h(x, y) with y running south: (-hx, hy, 1).
+            var nx = -hx, ny = hy, nz = 1, nl = Math.hypot(nx, ny, nz)
+            var lit = (nx * L[0] + ny * -L[1] + nz * L[2]) / (nl * ln)
+            // Flat ground keeps the token's colour; slopes lighten or darken.
+            var shade = clamp(1 + 1.15 * (lit - L[2] / ln), 0.5, 1.2)
+            var t = relief.max ? Math.min(1, relief.e[k] / relief.max) * 0.6 : 0
+            for (var c = 0; c < 3; c++) img.data[k * 4 + c] = clamp(lerp(lo[c], hi[c], t) * shade, 0, 255)
+            img.data[k * 4 + 3] = 255
+          }
+        }
+        sg.putImageData(img, 0, 0)
+        g.save()
+        g.globalCompositeOperation = 'source-atop'
+        g.imageSmoothingQuality = 'high'
+        g.drawImage(small, 0, 0, tw, th)
+        g.restore()
+      }
+      g.save()
+      g.scale(tw / W, th / H)
+      if (borders) {
+        g.beginPath()
+        path(borders)
+        g.setLineDash([3, 2.5])
+        g.lineWidth = 0.9
+        g.strokeStyle = tok['strata-2']
+        g.globalAlpha = 0.85
+        g.stroke()
+        g.setLineDash([])
+      }
+      g.beginPath()
+      path(plate.land.geom)
+      g.globalAlpha = 1
+      g.lineWidth = 0.6
+      g.strokeStyle = tok['strata-2']
+      g.stroke()
+      g.restore()
+      return { canvas: cv, relief: relief }
+    }
+    // Height of the ground at a plate point, on the WebGL stage (the CSS
+    // plate is flat).
+    function heightAt(plate, x, y) {
+      var r = plate.surface && plate.surface.relief
+      if (!r || !R || R.kind !== 'webgl') return 0
+      var fx = clamp((x / plate.W) * (r.gw - 1), 0, r.gw - 1), fy = clamp((y / plate.H) * (r.gh - 1), 0, r.gh - 1)
+      var i = Math.min(r.gw - 2, Math.floor(fx)), j = Math.min(r.gh - 2, Math.floor(fy))
+      var tx = fx - i, ty = fy - j, h = r.h, gw = r.gw
+      return lerp(lerp(h[j * gw + i], h[j * gw + i + 1], tx), lerp(h[(j + 1) * gw + i], h[(j + 1) * gw + i + 1], tx), ty)
+    }
+    // Credits for the map data: in the view on wide screens, and at the end
+    // of the page (inside .dio-end when there is one) for every screen.
+    var creditParts = {}
+    var endCredit = el('p', 'dio-credit-end')
+    ;(stage.querySelector('.dio-end') || stage).appendChild(endCredit)
+    function credits(plate, relief, borders) {
+      plate.credit = 'Land' + (borders ? ' and borders' : '') + ': Natural Earth' + (relief ? ' · Elevation: Mapzen terrain tiles, AWS Open Data' : '')
+      if (plate === curPlate) credit.textContent = plate.credit
+      creditParts.land = 'Natural Earth (land' + (borders || creditParts.borders ? ', borders' : '') + ')'
+      if (borders) creditParts.borders = true
+      if (relief) creditParts.relief = 'Mapzen terrain tiles on AWS Open Data (elevation)'
+      endCredit.textContent = 'Map data: ' + [creditParts.land, creditParts.relief].filter(Boolean).join('; ') + '.'
     }
     function area(r) {
       var s = 0
@@ -809,7 +1024,7 @@
         prop.h = Math.max(3, (+q.value / (towerMax[q.unit] || +q.value)) * plate.H * 0.46)
         var cap = p.caption || q.value + ' ' + (q.unit || '')
         prop.tag = tag(plate, (p.label ? '<b>' + esc(p.label) + '</b>' : '') + '<small>' + esc(cap) + '</small>', 'is-tower')
-        prop.anchor = function () { return [at[0], at[1], prop.h * prop.grow + 14] }
+        prop.anchor = function () { return [at[0], at[1], heightAt(plate, at[0], at[1]) + prop.h * prop.grow + 14] }
       } else if (p.kind === 'ring') {
         var c = where2(plate, p.at)
         if (!c) return null
@@ -828,7 +1043,7 @@
         prop.a = a
         prop.b = b2
         if (p.label) prop.tag = tag(plate, esc(p.label), 'is-line')
-        prop.anchor = function () { return [(a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2, LZ + 2] }
+        prop.anchor = function () { var mx = (a[0] + b2[0]) / 2, my = (a[1] + b2[1]) / 2; return [mx, my, LZ + 2 + heightAt(plate, mx, my)] }
       } else if (p.kind === 'pulse') {
         var pc = where2(plate, p.at)
         if (!pc) return null
@@ -976,7 +1191,7 @@
       Object.keys(p.marks).forEach(function (pid) {
         var m = p.marks[pid]
         if (m.o < 0.01) { if (m.shown) { m.el.style.visibility = 'hidden'; m.shown = false } return }
-        var s = R.project(m.xy[0], m.xy[1], LZ + 0.5)
+        var s = R.project(m.xy[0], m.xy[1], LZ + 0.5 + heightAt(p, m.xy[0], m.xy[1]))
         if (!s) return
         if (!m.shown) { m.el.style.visibility = 'visible'; m.shown = true }
         m.el.style.opacity = m.o.toFixed(3)
@@ -1000,14 +1215,14 @@
           if (!sp[0]) return
           sp[0].style.visibility = f.o < 0.01 ? 'hidden' : 'visible'
           if (f.o < 0.01) return
-          var s = R.project(sp[1], sp[2], LZ + 4)
+          var s = R.project(sp[1], sp[2], LZ + 4 + heightAt(p, sp[1], sp[2]))
           if (!s) return
           sp[0].style.opacity = f.o.toFixed(3)
           sp[0].style.transform = 'translate3d(' + s[0].toFixed(1) + 'px,' + s[1].toFixed(1) + 'px,0)'
         })
       })
       if (p.shipO > 0.01) {
-        var s = R.project(p.shipXY[0], p.shipXY[1], LZ + 1)
+        var s = R.project(p.shipXY[0], p.shipXY[1], LZ + 1 + heightAt(p, p.shipXY[0], p.shipXY[1]))
         if (s) p.ship.style.transform = 'translate3d(' + s[0].toFixed(1) + 'px,' + s[1].toFixed(1) + 'px,0)'
       }
       p.ship.style.opacity = p.shipO.toFixed(3)
@@ -1037,18 +1252,13 @@
         collect(plate)
       }
       plate.layer.style.display = ''
+      credit.textContent = plate.credit || ''
       if (!plate.built && !plate.loading) {
         plate.loading = true
-        landFor(plate).then(function (land) {
-          plate.land = land
+        prepare(plate).then(function () {
           R.build(plate)
           plate.built = true
           dirty = true
-        }, function (e) {
-          ui.warn('diorama: land for plate "' + plate.id + '" failed to load', e)
-          plate.land = { rings: [], d: '', geom: null }
-          R.build(plate)
-          plate.built = true
         })
       }
       if (R) R.show(plate)
@@ -1082,7 +1292,7 @@
     var forceCss = stage.getAttribute('data-renderer') === 'css' || ui.hashHas('css')
     var make = forceCss || !hasWebGL()
       ? Promise.resolve(cssRenderer(glHost, tok))
-      : loadThree().then(function (THREE) { return threeRenderer(THREE, glHost, tok) }, function (e) {
+      : loadThree().then(function (THREE) { return threeRenderer(THREE, glHost, tok, heightAt) }, function (e) {
           ui.warn('diorama: three.js failed to load; drawing the CSS plate', e)
           return cssRenderer(glHost, tok)
         })
@@ -1099,7 +1309,7 @@
           if (!pl.layer) { buildOverlay(pl); collect(pl); pl.layer.style.display = 'none' }
           if (!pl.built && !pl.loading) {
             pl.loading = true
-            landFor(pl).then(function (land) { pl.land = land; R.build(pl); pl.built = true; if (pl !== curPlate) R.hide(pl) }, function () {})
+            prepare(pl).then(function () { R.build(pl); pl.built = true; if (pl !== curPlate) R.hide(pl) })
           }
         })
       }, 1500)
@@ -1143,7 +1353,7 @@
   // ── the WebGL stage ────────────────────────────────────────────────────
   // Colours are used as written (no colour management), so the model
   // matches the page's tokens exactly; faces are flat-shaded by hand.
-  function threeRenderer(THREE, host, tok) {
+  function threeRenderer(THREE, host, tok, ground) {
     if (THREE.ColorManagement) THREE.ColorManagement.enabled = false
     var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
     renderer.setPixelRatio(Math.min(w.devicePixelRatio || 1, 2))
@@ -1205,7 +1415,7 @@
           var k = i * 2 + s
           pos[k * 3] = samples[i].x
           pos[k * 3 + 1] = -samples[i].y
-          pos[k * 3 + 2] = opts.z
+          pos[k * 3 + 2] = opts.z + (opts.drape ? ground(opts.plate, samples[i].x, samples[i].y) : 0)
           nor[k * 2] = nx
           nor[k * 2 + 1] = ny
           dist[k] = samples[i].d
@@ -1304,11 +1514,15 @@
       g.fillRect(0, 0, cw, ch)
       if (plate.caption) {
         var fs = Math.round(ch * 0.36)
-        g.font = '500 ' + fs + 'px "IBM Plex Mono", ui-monospace, monospace'
+        var text = String(plate.caption).toUpperCase().split('').join(String.fromCharCode(8202, 8202))
+        // Long captions shrink to fit the front face.
+        for (; fs > 8; fs--) {
+          g.font = '500 ' + fs + 'px "IBM Plex Mono", ui-monospace, monospace'
+          if (g.measureText(text).width < cw * 0.9) break
+        }
         g.fillStyle = tok.muted
         g.textAlign = 'center'
         g.textBaseline = 'middle'
-        var text = String(plate.caption).toUpperCase().split('').join(String.fromCharCode(8202, 8202))
         g.fillText(text, cw / 2, ch / 2)
       }
       return canvasTex(cv)
@@ -1380,11 +1594,24 @@
           g.add(mesh)
         })
       }
+      // The land's top: relief and borders, draped over the strata.
+      if (plate.surface) {
+        var rel = plate.surface.relief
+        var sx = rel ? rel.gw - 1 : 1, sy = rel ? rel.gh - 1 : 1
+        var sgeo = new THREE.PlaneGeometry(W, H, sx, sy)
+        var sp = sgeo.attributes.position
+        for (var v = 0; v < sp.count; v++) sp.setZ(v, LZ + 0.3 + (rel ? rel.h[v] : 0))
+        sgeo.computeBoundingSphere()
+        var surf = new THREE.Mesh(sgeo, new THREE.MeshBasicMaterial({ map: canvasTex(plate.surface.canvas), alphaTest: 0.5, side: THREE.DoubleSide }))
+        surf.position.set(W / 2, -H / 2, 0)
+        surf.renderOrder = 1
+        g.add(surf)
+      }
       // 03 · routes
       Object.keys(plate.routes).forEach(function (rid) {
         var r = plate.routes[rid]
         if (!r) return
-        r.mesh = ribbon(r.samples, { plate: plate, z: LZ + 0.8, color: r.color, dash: r.dash, width: r.width, order: 3 })
+        r.mesh = ribbon(r.samples, { plate: plate, drape: true, z: LZ + 1.2, color: r.color, dash: r.dash, width: r.width, order: 3 })
         g.add(r.mesh)
       })
       // 04 · props
@@ -1399,10 +1626,10 @@
           vertexShader: UV_VS, fragmentShader: FOG_FS
         })
         f.mesh = new THREE.Mesh(new THREE.PlaneGeometry(fw, H), mat)
-        f.mesh.position.set(f.west ? fw / 2 : f.x + fw / 2, -H / 2, LZ + 4)
+        f.mesh.position.set(f.west ? fw / 2 : f.x + fw / 2, -H / 2, LZ + 4 + (plate.surface && plate.surface.relief ? plate.surface.relief.maxH * 0.6 : 0))
         f.mesh.renderOrder = 6
         g.add(f.mesh)
-        f.line = ribbon(lineSamples([f.x, H * 0.06], [f.x, H * 0.95]), { plate: plate, z: LZ + 1, color: tok.accent, dash: [2, 5], width: 1.3, order: 4 })
+        f.line = ribbon(lineSamples([f.x, H * 0.06], [f.x, H * 0.95]), { plate: plate, drape: true, z: LZ + 1.2, color: tok.accent, dash: [2, 5], width: 1.3, order: 4 })
         g.add(f.line)
       })
       groups[plate.id] = outer
@@ -1419,7 +1646,7 @@
         geo.translate(0, 0, 0.5)
         var mats = [sh.east, sh.west, sh.north, sh.south, sh.top, sh.north].map(function (c) { return basic(c, { transparent: true }) })
         pr.mesh = new THREE.Mesh(geo, mats)
-        pr.mesh.position.set(pr.xy[0], -pr.xy[1], 0)
+        pr.mesh.position.set(pr.xy[0], -pr.xy[1], ground(plate, pr.xy[0], pr.xy[1]))
         pr.mesh.renderOrder = 5
         pr.mats = mats
         g.add(pr.mesh)
@@ -1445,12 +1672,12 @@
         })
         g.add(pr.group)
       } else if (pr.kind === 'line') {
-        pr.lines = [ribbon(lineSamples(pr.a, pr.b), { plate: plate, z: LZ + 1.2, color: pr.spec.color ? pr.color : tok.paper, dash: [1, 6], width: 2, order: 4 })]
+        pr.lines = [ribbon(lineSamples(pr.a, pr.b), { plate: plate, drape: true, z: LZ + 1.4, color: pr.spec.color ? pr.color : tok.paper, dash: [1, 6], width: 2, order: 4 })]
         g.add(pr.lines[0])
       } else if (pr.kind === 'pulse') {
         pr.rings = [0, 1].map(function () {
           var m = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 72), basic(pr.color, { transparent: true, depthWrite: false }))
-          m.position.set(pr.xy[0], -pr.xy[1], LZ + 0.6)
+          m.position.set(pr.xy[0], -pr.xy[1], LZ + 0.6 + ground(plate, pr.xy[0], pr.xy[1]))
           m.renderOrder = 4
           g.add(m)
           return m
@@ -1606,6 +1833,8 @@
       if (d) {
         ;[[7, 'strata-3'], [4.5, 'strata-2'], [2, 'strata-1']].forEach(function (s) { svgEl('path', { d: d, transform: 'translate(0 ' + s[0] + ')', fill: tok[s[1]] }, svg) })
         svgEl('path', { d: d, fill: tok.land, stroke: mix(tok['strata-2'], tok.land, 0.2), 'stroke-width': 0.6, 'stroke-linejoin': 'round' }, svg)
+        // Relief and borders, flat on this plate.
+        if (plate.surface) svgEl('image', { href: plate.surface.canvas.toDataURL('image/png'), x: 0, y: 0, width: W, height: H, preserveAspectRatio: 'none' }, svg)
       }
       Object.keys(plate.props).forEach(function (key) {
         var pr = plate.props[key]

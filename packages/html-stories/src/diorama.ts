@@ -24,6 +24,10 @@ export interface DioramaPlate {
   land?: 'land-110m' | 'land-50m' | 'land-10m'
   size?: [number, number]
   caption?: string
+  /** Real elevation, draped and shaded (on unless false); exaggeration overrides the automatic one. */
+  relief?: boolean | { exaggeration?: number }
+  /** Modern country borders drawn on the land (off by default: anachronistic for most history). */
+  borders?: boolean
 }
 export interface DioramaPlace {
   id: string
@@ -184,6 +188,10 @@ function close(value: number, computed: number): boolean {
 }
 
 /** Every problem with the story JSON a reader (or the fact-check) would trip over. */
+const BEAT_KEYS = new Set(['id', 'type', 'plate', 'camera', 'layers', 'props', 'stepper', 'copy'])
+const LAYER_KEYS = new Set(['routes', 'on', 'labels', 'labelsSm', 'places', 'fog'])
+const PLATE_KEYS = new Set(['id', 'bbox', 'projection', 'land', 'size', 'caption', 'relief', 'borders'])
+
 export function checkDioramaStory(story: DioramaStory): string[] {
   const out: string[] = []
   const places = Array.isArray(story.places) ? story.places : []
@@ -196,6 +204,9 @@ export function checkDioramaStory(story: DioramaStory): string[] {
   const plateIds = new Set(['main', ...(story.insets ?? []).map((p) => p.id)])
 
   if (!story.plate || !Array.isArray(story.plate.bbox)) out.push('plate.bbox is missing: [[west, south], [east, north]].')
+  for (const plate of [story.plate, ...(story.insets ?? [])]) {
+    for (const k of Object.keys(plate ?? {})) if (!PLATE_KEYS.has(k)) out.push(`A plate has "${k}", which the runtime doesn't read (${[...PLATE_KEYS].join(', ')}).`)
+  }
   for (const p of places) {
     if (!(DIORAMA_CERTAINTIES as readonly string[]).includes(p.certainty)) {
       out.push(`Place "${p.id}" needs a certainty (${DIORAMA_CERTAINTIES.join(', ')}): its marker shows how sure anyone is.`)
@@ -233,7 +244,16 @@ export function checkDioramaStory(story: DioramaStory): string[] {
   for (const b of beats) {
     if (!(DIORAMA_BEAT_TYPES as readonly string[]).includes(b.type)) out.push(`Beat "${b.id}" has an unknown type "${b.type}" (${DIORAMA_BEAT_TYPES.join(', ')}).`)
     if (b.plate && !plateIds.has(b.plate)) out.push(`Beat "${b.id}" is on plate "${b.plate}", which isn't in insets.`)
+    for (const k of Object.keys(b)) {
+      if (BEAT_KEYS.has(k)) continue
+      out.push(
+        LAYER_KEYS.has(k)
+          ? `Beat "${b.id}" has "${k}" at the top level; it goes under "layers", or the runtime ignores it.`
+          : `Beat "${b.id}" has "${k}", which the runtime doesn't read (${[...BEAT_KEYS].join(', ')}).`,
+      )
+    }
     const L = b.layers ?? {}
+    for (const k of Object.keys(L)) if (!LAYER_KEYS.has(k)) out.push(`Beat "${b.id}" layers has "${k}", which the runtime doesn't read (${[...LAYER_KEYS].join(', ')}).`)
     for (const r of [...(L.routes ?? []), ...(L.on ?? [])]) if (!routeIds.has(r)) out.push(`Beat "${b.id}" shows route "${r}", which isn't in routes.`)
     for (const p of [...(L.labels ?? []), ...(L.labelsSm ?? []), ...(L.places ?? [])]) if (!placeIds.has(p)) out.push(`Beat "${b.id}" labels "${p}", which isn't in places.`)
     if ((L.labels?.length ?? 0) > 8) out.push(`Beat "${b.id}" labels ${L.labels!.length} places: at most 8 (and 4 on phones, via labelsSm).`)
@@ -252,6 +272,49 @@ export function checkDioramaStory(story: DioramaStory): string[] {
   return out
 }
 
+function luminance(hex: string): number {
+  const h = hex.replace('#', '')
+  const full = h.length === 3 ? h.replace(/./g, '$&$&') : h.slice(0, 6)
+  const c = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+  return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!
+}
+/** WCAG contrast ratio between two hex colours. */
+export function contrast(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p)
+  return (x! + 0.05) / (y! + 0.05)
+}
+const DEFAULT_TOKENS: Record<string, string> = { ground: '#120E16', land: '#EDE3CF', 'sea-1': '#30346E', 'sea-2': '#241B45' }
+
+/**
+ * The model's colours, from the page's --dio-* custom properties: the stage
+ * reads hex only, and the land has to stand off the ground and the sea or the
+ * model disappears into the page.
+ */
+export function checkDioramaPalette(html: string): string[] {
+  const out: string[] = []
+  const css = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n')
+  const tokens: Record<string, string> = {}
+  for (const [, name, value] of css.matchAll(/--dio-([a-z0-9-]+)\s*:\s*([^;}]+)/gi)) tokens[name!.toLowerCase()] = value!.trim()
+  const colourTokens = ['ground', 'paper', 'muted', 'accent', 'sea-1', 'sea-2', 'sea-3', 'land', 'strata-1', 'strata-2', 'strata-3', 'route-2', 'route-3', 'route-4', 'plinth', 'plinth-side', 'fog']
+  for (const k of colourTokens) {
+    if (tokens[k] && !/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(tokens[k]!)) {
+      out.push(`--dio-${k} is "${tokens[k]}": the stage reads #rgb or #rrggbb only, so it falls back to the default colour.`)
+    }
+  }
+  const hex = (k: string) => (tokens[k] && /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(tokens[k]!) ? tokens[k]! : DEFAULT_TOKENS[k]!)
+  const land = hex('land'), ground = hex('ground'), sea = hex('sea-2')
+  if (contrast(land, ground) < 3) {
+    out.push(
+      `--dio-land (${land}) is too close to --dio-ground (${ground}), contrast ${contrast(land, ground).toFixed(1)}:1: the model disappears into the page. ` +
+        'Make the land a light paper (bone, sand, chalk) on a dark ground, at 3:1 or more.',
+    )
+  }
+  if (contrast(land, sea) < 2) {
+    out.push(`--dio-land (${land}) and --dio-sea-2 (${sea}) are too alike (${contrast(land, sea).toFixed(1)}:1): coasts and lakes won't read. Aim for 2:1 or more.`)
+  }
+  return out
+}
+
 /**
  * The lint's diorama checks: the JSON, its contract, one <section
  * class="beat" data-beat> per beat (and back), [data-q] numbers that point
@@ -264,6 +327,7 @@ export function lintDiorama(html: string, warnings: string[]): void {
     return
   }
   for (const w of checkDioramaStory(story)) warnings.push(`Diorama: ${w}`)
+  for (const w of checkDioramaPalette(html)) warnings.push(`Diorama: ${w}`)
   const sections = [...html.matchAll(/<section\b[^>]*\bdata-beat="([^"]+)"/gi)].map((m) => m[1]!)
   const beatIds = (story.beats ?? []).map((b) => b.id)
   for (const id of beatIds) if (!sections.includes(id)) warnings.push(`Diorama: beat "${id}" has no <section class="beat" data-beat="${id}"> with its words.`)

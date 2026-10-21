@@ -312,7 +312,14 @@ beat gets its toggles in `.dio-chips`. `<footer class="dio-end">` after
 - **The WebGL stage:** the plinth is a box; the sea a plane whose shader
   reads a canvas texture (the radial gradient and a coastal glow) and adds a
   slow swell; the land is one `ExtrudeGeometry` from the projected rings,
-  drawn as three strata under a paper top; routes, rings and lines are
+  drawn as three strata under a paper top; over it, the **relief**: real
+  elevation from the Terrarium tiles (Mapzen terrain on AWS Open Data,
+  CORS-open), sampled on a grid over the land (up to 12 tiles), exaggerated
+  so the highest ground stands about 7% of the plate's height
+  (`plate.relief: { exaggeration }`, or `false` for flat land), tinted and
+  hill-shaded into a texture, with modern borders drawn on it when
+  `plate.borders` is set; routes, lines, markers and props drape over it;
+  routes, rings and lines are
   ribbons whose shader dashes them by arc length, flows the dashes on a 1.4s
   loop, draws a route up to a distance (the stepper) and clips them to the
   plate; towers are boxes with hand-shaded faces that rise once over 2.6s;
@@ -320,7 +327,10 @@ beat gets its toggles in `.dio-chips`. `<footer class="dio-end">` after
   management), so the model matches the page's tokens.
 - **Without WebGL** (or `data-renderer="css"` on the stage, or `#css`) the
   same model is an inline SVG plate tilted in CSS 3D, the land drawn four
-  times as strata, towers as CSS boxes: the design canvas's own build.
+  times as strata with the shaded relief laid flat on it, towers as CSS
+  boxes: the design canvas's own build.
+- **Credits** for the map data (Natural Earth; the elevation tiles) show in
+  the view on wide screens and at the end of the page (in `.dio-end`).
 - **Labels and markers** are DOM in an overlay, positioned each frame by
   projecting their points, so text stays crisp. At most 8 names per beat (4
   on phones); the current stop is set in the display serif. A stop a route
@@ -346,12 +356,17 @@ beat gets its toggles in `.dio-chips`. `<footer class="dio-end">` after
   (`lintDiorama`) checks the JSON's contract and recomputes every `computed`
   quantity from its derivation (`haversine`, `route`, `sum`, `ratio`,
   `share`, `stops`, `count`), the beat sections, `data-q` references and that
-  every source is linked.
+  every source is linked, keys put where the runtime doesn't read them (a
+  `fog` on the beat instead of under `layers`), colour tokens that aren't
+  hex, and a land colour that disappears into the ground (under 3:1) or the
+  sea (under 2:1).
 - **Reduced motion:** no breathing, swell, dash flow, fog drift or bobbing;
   camera moves become cuts behind a fade; props stand at full height.
 
 **Known limits:** labels don't avoid each other (keep to the label caps and
-set `label` sides); the land has no relief beyond the strata; a close-up's
+set `label` sides); relief is the terrain tiles' resolution at the plate's
+scale (a continent shows ranges, not valleys); lakes inside the land
+(Natural Earth's land has none) don't show; a close-up's
 `land-10m` is a 3MB download (it loads in the background once the main plate
 is up). The device pixel ratio is capped at 2; frame rates on a mid-range
 phone haven't been measured yet.

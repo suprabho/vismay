@@ -283,6 +283,16 @@ fact-check all read it.
   \`land-10m\` for a close-up of islands or a coast; \`size\` is the plate in
   pixels (keep the main one about 1100 wide). The model never changes scale:
   only the camera moves.
+- **Terrain.** The runtime raises the land from real elevation data and
+  drapes routes, markers and props over it, so mountains, valleys and passes
+  are on the model without you drawing them. It is on by default; the
+  highest ground stands about 7% of the plate's height
+  (\`"relief": { "exaggeration": 3 }\` sets it, \`"relief": false\` keeps the
+  land flat). An inland story (no coast in the plate) depends on it: pick a
+  bbox that takes in the ranges and basins the story moves through, and put
+  the camera where the relief tells it. \`"borders": true\` draws modern
+  country borders on the land: use it for a present-day story, never for one
+  set before those borders existed.
 - **Places.** Every place has a \`certainty\` and at least one source, and its
   marker shows the certainty:
   - \`excavated\`: a solid accent dot with a light ring. Archaeology supports
@@ -316,7 +326,9 @@ fact-check all read it.
   - \`reveal\`: a data prop grows out of the plate (towers, rings).
   - \`hinge\`: a threshold where certainty changes: \`"fog": { "west": 23.19,
     "labels": { "west": "Wonderland", "east": "Geography" }, "caption": "…" }\`
-    hazes everything west (or east) of a longitude.
+    under the beat's \`layers\` hazes everything west (or east) of a
+    longitude. Keys are read only where this section puts them: a \`fog\` or
+    \`routes\` on the beat itself is ignored (the lint names it).
   - \`stepper\`: stop by stop. Its \`.copy\` holds \`<ol class="stops">\` with one
     \`<li data-stop="<place>">\` card per stop (\`data-short\` for the timeline,
     \`data-ship\`: \`galley\`, \`raft\` or \`none\`). The section is as tall as its
@@ -371,7 +383,15 @@ paper top of the land), \`--dio-strata-1\`, \`--dio-strata-2\`, \`--dio-strata-3
 \`--dio-route-4\` (competing routes: differ in lightness, not only hue),
 \`--dio-plinth\`, \`--dio-plinth-side\`, \`--dio-fog\`, and the type:
 \`--dio-serif\` (headlines, stop names), \`--dio-sans\` (body), \`--dio-mono\`
-(kickers, counters, map captions). Load the fonts yourself.`
+(kickers, counters, map captions). Load the fonts yourself.
+
+**Make it look like a model you could set on a table.** The land is the
+lightest thing on the stage: a paper, bone, sand or chalk \`--dio-land\`, at
+3:1 or more against a dark \`--dio-ground\`, with the strata stepping darker
+under it and the sea a mid-tone at least 2:1 from the land. A dark land on a
+dark ground hides the model and its relief entirely (the lint warns). Every
+\`--dio-*\` colour is a hex value (\`#rgb\` or \`#rrggbb\`): the stage can't read
+\`rgba()\`, names or variables and falls back to its defaults.`
 }
 
 /** The travel story told as a board: the git copy of the reference page, private to its trip. */
@@ -818,7 +838,8 @@ export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): 
   }
   if (format === 'diorama') {
     return [
-      'any warning the lint gives on the diorama JSON: a computed figure that doesn\'t match its derivation, a place without a certainty or a source, a beat without its section',
+      'any warning the lint gives on the diorama: a computed figure that doesn\'t match its derivation, a place without a certainty or a source, a beat without its section, a key in the wrong place, a land colour that disappears into the ground',
+      'a model you haven\'t looked at: open the page and check the land, its relief and every route and marker are plain to see in each beat',
       'a marker that looks more certain than its evidence, or anything past the hinge marked as more than tradition',
       'beats you haven\'t scrolled through at 1440 and 390px wide (and with reduced motion), and the one-column view ("Read as one page")',
     ]

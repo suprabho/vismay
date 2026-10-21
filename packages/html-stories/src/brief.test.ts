@@ -262,6 +262,7 @@ assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).inc
   for (const fn of ['haversine(a, b)', 'route(a, b, c…)', 'sum(q1, q2…)']) assert.ok(d.includes(fn), `diorama brief: ${fn}`)
   assert.ok(d.includes('Fact-check before designing') && d.includes('data-q'))
   assert.ok(d.includes("The model is the story's map"))
+  assert.ok(d.includes('Make it look like a model') && d.includes('"relief": false') && d.includes('"borders": true'))
   assert.ok(!/\\`/.test(d), 'no double-escaped backticks')
 }
 

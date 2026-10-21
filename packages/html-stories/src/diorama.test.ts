@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { FORMAT_ASSETS } from './formatAssets.generated'
-import { checkDioramaStory, evaluateDerivation, extractDioramaStory, haversineKm, type DioramaStory } from './diorama'
+import { checkDioramaPalette, checkDioramaStory, contrast, evaluateDerivation, extractDioramaStory, haversineKm, type DioramaStory } from './diorama'
 import { lintHtml } from './meta'
 
 // Haversine: Troy (Hisarlik) to Ithaki is about 506 km, 273 nm.
@@ -66,5 +66,29 @@ assert.ok(warns(html.replace('data-q="ithaki-paliki"', 'data-q="ithaki-paliki-km
 assert.ok(warns(html.replace('<a href="https://odysseus-unbound.org/">', '<a href="#">')).some((w) => w.includes('"bittlestone"')))
 assert.ok(warns(html.replace('class="diorama-data"', 'class="data"')).some((w) => w.includes('No <script type="application/json" class="diorama-data">')))
 assert.ok(warns(html.replace('"type": "stepper"', '"type": "slideshow"')).some((w) => w.includes('unknown type "slideshow"')))
+
+// Keys in the wrong place are named, not silently ignored.
+{
+  const x = s() as unknown as { beats: Record<string, unknown>[]; plate: Record<string, unknown> }
+  x.beats[2]!.fog = { east: 20 }
+  ;(x.beats[2]!.layers as Record<string, unknown>).fogg = true
+  x.plate.relief = { exaggeration: 3 }
+  x.plate.borders = true
+  x.plate.shading = true
+  const w = checkDioramaStory(x as unknown as DioramaStory).join('\n')
+  assert.ok(w.includes('Beat "malea" has "fog" at the top level; it goes under "layers"'))
+  assert.ok(w.includes('layers has "fogg"'))
+  assert.ok(w.includes('A plate has "shading"') && !w.includes('"relief"') && !w.includes('"borders",'))
+}
+
+// The palette: dark land on a dark ground vanishes; non-hex tokens fall back.
+assert.ok(contrast('#ffffff', '#000000') > 20 && contrast('#120E16', '#120E16') === 1)
+assert.deepEqual(checkDioramaPalette(html), [])
+{
+  const dark = html.replace('--dio-land: #EDE3CF;', '--dio-land: #2a1e13;').replace('--dio-fog: #CFC8DE;', '--dio-fog: rgba(26,18,11,.72);')
+  const w = checkDioramaPalette(dark).join('\n')
+  assert.ok(w.includes('--dio-land (#2a1e13) is too close to --dio-ground'))
+  assert.ok(w.includes('--dio-fog is "rgba(26,18,11,.72)"'))
+}
 
 console.log('diorama: ok')
