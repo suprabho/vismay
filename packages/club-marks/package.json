@@ -1,0 +1,31 @@
+{
+  "name": "@vismay/club-marks",
+  "version": "0.0.0",
+  "private": true,
+  "description": "toClubMark(): the football-seasons club mark \u2014 a crest-family shape (classified from the real crest, which never appears in the output) filled with the home-kit pattern, with a 3-letter code \u2014 plus the six accessibility checks, the print-palette snap and dot/token/hero SVG renders. ./types, ./palette, ./color, ./render, ./checks and ./codes are client-safe; the root export needs sharp (Node only).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./palette": "./src/palette.ts",
+    "./color": "./src/color.ts",
+    "./render": "./src/render.ts",
+    "./checks": "./src/checks.ts",
+    "./codes": "./src/codes.ts",
+    "./charges": "./src/charges.ts",
+    "./emblems": "./src/emblems.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "sharp": "^0.34.5",
+    "svgo": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}

@@ -1,7 +1,7 @@
 import 'server-only'
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { HISTORY_CRESTS_BUCKET, HISTORY_CRESTS_TABLE, type HistoryCrest } from '@footshorts/shared/historicalCrests'
-import { crestExtension, crestUploadPath, type CrestView } from './crests'
+import { HISTORY_CLUB_MARKS_TABLE, HISTORY_CRESTS_BUCKET, HISTORY_CRESTS_TABLE, type HistoryCrest } from '@footshorts/shared/historicalCrests'
+import { crestExtension, crestUploadPath, type ClubMarkView, type CrestView } from './crests'
 
 /**
  * Readers/writers for the private `admin_season_crests` table and the private
@@ -19,7 +19,10 @@ export class CrestStoreError extends Error {
   }
 }
 
-function fail(message: string): never {
+export function fail(message: string): never {
+  if (/admin_club_marks/.test(message) && /does not exist|schema cache|not find/i.test(message)) {
+    throw new CrestStoreError('Club marks are not set up yet. Apply the admin_club_marks migration (supabase/footshorts), then push kits with history:club-marks-sync.', 503)
+  }
   if (/admin_season_crests/.test(message) && /does not exist|schema cache|not find/i.test(message)) {
     throw new CrestStoreError('Crests are not set up yet. Apply the admin_season_crests migration (supabase/footshorts), then push crests with history:crests-sync.', 503)
   }
@@ -36,25 +39,51 @@ export async function listCrestSeasons(): Promise<string[]> {
   return [...new Set((data ?? []).map(r => r.season as string))]
 }
 
-async function withImages(rows: HistoryCrest[]): Promise<CrestView[]> {
-  const paths = rows.map(r => r.upload_path).filter((p): p is string => !!p)
+/** Signed URLs for bucket paths, 200 per request. */
+export async function signCrestPaths(paths: string[]): Promise<Map<string, string>> {
   const signed = new Map<string, string>()
-  if (paths.length) {
-    const { data, error } = await createServiceClient().storage.from(HISTORY_CRESTS_BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS)
+  const unique = [...new Set(paths)]
+  for (let i = 0; i < unique.length; i += 200) {
+    const { data, error } = await createServiceClient().storage.from(HISTORY_CRESTS_BUCKET).createSignedUrls(unique.slice(i, i + 200), SIGNED_URL_SECONDS)
     if (error) fail(error.message)
     for (const s of data ?? []) if (s.path && s.signedUrl) signed.set(s.path, s.signedUrl)
   }
-  return rows.map(r => ({ ...r, image_url: (r.upload_path && signed.get(r.upload_path)) || r.thumb_url || r.file_url || null }))
+  return signed
+}
+
+export const MARK_COLUMNS = 'wiki,kit_pattern,kit_c1,kit_c2,kit_confidence,kit_source,kit_page,kit_needs_review,kit_note,'
+  + 'override_family,override_code,override_pattern,override_c1,override_c2,override_charge,override_rim,seed_family,seed_charge,seed_rim,seed_pattern,seed_c1,seed_c2,'
+  + 'reviewed_by,reviewed_at,status,error_code,error_message,'
+  + 'code,crest,pattern,c1,c2,ring,rim,charge,league,era_from,era_to,family_confidence,checks,print,needs_review,review_reasons,alt,spec_version,'
+  + 'generated_from,generated_by,generated_at'
+
+/** Club-mark rows of a season (or some of its clubs) by wiki. */
+export async function loadMarks(season: string, wikis?: string[]): Promise<Map<string, ClubMarkView>> {
+  let q = createServiceClient().from(HISTORY_CLUB_MARKS_TABLE).select(MARK_COLUMNS).eq('season', season).limit(5000)
+  if (wikis) q = q.in('wiki', wikis)
+  const { data, error } = await q
+  if (error) fail(error.message)
+  return new Map(((data ?? []) as unknown as (ClubMarkView & { wiki: string })[]).map(({ wiki, ...m }) => [wiki, m]))
+}
+
+async function withImages(season: string, rows: HistoryCrest[]): Promise<CrestView[]> {
+  const signed = await signCrestPaths(rows.map(r => r.upload_path).filter((p): p is string => !!p))
+  const marks = rows.length ? await loadMarks(season, rows.length === 1 ? [rows[0]!.wiki] : undefined) : new Map<string, ClubMarkView>()
+  return rows.map(r => ({
+    ...r,
+    image_url: (r.upload_path && signed.get(r.upload_path)) || r.thumb_url || r.file_url || null,
+    mark: marks.get(r.wiki) ?? null,
+  }))
 }
 
 export async function listCrests(season: string): Promise<CrestView[]> {
   const { data, error } = await createServiceClient().from(HISTORY_CRESTS_TABLE).select(COLUMNS)
     .eq('season', season).order('top_flight').order('name').limit(5000)
   if (error) fail(error.message)
-  return withImages((data ?? []) as HistoryCrest[])
+  return withImages(season, (data ?? []) as HistoryCrest[])
 }
 
-async function getCrest(season: string, wiki: string): Promise<HistoryCrest> {
+export async function getCrest(season: string, wiki: string): Promise<HistoryCrest> {
   const { data, error } = await createServiceClient().from(HISTORY_CRESTS_TABLE).select(COLUMNS)
     .eq('season', season).eq('wiki', wiki).maybeSingle()
   if (error) fail(error.message)
@@ -76,7 +105,11 @@ export async function uploadCrest(season: string, wiki: string, bytes: Uint8Arra
     .eq('season', season).eq('wiki', wiki).select(COLUMNS).maybeSingle()
   if (error) fail(error.message)
   if (crest.upload_path && crest.upload_path !== path) await sb.storage.from(HISTORY_CRESTS_BUCKET).remove([crest.upload_path])
-  return (await withImages([data as HistoryCrest]))[0]!
+  return (await withImages(season, [data as HistoryCrest]))[0]!
+}
+
+export async function getCrestView(season: string, wiki: string): Promise<CrestView> {
+  return (await withImages(season, [await getCrest(season, wiki)]))[0]!
 }
 
 /** Drop the upload: the club falls back to the crest crests.py picked (or none). */
@@ -91,5 +124,5 @@ export async function removeCrestUpload(season: string, wiki: string): Promise<C
     const { error: rmErr } = await sb.storage.from(HISTORY_CRESTS_BUCKET).remove([crest.upload_path])
     if (rmErr) console.warn('[crests] could not delete the old upload:', rmErr.message)
   }
-  return (await withImages([data as HistoryCrest]))[0]!
+  return (await withImages(season, [data as HistoryCrest]))[0]!
 }

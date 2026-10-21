@@ -21,6 +21,7 @@
     "@vismay/admin-core": "workspace:*",
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/club-marks": "workspace:*",
     "@vismay/dc-editions": "workspace:*",
     "@vismay/html-stories": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
@@ -47,6 +48,7 @@
     "rete-connection-plugin": "^2.0.5",
     "rete-react-plugin": "^2.1.0",
     "rete-render-utils": "^2.0.3",
+    "sharp": "^0.34.5",
     "styled-components": "^6.4.2",
     "yaml": "^2.8.3",
     "zod": "^3.23.0"

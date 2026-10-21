@@ -6,9 +6,9 @@ import {
   parseSeasonSlug, planSchema, seasonMonths, seasonSlug, sortSpreads, starterPlan,
 } from './plan'
 import {
-  crestCounts, crestStatus, crestUploadPath, groupCrests, matchesCrestFilter, sniffCrestType, unsafeSvg,
+  crestCounts, crestEra, crestSourceRef, crestStatus, crestUploadPath, duplicateCodes, groupCrests, leagueCode, markCharges, markFamily,
+  markFingerprint, markKit, markRim, markRow, markState, matchesCrestFilter, sniffCrestType, unsafeSvg, type ClubMarkView, type CrestView,
 } from './crests'
-import type { HistoryCrest } from '@footshorts/shared/historicalCrests'
 
 // A four-team league: Blues lead at September's end, Reds overtake in October
 // on goal difference and finish unbeaten (checked by hand).
@@ -87,10 +87,11 @@ assert.ok(one[0].startsWith('1 beat so far. Find 14 more'))
 assert.ok(one.some(x => x.includes('is more than one sentence')))
 
 // Crests: an upload wins, then a dated pick, then today's crest; nothing = missing.
-const crest = (wiki: string, over: Partial<HistoryCrest> = {}): HistoryCrest => ({
+const crest = (wiki: string, over: Partial<CrestView> = {}): CrestView => ({
   season: '2003-04', wiki, name: wiki, canonical_id: '', slug: '', top_flight: '', competitions: 'FA Cup', country: 'England',
   qid: '', source: 'logopedia', era: 'season', era_label: '1999–2007', file: 'x.svg', file_url: 'https://x/x.svg', thumb_url: '',
-  logopedia_page: '', needs_review: false, review_note: '', upload_path: null, upload_type: null, uploaded_by: null, uploaded_at: null, ...over,
+  logopedia_page: '', needs_review: false, review_note: '', upload_path: null, upload_type: null, uploaded_by: null, uploaded_at: null,
+  image_url: null, mark: null, ...over,
 })
 const crests = [
   crest('Arsenal F.C.', { top_flight: 'Premier League' }),
@@ -100,7 +101,9 @@ const crests = [
   crest('Aire-sur-la-Lys', { file_url: '', era: '', upload_path: '2003-04/aire.png', needs_review: true }),
 ]
 assert.deepEqual(crests.map(crestStatus), ['season', 'season', 'current', 'missing', 'uploaded'])
-assert.deepEqual(crestCounts(crests), { total: 5, uploaded: 1, season: 2, current: 1, missing: 1, flagged: 2 })
+assert.deepEqual(crestCounts(crests), {
+  total: 5, uploaded: 1, season: 2, current: 1, missing: 1, flagged: 2, unmarked: 5, 'mark-review': 0, marked: 0, toGenerate: 0,
+})
 assert.deepEqual(crests.filter(c => matchesCrestFilter(c, 'flagged', '')).map(c => c.wiki), ['Juventus FC', 'Real Zaragoza'])
 assert.deepEqual(crests.filter(c => matchesCrestFilter(c, 'all', 'serie')).map(c => c.wiki), ['Juventus FC'])
 assert.deepEqual(groupCrests(crests).map(g => g.group), ['Premier League', 'LaLiga', 'Serie A', 'Cup opponents'])
@@ -109,12 +112,69 @@ assert.match(crestUploadPath('2003-04', 'Real Unión', '', 'png'), /^2003-04\/re
 assert.notEqual(crestUploadPath('2003-04', 'Real Unión', '', 'png'), crestUploadPath('2003-04', 'Real Union', '', 'png'))
 assert.equal(crestUploadPath('2003-04', 'name:fr:Aire-sur-la-Lys', 'aire', 'svg').split('/')[1]!.startsWith('aire-'), true)
 
+// Club marks: kit overrides win; a mark is stale when anything it was built from changes; duplicate codes go to review.
+const mark = (over: Partial<ClubMarkView> = {}): ClubMarkView => ({
+  kit_pattern: 'stripes', kit_c1: '#FF0000', kit_c2: '#0000FF', kit_confidence: 0.9, kit_source: 'season', kit_page: '', kit_needs_review: false,
+  kit_note: '', override_family: null, override_code: null, override_pattern: null, override_c1: null, override_c2: null,
+  override_charge: null, override_rim: null, seed_family: null, seed_charge: null, seed_rim: null, seed_pattern: null, seed_c1: null, seed_c2: null, reviewed_by: null,
+  reviewed_at: null, status: null, error_code: null, error_message: null, code: null, crest: null, pattern: null, c1: null, c2: null,
+  ring: null, rim: null, charge: null,
+  league: null, era_from: null, era_to: null, family_confidence: null, checks: null, print: null, needs_review: false, review_reasons: [],
+  alt: null, spec_version: null, generated_from: null, generated_by: null, generated_at: null, ...over,
+})
+assert.deepEqual(markKit(mark()), { pattern: 'stripes', c1: '#FF0000', c2: '#0000FF' })
+assert.deepEqual(markKit(mark({ override_c1: '#a50044', override_c2: '' })), { pattern: 'stripes', c1: '#A50044', c2: null })
+assert.equal(markFamily(mark({ seed_family: 'roundel' })), 'roundel')
+// The editorial design (mark_overrides.csv) sits between the review overrides and the kit.
+assert.deepEqual(markKit(mark({ seed_pattern: 'solid', seed_c1: '#ffffff', seed_c2: null })), { pattern: 'solid', c1: '#FFFFFF', c2: null })
+assert.deepEqual(markKit(mark({ seed_pattern: 'solid', seed_c1: '#FFFFFF', override_c1: '#000000' })), { pattern: 'solid', c1: '#000000', c2: null })
+assert.equal(markRim(mark()), undefined)
+assert.deepEqual(markRim(mark({ seed_rim: '#F2B300@9' })), [{ colour: '#F2B300', width: 9 }])
+assert.deepEqual(markRim(mark({ seed_rim: '#F2B300@9', override_rim: 'none' })), [])
+assert.equal(markRim(mark({ seed_rim: '#F2B300@9', override_rim: '' })), undefined)
+assert.equal(markFamily(mark({ seed_family: 'roundel', override_family: 'heater' })), 'heater')
+// Charges are "shape:#hex[@scale,rotate,x,y];…": the override wins ('' = none); an emblem name is not a charge.
+assert.deepEqual(markCharges(mark({ seed_charge: 'triangle:#a50044' })), [{ shape: 'triangle', colour: '#A50044' }])
+assert.deepEqual(markCharges(mark({ seed_charge: 'triangle:#A50044', override_charge: '' })), [])
+assert.deepEqual(markCharges(mark({ seed_charge: 'triangle:#A50044', override_charge: 'bar:#000000;star:#FFFFFF@0.5,30,0,-10' })),
+  [{ shape: 'bar', colour: '#000000' }, { shape: 'star', colour: '#FFFFFF', scale: 0.5, rotate: 30, y: -10 }])
+assert.deepEqual(markCharges(mark({ seed_charge: 'fox' })), [])
+assert.equal(markKit(mark({ kit_c1: '', kit_pattern: '' })), null)
+assert.equal(crestSourceRef(crests[4]!), 'upload:2003-04/aire.png@')
+assert.equal(leagueCode(crests[0]!), 'ENG')
+assert.equal(leagueCode(crest('Celtic', { country: 'United Kingdom', competitions: 'Champions League' })), 'SCO')
+assert.deepEqual(crestEra(crests[0]!), { from: 1999, to: 2007 })
+assert.deepEqual(crestEra(crest('X', { era_label: '2002–present' })), { from: 2002, to: null })
+assert.deepEqual(crestEra(crest('X', { era_label: 'today' })), { from: 2003, to: 2003 })
+const noKit = crest('A', { mark: mark({ kit_c1: '', kit_pattern: '' }) })
+assert.equal(markState(crest('A')), 'nokit')
+assert.equal(markState(noKit), 'nokit')
+assert.equal(markState(crest('A', { mark: mark() })), 'none')
+const made = (over: Partial<ClubMarkView> = {}, c: Partial<CrestView> = {}) => {
+  const base = crest('A', { mark: mark({ status: 'ok', code: 'ABC', crest: 'heater', pattern: 'stripes', c1: '#FF0000', c2: '#0000FF', ...over }), ...c })
+  return { ...base, mark: { ...base.mark!, generated_from: markFingerprint(base) } }
+}
+assert.equal(markState(made()), 'ok')
+assert.deepEqual(markRow(made({ ring: '#7a1a1a', charge: 'diamond:#7A1A1A@1.5,45,0,0' }).mark), {
+  code: 'ABC', crest: 'heater', pattern: 'stripes', c1: '#FF0000', c2: '#0000FF', ring: '#7A1A1A',
+  charges: [{ shape: 'diamond', colour: '#7A1A1A', scale: 1.5, rotate: 45 }], league: '', from: 0, to: null,
+})
+assert.equal(markState(made({ needs_review: true })), 'review')
+assert.equal(markState({ ...made(), file_url: 'https://x/other.svg' }), 'stale')
+assert.equal(markState({ ...made(), mark: { ...made().mark, override_c1: '#00FF00' } }), 'stale')
+const twins = [made(), { ...made(), wiki: 'B' }, made({ code: 'XYZ' })]
+assert.deepEqual([...duplicateCodes(twins)], ['ABC'])
+assert.equal(markState(twins[0]!, duplicateCodes(twins)), 'review')
+assert.deepEqual(twins.filter(c => matchesCrestFilter(c, 'mark-review', '', duplicateCodes(twins))).map(c => c.wiki), ['A', 'B'])
+assert.deepEqual([crest('C', { mark: mark() }), made()].filter(c => matchesCrestFilter(c, 'unmarked', '')).map(c => c.wiki), ['C'])
+
 // Uploads are typed by their bytes; scripted SVGs are refused.
 const bytes = (...b: number[]) => new Uint8Array([...b, ...new Array(16).fill(0)])
 assert.equal(sniffCrestType(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)), 'image/png')
 assert.equal(sniffCrestType(bytes(0xff, 0xd8, 0xff, 0xe0)), 'image/jpeg')
 assert.equal(sniffCrestType(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ')), 'image/webp')
 assert.equal(sniffCrestType(new TextEncoder().encode('<?xml version="1.0"?>\n<!-- crest -->\n<svg xmlns="http://www.w3.org/2000/svg"/>')), 'image/svg+xml')
+assert.equal(sniffCrestType(new TextEncoder().encode('<?xml version="1.0"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x.dtd" [\n<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">\n]>\n<svg xmlns="http://www.w3.org/2000/svg"/>')), 'image/svg+xml')
 assert.equal(sniffCrestType(new TextEncoder().encode('<html><svg></svg></html>')), null)
 assert.equal(sniffCrestType(bytes(0x25, 0x50, 0x44, 0x46)), null)
 assert.ok(unsafeSvg('<svg><script>alert(1)</script></svg>'))

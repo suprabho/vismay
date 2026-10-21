@@ -1,0 +1,300 @@
+season,wiki,name,pattern,c1,c2,confidence,source,page,body1,pattern_file,sleeves,shorts,needs_review,review_note
+2003-04,1. FC Kaiserslautern,1. FC Kaiserslautern,solid,#F20017,,0.98,season,1. FC Kaiserslautern,FF0019,_kaiserslautern2627h,#FF0019,#FF0019,,
+2003-04,1. FC Köln,1. FC Köln,solid,#FFFFFF,,0.97,club,1. FC Köln,FFFFFF,_koeln2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Bayer 04 Leverkusen,Bayer Leverkusen,solid,#FD0000,#000000,0.85,season,2003–04 Bayer 04 Leverkusen season,FFFFFF,_BAYER_0203h,#FF0000,#000000,,
+2003-04,Borussia Dortmund,Borussia Dortmund,solid,#FFE517,#000000,1.0,season,2003–04 Borussia Dortmund season,FFE517,_blackcollar,#FFE517,#000000,,
+2003-04,Borussia Mönchengladbach,Borussia Mönchengladbach,solid,#F3F9F4,,0.94,club,Borussia Mönchengladbach,FFFFFF,_gladbach2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Eintracht Frankfurt,Eintracht Frankfurt,solid,#000000,,0.9,season,2003–04 Eintracht Frankfurt season,000000,_redpinstripes,#000000,#000000,,
+2003-04,FC Bayern Munich,Bayern Munich,solid,#DD0000,,0.99,season,2003–04 FC Bayern Munich season,DD0000,_FCBAYERN_0304h,#DD0000,#DD0000,,
+2003-04,FC Hansa Rostock,Hansa Rostock,solid,#0068AF,#FFFFFF,0.91,club,FC Hansa Rostock,006EB9,_rostock2526h,#006EB9,#FFFFFF,,today's kit (no season article)
+2003-04,FC Schalke 04,Schalke 04,solid,#0202FF,#FFFFFF,1.0,season,2003–04 FC Schalke 04 season,0000FF,_SCHALKE04_0203h,#0000FF,#FFFFFF,,
+2003-04,Hamburger SV,Hamburger SV,solid,#FFFFFF,#FF0000,0.97,season,2003–04 Hamburger SV season,FFFFFF,_hamburgersv0203h,#FFFFFF,#FF0000,,
+2003-04,Hannover 96,Hannover 96,stripes,#FF0505,#050505,0.66,club,Hannover 96,FFFFFF,_hannover2526h,#FFFFFF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.66
+2003-04,Hertha BSC,Hertha BSC,solid,#FEFEFE,,0.98,season,2003–04 Hertha BSC season,,_hertha0203a,,#FFFFFF,,
+2003-04,SC Freiburg,SC Freiburg,solid,#FF0000,,0.57,club,SC Freiburg,FE0000,_freiburg2627h,#FE0000,#FE0000,yes,today's kit (no season article); pattern fit 0.57
+2003-04,SV Werder Bremen,Werder Bremen,sleeves,#339966,#FF7F00,1.0,season,2003–04 SV Werder Bremen season,008000,_wbremen0304h,#FF7F00,#FFFFFF,,
+2003-04,TSV 1860 Munich,1860 München,stripes,#A0C7E5,#FAFFFF,0.92,club,TSV 1860 Munich,A0C7E5,_munchen2526h,#A0C7E5,#A0C7E5,,today's kit (no season article)
+2003-04,VfB Stuttgart,VfB Stuttgart,hoops,#FFFFFF,#FF0000,0.91,season,2003–04 VfB Stuttgart season,FFFFFF,_vfb0304h,#FFFFFF,#FFFFFF,,
+2003-04,VfL Bochum,VfL Bochum,solid,#0B4A9E,#FFFFFF,1.0,season,2003–04 VfL Bochum season,0B4A9E,,#0B4A9E,#FFFFFF,,
+2003-04,VfL Wolfsburg,VfL Wolfsburg,solid,#FFFFFF,#009000,1.0,season,2003–04 VfL Wolfsburg season,009000,_collaronwhite,#FFFFFF,#009000,,
+2003-04,Albacete Balompié,Albacete,solid,#FFFFFF,,0.97,club,Albacete Balompié,FFFFFF,_albacete2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Athletic Bilbao,Athletic Bilbao,stripes,#F20707,#FFFFFF,0.93,club,Athletic Bilbao,FFFFFF,_bilbao2627h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Atlético Madrid,Atlético Madrid,stripes,#FF0000,#FFFFFF,0.88,season,2003–04 Atlético Madrid season,FF0000,_am0304h,#FF0000,#0000DD,,
+2003-04,CA Osasuna,Osasuna,solid,#FB0000,,0.99,club,CA Osasuna,,_osasuna2627h,,,,today's kit (no season article)
+2003-04,Deportivo de A Coruña,Deportivo La Coruña,stripes,#FFFFFF,#0000FF,0.93,club,Deportivo de A Coruña,,_depor2627h,,#0000FF,,today's kit (no season article)
+2003-04,FC Barcelona,Barcelona,stripes,#A50044,#004D98,1.0,override,2003–04 FC Barcelona season,203B5A,_fcbarcelona0304h,#203B5A,#0000FF,,Club Mark Generator spec: BAR 2003-04 heater stripes
+2003-04,Málaga CF,Málaga,stripes,#92BAF0,#FDFDFD,0.88,club,Málaga CF,FFFFFF,_malaga2627h,#FFFFFF,#103E9E,,today's kit (no season article)
+2003-04,RC Celta de Vigo,Celta Vigo,solid,#90CCFF,,0.98,club,RC Celta de Vigo,,_celta2627h,,,,today's kit (no season article)
+2003-04,RCD Espanyol,Espanyol,stripes,#F9F9F9,#0000FA,0.93,club,RCD Espanyol,,_rcde2627h,,,,today's kit (no season article)
+2003-04,RCD Mallorca,Mallorca,halves,#FF0000,#000000,0.97,club,RCD Mallorca,FF0000,_mallorca2627h,#FF0000,#000000,,today's kit (no season article)
+2003-04,Racing de Santander,Racing Santander,solid,#FCFCFC,#000000,0.97,club,Racing de Santander,FFFFFF,_santander2627h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Real Betis,Real Betis,stripes,#399C5F,#F8FAF9,0.62,club,Real Betis,359B5C,_betis2627h,#359B5C,#FFFFFF,yes,today's kit (no season article); pattern fit 0.62
+2003-04,Real Madrid CF,Real Madrid,solid,#FFFFFF,,0.99,season,2003–04 Real Madrid CF season,FFFFFF,_rmcf0304,#FFFFFF,#FFFFFF,,
+2003-04,Real Murcia CF,Real Murcia,sleeves,#EF0000,#FFFFFF,0.99,club,Real Murcia CF,EF0000,_rmurcia2425h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Real Sociedad,Real Sociedad,stripes,#0011A3,#FFFFFF,0.93,club,Real Sociedad,0042FF,_realsociedad2627h,#0042FF,#FFFFFF,,today's kit (no season article)
+2003-04,Real Valladolid,Valladolid,stripes,#FFFFFF,#8D5AA2,0.89,club,Real Valladolid,FFFFFF,_valladolid2526h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Real Zaragoza,Zaragoza,solid,#FDFDFD,#8EC6E1,0.96,club,Real Zaragoza,,_zaragoza2627h,,#8EC6E1,,today's kit (no season article)
+2003-04,Sevilla FC,Sevilla,sleeves,#F9F9F9,#E20001,0.98,club,Sevilla FC,FFFFFF,_sevilla2627h,#E20001,#FFFFFF,,today's kit (no season article)
+2003-04,Valencia CF,Valencia,sleeves,#FEFEFE,#000000,0.99,season,2003–04 Valencia CF season,FFFFFF,_valencia0304h,#000000,#000000,,
+2003-04,Villarreal CF,Villarreal,solid,#FEFE00,,0.95,season,2003–04 Villarreal CF season,FFFF00,_villarreal0304h,#FFFF00,#FFFF00,,
+2003-04,AC Ajaccio,AC Ajaccio,sleeves,#EF0000,#FFFFFF,0.79,club,AC Ajaccio,FFFFFF,_ajaccio2526h,#FFFFFF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.79
+2003-04,AJ Auxerre,AJ Auxerre,solid,#FFFFFF,,0.98,club,AJ Auxerre,FFFFFF,_AJAuxerre2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,AS Monaco FC,Monaco,halves,#FFFFFF,#FF0000,0.74,season,2003–04 AS Monaco FC season,FF0000,_asm10h,#FFFFFF,#FFFFFF,yes,pattern fit 0.74
+2003-04,En Avant Guingamp,EA Guingamp,stripes,#FF0000,#000000,0.9,club,En Avant Guingamp,FF0000,_guingamp2526h,#FF0000,#000000,,today's kit (no season article)
+2003-04,FC Girondins de Bordeaux,Girondins de Bordeaux,solid,#000040,,0.9,season,2003–04 FC Girondins de Bordeaux season,,_bordeaux0304h,,,,
+2003-04,FC Metz,FC Metz,solid,#7C1E1E,,0.98,club,FC Metz,,_metz2526h,,,,today's kit (no season article)
+2003-04,FC Nantes,Nantes,stripes,#FFFF57,#FFFF00,0.62,club,FC Nantes,FFFF00,_nantes2627h,#00B211,#FFFF00,yes,today's kit (no season article); pattern fit 0.62
+2003-04,FC Sochaux-Montbéliard,FC Sochaux,solid,#F8E816,#0B1031,0.94,club,FC Sochaux-Montbéliard,,_FCSochaux2526h,#FFFE2A,#0B1031,,today's kit (no season article)
+2003-04,Le Mans FC,Le Mans UC,band,#FFFF00,#FE0000,0.91,club,Le Mans FC,FF0000,_lemans2627h,#FFFF00,#FF0000,,today's kit (no season article)
+2003-04,Lille OSC,LOSC Lille Métropole,band,#24216A,#FF0000,0.83,club,Lille OSC,FE0000,_lille2627h,#FE0000,#221F64,,today's kit (no season article)
+2003-04,Montpellier HSC,Montpellier HSC,hoops,#000055,#FF6600,0.72,club,Montpellier HSC,000055,_montpellier2526h,#000055,#FF6600,yes,today's kit (no season article); pattern fit 0.72
+2003-04,OGC Nice,OGC Nice,stripes,#FF0000,#010101,0.89,club,OGC Nice,FF0000,_nice2627h,#FF0000,#000000,,today's kit (no season article)
+2003-04,Olympique Lyonnais,Olympique lyonnais,solid,#FCFCFC,,0.85,season,2003–04 Olympique Lyonnais season,FFFFFF,_lyon0203h,#FFFFFF,#FFFFFF,,
+2003-04,Olympique de Marseille,Olympique de Marseille,solid,#FFFFFF,,0.98,season,2003–04 Olympique de Marseille season,,_om0304h,,,,
+2003-04,Paris Saint-Germain FC,Paris Saint-Germain,solid,#00003F,,0.78,season,2003–04 Paris Saint-Germain FC season,000040,_psg0304h,#000040,#000040,yes,pattern fit 0.78
+2003-04,RC Lens,RC Lens,solid,#FDEE00,#FF0000,0.98,club,RC Lens,,_lens2627h,,#FF0000,,today's kit (no season article)
+2003-04,RC Strasbourg Alsace,RC Strasbourg,solid,#0000FF,#FFFFFF,0.81,club,RC Strasbourg Alsace,0000DD,_strasbourg2627h,#0000DD,#FFFFFF,,today's kit (no season article)
+2003-04,SC Bastia,SC Bastia,solid,#00449F,,1.0,season,2003–04 SC Bastia season,00449F,00449F,#00449F,#00449F,,
+2003-04,Stade Rennais FC,Rennes,solid,#F50000,#000000,0.99,club,Stade Rennais FC,FF0000,_rennes2627h,#FF0000,#000000,,today's kit (no season article)
+2003-04,Toulouse FC,Toulouse FC,stripes,#3C0082,#8445D9,0.81,club,Toulouse FC,3C0082,_toulouse2627h,,#3C0082,,today's kit (no season article)
+2003-04,Arsenal F.C.,Arsenal,sleeves,#EF0107,#FFFFFF,1.0,override,2003–04 Arsenal F.C. season,DD0000,_arsenal0204h,#FFFFFF,#FFFFFF,,Curated PL 2003-04: red with white sleeves (club brand red; check against the season kit)
+2003-04,Aston Villa F.C.,Aston Villa,sleeves,#670E36,#95BFE5,1.0,override,2003–04 Aston Villa F.C. season,970045,,#88A7E0,#FFFFFF,,Curated PL 2003-04: claret with sky-blue sleeves
+2003-04,Birmingham City F.C.,Birmingham City,solid,#0033A0,#FFFFFF,1.0,override,Birmingham City F.C.,0000FF,_birmingham2627h,#0000FF,#FFFFFF,,Curated PL 2003-04: royal blue; white shorts
+2003-04,Blackburn Rovers F.C.,Blackburn Rovers,halves,#009EE0,#FFFFFF,1.0,override,Blackburn Rovers F.C.,FFFFFF,_blackburn2627h,#1F97E6,#1F97E6,,Curated PL 2003-04: blue and white halves; navy trim
+2003-04,Bolton Wanderers F.C.,Bolton Wanderers,solid,#FFFFFF,#1D3A73,1.0,override,2003–04 Bolton Wanderers F.C. season,FFFFFF,,#FFFFFF,#FFFFFF,,Curated PL 2003-04: white; navy trim
+2003-04,Charlton Athletic F.C.,Charlton Athletic,solid,#D4021D,#FFFFFF,1.0,override,2003–04 Charlton Athletic F.C. season,FF0000,_whiteshoulders,#FF0000,#FFFFFF,,Curated PL 2003-04: red; white shorts
+2003-04,Chelsea F.C.,Chelsea,solid,#034694,#FFFFFF,1.0,override,2003–04 Chelsea F.C. season,0000FF,_chelsea0304h,#0000FF,#0000FF,,Curated PL 2003-04: royal blue; white trim
+2003-04,Everton F.C.,Everton,solid,#003399,#FFFFFF,1.0,override,Everton F.C.,0000FF,_everton2627h,#0000FF,#FFFFFF,,Curated PL 2003-04: royal blue; white trim
+2003-04,Fulham F.C.,Fulham,solid,#FFFFFF,#000000,1.0,override,2003–04 Fulham F.C. season,FFFFFF,_fulham0304h,#FFFFFF,#000000,,Curated PL 2003-04: white; black trim
+2003-04,Leeds United F.C.,Leeds United,solid,#FFFFFF,#1D428A,1.0,override,Leeds United F.C.,,_leeds2627h,,,,Curated PL 2003-04: white; blue and yellow trim (Wikipedia gave today's kit)
+2003-04,Leicester City F.C.,Leicester City,solid,#003090,#FFFFFF,1.0,override,2003–04 Leicester City F.C. season,0000FF,_whitecollar,#0000FF,,,Curated PL 2003-04: royal blue; white shorts
+2003-04,Liverpool F.C.,Liverpool,solid,#C8102E,#FFFFFF,1.0,override,2003–04 Liverpool F.C. season,FF0000,_liverpool0204h,#FF0000,#FF0000,,Curated PL 2003-04: red; white trim
+2003-04,Manchester City F.C.,Manchester City,solid,#6CABDD,#FFFFFF,1.0,override,2003–04 Manchester City F.C. season,3399FF,_mcfc_home_2003-04,#3399FF,,,Curated PL 2003-04: sky blue; white shorts; navy trim
+2003-04,Manchester United F.C.,Manchester United,solid,#DA291C,#FFFFFF,1.0,override,2003–04 Manchester United F.C. season,E20E0E,_manutd0204h,#E20E0E,#FFFFFF,,Curated PL 2003-04: red; white shorts; black trim
+2003-04,Middlesbrough F.C.,Middlesbrough,band,#E11B22,#FFFFFF,1.0,override,2003–04 Middlesbrough F.C. season,FF0000,_whitethinlines,#FF0000,#FF0000,,Curated PL 2003-04: red with a white chest band
+2003-04,Newcastle United F.C.,Newcastle United,stripes,#FFFFFF,#241F20,1.0,override,2003–04 Newcastle United F.C. season,,_nufc0305h,,,,Curated PL 2003-04: black and white stripes
+2003-04,Portsmouth F.C.,Portsmouth,solid,#001489,#FFFFFF,1.0,override,Portsmouth F.C.,0000FF,_portsmouth2627h,#0000FF,#FFFFFF,,Curated PL 2003-04: royal blue; white shorts; red trim
+2003-04,Southampton F.C.,Southampton,stripes,#D71920,#FFFFFF,1.0,override,2003–04 Southampton F.C. season,,_red_stripes_red_sholders,#FF0000,#000000,,Curated PL 2003-04: red and white stripes
+2003-04,Tottenham Hotspur F.C.,Tottenham Hotspur,solid,#FFFFFF,#132257,1.0,override,2003–04 Tottenham Hotspur F.C. season,FFFFFF,_tottenham0203h,#FFFFFF,#000040,,Curated PL 2003-04: white; navy trim
+2003-04,Wolverhampton Wanderers F.C.,Wolverhampton Wanderers,solid,#FDB913,#231F20,1.0,override,Wolverhampton Wanderers F.C.,F4B125,_wolverhampton2627h,#F4B125,#000000,,Curated PL 2003-04: old gold; black trim
+2003-04,AC Ancona,Ancona,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,AC ChievoVerona,Chievo,hoops,#EFD245,#1981C5,0.66,club,AC ChievoVerona,,_chievo2526h,,,yes,today's kit (no season article); pattern fit 0.66
+2003-04,AC Milan,Milan,stripes,#070707,#FF0000,0.89,season,2003–04 AC Milan season,FFFFFF,_acm0304h,#FFFFFF,#000000,,
+2003-04,AC Perugia Calcio,Perugia,solid,#F50001,#FFFFFF,0.95,club,AC Perugia Calcio,FF0000,_perugia2627h,#FF0000,#FFFFFF,,today's kit (no season article)
+2003-04,AS Reggina 1914,Reggina,solid,#8D0000,,1.0,club,AS Reggina 1914,8D0000,_whitecollar,#8D0000,#8D0000,,today's kit (no season article)
+2003-04,AS Roma,Roma,solid,#9E0000,#FFFFFF,1.0,season,2003–04 AS Roma season,FFFFFF,_asroma0304h,#A00000,#FFFFFF,,
+2003-04,Bologna FC 1909,Bologna,band,#CF0000,#04043D,0.96,club,Bologna FC 1909,00003C,_bologna2627h,#00003C,#FFFFFF,,today's kit (no season article)
+2003-04,Brescia Calcio,Brescia Calcio,solid,#0030FF,,0.7,club,Brescia Calcio,0033FF,_brescia2425h,#0033FF,#0033FF,yes,today's kit (no season article); pattern fit 0.7
+2003-04,Empoli FC,Empoli,band,#0541AE,#0C60F7,0.78,club,Empoli FC,0055FF,_empoli2526h,#0055FF,#0055FF,yes,today's kit (no season article); pattern fit 0.78
+2003-04,Inter Milan,Internazionale,stripes,#171DFF,#000000,0.82,season,2003–04 Inter Milan season,0000FF,_inter0304h,#0000FF,#000000,,
+2003-04,Juventus FC,Juventus,stripes,#FFFFFF,#000000,0.76,season,2003–04 Juventus FC season,FFFFFF,_juve0304h,#FFFFFF,#FFFFFF,yes,pattern fit 0.76
+2003-04,Modena FC 2018,Modena,solid,#FFFF00,#000040,0.76,club,Modena FC 2018,FFEC00,_modna2627h,#FFEC00,#000040,yes,today's kit (no season article); pattern fit 0.76
+2003-04,Parma Calcio 1913,Parma,band,#FFFFFF,#010101,0.86,club,Parma Calcio 1913,FFFFFF,_parma2627h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,SS Lazio,Lazio,solid,#89CFF0,#FFFFFF,1.0,season,2003–04 SS Lazio season,89CFF0,_lazio0304h,#89CFF0,#FFFFFF,,
+2003-04,Siena FC,Siena,halves,#000000,#FFFFFF,0.77,club,Siena FC,FFFFFF,_siena2627h,#FFFFFF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.77
+2003-04,UC Sampdoria,Sampdoria,hoops,#0A0AFF,#FFFFFF,0.94,club,UC Sampdoria,2345C0,_sampdoria2526h,#2234A4,#FFFFFF,,today's kit (no season article)
+2003-04,US Lecce,Lecce,stripes,#FF0000,#FEFE00,0.88,club,US Lecce,FFFF00,_lecce2627h,#FFFF00,#000055,,today's kit (no season article)
+2003-04,Udinese Calcio,Udinese,stripes,#121212,#FFFFFF,0.88,season,2003–04 Udinese Calcio season,FFFFFF,_udinese0304h,#FFFFFF,#000000,,
+2003-04,1. FC Nürnberg,1. FC Nürnberg,solid,#FF0909,#000000,0.98,season,2003–04 1. FC Nürnberg season,FF0000,_nurnberg0304h,#FF0000,#000000,,
+2003-04,1. FC Slovácko,1. FC Synot,solid,#FFFFFF,,0.99,club,1. FC Slovácko,FFFFFF,_slovacko2526h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,1. FC Union Berlin,1. FC Union Berlin,solid,#FF0F0F,,0.66,club,1. FC Union Berlin,FF0000,_unionberlin2627h,#FF0000,#FF0000,yes,today's kit (no season article); pattern fit 0.66
+2003-04,AC Allianssi,Allianssi,solid,#F1771D,#FFFFFF,1.0,club,AC Allianssi,F1771D,,#F1771D,#FFFFFF,,today's kit (no season article)
+2003-04,AC Cesena,Cesena,solid,#FFFFFF,,0.98,club,AC Cesena,FFFFFF,_cesena1617h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,AC Sparta Prague,Sparta Prague,solid,#850F13,#FFFFFF,0.67,club,AC Sparta Prague,8A1014,_spartapraha2627h,#8A1014,#FFFFFF,yes,today's kit (no season article); pattern fit 0.67
+2003-04,ACF Fiorentina,Fiorentina,solid,#542E84,,0.97,club,ACF Fiorentina,552A79,_fiorentina2627h,#552A79,#552A79,,today's kit (no season article)
+2003-04,ACF Gloria Bistrița,Gloria Bistrița,solid,#FFFFFF,,1.0,club,ACF Gloria Bistrița,FFFFFF,_bluecollar,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,AD Cerro de Reyes,Cerro de Reyes,stripes,#FFFFFF,#0000FF,0.93,club,AD Cerro de Reyes,0000FF,_whitestripes,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,AD Ceuta,Ceuta,solid,#FFFFFF,,1.0,club,AD Ceuta,FFFFFF,,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,AEK Athens F.C.,AEK Athens,stripes,#FFDF00,#000000,0.86,season,2003–04 AEK Athens F.C. season,FFDE00,_aek0204,#FFDE00,#FFDE00,,
+2003-04,AFC Ajax,Ajax,band,#FAFAFA,#FF0000,0.94,season,2003–04 AFC Ajax season,FFFFFF,_ajax0203h,#FFFFFF,#FFFFFF,,
+2003-04,AIK Fotboll,AIK,solid,#060606,#FFFFFF,0.99,club,AIK Fotboll,000000,_aik25h,#000000,#FFFFFF,,today's kit (no season article)
+2003-04,APOEL FC,APOEL,band,#FCC60C,#01369F,0.85,club,APOEL FC,FFDD00,_apoel2526h,#FFDD00,#0E00D9,,today's kit (no season article)
+2003-04,AS Moulins,AS Moulins,solid,#FFFFFF,#0000FF,1.0,club,AS Moulins,FFFFFF,,#FFFFFF,#0000FF,,today's kit (no season article)
+2003-04,AS Nancy Lorraine,AS Nancy-Lorraine,solid,#FCFCFC,,0.91,club,AS Nancy Lorraine,FFFFFF,_ASNancyLorraine2425h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,AS Saint-Étienne,Saint-Étienne,solid,#189459,,0.97,club,AS Saint-Étienne,,_saintetienne2526h,,,,today's kit (no season article)
+2003-04,ASKÖ Pasching,Pasching,solid,#FFFFFF,#008000,1.0,club,ASKÖ Pasching,FFFFFF,,#FFFFFF,#008000,,today's kit (no season article)
+2003-04,ASV Bergedorf 85,ASV Bergedorf 85,solid,#FFFFFF,,1.0,club,ASV Bergedorf 85,FFFFFF,,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Alemannia Aachen,Alemannia Aachen,solid,#FFDE00,,1.0,club,Alemannia Aachen,FFDE00,,#FFDE00,#FFDE00,,today's kit (no season article)
+2003-04,Algeciras CF,Algeciras,band,#FF0000,#FFFFFF,0.85,club,Algeciras CF,FF0000,_whitecross,#FF0000,#0000FF,,today's kit (no season article)
+2003-04,Alicante CF,Alicante,solid,#0000FF,#FFFFFF,0.99,club,Alicante CF,0000FF,_lifan17a,#0000FF,#FFFFFF,,today's kit (no season article)
+2003-04,Angers SCO,SCO Angers,stripes,#FFFFFF,#000000,0.9,club,Angers SCO,000000,_angers2627h,#000000,#000000,,today's kit (no season article)
+2003-04,Aris Thessaloniki F.C.,Aris,hoops,#FFFF00,#000000,0.79,club,Aris Thessaloniki F.C.,,_aris2627h,,#000000,yes,today's kit (no season article); pattern fit 0.79
+2003-04,Aurora Pro Patria 1919,Pro Patria,hoops,#0000FF,#FFFFFF,0.87,club,Aurora Pro Patria 1919,FFFFFF,_propatria1819h,#FFFFFF,#0000FF,,today's kit (no season article)
+2003-04,Aviron Bayonnais FC,Aviron Bayonnais,solid,#AFDFFD,,0.99,club,Aviron Bayonnais FC,,_AvironBayonnaisFC2425h,,,,today's kit (no season article)
+2003-04,BSV Schwarz-Weiß Rehden,BSV Schwarz-Weiß Rehden,solid,#000000,,0.56,club,BSV Schwarz-Weiß Rehden,000000,_pumacupcore19bb,#000000,#000000,yes,today's kit (no season article); pattern fit 0.56
+2003-04,Barakaldo CF,Barakaldo,stripes,#000000,#FFDE00,1.0,club,Barakaldo CF,FFDE00,_blackstripes4,,#000000,,today's kit (no season article)
+2003-04,Bayer 04 Leverkusen II,Bayer Leverkusen (A),sleeves,#000000,#FFFFFF,0.98,club,Bayer 04 Leverkusen II,FFFFFF,_bayer1314h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Beşiktaş J.K.,Beşiktaş,solid,#FFFFFF,#000000,0.99,club,Beşiktaş J.K.,FFFFFF,_besiktas2627h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Blackpool F.C.,Blackpool,solid,#FF8200,,0.98,club,Blackpool F.C.,,_blackpool2627h,,,,today's kit (no season article)
+2003-04,Borussia Neunkirchen,Borussia Neunkirchen,solid,#FF0000,#000000,1.0,club,Borussia Neunkirchen,FF0000,,#FF0000,#000000,,today's kit (no season article)
+2003-04,Brighton & Hove Albion F.C.,Brighton & Hove Albion,solid,#1143DB,,0.85,club,Brighton & Hove Albion F.C.,1144DD,_brighton2627h,#1144DD,#1144DD,,today's kit (no season article)
+2003-04,Bristol City F.C.,Bristol City,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,Brøndby IF,Brøndby,sleeves,#FFD200,#003DA5,0.97,club,Brøndby IF,003DA5,_brondby2526h,#003DA5,#003DA5,,today's kit (no season article)
+2003-04,Burnley F.C.,Burnley,solid,#841E43,#FFFFFF,0.98,club,Burnley F.C.,,_burnley2627h,,#FFFFFF,,today's kit (no season article)
+2003-04,CD Badajoz,Badajoz,stripes,#010101,#FEFEFE,0.85,club,CD Badajoz,FFFFFF,_Bada_26-27h,#000000,#FFFFFF,,today's kit (no season article)
+2003-04,CD Castellón,Castellón,stripes,#010101,#FFFFFF,0.88,club,CD Castellón,FFFFFF,_castellon2526h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,CD Leganés,Leganés,band,#FFFFFF,#031970,0.97,club,CD Leganés,FFFFFF,_leganes2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,CD Mirandés,Mirandés,band,#010101,#F10000,0.7,club,CD Mirandés,EF0000,_mirandes2627h,#EF0000,#000000,yes,today's kit (no season article); pattern fit 0.7
+2003-04,CE Sabadell FC,Sabadell,halves,#0000FE,#FEFEFE,0.85,club,CE Sabadell FC,0000FF,_sabadell2627h,#0000FF,#0000FF,,today's kit (no season article)
+2003-04,CS Sedan Ardennes,Sedan,solid,#008000,#FF0000,0.96,club,CS Sedan Ardennes,008000,_sedan2526h,#008000,#FF0000,,today's kit (no season article)
+2003-04,Catania FC,Catania,stripes,#AC0200,#FF0000,0.88,club,Catania FC,,_catania2526h,,#000000,,today's kit (no season article)
+2003-04,Celtic F.C.,Celtic,hoops,#FFFFFF,#146F32,0.94,season,2003–04 Celtic F.C. season,009933,_celtic0204h,#009933,#FFFFFF,,
+2003-04,Cheltenham Town F.C.,Cheltenham Town,stripes,#FFFFFF,#EE0000,0.9,club,Cheltenham Town F.C.,FFFFFF,_cheltenham2627h,#FFFFFF,#FF0000,,today's kit (no season article)
+2003-04,Ciudad de Murcia,Ciudad de Murcia,solid,#E30817,#000000,1.0,club,Ciudad de Murcia,E30817,_blackshoulders,#E30817,#000000,,today's kit (no season article)
+2003-04,Clermont Foot 63,Clermont,stripes,#03235B,#C5013D,0.9,club,Clermont Foot 63,,_clermont2526h,,,,today's kit (no season article)
+2003-04,Club Brugge KV,Club Brugge,band,#000000,#0080FF,0.86,club,Club Brugge KV,000000,_brugge2627h,#000000,#000000,,today's kit (no season article)
+2003-04,Coventry City F.C.,Coventry City,stripes,#348CC2,#FFFFFF,0.83,club,Coventry City F.C.,62B5E5,_coventry2627h,#62B5E5,#62B5E5,,today's kit (no season article)
+2003-04,Crewe Alexandra F.C.,Crewe Alexandra,solid,#F50000,#FFFFFF,0.98,club,Crewe Alexandra F.C.,FF0000,_crewe2627h,#FF0000,#FFFFFF,,today's kit (no season article)
+2003-04,Crystal Palace F.C.,Crystal Palace,stripes,#0000FF,#FF0000,0.93,season,2003–04 Crystal Palace F.C. season,0000FF,_redstripes,#0000FF,#FF0000,,
+2003-04,Cultural y Deportiva Leonesa,Cultural Leonesa,solid,#FAFAFA,,0.97,club,Cultural y Deportiva Leonesa,FFFFFF,_culturalleonesa2526h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Cádiz CF,Cádiz,solid,#FFFF00,#0000FF,0.99,club,Cádiz CF,FFEE00,_cadiz2627h,#FFEE00,#0000FF,,today's kit (no season article)
+2003-04,Córdoba CF,Córdoba,stripes,#007D48,#FFFFFF,0.9,club,Córdoba CF,FFFFFF,_cordoba2526h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Darlington F.C.,Darlington,halves,#000000,#FFFFFF,0.92,club,Darlington F.C.,,_blackquarters14,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Deportivo Alavés,Alavés,stripes,#FFFFFF,#0000FF,0.89,club,Deportivo Alavés,FFFFFF,_alaves2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Dijon FCO,Dijon FCO,solid,#FF0705,,0.97,club,Dijon FCO,FF0000,_dijon2324h,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,Dundee F.C.,Dundee,solid,#000033,,0.95,season,2003–04 Dundee F.C. season,,_dundeefc0304h,,,,
+2003-04,Dynamo Dresden,Dynamo Dresden,solid,#FABE08,#000000,0.99,club,Dynamo Dresden,FFCC00,_dresden2223h,#FFCC00,#000000,,today's kit (no season article)
+2003-04,Dyskobolia Grodzisk Wielkopolski,Groclin Grodzisk Wielkopolski,sleeves,#FFFFFF,#286F6B,1.0,club,Dyskobolia Grodzisk Wielkopolski,286F6B,_thinsidesonwhite,#286F6B,#FFFFFF,,today's kit (no season article)
+2003-04,ES Troyes AC,ES Troyes AC,solid,#0000FF,,0.99,club,ES Troyes AC,,_troyes2526h,,#0000FF,,today's kit (no season article)
+2003-04,ESA Brive,Brive,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,Eintracht Braunschweig,Eintracht Braunschweig,solid,#FFDD00,#0044FF,0.97,club,Eintracht Braunschweig,FFDD00,_braun2425h,#FFDD00,#0044FF,,today's kit (no season article)
+2003-04,Elche CF,Elche,hoops,#FFFFFF,#008127,0.88,club,Elche CF,,_elche2627h,,,,today's kit (no season article)
+2003-04,F.C. Copenhagen,Copenhagen,solid,#FBFBFB,,0.98,club,F.C. Copenhagen,FFFFFF,_copenhagen2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,FC Basel,Basel,solid,#1818FF,,0.98,club,FC Basel,0000FF,_basel2627h,#0000FF,#0000FF,,today's kit (no season article)
+2003-04,FC Dacia Chișinău,Dacia Chișinău,solid,#FFFFFF,,1.0,club,FC Dacia Chișinău,FFFFFF,,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,FC Dnipro,Dnipro Dnipropetrovsk,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,FC Dynamo Kyiv,Dynamo Kyiv,stripes,#FFFFFF,#9EC2E0,0.82,club,FC Dynamo Kyiv,FFFFFF,_dkyiv2627h,#FFFFFF,#176FC1,,today's kit (no season article)
+2003-04,FC Emmendingen,FC Emmendingen,solid,#FFFFFF,#000000,1.0,club,FC Emmendingen,FFFFFF,,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,FC Gueugnon,FC Gueugnon,sleeves,#F7DB4A,#1B375F,1.0,club,FC Gueugnon,F7DB4A,,#1B375F,#1B375F,,today's kit (no season article)
+2003-04,FC Libourne,FC Libourne-Saint-Seurin,sleeves,#000000,#000F66,0.5,club,FC Libourne,,_FCLibourne2223h,#000F66,#000F66,yes,today's kit (no season article); pattern fit 0.5
+2003-04,FC Lokomotiv Moscow,Lokomotiv Moscow,solid,#094422,,0.99,club,FC Lokomotiv Moscow,094422,_collar,#094422,#094422,,today's kit (no season article)
+2003-04,FC Marek Dupnitsa,Marek Dupnitsa,solid,#E40000,,0.99,club,FC Marek Dupnitsa,FF0000,_wurzburger1819h,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,FC Metalurh Donetsk,Metalurh Donetsk,solid,#00003C,,0.71,club,FC Metalurh Donetsk,00003C,_metalurhdonetsk1314h,#00003C,#00003C,yes,today's kit (no season article); pattern fit 0.71
+2003-04,FC Mulhouse,FC Mulhouse,solid,#FFFFFF,#000088,0.99,club,FC Mulhouse,FFFFFF,_fin18H,#FFFFFF,#000088,,today's kit (no season article)
+2003-04,FC Oberneuland,FC Oberneuland,solid,#FF0000,#000000,1.0,club,FC Oberneuland,FF0000,,#FF0000,#000000,,today's kit (no season article)
+2003-04,FC Petržalka,Artmedia Petržalka,stripes,#000000,#FFFFFF,0.93,club,FC Petržalka,FFFFFF,_blackstripes,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,FC Porto,Porto,band,#0000FE,#FFFFFF,0.9,season,2003–04 FC Porto season,FFFFFF,_porto0304h,#FFFFFF,#FFFFFF,,
+2003-04,FC Red Bull Salzburg,Wüstenrot Salzburg,solid,#FBFBFB,,0.83,club,FC Red Bull Salzburg,FFFFFF,_rbs2627H,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,FC Schönberg 95,Schönberg 95,solid,#008000,,1.0,club,FC Schönberg 95,008000,_whiteshoulders,#008000,#008000,,today's kit (no season article)
+2003-04,FC Slovan Liberec,Slovan Liberec,halves,#000000,#76BAFE,0.86,club,FC Slovan Liberec,000000,_liberec2627h,#000000,#000000,,today's kit (no season article)
+2003-04,FC Spartak Moscow,Spartak Moscow,solid,#EE000D,#FFFFFF,0.79,club,FC Spartak Moscow,FF0000,_spartak2425h,#FF0000,#FFFFFF,yes,today's kit (no season article); pattern fit 0.79
+2003-04,FC Torpedo Kutaisi,Torpedo Kutaisi,solid,#FDFDFD,,0.99,club,FC Torpedo Kutaisi,FFFFFF,_adidascampeon25w,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,FC Torpedo Moscow,Torpedo Moscow,solid,#F6F6F6,#000000,0.99,club,FC Torpedo Moscow,FFFFFF,_pumaultimate25w,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,FC Utrecht,Utrecht,band,#ED1A2F,#FFFFFF,0.93,club,FC Utrecht,ED1A2F,_utrecht2627h,#ED1A2F,#ED1A2F,,today's kit (no season article)
+2003-04,FC Wil,Wil,solid,#FFFFFF,,0.99,club,FC Wil,FFFFFF,_adidassquadra25wb,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,FC Zbrojovka Brno,Brno,stripes,#FF0000,#FFFFFF,0.93,club,FC Zbrojovka Brno,FF0000,_fczbrno2526h,#FF0000,#0044FF,,today's kit (no season article)
+2003-04,FCSB,Steaua București,solid,#0000F9,#FF0000,0.99,club,FCSB,0000FF,_fcsb2627h,#0000FF,#FF0000,,today's kit (no season article)
+2003-04,FK Austria Wien,Austria Wien,solid,#56327B,,0.97,club,FK Austria Wien,,_fak2526h,,,,today's kit (no season article)
+2003-04,FK Cementarnica 55,Cementarnica 55,solid,#C0C0C0,#FF0000,1.0,club,FK Cementarnica 55,C0C0C0,_blackshoulders,#C0C0C0,#FF0000,,today's kit (no season article)
+2003-04,FK Partizan,Partizan,stripes,#000000,#FFFFFF,0.89,club,FK Partizan,,_partizan2627h,,,,today's kit (no season article)
+2003-04,FK Teplice,Teplice,solid,#FFDD00,#0033FF,0.98,club,FK Teplice,FFDD00,_teplice2324h,#FFE800,#0033FF,,today's kit (no season article)
+2003-04,FK Vardar,Vardar,stripes,#000000,#FF0000,0.93,club,FK Vardar,000000,_jomainter19rb,#FF0000,#000000,,today's kit (no season article)
+2003-04,Football Bourg-en-Bresse Péronnas 01,FC Bourg-Péronnas,solid,#006AB8,,0.99,club,Football Bourg-en-Bresse Péronnas 01,,_FCBourgPeronnas2425h,,,,today's kit (no season article)
+2003-04,Galatasaray S.K. (football),Galatasaray,halves,#FB9502,#B11638,0.96,club,Galatasaray S.K. (football),270E8B,_galatasaray2627h,#270E8B,#270E8B,,today's kit (no season article)
+2003-04,Gaziantepspor,Gaziantepspor,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,Gençlerbirliği S.K.,Gençlerbirliği,stripes,#010101,#FF0909,0.65,season,Gençlerbirliği S.K.,000000,_genclerbieligi2021h,#000000,#000000,yes,pattern fit 0.65
+2003-04,Gillingham F.C.,Gillingham,hoops,#0000FF,#000000,0.89,season,2003–04 Gillingham F.C. season,0000FF,_blackhoops,#0000FF,#000000,,
+2003-04,Gimnástica de Torrelavega,Gimnástica Torrelavega,stripes,#FFFFFF,#0000FF,0.93,club,Gimnástica de Torrelavega,0000FF,_whitestripes,#0000FF,#FFFFFF,,today's kit (no season article)
+2003-04,Győri ETO FC,Győr,solid,#008828,#FFFAFA,0.64,club,Győri ETO FC,006837,_eto2627h,#006837,#FFFAFA,yes,today's kit (no season article); pattern fit 0.64
+2003-04,HNK Cibalia,Cibalia,solid,#54A3EC,#000000,1.0,club,HNK Cibalia,54A3EC,_thinblacksides,#54A3EC,#000000,,today's kit (no season article)
+2003-04,HNK Hajduk Split,Hajduk Split,solid,#FFFFFF,#0000DD,0.99,club,HNK Hajduk Split,FFFFFF,_hajduk2627h,#FFFFFF,#0000DD,,today's kit (no season article)
+2003-04,Heart of Midlothian F.C.,Heart of Midlothian,solid,#601B2B,#FFFFFF,0.98,club,Heart of Midlothian F.C.,601F2E,_hearts2627h,#601F2E,#FFFFFF,,today's kit (no season article)
+2003-04,Holstein Kiel,Holstein Kiel,sleeves,#0000CC,#0042FF,0.75,club,Holstein Kiel,0042FF,_holstein2526h,#0042FF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.75
+2003-04,Istres FC,FC Istres,stripes,#000000,#550099,0.66,club,Istres FC,550099,_istres2526h,#550099,#000000,yes,today's kit (no season article); pattern fit 0.66
+2003-04,KSC Lokeren Oost-Vlaanderen,Lokeren,solid,#FFFFFF,#000000,0.98,club,KSC Lokeren Oost-Vlaanderen,FFFFFF,_kscl1718h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Kickers Offenbach,Kickers Offenbach,solid,#FF0000,#FFFFFF,0.86,club,Kickers Offenbach,FF0000,_kickersoffenbach2526h,#FF0000,#FFFFFF,,today's kit (no season article)
+2003-04,Kidderminster Harriers F.C.,Kidderminster Harriers,halves,#FF0000,#FFFFFF,0.97,club,Kidderminster Harriers F.C.,FFFFFF,_redhalf,#FFFFFF,#FF0000,,today's kit (no season article)
+2003-04,LB Châteauroux,Châteauroux,stripes,#E4001A,#00458E,1.0,club,LB Châteauroux,,_BerrichonneChâteauroux2425h,,,,today's kit (no season article)
+2003-04,Levante UD,Levante,stripes,#080943,#86152D,0.9,club,Levante UD,222730,_levante2627h,#661424,#222730,,today's kit (no season article)
+2003-04,Lorca Deportiva CF,Lorca Deportiva,stripes,#3676CD,#FFFFFF,0.89,club,Lorca Deportiva CF,3676CD,_Lorca 2008 09 home,#3676CD,#3676CD,,today's kit (no season article)
+2003-04,Ludwigsfelder FC,Ludwigsfelder FC,solid,#FF0000,,1.0,club,Ludwigsfelder FC,FF0000,,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,Luton Town F.C.,Luton Town,solid,#FEFEFE,#000000,1.0,season,2003–04 Luton Town F.C. season,FFFFFF,_gremio11g2,#FFFFFF,#000000,,
+2003-04,MSV Duisburg,MSV Duisburg,hoops,#FFFFFF,#0000FF,0.64,club,MSV Duisburg,FFFFFF,_duisburg2526h,#FFFFFF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.64
+2003-04,Maccabi Haifa F.C.,Maccabi Haifa,solid,#007711,,0.82,club,Maccabi Haifa F.C.,007711,_mhaifa2627h,#007711,#007711,,today's kit (no season article)
+2003-04,Millwall F.C.,Millwall,solid,#1A2849,,0.77,club,Millwall F.C.,000F36,_millwall2627h,#000F36,,yes,today's kit (no season article); pattern fit 0.77
+2003-04,Myllykosken Pallo −47,MYPA,sleeves,#FF0000,#FFFFFF,0.97,club,Myllykosken Pallo −47,FF0000,_mypa20h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,MŠK Púchov,Matador Púchov,stripes,#FF0000,#000000,0.93,club,MŠK Púchov,FF0000,_blackstripes2 with black bordered diagonal top,#000000,#000000,,today's kit (no season article)
+2003-04,MŠK Žilina,Žilina,solid,#FFFF00,#008000,0.97,club,MŠK Žilina,FFFF00,_zilina2526h,#FFDD00,#008000,,today's kit (no season article)
+2003-04,NAC Breda,NAC Breda,band,#FFFF00,#000000,0.84,club,NAC Breda,FFFF00,_nac2526h,#FFFF00,#000000,,today's kit (no season article)
+2003-04,NK Kamen Ingrad,Kamen Ingrad,solid,#29459B,,1.0,club,NK Kamen Ingrad,29459B,,#29459B,#29459B,,today's kit (no season article)
+2003-04,NK Olimpija Ljubljana (1945–2005),Olimpija Ljubljana,solid,#34925E,,1.0,club,NK Olimpija Ljubljana (1945–2005),34925E,,#34925E,#34925E,,today's kit (no season article)
+2003-04,Neuchâtel Xamax FCS,Neuchâtel Xamax,band,#FA0000,#020000,0.76,club,Neuchâtel Xamax FCS,FF0000,_xamax1819h,#000000,#000000,yes,today's kit (no season article); pattern fit 0.76
+2003-04,Northampton Town F.C.,Northampton Town,solid,#6E1E29,#FFFFFF,0.98,club,Northampton Town F.C.,72202B,_northampton2526h,#72202B,#FFFFFF,,today's kit (no season article)
+2003-04,Norwich City F.C.,Norwich City,solid,#FFDD00,,0.99,season,2003–04 Norwich City F.C. season,,_norwich0304h,,,,
+2003-04,Nottingham Forest F.C.,Nottingham Forest,solid,#DD0000,#FFFFFF,1.0,season,2003–04 Nottingham Forest F.C. season,DD0000,_thinwhitesides,#DD0000,#FFFFFF,,
+2003-04,Notts County F.C.,Notts County,stripes,#000000,#FFFFFF,0.82,club,Notts County F.C.,FFFFFF,_notts2526h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Nuova Ternana 1925,Ternana,band,#FF0000,#018433,0.85,club,Nuova Ternana 1925,008433,_ternana2021h,#FF0000,#000000,,today's kit (no season article)
+2003-04,Nîmes Olympique,Nîmes Olympique,solid,#DC0000,#FFFFFF,0.99,club,Nîmes Olympique,0000FF,_NimesOlympique2425h,#FF0000,#FFFFFF,,today's kit (no season article)
+2003-04,Olympiacos F.C.,Olympiacos,band,#F70C29,#FFFFFF,0.96,season,2003–04 Olympiacos F.C. season,F20D2F,_olympiacosfc0304h,#F20D2F,#F20D2F,,
+2003-04,Olympique de Valence,ASOA Valence,band,#FF0000,#FFFFFF,0.85,club,Olympique de Valence,FF0000,_whitecross,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,PFC Levski Sofia,Levski Sofia,solid,#0000A9,,0.51,club,PFC Levski Sofia,0000DD,_levski2627h,#0000DD,#0000DD,yes,today's kit (no season article); pattern fit 0.51
+2003-04,PSV Eindhoven,PSV Eindhoven,stripes,#FCFCFC,#EA0000,0.82,season,2003–04 PSV Eindhoven season,FFFFFF,_psv0203h,#FFFFFF,#FFFFFF,,
+2003-04,Palermo FC,Palermo,solid,#F7C7C7,,0.67,club,Palermo FC,FFB8CA,_palermo2627h,#FFB8CA,#FFB8CA,yes,today's kit (no season article); pattern fit 0.67
+2003-04,Panathinaikos F.C.,Panathinaikos,solid,#006539,,0.99,season,2003–04 Panathinaikos F.C. season,03673D,_panathinaikosfc0304h,#03673D,#03673D,,
+2003-04,Panionios F.C.,Panionios,band,#0000FF,#FF0000,0.97,club,Panionios F.C.,0000FF,_3redstripes2,#0000FF,#0000FF,,today's kit (no season article)
+2003-04,Pisa SC,Pisa,band,#010101,#0000DD,0.86,club,Pisa SC,000000,_pisa2627h,#000000,#000000,,today's kit (no season article)
+2003-04,Pontevedra CF,Pontevedra,solid,#660000,#00529F,0.99,club,Pontevedra CF,660000,_adidas_condivo_16_white,#660000,#00529F,,today's kit (no season article)
+2003-04,Queens Park Rangers F.C.,QPR,hoops,#0000FF,#FFFFFF,0.89,season,2003–04 Queens Park Rangers F.C. season,FFFFFF,_bluehoops3,,,,
+2003-04,RSC Anderlecht,Anderlecht,sleeves,#FFFEFE,#430568,0.91,season,2003–04 RSC Anderlecht season,FFFFFF,_anderlecht0405h,#430568,#FFFFFF,,
+2003-04,Racing Besançon,Besançon RC,solid,#FF0000,,1.0,club,Racing Besançon,FF0000,,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,Racing Club de France Football,RC Paris,hoops,#AFD9F0,#FFFFFF,0.91,club,Racing Club de France Football,AFD9F0,_RacingCF1920h,#AFD9F0,#000000,,today's kit (no season article)
+2003-04,Rangers F.C.,Rangers,solid,#0000FF,#FFFFFF,0.96,season,2003–04 Rangers F.C. season,0000FF,_rangersh0305,#0000FF,#FFFFFF,,
+2003-04,Reading F.C.,Reading,hoops,#27287C,#FFFFFF,0.89,season,2003–04 Reading F.C. season,27287C,_whitehoops,#27287C,#27287C,,
+2003-04,Real Oviedo,Oviedo,solid,#0808DD,#FFFFFF,0.98,club,Real Oviedo,0000DD,_realoviedo2627h,#0000DD,#FFFFFF,,today's kit (no season article)
+2003-04,Real Unión,Real Unión,stripes,#000000,#FFFFFF,0.66,club,Real Unión,000000,_realunion2526h,#000000,#000000,yes,today's kit (no season article); pattern fit 0.66
+2003-04,Rosenborg BK,Rosenborg,solid,#FFFFFF,#000000,0.98,club,Rosenborg BK,FFFFFF,_rosenborg26h,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,Rotherham United F.C.,Rotherham United,,,,0.0,season,2003–04 Rotherham United F.C. season,FF0000,_collarwhite,,,yes,pattern image unreadable: interlaced PNG; pattern fit 0.0
+2003-04,S.L. Benfica,Benfica,solid,#FF0000,#FFFFFF,0.9,season,2003–04 S.L. Benfica season,FF0000,_benfica0405h,#FF0000,#FFFFFF,,
+2003-04,SC Heerenveen,Heerenveen,stripes,#FFFFFF,#0044FF,0.81,club,SC Heerenveen,FFFFFF,_heerenveen2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,SD Compostela,Compostela,halves,#87CEEB,#FDFEFF,0.73,club,SD Compostela,87CEEB,_compostela2526h,#FFFFFF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.73
+2003-04,SD Eibar,Eibar,band,#192030,#520721,0.86,club,SD Eibar,192030,_eibar2627h,#192030,#192030,,today's kit (no season article)
+2003-04,SK Slavia Prague,Slavia Prague,halves,#FF0000,#FFFFFF,0.97,club,SK Slavia Prague,FFFFFF,_slaviapraha2627h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,SSD Città di Teramo,Teramo,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,SSV Jahn Regensburg,Jahn Regensburg,band,#FFFFFF,#C10000,0.93,club,SSV Jahn Regensburg,FFFFFF,_regensburg2627h,#FFFFFF,#EE0000,,today's kit (no season article)
+2003-04,SSV Reutlingen 05,SSV Reutlingen,solid,#E80000,#000000,0.93,club,SSV Reutlingen 05,E80000,_reutlingen1112h,#E80000,#000000,,today's kit (no season article)
+2003-04,SV Wacker Burghausen,Wacker Burghausen,stripes,#FFFFFF,#000000,0.9,club,SV Wacker Burghausen,FFFFFF,_blackstripes3,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,Scarborough F.C.,Scarborough,solid,#DD0000,,0.98,club,Scarborough F.C.,DD0000,_vneckwhite,#DD0000,#DD0000,,today's kit (no season article)
+2003-04,Scunthorpe United F.C.,Scunthorpe United,stripes,#3399FF,#A70C1C,0.93,club,Scunthorpe United F.C.,A70C1C,_skybluestripes,#80BFFF,#80BFFF,,today's kit (no season article)
+2003-04,SpVgg EGC Wirges,SpVgg EGC Wirges,solid,#0000FF,,1.0,club,SpVgg EGC Wirges,0000FF,,#0000FF,#0000FF,,today's kit (no season article)
+2003-04,SpVgg Greuther Fürth,SpVgg Greuther Fürth,solid,#FBECDA,#01744D,0.99,club,SpVgg Greuther Fürth,FFEFDD,_furth2627h,#FFEFDD,#01744D,,today's kit (no season article)
+2003-04,SpVgg Unterhaching,SpVgg Unterhaching,solid,#FF0000,,0.99,club,SpVgg Unterhaching,FF0000,_uhlsportgoal25r,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,Stade Brestois 29,Stade Brestois,solid,#E50000,,0.98,club,Stade Brestois 29,EF0000,_brest2627h,#EF0000,#EF0000,,today's kit (no season article)
+2003-04,Stockport County F.C.,Stockport County,solid,#0000FF,,1.0,season,2003–04 Stockport County F.C. season,0000FF,_thinwhitesides,#0000FF,#0000FF,,
+2003-04,Sunderland A.F.C.,Sunderland,stripes,#F90000,#FAFAFA,0.89,club,Sunderland A.F.C.,FF0000,_sunderland2627h,#FF0000,#000000,,today's kit (no season article)
+2003-04,Swindon Town F.C.,Swindon Town,solid,#FF0000,#FFFFFF,1.0,season,2003–04 Swindon Town F.C. season,FF0000,_thinwhitesides,#FF0000,#FFFFFF,,
+2003-04,TSG 1899 Hoffenheim,1899 Hoffenheim,sleeves,#1313FF,#FFFFFF,0.98,club,TSG 1899 Hoffenheim,0000FF,_hoffenheim2627h,#FFFFFF,#0000FF,,today's kit (no season article)
+2003-04,TSV Aindling,TSV Aindling,solid,#FF0000,,1.0,club,TSV Aindling,FF0000,,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,The New Saints F.C.,Total Network Solutions,hoops,#FEFEFE,#0EB357,0.75,club,The New Saints F.C.,FFFFFF,_tns2324h,#FFFFFF,#FFFFFF,yes,today's kit (no season article); pattern fit 0.75
+2003-04,Thonon Evian Grand Genève FC,Croix de Savoie,solid,#000055,,0.52,club,Thonon Evian Grand Genève FC,000055,_nikeprecision7mn,#000055,#000055,yes,today's kit (no season article); pattern fit 0.52
+2003-04,Trabzonspor,Trabzonspor,band,#5A1129,#74B7E6,0.93,club,Trabzonspor,5A1129,_trabzonspor2627h,#5A1129,#5A1129,,today's kit (no season article)
+2003-04,Tranmere Rovers F.C.,Tranmere Rovers,solid,#FFFFFF,,0.99,club,Tranmere Rovers F.C.,FFFFFF,_collarnavy,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,UB Conquense,Conquense,solid,#FFFFFF,#000000,1.0,club,UB Conquense,FFFFFF,,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,UD Almería,Almería,stripes,#FFFFFF,#FE0505,0.88,club,UD Almería,FF0000,_almeria2526h,#FF0000,#FF0000,,today's kit (no season article)
+2003-04,UD Lanzarote,Lanzarote,solid,#FF0011,#0046B8,1.0,club,UD Lanzarote,FF0011,,#FF0011,#0046B8,,today's kit (no season article)
+2003-04,UD Salamanca,Salamanca,solid,#FFFFFF,#000000,0.86,club,UD Salamanca,FFFFFF,_thinblackstripes,#FFFFFF,#000000,,today's kit (no season article)
+2003-04,UD San Sebastián de los Reyes,San Sebastián,hoops,#FFFFFF,#EF0000,0.89,club,UD San Sebastián de los Reyes,FFFFFF,_sase2526h,#FFFFFF,#FFFFFF,,today's kit (no season article)
+2003-04,UDA Gramenet,Gramenet,solid,#0000FF,#FFFFFF,0.97,club,UDA Gramenet,0000FF,_whitesleevelinesandsides,#0000FF,#FFFFFF,,today's kit (no season article)
+2003-04,US Avellino 1912,Avellino,sleeves,#038606,#3D8776,0.81,club,US Avellino 1912,3D8776,_Avellino2025H,#3D8776,#3D8776,,today's kit (no season article)
+2003-04,US Salernitana 1919,Salernitana,solid,#671912,,0.91,club,US Salernitana 1919,671912,_salernitana2526h,#671912,#671912,,today's kit (no season article)
+2003-04,US Sambenedettese,Sambenedettese,solid,#000055,,0.89,club,US Sambenedettese,000055,_sambenedettese2021h,#000055,#000055,,today's kit (no season article)
+2003-04,Valenciennes FC,Valenciennes FC,solid,#EE0434,,0.85,club,Valenciennes FC,,_ValenciennesFC2526h,,,,today's kit (no season article)
+2003-04,Vendée Fontenay Foot,Vendée Fontenay Foot,sleeves,#0000FF,#FFFFFF,1.0,club,Vendée Fontenay Foot,0000FF,,#FFFFFF,#0000FF,,today's kit (no season article)
+2003-04,Venezia FC,Venezia,hoops,#0B0B0B,#FA7B00,0.86,club,Venezia FC,000000,_venezia2627h,#000000,#000000,,today's kit (no season article)
+2003-04,VfB Lübeck,VfB Lübeck,solid,#007020,#FFFFFF,0.85,club,VfB Lübeck,007020,_lubeck2021h,#007020,#FFFFFF,,today's kit (no season article)
+2003-04,VfL Kirchheim/Teck,VfL Kirchheim/Teck,solid,#0000FF,,1.0,club,VfL Kirchheim/Teck,0000FF,,#0000FF,#0000FF,,today's kit (no season article)
+2003-04,VfL Osnabrück,VfL Osnabrück,stripes,#FFFFFF,#493AA6,0.88,club,VfL Osnabrück,493AA6,_osnabruck2526h,#493AA6,#493AA6,,today's kit (no season article)
+2003-04,VfL Wolfsburg II,VfL Wolfsburg (A),,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,Vålerenga Fotball,Vålerenga,solid,#0303E2,#FFFFFF,0.98,club,Vålerenga Fotball,0000DD,_vif26h,#0000DD,#FFFFFF,,today's kit (no season article)
+2003-04,Walsall F.C.,Walsall,solid,#FF0000,,1.0,season,2003–04 Walsall F.C. season,FF0000,_whitesides3,#FF0000,#FF0000,,
+2003-04,Watford F.C.,Watford,solid,#F5EA00,#FF0000,0.75,club,Watford F.C.,FDF200,_watford2425h,#FDF200,#FF0000,yes,today's kit (no season article); pattern fit 0.75
+2003-04,West Bromwich Albion F.C.,West Bromwich Albion,stripes,#000040,#FFFFFF,0.9,season,2003–04 West Bromwich Albion F.C. season,,_wba0304h,,,,
+2003-04,West Ham United F.C.,West Ham United,solid,#7E1823,#FFFFFF,0.98,club,West Ham United F.C.,7E1823,_whu2526h,#7E1823,#FFFFFF,,today's kit (no season article)
+2003-04,Wigan Athletic F.C.,Wigan Athletic,solid,#000DFF,,1.0,club,Wigan Athletic F.C.,0000FF,_blue_stripes,#0000FF,#0000FF,,today's kit (no season article)
+2003-04,Wimbledon F.C.,Wimbledon,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,Wycombe Wanderers F.C.,Wycombe Wanderers,halves,#05013A,#6AB0D8,0.83,club,Wycombe Wanderers F.C.,05003A,_wycombe2526h,#05003A,#05003A,,today's kit (no season article)
+2003-04,Xerez CD,Xerez,solid,#0000FF,#FFFFFF,0.98,club,Xerez CD,0000FF,_xerez2627h,#0000FF,#FFFFFF,,today's kit (no season article)
+2003-04,Yeovil Town F.C.,Yeovil Town,hoops,#FFFFFF,#009900,0.93,season,2003–04 Yeovil Town F.C. season,FFFFFF,_greenhoops,#FFFFFF,#008000,,
+2003-04,Zamora CF,Zamora,stripes,#FFFFFF,#FF0000,0.93,club,Zamora CF,FF0000,_whitestripes,#FF0000,#000000,,today's kit (no season article)
+2003-04,name:fr:Aire-sur-la-Lys,Aire-sur-la-Lys,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,name:fr:Beaujolais Mont-d'Or,Beaujolais Mont-d'Or,,,,0.0,none,,,,,,yes,no kit on Wikipedia
+2003-04,Örgryte IS,Örgryte IS,solid,#DD0000,#000055,0.99,club,Örgryte IS,DD0000,_orgryte21h,#DD0000,#000055,,today's kit (no season article)

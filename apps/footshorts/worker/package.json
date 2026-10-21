@@ -28,6 +28,7 @@
     "history:events": "tsx --env-file=.env src/historicalEvents.ts",
     "history:events-sync": "tsx --env-file=.env src/historicalEventsSync.ts",
     "history:crests-sync": "tsx --env-file=.env src/historicalCrestsSync.ts",
+    "history:club-marks-sync": "tsx --env-file=.env src/historicalClubMarksSync.ts",
     "fixtures:upcoming": "tsx --env-file=.env src/upcomingFixtures.ts",
     "fixtures:seasons": "tsx --env-file=.env src/fixtureSeasons.ts",
     "recap": "tsx --env-file=.env src/recap.ts",
