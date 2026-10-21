@@ -13,7 +13,8 @@ const MASK_PX = 256
 const MAX_SOURCE_BYTES = 5 * 1024 * 1024
 const USER_AGENT = 'VismayClubMarks/1.0 (+https://vismay.xyz)'
 
-export type Mask = { data: Uint8Array; width: number; height: number }
+/** The silhouette, plus how strongly the crest carries a concentric band (read from its colours, then dropped). */
+export type Mask = { data: Uint8Array; width: number; height: number; ring?: number }
 export type FamilyFeatures = {
   aspect: number
   fill: number
@@ -25,6 +26,10 @@ export type FamilyFeatures = {
   upper: number
   bottom: number
   lowerTaper: number
+  /** Width of the last rows over the widest: ~0 for a pointed base, ~0.3+ for a round one. */
+  tip: number
+  /** Share of radii that cross one circular colour edge at the same distance (a lettering band). */
+  ring: number
 }
 
 const startsWith = (b: Uint8Array, sig: number[], at = 0) => sig.every((x, i) => b[at + i] === x)
@@ -52,8 +57,10 @@ async function crestBytes(crest: NonNullable<ClubMarkInput['crest']>): Promise<U
   return new Uint8Array(await res.arrayBuffer())
 }
 
-/** The crest's silhouette: alpha ≥ 50%, cropped to its bounds, longest side 256 px. */
-export async function crestMask(crest: NonNullable<ClubMarkInput['crest']>): Promise<Mask> {
+/** The crest as RGBA (≤ 1024 px, a baked-in background made transparent) with the bounds of its opaque part. */
+export type CrestImage = { rgba: Buffer; width: number; height: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
+
+export async function crestImage(crest: NonNullable<ClubMarkInput['crest']>): Promise<CrestImage> {
   const bytes = await crestBytes(crest)
   if (bytes.byteLength > MAX_SOURCE_BYTES) throw new ClubMarkError('E_FORMAT', 'over 5 MB')
   let img: sharp.Sharp
@@ -72,20 +79,56 @@ export async function crestMask(crest: NonNullable<ClubMarkInput['crest']>): Pro
   const alpha = new Uint8Array(w * h)
   for (let i = 0; i < w * h; i++) alpha[i] = data[i * 4 + 3]!
   removeBackground(data, alpha, w, h)
+  for (let i = 0; i < w * h; i++) data[i * 4 + 3] = alpha[i]!
   let x0 = w, y0 = h, x1 = -1, y1 = -1
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (alpha[y * w + x]! >= 128) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y) }
   }
   if (x1 < 0) throw new ClubMarkError('E_FORMAT', 'nothing opaque in the crest')
+  return { rgba: data, width: w, height: h, bbox: { x0, y0, x1, y1 } }
+}
+
+/** The crest's silhouette: alpha ≥ 50%, cropped to its bounds, longest side 256 px. */
+export async function crestMask(crest: NonNullable<ClubMarkInput['crest']>): Promise<Mask> {
+  const { rgba: data, width: w, height: h, bbox: { x0, y0, x1, y1 } } = await crestImage(crest)
   const bw = x1 - x0 + 1, bh = y1 - y0 + 1
   const k = MASK_PX / Math.max(bw, bh)
   const mw = Math.max(1, Math.round(bw * k)), mh = Math.max(1, Math.round(bh * k))
   const mask = new Uint8Array(mw * mh)
   for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
     const sx = Math.min(x1, x0 + Math.floor((x + 0.5) / k)), sy = Math.min(y1, y0 + Math.floor((y + 0.5) / k))
-    mask[y * mw + x] = alpha[sy * w + sx]! >= 128 ? 1 : 0
+    mask[y * mw + x] = data[(sy * w + sx) * 4 + 3]! >= 128 ? 1 : 0
   }
-  return { data: mask, width: mw, height: mh }
+  return { data: mask, width: mw, height: mh, ring: ringBand(data, w, h, { x0, y0, x1, y1 }) }
+}
+
+/**
+ * A lettering band (Charlton, Leicester, Middlesbrough): along most radii the strongest
+ * colour edge between 55% and 90% of the radius sits at the same distance — the band's
+ * inner circle. Returns the share of radii that agree (0 when the band is not round).
+ */
+function ringBand(rgba: Buffer, w: number, h: number, b: { x0: number; y0: number; x1: number; y1: number }): number {
+  const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, R = Math.min(b.x1 - b.x0, b.y1 - b.y0) / 2
+  const lum = (x: number, y: number) => {
+    const i = (Math.round(y) * w + Math.round(x)) * 4
+    if (x < 0 || y < 0 || x >= w || y >= h) return 1
+    const a = rgba[i + 3]! / 255
+    return ((0.2126 * rgba[i]! + 0.7152 * rgba[i + 1]! + 0.0722 * rgba[i + 2]!) / 255) * a + (1 - a)
+  }
+  const peaks: number[] = []
+  for (let k = 0; k < 120; k++) {
+    const t = (k / 120) * 2 * Math.PI, dx = Math.cos(t), dy = Math.sin(t)
+    let best = 0, at = -1
+    for (let f = 0.55; f <= 0.9; f += 0.005) {
+      const d = Math.abs(lum(cx + dx * (f + 0.01) * R, cy + dy * (f + 0.01) * R) - lum(cx + dx * (f - 0.01) * R, cy + dy * (f - 0.01) * R))
+      if (d > best) { best = d; at = f }
+    }
+    if (best > 0.15) peaks.push(at)
+  }
+  if (peaks.length < 60) return 0
+  const sorted = [...peaks].sort((x, y) => x - y)
+  const median = sorted[Math.floor(sorted.length / 2)]!
+  return Math.round((peaks.filter(p => Math.abs(p - median) <= 0.03).length / 120) * 1000) / 1000
 }
 
 /** A raster on a solid background: flood-fill from the four corners (RGB distance ≤ 24) to transparent. */
@@ -112,7 +155,7 @@ function removeBackground(rgba: Buffer, alpha: Uint8Array, w: number, h: number)
 }
 
 /** Shape measurements on the silhouette, its holes filled row by row (a crest's outline, not its detail). */
-export function familyFeatures({ data, width: w, height: h }: Mask): FamilyFeatures {
+export function familyFeatures({ data, width: w, height: h, ring = 0 }: Mask): FamilyFeatures {
   const extent: [number, number][] = []
   let area = 0
   for (let y = 0; y < h; y++) {
@@ -160,6 +203,8 @@ export function familyFeatures({ data, width: w, height: h }: Mask): FamilyFeatu
     upper: r(Math.max(...Array.from({ length: 31 }, (_, i) => widthAt(0.1 + i * 0.01)))),
     bottom: r(mean(0.9, 0.97)),
     lowerTaper: r(mean(0.88, 0.95) / Math.max(0.01, mean(0.55, 0.65))),
+    tip: r(mean(0.93, 0.98) / Math.max(0.01, Math.max(...extent.map(([lo, hi]) => (lo < 0 ? 0 : (hi - lo + 1) / w))))),
+    ring,
   }
 }
 
@@ -183,10 +228,14 @@ export function scoreFamilies(f: FamilyFeatures): Record<CrestFamily, number> {
   const rect = clamp01((f.fill - 0.86) / 0.07) * clamp01((f.bottom - 0.7) / 0.2)
   const loose = clamp01((0.6 - f.fill) / 0.14)
   return {
+    // A ringed roundel is still a roundel: the ring band is the mark's own ring now.
     roundel: round * near(aspect, 1, 0.2),
     oval: round * clamp01((aspect - 1.1) / 0.1),
+    // Pointed and round-based shields are both heaters.
     heater: shield * (1 - round) * (1 - rect),
     plate: Math.max(rect, loose * (1 - round)),
+    // Hexagons are set by hand (Wolves): the silhouette features do not separate them from roundels reliably.
+    hexagon: 0,
   }
 }
 

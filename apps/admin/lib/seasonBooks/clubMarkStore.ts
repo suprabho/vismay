@@ -2,16 +2,17 @@ import 'server-only'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { HISTORY_CLUB_MARKS_TABLE, HISTORY_CRESTS_BUCKET } from '@footshorts/shared/historicalCrests'
 import {
-  CREST_FAMILIES, ClubMarkError, KIT_PATTERNS, isValidCode, toClubMark, type ClubMarkInput, type ClubMarkRow, type CrestFamily, type KitPattern,
+  CREST_FAMILIES, ClubMarkError, KIT_PATTERNS, chargesFromText, chargesToText, isValidCode, rimFromText, rimToText, toClubMark, type ClubMarkInput, type CrestFamily, type KitPattern,
 } from '@vismay/club-marks'
-import { CREST_LEAGUES, crestEra, isHex, leagueCode, markFingerprint, markKit, markRow, type CrestView } from './crests'
+import { crestEra, isHex, leagueCode, markCharges, markFamily, markRim, markFingerprint, markKit, type CrestView } from './crests'
 import { CrestStoreError, fail, getCrestView, loadMarks } from './crestStore'
 
 /**
- * Generates and reviews club marks (admin_club_marks, footshorts migration
- * 20261021000000). The crest is read once, to classify the family, and is not
- * kept; the kit comes from data/kits.csv (pushed by history:club-marks-sync) or
- * the editor's overrides. Node only (sharp); every caller is behind `isAuthed()`.
+ * Generates and reviews club marks (admin_club_marks, footshorts migrations
+ * 20261021000000 + 20261023000000). The crest is read once, to classify the
+ * family, and is not kept; the kit comes from data/kits.csv (pushed by
+ * history:club-marks-sync) or the editor's overrides; the charges (plain shapes,
+ * "shape:#hex[@scale,rotate,x,y];…") are set by hand. Node only (sharp); every caller is behind `isAuthed()`.
  */
 
 export type MarkOverrides = {
@@ -21,6 +22,10 @@ export type MarkOverrides = {
   c1?: string | null
   /** '' = explicitly no second colour; null = back to the kit's. */
   c2?: string | null
+  /** "shape:#a/#b[@scale,rotate,x,y[,sx,sy]][~layer];…". '' = explicitly none; null = back to the editorial default. */
+  charge?: string | null
+  /** "#HEX@width;…" edge first, "none", or '' for the default ring; null = back to the editorial default. */
+  rim?: string | null
 }
 
 async function update(season: string, wiki: string, patch: Record<string, unknown>) {
@@ -43,14 +48,6 @@ export async function generateMark(season: string, wiki: string, by: string | nu
   const m = crest.mark
   const others = [...(await loadMarks(season))].filter(([w]) => w !== wiki)
   const takenCodes = others.filter(([, o]) => o.status === 'ok' && o.code).map(([, o]) => o.code!)
-  // Fixture collisions: a top-flight club meets every club in its league.
-  let opponents: ClubMarkRow[] | undefined
-  if ((CREST_LEAGUES as readonly string[]).includes(crest.top_flight)) {
-    const { data, error } = await createServiceClient().from('admin_season_crests').select('wiki').eq('season', season).eq('top_flight', crest.top_flight)
-    if (error) fail(error.message)
-    const mates = new Set((data ?? []).map(d => d.wiki as string))
-    opponents = others.filter(([w]) => mates.has(w)).map(([, o]) => markRow(o)).filter((r): r is ClubMarkRow => !!r)
-  }
   const base = { generated_from: markFingerprint(crest), generated_by: by, generated_at: new Date().toISOString() }
   try {
     const kit = markKit(m)
@@ -59,23 +56,27 @@ export async function generateMark(season: string, wiki: string, by: string | nu
       name: crest.name,
       league: leagueCode(crest),
       era: crestEra(crest),
-      crest: m?.override_family ? undefined : await crestSource(crest),
+      crest: markFamily(m) ? undefined : await crestSource(crest),
       kit: kit ?? undefined,
-      overrides: { family: m?.override_family ?? undefined, code: m?.override_code ?? undefined },
-    }, { opponents, takenCodes })
+      overrides: { family: markFamily(m) ?? undefined, code: m?.override_code ?? undefined },
+      charges: markCharges(m),
+      rim: markRim(m) ?? null,
+    }, { takenCodes })
     const reasons = [...result.reviewReasons]
-    if (m?.kit_needs_review && !m.override_pattern && !m.override_c1) reasons.push(`Kit: ${m.kit_note || 'flagged in kits.csv'}`)
+    if (m?.kit_needs_review && !m.override_pattern && !m.override_c1 && !m.seed_c1) reasons.push(`Kit: ${m.kit_note || 'flagged in kits.csv'}`)
     const { row } = result
     await update(season, wiki, {
       ...base, status: 'ok', error_code: null, error_message: null,
-      code: row.code, crest: row.crest, pattern: row.pattern, c1: row.c1, c2: row.c2, league: row.league, era_from: row.from, era_to: row.to,
-      family_confidence: result.familyConfidence, checks: result.checks, print: result.printSwatches,
+      code: row.code, crest: row.crest, pattern: row.pattern, c1: row.c1, c2: row.c2, ring: row.ring, rim: rimToText(row.rim),
+      charge: row.charges.length ? chargesToText(row.charges) : null, league: row.league, era_from: row.from, era_to: row.to,
+      family_confidence: result.familyConfidence, checks: result.checks, print: { ...result.printSwatches, cmyk: result.print },
       needs_review: reasons.length > 0, review_reasons: reasons, alt: result.alt, spec_version: result.specVersion,
     })
   } catch (e) {
     if (!(e instanceof ClubMarkError)) throw e
     await update(season, wiki, {
       ...base, status: 'error', error_code: e.code, error_message: e.message, code: null, crest: null, pattern: null, c1: null, c2: null,
+      ring: null, rim: null, charge: null,
       checks: null, print: null, needs_review: true, review_reasons: [e.message],
     })
   }
@@ -100,8 +101,17 @@ function validOverrides(o: MarkOverrides): Record<string, unknown> {
   for (const k of ['c1', 'c2'] as const) {
     const v = o[k]
     if (v === undefined) continue
-    if (v !== null && !(k === 'c2' && v === '') && !isHex(v)) throw new CrestStoreError(`${k} must be a hex colour like #A50044`, 400)
+    if (v !== null && !(k !== 'c1' && v === '') && !isHex(v)) throw new CrestStoreError(`${k} must be a hex colour like #A50044`, 400)
     out[`override_${k}`] = v === null ? null : v === '' ? '' : (v.startsWith('#') ? v : `#${v}`).toUpperCase()
+  }
+  if (o.charge !== undefined) {
+    const charges = o.charge ? chargesFromText(o.charge) : []
+    if (o.charge && !charges.length) throw new CrestStoreError('Charges are plain shapes like triangle:#A50044@1,0,0,0, separated by ;', 400)
+    out.override_charge = charges.length ? chargesToText(charges) : o.charge
+  }
+  if (o.rim !== undefined) {
+    if (o.rim && o.rim !== 'none' && !rimFromText(o.rim)) throw new CrestStoreError('A rim is up to 3 bands like #F2B300@9;#FFFFFF@3, or none', 400)
+    out.override_rim = o.rim === null ? null : o.rim === '' || o.rim === 'none' ? o.rim : rimToText(rimFromText(o.rim))
   }
   return out
 }
@@ -117,7 +127,9 @@ export async function confirmMark(season: string, wiki: string, by: string | nul
   const crest = await getCrestView(season, wiki)
   const m = crest.mark
   if (m?.status !== 'ok' || !m.crest || !m.code) throw new CrestStoreError('Generate the mark before confirming it.', 409)
-  await update(season, wiki, { override_family: m.crest, override_code: m.code, reviewed_by: by, reviewed_at: new Date().toISOString() })
+  await update(season, wiki, {
+    override_family: m.crest, override_code: m.code, override_charge: m.charge ?? '', override_rim: m.rim ?? '', reviewed_by: by, reviewed_at: new Date().toISOString(),
+  })
   const next = await generateMark(season, wiki, by)
   // What is left (a print ΔE, a kit note) was seen and accepted.
   await update(season, wiki, { needs_review: false })

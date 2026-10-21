@@ -19,6 +19,10 @@ const STANDARD: Record<string, string> = {
   '1. fc nurnberg': 'FCN', 'eintracht frankfurt': 'SGE', 'sc freiburg': 'SCF', 'vfl bochum': 'BOC', 'hannover 96': 'H96',
   'paris saint-germain': 'PSG', 'olympique lyonnais': 'LYO', 'olympique de marseille': 'MAR', 'as monaco': 'ASM',
   'girondins de bordeaux': 'BOR', 'losc lille metropole': 'LIL', 'rc lens': 'RCL', 'stade rennais': 'REN', 'fc nantes': 'NAN',
+  // Premier League codes win; the clubs a rule would give the same code step aside.
+  'blackburn rovers': 'BLA', 'bolton wanderers': 'BOL', 'charlton athletic': 'CHA', 'chelsea': 'CHE', 'portsmouth': 'POR',
+  'blackpool': 'BPL', 'bologna': 'BGN', 'chateauroux': 'CHX', 'cheltenham town': 'CHL', 'porto': 'FCP', 'fc porto': 'FCP',
+  'total network solutions': 'TNS',
 }
 
 const STRIP = /^(1\.|fc|cf|afc|sc|ac|as|ss|us|sv|vfl|vfb|tsg|rc|rcd|cd|ud|sd|ca|ad|sl|sk|fk|nk|hnk|ks|ogc|aj|ea|losc|sco|ssc|acf|bsv|spvgg|fsv|tsv|sv)$/i

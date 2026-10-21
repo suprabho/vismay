@@ -7,16 +7,20 @@
 
 Which kit: the home kit (suffix 1) in the infobox's {{Football kit}} parameters — body1 is the shirt colour and
 pattern_b1 names a 38×59 overlay image ("Kit body_fcbarcelona0304h.png"). The overlay is composited on body1 and
-the shirt is matched against the spec's patterns (solid, stripes, hoops, halves, sash, band, quarters); c1 and c2
-are the two main colours. Kit colours never come from the crest.
+the shirt is matched against the spec's six patterns (solid, stripes, hoops, halves, sleeves, band); c1 and c2 are
+the two main colours. A sash reads as a band and quarters as halves. Kit colours never come from the crest.
 
-c1/c2 roles: stripes and hoops — c1 is the more common colour; halves — c1 is the left half; band and sash — c1 is
-the band; quarters — c1 is the top-right quarter (the conic gradient's first quarter).
+A plain shirt still gets a second colour: sleeves in another colour make the pattern `sleeves` (c2 = the sleeves,
+Arsenal); otherwise c2 is the shorts colour (it can become the mark's ring, when it is dark enough).
+
+c1/c2 roles: c1 is the shirt, c2 the second colour. Stripes and hoops — c1 is the more common colour; halves — c1 is
+the left half; band (and sash) — c2 is the band; quarters, read as halves — c1 is the top-left quarter.
 
 needs_review flags: pattern fit under 0.8, no kit at all, an unreadable pattern image. Only today's kit found (no
 season article) is noted in review_note but not flagged. Wikipedia kit
 colours are approximate (often pure #FF0000 / #0000FF), so the admin review queue is where they get corrected.
-Hand fixes: data/kits_overrides.csv (season, wiki, pattern, c1, c2, note); a row always wins on rerun.
+Hand fixes: data/kits_overrides.csv (season, wiki, pattern, c1, c2, note); a row always wins on rerun, blanks
+included (a blank c2 means none).
 """
 import json, math, os, re, struct, sys, time, urllib.error, urllib.parse, zlib
 
@@ -30,8 +34,10 @@ PATTERNS = os.path.join(RAW, 'patterns')
 OUT = os.path.join(DATA, 'kits.csv')
 OVERRIDES = os.path.join(DATA, 'kits_overrides.csv')
 HEADER = ['season', 'wiki', 'name', 'pattern', 'c1', 'c2', 'confidence', 'source', 'page', 'body1', 'pattern_file',
-          'needs_review', 'review_note']
-PATTERN_NAMES = ['solid', 'stripes', 'hoops', 'halves', 'sash', 'band', 'quarters']
+          'sleeves', 'shorts', 'needs_review', 'review_note']
+PATTERN_NAMES = ['solid', 'stripes', 'hoops', 'halves', 'sleeves', 'band']
+# Shirt templates the classifier still fits, folded into the six: a diagonal sash is a band, quarters are halves.
+FOLD = {'sash': 'band', 'quarters': 'halves', 'chestband': 'band'}
 
 def clubs(start):
     """(wiki, name) of every club in the season's crests (top flights + cup opponents)."""
@@ -75,14 +81,14 @@ def article_titles(wiki):
     return (m.group(1), m.group(2)) if m else ('en', wiki)
 
 def home_kit(wikitext):
-    """body1 and pattern_b1 from the first infobox kit, or None."""
+    """body1, pattern_b1, leftarm1 and shorts1 from the first infobox kit, or None."""
     if not wikitext: return None
     params = {}
-    for m in re.finditer(r'\|\s*(body1|pattern_b1)\s*=\s*([^|\n}]*)', wikitext):
+    for m in re.finditer(r'\|\s*(body1|pattern_b1|leftarm1|shorts1)\s*=\s*([^|\n}]*)', wikitext):
         params.setdefault(m.group(1), re.sub(r'<!--.*?-->', '', m.group(2)).strip())
-    hexm = re.search(r'[0-9A-Fa-f]{6}', params.get('body1', ''))
-    if not hexm and not params.get('pattern_b1'): return None
-    return {'body1': hexm.group(0).upper() if hexm else '', 'pattern': params.get('pattern_b1', '').strip()}
+    colour = lambda k: (m.group(0).upper() if (m := re.search(r'[0-9A-Fa-f]{6}', params.get(k, ''))) else '')
+    if not colour('body1') and not params.get('pattern_b1'): return None
+    return {'body1': colour('body1'), 'pattern': params.get('pattern_b1', '').strip(), 'sleeves': colour('leftarm1'), 'shorts': colour('shorts1')}
 
 def pattern_path(pattern):
     return os.path.join(PATTERNS, re.sub(r'[^\w.\-]+', '_', pattern) + '.png')
@@ -239,11 +245,15 @@ def classify(w, h, px):
     ca, cb = hexof(mean(a)), hexof(mean(b))
     # Role of c1 per pattern: the template's "true" region is the band / right half / top-right quarter.
     true_c, false_c = (cb, ca) if b_is_true else (ca, cb)
-    if name in ('band', 'sash'): c1, c2 = true_c, false_c
-    elif name == 'halves': c1, c2 = false_c, true_c
-    elif name == 'quarters': c1, c2 = (true_c, false_c)
+    if name in ('band', 'sash', 'halves', 'quarters'): c1, c2 = false_c, true_c
     else: c1, c2 = ca, cb
-    return name, c1, c2, round(score, 2)
+    return FOLD.get(name, name), c1, c2, round(score, 2)
+
+def distinct(a, b):
+    """Two kit colours (hex) far enough apart to read as two (sRGB distance)."""
+    if not a or not b: return False
+    ra, rb = (tuple(int(h.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4)) for h in (a, b))
+    return math.dist(ra, rb) > 80
 
 def build(start):
     overrides = {(r['season'], r['wiki']): r for r in read_csv(OVERRIDES)} if os.path.exists(OVERRIDES) else {}
@@ -251,30 +261,36 @@ def build(start):
     for wiki, name in clubs(start):
         season = season_label(start)
         notes, source, page, body1, pfile = [], 'none', '', '', ''
-        pattern = c1 = c2 = ''; conf = 0.0
+        pattern = c1 = c2 = sleeves = shorts = ''; conf = 0.0
         kits = kits_for(wiki, start)
         if kits:
             kit, source, page = kits[0]
             body1, pfile = kit['body1'], kit['pattern']
+            sleeves, shorts = (f'#{kit[k]}' if kit.get(k) else '' for k in ('sleeves', 'shorts'))
             if pfile and not os.path.exists(pattern_path(pfile)): notes.append('pattern image not fetched (run fetch)')
             try: pattern, c1, c2, conf = classify(*shirt(body1, pfile if pfile and os.path.exists(pattern_path(pfile)) else ''))
             except ValueError as e: notes.append(f'pattern image unreadable: {e}')
+            if pattern == 'solid':
+                if distinct(sleeves, c1): pattern, c2 = 'sleeves', sleeves
+                elif distinct(shorts, c1): c2 = shorts
             if source == 'club': notes.append("today's kit (no season article)")
             if conf < 0.8: notes.append(f'pattern fit {conf}')
         else:
             notes.append('no kit on Wikipedia')
         if (o := overrides.get((season, wiki))):
-            pattern, c1, c2, conf, source = o['pattern'] or pattern, o['c1'] or c1, o['c2'], 1.0, 'override'
+            pattern, c1, c2, conf, source = FOLD.get(o['pattern'], o['pattern']) or pattern, o['c1'] or c1, o['c2'], 1.0, 'override'
             notes = [o['note']] if o.get('note') else []
         if pattern and pattern not in PATTERN_NAMES: notes.append(f'unknown pattern {pattern}')
         # Today's kit is a note, not a flag: traditional home kits rarely change pattern; the review queue shows it.
         flagged = source != 'override' and any(not n.startswith("today's kit") for n in notes)
-        rows.append([season, wiki, name, pattern, c1, c2, conf, source, page, body1, pfile, 'yes' if flagged else '', '; '.join(notes)])
+        rows.append([season, wiki, name, pattern, c1, c2, conf, source, page, body1, pfile, sleeves, shorts,
+                     'yes' if flagged else '', '; '.join(notes)])
     keep = [r for r in read_csv(OUT) if r['season'] != season_label(start)] if os.path.exists(OUT) else []
     write_csv(OUT, HEADER, [[r[h] for h in HEADER] for r in keep] + rows)
     by = lambda k: sum(1 for r in rows if r[7] == k)
     print(f'{len(rows)} clubs → data/kits.csv: season kit {by("season")}, today\'s kit {by("club")}, override {by("override")}, '
-          f'none {by("none")}; flagged {sum(1 for r in rows if r[11])}')
+          f'none {by("none")}; flagged {sum(1 for r in rows if r[13])}; sleeves {sum(1 for r in rows if r[3] == "sleeves")}; '
+          f'solid {sum(1 for r in rows if r[3] == "solid")}')
 
 if __name__ == '__main__':
     if len(sys.argv) < 4 or sys.argv[1] not in ('fetch', 'build') or sys.argv[2] != '--season':

@@ -1,7 +1,8 @@
 import { CREST_UPLOAD_TYPES, type HistoryCrest } from '@footshorts/shared/historicalCrests'
+import { chargesFromText, rimFromText } from '@vismay/club-marks/charges'
 import {
-  CLUB_MARK_SPEC_VERSION, CREST_FAMILIES, KIT_PATTERNS,
-  type ClubMarkCheck, type ClubMarkInput, type ClubMarkRow, type CrestFamily, type KitPattern, type PrintSwatch,
+  CLUB_MARK_SPEC_VERSION, CREST_FAMILIES, INK, KIT_PATTERNS,
+  type Charge, type ClubMarkCheck, type ClubMarkInput, type ClubMarkResult, type ClubMarkRow, type CrestFamily, type KitPattern, type PrintSwatch, type RimBand,
 } from '@vismay/club-marks/types'
 
 /**
@@ -25,6 +26,18 @@ export type ClubMarkView = {
   override_pattern: KitPattern | null
   override_c1: string | null
   override_c2: string | null
+  /** Charges as text ("shape:#a/#b[@scale,rotate,x,y[,sx,sy]][~layer];…"); '' = explicitly none. */
+  override_charge: string | null
+  /** The rim as text ("#HEX@width;…", "none"); '' = the default ring; null = back to the editorial default. */
+  override_rim: string | null
+  /** Editorial defaults from data/mark_overrides.csv; the review overrides win. */
+  seed_family: CrestFamily | null
+  seed_charge: string | null
+  /** The editorial field (data/mark_overrides.csv), when the design differs from the kit. */
+  seed_pattern: KitPattern | null
+  seed_c1: string | null
+  seed_c2: string | null
+  seed_rim: string | null
   reviewed_by: string | null
   reviewed_at: string | null
   status: 'ok' | 'error' | null
@@ -35,12 +48,18 @@ export type ClubMarkView = {
   pattern: KitPattern | null
   c1: string | null
   c2: string | null
+  ring: string | null
+  /** The generated rim as text ('' = the default ring). */
+  rim: string | null
+  /** The generated charges as text ("shape:#hex[@scale,rotate,x,y];…"). */
+  charge: string | null
   league: string | null
   era_from: number | null
   era_to: number | null
   family_confidence: number | null
   checks: ClubMarkCheck[] | null
-  print: { c1: PrintSwatch; c2: PrintSwatch | null } | null
+  /** The kit colours' print-palette snaps, plus the mark's CMYK. */
+  print: { c1: PrintSwatch; c2: PrintSwatch | null; cmyk?: ClubMarkResult['print'] } | null
   needs_review: boolean
   review_reasons: string[]
   alt: string | null
@@ -117,20 +136,30 @@ export function crestEra(c: Pick<HistoryCrest, 'era_label' | 'season'>): { from:
   return { from: Number(m[1]), to: m[2] === 'present' ? null : Number(m[2]) }
 }
 
-/** The kit toClubMark gets: review overrides win over data/kits.csv. Null when there is no usable kit. */
+/** The kit toClubMark gets: review overrides win over data/kits.csv ('' = explicitly none). Null when there is no usable kit. */
 export function markKit(m: ClubMarkView | null): NonNullable<ClubMarkInput['kit']> | null {
   if (!m) return null
-  const pattern = (m.override_pattern ?? m.kit_pattern) as KitPattern
-  const c1 = m.override_c1 ?? m.kit_c1
-  const c2 = m.override_c2 !== null ? m.override_c2 : m.kit_c2
+  // Review overrides win, then the editorial design (data/mark_overrides.csv), then data/kits.csv.
+  const seeded = !!(m.seed_pattern || m.seed_c1)
+  const pattern = (m.override_pattern ?? m.seed_pattern ?? m.kit_pattern) as KitPattern
+  const c1 = m.override_c1 ?? m.seed_c1 ?? m.kit_c1
+  const c2 = m.override_c2 !== null ? m.override_c2 : seeded ? m.seed_c2 : m.kit_c2
   if (!KIT_PATTERNS.includes(pattern) || !isHex(c1)) return null
   return { pattern, c1: asHex(c1), c2: isHex(c2) ? asHex(c2) : null }
 }
 
+/** The family set by hand: the review override, else the editorial default. Null = classify the crest. */
+export const markFamily = (m: ClubMarkView | null): CrestFamily | null => m?.override_family ?? m?.seed_family ?? null
+/** The rim: the review override, else the editorial default; undefined = the default ring + gap, [] = none. */
+export const markRim = (m: ClubMarkView | null): RimBand[] | undefined => rimFromText(m?.override_rim != null ? m.override_rim : m?.seed_rim ?? '')
+/** The charges: the review override ('' = none), else the editorial default. */
+export const markCharges = (m: ClubMarkView | null): Charge[] =>
+  chargesFromText(m?.override_charge != null ? m.override_charge : m?.seed_charge ?? '')
+
 /** Everything a mark is generated from; a different fingerprint means the stored mark is stale. */
 export function markFingerprint(c: HistoryCrest & { mark: ClubMarkView | null }): string {
   const m = c.mark
-  return JSON.stringify([CLUB_MARK_SPEC_VERSION, crestSourceRef(c), markKit(m), m?.override_family ?? null, m?.override_code ?? null, leagueCode(c), crestEra(c)])
+  return JSON.stringify([CLUB_MARK_SPEC_VERSION, crestSourceRef(c), markKit(m), markFamily(m), m?.override_code ?? null, markRim(m) ?? null, markCharges(m), leagueCode(c), crestEra(c)])
 }
 
 /** The stored mark as a row the renderer takes, or null when it is missing or malformed. */
@@ -140,6 +169,7 @@ export function markRow(m: ClubMarkView | null): ClubMarkRow | null {
   return {
     code: m.code, crest: m.crest, pattern: m.pattern, c1: asHex(m.c1), c2: isHex(m.c2) ? asHex(m.c2) : null,
     league: m.league ?? '', from: m.era_from ?? 0, to: m.era_to,
+    ring: isHex(m.ring) ? asHex(m.ring) : INK, ...(rimFromText(m.rim) ? { rim: rimFromText(m.rim) } : {}), charges: chargesFromText(m.charge),
   }
 }
 

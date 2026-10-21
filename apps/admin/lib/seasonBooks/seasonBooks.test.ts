@@ -6,8 +6,8 @@ import {
   parseSeasonSlug, planSchema, seasonMonths, seasonSlug, sortSpreads, starterPlan,
 } from './plan'
 import {
-  crestCounts, crestEra, crestSourceRef, crestStatus, crestUploadPath, duplicateCodes, groupCrests, leagueCode, markFingerprint,
-  markKit, markState, matchesCrestFilter, sniffCrestType, unsafeSvg, type ClubMarkView, type CrestView,
+  crestCounts, crestEra, crestSourceRef, crestStatus, crestUploadPath, duplicateCodes, groupCrests, leagueCode, markCharges, markFamily,
+  markFingerprint, markKit, markRim, markRow, markState, matchesCrestFilter, sniffCrestType, unsafeSvg, type ClubMarkView, type CrestView,
 } from './crests'
 
 // A four-team league: Blues lead at September's end, Reds overtake in October
@@ -112,13 +112,30 @@ assert.equal(crestUploadPath('2003-04', 'name:fr:Aire-sur-la-Lys', 'aire', 'svg'
 // Club marks: kit overrides win; a mark is stale when anything it was built from changes; duplicate codes go to review.
 const mark = (over: Partial<ClubMarkView> = {}): ClubMarkView => ({
   kit_pattern: 'stripes', kit_c1: '#FF0000', kit_c2: '#0000FF', kit_confidence: 0.9, kit_source: 'season', kit_page: '', kit_needs_review: false,
-  kit_note: '', override_family: null, override_code: null, override_pattern: null, override_c1: null, override_c2: null, reviewed_by: null,
+  kit_note: '', override_family: null, override_code: null, override_pattern: null, override_c1: null, override_c2: null,
+  override_charge: null, override_rim: null, seed_family: null, seed_charge: null, seed_rim: null, seed_pattern: null, seed_c1: null, seed_c2: null, reviewed_by: null,
   reviewed_at: null, status: null, error_code: null, error_message: null, code: null, crest: null, pattern: null, c1: null, c2: null,
+  ring: null, rim: null, charge: null,
   league: null, era_from: null, era_to: null, family_confidence: null, checks: null, print: null, needs_review: false, review_reasons: [],
   alt: null, spec_version: null, generated_from: null, generated_by: null, generated_at: null, ...over,
 })
 assert.deepEqual(markKit(mark()), { pattern: 'stripes', c1: '#FF0000', c2: '#0000FF' })
 assert.deepEqual(markKit(mark({ override_c1: '#a50044', override_c2: '' })), { pattern: 'stripes', c1: '#A50044', c2: null })
+assert.equal(markFamily(mark({ seed_family: 'roundel' })), 'roundel')
+// The editorial design (mark_overrides.csv) sits between the review overrides and the kit.
+assert.deepEqual(markKit(mark({ seed_pattern: 'solid', seed_c1: '#ffffff', seed_c2: null })), { pattern: 'solid', c1: '#FFFFFF', c2: null })
+assert.deepEqual(markKit(mark({ seed_pattern: 'solid', seed_c1: '#FFFFFF', override_c1: '#000000' })), { pattern: 'solid', c1: '#000000', c2: null })
+assert.equal(markRim(mark()), undefined)
+assert.deepEqual(markRim(mark({ seed_rim: '#F2B300@9' })), [{ colour: '#F2B300', width: 9 }])
+assert.deepEqual(markRim(mark({ seed_rim: '#F2B300@9', override_rim: 'none' })), [])
+assert.equal(markRim(mark({ seed_rim: '#F2B300@9', override_rim: '' })), undefined)
+assert.equal(markFamily(mark({ seed_family: 'roundel', override_family: 'heater' })), 'heater')
+// Charges are "shape:#hex[@scale,rotate,x,y];…": the override wins ('' = none); an emblem name is not a charge.
+assert.deepEqual(markCharges(mark({ seed_charge: 'triangle:#a50044' })), [{ shape: 'triangle', colour: '#A50044' }])
+assert.deepEqual(markCharges(mark({ seed_charge: 'triangle:#A50044', override_charge: '' })), [])
+assert.deepEqual(markCharges(mark({ seed_charge: 'triangle:#A50044', override_charge: 'bar:#000000;star:#FFFFFF@0.5,30,0,-10' })),
+  [{ shape: 'bar', colour: '#000000' }, { shape: 'star', colour: '#FFFFFF', scale: 0.5, rotate: 30, y: -10 }])
+assert.deepEqual(markCharges(mark({ seed_charge: 'fox' })), [])
 assert.equal(markKit(mark({ kit_c1: '', kit_pattern: '' })), null)
 assert.equal(crestSourceRef(crests[4]!), 'upload:2003-04/aire.png@')
 assert.equal(leagueCode(crests[0]!), 'ENG')
@@ -135,6 +152,10 @@ const made = (over: Partial<ClubMarkView> = {}, c: Partial<CrestView> = {}) => {
   return { ...base, mark: { ...base.mark!, generated_from: markFingerprint(base) } }
 }
 assert.equal(markState(made()), 'ok')
+assert.deepEqual(markRow(made({ ring: '#7a1a1a', charge: 'diamond:#7A1A1A@1.5,45,0,0' }).mark), {
+  code: 'ABC', crest: 'heater', pattern: 'stripes', c1: '#FF0000', c2: '#0000FF', ring: '#7A1A1A',
+  charges: [{ shape: 'diamond', colour: '#7A1A1A', scale: 1.5, rotate: 45 }], league: '', from: 0, to: null,
+})
 assert.equal(markState(made({ needs_review: true })), 'review')
 assert.equal(markState({ ...made(), file_url: 'https://x/other.svg' }), 'stale')
 assert.equal(markState({ ...made(), mark: { ...made().mark, override_c1: '#00FF00' } }), 'stale')

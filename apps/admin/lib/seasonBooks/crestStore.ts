@@ -52,8 +52,9 @@ export async function signCrestPaths(paths: string[]): Promise<Map<string, strin
 }
 
 export const MARK_COLUMNS = 'wiki,kit_pattern,kit_c1,kit_c2,kit_confidence,kit_source,kit_page,kit_needs_review,kit_note,'
-  + 'override_family,override_code,override_pattern,override_c1,override_c2,reviewed_by,reviewed_at,status,error_code,error_message,'
-  + 'code,crest,pattern,c1,c2,league,era_from,era_to,family_confidence,checks,print,needs_review,review_reasons,alt,spec_version,'
+  + 'override_family,override_code,override_pattern,override_c1,override_c2,override_charge,override_rim,seed_family,seed_charge,seed_rim,seed_pattern,seed_c1,seed_c2,'
+  + 'reviewed_by,reviewed_at,status,error_code,error_message,'
+  + 'code,crest,pattern,c1,c2,ring,rim,charge,league,era_from,era_to,family_confidence,checks,print,needs_review,review_reasons,alt,spec_version,'
   + 'generated_from,generated_by,generated_at'
 
 /** Club-mark rows of a season (or some of its clubs) by wiki. */

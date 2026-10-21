@@ -11,9 +11,13 @@ export const CLUB_MARK_KIT_COLUMNS = {
   pattern: 'kit_pattern', c1: 'kit_c1', c2: 'kit_c2', confidence: 'kit_confidence', source: 'kit_source', page: 'kit_page',
   needs_review: 'kit_needs_review', review_note: 'kit_note',
 } as const;
-/** data/club_marks.csv: one row per club per crest era (Club Mark Generator spec), pulled from admin_club_marks. */
-export const CLUB_MARKS_CSV_HEADER = ['season', 'wiki', 'name', 'code', 'crest', 'pattern', 'c1', 'c2', 'league', 'from', 'to',
-  'family_confidence', 'needs_review', 'review_reasons', 'reviewed_by'] as const;
+/** data/club_marks.csv: one row per club per crest era (toClubMark spec 2), pulled from admin_club_marks. charge is "shape:#hex". */
+export const CLUB_MARKS_CSV_HEADER = ['season', 'wiki', 'name', 'code', 'crest', 'pattern', 'c1', 'c2', 'ring', 'rim', 'charge', 'league',
+  'from', 'to', 'family_confidence', 'needs_review', 'review_reasons', 'reviewed_by'] as const;
+/** data/mark_overrides.csv column → admin_club_marks column: the editorial design (family, rim, field, charges); the review queue still wins. */
+export const CLUB_MARK_SEED_COLUMNS = {
+  family: 'seed_family', rim: 'seed_rim', pattern: 'seed_pattern', c1: 'seed_c1', c2: 'seed_c2', charge: 'seed_charge',
+} as const;
 
 /** Columns that come from crests.csv. A push overwrites only these, so an upload
  * made in the admin (upload_*, uploaded_*) survives. */

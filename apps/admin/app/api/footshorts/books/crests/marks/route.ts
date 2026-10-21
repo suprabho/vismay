@@ -8,7 +8,7 @@ import { confirmMark, generateMark, overrideMark, type MarkOverrides } from '@/l
 /**
  * POST { season, wiki, action } → { crest }: the club-mark review queue.
  *   generate  run toClubMark() for the club and store the row (an E_NO_KIT etc. is stored, not thrown)
- *   override  { overrides: { family?, code?, pattern?, c1?, c2? } } written back into the input, then regenerate
+ *   override  { overrides: { family?, code?, pattern?, c1?, c2?, charge? ('shape:#hex[@scale,rotate,x,y];…') } } written back into the input, then regenerate
  *   confirm   the generated family and code become overrides; the row leaves the queue
  * Admin-auth gated, same-origin.
  */

@@ -3,10 +3,11 @@
  * admin_club_marks table, where the admin Books → Crests "Club marks" view generates
  * each mark (toClubMark) and editors work the review queue.
  *
- *   --push   data/kits.csv → the kit columns. Never touches the review overrides or the
- *            generated mark; the admin flags a mark whose kit changed for regeneration.
+ *   --push   data/kits.csv → the kit columns, data/mark_overrides.csv → the seed design
+ *            (family, rim, pattern, c1, c2, charges). Never touches the review overrides or the generated mark; the admin
+ *            flags a mark whose inputs changed for regeneration.
  *   --pull   generated marks → data/club_marks.csv (one row per club per crest era, the
- *            spec's row: code, crest, pattern, c1, c2, league, from, to + the review state).
+ *            spec's row: code, crest, pattern, c1, c2, ring, charge, league, from, to + the review state).
  *
  *   pnpm history:club-marks-sync -- --season=2003 (--push | --pull) [--dry-run] [--dir=…]
  */
@@ -14,7 +15,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import {
-  CLUB_MARK_KIT_COLUMNS, CLUB_MARKS_CSV_HEADER, HISTORY_CLUB_MARKS_TABLE, HISTORY_CRESTS_TABLE,
+  CLUB_MARK_KIT_COLUMNS, CLUB_MARK_SEED_COLUMNS, CLUB_MARKS_CSV_HEADER, HISTORY_CLUB_MARKS_TABLE, HISTORY_CRESTS_TABLE,
 } from '@footshorts/shared/historicalCrests';
 import { parseCsv, toCsv } from './csv';
 
@@ -36,14 +37,15 @@ async function main() {
 
   if (pull) {
     const [{ data: marks, error }, { data: crests, error: e2 }] = await Promise.all([
-      sb.from(HISTORY_CLUB_MARKS_TABLE).select('wiki,code,crest,pattern,c1,c2,league,era_from,era_to,family_confidence,needs_review,review_reasons,reviewed_by,status')
+      sb.from(HISTORY_CLUB_MARKS_TABLE).select('wiki,code,crest,pattern,c1,c2,ring,rim,charge,league,era_from,era_to,family_confidence,needs_review,review_reasons,reviewed_by,status')
         .eq('season', season).eq('status', 'ok'),
       sb.from(HISTORY_CRESTS_TABLE).select('wiki,name').eq('season', season),
     ]);
     if (error || e2) throw new Error(`Club marks are unavailable. Apply the admin_club_marks migration first: ${(error ?? e2)!.message}`);
     const names = new Map((crests ?? []).map(c => [c.wiki as string, c.name as string]));
     const rows = (marks ?? []).sort((a, b) => (a.wiki as string).localeCompare(b.wiki as string)).map(m => [
-      season, m.wiki, names.get(m.wiki) ?? '', m.code, m.crest, m.pattern, m.c1, m.c2 ?? '', m.league ?? '', m.era_from ?? '', m.era_to ?? '',
+      season, m.wiki, names.get(m.wiki) ?? '', m.code, m.crest, m.pattern, m.c1, m.c2 ?? '', m.ring ?? '', m.rim ?? '', m.charge ?? '', m.league ?? '',
+      m.era_from ?? '', m.era_to ?? '',
       m.family_confidence ?? '', m.needs_review ? 'yes' : '', (m.review_reasons ?? []).join('; '), m.reviewed_by ?? '',
     ].map(String));
     const file = join(dir, 'data/club_marks.csv');
@@ -53,7 +55,7 @@ async function main() {
       keep = body.filter(r => r[0] !== season);
     } catch { /* first pull */ }
     if (!dry) writeFileSync(file, toCsv([[...CLUB_MARKS_CSV_HEADER], ...keep, ...rows]));
-    console.log(JSON.stringify({ season, pulled: rows.length, needsReview: rows.filter(r => r[12] === 'yes').length, into: file, dryRun: dry }));
+    console.log(JSON.stringify({ season, pulled: rows.length, needsReview: rows.filter(r => r[CLUB_MARKS_CSV_HEADER.indexOf('needs_review')] === 'yes').length, into: file, dryRun: dry }));
     return;
   }
 
@@ -65,8 +67,15 @@ async function main() {
   const { data: crests, error } = await sb.from(HISTORY_CRESTS_TABLE).select('wiki').eq('season', season);
   if (error) throw new Error(error.message);
   const known = new Set((crests ?? []).map(c => c.wiki as string));
+  // Editorial family / charge defaults; a club missing from the file gets none (so a removed row clears).
+  let seeds = new Map<string, Record<string, string>>();
+  try {
+    const [sh, ...sb2] = parseCsv(readFileSync(join(dir, 'data/mark_overrides.csv'), 'utf8')).filter(r => r.length > 1);
+    seeds = new Map(sb2.map(cells => Object.fromEntries(sh!.map((h, i) => [h, cells[i] ?? '']))).filter(r => r.season === season).map(r => [r.wiki!, r]));
+  } catch { /* no mark overrides yet */ }
   const payload = mine.filter(r => known.has(r.wiki ?? '')).map(r => {
     const row: Record<string, unknown> = { season, wiki: r.wiki };
+    for (const [csv, col] of Object.entries(CLUB_MARK_SEED_COLUMNS)) row[col] = seeds.get(r.wiki ?? '')?.[csv] || null;
     for (const [csv, col] of Object.entries(CLUB_MARK_KIT_COLUMNS)) {
       row[col] = csv === 'needs_review' ? r[csv] === 'yes' : csv === 'confidence' ? (r[csv] ? Number(r[csv]) : null) : (r[csv] ?? '');
     }

@@ -11,7 +11,7 @@ import {
   type CrestFilter, type CrestView,
 } from '@/lib/seasonBooks/crests'
 import { BUTTON, ICON_BUTTON, INPUT, PANEL, PRIMARY, SELECT } from './shared'
-import { ClubMarkPanel, MarkTile, markCaption, SURFACES, type MarkAction, type Surface } from './ClubMarkPanel'
+import { ClubMarkPanel, MarkTile, markCaption, type MarkAction } from './ClubMarkPanel'
 
 const API = '/api/footshorts/books/crests'
 const ACCEPT = Object.keys(CREST_UPLOAD_TYPES).join(',')
@@ -53,7 +53,6 @@ export function CrestsViewer({ initialSeason, initialFilter, initialView }: { in
   const [busy, setBusy] = useState<Set<string>>(new Set())
   const [dragOver, setDragOver] = useState<string | null>(null)
   const [view, setView] = useState<View>(initialView)
-  const [surface, setSurface] = useState<Surface>('paper')
   const [batch, setBatch] = useState<Batch | null>(null)
   const stopBatch = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -221,9 +220,6 @@ export function CrestsViewer({ initialSeason, initialFilter, initialView }: { in
         {!error && (
           <div className={`${PANEL} sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-neutral-950/95 px-3 py-2 backdrop-blur`}>
             <Segmented value={view} onChange={setView} options={[['picked', 'Crests'], ['marks', 'Club marks']]} label="Shown" />
-            {view === 'marks' && (
-              <Segmented value={surface} onChange={setSurface} options={(Object.keys(SURFACES) as Surface[]).map(k => [k, SURFACES[k].label])} label="Surface" />
-            )}
             <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" />
             {CREST_FILTERS.map(f => {
               const n = f === 'all' ? counts.total : counts[f]
@@ -283,7 +279,7 @@ export function CrestsViewer({ initialSeason, initialFilter, initialView }: { in
                     className={`group relative flex flex-col rounded-lg border transition ${dragOver === key(c) ? 'border-sky-400 ring-2 ring-sky-400/40'
                       : selected === key(c) ? 'border-white/50' : c.needs_review && status !== 'uploaded' ? 'border-amber-400/40' : 'border-white/10 hover:border-white/25'}`}>
                     <button type="button" onClick={() => setSelected(key(c))} className="flex flex-1 flex-col items-center gap-2 p-2.5 text-center">
-                      {view === 'marks' ? <MarkTile crest={c} surface={surface} /> : <CrestImage crest={c} size="sm" />}
+                      {view === 'marks' ? <MarkTile crest={c} /> : <CrestImage crest={c} size="sm" />}
                       <span className="line-clamp-2 text-xs font-medium leading-tight text-neutral-100">{c.name}</span>
                       {view === 'marks' ? (
                         <span className={`text-[11px] leading-tight ${markCaption(c, dupes).className}`}>{markCaption(c, dupes).text}</span>

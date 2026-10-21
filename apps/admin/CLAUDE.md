@@ -336,28 +336,38 @@ upload falls back to it.
   refused. Helpers in [lib/seasonBooks/crests.ts](lib/seasonBooks/crests.ts)
   and [crestStore.ts](lib/seasonBooks/crestStore.ts); UI
   [components/books/CrestsViewer.tsx](components/books/CrestsViewer.tsx).
-- **Club marks** (`?view=marks`, the Crests / Club marks toggle, Paper / Dark /
-  Club colour surface): the series' club mark per club (Club Mark Generator
-  spec, [packages/club-marks](../../packages/club-marks/README.md)): a
-  crest-family shape (roundel, heater, oval, plate) filled with the home-kit
-  pattern, with a three-letter code. The crest is read once to classify the
-  family; nothing of it is stored or drawn. Kits come from
-  `vizmaya-data/football-seasons/scripts/kits.py` (Wikipedia kit templates →
-  `data/kits.csv`, hand fixes in `data/kits_overrides.csv`), pushed with
-  `pnpm --filter @footshorts/worker history:club-marks-sync -- --season=2003
-  --push`; `--pull` writes the rows to `data/club_marks.csv`. **Generate N
-  marks** runs every club with no mark (or a stale one) one at a time; an
-  upload or Remove upload regenerates that club. The **Mark review** filter is
-  the review queue: family under 0.75 confidence, no crest, a failing check,
-  a kit colour more than ΔE 15 from any print swatch (colours snap to the
-  palette; the row carries the swatches), a duplicate code, a flagged kit. The detail panel shows the
-  real crest beside the mark, all three tiers on three surfaces, the six
-  checks and print swatches, and takes overrides (family, code, pattern, c1,
-  c2), written back into the input before regenerating; **Confirm** turns the
-  generated family and code into overrides and clears the flag. Storage:
-  private `admin_club_marks` (footshorts migration
-  [20261021000000](../../supabase/footshorts/migrations/20261021000000_admin_club_marks.sql));
-  renders are not stored, every surface draws from the row with
+- **Club marks** (`?view=marks`, the Crests / Club marks toggle): the
+  series' club mark per club (toClubMark spec 2.2,
+  [packages/club-marks](../../packages/club-marks/README.md)): a shape family
+  (roundel, heater, oval, plate, hexagon), a rim of 0–3 bands, the field in
+  the kit colours, and up to 10 charges on it — primitives or emblems from
+  the house library (simplified crest motifs drawn in Figma, Vismay Brands ›
+  FS-stlb), each with colour slots, scale, stretch, rotation, position and a
+  layer (field / emblem / over the rim). The crest is only read to guess the
+  family; no text is drawn. Kits come from
+  `vizmaya-data/football-seasons/scripts/kits.py` (`data/kits.csv`, hand fixes
+  in `data/kits_overrides.csv`); the editorial design (family, rim, pattern,
+  c1, c2, charges) from `data/mark_overrides.csv` (`seed_*` columns; it wins
+  over the kit, review overrides win over it), pushed with `pnpm --filter
+  @footshorts/worker history:club-marks-sync -- --season=2003 --push`;
+  `--pull` writes the rows to `data/club_marks.csv`. **Generate N marks** runs
+  every club with no mark (or a stale one) one at a time. The **Mark review**
+  filter is the review queue: family under 0.75 confidence, no crest, a
+  failing check (a weak edge or charge contrast goes to review), a kit colour
+  more than ΔE 15 from any print swatch, a duplicate code, a flagged kit. The
+  detail panel shows the real crest beside the mark, chip 24 / token 120 /
+  hero in colour and greyscale, the checks, the print swatches and CMYK, the
+  design editor (rim bands or Default ring / No rim; charges from Shapes or
+  Emblems with a colour picker per slot, scale, stretch, rotation and
+  position sliders, layer, reorder; live preview; **Save design**), and
+  overrides (family, code, pattern, c1, c2); **Confirm** turns the generated
+  family, code, rim and charges into overrides and clears the flag. Storage:
+  private `admin_club_marks` (footshorts migrations
+  [20261021000000](../../supabase/footshorts/migrations/20261021000000_admin_club_marks.sql)
+  → [20261025000000](../../supabase/footshorts/migrations/20261025000000_admin_club_marks_rim_field.sql):
+  `ring`, `rim`, `override_rim`, `seed_rim`, `seed_pattern`, `seed_c1`,
+  `seed_c2`; charges and rims as text, validated in the app; the trim columns
+  are unused); renders are not stored, every surface draws from the row with
   `renderClubMark()`. API: `POST /api/footshorts/books/crests/marks` `{ season,
   wiki, action: 'generate' | 'override' | 'confirm', overrides? }`; writer
   [clubMarkStore.ts](lib/seasonBooks/clubMarkStore.ts) (sharp, Node only), UI
