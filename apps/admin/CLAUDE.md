@@ -242,18 +242,18 @@ league and team rows only).
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092 and 093;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093 and 094;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
-Desk, Atlas, Epics and the OCW Desk on `/vizmaya/randomizer`, the Football Desk on
+Desk, Atlas, Epics, the OCW Desk and the Landmark Desk on `/vizmaya/randomizer`, the Football Desk on
 `/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
-  four tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
-  with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course
-  toggle, the style die, the rules that fired, the spin log, the hero insight
+  five tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course /
+  Landmark follow-the-prize toggle, the style die, the rules that fired, the spin log, the hero insight
   gate (approve / send back with a note, paste research), the composed brief's
   assignment with Copy agent brief and Copy research stub, the Desk heat table
   (stale and failed refreshes shown) and, on the OCW Desk tab, the **OCW pool**
@@ -263,7 +263,16 @@ story links.
   lecture notes only for now, so there is no kind reel). The OCW course and
   resource reels blur through that page's titles. Nothing is loaded up front
   for it: a cron on vizmaya-fyi spins it each morning, and the page lives on
-  the spin.
+  the spin. On the Landmark Desk tab, the **Landmark pool** panel: the award
+  the spin drew (year, laureate, share, co-laureates, the official motivation
+  verbatim, links to the laureate page, the prize summary, the scientific
+  background document, the lecture and Wikipedia), the work (title, year,
+  venue, authors, DOI, free-to-read link and status, citations, FWCI, top-1%,
+  retraction, and its label: named by the award, representative, or a
+  subject), the other works the loader found, the other laureates of the
+  era, and the four sources' states (Wikidata, OpenAlex, Open Library,
+  Unpaywall) with notes and errors. The laureate and work reels blur through
+  the spin's own pool; a cron spins it each morning too.
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel

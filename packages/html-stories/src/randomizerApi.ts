@@ -28,6 +28,12 @@
  *                                                     the taxonomy (fields, topics with their file counts, kinds)
  *   GET  /api/randomizer/cron/ocw                   the OCW Desk's daily spin (Vercel Cron, CRON_SECRET):
  *                                                     spins once per UTC day unless a kept spin exists
+ *   GET  /api/randomizer/landmark?prize=&era=&laureate=  the Landmark Desk's pool (vizmaya only): the awards
+ *                                                     of one prize in one era, as a spin would read them;
+ *                                                     with `laureate` (a laureateId from them), that laureate's
+ *                                                     works; without a query, the taxonomy (fields, prizes
+ *                                                     with their award counts per era, eras, lenses)
+ *   GET  /api/randomizer/cron/landmark              the Landmark Desk's daily spin (Vercel Cron, CRON_SECRET)
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -36,8 +42,9 @@
  * Server only.
  */
 
-import { DESK, OCW } from '@vismay/randomizer/datasets'
+import { DESK, LANDMARK, OCW } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
+import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from '@vismay/randomizer/landmarkPool'
 import { loadOcwPool } from '@vismay/randomizer/ocwPool'
 import { assignmentSection } from '@vismay/randomizer/spinBrief'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
@@ -59,7 +66,7 @@ import {
   type HeatRefresh,
 } from '@vismay/randomizer/spins'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { isRandomizerId, RANDOMIZER_META, RANDOMIZERS, RESPIN_REASONS, type SpinRecord } from '@vismay/randomizer/types'
+import { isRandomizerId, RANDOMIZER_META, RANDOMIZERS, RESPIN_REASONS, type RandomizerId, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 
 function json(body: unknown, status = 200): Response {
@@ -348,24 +355,79 @@ export async function handleOcwPoolRequest(req: Request): Promise<Response> {
 }
 
 /**
- * GET /api/randomizer/cron/ocw on vizmaya: the OCW Desk's daily spin. Vercel
- * Cron calls it (apps/vizmaya-fyi/vercel.json) with `Authorization: Bearer
- * $CRON_SECRET`; it fails closed without the secret. One spin per UTC day:
- * when a kept OCW spin already exists today (someone spun by hand), it
- * answers with that one and spins nothing.
+ * GET /api/randomizer/landmark on vizmaya: the Landmark Desk's pool, read
+ * the way a spin reads it (packages/randomizer landmarkPool.ts), for an
+ * agent that wants to look before locking a prize, an era or a laureate.
+ * `prize` (a prize id from the taxonomy) and `era` (an era id) select the
+ * awards; `laureate` (a laureateId from those awards) reads that laureate's
+ * works instead, with how each source fared. Without `prize` it answers
+ * the taxonomy: fields, prizes with their award counts per era, eras and
+ * lenses. Read-only; the works read uses the server's OPENALEX_API_KEY and
+ * UNPAYWALL_EMAIL when set.
  */
-export async function handleOcwDailySpinRequest(req: Request, origin: string): Promise<Response> {
+export async function handleLandmarkPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const url = new URL(req.url)
+  const prizeId = url.searchParams.get('prize')?.trim() || null
+  const eraId = url.searchParams.get('era')?.trim() || null
+  const laureateId = url.searchParams.get('laureate')?.trim() || null
+  if (!prizeId) {
+    return json({
+      fields: LANDMARK.fields,
+      eras: LANDMARK.eras,
+      prizes: LANDMARK.prizes,
+      lenses: LANDMARK.lenses,
+      note: 'Pass prize and era for the awards, as a spin would read them; add laureate (a laureateId from the awards) for that laureate\'s works.',
+    })
+  }
+  const prize = LANDMARK.prizes.find((p) => p.id === prizeId)
+  if (!prize) return json({ error: `unknown prize "${prizeId}": see GET /api/randomizer/landmark for the taxonomy` }, 400)
+  const era = eraId ? LANDMARK.eras.find((e) => e.id === eraId) : undefined
+  if (!era) return json({ error: `era must be one of ${LANDMARK.eras.map((e) => e.id).join(', ')}` }, 400)
+  try {
+    const pool = await loadLandmarkAwards({ prize, era, query: { prize: prize.id, era: era.id } })
+    if (!laureateId) return json(pool)
+    const found = pool.awards.find((a) => a.laureateId === laureateId)
+    if (!found) return json({ error: `no award for laureate "${laureateId}" in the ${prize.name} between ${era.from} and ${era.to}` }, 404)
+    const award = await enrichLandmarkAward(found, prize)
+    const works = await loadLandmarkWorks(award, prize)
+    return json({ asOf: pool.asOf, query: pool.query, award, works })
+  } catch (e) {
+    return json({ error: `The Landmark pool could not be read: ${e instanceof Error ? e.message : String(e)}` }, 503)
+  }
+}
+
+/**
+ * The daily spin of a randomizer with a cron (the OCW Desk, the Landmark
+ * Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
+ * `Authorization: Bearer $CRON_SECRET`; it fails closed without the secret.
+ * One spin per UTC day: when a kept spin of that randomizer already exists
+ * today (someone spun by hand), it answers with that one and spins nothing.
+ */
+async function handleDailySpinRequest(req: Request, origin: string, randomizer: RandomizerId): Promise<Response> {
   const secret = process.env.CRON_SECRET
   if (!secret) return json({ error: 'CRON_SECRET is not set on this project' }, 503)
   if (req.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401)
   if (!hasRandomizerEnv()) return json({ error: 'the randomizer needs Supabase service credentials' }, 503)
   try {
-    const existing = await spunOn('ocw')
+    const existing = await spunOn(randomizer)
     if (existing) return json({ ok: true, spun: false, ...spinPayload(existing, origin) })
-    const spin = await createSpin({ randomizer: 'ocw', createdBy: 'cron' })
-    console.log(`[randomizer] ocw daily spin ${spin.id}: ${spin.summary}`)
+    const spin = await createSpin({ randomizer, createdBy: 'cron' })
+    console.log(`[randomizer] ${randomizer} daily spin ${spin.id}: ${spin.summary}`)
     return json({ ok: true, spun: true, ...spinPayload(spin, origin) })
   } catch (e) {
     return fail(e)
   }
+}
+
+/** GET /api/randomizer/cron/ocw on vizmaya: the OCW Desk's daily spin. */
+export async function handleOcwDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'ocw')
+}
+
+/** GET /api/randomizer/cron/landmark on vizmaya: the Landmark Desk's daily spin. */
+export async function handleLandmarkDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'landmark')
 }

@@ -6,7 +6,9 @@
  * (loadViznbaNews), read from the viznba_ tables there and ESPN's schedule.
  * The OCW Desk's pool comes from ./ocwPool (the MIT Learn API) in two
  * passes: planOcw() says which page of files to read, then the draw runs
- * with it (see createSpin).
+ * with it (see createSpin). The Landmark Desk's comes from ./landmarkPool in
+ * three: planLandmark() says which prize and era's awards to read, with them
+ * which laureate's works to load, then the draw runs with both.
  *
  * A spin is created only here, and only by an authenticated caller (admin's
  * session-gated routes, or the token-gated routes on vizmaya-fyi that the MCP
@@ -23,7 +25,8 @@
 
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { DESK, FOOTSHORTS, VIZNBA } from './datasets'
-import { draw, planOcw } from './draw'
+import { draw, planLandmark, planOcw } from './draw'
+import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from './landmarkPool'
 import { enrichOcwCourse, loadOcwPool } from './ocwPool'
 import { randomSeed, seedHex } from './rng'
 import { extractHeroInsight } from './stub'
@@ -36,6 +39,7 @@ import {
   type FootshortsHeadline,
   type FootshortsNews,
   type FootshortsTeamNews,
+  type LandmarkPool,
   type OcwPool,
   type RandomizerId,
   type SpinHistoryEntry,
@@ -71,7 +75,7 @@ function check(error: { code?: string; message: string } | null): void {
   if (error.code === '42P01' || error.code === 'PGRST205') throw new SpinError(MIGRATION_HINT, 503)
   if (error.code === '23514' && /randomizer_check/.test(error.message)) {
     throw new SpinError(
-      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk',
+      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk',
       503,
     )
   }
@@ -215,6 +219,41 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
     }
   }
 
+  // The Landmark Desk's first two passes: plan from the seed, read the awards
+  // of the prize and era the plan asks for (re-planning from a fresh seed, up
+  // to three times, when none could be read), plan again with them for the
+  // laureate, then load that laureate's works.
+  let landmarkPool: LandmarkPool | null = null
+  if (input.randomizer === 'landmark') {
+    const planInput = { randomizer: 'landmark' as const, history: past, prev, locks: input.locks, sequence: input.sequence }
+    for (let tries = 0; ; tries++) {
+      const plan = planLandmark({ ...planInput, seed })
+      try {
+        landmarkPool = await loadLandmarkAwards(plan)
+      } catch (e) {
+        throw new SpinError(`The prize's awards could not be read: ${e instanceof Error ? e.message : String(e)}`, 503)
+      }
+      if (landmarkPool.awards.length || input.seed !== undefined || tries >= LANDMARK_SPIN_RULES.replans) break
+      seed = randomSeed()
+    }
+    let planned: ReturnType<typeof planLandmark>
+    try {
+      planned = planLandmark({ ...planInput, seed }, landmarkPool!.awards)
+    } catch (e) {
+      // No award of that prize in that era could be read (the taxonomy counts drifted, or the source is thin today).
+      throw new SpinError(e instanceof Error ? e.message : String(e), 503)
+    }
+    if (planned.award) {
+      const award = await enrichLandmarkAward(planned.award, planned.prize)
+      const works = await loadLandmarkWorks(award, planned.prize)
+      landmarkPool = {
+        ...landmarkPool!,
+        awards: landmarkPool!.awards.map((a) => (a.laureateId === award.laureateId ? award : a)),
+        works,
+      }
+    }
+  }
+
   const reason = input.reason?.trim().slice(0, 200) || null
   let result: ReturnType<typeof draw>
   try {
@@ -230,9 +269,10 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
       news,
       nbaNews,
       ocwPool,
+      landmarkPool,
     })
   } catch (e) {
-    // The draw only throws when there is nothing to draw from (an empty footshorts, VizNBA or OCW pool).
+    // The draw only throws when there is nothing to draw from (an empty footshorts, VizNBA, OCW or Landmark pool).
     throw new SpinError(e instanceof Error ? e.message : String(e), 503)
   }
   if (result.subject.randomizer === 'ocw') {
@@ -280,6 +320,11 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
 
 export const OCW_SPIN_RULES = {
   /** Fresh seeds tried when the plan's topic and kind have no files on OCW. */
+  replans: 2,
+} as const
+
+export const LANDMARK_SPIN_RULES = {
+  /** Fresh seeds tried when the plan's prize and era have no awards on record (the taxonomy counts drifted). */
   replans: 2,
 } as const
 

@@ -859,8 +859,17 @@ const OCW_SPIN_RULES = [
   'OCW is CC BY-NC-SA 4.0: the credit line in the assignment goes on the page as written, and nothing on the page is sponsored or sold.',
 ]
 
+/** A Landmark Desk spin's brief carries an award and a work to read: how the page uses them. */
+const LANDMARK_SPIN_RULES = [
+  'The work in the assignment is the primary source for what the page says it shows: read it end to end, cite it by page, figure, theorem or chapter, and link it (the free-to-read copy where there is one) and the laureate page from the page.',
+  'The official motivation goes on the page verbatim, in quotation marks, attributed to the awarder; never paraphrase it inside quotation marks or alter it.',
+  'A work the assignment labels representative is called a representative work on the page, never "the prize-winning paper", unless the award\'s own account confirms it.',
+  'Prize and work metadata are CC0 (Nobel Prize Outreach, Wikidata, OpenAlex): credit them as the assignment says, link to nobelprize.org and the publisher, and never rehost a paper, a book or a Nobel document.',
+]
+
 function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
   if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
+  if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES
   return hasContext ? (SPIN_CONTEXT_RULES[app] ?? []) : []
 }
 
