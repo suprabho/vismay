@@ -9,7 +9,22 @@
  * playbook bans them in everything generated.
  */
 
-import { fixtureSummary, footshortsAngleMetrics, gameSummary, ocwCourseLabel, ocwCreditLine, ocwLensMetrics, researchFileName, researchStub, viznbaAngleMetrics } from './stub'
+import {
+  fixtureSummary,
+  footshortsAngleMetrics,
+  gameSummary,
+  LANDMARK_WORK_LEVEL_LABEL,
+  landmarkAwardLabel,
+  landmarkCreditLine,
+  landmarkLensMetrics,
+  landmarkWorkBasisLabel,
+  ocwCourseLabel,
+  ocwCreditLine,
+  ocwLensMetrics,
+  researchFileName,
+  researchStub,
+  viznbaAngleMetrics,
+} from './stub'
 import {
   RANDOMIZER_META,
   type AtlasSubject,
@@ -17,6 +32,7 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type LandmarkSubject,
   type OcwSubject,
   type SpinRecord,
   type ViznbaGameRef,
@@ -249,6 +265,67 @@ function ocwAssignment(s: OcwSubject): string[] {
   return out
 }
 
+function landmarkAssignment(s: LandmarkSubject): string[] {
+  const a = s.award
+  const w = s.work
+  const account = a.links.background
+    ? `the scientific background document (${a.links.background})${a.links.lecture ? ` and the prize lecture (${a.links.lecture})` : ''}`
+    : `the citation on the ${s.prize.awarder} list (${s.prize.url})`
+  const out = [
+    `- Field: ${s.field.name} › Prize: ${s.prize.name} (${s.prize.awarder}; ${LANDMARK_WORK_LEVEL_LABEL[s.prize.works]}). ${s.prize.note}`,
+    `- Award: ${a.name}, ${landmarkAwardLabel(s.prize, a.year)}${a.share ? `, share ${a.share}` : ''}${a.coLaureates.length ? `, with ${a.coLaureates.join(', ')}` : ''}. ${a.url}`,
+    a.motivation ? `- Motivation, verbatim: "${a.motivation}"` : `- Motivation: none on record here. Quote the citation from the official list verbatim: ${s.prize.url}`,
+  ]
+  if (w) {
+    out.push(
+      `- Work: ${w.title}${w.year ? ` (${w.year}${w.venue ? `, ${w.venue}` : ''})` : w.venue ? ` (${w.venue})` : ''}. ${w.url}${w.doi ? ` (DOI ${w.doi})` : ''}. ${w.oaUrl ? `Free to read: ${w.oaUrl} (${w.oaStatus ?? 'open'}).` : 'No free copy on record.'}`,
+      `- ${landmarkWorkBasisLabel(s)}`,
+    )
+  } else {
+    out.push(`- Work: ${landmarkWorkBasisLabel(s)}`)
+  }
+  out.push(`- Lens: ${s.lens.name}. ${s.lens.description}`)
+  const links = [
+    a.links.summary ? `prize summary ${a.links.summary}` : null,
+    a.links.background ? `scientific background ${a.links.background}` : null,
+    a.links.lecture ? `prize lecture ${a.links.lecture}` : null,
+    a.links.wikipedia ? `Wikipedia ${a.links.wikipedia}` : null,
+  ].filter(Boolean)
+  if (links.length) out.push(`- Links: ${links.join('; ')}.`)
+  out.push(
+    '',
+    '### Do this first',
+    '',
+    w
+      ? '1. Read the work end to end (the free copy linked above, or the DOI). It is the only source for what the page says the work says: cite it by page, figure, theorem or chapter.'
+      : `1. Reconstruct the prize-winning work from ${account}: the paper or book the award rewarded, with its DOI or ISBN. Say on the page that it was reconstructed. Then read it end to end and cite it by page, figure, theorem or chapter.`,
+    `2. Read the award's own account, ${account}: what the committee rewarded, in its words, and the references it cites.`,
+  )
+  let n = 3
+  if (w?.representative) {
+    out.push(`${n++}. Confirm the work. The award's account decides which paper or book won; if it names another, switch to it and say so in the research file. If you cannot tell, the page keeps the label "representative work".`)
+  }
+  out.push(`${n++}. Apply the ${s.lens.name} lens to the work itself, not to ${a.name}'s career or to ${s.field.name.toLowerCase()} in general.`)
+  out.push(`${n++}. ${landmarkCreditLine(s)} The motivation is quoted verbatim and never altered.`)
+  if (s.sequence) out.push(`${n++}. This spin follows the previous one: the same prize, the year before. Link back to that story and do not re-explain the prize.`)
+  if (s.related.length) {
+    out.push('', 'Other works the loader found (context, and the candidates for the switch above):')
+    for (const r of s.related.slice(0, 8)) out.push(`- [${r.title}](${r.url})${r.year ? ` (${r.year})` : ''}, ${r.basis === 'citation' ? 'named by the award' : r.basis === 'notable' ? 'a notable work' : r.basis === 'book' ? 'a book from around the prize year' : 'top-cited'}${r.oaUrl ? ', free to read' : ''}`)
+  }
+  const others = s.pool.laureates.filter((name) => name !== a.name).slice(0, 12)
+  if (others.length) out.push('', `Other ${s.prize.name} laureates of ${s.era.name} (context, not to cover): ${others.join(', ')}${s.pool.laureates.length > 13 ? ` and ${s.pool.laureates.length - 13} more` : ''}.`)
+  if (w?.countsByYear.length) {
+    out.push('', `Citations by year (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}. Cited ${w.citedBy?.toLocaleString('en-US') ?? '?'} times in all${w.fwci !== null ? `, FWCI ${w.fwci}` : ''}${w.topOnePercent ? ', top 1% of its field and year' : ''}.`)
+  }
+  if (s.pool.sources.notes.length) out.push('', `Loader notes: ${s.pool.sources.notes.join(' ')}`)
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${landmarkLensMetrics(s.lens.name).join(', ')}.`,
+    'Start from: the work, the award\'s own account (the background document, the lecture or the citation), OpenAlex for the citation record, and a public dataset for anything about the world.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -264,7 +341,9 @@ export function assignmentSection(spin: BriefSpin): string {
             ? viznbaAssignment(s)
             : s.randomizer === 'ocw'
               ? ocwAssignment(s)
-              : epicsAssignment(s)
+              : s.randomizer === 'landmark'
+                ? landmarkAssignment(s)
+                : epicsAssignment(s)
   const ready = insightReady(spin)
   const lead = ready
     ? [
@@ -300,7 +379,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
             ? '\n8. Trade talk, injury timelines and locker-room stories are Unverified until the team, the league or the player confirms them, or two independent outlets with named sourcing report them. A rumour never goes on the page as fact.'
             : spin.randomizer === 'ocw'
               ? '\n8. The resource is the primary source for what it says; quote it with its page or slide number. Anything about the world outside the resource (a number, a date, a history) follows the two-source rule like any other claim.'
-              : ''
+              : spin.randomizer === 'landmark'
+                ? '\n8. The work is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it; otherwise the page says "representative work".'
+                : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -408,6 +489,25 @@ Built like the best page of a study guide: one idea, explained so a reader who h
 10. **Sources and claims log summary.**`
 }
 
+function landmarkFormat(s: LandmarkSubject): string {
+  const a = s.award
+  return `## Format: landmark paper explainer with charts
+
+Built like the best page of a journal club: one result, explained so a reader outside ${s.field.name.toLowerCase()} gets it, with the numbers that make it concrete and the award's own words beside it. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the result in plain words) and **dek** (one line, why a reader outside the field should care).
+2. **The award:** ${landmarkAwardLabel(s.prize, a.year)}, ${a.name}${a.coLaureates.length ? ` with ${a.coLaureates.join(', ')}` : ''}, and the motivation quoted verbatim, linked to the laureate page.
+3. **The work:** ${s.work ? `${s.work.title}${s.work.year ? ` (${s.work.year})` : ''}, linked (the free copy where there is one)` : 'the paper or book you reconstructed, linked'}, with the label it carries: ${s.work && !s.work.representative ? 'named by the award' : 'representative work, unless the award\'s account confirms it'}.
+4. **The one result:** 150 words at most, from the work, cited to its page, figure, theorem or chapter.
+5. **Chart 1, the result:** the work's central figure or number, rebuilt from its own data (8 or more points), or the quantity it is about from a public dataset.
+6. **Chart 2, the trail or the comparison:** citations by year from OpenAlex, or the result against what came before it.
+7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+8. **Where it breaks:** the assumption, limit or revision since, stated from the record.
+9. **Go further:** the award's own account (${a.links.background ? 'the scientific background document and the lecture' : 'the citation'}) and the work's references, linked.
+10. **Credit:** ${landmarkCreditLine(s)}
+11. **Sources and claims log summary.**`
+}
+
 function atlasFormat(s: AtlasSubject): string {
   return `## Format: geography (route table)
 
@@ -451,6 +551,7 @@ export function formatSection(spin: BriefSpin): string {
   if (s.randomizer === 'footshorts') return footshortsFormat(s)
   if (s.randomizer === 'viznba') return viznbaFormat(s)
   if (s.randomizer === 'ocw') return ocwFormat(s)
+  if (s.randomizer === 'landmark') return landmarkFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -478,6 +579,12 @@ export function chartRules(spin: BriefSpin): string[] {
     return [
       'Study-note series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
       'A chart of the resource\'s own numbers (a worked example, a table in the notes) says so in its footer and cites the page; a chart from a public dataset names the dataset.',
+    ]
+  }
+  if (spin.randomizer === 'landmark') {
+    return [
+      'Landmark series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
+      'A chart rebuilt from the work\'s own figure or table says so in its footer and cites the page; the citation chart names OpenAlex and the read date; a chart from a public dataset names the dataset.',
     ]
   }
   return [
@@ -521,12 +628,13 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'viznba' ? ['Every score and stat line matches the box scores; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'ocw' ? ['The resource and the course page are linked, the CC BY-NC-SA credit names the course, the instructors and the term, and nothing on the page is sponsored.'] : []),
+    ...(spin.randomizer === 'landmark' ? ['The work and the laureate page are linked, the motivation is quoted verbatim, a representative work is labelled as such, and the credit names the data sources.'] : []),
     'Contested claims are labelled and both sides stated fairly.',
     'The first 3 seconds of the script open on the surprising claim.',
     'No em dashes. No unverified claims on the page or in the script.',

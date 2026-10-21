@@ -53,11 +53,27 @@
  * and picks the file: courses spun in the last 30 days are left out, the
  * full combination (topic, kind, course, lens) is blocked for 90 days, and
  * sequence mode walks to the next file of the previous spin's course.
+ *
+ * The Landmark Desk draws prize-winning research the same way, one stage
+ * deeper, because both its laureate and its work reels come from live
+ * sources (the Nobel Prize API and Wikidata for the awards; Wikidata,
+ * OpenAlex, Open Library and Unpaywall for the works). planLandmark() is
+ * pure: a field (re-drawn once when it repeats the last spin's), a prize in
+ * it (minus prizes spun in the last 30 days; at least one in three spins on
+ * a prize whose citation or background document names the work), an era the
+ * prize was awarded in, and a lens; run again with the awards, it picks the
+ * laureate (laureates spun in the last 30 days are left out, no award
+ * twice). spins.ts loads that laureate's works, and draw() runs the plan
+ * again from the same seed and picks the work: what the award record names
+ * first, then a notable work, then the most-cited work before the prize (or
+ * the book from around the prize year), free-to-read copies weighted up,
+ * retracted works out. The combination (prize, laureate, lens) is blocked
+ * for 90 days; sequence mode follows one prize back a year at a time.
  */
 
-import { ATLAS, DESK, EPICS, FOOTSHORTS, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, LANDMARK, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
-import { gameSummary, ocwCourseLabel } from './stub'
+import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, landmarkAwardLabel, landmarkLicenceNote, ocwCourseLabel } from './stub'
 import {
   GEO_STATUS_TEXT,
   RANDOMIZER_META,
@@ -80,6 +96,17 @@ import {
   type FootshortsNews,
   type FootshortsPicks,
   type FootshortsTeamNews,
+  type LandmarkAward,
+  type LandmarkDataset,
+  type LandmarkEra,
+  type LandmarkField,
+  type LandmarkPicks,
+  type LandmarkPlan,
+  type LandmarkPool,
+  type LandmarkPrize,
+  type LandmarkQuery,
+  type LandmarkWork,
+  type LandmarkWorkBasis,
   type NamedOption,
   type OcwCourse,
   type OcwDataset,
@@ -136,6 +163,11 @@ export const DRAW_RULES = {
   ocwSearchCap: 10000,
   /** OCW Desk: at most this many sibling files (same course, same kind) kept on a spin. */
   maxOcwSiblings: 40,
+  /** Landmark Desk: a work with a free-to-read copy weighs this much against one without, in the work draw. */
+  landmarkOaWeight: 3,
+  /** Landmark Desk: at most this many other works kept on a spin as related reading, and laureate names from the pool. */
+  maxLandmarkRelated: 8,
+  maxLandmarkNames: 80,
 } as const
 
 const DAY = 864e5
@@ -161,8 +193,10 @@ export interface DrawInput {
   nbaNews?: ViznbaNews | null
   /** OCW Desk: the page of files planOcw() asked for (spins.ts loadOcwPool). Required. */
   ocwPool?: OcwPool | null
+  /** Landmark Desk: the awards planLandmark() asked for and the planned laureate's works (spins.ts). Required. */
+  landmarkPool?: LandmarkPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -280,6 +314,18 @@ export function planOcw(input: DrawInput): OcwPlan {
   return ocwPlan(ctx, input.datasets?.ocw ?? OCW, input.prev?.picks as OcwPicks | undefined, !!input.sequence)
 }
 
+/**
+ * The Landmark Desk's first stage on its own, twice over: without awards,
+ * what the awards loader needs (the prize and era); with them, the laureate
+ * whose works to load (`award`). Pure; the same input gives the plan draw()
+ * will reproduce. The rules it fires are repeated by draw(), so they are
+ * dropped here.
+ */
+export function planLandmark(input: DrawInput, awards?: LandmarkAward[]): LandmarkPlan {
+  const ctx = context(input)
+  return landmarkPlan(ctx, input.datasets?.landmark ?? LANDMARK, input.prev?.picks as LandmarkPicks | undefined, !!input.sequence, awards)
+}
+
 export function draw(input: DrawInput): DrawResult {
   const ctx = context(input)
   const prev = input.prev ?? null
@@ -294,6 +340,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'ocw') {
     return drawOcw(ctx, input.datasets?.ocw ?? OCW, prev?.picks as OcwPicks | undefined, input.ocwPool ?? null, !!input.sequence)
+  }
+  if (input.randomizer === 'landmark') {
+    return drawLandmark(ctx, input.datasets?.landmark ?? LANDMARK, prev?.picks as LandmarkPicks | undefined, input.landmarkPool ?? null, !!input.sequence)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -982,6 +1031,396 @@ function drawOcw(ctx: Ctx, data: OcwDataset, prev: OcwPicks | undefined, pool: O
     summary: `${course.number} ${course.title} · ${file.title}`,
     rules: ctx.rules,
     meta: { field: field.id, topic: topic.id, kind: kind.name },
+  }
+}
+
+/* ---------- Landmark Desk ---------- */
+
+function lastLandmark(ctx: Ctx): { entry: SpinHistoryEntry; picks: LandmarkPicks } | null {
+  const entry = ctx.kept[ctx.kept.length - 1]
+  const picks = entry?.picks as Partial<LandmarkPicks> | undefined
+  return entry && picks && typeof picks.laureateId === 'string' && typeof picks.year === 'number' && typeof picks.prize === 'string'
+    ? { entry, picks: picks as LandmarkPicks }
+    : null
+}
+
+/**
+ * Stage one: the reels the dataset fills and the awards to read; with the
+ * awards, stage two: the laureate whose works to load. Deterministic for a
+ * seed, and run up to three times per spin (planLandmark twice, then draw)
+ * with the same rng sequence, so the pool spins.ts fetched is the one the
+ * draw expects.
+ */
+function landmarkPlan(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | undefined, sequence: boolean, awards?: LandmarkAward[]): LandmarkPlan {
+  const { rng } = ctx
+  const fieldById = (id: string) => data.fields.find((f) => f.id === id)
+  const prizeById = (id: string) => data.prizes.find((p) => p.id === id)
+  const eraById = (id: string) => data.eras.find((e) => e.id === id)
+  const lensByName = (name: string) => data.lenses.find((l) => l.name === name)
+  const last = ctx.kept[ctx.kept.length - 1]
+
+  let field: LandmarkField | undefined
+  let prize: LandmarkPrize | undefined
+  let era: LandmarkEra | undefined
+  let beforeYear: number | null = null
+
+  // Sequence mode: the same prize, the year before the previous spin's.
+  if (sequence && !ctx.locked('prize')) {
+    const from = lastLandmark(ctx)
+    const fromPrize = from ? prizeById(from.picks.prize) : undefined
+    const fromField = fromPrize ? fieldById(fromPrize.field) : undefined
+    if (from && fromPrize && fromField) {
+      const target = from.picks.year - 1
+      const back = data.eras
+        .filter((e) => landmarkStocked(fromPrize, e.id) && e.from <= target)
+        .sort((a, b) => b.from - a.from)[0]
+      if (back) {
+        field = fromField
+        prize = fromPrize
+        era = back
+        beforeYear = from.picks.year
+        rule(ctx, 'sequence', 'good', `Sequence mode: following the ${prize.name} back from ${from.picks.year} to the year before. The prize block and the balancing rules pause while a prize is being followed.`)
+      } else {
+        rule(ctx, 'sequence', 'info', `Sequence mode: the ${fromPrize.name} has no awards before ${from.picks.year} on record, so this is a fresh draw.`)
+      }
+    } else {
+      rule(ctx, 'sequence', 'info', 'Sequence mode needs a previous Landmark Desk spin to continue from. Drawing fresh.')
+    }
+  }
+
+  if (!field || !prize || !era) {
+    const stockedPrizes = data.prizes.filter((p) => landmarkStocked(p))
+    const prizesIn = (f: LandmarkField) => stockedPrizes.filter((p) => p.field === f.id)
+    // The work-level quota: after two spins on prizes that do not name the work, this one draws from those that do.
+    const lastTwo = ctx.kept.slice(-2)
+    const quotaDue = lastTwo.length === 2 && lastTwo.every((e) => !isWorkLevel(e.meta.prize, data))
+    let quotaApplied = false
+
+    // Field: uniform among fields with a stocked prize, re-drawn once when it repeats the last spin's (the Atlas region rule).
+    let fields = data.fields.filter((f) => prizesIn(f).length)
+    if (!fields.length) throw new Error('No Landmark Desk prize has awards on record. Re-run scripts/randomizer/landmark-taxonomy.mts.')
+    const prevField = prev ? fieldById(prev.field) : undefined
+    if (ctx.locked('field') && prevField && prizesIn(prevField).length) {
+      field = prevField
+      rule(ctx, 'lock', 'info', `Field locked to ${field.name}.`)
+    } else {
+      const withWorkLevel = fields.filter((f) => prizesIn(f).some((p) => p.work_level))
+      if (quotaDue && withWorkLevel.length) {
+        fields = withWorkLevel
+        quotaApplied = true
+      }
+      field = pick(fields, rng)
+      if (last?.meta.fieldId === field.id && fields.length > 1) {
+        const again = pick(fields, rng)
+        rule(
+          ctx,
+          'balance',
+          'warn',
+          again === field
+            ? `${field.name} came up twice in a row, so the field was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+            : `${field.name} came up twice in a row, so the field was re-drawn once, now ${again.name}.`,
+        )
+        field = again
+      }
+    }
+
+    // Prize: uniform inside the field, minus prizes spun in the last 30 days (the block lifts when every prize is blocked).
+    let pool = prizesIn(field)
+    const prevPrize = prev ? prizeById(prev.prize) : undefined
+    if (ctx.locked('prize') && prevPrize && prevPrize.field === field.id && landmarkStocked(prevPrize)) {
+      prize = prevPrize
+      rule(ctx, 'lock', 'info', `Prize locked to the ${prize.name}.`)
+    } else {
+      if (quotaDue && pool.some((p) => p.work_level)) {
+        pool = pool.filter((p) => p.work_level)
+        quotaApplied = true
+      }
+      const r30 = new Set(ctx.kept.filter((e) => ctx.within(e, DRAW_RULES.primaryBlockDays)).map((e) => e.meta.prize))
+      const blocked = pool.filter((p) => r30.has(p.id))
+      const cands = pool.filter((p) => !r30.has(p.id))
+      if (blocked.length) {
+        rule(
+          ctx,
+          '30 days',
+          cands.length ? 'block' : 'warn',
+          cands.length
+            ? `Left out the ${list(blocked.map((p) => p.name))}: spun in the last 30 days.`
+            : `Every ${field.name} prize was spun in the last 30 days, so the block is lifted for this draw.`,
+        )
+      }
+      prize = pick(cands.length ? cands : pool, rng)
+      rule(ctx, 'balance', 'good', `Field first (${field.name}, 1 in ${fields.length}), then a prize in it (the ${prize.name}, 1 in ${cands.length || pool.length}), then an era it was awarded in. No prize dominates by its size.`)
+    }
+    if (quotaApplied) {
+      rule(ctx, 'quota', 'warn', 'The last two spins were on prizes that do not name the work. To keep one in three work-level, this draw only uses prizes whose citation or background document names the paper or book.')
+    }
+
+    // Era: uniform among the eras the prize has awards in.
+    const eras = data.eras.filter((e) => landmarkStocked(prize!, e.id))
+    const prevEra = prev ? eraById(prev.era) : undefined
+    if (ctx.locked('era') && prevEra && eras.includes(prevEra)) {
+      era = prevEra
+      rule(ctx, 'lock', 'info', `Era locked to ${era.name}.`)
+    } else {
+      era = pick(eras, rng)
+    }
+    rule(ctx, 'era', 'info', `${era.name}: ${prize.awards[era.id]} ${prize.name} ${prize.awards[era.id] === 1 ? 'award' : 'awards'} on record, 1 era in ${eras.length}.`)
+  }
+
+  const lens = (ctx.locked('lens') && prev && lensByName(prev.lens)) || pick(data.lenses, rng)
+  const u = rng()
+  const keepLaureate = ctx.locked('laureate') && prev ? prev.laureateId : null
+  const keepWork = ctx.locked('work') && prev ? prev.workId : null
+  if (keepLaureate !== null) {
+    rule(ctx, 'lock', 'info', keepWork !== null ? 'Work locked: the spin keeps its laureate and work.' : 'Laureate locked: the work is drawn again from the laureate\'s works.')
+  }
+
+  const plan: LandmarkPlan = {
+    field,
+    prize,
+    era,
+    lens,
+    u,
+    query: { prize: prize.id, era: era.id },
+    keepLaureate,
+    keepWork,
+    beforeYear,
+    award: null,
+  }
+  if (!awards) return plan
+  return { ...plan, award: landmarkPickAward(ctx, plan, awards) }
+}
+
+/** Stage two: the laureate, from the awards of the plan's prize and era. */
+function landmarkPickAward(ctx: Ctx, plan: LandmarkPlan, awards: LandmarkAward[]): LandmarkAward {
+  const { rng } = ctx
+  const { prize, era } = plan
+  const inEra = awards.filter((a) => a.prize === prize.id && a.year >= era.from && a.year <= era.to)
+  if (!inEra.length) {
+    throw new Error(`No ${prize.name} awards between ${era.from} and ${era.to} could be read. Re-spin: the next plan draws another prize or era.`)
+  }
+  if (plan.keepLaureate !== null) {
+    const kept = inEra.find((a) => a.laureateId === plan.keepLaureate)
+    if (kept) {
+      rule(ctx, 'lock', 'info', `Laureate locked to ${kept.name}.`)
+      return kept
+    }
+    rule(ctx, 'lock', 'warn', 'The locked laureate is not in this prize and era any more (the pool changed). Drawing another.')
+  }
+  const key = (a: Pick<LandmarkAward, 'prize' | 'year' | 'laureateId'>) => `${a.prize}|${a.year}|${a.laureateId}`
+  const spun = new Set(
+    ctx.kept.map((e) => {
+      const p = e.picks as Partial<LandmarkPicks>
+      return `${p.prize}|${p.year}|${p.laureateId}`
+    }),
+  )
+  if (plan.beforeYear !== null) {
+    // Sequence mode: the latest award year before the previous spin's; past the start, the era's newest year.
+    const earlier = inEra.filter((a) => a.year < plan.beforeYear!)
+    const year = Math.max(...(earlier.length ? earlier : inEra).map((a) => a.year))
+    const atYear = inEra.filter((a) => a.year === year)
+    const fresh = atYear.filter((a) => !spun.has(key(a)))
+    const award = pick(fresh.length ? fresh : atYear, rng)
+    rule(
+      ctx,
+      'sequence',
+      earlier.length ? 'good' : 'warn',
+      earlier.length
+        ? `${prize.name} ${award.year}: ${list(atYear.map((a) => a.name))}${atYear.length > 1 ? `; ${award.name} drawn` : ''}.`
+        : `No ${prize.name} award before ${plan.beforeYear} in ${era.name}, so the walk starts again from ${award.year}. Turn sequence mode off for a fresh prize.`,
+    )
+    return award
+  }
+  // The 30-day block on laureates, and never the same award twice.
+  const r30 = new Set(ctx.kept.filter((e) => ctx.within(e, DRAW_RULES.primaryBlockDays)).map((e) => e.primary))
+  const fresh = inEra.filter((a) => !spun.has(key(a)))
+  const unblocked = fresh.filter((a) => !r30.has(a.laureateId))
+  const blocked = uniq(fresh.filter((a) => r30.has(a.laureateId)).map((a) => a.name))
+  if (blocked.length) {
+    rule(
+      ctx,
+      '30 days',
+      unblocked.length ? 'block' : 'warn',
+      unblocked.length
+        ? `Left out ${list(blocked)}: spun in the last 30 days.`
+        : `Every ${prize.name} laureate of ${era.name} not yet spun was spun in the last 30 days, so the block is lifted for this draw.`,
+    )
+  }
+  if (!fresh.length) rule(ctx, '30 days', 'warn', `Every ${prize.name} award of ${era.name} has been spun. One repeats; re-spin for another era.`)
+  const cands = unblocked.length ? unblocked : fresh.length ? fresh : inEra
+  const award = pick(cands, rng)
+  rule(ctx, 'draw', 'info', `${award.name} (${award.year}) drawn from ${cands.length} eligible ${prize.name} ${cands.length === 1 ? 'award' : 'awards'} of ${era.name}, every one equally likely.`)
+  return award
+}
+
+function sameLandmarkQuery(a: LandmarkQuery, b: LandmarkQuery): boolean {
+  return a.prize === b.prize && a.era === b.era
+}
+
+/** Which of a laureate's works the draw picks from first, by what the prize names. */
+function landmarkTiers(prize: LandmarkPrize): LandmarkWorkBasis[] {
+  return prize.works === 'book' ? ['citation', 'notable', 'book', 'top-cited'] : ['citation', 'notable', 'top-cited', 'book']
+}
+
+function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | undefined, pool: LandmarkPool | null, sequence: boolean): DrawResult {
+  const { rng } = ctx
+  const plan = landmarkPlan(ctx, data, prev, sequence, pool?.awards)
+  if (!pool) throw new Error('The Landmark Desk draws from a pool of awards and works (planLandmark, loadLandmarkAwards, loadLandmarkWorks), and none was given.')
+  if (!sameLandmarkQuery(pool.query, plan.query)) {
+    throw new Error(
+      `The Landmark pool (${pool.query.prize} · ${pool.query.era}) is not the one the plan asked for (${plan.query.prize} · ${plan.query.era}). Same seed, same history, same locks: load the awards from planLandmark() of this draw.`,
+    )
+  }
+  const award = plan.award!
+  if (!pool.works || pool.works.laureateId !== award.laureateId) {
+    throw new Error(
+      `The works in the pool are for ${pool.works?.laureateId ?? 'nobody'}, not the planned laureate ${award.name} (${award.laureateId}). Load the works for the award planLandmark() returns with the awards.`,
+    )
+  }
+  const { field, prize, era } = plan
+  let lens: NamedOption = plan.lens
+  const { items, sources } = pool.works
+  const continued = plan.beforeYear !== null && award.year < plan.beforeYear
+
+  const retracted = items.filter((w) => w.retracted)
+  const live = items.filter((w) => !w.retracted)
+  if (retracted.length) {
+    rule(ctx, 'retracted', 'block', `Left out ${retracted.length} retracted ${retracted.length === 1 ? 'work' : 'works'} (OpenAlex flags them): ${list(retracted.map((w) => w.title))}.`)
+  }
+
+  let work: LandmarkWork | null = null
+  if (plan.keepWork !== null) {
+    work = live.find((w) => w.id === plan.keepWork) ?? null
+    if (work) rule(ctx, 'lock', 'info', `Work locked to ${work.title}.`)
+    else rule(ctx, 'lock', 'warn', 'The locked work is not among the laureate\'s works any more. Drawing another.')
+  }
+  if (!work) {
+    // A named subject (a theory, a theorem) stands in only when no publication was found.
+    const publications = live.filter((w) => w.type !== 'subject')
+    const tier =
+      landmarkTiers(prize)
+        .map((basis) => publications.filter((w) => w.basis === basis))
+        .find((candidates) => candidates.length) ?? live.filter((w) => w.type === 'subject')
+    if (tier?.length) {
+      work = weighted(tier, (w) => (w.oaUrl ? DRAW_RULES.landmarkOaWeight : 1), rng)
+      const free = tier.filter((w) => w.oaUrl).length
+      if (tier.length > 1 && free && free < tier.length) {
+        rule(ctx, 'open access', 'info', `${free} of ${tier.length} candidate works have a free-to-read copy, so they were weighted ${DRAW_RULES.landmarkOaWeight} to 1 in the draw.`)
+      }
+    }
+  }
+
+  const failed = (['wikidata', 'openalex', 'openlibrary', 'unpaywall'] as const).filter((s) => sources[s] === 'failed')
+  if (!work) {
+    rule(
+      ctx,
+      'work',
+      'warn',
+      `No work could be resolved for ${award.name}. Start from ${award.links.background ? 'the scientific background document' : 'the award citation'}${award.links.lecture ? ' and the prize lecture' : ''}, reconstruct the prize-winning work, and say on the page that it was reconstructed.`,
+    )
+  } else if (work.basis === 'citation' && work.type === 'subject') {
+    rule(ctx, 'work', 'warn', `${work.title}: the award record names it (Wikidata "for work"), but as a subject, not a publication. Find the paper or book that established it, from ${award.links.background ? 'the scientific background document' : 'the citation'}, and read that.`)
+  } else if (work.basis === 'citation') {
+    rule(ctx, 'work', 'good', `${work.title}: named by the award record itself (Wikidata "for work"). This is the prize-winning work.`)
+  } else if (work.basis === 'notable') {
+    rule(ctx, 'work', 'warn', `${work.title} is listed as a notable work of ${award.name} on Wikidata; the award does not name it. Label it a representative work and check it against the citation${award.links.background ? ' and the background document' : ''}.`)
+  } else if (work.basis === 'top-cited') {
+    rule(
+      ctx,
+      'work',
+      'warn',
+      `${work.title} is ${award.name}'s most-cited work before the prize on OpenAlex (${work.citedBy?.toLocaleString('en-US') ?? '?'} citations${work.fwci !== null ? `, FWCI ${work.fwci}` : ''}), not the work the award names. Label it a representative work; the citation${award.links.background ? ' and the background document' : ''} decide which paper won.`,
+    )
+  } else {
+    rule(ctx, 'work', 'warn', `${work.title}${work.year ? ` (${work.year})` : ''} is ${award.name}'s book from around the prize year on Open Library, not confirmed as the winning title. Check it against the prize's own list and label it accordingly.`)
+  }
+  if (work) {
+    rule(
+      ctx,
+      'open access',
+      work.oaUrl ? 'info' : 'warn',
+      work.oaUrl
+        ? `Free to read: ${work.oaUrl} (${work.oaStatus ?? 'open'}). Link it.`
+        : `No free copy on record (${work.oaStatus ?? 'unknown'}): link the ${work.doi ? 'DOI' : 'landing page'}, and the ${award.links.background ? 'background document' : 'award page'} for the account of the work.`,
+    )
+  }
+  if (sources.openalex === 'no key') {
+    rule(ctx, 'sources', 'info', 'OpenAlex list calls need OPENALEX_API_KEY on the server, so no top-cited works were read; the works came from the award record, Open Library or DOI lookups.')
+  }
+  if (failed.length) rule(ctx, 'sources', 'warn', `${list(failed)} could not be read (${sources.errors.join('; ') || 'no detail'}). The works may be incomplete; the research file says so.`)
+
+  // 90-day block on the full combination: re-draw the lens when it is free.
+  const combo = () => `${prize.id}|${award.laureateId}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    let tries = 0
+    while (r90.has(combo()) && !ctx.locked('lens') && tries < 16) {
+      tries++
+      lens = pick(data.lenses, rng)
+    }
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${award.name} with the ${lens.name} lens ran in the last 90 days, and the lens is locked. It repeats.`
+        : 'The first draw repeated a laureate and lens from the last 90 days. The lens was re-drawn.',
+    )
+  }
+
+  rule(ctx, 'pool', 'info', `${prize.name} · ${era.name}: ${pool.awards.length} ${pool.awards.length === 1 ? 'award' : 'awards'} read ${pool.asOf.slice(0, 10)}; ${items.length} ${items.length === 1 ? 'work' : 'works'} resolved for ${award.name}.`)
+  rule(
+    ctx,
+    'read first',
+    'info',
+    `Mandatory next step: read ${work ? work.title : 'the award citation'} end to end${award.links.background ? ', then the scientific background document' : ''}, and apply the ${lens.name} lens to the work, not to ${award.name}'s career or to ${field.name.toLowerCase()} in general.`,
+  )
+  rule(ctx, 'licence', 'info', landmarkLicenceNote(prize))
+
+  const related = live.filter((w) => w !== work).slice(0, DRAW_RULES.maxLandmarkRelated)
+  const laureates = uniq(pool.awards.map((a) => a.name)).slice(0, DRAW_RULES.maxLandmarkNames)
+  const picks: LandmarkPicks = { field: field.id, prize: prize.id, era: era.id, lens: lens.name, laureateId: award.laureateId, year: award.year, workId: work?.id ?? null }
+  const inEra = pool.awards.length
+  return {
+    randomizer: 'landmark',
+    picks,
+    subject: {
+      randomizer: 'landmark',
+      field,
+      prize,
+      era,
+      lens,
+      award,
+      work,
+      related,
+      pool: { asOf: pool.asOf, query: pool.query, count: inEra, laureates, sources },
+      sequence: continued,
+    },
+    reels: {
+      field: { value: field.name },
+      prize: { value: prize.name, sub: `${prize.awarder} · ${LANDMARK_WORK_LEVEL_LABEL[prize.works]}` },
+      era: { value: era.name, sub: `${inEra} ${inEra === 1 ? 'award' : 'awards'}` },
+      laureate: {
+        value: award.name,
+        sub: [String(award.year), award.share ? `share ${award.share}` : null, award.coLaureates.length ? `with ${list(award.coLaureates)}` : null].filter(Boolean).join(' · '),
+      },
+      work: {
+        value: work?.title ?? 'No work resolved',
+        sub: work
+          ? work.type === 'subject'
+            ? 'named by the award as a subject · find its paper'
+            : [work.year ? String(work.year) : null, work.venue, work.oaUrl ? `free to read (${work.oaStatus ?? 'open'})` : 'no free copy', work.representative ? 'representative' : 'named by the award']
+                .filter(Boolean)
+                .join(' · ')
+          : 'reconstruct it from the citation',
+      },
+      lens: { value: lens.name },
+    },
+    primary: award.laureateId,
+    combo: combo(),
+    summary: `${award.name} · ${landmarkAwardLabel(prize, award.year)}`,
+    rules: ctx.rules,
+    meta: { fieldId: field.id, prize: prize.id, workLevel: prize.work_level },
   }
 }
 

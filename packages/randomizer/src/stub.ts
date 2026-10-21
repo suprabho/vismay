@@ -6,7 +6,10 @@
  * the snapshot, the table, the angle read and the data pull. NBA Desk spins
  * get the same in basketball terms: the game log and the standings. OCW Desk
  * spins get a study template: what the resource says, where it sits in the
- * course, the lens read, the data pull and the credit line.
+ * course, the lens read, the data pull and the credit line. Landmark Desk
+ * spins get a paper template: the award and its motivation, the work and how
+ * it was tied to the award, what the award rewarded, the lens read, the data
+ * pull with the citation record, and the credit line.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
@@ -20,6 +23,9 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type LandmarkPrize,
+  type LandmarkSubject,
+  type LandmarkWorkLevel,
   type OcwSubject,
   type SpinRecord,
   type ViznbaGameRef,
@@ -37,6 +43,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'atlas') return s.pair ? `${s.country.name} and ${s.pair.name}` : s.country.name
   if (s.randomizer === 'footshorts' || s.randomizer === 'viznba') return s.opponent ? `${s.team.name} v ${s.opponent.name}` : s.team.name
   if (s.randomizer === 'ocw') return `${s.course.number} ${s.file.title}`
+  if (s.randomizer === 'landmark') return s.award.name
   return s.epic.title
 }
 
@@ -387,6 +394,129 @@ function ocwTemplate(s: OcwSubject): string[] {
   ].filter((l, i, a) => !(l === '' && a[i - 1] === ''))
 }
 
+/* ---------- Landmark Desk ---------- */
+
+/** What a prize's citation names, for the reels and the brief. */
+export const LANDMARK_WORK_LEVEL_LABEL: Record<LandmarkWorkLevel, string> = {
+  paper: 'the citation names the paper',
+  book: 'the citation names the book',
+  result: 'the citation names a result',
+  body: 'the citation names a body of work',
+}
+
+/** "Nobel Prize in Physics 2020", "Gödel Prize 2019" */
+export function landmarkAwardLabel(prize: Pick<LandmarkPrize, 'name'>, year: number): string {
+  return `${prize.name} ${year}`
+}
+
+/** The one-line licence reminder the draw fires. */
+export function landmarkLicenceNote(prize: Pick<LandmarkPrize, 'source' | 'awarder'>): string {
+  return prize.source.kind === 'nobel'
+    ? 'Prize data is CC0 from Nobel Prize Outreach: quote the motivation verbatim, never alter it, and link to nobelprize.org rather than rehosting its documents. Work metadata is CC0 from OpenAlex and Wikidata. Link the paper; do not rehost it.'
+    : `Prize data is CC0 from Wikidata; the citation is quoted from the ${prize.awarder} list, linked. Work metadata is CC0 from OpenAlex and Wikidata. Link the paper or book; do not rehost it.`
+}
+
+/** The credit the page carries, written out. */
+export function landmarkCreditLine(s: Pick<LandmarkSubject, 'prize' | 'award' | 'work'>): string {
+  const prizeData = s.prize.source.kind === 'nobel' ? 'Nobel Prize Outreach AB (api.nobelprize.org, CC0)' : `Wikidata (CC0) and the ${s.prize.awarder} list`
+  const workData = s.work ? (s.work.basis === 'book' ? 'Open Library' : 'OpenAlex (CC0) and Wikidata (CC0)') : null
+  const free = s.work?.oaUrl ? '; free-to-read link via Unpaywall and OpenAlex' : ''
+  const links = [s.award.url, s.work?.url].filter(Boolean).join(' and ')
+  return `Credit: "Prize data: ${prizeData}.${workData ? ` Work metadata: ${workData}${free}.` : ''} The motivation is quoted verbatim." with links to ${links}.`
+}
+
+/** What to chart per Landmark lens, when the data exists. */
+export const LANDMARK_LENS_METRICS: Record<string, string[]> = {
+  'Why it won': ['the quantity the motivation names, as the work measured it', 'the work\'s key result against what the field expected before it', 'years from publication to prize, for this prize\'s laureates of the era'],
+  'One figure': ['the work\'s central figure or table, rebuilt from its own numbers', 'the key parameter across the cases the work reports', 'the result against the prediction it tested'],
+  'What it replaced': ['the measured value before and after the work, by year', 'how often the old and the new idea appear in the literature by decade', 'the evidence each side had, as a count of studies'],
+  'Read it today': ['the work\'s shape (sections, figures, equations, references), as a picture chart', 'the one quantity the key passage turns on, in everyday units', 'citations by year, from OpenAlex (the counts in the brief)'],
+  'Citation trail': ['citations by year, from OpenAlex (the counts in the brief)', 'the citing fields, as a share', 'the lag from publication to prize for the laureates of this prize'],
+  'Missing names': ['the authors of the work and of the work it built on, on a timeline', 'the co-authors\' and rivals\' citations over the same years', 'the share of the award year\'s citations each name received'],
+  "Explain like I'm 5": ['the quantity in everyday units (steps, spoons, minutes), as a picture chart', 'the everyday stand-in against the real thing, side by side', 'the one number that changes when the result is switched on and off'],
+}
+
+export function landmarkLensMetrics(lens: string): string[] {
+  return LANDMARK_LENS_METRICS[lens] ?? ['the quantity the work is about, over time', 'citations by year, from OpenAlex', 'the work\'s own numbers']
+}
+
+/** "Named by the award record", "Representative work: the laureate's most-cited paper before the prize (OpenAlex)". */
+export function landmarkWorkBasisLabel(s: Pick<LandmarkSubject, 'work' | 'award'>): string {
+  const w = s.work
+  if (!w) return 'No work resolved: reconstruct the prize-winning work from the award citation and the background document, and say so.'
+  if (w.basis === 'citation' && w.type === 'subject') return 'Named by the award record (Wikidata "for work") as a subject, not a publication: find the paper or book that established it and read that.'
+  if (w.basis === 'citation') return 'Named by the award record (Wikidata "for work"): the prize-winning work.'
+  if (w.basis === 'notable') return `Representative work: listed as a notable work of ${s.award.name} on Wikidata, not named by the award. Label it so.`
+  if (w.basis === 'top-cited') return `Representative work: ${s.award.name}'s most-cited work before the prize on OpenAlex, not named by the award. Label it so.`
+  return `Representative work: ${s.award.name}'s book from around the prize year on Open Library, not confirmed as the winning title. Check the prize's list.`
+}
+
+function landmarkTemplate(s: LandmarkSubject): string[] {
+  const a = s.award
+  const w = s.work
+  const links = [
+    ['Laureate page', a.url],
+    ['Prize summary', a.links.summary],
+    ['Scientific background', a.links.background],
+    ['Prize lecture', a.links.lecture],
+    ['Wikipedia', a.links.wikipedia],
+  ].filter((l): l is [string, string] => !!l[1])
+  return [
+    '## The award',
+    '',
+    `${landmarkAwardLabel(s.prize, a.year)}, ${s.prize.awarder}. Laureate: ${a.name}${a.share ? ` (share ${a.share})` : ''}${a.coLaureates.length ? `, with ${a.coLaureates.join(', ')}` : ''}.`,
+    a.motivation ? `Motivation, verbatim: "${a.motivation}"` : `No motivation on record here: quote the citation from the official list (${s.prize.url}) verbatim.`,
+    links.length ? `Links: ${links.map(([k, v]) => `${k}: ${v}`).join('; ')}.` : '',
+    '',
+    '## The work',
+    '',
+    w
+      ? `${w.title}${w.year ? ` (${w.year}${w.venue ? `, ${w.venue}` : ''})` : w.venue ? ` (${w.venue})` : ''}: ${w.url}${w.doi ? ` · DOI ${w.doi}` : ''}${w.oaUrl ? ` · free to read: ${w.oaUrl} (${w.oaStatus ?? 'open'})` : ' · no free copy on record'}.`
+      : 'None resolved. Candidates, from the citation and the background document:',
+    landmarkWorkBasisLabel(s),
+    s.related.length ? `Other works the loader found: ${s.related.map((r) => `${r.title}${r.year ? ` (${r.year})` : ''}`).join('; ')}.` : '',
+    '',
+    '## The one result',
+    '',
+    'Two sentences: what the work shows, for a reader outside the field.',
+    '',
+    '## What the work says',
+    '',
+    'Its own structure, section by section (or chapter by chapter), each cited to a page, figure, theorem or section.',
+    '',
+    '| Part | Says | Page, figure or section |',
+    '|------|------|-------------------------|',
+    '| | | |',
+    '',
+    '## What the award rewarded',
+    '',
+    'The motivation against the work: which result, where in the work it is, what the motivation leaves out, and (for a representative work) whether the citation or the background document names another paper or book instead.',
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `${s.lens.description} Applied to the work, not to ${a.name}'s career or to ${s.field.name.toLowerCase()} in general.`,
+    '',
+    '## Data pull',
+    '',
+    'At least 8 data points per series where possible: the work\'s own numbers (cited to the page), the citation record below, then a public dataset for anything about the world.',
+    '',
+    '| Metric | Period or case | Value | Unit | Source |',
+    '|--------|----------------|-------|------|--------|',
+    ...landmarkLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    w?.countsByYear.length ? '' : '',
+    w?.countsByYear.length ? `Citations by year (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}.` : '',
+    w?.citedBy !== null && w?.citedBy !== undefined ? `Cited ${w.citedBy.toLocaleString('en-US')} times in all${w.fwci !== null ? `; FWCI ${w.fwci}` : ''}${w.topOnePercent ? '; top 1% of its field and year' : ''} (OpenAlex).` : '',
+    '',
+    '## Where it breaks, and what came after',
+    '',
+    'The assumption or claim that did not hold up, the revisions and replications since, any retraction nearby, and the result\'s limits.',
+    '',
+    '## Credit',
+    '',
+    landmarkCreditLine(s),
+  ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -406,7 +536,9 @@ export function researchStub(spin: StubSpin): string {
             ? viznbaTemplate(s)
             : s.randomizer === 'ocw'
               ? ocwTemplate(s)
-              : epicsTemplate(s)
+              : s.randomizer === 'landmark'
+                ? landmarkTemplate(s)
+                : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -422,7 +554,9 @@ export function researchStub(spin: StubSpin): string {
         ? '> (an official box score, NBA.com stats, a team or league statement). Mark each claim Verified, Contested or'
         : s.randomizer === 'ocw'
           ? '> (the resource itself with its page or slide, a government statistic, a peer-reviewed paper). Mark each claim Verified, Contested or'
-          : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+          : s.randomizer === 'landmark'
+            ? '> (the work itself with its page or figure, the award\'s own documents, a peer-reviewed paper). Mark each claim Verified, Contested or'
+            : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

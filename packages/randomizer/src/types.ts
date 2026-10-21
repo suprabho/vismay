@@ -1,6 +1,7 @@
 /**
- * Types for the story randomizers: the four Vizmaya ones (the playbook's
- * Desk, Atlas and Epics, and the OCW Desk on MIT OpenCourseWare), the
+ * Types for the story randomizers: the five Vizmaya ones (the playbook's
+ * Desk, Atlas and Epics, the OCW Desk on MIT OpenCourseWare and the Landmark
+ * Desk on prize-winning research), the
  * Footshorts one (teams, tournaments and their news) and the VizNBA one
  * (franchises, conferences and their news), their datasets (./data/*.json)
  * and the spins they produce.
@@ -8,9 +9,9 @@
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -31,7 +32,7 @@ export interface ReelDef {
   parents?: string[]
   /** Shown only when an option is on (the Atlas pair reel, the Footshorts and NBA opponents). Never lockable. */
   option?: 'pair'
-  /** Filled per spin from a live pool (the OCW course and resource), not from the dataset. */
+  /** Filled per spin from a live pool (the OCW course and resource, the Landmark laureate and work), not from the dataset. */
   live?: boolean
 }
 
@@ -44,7 +45,7 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics and OCW sequence mode, Footshorts and NBA head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW and Landmark sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
@@ -119,6 +120,23 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
       { key: 'lens', label: 'Lens' },
     ],
     option: { key: 'sequence', label: 'Continue the course (next resource)' },
+    gated: false,
+  },
+  landmark: {
+    id: 'landmark',
+    app: 'vizmaya-fyi',
+    name: 'Landmark Desk',
+    hint: 'Prizes · laureates · papers',
+    format: 'Landmark paper explainer with charts',
+    reels: [
+      { key: 'field', label: 'Field' },
+      { key: 'prize', label: 'Prize', parents: ['field'] },
+      { key: 'era', label: 'Era', parents: ['prize', 'field'] },
+      { key: 'laureate', label: 'Laureate', parents: ['era', 'prize', 'field'], live: true },
+      { key: 'work', label: 'Work', parents: ['laureate', 'era', 'prize', 'field'], live: true },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: { key: 'sequence', label: 'Follow the prize (the year before)' },
     gated: false,
   },
   footshorts: {
@@ -490,6 +508,235 @@ export interface OcwSubject {
   sequence: boolean
 }
 
+/* ---------- Landmark Desk ---------- */
+
+/**
+ * What a prize's citation names: a paper, a book, a specific result or
+ * discovery, or a body of work. Only `paper` and `book` prizes name the work
+ * itself; for the rest the desk resolves a representative work and says so.
+ */
+export type LandmarkWorkLevel = 'paper' | 'book' | 'result' | 'body'
+
+export interface LandmarkField {
+  id: string
+  name: string
+}
+
+/** A band of award years, the era reel. */
+export interface LandmarkEra {
+  id: string
+  name: string
+  from: number
+  to: number
+}
+
+/**
+ * Where a prize's award list is read from, live: the Nobel Prize API (its
+ * category code, the slug nobelprize.org uses, and the prize's Wikidata item
+ * for the "for work" qualifiers), or Wikidata (the prize item, with P166 on
+ * the laureates and P585 for the year).
+ */
+export type LandmarkPrizeSource = { kind: 'nobel'; category: string; slug: string; item: string } | { kind: 'wikidata'; item: string }
+
+export interface LandmarkPrize {
+  id: string
+  /** LandmarkField.id */
+  field: string
+  name: string
+  /** The body that awards it, for the credit line. */
+  awarder: string
+  source: LandmarkPrizeSource
+  /** The official list of laureates. */
+  url: string
+  /** First year awarded. */
+  since: number
+  works: LandmarkWorkLevel
+  /**
+   * The citation or an official document names the work: the Nobels (their
+   * scientific background documents), the Gödel Prize (papers) and the book
+   * prizes. The one-in-three quota keeps these coming.
+   */
+  work_level: boolean
+  /** One line on what the citation looks like, for the brief. */
+  note: string
+  /** Awards per era (by LandmarkEra.id) at the last taxonomy refresh: the plan never asks for an empty one. */
+  awards: Record<string, number>
+  /** Awards whose record names the work (Wikidata P1686), and awards with no date, at the last refresh. */
+  named_works: number
+  undated: number
+}
+
+export interface LandmarkDataset {
+  fields: LandmarkField[]
+  eras: LandmarkEra[]
+  prizes: LandmarkPrize[]
+  lenses: NamedOption[]
+}
+
+/** A work the award's own record names (Wikidata P1686 "for work") or lists as notable (P800), before the work loader fills it in. */
+export interface LandmarkNamedWork {
+  /** "wd:Q..." */
+  id: string
+  title: string
+  doi: string | null
+  isbn: string | null
+  year: number | null
+  basis: 'citation' | 'notable'
+}
+
+/** One award: one laureate in one year of one prize. The row of the awards pool. */
+export interface LandmarkAward {
+  /** LandmarkPrize.id */
+  prize: string
+  year: number
+  /** "nobel:973" or "wd:Q193803": the 30-day block keys on it. */
+  laureateId: string
+  name: string
+  /** The laureate's Wikidata item, when known (a Nobel laureate's comes from the laureate record, after the pick). */
+  wikidata: string | null
+  nobelId: string | null
+  /** The official motivation, verbatim. Wikidata has none. */
+  motivation: string | null
+  /** The Nobel share ("1/2"). */
+  share: string | null
+  /** The others who shared the prize that year. */
+  coLaureates: string[]
+  /** Works the award statement itself names. */
+  namedWorks: LandmarkNamedWork[]
+  /** The laureate's page at the awarder (nobelprize.org) or on Wikidata. */
+  url: string
+  /** The prize summary and scientific background pages for the year, the Nobel lecture, the Wikipedia article, as known. */
+  links: { summary?: string; background?: string; lecture?: string; wikipedia?: string }
+  orcid: string | null
+  /** OpenAlex author id ("A..."), from Wikidata P10283. */
+  openalexId: string | null
+  /** Open Library author id ("OL...A"), from Wikidata P648. */
+  openLibraryId: string | null
+}
+
+export type LandmarkWorkBasis = 'citation' | 'notable' | 'top-cited' | 'book'
+
+/** A paper or book tied to an award, as the work loader resolved it. */
+export interface LandmarkWork {
+  /** "openalex:W…", "wd:Q…", "doi:…" or "ol:OL…W". */
+  id: string
+  title: string
+  year: number | null
+  doi: string | null
+  /** The landing page: doi.org, Open Library or Wikidata. */
+  url: string
+  /** The best free-to-read copy (Unpaywall's best_oa_location, else OpenAlex's oa_url). */
+  oaUrl: string | null
+  /** gold, hybrid, bronze, green or closed; null when unknown. */
+  oaStatus: string | null
+  venue: string | null
+  /** The first few authors. */
+  authors: string[]
+  citedBy: number | null
+  /** OpenAlex's field-weighted citation impact. */
+  fwci: number | null
+  topOnePercent: boolean | null
+  /** Citations per year, as OpenAlex counts them (recent years only). */
+  countsByYear: Array<{ year: number; citations: number }>
+  type: string | null
+  retracted: boolean
+  /**
+   * How the work was tied to the award: named in the award record, a
+   * notable work on the laureate's record, the laureate's most-cited work
+   * before the prize (OpenAlex), or the laureate's book from around the
+   * prize year (Open Library).
+   */
+  basis: LandmarkWorkBasis
+  /** True unless the award record names it: the page calls it a representative work, not the prize-winning one. */
+  representative: boolean
+}
+
+export type LandmarkSourceState = 'ok' | 'failed' | 'skipped' | 'no key' | 'no email'
+
+/** How each source fared when the works were loaded; the admin panel and the brief say so. */
+export interface LandmarkSources {
+  wikidata: LandmarkSourceState
+  openalex: LandmarkSourceState
+  openlibrary: LandmarkSourceState
+  unpaywall: LandmarkSourceState
+  errors: string[]
+  /** What a source did that the brief should mention (an author matched by name alone, a book picked by year). */
+  notes: string[]
+}
+
+/** What the plan asks the awards pool for: every award of one prize in one era. */
+export interface LandmarkQuery {
+  prize: string
+  era: string
+}
+
+/**
+ * The pure first stage of a Landmark draw (draw.ts planLandmark): the reels
+ * the dataset can fill and the awards to read; then, run again with the
+ * awards, the laureate whose works to load. spins.ts turns it into a
+ * LandmarkPool, and the draw finishes with the same seed.
+ */
+export interface LandmarkPlan {
+  field: LandmarkField
+  prize: LandmarkPrize
+  era: LandmarkEra
+  lens: NamedOption
+  /** One rng draw in [0, 1), kept so the plan's rng sequence is fixed before the laureate pick. */
+  u: number
+  query: LandmarkQuery
+  /** The laureate to keep (a laureate or work lock), by LandmarkAward.laureateId. */
+  keepLaureate: string | null
+  /** The work to keep (a work lock), by LandmarkWork.id. */
+  keepWork: string | null
+  /** Sequence mode: the previous spin's prize year, to walk back from. */
+  beforeYear: number | null
+  /** Stage two, once the awards are known: the award whose works to load. */
+  award: LandmarkAward | null
+}
+
+/** The live pool one Landmark draw reads (frozen, less the awards, into the spin's subject). */
+export interface LandmarkPool {
+  /** ISO timestamp the awards were read. */
+  asOf: string
+  query: LandmarkQuery
+  /** Every award of the prize in the era, oldest first, then by name. */
+  awards: LandmarkAward[]
+  /** The works loaded for the planned laureate; null before stage two. */
+  works: { laureateId: string; items: LandmarkWork[]; sources: LandmarkSources } | null
+}
+
+export interface LandmarkPicks {
+  /** LandmarkField.id */
+  field: string
+  /** LandmarkPrize.id */
+  prize: string
+  /** LandmarkEra.id */
+  era: string
+  lens: string
+  /** LandmarkAward.laureateId */
+  laureateId: string
+  year: number
+  /** LandmarkWork.id, or null when no work could be resolved. */
+  workId: string | null
+}
+
+export interface LandmarkSubject {
+  randomizer: 'landmark'
+  field: LandmarkField
+  prize: LandmarkPrize
+  era: LandmarkEra
+  lens: NamedOption
+  award: LandmarkAward
+  /** The headline work, or null when none could be resolved (the brief then says to reconstruct it). */
+  work: LandmarkWork | null
+  /** The other candidates the loader found, best first: related reading, and the route for a work lock. */
+  related: LandmarkWork[]
+  /** The pool the award came from: its query, size, the laureates in it (names), when it was read, and how the sources fared. */
+  pool: { asOf: string; query: LandmarkQuery; count: number; laureates: string[]; sources: LandmarkSources }
+  /** Continued from the previous spin's prize, the year before (sequence mode). */
+  sequence: boolean
+}
+
 /* ---------- Footshorts ---------- */
 
 export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
@@ -851,8 +1098,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -869,6 +1116,10 @@ export interface SpinMeta {
   field?: number
   topic?: number
   kind?: string
+  /** Landmark Desk: the field and prize ids and whether the prize names the work, for the field re-draw, the prize block and the work-level quota. */
+  fieldId?: string
+  prize?: string
+  workLevel?: boolean
 }
 
 export interface DrawResult {
@@ -876,7 +1127,7 @@ export interface DrawResult {
   picks: SpinPicks
   subject: SpinSubject
   reels: Record<string, ReelValue>
-  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, team). */
+  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, team, course, laureate). */
   primary: string
   /** The full combination the 90-day block keys on. */
   combo: string
