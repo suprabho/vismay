@@ -282,7 +282,7 @@ export default function EditionsClient() {
 
       {data && !draft && (
         <section className="px-4 py-6 border-b border-white/5">
-          <p className="text-sm text-neutral-300">No draft right now — the last edition is published and the next composer run is at 06:15 UTC.</p>
+          <p className="text-sm text-neutral-300">No draft right now — the last edition is published or skipped and the next composer run is at 06:15 UTC.</p>
           <div className="mt-3 flex gap-2">
             <button type="button" className={btn} disabled={!data.recomposeConfigured || busy !== null} onClick={() => recompose(false)}>
               compose now
@@ -558,11 +558,16 @@ export default function EditionsClient() {
           {(archive ?? []).map((e) => (
             <li key={e.id} className="py-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
               <span className="font-mono text-xs text-neutral-500 w-24">{e.date}</span>
-              <span className="font-mono text-xs text-neutral-500 w-12">{e.number != null ? `№ ${e.number}` : 'draft'}</span>
+              <span className="font-mono text-xs text-neutral-500 w-12">{e.number != null ? `№ ${e.number}` : e.status === 'skipped' ? '—' : 'draft'}</span>
               <span className="font-medium min-w-0 flex-1 truncate" title={e.headline}>
                 {e.headline || '(no headline)'}
               </span>
               <Badge tone={e.status === 'published' ? 'accent' : 'neutral'}>{e.status}</Badge>
+              {e.status === 'skipped' && (
+                <span className="text-xs text-neutral-500" title="Nothing was scored in this window, so it was never published. Recompose for this date once the feeds have backfilled it.">
+                  nothing scored · not published
+                </span>
+              )}
               <span className="text-xs text-neutral-500">
                 mood {e.moodScore == null ? '—' : formatSigned(e.moodScore)} · {e.counts.stories} stories · {e.counts.papers} papers
               </span>

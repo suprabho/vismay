@@ -74,6 +74,7 @@ import {
   publishStaleDrafts,
   saveDraftCharts,
   upsertDraftEdition,
+  skipUnscoredDraft,
 } from '@vismay/dc-editions/dcEditions'
 import {
   EDITION_CHART_SECTIONS,
@@ -781,6 +782,12 @@ async function main() {
   console.log(
     `[compose] draft ${draft.date} written · model=${model} · ${draft.counts.stories} stories (dc ${layerCounts.dc} · hyper ${layerCounts.hyper} · semi ${layerCounts.semi} · equip ${layerCounts.equip}) · ${draft.counts.papers} papers · mood ${draft.moodScore ?? '—'} · charts ${Object.keys(chartsRun.charts).length}/${EDITION_CHART_SECTIONS.length} · auto-publish ${draft.autoPublishAt}`,
   )
+  // Nothing scored (an empty window — every RSS feed down at 06:15, as on
+  // 2026-10-25): the deterministic fallback covers a model failure, not a
+  // missing feed. The edition is marked skipped, never published, and a
+  // recompose for the date once the feeds backfill reopens it as a draft.
+  const skipped = await skipUnscoredDraft(draft.date)
+  if (skipped) console.warn(`[compose] ${skipped.date} has nothing scored — marked skipped; it will not publish. Recompose with --date ${skipped.date} after a backfill.`)
 }
 
 main().catch((err) => {

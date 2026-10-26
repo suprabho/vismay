@@ -1088,6 +1088,8 @@ export async function upsertDraftEdition(input: DraftUpsert): Promise<DcEdition>
   if (existing?.status === 'published') {
     throw new Error(`edition ${input.editionDate} is already published — corrections run in the next edition`)
   }
+  // A skipped row (nothing scored on the day) reopens as the draft here —
+  // the way to re-run a date once the feeds have backfilled its window.
 
   let text = input.text
   let editedFields = existing?.editedFields ?? []
@@ -1410,6 +1412,32 @@ export interface PublishResult {
   reason: string | null
 }
 
+/** An edition with a Doom v Boom reading. Null = nothing in the window was scored (an empty window). */
+export function isScored(e: Pick<DcEditionSummary, 'moodScore'>): boolean {
+  return e.moodScore != null
+}
+
+/**
+ * Mark a draft skipped (migration 096): it never publishes, gets no number,
+ * stays in the admin archive, and frees the one-draft slot. A later
+ * recompose for the date reopens it as a draft.
+ */
+async function skipDraftEdition(sb: Sb, draft: DcEdition): Promise<DcEdition> {
+  const { data, error } = await withEditionColumns((cols) =>
+    sb.from('dc_editions').update({ status: 'skipped', published_at: null }).eq('id', draft.id).eq('status', 'draft').select(cols).single(),
+  )
+  if (error) throw new Error(`skipDraftEdition(${draft.date}): ${error.message}`)
+  return mapEditionRow(data)
+}
+
+/** The composer's own call: an unscored draft is skipped the moment it is written. */
+export async function skipUnscoredDraft(date: string): Promise<DcEdition | null> {
+  const sb = createServiceClient()
+  const draft = await readDraftRow(sb)
+  if (!draft || draft.date !== date || isScored(draft)) return null
+  return skipDraftEdition(sb, draft)
+}
+
 /**
  * Freeze the draft: status → published, sequential number, published_at.
  * With `onlyIfDue`, a draft whose auto_publish_at is still in the future is
@@ -1421,6 +1449,10 @@ export async function publishDraftEdition(opts: { reviewedBy?: string | null; on
   if (!draft) return { published: false, edition: null, reason: 'no draft' }
   if (opts.onlyIfDue && draft.autoPublishAt && Date.parse(draft.autoPublishAt) > Date.now()) {
     return { published: false, edition: draft, reason: `held until ${draft.autoPublishAt}` }
+  }
+  if (!isScored(draft)) {
+    const skipped = await skipDraftEdition(sb, draft)
+    return { published: false, edition: skipped, reason: `nothing scored (${draft.counts.stories} stories, mood —) — marked skipped, not published` }
   }
   const { data: maxRow, error: maxErr } = await sb
     .from('dc_editions')
@@ -1459,7 +1491,8 @@ export async function publishStaleDrafts(beforeDate: string): Promise<DcEdition[
   const draft = await readDraftRow(sb)
   if (!draft || draft.date >= beforeDate) return []
   const res = await publishDraftEdition({ onlyIfDue: false })
-  return res.edition ? [res.edition] : []
+  // An unscored stale draft was marked skipped, not published; either way the slot is free.
+  return res.published && res.edition ? [res.edition] : []
 }
 
 /** The rare hard case: pull a published edition back to draft. */

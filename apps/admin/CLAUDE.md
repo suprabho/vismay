@@ -111,7 +111,9 @@ edition composed at 06:15 UTC and published at 09:00 UTC (PRD:
 [docs/ai-data-centers-daily-snapshot-prd.md](../../docs/ai-data-centers-daily-snapshot-prd.md)).
 Review is a window, not a gate: the draft goes public whether or not anyone
 looked. Published editions are immutable (DB trigger); corrections run in the
-next edition.
+next edition. An edition with nothing scored (mood null, an empty window) is
+never published: it sits in the archive as `skipped` (migration 096) with no
+number, and a Recompose for that date after a backfill reopens it as a draft.
 
 - **Page:** [app/vizmaya/(tabbed)/editions/](<app/vizmaya/(tabbed)/editions/>) —
   draft banner (window, composer model, generated time, countdown to
