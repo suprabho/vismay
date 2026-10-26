@@ -8,14 +8,16 @@
 -- it to html_stories.format like the other formats. Until this constraint
 -- allows it, saving a collage page fails.
 --
--- Self-contained like 091: adds the format column if 089 never ran, widens
--- its check, and backfills from the stored documents. Safe to run again.
+-- Numbered after 094 (diorama) and listing every format, so applying the
+-- migrations in order keeps both. Self-contained like 091: adds the format
+-- column if 089 never ran, widens its check, and backfills from the stored
+-- documents. Safe to run again.
 
 alter table html_stories add column if not exists format text not null default 'scroll';
 
 alter table html_stories drop constraint if exists html_stories_format_check;
 alter table html_stories
-  add constraint html_stories_format_check check (format in ('scroll', 'book', 'board', 'deck', 'collage', 'recap'));
+  add constraint html_stories_format_check check (format in ('scroll', 'book', 'board', 'deck', 'diorama', 'collage', 'recap'));
 
 with declared as (
   select slug, lower(trim(coalesce(
@@ -28,7 +30,7 @@ update html_stories h
 set format = d.format
 from declared d
 where h.slug = d.slug
-  and d.format in ('book', 'board', 'deck', 'collage', 'recap')
+  and d.format in ('book', 'board', 'deck', 'diorama', 'collage', 'recap')
   and h.format = 'scroll';
 
 notify pgrst, 'reload schema';
