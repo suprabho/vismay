@@ -408,7 +408,8 @@ claims carry a `.stamp.documented | .contested | .inferred`, a number in
 running text sits on an `.n` patch, the headline is cut into `.strip`s and a
 `.ransom` number. Charts are cut from paper (`.cmp` strips of `.cbar`s with
 inline percentages, `.hatch`, `.fuzzy`, `.ctick`; `.cstack` of `.blk`
-blocks) or registered (`Story.charts.<name>`; every paper sets `--c-ink
+blocks, a single bottom-up column, so a waffle grid needs its own class
+names) or registered (`Story.charts.<name>`; every paper sets `--c-ink
 --c-muted --c-grid --c-hi --c-paper --c-halo --font-chart` for them).
 Motion is a class plus inline variables: `.fly` (`--fx --fy --fr`), `.grow`,
 `.swim` (`--sw`), `.ring`, `.seq-drop | .seq-slide | .seq-pop` inside a

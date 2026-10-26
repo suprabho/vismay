@@ -791,7 +791,12 @@ ${skeleton(
   placed with inline \`left\` and \`width\` percentages), and a \`.ctick\` axis;
   \`.hatch\` for a claimed range, \`.fuzzy\` for an estimate with soft ends. A
   stack of blocks (\`.cstack\` of \`.blk\`, one block one unit, \`data-seq=".blk"\`
-  on the stack to drop them one at a time). Strata, a vein, a silhouette:
+  on the stack to drop them one at a time). The format styles \`.cstack\` as
+  a single bottom-up column of torn, tilted blocks, so never reuse \`.cstack\`
+  or \`.blk\` for a waffle or wrapping grid of squares: your own flex or grid
+  rules won't undo its \`flex-direction\`, \`clip-path\` and \`rotate\`, and the
+  grid collapses into one tall column. Give a waffle its own class names
+  (say \`.waffle\` of \`.sq\`). Strata, a vein, a silhouette:
   inline SVG polygons in the paper colours. Anything that needs a real
   scale (a map, a log axis, 120 squares, a line over time) is a registered
   chart (below) on its own coloured paper: every paper sets \`--c-ink\`,
