@@ -14,7 +14,7 @@
  * re-running never undoes a review.
  *
  * Transfermarkt names are copied by id from data/transfermarkt_clubs.csv (players.py tm-clubs).
- * ClubElo names (raw/clubelo/*.csv, from scripts/fetch_clubelo.py) only attach to
+ * ClubElo names (raw/clubelo/*.csv, from scripts/clubelo.py) only attach to
  * clubs the match sources already know — ClubElo's thousands of other clubs never
  * become rows. Pin a ClubElo name with source "clubelo" in the overrides file.
  *
