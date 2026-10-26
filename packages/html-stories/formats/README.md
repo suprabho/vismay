@@ -1,21 +1,23 @@
-# Story formats: book, board, deck, recap
+# Story formats: book, board, deck, collage, recap
 
 Agent-authored HTML stories (`packages/html-stories`) are scrolling pages by
-default. This folder holds the runtimes for four formats, which each site
+default. This folder holds the runtimes for five formats, which each site
 hosts so an agent only writes the content, its design and its charts. Three
-are not vertical scrollytelling; the fourth, the recap, scrolls, but beside a
-3D race replay that its runtime drives:
+are not vertical scrollytelling; the collage scrolls, but its runtime
+choreographs torn-paper pieces in stop-motion from the scroll; the recap
+scrolls beside a 3D race replay that its runtime drives:
 
 | Format | What the reader does | Runtime |
 |---|---|---|
 | **Book** | Turns pages: tap, drag a page across, or the arrow keys. A two-page spread on wide screens, one page at a time on phones. | `book@1.css` + `book@1.js` |
 | **Board** | Follows a guided tour while the camera flies between pinned items, or pans and zooms freely. Felt board or whiteboard. | `board@1.css` + `board@1.js` |
 | **Deck** | Steps through slides, or switches to a stack of cards and swipes them away. | `deck@1.css` + `deck@1.js` |
+| **Collage** | Scrolls a kraft board of torn-paper pieces that land, stretch and stamp down in held poses as they come into view; a thread rail marks the scenes. | `collage@1.css` + `collage@1.js` |
 | **Recap** (vizf1) | Scrolls chapters while the 3D race replay beside them jumps to each moment, camera and car. | `recap@1.css` + `recap@1.js` |
 
 `examples/` tells the same story (`vizmaya-data/odyssey-voyage`) as a book, a
-board and a deck, so the only difference between them is the format, and the
-2024 Austrian Grand Prix as a recap. They are served at
+board, a deck and a cut-out collage, so the only difference between them is
+the format, and the 2024 Austrian Grand Prix as a recap. They are served at
 `<site>/formats/examples/<file>.html` (`FORMAT_EXAMPLES` in `src/formats.ts`)
 and the brief links to them.
 
@@ -274,6 +276,62 @@ portrait), `.hide-portrait`. `.bare` slides get no folio; `data-title` on
 **Known limits:** no slide-overview grid yet (a G key showing thumbnails
 would be a good next step), and no presenter notes.
 
+## Collage (`collage.css`, `collage.js`)
+
+**Authoring:** `<main class="stage">` is the board. Its sections are the
+units: `<header class="cover wrap" data-unit>`, `<section class="scene wrap"
+data-unit data-knot="1">` (a `.notes` column beside a `.plate`; `.flip`
+swaps sides), `<section class="band wrap" data-unit>` (a `.head` and
+`.tiles`), `<footer class="end wrap">` (`.sheet`s). Everything on the board
+is a `.piece` (tilt `--tilt`, shadow) holding a `.tape` and a `.paper`
+(torn by `--cut: var(--torn-all | --torn-tb | --torn-t)`; colours
+`.accent .warm .dark .cool`; `.halftone`, `.ruled`). Labels are `.slip`s,
+claims carry a `.stamp.documented | .contested | .inferred`, a number in
+running text sits on an `.n` patch, the headline is cut into `.strip`s and a
+`.ransom` number. Charts are cut from paper (`.cmp` strips of `.cbar`s with
+inline percentages, `.hatch`, `.fuzzy`, `.ctick`; `.cstack` of `.blk`
+blocks) or registered (`Story.charts.<name>`; every paper sets `--c-ink
+--c-muted --c-grid --c-hi --c-paper --c-halo --font-chart` for them).
+Motion is a class plus inline variables: `.fly` (`--fx --fy --fr`), `.grow`,
+`.swim` (`--sw`), `.ring`, `.seq-drop | .seq-slide | .seq-pop` inside a
+`[data-seq="<selector>"]`; `.enter` and `.boil` on the cover (on load),
+`data-par` / `data-parx` parallax, `data-drift` on a `.bignum`. Tokens:
+`--collage-board`, `--collage-board-deep`, `--collage-ink`,
+`--collage-ink-soft`, `--collage-paper` (+ `-ink`, `-soft`),
+`--collage-accent`, `--collage-warm`, `--collage-dark`, `--collage-cool`
+(each + `-ink`), `--collage-tape`, `--collage-shadow`, the three faces
+`--collage-display`, `--collage-body`, `--collage-typed`;
+`data-surface="dark"` on the stage swaps kraft for slate. The torn edges are
+clip-path polygons whose jitter is in px (`calc(0% + 2.7px)`), so a slip and
+a sheet tear alike; they were generated once, with a seeded script, and live
+in the stylesheet.
+
+**Runtime:**
+- Writes scroll progress into each choreographed element as a CSS variable,
+  quantised to a few steps (`Math.floor(p * n) / n`): held poses, not
+  easing. The start and end of each motion are where the element's top sits
+  in the viewport (`.fly` from 1.02 to 0.58 of the height in 6 steps; bars
+  from .95 to .5 in 8; tape and stamps in 3; `.n` in 5; `.swim` in 10). A
+  `[data-seq]` container spreads its children's `--p` so they play one
+  after another as it rises. Every default is 1, so without the runtime (or
+  under reduced motion, where the loop returns early) the page is complete.
+- Builds the sewing-thread rail (`.vz-thread`, fixed at the left edge) with
+  a `.vz-knot` per `[data-knot]` placed at that section's share of the
+  scroll; the fill (`--prog`) and `.vz-on` knots follow the reader.
+- `Story.observe` on the `[data-unit]` sections: registered charts build and
+  play once, `[data-count]` numbers count up, in 12 held frames
+  (`Story.countSteps = 12`, a story.js addition under @1; `data-count-steps`
+  on an element overrides it). `Story.rebuildAll` after a resize.
+- `Story.collage.add(selector, variable, from, to, steps)` registers more
+  choreography; `Story.collage.refresh()` re-collects after the DOM changes.
+- Warns in the console when the stage has no `[data-unit]` or no `.piece`;
+  the lint (`lintCollage`) warns about a page without pieces or stamps.
+
+**Known limits:** no controls (nothing to switch: it is one page); the
+parallax runs only while the cover is on screen; a `.fly` piece inside a
+horizontally scrolling `.tablewrap` would fight the scroll, so the end-matter
+sheets don't fly.
+
 ## Recap (`recap.css`, `recap.js`) — vizf1 only
 
 **Authoring:** `<main class="stage">` holds `<div class="replay"
@@ -320,7 +378,8 @@ the camera the reader has switched away from doesn't switch it back.
 3. Open an example in a browser at 1440 × 900 and 375 × 740 (wrapped in the
    site chrome via `brandHtmlStory`, with `https://vizmaya.fyi/formats/*`
    served from the bundle): turn every page, step the whole tour, deal the
-   cards, switch to the one-page view and back, and try reduced motion.
+   cards, scroll the collage slowly end to end, switch to the one-page view
+   and back, and try reduced motion.
 4. Keep `@1` backwards compatible (see Versioning).
 
 ## Content notes on the examples

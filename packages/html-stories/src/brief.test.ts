@@ -227,8 +227,13 @@ assert.ok(!viz.includes('## Your assignment') && !viz.includes('Research stub'))
 // Story formats. The default (and an explicit 'scroll') is the scroll brief.
 assert.equal(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi/', format: 'scroll' }), viz)
 assert.ok(viz.includes('## Motion and scroll animation') && !viz.includes('## Story format'))
-const runtimes = { book: 'https://vizmaya.fyi/formats/book@1', board: 'https://vizmaya.fyi/formats/board@1', deck: 'https://vizmaya.fyi/formats/deck@1' }
-for (const format of ['book', 'board', 'deck'] as const) {
+const runtimes = {
+  book: 'https://vizmaya.fyi/formats/book@1',
+  board: 'https://vizmaya.fyi/formats/board@1',
+  deck: 'https://vizmaya.fyi/formats/deck@1',
+  collage: 'https://vizmaya.fyi/formats/collage@1',
+}
+for (const format of ['book', 'board', 'deck', 'collage'] as const) {
   // From a preview deployment, with a Mapbox token: neither leaks into a paged brief.
   const b = htmlStoryBrief({ siteUrl: 'https://vizmaya-git-x.vercel.app', format, mapboxToken: pk })
   const at = (h: string) => b.indexOf(h)
@@ -263,6 +268,20 @@ assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'book' }).inc
 }
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'deck' }).includes('One idea per slide.'))
 assert.ok(htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'board' }).includes('data-pin-to'))
+
+// The collage: the paper kit, stop-motion, stamps for how firm a claim is; works on every site.
+{
+  const c = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', format: 'collage' })
+  assert.ok(c.includes('## Story format: a cut-out collage') && c.includes('This story is a cut-out collage'))
+  assert.ok(c.includes('One idea per scene.'))
+  assert.ok(c.includes('The paper kit') && c.includes('Stop-motion, not easing') && c.includes('Say how firm it is'))
+  assert.ok(c.includes('.stamp') && c.includes('data-knot') && c.includes('Story.collage.add'))
+  assert.ok(c.includes('--collage-board') && c.includes('data-surface="dark"'))
+  assert.ok(c.includes('The cut-paper pieces follow the scroll; a registered chart doesn\'t.'))
+  assert.ok(c.includes('a scene without a stamp'))
+  const fs = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footshorts', format: 'collage' })
+  assert.ok(fs.includes('https://footshorts.com/formats/collage@1.js') && !fs.includes('vizmaya.fyi'))
+}
 
 // Travel's board: a day on a corkboard, strung to the day's map (a chart, with a
 // Mapbox Static Images picture under it given a token), its own example.

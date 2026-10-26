@@ -27,6 +27,9 @@
  *   Story.size(el, ratio)  [width, height] of el's layout box.
  *   Story.reduced          prefers-reduced-motion.
  *   Story.theme            the page's <meta name="vizmaya:theme"> colours.
+ *   Story.countSteps       count-ups in this many held frames instead of an
+ *                          ease (a format sets it; data-count-steps on an
+ *                          element overrides).
  * Story.ui is shared plumbing for the format runtimes, not part of the API.
  */
 (function () {
@@ -115,6 +118,9 @@
     var written = el.textContent
     var t0 = null
     var D = 1200
+    // Held frames instead of easing (the collage's stop-motion): data-count-steps
+    // on the element, or Story.countSteps set by a format runtime.
+    var steps = +el.getAttribute('data-count-steps') || +w.Story.countSteps || 0
     function fmt(v) {
       try { return v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) } catch (e) { return v.toFixed(dec) }
     }
@@ -122,7 +128,7 @@
       if (t0 === null) t0 = t
       var p = Math.min(1, (t - t0) / D)
       if (p < 1) {
-        el.textContent = fmt(end * (1 - Math.pow(1 - p, 3)))
+        el.textContent = fmt(end * (steps ? Math.floor(p * steps) / steps : 1 - Math.pow(1 - p, 3)))
         w.requestAnimationFrame(frame)
       } else {
         el.textContent = written
@@ -306,6 +312,7 @@
   w.Story = {
     version: 1,
     reduced: reduced,
+    countSteps: 0,
     theme: theme,
     charts: charts,
     build: build,

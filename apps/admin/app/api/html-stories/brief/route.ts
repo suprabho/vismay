@@ -26,7 +26,7 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
  *
  *   { app, format?, tone?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }
  *
- * `format` is the story format (scroll, the default, or book, board, deck);
+ * `format` is the story format (scroll, the default, or book, board, deck, collage, recap);
  * `tone` is the story's voice (straight, the default, or humorous);
  * `style` is the randomizer's pick (the client shows its swatches, so it must
  * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;

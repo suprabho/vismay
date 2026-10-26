@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpen, FilmStrip, Presentation, PushPin, Rows, type Icon } from '@phosphor-icons/react'
+import { BookOpen, FilmStrip, Presentation, PushPin, Rows, Scissors, type Icon } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { HTML_STORY_FORMATS, HTML_STORY_FORMAT_META, formatsForApp, type HtmlStoryFormat } from '@vismay/html-stories/formats'
 
@@ -9,13 +9,14 @@ const ICONS: Record<HtmlStoryFormat, Icon> = {
   book: BookOpen,
   board: PushPin,
   deck: Presentation,
+  collage: Scissors,
   recap: FilmStrip,
 }
 
 /**
  * Which story format the agent brief is for (packages/html-stories/src/formats):
- * a scrolling page, or a book, board, deck or (vizf1) race recap on the
- * site's hosted runtime. `app` limits the choice to the formats that site can
+ * a scrolling page, or a book, board, deck, cut-out collage or (vizf1) race
+ * recap on the site's hosted runtime. `app` limits the choice to the formats that site can
  * host; `suggested` marks the format a randomizer spin's kind of story suits.
  */
 export function FormatPicker({

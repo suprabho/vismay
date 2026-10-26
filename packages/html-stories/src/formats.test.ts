@@ -105,8 +105,8 @@ assert.equal(suggestedFormatFor('epics'), 'book')
 assert.equal(suggestedFormatFor('footshorts'), 'deck')
 
 // recap frames vizf1's race replay: vizf1 only.
-assert.deepEqual(formatsForApp('vizf1'), ['scroll', 'book', 'board', 'deck', 'recap'])
-assert.deepEqual(formatsForApp('vizmaya-fyi'), ['scroll', 'book', 'board', 'deck'])
+assert.deepEqual(formatsForApp('vizf1'), ['scroll', 'book', 'board', 'deck', 'collage', 'recap'])
+assert.deepEqual(formatsForApp('vizmaya-fyi'), ['scroll', 'book', 'board', 'deck', 'collage'])
 assert.equal(isFormatForApp('footshorts', 'recap'), false)
 
 console.log('formats: ok')

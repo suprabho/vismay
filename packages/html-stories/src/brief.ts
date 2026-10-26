@@ -36,7 +36,8 @@
  * message, so it never loads a tile).
  *
  * A brief is for one story format (./formats): the scrolling page by default,
- * or a book, a board or a deck. For those, the scroll-specific sections
+ * or a book, a board, a deck, a cut-out collage or (vizf1) a race recap. For
+ * those, the scroll-specific sections
  * (motion and scroll animation, the Mapbox sticky map) give way to the
  * format's own (./formatBrief): its hosted runtime, its authoring contract
  * and frame, and charts that animate when their unit is entered.
@@ -108,7 +109,7 @@ export interface BriefOptions {
   mapboxToken?: string | null
   /**
    * The story format: 'scroll' (default) or a runtime-driven format ('book',
-   * 'board', 'deck', and on vizf1 'recap') built on the site's hosted runtime.
+   * 'board', 'deck', 'collage', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
   /**

@@ -1,6 +1,6 @@
 /**
  * The brief's sections for the runtime-driven story formats (./formats): book,
- * board, deck and recap. In a brief for one of them, the scroll format's "Motion and
+ * board, deck, collage and recap. In a brief for one of them, the scroll format's "Motion and
  * scroll animation" section and its Mapbox sticky-map pattern are replaced by
  * the format's section here: what the reader does, what the hosted runtime
  * does, the page skeleton with the runtime's URLs, the authoring rules and
@@ -25,6 +25,7 @@ const TITLES: Record<PagedHtmlStoryFormat, string> = {
   book: 'a book',
   board: 'a pinned board',
   deck: 'a deck',
+  collage: 'a cut-out collage',
   recap: 'a race recap',
 }
 
@@ -390,11 +391,168 @@ ${skeleton(
   the deck sits on.`
 }
 
+
+function collageSection(app: HtmlStoryApp): string {
+  return `The story is a cut-out collage: a kraft board with torn-paper pieces taped
+to it, the way a scrapbook or a ransom note is made. Each scene is a plate: a
+torn sheet of notes beside a cut-paper figure, alternating sides down the
+page. The page scrolls as usual, but nothing glides. Pieces land, bars
+stretch, stamps press down and numbers tick up in held poses, like stop-motion
+paper, as the reader scrolls them into view. The charts are cut from paper
+too: strips, blocks, strata, a dashed thread for a route. A rubber stamp on
+every scene says how firm its claim is.
+
+A hosted runtime does the collage: the board and its grain, the torn edges,
+tape, slips, stamps and number patches, the stop-motion choreography from
+scroll position, the cover's parallax, a sewing-thread progress rail down the
+left edge with a knot per scene, and registered charts and count-ups that play
+when their scene comes up the screen. Readers without JavaScript, or with
+reduced motion, see every piece in its finished place. You write the pieces:
+their words, their colours, their charts.
+
+${skeleton(
+  'collage',
+  app,
+  `<main class="stage" aria-label="<headline>, as a cut-out collage">
+  <header class="cover wrap" data-unit>
+    <div class="cover-grid">
+      <div class="cover-text">
+        <span class="slip dark enter par" data-par=".55" style="--d:.05s;rotate:-2deg">Where · What kind of story</span>
+        <h1>
+          <span class="strip dark enter par" data-par=".32" data-parx="-.08" style="--d:.15s;--ex:-30px">The first half of the headline</span>
+          <span class="ransom enter" style="--d:.6s;--ey:40px" aria-hidden="true"><span class="boil par" data-par=".22">4</span><span class="boil par" data-par=".5">4</span></span><span class="sr">44</span>
+          <span class="strip light enter par" data-par=".26" style="--d:.85s;--ey:20px">…the rest.</span>
+        </h1>
+        <div class="piece enter par" data-par=".12" style="--d:1s;--tilt:-.6deg"><span class="tape"></span><div class="paper" style="--cut:var(--torn-all)"><p>…the dek…</p></div></div>
+        <p class="byline">…</p>
+      </div>
+      <figure class="piece enter" style="--d:.2s;--tilt:1.6deg;margin:0"><span class="tape r"></span><div class="paper cool">
+        <div class="chart" data-chart="map" data-alt="…" style="height:420px"></div>
+        <figcaption class="typed">…</figcaption>
+      </div></figure>
+    </div>
+  </header>
+
+  <section class="scene wrap" data-unit data-knot="1" aria-labelledby="s1-h">
+    <div class="notes">
+      <span class="bignum par" data-drift=".22" aria-hidden="true">1</span>
+      <div class="piece fly" style="--nt:-1.2deg;--fx:-50px;--fy:40px"><span class="tape"></span><div class="paper">
+        <div class="meta"><span class="slip dark">1 · Where this scene is</span><span class="stamp documented">Documented</span></div>
+        <h2 id="s1-h">…the claim, with its <span class="n">44,000</span> in a patch…</h2>
+        <p>…</p>
+        <p class="aside">…what is argued, who says so…</p>
+      </div></div>
+    </div>
+    <figure class="plate"><div class="piece" style="--pt:1.4deg"><span class="tape r"></span><div class="paper warm halftone" style="--cut:var(--torn-all)">
+      <p class="plate-title">…what the figure shows…</p>
+      <div class="cmp">
+        <div class="crow"><div class="crow-h"><span>…</span><b>44,000+</b></div>
+          <div class="ctrack"><div class="cbar grow" style="width:88%"></div></div></div>
+        <div class="crow"><div class="crow-h"><span>…</span><b data-count="10000">10,000</b></div>
+          <div class="ctrack"><div class="cbar grow fuzzy" style="width:20%;background:var(--collage-paper)"></div></div></div>
+        <div class="ctick" aria-hidden="true"><span style="left:0">0</span><span style="left:50%">25k</span><span style="left:100%">50k</span></div>
+      </div>
+      <p class="plate-note">…scale, caveat…</p>
+    </div></div></figure>
+  </section>
+  <section class="scene flip wrap" data-unit data-knot="2" aria-labelledby="s2-h">…</section>
+  …
+  <section class="band wrap" data-unit aria-labelledby="num-h">
+    <div class="head"><span class="slip" style="rotate:-1.5deg;justify-self:start">Numbers</span><h2 id="num-h">…</h2></div>
+    <div class="tiles">
+      <div class="piece tile fly" style="--fy:70px"><div class="paper accent"><b data-count="812728">812,728</b><p>…</p><span class="src">…</span></div></div>
+      …
+    </div>
+  </section>
+  <footer class="end wrap">
+    <div class="piece sheet" style="--tilt:-.3deg"><span class="tape l"></span><span class="tape r"></span><div class="paper"><h2>The route table</h2><div class="tablewrap"><table>…</table></div></div></div>
+    <div class="piece sheet" style="--tilt:.4deg"><span class="tape"></span><div class="paper"><h2>Method and caveats</h2>…</div></div>
+    <div class="piece sheet" style="--tilt:-.2deg"><span class="tape l"></span><div class="paper"><h2>Sources</h2><ul>…</ul></div></div>
+    <p class="colophon">…</p>
+  </footer>
+</main>`,
+)}
+
+- **Scenes, not screens.** Plan a cover, one plate that sets the whole scale
+  (a ruler, a map), 5 to 8 scenes, a band of numbers and the end matter (a
+  table of everything the story visited, a method-and-caveats sheet, the
+  sources). A scene is \`<section class="scene wrap" data-unit data-knot>\`:
+  \`.notes\` (a \`.piece.fly\` with a \`.tape\` and a torn \`.paper\`: a numbered
+  \`.slip\`, a \`.stamp\`, an \`h2\` that states the claim, a paragraph or two, an
+  \`.aside\` for what is argued) beside a \`.plate\` (a \`.piece\` with a coloured
+  \`.paper\` holding one figure, its \`.plate-title\` and a \`.plate-note\`). Add
+  \`.flip\` to every other scene so the notes change sides. Every section is a
+  \`data-unit\`; every scene has \`data-knot\` (its number on the thread rail).
+- **The paper kit.** \`.piece\` is the thing on the board (\`--tilt\`, a
+  shadow); \`.paper\` inside it is the torn sheet (\`--cut: var(--torn-all)\`,
+  \`var(--torn-tb)\` (the default: torn top and bottom) or \`var(--torn-t)\`;
+  colours \`.accent\`, \`.warm\`, \`.dark\`, \`.cool\`; textures \`.halftone\`,
+  \`.ruled\`). \`.tape\` sits across the top edge (\`.l\` or \`.r\` for a corner).
+  \`.slip\` is a typed label on a cut strip (\`.dark\`, \`.accent\`). \`.n\` sets a
+  number on a patch of paper that slides in as it is read. \`.strip\` cuts a
+  headline into ransom-note bands (\`.dark\`, \`.light\`, \`.accent\`) and
+  \`.ransom\` makes one number out of cut digits (\`.plain\` for a comma).
+  \`.bignum\` is the big outlined scene number behind the notes. Five papers
+  at most, one accent, and tilts within ±2°: it is a composition, not a mess.
+- **Cut the charts from paper first.** Comparison strips: \`.cmp\` of \`.crow\`
+  (a \`.crow-h\` with the label and the value, then a \`.ctrack\` of \`.cbar\`s
+  placed with inline \`left\` and \`width\` percentages), and a \`.ctick\` axis;
+  \`.hatch\` for a claimed range, \`.fuzzy\` for an estimate with soft ends. A
+  stack of blocks (\`.cstack\` of \`.blk\`, one block one unit, \`data-seq=".blk"\`
+  on the stack to drop them one at a time). Strata, a vein, a silhouette:
+  inline SVG polygons in the paper colours. Anything that needs a real
+  scale (a map, a log axis, 120 squares, a line over time) is a registered
+  chart (below) on its own coloured paper: every paper sets \`--c-ink\`,
+  \`--c-muted\`, \`--c-grid\`, \`--c-hi\`, \`--c-paper\`, \`--c-halo\` and
+  \`--font-chart\` for it, so one chart reads on any sheet.
+- **Stop-motion, not easing.** Choreography is a class and an inline
+  variable or two: \`.fly\` (the piece lands; \`--fx\`, \`--fy\`, \`--fr\`),
+  \`.grow\` on a bar (stretches from the left), \`.swim\` on a cut-out (crosses
+  its sheet; \`--sw\`), \`.ring\` on an SVG circle; inside a \`[data-seq]\`
+  container, \`.seq-drop\`, \`.seq-slide\` and \`.seq-pop\` play one after
+  another. \`.tape\`, \`.stamp\` and \`.n\` move on their own. On the cover,
+  \`.enter\` lands a piece on load (\`--d\` staggers; \`--ex\`, \`--ey\`), \`.boil\`
+  jitters a cut-out, \`data-par\` and \`data-parx\` give it parallax; a
+  \`.bignum\` takes \`data-drift\`. Everything has a finished default, so a
+  piece is never hidden waiting for a scroll. Don't animate running text, and
+  don't add your own scroll handler: \`Story.collage.add(selector, '--p',
+  from, to, steps)\` registers a new motion class instead.
+- **Say how firm it is.** Every scene's \`.stamp\` is \`.documented\` (a lab
+  date, a record, a census), \`.contested\` (rival claims, a disputed date) or
+  \`.inferred\` (an estimate, a tradition). Hatch a claimed range, soften an
+  estimate, draw a disputed span as a dashed vein, and put the contest in
+  the \`.aside\`. The method sheet at the end says which numbers are fact,
+  which are interpretation, and what was left off.
+- **Type and colour.** Three faces: a condensed display for headlines and
+  big numbers, a serif for the notes, a typewriter for slips, axes, sources
+  and anything "typed". The defaults are Bricolage Grotesque, Newsreader and
+  Courier Prime (load them from Google Fonts), set as \`--collage-display\`,
+  \`--collage-body\` and \`--collage-typed\`. The board is kraft; the papers are
+  newsprint, the accent (your \`vizmaya:theme\` accent), a warm ochre, a near
+  black and a cool blue (the theme's \`accent2\`). Keep the theme meta in step
+  with the board: background is the board, surface the paper.
+- **Photos belong on the board too.** A real photograph is a print: a
+  \`<figure class="piece">\` with a \`.tape\` and a \`.paper\` holding the
+  \`<img>\` and a typed \`<figcaption>\` with its credit. Cut-outs are for what
+  no photograph shows.
+- **Tokens** for your \`:root\`: \`--collage-board\`, \`--collage-board-deep\`,
+  \`--collage-ink\`, \`--collage-ink-soft\` (text straight on the board),
+  \`--collage-paper\`, \`--collage-paper-ink\`, \`--collage-paper-soft\`,
+  \`--collage-accent\` / \`-ink\`, \`--collage-warm\` / \`-ink\`, \`--collage-dark\`
+  / \`-ink\` / \`-soft\`, \`--collage-cool\` / \`-ink\`, \`--collage-tape\`,
+  \`--collage-shadow\`. \`data-surface="dark"\` on the stage swaps the kraft
+  for slate.
+- **Phones.** Under 820px a scene stacks (notes, then plate) and the cover
+  goes to one column. Keep a plate's figure legible at 340px wide: shorten
+  labels, fewer ticks, and \`.tablewrap\` around any table wider than that.
+  The thread rail takes the left 10px, so nothing touches the left edge.`
+}
+
 function enterSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
   const unit = HTML_STORY_FORMAT_META[format].unit
   const travelBoard = isTravelBoard(format, app)
   const verb =
-    format === 'book' ? 'turned to' : format === 'board' ? 'flown to' : format === 'recap' ? 'scrolled to' : 'shown'
+    format === 'book' ? 'turned to' : format === 'board' ? 'flown to' : format === 'recap' || format === 'collage' ? 'scrolled to' : 'shown'
   const board =
     format === 'board'
       ? `
@@ -408,7 +566,10 @@ function enterSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
     format === 'recap'
       ? `Charts aren't tied to scroll position. A chart builds and plays once, when its
 chapter becomes the one being read`
-      : `Nothing here is scroll-triggered. A chart builds and plays once, when its
+      : format === 'collage'
+        ? `The cut-paper pieces follow the scroll; a registered chart doesn't. It builds
+and plays once, when its scene comes up the screen`
+        : `Nothing here is scroll-triggered. A chart builds and plays once, when its
 ${unit} is ${verb}`
   const maps =
     format === 'recap'
@@ -419,7 +580,12 @@ ${unit} is ${verb}`
         ? `- The day's map is a chart too (see "The map is a chart" above); a map of
   somewhere bigger (the flight in, the country) is D3-geo with world-atlas
   TopoJSON. A live map canvas doesn't belong inside a scaled ${unit}.`
-        : `- Maps are charts too: D3-geo with world-atlas or us-atlas TopoJSON. A Mapbox
+        : format === 'collage'
+          ? `- Maps are charts cut from paper: D3-geo with world-atlas or us-atlas
+  TopoJSON on a \`.paper.cool\` sheet, the land filled in a paper colour with a
+  drop shadow, the route a dashed thread, each stop a numbered pin with a
+  typed slip. Not a Mapbox or MapLibre canvas: a live map isn't paper.`
+          : `- Maps are charts too: D3-geo with world-atlas or us-atlas TopoJSON. A Mapbox
   or MapLibre canvas doesn't belong inside a scaled ${unit}.`
   const example =
     format === 'recap'
@@ -580,7 +746,9 @@ export function storyFormatSection(
           : boardSection(app)
         : format === 'recap'
           ? recapSection(app)
-          : deckSection(app)
+          : format === 'collage'
+            ? collageSection(app)
+            : deckSection(app)
   return `## ${formatHeading(format)}
 
 ${body}
@@ -615,6 +783,13 @@ export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): 
     return [
       "tour steps whose items are off screen or under the panel at either size (step through the whole tour, then zoom into a few items by hand)",
       'text too small to read at the zoom that frames it',
+    ]
+  }
+  if (format === 'collage') {
+    return [
+      'a piece that lands over its neighbour or hides text at either size (scroll the whole page slowly at both; every piece must settle inside its column)',
+      'a scene without a stamp, or an estimate drawn as a solid bar (hatch a claimed range, soften an estimate with .fuzzy)',
+      'the page with scripts off, or with reduced motion on: every piece must already sit in its finished place, and the thread rail must not cover anything',
     ]
   }
   return [
