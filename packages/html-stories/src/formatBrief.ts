@@ -8,6 +8,7 @@
  * contract, design direction, icons, charts and content sections stay.
  */
 
+import type { RandomizerId } from '@vismay/randomizer/types'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import {
   HTML_STORY_FORMAT_META,
@@ -17,6 +18,7 @@ import {
   type HtmlStoryFormat,
   type PagedHtmlStoryFormat,
 } from './formats'
+import { DIORAMA_BEAT_TYPES } from './diorama'
 import { MAPBOX_TOKEN_GLOBAL } from './mapbox'
 
 const D3 = 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js'
@@ -25,6 +27,7 @@ const TITLES: Record<PagedHtmlStoryFormat, string> = {
   book: 'a book',
   board: 'a pinned board',
   deck: 'a deck',
+  diorama: 'a diorama',
   collage: 'a cut-out collage',
   recap: 'a race recap',
 }
@@ -179,6 +182,295 @@ ${skeleton(
   \`--board-ink\`, \`--board-ink-muted\`, \`--sticky-gold\` and the other sticky
   colours. The Whiteboard switch swaps the surface, string, pin and label
   tokens.`
+}
+
+function dioramaSection(app: HtmlStoryApp): string {
+  return `The story is one physical-feeling model of its subject, seen from many
+camera positions: a tilted map plate on a plinth, real coastlines cut as paper
+strata, routes and place markers on it, data objects that stand on the plinth
+(a deep-time ruler, a cutaway, specimen trays, a grove of 100, crates, flow
+arcs, two accounts side by side, small multiples of the plate, towers), fog
+over what can't be mapped, and a flat proscenium of words in front. The reader
+scrolls; the camera scrubs from one beat's pose to the next and the layers
+fade at the beat threshold. Pick it when the story has a place, a route or a
+spatial comparison at its heart.
+
+**The map is the stage, not the story.** Every beat puts a new data object on
+the plinth; a camera move alone is not a beat.
+
+A hosted runtime does the stage: the 3D model (three.js; a CSS 3D plate where
+WebGL is missing), projecting your places with d3-geo, the land from
+world-atlas, the camera rail, markers by certainty, labels, the data objects
+and their entrances, fog, the stepper's Back / Next and timeline, the layer toggles, a legend,
+progress, "Read as one page" (the beats as one column, which is also what
+readers without JavaScript get), keys (←/→), deep links (\`#beat=3\`), reduced
+motion (no loops, cuts instead of camera moves, props at full height) and a
+text list of every place and its certainty for screen readers. You write the
+story's data, its words and its design.
+
+${skeleton(
+  'diorama',
+  app,
+  `<main class="stage" aria-label="<headline>, as a diorama">
+  <script type="application/json" class="diorama-data">{ …story.json, below… }</script>
+  <div class="beats">
+    <section class="beat" data-unit data-beat="cover">
+      <div class="copy"><p class="kicker">…</p><h1>…</h1><p class="dek">…</p></div>
+    </section>
+    <section class="beat" data-unit data-beat="voyage">
+      <div class="copy">
+        <p class="kicker">…</p><h2>…</h2>
+        <ol class="stops">
+          <li data-stop="troy" data-short="Troy" data-ship="galley"><h3>Troy</h3><p>…</p></li>
+          …
+        </ol>
+      </div>
+    </section>
+    <section class="beat" data-unit data-beat="maps"><div class="copy">…<div class="dio-chips"></div></div></section>
+    …
+  </div>
+  <footer class="dio-end">…method, caveats, and a Sources list linking every source…</footer>
+</main>`,
+)}
+
+### Work in this order
+
+1. **Extract.** Read the research end to end: places (name, lat/lon, how sure
+   anyone is, who proposed it), sequences or routes, every quantity with its
+   unit, quotes with attribution, every caveat. List every data shape in it:
+   dates, items × attributes, shares, quantities, flows, rival accounts.
+2. **Fact-check before designing.** Recompute every distance from the
+   coordinates (haversine) and every sum or share from its parts. A research
+   figure more than 10% off is replaced by the computed value and flagged.
+   Keep the log, and put each computed figure in \`quantities\` with its
+   \`derivation\`: the lint recomputes every one when you post.
+3. **Assign objects** before you write beats: give each data shape its
+   object from the vocabulary below.
+4. **Find the spine:** the finding as one sentence with its number, then the
+   one or two comparisons that make it land. Turn it into 6 to 10 beats, one
+   claim and one new data object per beat.
+5. **Fit the plate:** the extent of every place plus about 5%. Mercator for
+   an extent under about 30° of latitude, \`conic-equal-area\` otherwise.
+6. **Write the JSON**, then the copy, then the design; check it at 1440 and
+   390px wide.
+
+### Beyond the map: the object vocabulary
+
+| Data shape | Object | \`kind\` | How it stands |
+| --- | --- | --- | --- |
+| Dates and periods | Deep-time ruler | \`ruler\` | A slab in front of the plate; spans rise from it, threads run up to each place |
+| Where things were found, by layer | Section cutaway | \`section\` | A block beside its place, cut open on two faces, strata as bands, finds set in them |
+| Presence across items × categories | Specimen trays | \`trays\` | A grid of shallow trays, filled or empty; a selected row lifts |
+| A share, or a count out of 100 | Unit grove | \`grove\` | 100 objects by its place; the share topples, fades or empties |
+| Quantities compared | Stacks | \`stack\` | Crates or sacks at true scale, the unit printed on the plinth |
+| Movement between places | Flow arcs | \`arc\` | Arcs lifting off the plate; width is volume only when volume is known |
+| Two accounts of one thing | Split stage | \`split\` | Two plinths side by side, same scale |
+| Change across eras | Time-lapse plates | \`lapse\` | The same plate as small multiples, one per period |
+| One value at one place | Tower, ring, pulse | \`tower\`, \`ring\`, \`pulse\` | For single numbers and distances |
+
+- **Mix:** three object kinds or more per story, and no more than half the
+  beats led by the map alone (the lint counts both).
+- **Tie back to place:** every object connects to the plate by a thread, a
+  leader line or a shared plinth (the runtime draws them from \`at\`,
+  \`anchor\` and each row's or span's \`at\`), so the map stays the index.
+- **Composite beats:** a beat may stage two or three objects when they answer
+  one question (a harvest: crates for two years and the import arc).
+- **On the stage, not in the copy:** a chart belongs on the plinth as an
+  object, never flat in the text column.
+
+A story built map-first and then rebuilt with objects (Kazakhstan's first
+grain and the apple):
+
+| Beat | Map-first | Objects |
+| --- | --- | --- |
+| Begash | Map zoom and a pulse | Section cutaway: the grain in the burial pit |
+| The route | Stepper on the map | The map threaded to a deep-time ruler |
+| The crops | (none) | Specimen trays: six crops × four sites |
+| The apple | Map and one tower | Unit grove: 80 of 100 trees fall |
+| The numbers | Two flat bars in the text column | Crate stacks and the import arc on one plinth |
+| Who tells it | Route layers | Split stage: the story told vs the record dug |
+| Insight | The map spinning | Time-lapse plates: the sites appearing, period by period |
+
+### The data: \`<script type="application/json" class="diorama-data">\`
+
+It is the single source of truth: the stage, the copy's numbers and the
+fact-check all read it.
+
+\`\`\`json
+{
+  "id": "odyssey-diorama",
+  "title": "A two-week sail that took ten years",
+  "plate": { "bbox": [[-9, 30], [37, 46]], "projection": "mercator", "land": "land-50m", "size": [1100, 560], "caption": "The Mediterranean · c. 1200 BCE" },
+  "insets": [{ "id": "ionian", "bbox": [[20.22, 37.96], [20.98, 38.66]], "land": "land-10m", "size": [620, 600], "caption": "The Ionian islands" }],
+  "places": [
+    { "id": "troy", "name": "Troy", "lat": 39.9575, "lon": 26.2389, "certainty": "excavated", "note": "Hisarlik mound", "label": "r", "sources": ["geo-odyssey"] },
+    { "id": "djerba", "name": "Lotus-Eaters", "lat": 33.8, "lon": 10.9, "certainty": "tradition", "proposedBy": ["Polybius", "Strabo"], "sources": ["geo-odyssey"] }
+  ],
+  "routes": [
+    { "id": "trad", "label": "Traditional", "by": "Strabo · Bérard", "style": { "color": "accent", "dash": [7, 6] },
+      "stops": ["troy", "ismaros", "malea", "djerba", "etna"], "gapFilled": [] }
+  ],
+  "quantities": [
+    { "id": "troy-ithaca-gc", "label": "Troy to Ithaca, great-circle", "value": 273, "unit": "nm", "derivation": "haversine(troy, ithaki)", "status": "computed" },
+    { "id": "calypso-years", "label": "Years with Calypso", "value": 7, "unit": "yr", "status": "sourced", "sources": ["homer"] }
+  ],
+  "beats": [
+    { "id": "decade", "type": "reveal",
+      "camera": { "target": [15.2, 38.4], "zoom": 1.5, "tilt": 50, "azimuth": -6 },
+      "layers": { "routes": ["trad"], "labels": ["lipari", "thrinacia"], "labelsSm": [] },
+      "props": [{ "kind": "tower", "at": "gozo", "value": "calypso-years", "label": "Calypso · Ogygia", "caption": "7 years", "color": "route-3" }] }
+  ],
+  "sources": [{ "id": "geo-odyssey", "title": "Geography of the Odyssey", "url": "https://en.wikipedia.org/wiki/Geography_of_the_Odyssey" }]
+}
+\`\`\`
+
+- **Plates.** \`plate\` is the main model; \`insets\` are close-up plates a beat
+  switches to with \`"plate": "<id>"\`. \`land\` is \`land-50m\` for a region and
+  \`land-10m\` for a close-up of islands or a coast; \`size\` is the plate in
+  pixels (keep the main one about 1100 wide). The model never changes scale:
+  only the camera moves.
+- **Terrain.** The runtime raises the land from real elevation data and
+  drapes routes, markers and props over it, so mountains, valleys and passes
+  are on the model without you drawing them. It is on by default; the
+  highest ground stands about 7% of the plate's height
+  (\`"relief": { "exaggeration": 3 }\` sets it, \`"relief": false\` keeps the
+  land flat). An inland story (no coast in the plate) depends on it: pick a
+  bbox that takes in the ranges and basins the story moves through, and put
+  the camera where the relief tells it. \`"borders": true\` draws modern
+  country borders on the land: use it for a present-day story, never for one
+  set before those borders existed.
+- **Places.** Every place has a \`certainty\` and at least one source, and its
+  marker shows the certainty:
+  - \`excavated\`: a solid accent dot with a light ring. Archaeology supports
+    the identification.
+  - \`hinge\`: an accent outline diamond. The last solid point before the
+    story leaves the map.
+  - \`tradition\`: a hollow dot. A literary or local association, nothing dug
+    up.
+  - \`contested\`: a dashed hollow dot. The evidence itself is disputed.
+  Everything past the story's hinge is \`tradition\` or \`contested\` unless the
+  research cites excavation: no marker may look more certain than its
+  evidence. \`label\` (\`l\`, \`r\`, \`t\`, \`b\`) is the side its name sits.
+- **Routes.** \`stops\` are place ids in order, or \`[lon, lat]\` waypoints that
+  only bend the line (round a cape, keep it at sea). A stop the proponent
+  never named, filled from another reading, goes in \`gapFilled\` and draws
+  hollow. \`style.color\` is \`accent\`, \`route-2\`, \`route-3\`, \`route-4\`, \`muted\`
+  or \`paper\`; give each competing route its own \`dash\` too, so colour never
+  carries meaning alone.
+- **Quantities.** Every number the reader sees has an entry: \`status\` is
+  \`computed\` (with a \`derivation\`), \`sourced\` (with \`sources\`),
+  \`reconstructed\` (a modelled figure: print it with "≈" and footnote it) or
+  \`estimate\` (with a \`note\` saying how). Derivations the lint recomputes:
+  \`haversine(a, b)\`, \`route(a, b, c…)\` (great-circle legs through places, in
+  the quantity's unit: km, nm or mi), \`sum(q1, q2…)\`, \`ratio(q1, q2)\`,
+  \`share(q1, q2)\` (a percentage), \`stops(route)\` and \`count(a, b…)\`. In the
+  copy, wrap each number in \`<span data-q="<quantity id>">\`; the runtime warns
+  when the text and the quantity disagree.
+- **Beats**, 6 to 10, in the order of the sections. \`type\` is one of
+  ${DIORAMA_BEAT_TYPES.map((t) => `\`${t}\``).join(', ')}:
+  - \`cover\`: the whole model and the one-line hook.
+  - \`reveal\`: a data object grows out of the plate.
+  - \`hinge\`: a threshold where certainty changes: \`"fog": { "west": 23.19,
+    "labels": { "west": "Wonderland", "east": "Geography" }, "caption": "…" }\`
+    under the beat's \`layers\` hazes everything west (or east) of a
+    longitude. Keys are read only where this section puts them: a \`fog\` or
+    \`routes\` on the beat itself is ignored (the lint names it).
+  - \`stepper\`: stop by stop. Its \`.copy\` holds \`<ol class="stops">\` with one
+    \`<li data-stop="<place>">\` card per stop (\`data-short\` for the timeline,
+    \`data-ship\`: \`galley\`, \`raft\` or \`none\`). The section is as tall as its
+    stops; the camera follows the stop the reader has scrolled to at the
+    beat's zoom (about 1.2–2), the route draws up to it, and Back / Next and
+    a timeline jump between stops. \`"stepper": { "route": "trad", "next":
+    "Sail on" }\`.
+  - \`layers\`: competing hypotheses the reader toggles: \`layers.routes\` gets a
+    toggle each (in \`<div class="dio-chips">\` if you place one), \`layers.on\`
+    is the starting set.
+  - \`interstitial\`: full screen, no model: a sensory or conceptual break.
+    Design its \`.copy\` as a whole screen (it covers the model).
+  - \`close-up\`: a second, smaller plate (an \`inset\`) for one place in detail.
+  - \`epilogue\`: the takeaway; \`"camera": { "spin": true }\` turns the plinth
+    slowly.
+- **Camera.** \`target\` is a place id, \`[lon, lat]\` or \`"props"\` (where the
+  beat's objects stand; default: the plate's centre), \`zoom\` (1 frames the
+  whole plate), \`tilt\` 38–52° and \`azimuth\` −2 to −12°. Objects on the shelf
+  (ruler, trays, split, lapse) stand in front of the plinth: target
+  \`"props"\` at about zoom 1.1–1.2 and tilt 50–54° so plate and shelf both
+  show. Small moves between neighbouring beats read best.
+- **Layers.** \`routes\` to show, \`labels\` (at most 8 names; the current stop
+  is set in the display serif), \`labelsSm\` (at most 4, for phones),
+  \`places\` (markers to show besides the routes' stops) and \`fog\`.
+- **Props**, the data objects, each with its data. Every number one shows is a
+  quantity id (or a row of years for a ruler), and its values share one scale
+  per unit across the story. \`color\` is a palette name, as for routes.
+  - \`ruler\`: \`spans: [{ label, from, to, at }]\`, years as numbers (negative
+    is BCE) or quantity ids (a unit of \`BCE\` counts back); \`from\`/\`to\` fix
+    the ends. Overlapping spans take lanes; each span threads to its \`at\`.
+  - \`section\`: \`at\`, \`strata: [{ label, depth }]\` from the top down
+    (\`depth\` is relative), \`finds: [{ label, in, x }]\` (\`in\`: a stratum's
+    label or index; \`x\`: 0–1 across the face), \`label\`, \`caption\`,
+    \`offset: [dx, dy]\` in plate pixels.
+  - \`trays\`: \`rows: [{ label, at }]\`, \`cols: [label]\` (six or fewer, short
+    words: they share a phone's width), \`cells\` (rows × cols: 1 present, 0
+    absent, a fraction, \`null\` not known), \`select\` (a row to lift),
+    \`label\`.
+  - \`grove\`: \`at\`, \`value\` (a % quantity, or a count with \`of\`),
+    \`show: "lost"\` (default) or \`"left"\`, \`mode\`: \`topple\` (default),
+    \`fade\` or \`empty\`, \`unit\` (what one object stands for), \`label\`.
+  - \`stack\`: \`at\`, \`items: [{ label, value }]\`, \`per\` (units per crate;
+    default: a round number that keeps the biggest pile under about 24),
+    \`shape\`: \`crate\` or \`sack\`.
+  - \`arc\`: \`from\`, \`to\` (places or \`[lon, lat]\`; one may lie off the
+    plate, and the arc comes in at its edge, named by \`fromLabel\`), \`value\`
+    (sets the width; leave it out when the volume isn't known), \`label\`.
+  - \`split\`: \`anchor\`, \`sides: [{ label, sub, items: [{ label, value }] }]\`
+    (two; an item with a value stands taller, on one scale for both).
+  - \`lapse\`: \`frames: [{ label, places }]\` (two to six); earlier places stay,
+    dimmed, unless \`"cumulative": false\`.
+  - \`tower\` (\`at\`, \`value\`, \`label\`, \`caption\`), \`ring\` (\`at\`, \`value\` or
+    \`range: [q1, q2]\`: distances drawn to scale from the place; \`label\`,
+    \`labelAngle\` in degrees, 0 = east, clockwise), \`pulse\` (\`at\`, \`radius\`),
+    and the leader \`line\` (\`from\`, \`to\`, \`label\`) and marker \`ship\` (\`at\`,
+    \`ship\`).
+  - A shape none of these fits: register your own kind in a script after the
+    runtime's, \`Story.props.<kind> = { layout: function (spec, api) { … } }\`,
+    returning boxes, paths and captions in plate pixels (the comment by
+    \`Story.props\` in diorama@1.js has the contract). Use it rarely.
+
+### The proscenium
+
+- **Copy per beat:** a kicker, a headline of 12 words or fewer with the number
+  in the sentence, and a dek of 40 words or fewer. One claim per beat. Plain
+  words.
+- **On wide screens** each \`.copy\` sits on the left (about 470px) over a
+  shadow on the model; the model fills the right. **On phones** the plate
+  takes the top half and \`.copy\` becomes a bottom sheet: keep it short, and
+  hide the extras (a card, a second paragraph) under 720px.
+- **Quotes:** at most two epigraphs per story, each under 25 words, attributed
+  with work and date. Live debates go in a dated caveat box, never as settled.
+- **End** with \`<footer class="dio-end">\` after \`.beats\`: method, caveats, and
+  a Sources list that links every source in the JSON (the lint checks).
+
+### The look
+
+Keep the structure; restyle the palette from the subject. Tokens for your
+\`:root\` (the stage reads them once): \`--dio-ground\` (page and stage),
+\`--dio-paper\` (text, labels), \`--dio-muted\`, \`--dio-accent\` (the one accent:
+the primary route, anchors, the hinge, active states), \`--dio-sea-1\`,
+\`--dio-sea-2\`, \`--dio-sea-3\` (the sea's radial gradient), \`--dio-land\` (the
+paper top of the land), \`--dio-strata-1\`, \`--dio-strata-2\`, \`--dio-strata-3\`
+(the strata under it, light to dark), \`--dio-route-2\`, \`--dio-route-3\`,
+\`--dio-route-4\` (competing routes: differ in lightness, not only hue),
+\`--dio-plinth\`, \`--dio-plinth-side\`, \`--dio-fog\`, and the type:
+\`--dio-serif\` (headlines, stop names), \`--dio-sans\` (body), \`--dio-mono\`
+(kickers, counters, map captions). Load the fonts yourself.
+
+**Make it look like a model you could set on a table.** The land is the
+lightest thing on the stage: a paper, bone, sand or chalk \`--dio-land\`, at
+3:1 or more against a dark \`--dio-ground\`, with the strata stepping darker
+under it and the sea a mid-tone at least 2:1 from the land. A dark land on a
+dark ground hides the model and its relief entirely (the lint warns). Every
+\`--dio-*\` colour is a hex value (\`#rgb\` or \`#rrggbb\`): the stage can't read
+\`rgba()\`, names or variables and falls back to its defaults.`
 }
 
 /** The travel story told as a board: the git copy of the reference page, private to its trip. */
@@ -552,7 +844,13 @@ function enterSection(format: PagedHtmlStoryFormat, app: HtmlStoryApp): string {
   const unit = HTML_STORY_FORMAT_META[format].unit
   const travelBoard = isTravelBoard(format, app)
   const verb =
-    format === 'book' ? 'turned to' : format === 'board' ? 'flown to' : format === 'recap' || format === 'collage' ? 'scrolled to' : 'shown'
+    format === 'book'
+      ? 'turned to'
+      : format === 'board'
+        ? 'flown to'
+        : format === 'recap' || format === 'diorama' || format === 'collage'
+          ? 'scrolled to'
+          : 'shown'
   const board =
     format === 'board'
       ? `
@@ -572,7 +870,11 @@ and plays once, when its scene comes up the screen`
         : `Nothing here is scroll-triggered. A chart builds and plays once, when its
 ${unit} is ${verb}`
   const maps =
-    format === 'recap'
+    format === 'diorama'
+      ? `- The model is the story's map: don't draw another map of the same place.
+  Data goes on the plinth as an object (see "Beyond the map"), not as a chart
+  flat in a beat's copy; a small key or a counter in the copy is fine.`
+      : format === 'recap'
       ? `- The replay is the race's map: don't add a Mapbox or MapLibre map of the
   circuit. A map of somewhere else (the calendar, a driver's home) is a D3-geo
   chart.`
@@ -746,8 +1048,10 @@ export function storyFormatSection(
           : boardSection(app)
         : format === 'recap'
           ? recapSection(app)
-          : format === 'collage'
-            ? collageSection(app)
+          : format === 'diorama'
+            ? dioramaSection(app)
+            : format === 'collage'
+              ? collageSection(app)
             : deckSection(app)
   return `## ${formatHeading(format)}
 
@@ -779,6 +1083,15 @@ export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): 
       'the one-column view ("Read as one page") you haven\'t read: every chapter must stand without the replay',
     ]
   }
+  if (format === 'diorama') {
+    return [
+      'any warning the lint gives on the diorama: a computed figure that doesn\'t match its derivation, a place without a certainty or a source, a beat without its section, a key in the wrong place, a land colour that disappears into the ground',
+      'a model you haven\'t looked at: open the page and check the land, its relief and every route and marker are plain to see in each beat',
+      'a beat with no new data object, fewer than three object kinds in the story, an object with no thread or leader back to its place, or a chart sitting flat in the text column',
+      'a marker that looks more certain than its evidence, or anything past the hinge marked as more than tradition',
+      'beats you haven\'t scrolled through at 1440 and 390px wide (and with reduced motion), and the one-column view ("Read as one page")',
+    ]
+  }
   if (format === 'board') {
     return [
       "tour steps whose items are off screen or under the panel at either size (step through the whole tour, then zoom into a few items by hand)",
@@ -802,7 +1115,7 @@ export function formatChecks(format: PagedHtmlStoryFormat, app?: HtmlStoryApp): 
  * A spin's brief is a scroll brief unless it asks for a format; say which
  * paged format its kind of story tends to suit, and how to ask for it.
  */
-export function formatHintSection(randomizer: 'desk' | 'atlas' | 'epics' | 'footshorts' | 'viznba', format: HtmlStoryFormat): string | null {
+export function formatHintSection(randomizer: RandomizerId, format: HtmlStoryFormat): string | null {
   if (format !== 'scroll') return null
   const s = suggestedFormatFor(randomizer)
   const label = HTML_STORY_FORMAT_META[s].label.toLowerCase()

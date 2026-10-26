@@ -11,10 +11,13 @@ import { RandomizerClient } from '@/components/randomizer/RandomizerClient'
 export const dynamic = 'force-dynamic'
 
 /**
- * The Vizmaya story randomizers (packages/randomizer, migration 088): one
- * slot machine with three reel sets (Desk, Atlas, Epics). Spin draws a topic
- * under the playbook's rules and logs it; the composed agent brief carries
- * the spin; the hero insight gate and the Desk heat table live here too.
+ * The Vizmaya story randomizers (packages/randomizer, migrations 088, 093
+ * and 094): one slot machine with five reel sets (Desk, Atlas, Epics, OCW
+ * Desk, Landmark Desk). Spin draws a topic under the playbook's rules and
+ * logs it; the composed agent brief carries the spin; the hero insight gate,
+ * the Desk heat table, the OCW pool panel and the Landmark pool panel live
+ * here too. The OCW and Landmark Desks need nothing loaded up front: their
+ * pools are read per spin and kept on the spin.
  */
 export default async function RandomizerPage() {
   if (!(await isAuthed())) redirect('/login?next=/vizmaya/randomizer')

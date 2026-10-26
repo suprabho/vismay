@@ -22,6 +22,18 @@
  *                                                     tournaments and teams with heat, headlines, fixtures
  *                                                     (on viznba: the NBA Desk's, conferences and
  *                                                     franchises with heat, headlines, games)
+ *   GET  /api/randomizer/ocw?topic=&kind=&course=&u=  a page of the OCW Desk's pool (vizmaya only):
+ *                                                     the files of one kind under one topic, or in one
+ *                                                     course, as a spin would see them; without a query,
+ *                                                     the taxonomy (fields, topics with their file counts, kinds)
+ *   GET  /api/randomizer/cron/ocw                   the OCW Desk's daily spin (Vercel Cron, CRON_SECRET):
+ *                                                     spins once per UTC day unless a kept spin exists
+ *   GET  /api/randomizer/landmark?prize=&era=&laureate=  the Landmark Desk's pool (vizmaya only): the awards
+ *                                                     of one prize in one era, as a spin would read them;
+ *                                                     with `laureate` (a laureateId from them), that laureate's
+ *                                                     works; without a query, the taxonomy (fields, prizes
+ *                                                     with their award counts per era, eras, lenses)
+ *   GET  /api/randomizer/cron/landmark              the Landmark Desk's daily spin (Vercel Cron, CRON_SECRET)
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -30,8 +42,10 @@
  * Server only.
  */
 
-import { DESK } from '@vismay/randomizer/datasets'
+import { DESK, LANDMARK, OCW } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
+import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from '@vismay/randomizer/landmarkPool'
+import { loadOcwPool } from '@vismay/randomizer/ocwPool'
 import { assignmentSection } from '@vismay/randomizer/spinBrief'
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { suggestedFormatFor } from './formats'
@@ -47,11 +61,12 @@ import {
   refreshDeskHeat,
   saveSpinResearch,
   SpinError,
+  spunOn,
   type HeatFailure,
   type HeatRefresh,
 } from '@vismay/randomizer/spins'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { isRandomizerId, RANDOMIZER_META, RANDOMIZERS, RESPIN_REASONS, type SpinRecord } from '@vismay/randomizer/types'
+import { isRandomizerId, RANDOMIZER_META, RANDOMIZERS, RESPIN_REASONS, type RandomizerId, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 
 function json(body: unknown, status = 200): Response {
@@ -283,4 +298,136 @@ export async function handleViznbaNewsRequest(req: Request): Promise<Response> {
   } catch (e) {
     return fail(e)
   }
+}
+
+/**
+ * GET /api/randomizer/ocw on vizmaya: a page of the OCW Desk's pool, read
+ * the way a spin reads it (packages/randomizer ocwPool.ts), for an agent
+ * that wants to look before locking a topic or a course. `topic` (a topic
+ * name from the taxonomy) and `kind` (a resource kind) select the page;
+ * `course` (a MIT Learn course id) reads that course's files of the kind
+ * instead; `u` in [0, 1) picks where the page starts (random otherwise).
+ * Without `topic` or `course` it answers the taxonomy: fields, topics with
+ * their file counts per kind, kinds and lenses. Read-only.
+ */
+export async function handleOcwPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const url = new URL(req.url)
+  const topicName = url.searchParams.get('topic')?.trim() || null
+  const kindName = url.searchParams.get('kind')?.trim() || null
+  const courseParam = url.searchParams.get('course')?.trim() || null
+  if (!topicName && !courseParam) {
+    return json({
+      fields: OCW.fields,
+      topics: OCW.topics,
+      kinds: OCW.kinds,
+      lenses: OCW.lenses,
+      note: 'Pass topic and kind (or course and kind) for a page of files, as a spin would read it.',
+    })
+  }
+  const kind = kindName ? OCW.kinds.find((k) => k.name.toLowerCase() === kindName.toLowerCase()) : undefined
+  if (!kind) return json({ error: `kind must be one of ${OCW.kinds.map((k) => k.name).join(', ')}` }, 400)
+  const topic = topicName ? OCW.topics.find((t) => t.name.toLowerCase() === topicName.toLowerCase()) : undefined
+  if (topicName && !topic) return json({ error: `unknown topic "${topicName}": see GET /api/randomizer/ocw for the taxonomy` }, 400)
+  const courseId = courseParam ? Number(courseParam) : null
+  if (courseParam && !(courseId! > 0 && Number.isInteger(courseId))) return json({ error: 'course must be a MIT Learn course id' }, 400)
+  const uParam = url.searchParams.get('u')
+  const u = uParam === null ? Math.random() : Number(uParam)
+  if (!(u >= 0 && u < 1)) return json({ error: 'u must be in [0, 1)' }, 400)
+  const field = topic ? OCW.fields.find((f) => f.id === topic.field)! : OCW.fields[0]!
+  try {
+    const pool = await loadOcwPool({
+      field,
+      topic: topic ?? { id: 0, field: field.id, name: '', files: {} },
+      kind,
+      lens: OCW.lenses[0]!,
+      u,
+      query: { topic: topic?.name ?? '', kind: kind.name, courseId },
+      keepFile: null,
+      afterFile: null,
+    })
+    return json(pool)
+  } catch (e) {
+    return json({ error: `The OCW pool could not be read: ${e instanceof Error ? e.message : String(e)}` }, 503)
+  }
+}
+
+/**
+ * GET /api/randomizer/landmark on vizmaya: the Landmark Desk's pool, read
+ * the way a spin reads it (packages/randomizer landmarkPool.ts), for an
+ * agent that wants to look before locking a prize, an era or a laureate.
+ * `prize` (a prize id from the taxonomy) and `era` (an era id) select the
+ * awards; `laureate` (a laureateId from those awards) reads that laureate's
+ * works instead, with how each source fared. Without `prize` it answers
+ * the taxonomy: fields, prizes with their award counts per era, eras and
+ * lenses. Read-only; the works read uses the server's OPENALEX_API_KEY and
+ * UNPAYWALL_EMAIL when set.
+ */
+export async function handleLandmarkPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const url = new URL(req.url)
+  const prizeId = url.searchParams.get('prize')?.trim() || null
+  const eraId = url.searchParams.get('era')?.trim() || null
+  const laureateId = url.searchParams.get('laureate')?.trim() || null
+  if (!prizeId) {
+    return json({
+      fields: LANDMARK.fields,
+      eras: LANDMARK.eras,
+      prizes: LANDMARK.prizes,
+      lenses: LANDMARK.lenses,
+      note: 'Pass prize and era for the awards, as a spin would read them; add laureate (a laureateId from the awards) for that laureate\'s works.',
+    })
+  }
+  const prize = LANDMARK.prizes.find((p) => p.id === prizeId)
+  if (!prize) return json({ error: `unknown prize "${prizeId}": see GET /api/randomizer/landmark for the taxonomy` }, 400)
+  const era = eraId ? LANDMARK.eras.find((e) => e.id === eraId) : undefined
+  if (!era) return json({ error: `era must be one of ${LANDMARK.eras.map((e) => e.id).join(', ')}` }, 400)
+  try {
+    const pool = await loadLandmarkAwards({ prize, era, query: { prize: prize.id, era: era.id } })
+    if (!laureateId) return json(pool)
+    const found = pool.awards.find((a) => a.laureateId === laureateId)
+    if (!found) return json({ error: `no award for laureate "${laureateId}" in the ${prize.name} between ${era.from} and ${era.to}` }, 404)
+    const award = await enrichLandmarkAward(found, prize)
+    const works = await loadLandmarkWorks(award, prize)
+    return json({ asOf: pool.asOf, query: pool.query, award, works })
+  } catch (e) {
+    return json({ error: `The Landmark pool could not be read: ${e instanceof Error ? e.message : String(e)}` }, 503)
+  }
+}
+
+/**
+ * The daily spin of a randomizer with a cron (the OCW Desk, the Landmark
+ * Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
+ * `Authorization: Bearer $CRON_SECRET`; it fails closed without the secret.
+ * One spin per UTC day: when a kept spin of that randomizer already exists
+ * today (someone spun by hand), it answers with that one and spins nothing.
+ */
+async function handleDailySpinRequest(req: Request, origin: string, randomizer: RandomizerId): Promise<Response> {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return json({ error: 'CRON_SECRET is not set on this project' }, 503)
+  if (req.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401)
+  if (!hasRandomizerEnv()) return json({ error: 'the randomizer needs Supabase service credentials' }, 503)
+  try {
+    const existing = await spunOn(randomizer)
+    if (existing) return json({ ok: true, spun: false, ...spinPayload(existing, origin) })
+    const spin = await createSpin({ randomizer, createdBy: 'cron' })
+    console.log(`[randomizer] ${randomizer} daily spin ${spin.id}: ${spin.summary}`)
+    return json({ ok: true, spun: true, ...spinPayload(spin, origin) })
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+/** GET /api/randomizer/cron/ocw on vizmaya: the OCW Desk's daily spin. */
+export async function handleOcwDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'ocw')
+}
+
+/** GET /api/randomizer/cron/landmark on vizmaya: the Landmark Desk's daily spin. */
+export async function handleLandmarkDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'landmark')
 }

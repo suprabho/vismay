@@ -8,6 +8,7 @@
  *   book@1.js, book@1.css    story.js + book.js; common.css + book.css
  *   board@1.js, board@1.css  likewise
  *   deck@1.js, deck@1.css    likewise
+ *   diorama@1.js, .css       likewise (a tilted 3D model the camera scrolls over)
  *   collage@1.js, collage@1.css  likewise (the cut-out collage)
  *   recap@1.js, recap@1.css  likewise (vizf1: frames the race replay)
  *   examples/*.html          the reference pages the brief links to
@@ -26,7 +27,7 @@ export const GENERATED_PATH = join(pkg, 'src', 'formatAssets.generated.ts')
 
 /** Must match FORMAT_RUNTIME_MAJOR in src/formats.ts (src/formats.test.ts checks). */
 const MAJOR = 1
-const PAGED = ['book', 'board', 'deck', 'collage', 'recap'] as const
+const PAGED = ['book', 'board', 'deck', 'diorama', 'collage', 'recap'] as const
 
 function read(file: string): string {
   return readFileSync(join(formatsDir, file), 'utf8').replace(/\r\n/g, '\n')

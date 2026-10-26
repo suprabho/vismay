@@ -8,6 +8,7 @@
  */
 
 import type { HtmlStoryApp } from './apps'
+import { lintDiorama } from './diorama'
 import {
   FORMAT_META_NAME,
   HTML_STORY_FORMAT_META,
@@ -231,6 +232,7 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
     )
   }
   if (format === 'recap') lintRecap(html, warnings)
+  if (format === 'diorama') lintDiorama(html, warnings)
   if (format === 'collage') lintCollage(html, warnings)
 }
 

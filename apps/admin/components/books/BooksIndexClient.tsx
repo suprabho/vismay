@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Plus, ShieldStar } from '@phosphor-icons/react'
 import { BEAT_TARGET, seasonLabel, seasonSlug, type SeasonBookSummary } from '@/lib/seasonBooks/plan'
+import { BOOK_FORMATS, type BookFormat } from '@/lib/seasonBooks/seasonSpreads'
 import { SYSTEM_VERSION } from '@/lib/seasonBooks/system'
 import { BUTTON, PANEL, PRIMARY, SELECT } from './shared'
 
@@ -23,6 +24,7 @@ export function BooksIndexClient() {
   const seasons = useMemo(() => Array.from({ length: latest - FIRST_SEASON + 1 }, (_, i) => FIRST_SEASON + i), [latest])
   const taken = new Set(books.map(b => b.seasonStart))
   const [season, setSeason] = useState<number>(2003)
+  const [format, setFormat] = useState<BookFormat>('season-spreads')
 
   useEffect(() => {
     fetch(API, { cache: 'no-store' })
@@ -39,7 +41,7 @@ export function BooksIndexClient() {
     setCreating(true)
     setError('')
     try {
-      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seasonStart: season }) })
+      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seasonStart: season, format }) })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error ?? 'Could not create the book')
       router.push(`/footshorts/books/${data.book.slug}`)
@@ -56,15 +58,18 @@ export function BooksIndexClient() {
           <div className="mb-2 text-xs font-medium uppercase tracking-wider text-amber-300">Season books · system v{SYSTEM_VERSION}</div>
           <h1 className="text-2xl font-semibold text-white">Books</h1>
           <p className="mt-2 text-sm text-neutral-400">
-            One season per book, one month per chapter. Work in spreads, not pages: each spread is one claim with one visual.
-            Find the season’s {BEAT_TARGET.min}–{BEAT_TARGET.max} beats first, map them on the flatplan, write a card for each spread,
-            thumbnail each chapter, then pull the real data and polish.
+            One season per book. A <span className="text-neutral-200">season-spreads</span> book is built from data spreads in the team-spread language: a league spread per league,
+            one team spread per club in its colours, a competition spread per cup, and honourable mentions; set the roster, work each spread in the editor,
+            page the flatplan. A <span className="text-neutral-200">claim-spreads</span> book is the older model: {BEAT_TARGET.min}–{BEAT_TARGET.max} beats, a flatplan and a card per claim.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/footshorts/books/crests" className={BUTTON}><ShieldStar size={16} /> Crests</Link>
           <select className={SELECT} value={season} onChange={e => setSeason(Number(e.target.value))} aria-label="Season">
             {seasons.map(s => <option key={s} value={s} disabled={taken.has(s)}>{seasonLabel(s)}{taken.has(s) ? ' (started)' : ''}</option>)}
+          </select>
+          <select className={SELECT} value={format} onChange={e => setFormat(e.target.value as BookFormat)} aria-label="Book format">
+            {(Object.keys(BOOK_FORMATS) as BookFormat[]).map(f => <option key={f} value={f}>{BOOK_FORMATS[f]}</option>)}
           </select>
           <button type="button" className={PRIMARY} onClick={create} disabled={creating || loading || taken.has(season)}>
             <Plus size={16} weight="bold" /> {creating ? 'Starting…' : 'Start book'}
@@ -86,7 +91,8 @@ export function BooksIndexClient() {
               </button>
             )
           }
-          const beatPct = Math.min(1, book.beatCount / BEAT_TARGET.min)
+          const v2 = book.format === 'season-spreads'
+          const pct = v2 ? (book.spreadCount ? Math.min(1, book.cardedCount / book.spreadCount) : 0) : Math.min(1, book.beatCount / BEAT_TARGET.min)
           return (
             <Link key={s} href={`/footshorts/books/${book.slug}`}
               className="group flex aspect-[3/4] flex-col justify-between rounded-lg border border-white/15 bg-[#F4F1EA] p-3 text-neutral-950 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40">
@@ -94,16 +100,17 @@ export function BooksIndexClient() {
                 <BookOpen size={18} weight="duotone" className="text-[#D7372B]" />
                 <span className="text-[10px] uppercase tracking-wider text-neutral-500">{DATE.format(new Date(book.updatedAt))}</span>
               </div>
+              <span className="text-[10px] uppercase tracking-wider text-neutral-500">{BOOK_FORMATS[book.format]}</span>
               <div>
                 <div className="text-3xl font-extrabold leading-none tabular-nums">{seasonLabel(s)}</div>
                 <div className="mt-1 line-clamp-2 text-xs text-neutral-600">{book.title}</div>
                 <dl className="mt-3 grid grid-cols-3 gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-                  <div><dt>Beats</dt><dd className="text-sm font-semibold tabular-nums text-neutral-900">{book.beatCount}</dd></div>
+                  <div><dt>{v2 ? 'Pages' : 'Beats'}</dt><dd className="text-sm font-semibold tabular-nums text-neutral-900">{v2 ? book.spreadCount * 2 : book.beatCount}</dd></div>
                   <div><dt>Spreads</dt><dd className="text-sm font-semibold tabular-nums text-neutral-900">{book.spreadCount}</dd></div>
-                  <div><dt>Carded</dt><dd className="text-sm font-semibold tabular-nums text-neutral-900">{book.cardedCount}</dd></div>
+                  <div><dt>{v2 ? 'Drafted' : 'Carded'}</dt><dd className="text-sm font-semibold tabular-nums text-neutral-900">{book.cardedCount}</dd></div>
                 </dl>
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-300" title="Beats found, of the minimum">
-                  <div className="h-full bg-[#D7372B]" style={{ width: `${beatPct * 100}%` }} />
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-300" title={v2 ? 'Spreads drafted, of all' : 'Beats found, of the minimum'}>
+                  <div className="h-full bg-[#D7372B]" style={{ width: `${pct * 100}%` }} />
                 </div>
               </div>
             </Link>

@@ -109,7 +109,7 @@ export interface BriefOptions {
   mapboxToken?: string | null
   /**
    * The story format: 'scroll' (default) or a runtime-driven format ('book',
-   * 'board', 'deck', 'collage', and on vizf1 'recap') built on the site's hosted runtime.
+   * 'board', 'deck', 'diorama', 'collage', and on vizf1 'recap') built on the site's hosted runtime.
    */
   format?: HtmlStoryFormat | null
   /**
@@ -853,6 +853,27 @@ const SPIN_CONTEXT_RULES: Partial<Record<HtmlStoryApp, string[]>> = {
   viznba: VIZNBA_SPIN_CONTEXT_RULES,
 }
 
+/** An OCW Desk spin's brief carries no context, only a resource to read: how the page uses it. */
+const OCW_SPIN_RULES = [
+  'The OCW resource in the assignment is the primary source for what the page explains: read it end to end, cite it by page, slide or timestamp, and link both it and its course page from the page.',
+  'The page must stand without the PDF or video: a reader who never opens the resource still gets the idea, the numbers and the credit.',
+  'OCW is CC BY-NC-SA 4.0: the credit line in the assignment goes on the page as written, and nothing on the page is sponsored or sold.',
+]
+
+/** A Landmark Desk spin's brief carries an award and a work to read: how the page uses them. */
+const LANDMARK_SPIN_RULES = [
+  'The work in the assignment is the primary source for what the page says it shows: read it end to end, cite it by page, figure, theorem or chapter, and link it (the free-to-read copy where there is one) and the laureate page from the page.',
+  'The official motivation goes on the page verbatim, in quotation marks, attributed to the awarder; never paraphrase it inside quotation marks or alter it.',
+  'A work the assignment labels representative is called a representative work on the page, never "the prize-winning paper", unless the award\'s own account confirms it.',
+  'Prize and work metadata are CC0 (Nobel Prize Outreach, Wikidata, OpenAlex): credit them as the assignment says, link to nobelprize.org and the publisher, and never rehost a paper, a book or a Nobel document.',
+]
+
+function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
+  if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
+  if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES
+  return hasContext ? (SPIN_CONTEXT_RULES[app] ?? []) : []
+}
+
 /** Demote `# ` and `## ` headings so the appended context nests under the brief's own. */
 function demoteHeadings(markdown: string): string {
   return markdown.replace(/^(#{1,5}) /gm, (_m, hashes: string) => `${hashes}# `)
@@ -970,6 +991,8 @@ charts. "${formatHeading(paged)}" below says how.
   const mapsLine =
     paged === 'recap'
       ? `The 3D replay is the race's map (see "${formatHeading(paged)}").`
+      : paged === 'diorama'
+        ? `The model is the story's map: places, routes and props go in its JSON (see "${formatHeading(paged)}").`
       : travelBoard
         ? `The day's map is a chart on the board's paper sheet (see "${formatHeading(paged)}").`
         : paged
@@ -1051,7 +1074,7 @@ ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapbo
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
-${applyToneToVoice(spin ? spinContentSection(meta.desk, hasContext ? SPIN_CONTEXT_RULES[app] ?? [] : []) : contentSection(app, hasContext), tone)}
+${applyToneToVoice(spin ? spinContentSection(meta.desk, spinContextRules(spin, app, hasContext)) : contentSection(app, hasContext), tone)}
 ${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}\n` : ''}
 ## Before you post: check your own work
 

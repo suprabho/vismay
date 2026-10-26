@@ -1,10 +1,16 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
- * `get_desk_heat`, `refresh_desk_heat`, `get_football_news` and `get_nba_news`.
+ * `get_desk_heat`, `refresh_desk_heat`, `get_football_news`, `get_nba_news`,
+ * `get_ocw_pool` and `get_landmark_pool`.
  *
  * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
- * editorial format), Atlas (countries and culture, geography format) and
- * Epics (epics place by place, geography format); for footshorts, the
+ * editorial format), Atlas (countries and culture, geography format), Epics
+ * (epics place by place, geography format), the OCW Desk (one MIT
+ * OpenCourseWare resource: a field, a topic, a resource kind, a course, a
+ * resource and a lens; study note with charts) and the Landmark Desk (one
+ * piece of prize-winning research: a field, a prize, an era, a laureate, the
+ * paper or book the award rewarded and a lens; landmark paper explainer with
+ * charts); for footshorts, the
  * Football Desk (a tournament, a team, an angle and a freshness, weighted by
  * the team's news on footshorts; football explainer with match context); for
  * viznba, the NBA Desk (a conference, a franchise, an angle and a freshness,
@@ -88,23 +94,31 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'explainer whose brief carries the match context of the team\'s recent and next fixtures). For viznba, ' +
         '"viznba" (the NBA Desk: a conference, a franchise in it, an angle and a news freshness, weighted by how much ' +
         'VizNBA news each has, a player\'s or coach\'s stories counting for his team; basketball explainer whose brief ' +
-        'carries the box scores of the team\'s recent and next games from ESPN). The draw applies ' +
+        'carries the box scores of the team\'s recent and next games from ESPN). For vizmaya.fyi again, "ocw" (the ' +
+        'OCW Desk: a field, a topic in it, then a course and one lecture-notes file from MIT OpenCourseWare, ' +
+        'read live from MIT Learn\'s API, and a lens; study note with charts, CC BY-NC-SA credit required; ' +
+        'sequence: true walks to the next resource of the previous spin\'s course), and "landmark" (the Landmark ' +
+        'Desk: a field, a prize in it, an era, a laureate read live from the Nobel Prize API or Wikidata, the paper ' +
+        'or book the award rewarded (named by the award record, else a representative work from OpenAlex or Open ' +
+        'Library, labelled so) and a lens; landmark paper explainer with charts; sequence: true follows the same ' +
+        'prize back to the year before). The draw applies ' +
         'the playbook rules: 30 and 90 day repeat blocks, heat weighting, region, tradition and tournament ' +
-        'balancing, the philosophical quota. To keep some reels, pass `from` ' +
+        'balancing, the philosophical, hands-on and work-level quotas. To keep some reels, pass `from` ' +
         '(the spin on screen) and `locks`. To reject a spin and draw again, pass `from`, respin=true and a reason. ' +
         'Next: get_html_story_brief with spinId (and app "footshorts" for a Football Desk spin, "viznba" for an NBA ' +
         'Desk spin), research, ' +
         'save_spin_research, then publish_html_story with spinId (same app).',
       inputSchema: {
-        randomizer: z.enum(['desk', 'atlas', 'epics', 'footshorts', 'viznba']),
+        randomizer: z.enum(['desk', 'atlas', 'epics', 'ocw', 'landmark', 'footshorts', 'viznba']),
         from: spinIdSchema.optional().describe('The spin the locks keep values from, or the one a re-spin rejects.'),
         locks: z
           .array(z.string())
           .optional()
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
-              'lens. epics: epic, episode, place, lens. footshorts: competition, team, angle, fresh. viznba: ' +
-              'conference, team, angle, fresh. A child lock ' +
+              'lens. epics: epic, episode, place, lens. ocw: field, topic, course, resource, lens. landmark: field, ' +
+              'prize, era, laureate, work, lens. footshorts: ' +
+              'competition, team, angle, fresh. viznba: conference, team, angle, fresh. A child lock ' +
               'implies its parents.',
           ),
         respin: z.boolean().default(false).describe('Reject `from` (logged) and draw again.'),
@@ -120,7 +134,10 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
               'head-to-head opponent from the same tournament, preferring one the team meets in the window. viznba: ' +
               'draw a head-to-head opponent from the league, preferring one the team plays in the window.',
           ),
-        sequence: z.boolean().default(false).describe('epics only: continue the previous spin\'s route to its next place.'),
+        sequence: z
+          .boolean()
+          .default(false)
+          .describe('epics: continue the previous spin\'s route to its next place. ocw: the next resource of the same kind in the previous spin\'s course. landmark: the same prize, the year before the previous spin\'s.'),
       },
     },
     async ({ randomizer, from, locks, respin, reason, pair, sequence }) => {
@@ -279,6 +296,67 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
     },
     async () => {
       const body = await call(config, '/api/randomizer/news', {}, 'viznba')
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+
+  server.registerTool(
+    'get_ocw_pool',
+    {
+      title: 'Get a page of the OCW Desk pool',
+      description:
+        'What the OCW Desk randomizer draws from, read live from MIT Learn\'s API (the API behind ocw.mit.edu/search). ' +
+        'With `topic` and `kind`: a page of up to 30 OCW files of that kind under that topic (title, URL on ocw.mit.edu, ' +
+        'course, term), with the total count and the page\'s offset; `u` in [0, 1) picks where the page starts. With ' +
+        '`course` (a MIT Learn course id, as a spin\'s subject carries it) and `kind`: every file of that kind in the ' +
+        'course, in order. With nothing: the taxonomy (11 fields, their topics with file counts per kind, the ' +
+        'kinds the desk draws, Lecture Notes for now, and the lenses). Use it to look before locking a topic or ' +
+        'course on spin_randomizer; it logs nothing. ' +
+        'Needs the vizmaya publish token.',
+      inputSchema: {
+        topic: z.string().optional().describe('A topic name from the taxonomy, e.g. "Physics".'),
+        kind: z.string().optional().describe('A resource kind the desk draws: Lecture Notes (the only one for now).'),
+        course: z.number().int().positive().optional().describe('A MIT Learn course id, for that course\'s files of the kind.'),
+        u: z.number().min(0).max(0.999999).optional().describe('Where in the topic\'s files the page starts, 0 to 1. Random when omitted.'),
+      },
+    },
+    async ({ topic, kind, course, u }) => {
+      const q = new URLSearchParams()
+      if (topic) q.set('topic', topic)
+      if (kind) q.set('kind', kind)
+      if (course !== undefined) q.set('course', String(course))
+      if (u !== undefined) q.set('u', String(u))
+      const body = await call(config, `/api/randomizer/ocw${q.size ? `?${q}` : ''}`, {}, 'vizmaya-fyi')
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+
+  server.registerTool(
+    'get_landmark_pool',
+    {
+      title: 'Get the Landmark Desk pool',
+      description:
+        'What the Landmark Desk randomizer draws from, read live. With `prize` (a prize id from the taxonomy) and `era` ' +
+        '(an era id): every award of that prize in that era (year, laureate, the official motivation for the Nobels, the ' +
+        'share and co-laureates, the works the award record names, links to the laureate page, the prize summary and the ' +
+        'scientific background document), from the Nobel Prize API or Wikidata. With `laureate` too (a laureateId from ' +
+        'those awards): that laureate\'s works as a spin would see them (named by the award, notable, top-cited before the ' +
+        'prize from OpenAlex when the server has a key, books from Open Library for the book prizes, free-to-read links), ' +
+        'with how each source fared. With nothing: the taxonomy (10 fields, 42 prizes with their award counts per era, 5 ' +
+        'eras, the lenses). Use it to look before locking a prize, an era or a laureate on spin_randomizer; it logs ' +
+        'nothing. Needs the vizmaya publish token.',
+      inputSchema: {
+        prize: z.string().optional().describe('A prize id from the taxonomy, e.g. "nobel-physics", "godel", "wolfson".'),
+        era: z.string().optional().describe('An era id: founding (1901 to 1945), postwar (1946 to 1969), late-century (1970 to 1989), turn (1990 to 2009), recent (2010 onward).'),
+        laureate: z.string().optional().describe('A laureateId from the awards ("nobel:988", "wd:Q193803"), for that laureate\'s works.'),
+      },
+    },
+    async ({ prize, era, laureate }) => {
+      const q = new URLSearchParams()
+      if (prize) q.set('prize', prize)
+      if (era) q.set('era', era)
+      if (laureate) q.set('laureate', laureate)
+      const body = await call(config, `/api/randomizer/landmark${q.size ? `?${q}` : ''}`, {}, 'vizmaya-fyi')
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )

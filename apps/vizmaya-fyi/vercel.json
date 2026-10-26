@@ -13,6 +13,14 @@
     {
       "path": "/api/ai-data-centers/cron/publish-late",
       "schedule": "30 9 * * *"
+    },
+    {
+      "path": "/api/randomizer/cron/ocw",
+      "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/randomizer/cron/landmark",
+      "schedule": "45 5 * * *"
     }
   ]
 }

@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { MatchRow } from '@/lib/seasonBooks/matches'
 
-type Entry = { status: 'loading' } | { status: 'ready'; matches: MatchRow[] } | { status: 'error'; error: string }
+export type MatchEntry = { status: 'loading' } | { status: 'ready'; matches: MatchRow[] } | { status: 'error'; error: string }
+type Entry = MatchEntry
 
 interface MatchDataValue {
   get: (competition: string) => Entry | undefined
@@ -37,6 +38,13 @@ export function MatchDataProvider({ seasonStart, children }: { seasonStart: numb
 
   const get = useCallback((competition: string) => entries[competition], [entries])
   return <Ctx.Provider value={{ get, load }}>{children}</Ctx.Provider>
+}
+
+/** The shared store itself, for hooks that read several competitions at once. */
+export function useMatchData(): MatchDataValue {
+  const ctx = useContext(Ctx)
+  if (!ctx) throw new Error('useMatchData needs a MatchDataProvider')
+  return ctx
 }
 
 /** The competition's matches, loading them on first use. */

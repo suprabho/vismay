@@ -77,7 +77,7 @@ Every cup tie a Big-5 top-flight club played, and the crest each of those clubs 
 - Rights: Logopedia and Wikipedia crests are trademarked, mostly non-free uploads. Fine for research and layout; clear them before print.
 
 ## Planning the books (admin)
-The admin **Books** tab (`/footshorts/books`, see [apps/admin/CLAUDE.md](../../apps/admin/CLAUDE.md#books-tab-footshortsbooks)) is where each book is planned in spreads: story beats (with a beat finder over `admin_historical_matches`), the flatplan, a card per spread (headline + chart sketch + stat + body + caption, then bound to real data), chapter thumbnails, and the locked series system (grid, type, chart style, spread templates). Plans live in the private `admin_season_books` table.
+The admin **Books** tab (`/footshorts/books`, see [apps/admin/CLAUDE.md](../../apps/admin/CLAUDE.md#books-tab-footshortsbooks)) is where each book is planned. A **season-spreads** book (the current model) is built from data spreads: the roster (leagues and their clubs from `admin_historical_matches`, European and domestic competitions, honourable mentions), one league, team or competition spread per subject worked in an editor (story, moments, the template's own tabs, modules, colour and marks, checks), and a flatplan paged against the KDP limit. A **claim-spreads** book (the older model) is story beats (with a beat finder), a flatplan, a card per spread and chapter thumbnails; it converts one way. Both use the locked series system. Plans live in the private `admin_season_books` table.
 
 ## Next layers (not fetched yet)
 5. **Event data** — StatsBomb open data for marquee seasons.

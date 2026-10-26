@@ -1,0 +1,1124 @@
+{
+  "fields": [
+    {
+      "id": "physics",
+      "name": "Physics & astronomy"
+    },
+    {
+      "id": "chemistry",
+      "name": "Chemistry"
+    },
+    {
+      "id": "medicine",
+      "name": "Medicine & life sciences"
+    },
+    {
+      "id": "economics",
+      "name": "Economics"
+    },
+    {
+      "id": "mathematics",
+      "name": "Mathematics"
+    },
+    {
+      "id": "computing",
+      "name": "Computer science"
+    },
+    {
+      "id": "humanities",
+      "name": "Humanities & philosophy"
+    },
+    {
+      "id": "history",
+      "name": "History"
+    },
+    {
+      "id": "social",
+      "name": "Social sciences"
+    },
+    {
+      "id": "cross",
+      "name": "Science & technology, cross-field"
+    }
+  ],
+  "eras": [
+    {
+      "id": "founding",
+      "name": "1901 to 1945",
+      "from": 1901,
+      "to": 1945
+    },
+    {
+      "id": "postwar",
+      "name": "1946 to 1969",
+      "from": 1946,
+      "to": 1969
+    },
+    {
+      "id": "late-century",
+      "name": "1970 to 1989",
+      "from": 1970,
+      "to": 1989
+    },
+    {
+      "id": "turn",
+      "name": "1990 to 2009",
+      "from": 1990,
+      "to": 2009
+    },
+    {
+      "id": "recent",
+      "name": "2010 onward",
+      "from": 2010,
+      "to": 2100
+    }
+  ],
+  "prizes": [
+    {
+      "id": "nobel-physics",
+      "field": "physics",
+      "name": "Nobel Prize in Physics",
+      "awarder": "Nobel Prize Outreach AB",
+      "source": {
+        "kind": "nobel",
+        "category": "phy",
+        "slug": "physics",
+        "item": "Q38104"
+      },
+      "url": "https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-physics/",
+      "since": 1901,
+      "works": "result",
+      "work_level": true,
+      "note": "The motivation names a discovery; the scientific background document on nobelprize.org cites the papers.",
+      "awards": {
+        "founding": 49,
+        "postwar": 41,
+        "late-century": 47,
+        "turn": 50,
+        "recent": 44
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "wolf-physics",
+      "field": "physics",
+      "name": "Wolf Prize in Physics",
+      "awarder": "Wolf Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q845333"
+      },
+      "url": "https://wolffund.org.il/category/the-wolf-prize-winners/",
+      "since": 1978,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of work (\"for foundational work on…\").",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 23,
+        "turn": 22,
+        "recent": 27
+      },
+      "named_works": 0,
+      "undated": 1
+    },
+    {
+      "id": "breakthrough-physics",
+      "field": "physics",
+      "name": "Breakthrough Prize in Fundamental Physics",
+      "awarder": "Breakthrough Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q1314470"
+      },
+      "url": "https://breakthroughprize.org/Laureates",
+      "since": 2012,
+      "works": "result",
+      "work_level": false,
+      "note": "An achievement, sometimes a named discovery or experiment.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 0,
+        "recent": 39
+      },
+      "named_works": 0,
+      "undated": 12
+    },
+    {
+      "id": "kavli-astrophysics",
+      "field": "physics",
+      "name": "Kavli Prize in Astrophysics",
+      "awarder": "Norwegian Academy of Science and Letters",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q18889778"
+      },
+      "url": "https://www.kavliprize.org/prizes",
+      "since": 2008,
+      "works": "result",
+      "work_level": false,
+      "note": "A discovery (\"for discoveries of exoplanets…\").",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 2,
+        "recent": 22
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "shaw-astronomy",
+      "field": "physics",
+      "name": "Shaw Prize in Astronomy",
+      "awarder": "Shaw Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q57232945"
+      },
+      "url": "https://www.shawprize.org/laureates/",
+      "since": 2004,
+      "works": "result",
+      "work_level": false,
+      "note": "A discovery or a line of observation.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 9,
+        "recent": 21
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "nobel-chemistry",
+      "field": "chemistry",
+      "name": "Nobel Prize in Chemistry",
+      "awarder": "Nobel Prize Outreach AB",
+      "source": {
+        "kind": "nobel",
+        "category": "che",
+        "slug": "chemistry",
+        "item": "Q44585"
+      },
+      "url": "https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-chemistry/",
+      "since": 1901,
+      "works": "result",
+      "work_level": true,
+      "note": "The motivation names a discovery or method; the scientific background document cites the papers.",
+      "awards": {
+        "founding": 43,
+        "postwar": 35,
+        "late-century": 36,
+        "turn": 43,
+        "recent": 45
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "wolf-chemistry",
+      "field": "chemistry",
+      "name": "Wolf Prize in Chemistry",
+      "awarder": "Wolf Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q968876"
+      },
+      "url": "https://wolffund.org.il/category/the-wolf-prize-winners/",
+      "since": 1978,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of work.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 18,
+        "turn": 21,
+        "recent": 22
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "nobel-medicine",
+      "field": "medicine",
+      "name": "Nobel Prize in Physiology or Medicine",
+      "awarder": "Nobel Prize Outreach AB",
+      "source": {
+        "kind": "nobel",
+        "category": "med",
+        "slug": "medicine",
+        "item": "Q80061"
+      },
+      "url": "https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-medicine/",
+      "since": 1901,
+      "works": "result",
+      "work_level": true,
+      "note": "The motivation names a discovery; the scientific background document cites the papers.",
+      "awards": {
+        "founding": 49,
+        "postwar": 52,
+        "late-century": 48,
+        "turn": 46,
+        "recent": 40
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "lasker-basic",
+      "field": "medicine",
+      "name": "Lasker Award for Basic Medical Research",
+      "awarder": "Lasker Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q999734"
+      },
+      "url": "https://laskerfoundation.org/awards/",
+      "since": 1946,
+      "works": "result",
+      "work_level": false,
+      "note": "A discovery; the Lasker essay carries a reference list.",
+      "awards": {
+        "founding": 0,
+        "postwar": 50,
+        "late-century": 50,
+        "turn": 41,
+        "recent": 29
+      },
+      "named_works": 0,
+      "undated": 5
+    },
+    {
+      "id": "lasker-clinical",
+      "field": "medicine",
+      "name": "Lasker-DeBakey Clinical Medical Research Award",
+      "awarder": "Lasker Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q136696"
+      },
+      "url": "https://laskerfoundation.org/awards/",
+      "since": 1946,
+      "works": "result",
+      "work_level": false,
+      "note": "A clinical advance; the Lasker essay carries a reference list.",
+      "awards": {
+        "founding": 0,
+        "postwar": 55,
+        "late-century": 47,
+        "turn": 31,
+        "recent": 33
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "wolf-medicine",
+      "field": "medicine",
+      "name": "Wolf Prize in Medicine",
+      "awarder": "Wolf Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q540561"
+      },
+      "url": "https://wolffund.org.il/category/the-wolf-prize-winners/",
+      "since": 1978,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of work.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 22,
+        "turn": 22,
+        "recent": 24
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "kavli-neuroscience",
+      "field": "medicine",
+      "name": "Kavli Prize in Neuroscience",
+      "awarder": "Norwegian Academy of Science and Letters",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q18889781"
+      },
+      "url": "https://www.kavliprize.org/prizes",
+      "since": 2008,
+      "works": "result",
+      "work_level": false,
+      "note": "A discovery.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 3,
+        "recent": 29
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "shaw-life-science",
+      "field": "medicine",
+      "name": "Shaw Prize in Life Science and Medicine",
+      "awarder": "Shaw Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q57202753"
+      },
+      "url": "https://www.shawprize.org/laureates/",
+      "since": 2004,
+      "works": "result",
+      "work_level": false,
+      "note": "A discovery.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 12,
+        "recent": 30
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "breakthrough-life-sciences",
+      "field": "medicine",
+      "name": "Breakthrough Prize in Life Sciences",
+      "awarder": "Breakthrough Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q5019489"
+      },
+      "url": "https://breakthroughprize.org/Laureates",
+      "since": 2013,
+      "works": "result",
+      "work_level": false,
+      "note": "An achievement, often a named discovery.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 0,
+        "recent": 76
+      },
+      "named_works": 0,
+      "undated": 7
+    },
+    {
+      "id": "nobel-economics",
+      "field": "economics",
+      "name": "Prize in Economic Sciences in Memory of Alfred Nobel",
+      "awarder": "Nobel Prize Outreach AB",
+      "source": {
+        "kind": "nobel",
+        "category": "eco",
+        "slug": "economic-sciences",
+        "item": "Q47170"
+      },
+      "url": "https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-economic-sciences/",
+      "since": 1969,
+      "works": "result",
+      "work_level": true,
+      "note": "The motivation names a contribution; the scientific background document cites the papers.",
+      "awards": {
+        "founding": 0,
+        "postwar": 2,
+        "late-century": 25,
+        "turn": 37,
+        "recent": 37
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "clark-medal",
+      "field": "economics",
+      "name": "John Bates Clark Medal",
+      "awarder": "American Economic Association",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q839677"
+      },
+      "url": "https://www.aeaweb.org/about-aea/honors-awards/bates-clark",
+      "since": 1947,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of work by an economist under forty.",
+      "awards": {
+        "founding": 0,
+        "postwar": 11,
+        "late-century": 10,
+        "turn": 10,
+        "recent": 16
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "abel",
+      "field": "mathematics",
+      "name": "Abel Prize",
+      "awarder": "Norwegian Academy of Science and Letters",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q188184"
+      },
+      "url": "https://abelprize.no/winners",
+      "since": 2003,
+      "works": "result",
+      "work_level": false,
+      "note": "An area or a named result (\"for their discovery and proof of the index theorem\").",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 9,
+        "recent": 20
+      },
+      "named_works": 1,
+      "undated": 0
+    },
+    {
+      "id": "fields",
+      "field": "mathematics",
+      "name": "Fields Medal",
+      "awarder": "International Mathematical Union",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q28835"
+      },
+      "url": "https://www.mathunion.org/imu-awards/fields-medal",
+      "since": 1936,
+      "works": "result",
+      "work_level": false,
+      "note": "A specific result or proof, in the IMU citation.",
+      "awards": {
+        "founding": 2,
+        "postwar": 12,
+        "late-century": 16,
+        "turn": 18,
+        "recent": 20
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "wolf-mathematics",
+      "field": "mathematics",
+      "name": "Wolf Prize in Mathematics",
+      "awarder": "Wolf Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q915604"
+      },
+      "url": "https://wolffund.org.il/category/the-wolf-prize-winners/",
+      "since": 1978,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of work.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 22,
+        "turn": 25,
+        "recent": 20
+      },
+      "named_works": 0,
+      "undated": 1
+    },
+    {
+      "id": "breakthrough-mathematics",
+      "field": "mathematics",
+      "name": "Breakthrough Prize in Mathematics",
+      "awarder": "Breakthrough Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q17278380"
+      },
+      "url": "https://breakthroughprize.org/Laureates",
+      "since": 2015,
+      "works": "result",
+      "work_level": false,
+      "note": "Sometimes a named discovery.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 0,
+        "recent": 14
+      },
+      "named_works": 0,
+      "undated": 2
+    },
+    {
+      "id": "schock-mathematics",
+      "field": "mathematics",
+      "name": "Rolf Schock Prize in Mathematics",
+      "awarder": "Royal Swedish Academy of Sciences",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q23070438"
+      },
+      "url": "https://www.kva.se/en/prizes/rolf-schock-prizes/",
+      "since": 1993,
+      "works": "result",
+      "work_level": false,
+      "note": "A specific breakthrough (\"concerning the possibility of an infinite number of twin primes\").",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 8,
+        "recent": 4
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "shaw-mathematics",
+      "field": "mathematics",
+      "name": "Shaw Prize in Mathematical Sciences",
+      "awarder": "Shaw Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q57232963"
+      },
+      "url": "https://www.shawprize.org/laureates/",
+      "since": 2004,
+      "works": "result",
+      "work_level": false,
+      "note": "A named contribution.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 10,
+        "recent": 14
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "godel",
+      "field": "computing",
+      "name": "Gödel Prize",
+      "awarder": "EATCS and ACM SIGACT",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q1417143"
+      },
+      "url": "https://www.sigact.org/prizes/g%C3%B6del.html",
+      "since": 1993,
+      "works": "paper",
+      "work_level": true,
+      "note": "Awarded for outstanding papers: the citation gives the full bibliographic reference.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 47,
+        "recent": 41
+      },
+      "named_works": 7,
+      "undated": 0
+    },
+    {
+      "id": "knuth",
+      "field": "computing",
+      "name": "Knuth Prize",
+      "awarder": "ACM SIGACT and IEEE TCMF",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q1165991"
+      },
+      "url": "https://www.sigact.org/prizes/knuth.html",
+      "since": 1996,
+      "works": "result",
+      "work_level": false,
+      "note": "A long citation that discusses individual papers.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 9,
+        "recent": 14
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "turing",
+      "field": "computing",
+      "name": "ACM Turing Award",
+      "awarder": "Association for Computing Machinery",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q185667"
+      },
+      "url": "https://amturing.acm.org/",
+      "since": 1966,
+      "works": "result",
+      "work_level": false,
+      "note": "A contribution, sometimes a named system or algorithm.",
+      "awards": {
+        "founding": 0,
+        "postwar": 4,
+        "late-century": 24,
+        "turn": 28,
+        "recent": 23
+      },
+      "named_works": 5,
+      "undated": 0
+    },
+    {
+      "id": "holberg",
+      "field": "humanities",
+      "name": "Holberg Prize",
+      "awarder": "Holberg Board, Norway",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q1624297"
+      },
+      "url": "https://holbergprize.org/prizes-and-laureates/holbergprize/holberg-prize-laureates/",
+      "since": 2004,
+      "works": "body",
+      "work_level": false,
+      "note": "Lifetime contributions; press releases sometimes name major works.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 6,
+        "recent": 15
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "kluge",
+      "field": "humanities",
+      "name": "Kluge Prize",
+      "awarder": "Library of Congress",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q1776592"
+      },
+      "url": "https://www.loc.gov/programs/john-w-kluge-center/kluge-prize/",
+      "since": 2003,
+      "works": "body",
+      "work_level": false,
+      "note": "Lifetime achievement in the humanities and social sciences.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 6,
+        "recent": 5
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "balzan",
+      "field": "humanities",
+      "name": "Balzan Prize",
+      "awarder": "International Balzan Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q628457"
+      },
+      "url": "https://www.balzan.org/en/prizewinners",
+      "since": 1961,
+      "works": "body",
+      "work_level": false,
+      "note": "The subject changes each year; motivations are in press-release PDFs.",
+      "awards": {
+        "founding": 0,
+        "postwar": 5,
+        "late-century": 37,
+        "turn": 81,
+        "recent": 53
+      },
+      "named_works": 0,
+      "undated": 1
+    },
+    {
+      "id": "berggruen",
+      "field": "humanities",
+      "name": "Berggruen Prize for Philosophy and Culture",
+      "awarder": "Berggruen Institute",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q25324637"
+      },
+      "url": "https://berggruen.org/prize",
+      "since": 2016,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of work; press releases list the key books.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 0,
+        "recent": 7
+      },
+      "named_works": 0,
+      "undated": 1
+    },
+    {
+      "id": "kyoto-arts-philosophy",
+      "field": "humanities",
+      "name": "Kyoto Prize in Arts and Philosophy",
+      "awarder": "Inamori Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q6452192"
+      },
+      "url": "https://www.kyotoprize.org/en/laureates/",
+      "since": 1985,
+      "works": "body",
+      "work_level": false,
+      "note": "A one-line summary per laureate.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 5,
+        "turn": 20,
+        "recent": 13
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "schock-philosophy",
+      "field": "humanities",
+      "name": "Rolf Schock Prize in Logic and Philosophy",
+      "awarder": "Royal Swedish Academy of Sciences",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q23070437"
+      },
+      "url": "https://www.kva.se/en/prizes/rolf-schock-prizes/",
+      "since": 1993,
+      "works": "result",
+      "work_level": false,
+      "note": "A named contribution (\"concerning personal identity…\").",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 7,
+        "recent": 5
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "erasmus",
+      "field": "humanities",
+      "name": "Erasmus Prize",
+      "awarder": "Praemium Erasmianum Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q974780"
+      },
+      "url": "https://erasmusprijs.org/en/laureates/",
+      "since": 1958,
+      "works": "body",
+      "work_level": false,
+      "note": "An annual theme.",
+      "awards": {
+        "founding": 0,
+        "postwar": 14,
+        "late-century": 27,
+        "turn": 27,
+        "recent": 16
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "wolfson",
+      "field": "history",
+      "name": "Wolfson History Prize",
+      "awarder": "Wolfson Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q4020686"
+      },
+      "url": "https://www.wolfsonhistoryprize.org.uk/past-winners/all-winners/",
+      "since": 1972,
+      "works": "book",
+      "work_level": true,
+      "note": "Every year lists the winning titles and publishers.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 31,
+        "turn": 33,
+        "recent": 16
+      },
+      "named_works": 6,
+      "undated": 0
+    },
+    {
+      "id": "pulitzer-history",
+      "field": "history",
+      "name": "Pulitzer Prize for History",
+      "awarder": "Columbia University",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q599254"
+      },
+      "url": "https://www.pulitzer.org/prize-winners-by-category/219",
+      "since": 1917,
+      "works": "book",
+      "work_level": true,
+      "note": "One-line citation per book.",
+      "awards": {
+        "founding": 29,
+        "postwar": 25,
+        "late-century": 20,
+        "turn": 21,
+        "recent": 13
+      },
+      "named_works": 21,
+      "undated": 0
+    },
+    {
+      "id": "bancroft",
+      "field": "history",
+      "name": "Bancroft Prize",
+      "awarder": "Columbia University Libraries",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q724144"
+      },
+      "url": "https://library.columbia.edu/about/awards/bancroft/previous_awards.html",
+      "since": 1948,
+      "works": "book",
+      "work_level": true,
+      "note": "Title, author, publisher and year on the list.",
+      "awards": {
+        "founding": 0,
+        "postwar": 51,
+        "late-century": 51,
+        "turn": 49,
+        "recent": 36
+      },
+      "named_works": 15,
+      "undated": 2
+    },
+    {
+      "id": "skytte",
+      "field": "social",
+      "name": "Johan Skytte Prize in Political Science",
+      "awarder": "Johan Skytte Foundation, Uppsala",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q738091"
+      },
+      "url": "https://skytteprize.com/prize-winners/",
+      "since": 1995,
+      "works": "body",
+      "work_level": false,
+      "note": "A one-sentence motivation.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 15,
+        "recent": 18
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "crafoord",
+      "field": "cross",
+      "name": "Crafoord Prize",
+      "awarder": "Royal Swedish Academy of Sciences",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q583069"
+      },
+      "url": "https://www.crafoordprize.se/laureates/",
+      "since": 1982,
+      "works": "result",
+      "work_level": false,
+      "note": "An achievement, in astronomy and mathematics, geosciences, biosciences or polyarthritis by turns.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 1,
+        "turn": 8,
+        "recent": 10
+      },
+      "named_works": 0,
+      "undated": 5
+    },
+    {
+      "id": "japan-prize",
+      "field": "cross",
+      "name": "Japan Prize",
+      "awarder": "Japan Prize Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q908745"
+      },
+      "url": "https://www.japanprize.jp/en/prize_past.html",
+      "since": 1985,
+      "works": "result",
+      "work_level": false,
+      "note": "An achievement in a field that changes each year.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 15,
+        "turn": 53,
+        "recent": 37
+      },
+      "named_works": 0,
+      "undated": 2
+    },
+    {
+      "id": "tyler",
+      "field": "cross",
+      "name": "Tyler Prize for Environmental Achievement",
+      "awarder": "University of Southern California",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q1892257"
+      },
+      "url": "https://tylerprize.org/laureates/",
+      "since": 1974,
+      "works": "body",
+      "work_level": false,
+      "note": "A body of environmental science or policy work.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 23,
+        "turn": 39,
+        "recent": 22
+      },
+      "named_works": 0,
+      "undated": 1
+    },
+    {
+      "id": "kyoto-basic-sciences",
+      "field": "cross",
+      "name": "Kyoto Prize in Basic Sciences",
+      "awarder": "Inamori Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q18344281"
+      },
+      "url": "https://www.kyotoprize.org/en/laureates/",
+      "since": 1985,
+      "works": "body",
+      "work_level": false,
+      "note": "A one-line summary per laureate.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 5,
+        "turn": 19,
+        "recent": 13
+      },
+      "named_works": 0,
+      "undated": 0
+    },
+    {
+      "id": "kyoto-advanced-technology",
+      "field": "cross",
+      "name": "Kyoto Prize in Advanced Technology",
+      "awarder": "Inamori Foundation",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q6452191"
+      },
+      "url": "https://www.kyotoprize.org/en/laureates/",
+      "since": 1985,
+      "works": "body",
+      "work_level": false,
+      "note": "A one-line summary per laureate.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 5,
+        "turn": 25,
+        "recent": 14
+      },
+      "named_works": 1,
+      "undated": 0
+    },
+    {
+      "id": "kavli-nanoscience",
+      "field": "cross",
+      "name": "Kavli Prize in Nanoscience",
+      "awarder": "Norwegian Academy of Science and Letters",
+      "source": {
+        "kind": "wikidata",
+        "item": "Q18889779"
+      },
+      "url": "https://www.kavliprize.org/prizes",
+      "since": 2008,
+      "works": "result",
+      "work_level": false,
+      "note": "A discovery.",
+      "awards": {
+        "founding": 0,
+        "postwar": 0,
+        "late-century": 0,
+        "turn": 2,
+        "recent": 20
+      },
+      "named_works": 0,
+      "undated": 0
+    }
+  ],
+  "lenses": [
+    {
+      "name": "Why it won",
+      "description": "Put the official motivation beside the work itself: what exactly the committee rewarded, where in the paper or book that result is, and what the motivation leaves out. The motivation is quoted verbatim, never paraphrased."
+    },
+    {
+      "name": "One figure",
+      "description": "Find the central figure, table, theorem or passage of the work and rebuild it as one chart from its own numbers (or the numbers it argues from), with the page or section cited."
+    },
+    {
+      "name": "What it replaced",
+      "description": "What the field believed before this work, the evidence that turned it over, and who held the old view, from the record. State the old view fairly."
+    },
+    {
+      "name": "Read it today",
+      "description": "A reader's guide to the work itself: its structure, the one passage or equation to read first, what a reader needs to know going in, and where to read it free of charge."
+    },
+    {
+      "name": "Citation trail",
+      "description": "How the work travelled: citations by year, the lag from publication to prize, who built on it and in which fields, from OpenAlex and the work's own references."
+    },
+    {
+      "name": "Missing names",
+      "description": "Who else did the work: the co-authors, the rivals and the predecessors the citation does not name, stated from the record and labelled where it is contested."
+    },
+    {
+      "name": "Explain like I'm 5",
+      "description": "Explain the result to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the work as the source for the real thing."
+    }
+  ]
+}

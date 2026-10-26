@@ -127,6 +127,23 @@ export function goalsByMonth(rows: MatchRow[]): { month: string; games: number; 
     .map(([month, e]) => ({ month, ...e, perGame: e.games ? e.goals / e.games : 0 }))
 }
 
+/** The team's table position after each of its league games (round order, not date order). */
+export function positionsByRound(rows: MatchRow[], team: string): { n: number; d: string; pos: number }[] {
+  const league = leagueMatches(rows)
+  const dates = [...new Set(league.filter(m => m.h === team || m.a === team).map(m => m.d))]
+  return dates.map((d, i) => ({ n: i + 1, d, pos: standings(league, d).findIndex(r => r.team === team) + 1 }))
+}
+
+/** Who was top after every match date, with the gap to second. */
+export function leaderByDate(rows: MatchRow[]): { d: string; leader: string; margin: number }[] {
+  const league = leagueMatches(rows)
+  const dates = [...new Set(league.map(m => m.d))]
+  return dates.map(d => {
+    const table = standings(league, d)
+    return { d, leader: table[0]?.team ?? '', margin: table.length > 1 ? table[0].pts - table[1].pts : 0 }
+  })
+}
+
 export function teamsOf(rows: MatchRow[]): string[] {
   return [...new Set(rows.flatMap(m => [m.h, m.a]))].sort((a, b) => a.localeCompare(b))
 }
