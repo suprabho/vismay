@@ -226,11 +226,24 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
     warnings.push(
       format === 'recap'
         ? `data-step is the scroll format's marker. In a recap, mark each chapter with data-unit and move the replay with data-lap / data-at.`
-        : `data-step is the scroll format's marker. In a ${format} nothing is scroll-triggered: mark each ${unit} with data-unit and let the runtime enter it.`,
+        : format === 'collage'
+          ? `data-step is the scroll format's marker. In a collage, mark each scene with data-unit and let the runtime choreograph its pieces (.fly, .grow, [data-seq]) from the scroll.`
+          : `data-step is the scroll format's marker. In a ${format} nothing is scroll-triggered: mark each ${unit} with data-unit and let the runtime enter it.`,
     )
   }
   if (format === 'recap') lintRecap(html, warnings)
   if (format === 'diorama') lintDiorama(html, warnings)
+  if (format === 'collage') lintCollage(html, warnings)
+}
+
+/** A collage is made of pieces: torn paper on the board, and a stamp on each claim. */
+function lintCollage(html: string, warnings: string[]): void {
+  if (!/\bclass="[^"]*\bpiece\b/i.test(html) || !/\bclass="[^"]*\bpaper\b/i.test(html)) {
+    warnings.push('No .piece / .paper elements: a collage is torn-paper pieces on the board (the brief\'s "The paper kit"), not a plain page with the kraft background.')
+  }
+  if (!/\bclass="[^"]*\bstamp\b/i.test(html)) {
+    warnings.push('No .stamp elements: stamp each scene\'s claim documented, contested or inferred, so the reader can see how firm it is.')
+  }
 }
 
 /** A recap needs the replay (with a race's session key) and cues to drive it. */

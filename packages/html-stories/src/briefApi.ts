@@ -5,7 +5,7 @@
  * the generic brief holds no secrets (the publish token is the user's).
  *
  * Query:
- *   - `format=book|board|deck|recap` writes the brief for that story format
+ *   - `format=book|board|deck|collage|recap` writes the brief for that story format
  *     (./formats; default `scroll`): its hosted runtime and authoring rules
  *     replace the scroll format's motion and Mapbox sections. `recap` is
  *     vizf1 only (it frames the race replay); other sites answer 400.
