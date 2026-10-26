@@ -149,7 +149,9 @@ ink in the deck. A chart that throws is emptied, so its `data-alt` shows.
   `--vz-accent` (at zero specificity, so a page's own values win).
 - **Aura:** when the site lays an aura scene behind the page
   (`<vizmaya-aura>`), the runtime adds `html.vz-aura`: the book's table goes
-  transparent, and the board's felt and the deck's table drop to 85%.
+  transparent, the deck's table drops to 85%, and the board's felt leaves
+  the viewport so the aura shows round the board, which turns to frosted
+  glass (a 45% wash of felt over a blur of the aura).
 - **Overflow:** a page or slide can't scroll, so the book and the deck measure
   theirs once fonts are in (the deck at all three frames, with charts set
   aside) and report any that overflow to the console and, as a
