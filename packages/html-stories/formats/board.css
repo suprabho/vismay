@@ -68,7 +68,17 @@ html.board-on .vz-viewport::before { /* the felt */
     radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .035) 1px, transparent 1.5px) 0 0 / 7px 7px,
     radial-gradient(ellipse at 50% 40%, var(--board-felt-2), var(--board-felt) 75%);
 }
-html.vz-aura.board-on .vz-viewport::before { opacity: .85 }
+/* Under an aura the felt leaves the viewport, so the aura shows all round
+   the board, and the board itself turns to frosted glass: a thin wash of
+   felt over a blur of the aura. */
+html.vz-aura.board-on .vz-viewport::before { display: none }
+html.vz-aura.board-on .world {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .035) 1px, transparent 1.5px) 0 0 / 7px 7px,
+    color-mix(in srgb, var(--board-felt) 45%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2);
+}
+html.vz-aura.board-on .world::before { border-color: color-mix(in srgb, var(--board-edge) 80%, transparent) }
 html.board-on .world {
   position: absolute; left: 0; top: 0; margin: 0; padding: 0; box-sizing: border-box;
   width: var(--vz-world-w, 3400px); height: var(--vz-world-h, 2240px);
