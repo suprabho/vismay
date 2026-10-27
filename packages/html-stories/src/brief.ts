@@ -306,6 +306,27 @@ so this page gets its own look. Use it instead of the house style:`
   don't introduce new hues.`
 }
 
+/**
+ * The "Listening" section: once a story is published, every ${unit} is voiced
+ * (./audio) and the page gets a Listen player. Travel stories get no audio.
+ */
+function listenSection(unit: string): string {
+  return `## Listening
+
+Once the story is published, each ${unit} is read aloud by a narrator and the
+page gets a "Listen" button that plays it ${unit} by ${unit}. The voice reads a
+${unit}'s headings, paragraphs, list items and quotes, in order; it skips
+figures, captions, tables, charts and anything \`aria-hidden\`. So:
+- Write every ${unit} so it makes sense heard, without its chart: the prose
+  states the number the chart shows.
+- To give a ${unit} a better spoken version, put it on the ${unit}'s element:
+  \`data-narration="…"\` is read instead of its text.
+- \`data-no-narrate\` on a ${unit} keeps it silent, and on an element inside one
+  leaves that element out (a credits line, a run of map labels).${unit === 'section' ? `
+- A scroll story's ${unit}s are its \`<section data-step>\` chapters, or else
+  its outermost \`<section>\` elements: use one per idea.` : ''}`
+}
+
 /** The "icons and flags" section; footshorts adds club crests, vizf1 and viznba team marks. */
 function iconsSection(app: HtmlStoryApp): string {
   const crests =
@@ -1082,7 +1103,7 @@ ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapbo
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
 ${applyToneToVoice(spin ? spinContentSection(meta.desk, spinContextRules(spin, app, hasContext)) : contentSection(app, hasContext), tone)}
-${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}\n` : ''}
+${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${app === 'travel' ? '' : `\n${listenSection(unit)}\n`}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}\n` : ''}
 ## Before you post: check your own work
 
 If you can run a browser, render the page at 375×812 and 1440×900 and look at

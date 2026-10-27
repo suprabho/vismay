@@ -121,6 +121,17 @@ import { generateSpeech } from '@vismay/ai-gateway'
 const { bytes, mimeType } = await generateSpeech({ text, voice: 'Orus', outputFormat: 'wav' })
 ```
 
+**ElevenLabs** isn't on the gateway, so `@vismay/ai-gateway/elevenlabs` calls its
+REST API directly (fetch, no SDK; `ELEVENLABS_API_KEY`) and returns the same
+`SpeechResult`, raw 24 kHz PCM by default. Used by the HTML-story narration
+(`packages/html-stories/src/narrationVoice.ts`).
+
+```ts
+import { generateElevenLabsSpeech } from '@vismay/ai-gateway/elevenlabs'
+
+const { bytes, mimeType } = await generateElevenLabsSpeech({ text, voiceId, modelId: 'eleven_flash_v2_5' })
+```
+
 ### Image
 
 ```ts

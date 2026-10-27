@@ -15,6 +15,7 @@ import {
   slugify,
   type HtmlStoryStatus,
 } from '@vismay/html-stories/meta'
+import { HtmlStoryAudioPanel } from './HtmlStoryAudioPanel'
 
 interface Version {
   id: number
@@ -486,6 +487,10 @@ export default function HtmlStoryEditorClient({
               </button>
             )}
           </div>
+
+          {!create && status === 'published' && app !== 'travel' && (
+            <HtmlStoryAudioPanel slug={slug} app={app} refreshKey={`${status}|${savedHtml.length}|${versions[0]?.id ?? ''}`} />
+          )}
 
           {!create && versions.length > 0 && (
             <div className="mt-8">

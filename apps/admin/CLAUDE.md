@@ -172,14 +172,20 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
   [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
-  (paste/upload, lint, preview in that site's chrome, publish, history; a book
+  (paste/upload, lint, preview in that site's chrome, publish, history, and
+  for a published story the **Section audio** panel,
+  [HtmlStoryAudioPanel.tsx](components/html-stories/HtmlStoryAudioPanel.tsx):
+  whether the live page offers the Listen player, each section's clip, and
+  Regenerate; publishing queues the audio on its own; a book
   or deck in the preview reports pages/slides that overflow their frame, shown
   with the lint). The list badges book, board, deck, collage and recap stories (and diorama, a retired format, on the stories already published as one).
   [lib/htmlStoryApps.ts](lib/htmlStoryApps.ts) maps an app to its public site
   and admin base path.
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
-  `GET /api/html-stories/[slug]/versions/[id]`, and `POST /api/html-stories/brief`
+  `GET /api/html-stories/[slug]/versions/[id]`, `GET|POST /api/html-stories/[slug]/audio`
+  (the section-audio manifest; POST re-voices every section, dispatching
+  `render-html-story-audio.yml` with force), and `POST /api/html-stories/brief`
   (`{ app, format?, tone?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
