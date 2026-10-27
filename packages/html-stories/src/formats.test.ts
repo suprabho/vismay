@@ -14,6 +14,7 @@ import {
   isFormatForApp,
   formatExampleUrl,
   formatRuntimeUrls,
+  RETIRED_HTML_STORY_FORMATS,
   parseHtmlStoryFormat,
   suggestedFormatFor,
 } from './formats'
@@ -105,8 +106,19 @@ assert.equal(suggestedFormatFor('epics'), 'book')
 assert.equal(suggestedFormatFor('footshorts'), 'deck')
 
 // recap frames vizf1's race replay: vizf1 only.
-assert.deepEqual(formatsForApp('vizf1'), ['scroll', 'book', 'board', 'deck', 'diorama', 'collage', 'recap'])
-assert.deepEqual(formatsForApp('vizmaya-fyi'), ['scroll', 'book', 'board', 'deck', 'diorama', 'collage'])
+assert.deepEqual(formatsForApp('vizf1'), ['scroll', 'book', 'board', 'deck', 'collage', 'recap'])
+assert.deepEqual(formatsForApp('vizmaya-fyi'), ['scroll', 'book', 'board', 'deck', 'collage'])
 assert.equal(isFormatForApp('footshorts', 'recap'), false)
+
+// A retired format: no site offers it, a page declaring it still lists as it
+// (with a warning), and its runtime is still served for the stories already up.
+for (const f of RETIRED_HTML_STORY_FORMATS) {
+  assert.equal(isFormatForApp('vizmaya-fyi', f), false)
+  assert.equal(parseHtmlStoryFormat(f), f)
+  assert.equal(extractFormatMeta(`<meta name="vizmaya:format" content="${f}">`), f)
+  assert.ok(lintHtml(`<meta name="vizmaya:format" content="${f}">`).warnings.some((w) => w.includes(`The ${f} format is retired`)))
+  assert.equal(serveFormatAsset(`${f}@${FORMAT_RUNTIME_MAJOR}.js`).status, 200)
+  assert.equal(serveFormatAsset(`${f}@${FORMAT_RUNTIME_MAJOR}.css`).status, 200)
+}
 
 console.log('formats: ok')

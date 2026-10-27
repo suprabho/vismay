@@ -68,7 +68,7 @@ import {
 import { DEFAULT_HTML_STORY_APP, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
 import { formatChecks, formatHeading, formatHintSection, formatTitle, storyFormatSection } from './formatBrief'
 import { MAPBOX_TOKEN_GLOBAL, storyMapboxToken } from './mapbox'
-import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type HtmlStoryFormat } from './formats'
+import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type AuthorableHtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 import { editorialHubPath } from './seo'
@@ -109,9 +109,9 @@ export interface BriefOptions {
   mapboxToken?: string | null
   /**
    * The story format: 'scroll' (default) or a runtime-driven format ('book',
-   * 'board', 'deck', 'diorama', 'collage', and on vizf1 'recap') built on the site's hosted runtime.
+   * 'board', 'deck', 'collage', and on vizf1 'recap') built on the site's hosted runtime.
    */
-  format?: HtmlStoryFormat | null
+  format?: AuthorableHtmlStoryFormat | null
   /**
    * The story's voice (./tone): 'straight' (default) or 'humorous', which adds
    * a "Tone" section asking for a wry, sarcastic voice under the same
@@ -991,8 +991,6 @@ charts. "${formatHeading(paged)}" below says how.
   const mapsLine =
     paged === 'recap'
       ? `The 3D replay is the race's map (see "${formatHeading(paged)}").`
-      : paged === 'diorama'
-        ? `The model is the story's map: places, routes and props go in its JSON (see "${formatHeading(paged)}").`
       : travelBoard
         ? `The day's map is a chart on the board's paper sheet (see "${formatHeading(paged)}").`
         : paged

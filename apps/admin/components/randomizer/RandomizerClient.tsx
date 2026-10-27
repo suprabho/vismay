@@ -20,7 +20,7 @@ import {
   Warning,
   X,
 } from '@phosphor-icons/react'
-import { suggestedFormatFor, type HtmlStoryFormat } from '@vismay/html-stories/formats'
+import { suggestedFormatFor, type AuthorableHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { DeskHeatTableRow } from '@vismay/html-stories/randomizerApi'
 import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
@@ -261,7 +261,7 @@ export function RandomizerClient({
   const [respinOpen, setRespinOpen] = useState(false)
   const [otherReason, setOtherReason] = useState('')
   const [style, setStyle] = useState<StoryStyle | null>(null)
-  const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
+  const [format, setFormat] = useState<AuthorableHtmlStoryFormat>('scroll')
   const [tone, setTone] = useState<HtmlStoryTone>('straight')
   const [built, setBuilt] = useState<{ request: string; brief: string | null; error: string | null } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)

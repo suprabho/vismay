@@ -172,7 +172,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
   (paste/upload, lint, preview in that site's chrome, publish, history; a book
   or deck in the preview reports pages/slides that overflow their frame, shown
-  with the lint). The list badges book, board, deck, diorama, collage and recap stories.
+  with the lint). The list badges book, board, deck, collage and recap stories (and diorama, a retired format, on the stories already published as one).
   [lib/htmlStoryApps.ts](lib/htmlStoryApps.ts) maps an app to its public site
   and admin base path.
 - **API (`isAuthed()`-gated, `?app=` or body `app`, default vizmaya-fyi):**
@@ -181,7 +181,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   (`{ app, format?, tone?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):
-  scroll, book, board, deck, diorama, collage, and recap on vizf1 only; also on the Randomizer tab, where it marks the
+  scroll, book, board, deck, collage, and recap on vizf1 only (the diorama format is retired); also on the Randomizer tab, where it marks the
   format the spin's kind of story suits), the Humorous tone toggle
   ([ToneToggle.tsx](components/html-stories/ToneToggle.tsx), also on the
   Randomizer tab: a wry, sarcastic voice under the same accuracy rules), the
