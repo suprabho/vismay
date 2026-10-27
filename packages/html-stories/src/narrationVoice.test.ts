@@ -16,6 +16,10 @@ assert.equal(
   'elevenlabs:eleven_flash_v2_5:v1',
 )
 assert.throws(() => narrationVoiceFromEnv({ HTML_STORY_AUDIO_PROVIDER: 'polly' }))
+// GitHub Actions passes unset repo variables and secrets as ''.
+const blank = { HTML_STORY_AUDIO_PROVIDER: '', HTML_STORY_AUDIO_VOICE: '', HTML_STORY_AUDIO_MODEL: '', ELEVENLABS_API_KEY: '' }
+assert.deepEqual(narrationVoiceFromEnv(blank), { provider: 'gemini', voice: 'Orus', model: 'speech.default', key: 'Orus' })
+assert.equal(narrationVoiceFromEnv({ ...blank, ELEVENLABS_API_KEY: 'k' }).provider, 'elevenlabs')
 
 async function main() {
   process.env.ELEVENLABS_API_KEY = 'test-key'
