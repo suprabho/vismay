@@ -488,7 +488,8 @@ ${skeleton(
   shadow); \`.paper\` inside it is the torn sheet (\`--cut: var(--torn-all)\`,
   \`var(--torn-tb)\` (the default: torn top and bottom) or \`var(--torn-t)\`;
   colours \`.accent\`, \`.warm\`, \`.dark\`, \`.cool\`; textures \`.halftone\`,
-  \`.ruled\`). \`.tape\` sits across the top edge (\`.l\` or \`.r\` for a corner).
+  \`.ruled\`). \`.halftone\` goes only on a sheet that holds a figure (a
+  \`.plate\`), never on one with running text: its dots sit over the words. \`.tape\` sits across the top edge (\`.l\` or \`.r\` for a corner).
   \`.slip\` is a typed label on a cut strip (\`.dark\`, \`.accent\`). \`.n\` sets a
   number on a patch of paper that slides in as it is read. \`.strip\` cuts a
   headline into ransom-note bands (\`.dark\`, \`.light\`, \`.accent\`) and

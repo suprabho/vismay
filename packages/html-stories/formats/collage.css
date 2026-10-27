@@ -79,7 +79,7 @@ html.vz-aura.collage-on .stage { background-color: transparent }
 :where(.paper.cool) { background: var(--collage-cool); color: var(--collage-cool-ink); --c-ink: var(--collage-cool-ink); --c-muted: var(--collage-cool-ink); --c-grid: rgba(255, 255, 255, .18); --c-hi: var(--collage-warm); --c-paper: var(--collage-cool); --c-halo: var(--collage-cool) }
 :where(.paper.dark, .paper.cool)::after { mix-blend-mode: screen; opacity: .18 }
 :where(.paper.accent)::after { opacity: .35 }
-:where(.halftone)::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 0, 0, .16) 1.1px, transparent 1.5px) 0 0 / 7px 7px; pointer-events: none }
+:where(.halftone)::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(0, 0, 0, .07) 1px, transparent 1.4px) 0 0 / 10px 10px; pointer-events: none }
 :where(.ruled) { background-image: repeating-linear-gradient(to bottom, transparent 0 1.58rem, rgba(43, 101, 132, .22) 1.58rem calc(1.58rem + 1px)); background-position: 0 1.1rem }
 :where(.paper .chart) { width: 100%; position: relative; z-index: 1 }
 :where(.paper .src, .paper .plate-note) { font: 400 .76rem/1.4 var(--collage-typed); margin-top: 1rem; opacity: .85 }
