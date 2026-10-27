@@ -139,7 +139,7 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
       else failure = `section ${s.index + 1}: ${e instanceof Error ? e.message : String(e)}`
     }
     if (!wav) {
-      console.log('✗')
+      console.log(`✗ ${failure ?? ''}`.trimEnd())
       out.push({ index: s.index, label: s.label, hash: null, url: null, durationMs: 0 })
       result.failed++
       if (failure?.startsWith('TTS daily quota')) break

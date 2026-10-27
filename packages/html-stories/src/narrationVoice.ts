@@ -46,7 +46,9 @@ export interface NarrationVoice {
 }
 
 export function narrationVoiceFromEnv(env: Record<string, string | undefined> = process.env): NarrationVoice {
-  const asked = env.HTML_STORY_AUDIO_PROVIDER?.trim().toLowerCase()
+  // `|| undefined`: the workflow passes an unset repo variable as '', which
+  // `??` below would keep as the provider.
+  const asked = env.HTML_STORY_AUDIO_PROVIDER?.trim().toLowerCase() || undefined
   if (asked && asked !== 'elevenlabs' && asked !== 'gemini') {
     throw new Error(`HTML_STORY_AUDIO_PROVIDER must be elevenlabs or gemini, not ${asked}`)
   }
