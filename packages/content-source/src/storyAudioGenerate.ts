@@ -162,7 +162,7 @@ function wrapPcmInWav(pcmData: Buffer, sampleRate = 24000): Buffer {
   return Buffer.concat([header, pcmData])
 }
 
-function isRiffWav(buf: Buffer): boolean {
+export function isRiffWav(buf: Buffer): boolean {
   return buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WAVE'
 }
 
@@ -191,7 +191,7 @@ function toWavBuffer(bytes: Uint8Array, mimeType: string): Buffer | null {
  * mono/24kHz header, since a gateway-produced WAV may carry extra chunks
  * (LIST, fact, …) or a different sample rate / channel count.
  */
-function wavDurationMs(wav: Buffer): number {
+export function wavDurationMs(wav: Buffer): number {
   if (!isRiffWav(wav)) return 0
   let byteRate = 0
   let dataSize = 0
@@ -221,7 +221,7 @@ function wavDurationMs(wav: Buffer): number {
  * Rate limiter — enforces a minimum interval between TTS calls.
  * 8000ms ≈ 7.5 req/min.
  */
-function makeRateLimiter(minIntervalMs: number) {
+export function makeRateLimiter(minIntervalMs: number) {
   let lastCallAt = 0
   return async function rateLimit() {
     const now = Date.now()
@@ -233,7 +233,7 @@ function makeRateLimiter(minIntervalMs: number) {
   }
 }
 
-interface TtsContext {
+export interface TtsContext {
   voiceName: string
   rateLimit: () => Promise<void>
 }
@@ -333,7 +333,7 @@ async function synthesizeOnce(
  * Generate speech with automatic retry on rate-limit (429) and transient
  * server errors (500/503). Honors `retry-after` / RetryInfo hints when present.
  */
-async function synthesizeWithRetry(ctx: TtsContext, text: string): Promise<Buffer | null> {
+export async function synthesizeWithRetry(ctx: TtsContext, text: string): Promise<Buffer | null> {
   const MAX_ATTEMPTS = 5
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const result = await synthesizeOnce(ctx, text)

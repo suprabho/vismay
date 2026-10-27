@@ -1,0 +1,66 @@
+name: Render HTML story audio
+
+# Section-wise narration for an agent-authored HTML story. Dispatched with
+# `workflow_dispatch` whenever a story is published (the token-gated publish
+# API on every site, the MCP tool, the admin editor; see
+# packages/html-stories/src/audio.ts), and by the admin editor's
+# "Regenerate audio" button with force=true. Runs
+# packages/html-stories/scripts/generate-audio.ts, which voices each section
+# whose text changed and writes the manifest to html_story_audio
+# (migration 097).
+#
+# Required repo secrets (under the `Production` environment, shared with the
+# other render workflows):
+#   NEXT_PUBLIC_SUPABASE_URL    — same value as in Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY   — service role key for storage writes
+#   AI_GATEWAY_API_KEY          — Vercel AI Gateway key for TTS (Gemini TTS via the gateway)
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: HTML story slug
+        required: true
+        type: string
+      force:
+        description: Re-voice every section, even unchanged ones
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: html-story-audio-${{ inputs.slug }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+    defaults:
+      run:
+        working-directory: packages/html-stories
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate audio
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          SLUG: ${{ inputs.slug }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: pnpm exec tsx scripts/generate-audio.ts "$SLUG" $FORCE

@@ -9,15 +9,20 @@
  * origin with no access to the site's cookies or storage. The agent brief
  * tells authors to expect that.
  *
+ * A published story with section audio (./audio) also gets the "Listen"
+ * player at the end of its body.
+ *
  * Shared by vizmaya-fyi, footshorts, vizf1 and viznba, whose route handlers are
  * one line each, and travel, which checks the trip's password first.
  * Server only.
  */
 
 import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
+import { getHtmlStoryAudio, playableHtmlStoryAudio, type HtmlStoryAudioSection } from './audio'
+import { audioPlayerHtml, audioPlayerLook } from './audioPlayer'
 import { brandHtmlStory } from './branding'
 import { getPublishedHtmlStory, type HtmlStory } from './htmlStories'
-import { HTML_STORY_SANDBOX_CSP, isSafeSlug } from './meta'
+import { HTML_STORY_SANDBOX_CSP, extractHtmlMeta, extractThemeMeta, isSafeSlug } from './meta'
 import { injectHtmlStorySeo } from './seo'
 
 const NOT_FOUND_LOOK: Record<HtmlStoryApp, { bg: string; fg: string; link: string; font: string }> = {
@@ -57,6 +62,25 @@ export interface HtmlStoryResponseOptions {
    * and kept out of search indexes.
    */
   private?: boolean
+  /**
+   * The story's section audio (./audio, already checked against this HTML):
+   * the page gets the "Listen" player (./audioPlayer). Public stories only.
+   */
+  audio?: HtmlStoryAudioSection[] | null
+}
+
+/** Put the player last in <body>, after the footer and the page's own scripts. */
+function withAudioPlayer(html: string, sections: HtmlStoryAudioSection[], app: HtmlStoryApp): string {
+  const player = audioPlayerHtml(sections, {
+    look: audioPlayerLook(extractThemeMeta(html)),
+    title: extractHtmlMeta(html).title ?? undefined,
+    site: HTML_STORY_APP_META[app].name,
+  })
+  if (!player) return html
+  const lower = html.toLowerCase()
+  const bodyClose = lower.lastIndexOf('</body')
+  const at = bodyClose !== -1 ? bodyClose : lower.lastIndexOf('</html') !== -1 ? lower.lastIndexOf('</html') : html.length
+  return html.slice(0, at) + player + html.slice(at)
 }
 
 /**
@@ -65,7 +89,12 @@ export interface HtmlStoryResponseOptions {
  * SEO head (./seo); a private one is served exactly as written, with no
  * canonical or JSON-LD pointing a crawler at it.
  */
-export function htmlStoryResponse(req: Request, story: HtmlStory, app: HtmlStoryApp, opts?: { private?: false }): Response
+export function htmlStoryResponse(
+  req: Request,
+  story: HtmlStory,
+  app: HtmlStoryApp,
+  opts?: { private?: false; audio?: HtmlStoryAudioSection[] | null },
+): Response
 export function htmlStoryResponse(
   req: Request,
   story: Pick<HtmlStory, 'html' | 'aura' | 'updatedAt'>,
@@ -76,19 +105,20 @@ export function htmlStoryResponse(
   req: Request,
   story: Pick<HtmlStory, 'html' | 'aura' | 'updatedAt'>,
   app: HtmlStoryApp,
-  { private: isPrivate = false }: HtmlStoryResponseOptions = {},
+  { private: isPrivate = false, audio }: HtmlStoryResponseOptions = {},
 ): Response {
   const url = new URL(req.url)
   const embed = url.searchParams.get('embed') === '1'
   // Canonical, robots, missing OG/article tags and NewsArticle JSON-LD (./seo),
   // read from the author's own <head> before the chrome goes in.
   const doc = isPrivate ? story.html : injectHtmlStorySeo(story.html, story as HtmlStory, { embed })
-  const html = brandHtmlStory(doc, {
+  const branded = brandHtmlStory(doc, {
     siteUrl: url.origin,
     aura: story.aura,
     app,
     chrome: !embed,
   })
+  const html = audio && !isPrivate ? withAudioPlayer(branded, audio, app) : branded
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
@@ -116,7 +146,13 @@ export function htmlStoryResponse(
  * serves them through htmlStoryResponse itself (apps/travel/web/app/s/[slug]).
  */
 export async function serveHtmlStory(req: Request, slug: string, app: HtmlStoryApp): Promise<Response> {
-  const story = isSafeSlug(slug) ? await getPublishedHtmlStory(slug, app) : null
+  if (!isSafeSlug(slug)) return htmlStoryNotFound(app)
+  // The audio manifest is read beside the story; a page is served without
+  // the player rather than failing when it can't be read.
+  const [story, audio] = await Promise.all([
+    getPublishedHtmlStory(slug, app),
+    app === 'travel' ? null : getHtmlStoryAudio(slug).catch(() => null),
+  ])
   if (!story) return htmlStoryNotFound(app)
-  return htmlStoryResponse(req, story, app)
+  return htmlStoryResponse(req, story, app, { audio: playableHtmlStoryAudio(audio, story.html) })
 }

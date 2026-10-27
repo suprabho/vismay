@@ -2,7 +2,7 @@
   "name": "@vismay/html-stories",
   "version": "0.0.0",
   "private": true,
-  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, site chrome, the agent brief (per app: vizmaya-fyi, footshorts, vizf1, viznba, travel — whose stories are private to a trip; per story format: scroll, book, board, deck, collage, and recap on vizf1; a vizmaya, footshorts or viznba brief can carry a randomizer spin), the hosted format runtimes (formats/), and the shared serve/publish/brief route handlers. Its own package so changes here only rebuild admin, vizmaya-fyi, footshorts web, vizf1 web, viznba web and travel web.",
+  "description": "Agent-authored, self-contained HTML stories: storage, metadata extraction, site chrome, the agent brief (per app: vizmaya-fyi, footshorts, vizf1, viznba, travel — whose stories are private to a trip; per story format: scroll, book, board, deck, collage, and recap on vizf1; a vizmaya, footshorts or viznba brief can carry a randomizer spin), the hosted format runtimes (formats/), the shared serve/publish/brief route handlers, and section-wise audio for published stories. Its own package so changes here only rebuild admin, vizmaya-fyi, footshorts web, vizf1 web, viznba web and travel web.",
   "exports": {
     "./apps": "./src/apps.ts",
     "./htmlStories": "./src/htmlStories.ts",
@@ -22,19 +22,24 @@
     "./formats": "./src/formats.ts",
     "./formatsApi": "./src/formatsApi.ts",
     "./assetsApi": "./src/assetsApi.ts",
+    "./audio": "./src/audio.ts",
+    "./audioGenerate": "./src/audioGenerate.ts",
+    "./narration": "./src/narration.ts",
     "./seo": "./src/seo.ts",
     "./tone": "./src/tone.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "gen:formats": "tsx scripts/gen-format-assets.ts"
+    "gen:formats": "tsx scripts/gen-format-assets.ts",
+    "generate-audio": "tsx scripts/generate-audio.ts"
   },
   "dependencies": {
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vismay/randomizer": "workspace:*",
-    "@vismay/viz-engine": "workspace:*"
+    "@vismay/viz-engine": "workspace:*",
+    "cheerio": "^1.2.0"
   },
   "devDependencies": {
     "@types/node": "^20",

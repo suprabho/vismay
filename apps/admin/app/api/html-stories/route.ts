@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
+import { audioQueueWarning, queueHtmlStoryAudio } from '@vismay/html-stories/audio'
 import { HtmlStorySlugTakenError, listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
 import { HTML_STORY_STATUSES, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
@@ -60,7 +61,13 @@ export async function POST(req: Request) {
       aura,
       source: str(b.source) === 'admin:restore' ? 'admin:restore' : 'admin',
     })
-    return NextResponse.json({ ok: true, created, story, warnings: lint.warnings })
+    // A published story gets its section audio (re)made from the new HTML.
+    const warnings = [...lint.warnings]
+    if (story.status === 'published') {
+      const warning = audioQueueWarning(await queueHtmlStoryAudio({ slug: story.slug, app, html: b.html }))
+      if (warning) warnings.push(warning)
+    }
+    return NextResponse.json({ ok: true, created, story, warnings })
   } catch (e) {
     if (e instanceof HtmlStorySlugTakenError) return NextResponse.json({ error: e.message }, { status: 409 })
     return NextResponse.json({ error: e instanceof Error ? e.message : 'write failed' }, { status: 500 })

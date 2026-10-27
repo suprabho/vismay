@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
+import { audioQueueWarning, queueHtmlStoryAudio } from '@vismay/html-stories/audio'
 import {
   deleteHtmlStory,
   getHtmlStoryForAdmin,
@@ -54,7 +55,14 @@ export async function PATCH(req: Request, { params }: Ctx) {
   try {
     const story = await updateHtmlStoryMeta(slug, patch, app)
     if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
-    return NextResponse.json({ ok: true, story })
+    // Publishing queues the section audio; the generator reuses every clip
+    // whose section is unchanged, so publishing again costs no TTS.
+    const warnings: string[] = []
+    if (patch.status === 'published') {
+      const warning = audioQueueWarning(await queueHtmlStoryAudio({ slug, app }))
+      if (warning) warnings.push(warning)
+    }
+    return NextResponse.json({ ok: true, story, warnings })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'write failed' }, { status: 500 })
   }
