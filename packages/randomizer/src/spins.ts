@@ -8,7 +8,9 @@
  * passes: planOcw() says which page of files to read, then the draw runs
  * with it (see createSpin). The Landmark Desk's comes from ./landmarkPool in
  * three: planLandmark() says which prize and era's awards to read, with them
- * which laureate's works to load, then the draw runs with both.
+ * which laureate's works to load, then the draw runs with both. The 100
+ * Desk draws from its dataset alone; the drawn person's profile comes from
+ * ./hundredPool (Wikidata, Wikipedia, pageviews) after the draw.
  *
  * A spin is created only here, and only by an authenticated caller (admin's
  * session-gated routes, or the token-gated routes on vizmaya-fyi that the MCP
@@ -26,6 +28,7 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { DESK, FOOTSHORTS, VIZNBA } from './datasets'
 import { draw, planLandmark, planOcw } from './draw'
+import { loadHundredProfile } from './hundredPool'
 import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from './landmarkPool'
 import { enrichOcwCourse, loadOcwPool } from './ocwPool'
 import { randomSeed, seedHex } from './rng'
@@ -75,7 +78,7 @@ function check(error: { code?: string; message: string } | null): void {
   if (error.code === '42P01' || error.code === 'PGRST205') throw new SpinError(MIGRATION_HINT, 503)
   if (error.code === '23514' && /randomizer_check/.test(error.message)) {
     throw new SpinError(
-      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk',
+      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk',
       503,
     )
   }
@@ -278,6 +281,19 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
   if (result.subject.randomizer === 'ocw') {
     // The course page's instructors and level, for the brief and the credit line. Best effort.
     result.subject = { ...result.subject, course: await enrichOcwCourse(result.subject.course) }
+  }
+  if (result.subject.randomizer === 'hundred') {
+    // The person's life, portrait and pageviews, for the brief. Never blocks the spin.
+    const profile = await loadHundredProfile(result.subject.person)
+    result.subject = { ...result.subject, profile }
+    const failed = (['wikidata', 'wikipedia', 'pageviews'] as const).filter((k) => profile.sources[k] === 'failed')
+    if (failed.length) {
+      result.rules.push({
+        tag: 'profile',
+        kind: 'warn',
+        text: `The live profile could not read ${failed.join(', ')} (${profile.sources.errors.join('; ')}). The brief says to look those up by hand.`,
+      })
+    }
   }
   if (input.respin && prev) {
     result.rules.unshift({

@@ -242,18 +242,18 @@ league and team rows only).
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093 and 094;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094 and 096;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
-Desk, Atlas, Epics, the OCW Desk and the Landmark Desk on `/vizmaya/randomizer`, the Football Desk on
+Desk, Atlas, Epics, the OCW Desk, the Landmark Desk and The 100 Desk on `/vizmaya/randomizer`, the Football Desk on
 `/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
-  five tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  six tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
   with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course /
-  Landmark follow-the-prize toggle, the style die, the rules that fired, the spin log, the hero insight
+  Landmark follow-the-prize / The 100 walk-the-ranking toggle, the style die, the rules that fired, the spin log, the hero insight
   gate (approve / send back with a note, paste research), the composed brief's
   assignment with Copy agent brief and Copy research stub, the Desk heat table
   (stale and failed refreshes shown) and, on the OCW Desk tab, the **OCW pool**
@@ -272,7 +272,15 @@ story links.
   subject), the other works the loader found, the other laureates of the
   era, and the four sources' states (Wikidata, OpenAlex, Open Library,
   Unpaywall) with notes and errors. The laureate and work reels blur through
-  the spin's own pool; a cron spins it each morning too.
+  the spin's own pool; a cron spins it each morning too. On The 100 Desk tab
+  (Michael Hart's ranking of the most influential persons in history, the
+  whole list committed in `data/hundred.json`), **The 100 profile** panel:
+  the portrait from Wikimedia Commons (withheld for anyone flagged
+  `no-portrait`), the person with Hart's spelling, life, domain, region,
+  Wikidata description and flags, the ranks around them, birth and death with
+  places and coordinates, a year of English Wikipedia pageviews as bars, and
+  the three sources' states (Wikidata, Wikipedia, pageviews) with notes and
+  errors. It is gated like Atlas and Epics; a cron spins it each morning.
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel

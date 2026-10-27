@@ -8,6 +8,7 @@ import {
   CheckCircle,
   ClipboardText,
   Copy,
+  Crown,
   Fire,
   GraduationCap,
   LockSimple,
@@ -26,14 +27,15 @@ import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-s
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
-import { researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { FOOTSHORTS, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
+import { hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
   RESPIN_REASONS,
   randomizersFor,
   type FootshortsNews,
+  type HundredFlag,
   type LandmarkSources,
   type LandmarkWork,
   type OcwFile,
@@ -218,8 +220,9 @@ function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: 
 
 /**
  * One slot machine for a site's randomizers: Desk, Atlas, Epics, the OCW
- * Desk and the Landmark Desk on vizmaya (with the Desk heat table, the OCW
- * pool panel and the Landmark pool panel), the Football Desk on footshorts
+ * Desk, the Landmark Desk and The 100 Desk on vizmaya (with the Desk heat
+ * table, the OCW pool panel, the Landmark pool panel and The 100 profile
+ * panel), the Football Desk on footshorts
  * (with its live news table), the NBA Desk on viznba (with its news and
  * games).
  */
@@ -422,11 +425,12 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, five reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  One slot machine, six reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
                   tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
                   MIT OpenCourseWare live for its course and resource reels; the Landmark Desk reads the prize lists (the Nobel Prize
-                  API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; a
-                  cron spins each once a morning. The agent brief then carries the spin.
+                  API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; The
+                  100 Desk draws a person from Michael Hart&rsquo;s ranking of the most influential persons in history and reads their
+                  profile (Wikidata, Wikipedia, pageviews) live; a cron spins each once a morning. The agent brief then carries the spin.
                 </>
               )}
             </p>
@@ -436,7 +440,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk)'} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk)'} been applied?
           </div>
         )}
 
@@ -696,6 +700,7 @@ export function RandomizerClient({
         {tab === 'viznba' && <NbaNews news={nbaNews} />}
         {tab === 'ocw' && <OcwPool spin={current} />}
         {tab === 'landmark' && <LandmarkPool spin={current} />}
+        {tab === 'hundred' && <HundredProfilePanel spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -1306,6 +1311,142 @@ function LandmarkPool({ spin }: { spin: SpinRecord | null }) {
             <div key={`n${i}`} className="text-amber-300/90">{n}</div>
           ))}
           {s.pool.sources.errors.map((e, i) => (
+            <div key={`e${i}`} className="text-red-300/90">{e}</div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const FLAG_LABEL: Record<HundredFlag, string> = {
+  legendary: 'historicity debated',
+  'no-portrait': 'not depicted',
+  duo: 'two people',
+  authorship: 'authorship contested',
+  harm: 'human cost',
+}
+
+/** The 100 Desk's profile: the person the spin drew, their place in Hart's ranking, their life on Wikidata, and a year of pageviews. */
+function HundredProfilePanel({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'hundred' ? spin.subject : null
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-neutral-300 inline-flex items-center gap-1.5">
+          <Crown size={15} className="text-orange-400" />
+          The 100 profile
+        </span>
+        <span>
+          {HUNDRED.people.length} people from {HUNDRED.book.author}&rsquo;s <i>The 100</i> ({HUNDRED.book.year} edition), in {HUNDRED.domains.length} domains and{' '}
+          {HUNDRED.eras.length} eras. The ranking is committed; a spin reads the person&rsquo;s profile live (Wikidata, Wikipedia, pageviews) and keeps it on the spin.
+        </span>
+      </section>
+    )
+  }
+  const p = s.person
+  const pr = s.profile
+  const life = (label: string, e: NonNullable<typeof pr>['born']) =>
+    e ? (
+      <div>
+        <span className="text-neutral-500">{label}</span> {[e.date, e.place].filter(Boolean).join(', ')}
+        {e.lat !== null && e.lon !== null && <span className="text-neutral-600 font-mono"> · {e.lat.toFixed(2)}, {e.lon.toFixed(2)}</span>}
+      </div>
+    ) : null
+  const max = Math.max(1, ...(pr?.pageviews.map((v) => v.views) ?? []))
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Crown size={15} className="text-orange-400" />
+          The 100 profile
+        </h2>
+        <span className="text-xs text-neutral-500">
+          #{p.rank} of 100 in {s.book.author}&rsquo;s list ({s.book.year}){pr ? `, read ${new Date(pr.asOf).toLocaleString()}` : ', no live profile on this spin'}.
+          {s.sequence ? ' Walked on from the previous rank.' : ''}
+        </span>
+        {pr && (
+          <span className="flex flex-wrap gap-1.5 sm:ml-auto">
+            {(['wikidata', 'wikipedia', 'pageviews'] as const).map((k) => (
+              <span key={k} className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${SOURCE_TONE[pr.sources[k]]}`}>
+                {k === 'wikidata' ? 'Wikidata' : k === 'wikipedia' ? 'Wikipedia' : 'Pageviews'} · {pr.sources[k]}
+              </span>
+            ))}
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 border-b border-white/5 flex gap-4">
+        {pr?.image && (
+          <a href={pr.imagePage ?? pr.image} target="_blank" rel="noreferrer" className="shrink-0" title="Portrait on Wikimedia Commons (licence on its file page)">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${pr.image}?width=160`} alt={`Portrait of ${p.name}`} className="w-20 h-24 object-cover rounded-md border border-white/10 bg-neutral-800" />
+          </a>
+        )}
+        <div className="min-w-0 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm flex-1">
+          <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Person</span>
+          <div className="min-w-0">
+            <a href={pr?.wikipediaUrl ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(p.wiki.replace(/ /g, '_'))}`} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+              {p.name}
+              <ArrowSquareOut size={13} className="text-neutral-500" />
+            </a>
+            <div className="text-xs text-neutral-500">
+              {[p.hart_name !== p.name ? `Hart: “${p.hart_name}”` : null, hundredLife(p), s.domain.name, p.region, pr?.description ?? null].filter(Boolean).join(' · ')}
+            </div>
+            {(p.flags.length > 0 || !pr?.image) && (
+              <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wider">
+                {p.flags.map((f) => (
+                  <span key={f} className="px-2 py-0.5 rounded-full border text-amber-300 border-amber-400/40">
+                    {FLAG_LABEL[f]}
+                  </span>
+                ))}
+                {pr && !pr.image && !p.flags.includes('no-portrait') && <span className="px-2 py-0.5 rounded-full border text-neutral-400 border-white/10">no portrait on Wikidata</span>}
+              </div>
+            )}
+          </div>
+          <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Ranking</span>
+          <div className="text-xs text-neutral-400">
+            {[s.neighbours.above, p, s.neighbours.below].map((n) =>
+              n ? (
+                <span key={n.rank} className={n.rank === p.rank ? 'text-orange-300' : ''}>
+                  #{n.rank} {n.name}
+                  {n.rank !== (s.neighbours.below?.rank ?? p.rank) ? ' · ' : ''}
+                </span>
+              ) : null,
+            )}
+          </div>
+          {pr && (pr.born || pr.died) && (
+            <>
+              <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Life</span>
+              <div className="text-xs text-neutral-300 flex flex-col gap-0.5">
+                {life('Born', pr.born)}
+                {life('Died', pr.died)}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      {pr && pr.pageviews.length > 0 && (
+        <div className="px-4 py-3 border-b border-white/5">
+          <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono mb-1.5">
+            English Wikipedia views by month{pr.sitelinks ? ` · ${pr.sitelinks} Wikipedia editions` : ''}
+          </div>
+          <div className="flex items-end gap-1 h-16">
+            {pr.pageviews.map((v) => (
+              <div key={v.month} className="flex-1 min-w-0 flex flex-col items-center gap-1" title={`${v.month}: ${v.views.toLocaleString('en-US')} views`}>
+                <div className="w-full rounded-sm bg-orange-400/70" style={{ height: `${Math.max(2, Math.round((v.views / max) * 48))}px` }} />
+                <span className="text-[9px] text-neutral-600 font-mono">{v.month.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {(p.note || (pr && (pr.sources.notes.length > 0 || pr.sources.errors.length > 0))) && (
+        <div className="px-4 py-3 text-xs text-neutral-500 flex flex-col gap-1">
+          {p.note && <div className="text-amber-300/90">{p.note}</div>}
+          {pr?.sources.notes.map((n, i) => (
+            <div key={`n${i}`} className="text-amber-300/90">{n}</div>
+          ))}
+          {pr?.sources.errors.map((e, i) => (
             <div key={`e${i}`} className="text-red-300/90">{e}</div>
           ))}
         </div>

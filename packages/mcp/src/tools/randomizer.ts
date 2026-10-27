@@ -1,16 +1,18 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
  * `get_desk_heat`, `refresh_desk_heat`, `get_football_news`, `get_nba_news`,
- * `get_ocw_pool` and `get_landmark_pool`.
+ * `get_ocw_pool`, `get_landmark_pool` and `get_hundred_pool`.
  *
  * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
  * editorial format), Atlas (countries and culture, geography format), Epics
  * (epics place by place, geography format), the OCW Desk (one MIT
  * OpenCourseWare resource: a field, a topic, a resource kind, a course, a
- * resource and a lens; study note with charts) and the Landmark Desk (one
+ * resource and a lens; study note with charts), the Landmark Desk (one
  * piece of prize-winning research: a field, a prize, an era, a laureate, the
  * paper or book the award rewarded and a lens; landmark paper explainer with
- * charts); for footshorts, the
+ * charts) and The 100 Desk (one person from Michael Hart's ranking of the
+ * most influential persons in history: a domain, an era, a person and a
+ * lens; influence profile with charts); for footshorts, the
  * Football Desk (a tournament, a team, an angle and a freshness, weighted by
  * the team's news on footshorts; football explainer with match context); for
  * viznba, the NBA Desk (a conference, a franchise, an angle and a freshness,
@@ -101,7 +103,10 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'Desk: a field, a prize in it, an era, a laureate read live from the Nobel Prize API or Wikidata, the paper ' +
         'or book the award rewarded (named by the award record, else a representative work from OpenAlex or Open ' +
         'Library, labelled so) and a lens; landmark paper explainer with charts; sequence: true follows the same ' +
-        'prize back to the year before). The draw applies ' +
+        'prize back to the year before), and "hundred" (The 100 Desk: one person from Michael Hart\'s ranking of the ' +
+        'most influential persons in history, 1992 edition, drawn by domain, then era, then person, plus a lens; ' +
+        'influence profile with charts that tests the rank against the record, with a live profile from Wikidata, ' +
+        'Wikipedia and its pageviews; sequence: true walks the ranking to the next rank). The draw applies ' +
         'the playbook rules: 30 and 90 day repeat blocks, heat weighting, region, tradition and tournament ' +
         'balancing, the philosophical, hands-on and work-level quotas. To keep some reels, pass `from` ' +
         '(the spin on screen) and `locks`. To reject a spin and draw again, pass `from`, respin=true and a reason. ' +
@@ -109,7 +114,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'Desk spin), research, ' +
         'save_spin_research, then publish_html_story with spinId (same app).',
       inputSchema: {
-        randomizer: z.enum(['desk', 'atlas', 'epics', 'ocw', 'landmark', 'footshorts', 'viznba']),
+        randomizer: z.enum(['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'footshorts', 'viznba']),
         from: spinIdSchema.optional().describe('The spin the locks keep values from, or the one a re-spin rejects.'),
         locks: z
           .array(z.string())
@@ -117,7 +122,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
               'lens. epics: epic, episode, place, lens. ocw: field, topic, course, resource, lens. landmark: field, ' +
-              'prize, era, laureate, work, lens. footshorts: ' +
+              'prize, era, laureate, work, lens. hundred: domain, era, person, lens. footshorts: ' +
               'competition, team, angle, fresh. viznba: conference, team, angle, fresh. A child lock ' +
               'implies its parents.',
           ),
@@ -137,7 +142,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         sequence: z
           .boolean()
           .default(false)
-          .describe('epics: continue the previous spin\'s route to its next place. ocw: the next resource of the same kind in the previous spin\'s course. landmark: the same prize, the year before the previous spin\'s.'),
+          .describe('epics: continue the previous spin\'s route to its next place. ocw: the next resource of the same kind in the previous spin\'s course. landmark: the same prize, the year before the previous spin\'s. hundred: the next rank after the previous spin\'s (100 wraps to 1).'),
       },
     },
     async ({ randomizer, from, locks, respin, reason, pair, sequence }) => {
@@ -186,8 +191,8 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
       title: 'Save a spin\'s research file',
       description:
         'Save the research MD for a spin (claims log, gaps, HERO INSIGHT). Pass `markdown` or a local `filePath`. ' +
-        'The spin\'s status follows the HERO INSIGHT section: without one it stays researching; with one, Atlas and ' +
-        'Epics spins wait for a human to approve the insight in admin before the page can go public, and Desk ' +
+        'The spin\'s status follows the HERO INSIGHT section: without one it stays researching; with one, Atlas, Epics and ' +
+        '100 Desk spins wait for a human to approve the insight in admin before the page can go public, and Desk ' +
         'spins are ready to build. Save again to update it.',
       inputSchema: {
         spinId: spinIdSchema,
@@ -357,6 +362,28 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
       if (era) q.set('era', era)
       if (laureate) q.set('laureate', laureate)
       const body = await call(config, `/api/randomizer/landmark${q.size ? `?${q}` : ''}`, {}, 'vizmaya-fyi')
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+
+  server.registerTool(
+    'get_hundred_pool',
+    {
+      title: 'Get The 100 Desk pool',
+      description:
+        'What The 100 Desk randomizer draws from. With nothing: Michael Hart\'s whole ranking (The 100, 1992 edition) as ' +
+        'the desk holds it: the book, 8 domains, 5 eras, the regions, the 100 people (rank, name, Hart\'s spelling, ' +
+        'Wikidata item, domain, era, region, life years, flags such as no-portrait or contested authorship) and the ' +
+        'lenses. With `rank` (1 to 100): that person and their live profile as a spin would read it (Wikidata ' +
+        'description, birth and death with places and coordinates, portrait unless withheld, Wikipedia editions, the ' +
+        'Wikipedia summary, a year of monthly pageviews), with how each source fared. Use it to look before locking a ' +
+        'person on spin_randomizer; it logs nothing. Needs the vizmaya publish token.',
+      inputSchema: {
+        rank: z.number().int().min(1).max(100).optional().describe('Hart\'s rank, 1 to 100, for that person\'s live profile.'),
+      },
+    },
+    async ({ rank }) => {
+      const body = await call(config, `/api/randomizer/hundred${rank ? `?rank=${rank}` : ''}`, {}, 'vizmaya-fyi')
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )

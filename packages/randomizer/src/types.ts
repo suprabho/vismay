@@ -1,7 +1,8 @@
 /**
- * Types for the story randomizers: the five Vizmaya ones (the playbook's
- * Desk, Atlas and Epics, the OCW Desk on MIT OpenCourseWare and the Landmark
- * Desk on prize-winning research), the
+ * Types for the story randomizers: the six Vizmaya ones (the playbook's
+ * Desk, Atlas and Epics, the OCW Desk on MIT OpenCourseWare, the Landmark
+ * Desk on prize-winning research and The 100 Desk on Michael Hart's ranking
+ * of the most influential persons in history), the
  * Footshorts one (teams, tournaments and their news) and the VizNBA one
  * (franchises, conferences and their news), their datasets (./data/*.json)
  * and the spins they produce.
@@ -9,9 +10,9 @@
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -45,12 +46,14 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW and Landmark sequence mode, Footshorts and NBA head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark and The 100 sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
    * built from it (decision D4: gated for Atlas and Epics because of the
-   * sensitivity rules, optional for the Desk, Footshorts and the NBA Desk).
+   * sensitivity rules, and for The 100 Desk, whose list runs from the
+   * founders of religions to dictators; optional for the Desk, Footshorts and
+   * the NBA Desk).
    */
   gated: boolean
 }
@@ -138,6 +141,21 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     ],
     option: { key: 'sequence', label: 'Follow the prize (the year before)' },
     gated: false,
+  },
+  hundred: {
+    id: 'hundred',
+    app: 'vizmaya-fyi',
+    name: 'The 100 Desk',
+    hint: "Hart's 100 · influence",
+    format: 'Influence profile with charts',
+    reels: [
+      { key: 'domain', label: 'Domain' },
+      { key: 'era', label: 'Era', parents: ['domain'] },
+      { key: 'person', label: 'Person', parents: ['era', 'domain'] },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: { key: 'sequence', label: 'Walk the ranking (next rank)' },
+    gated: true,
   },
   footshorts: {
     id: 'footshorts',
@@ -737,6 +755,143 @@ export interface LandmarkSubject {
   sequence: boolean
 }
 
+/* ---------- The 100 Desk ---------- */
+
+/**
+ * What the brief must handle up front for one person: a life whose
+ * historicity is debated, a person most of the faithful hold should not be
+ * depicted, one entry for two people (the Wright brothers), a contested
+ * authorship (Hart credits Shakespeare's works to Edward de Vere), or an
+ * influence that came with mass death on the record.
+ */
+export type HundredFlag = 'legendary' | 'no-portrait' | 'duo' | 'authorship' | 'harm'
+
+/** The book the ranking comes from, for the credit line. */
+export interface HundredBook {
+  title: string
+  author: string
+  edition: string
+  publisher: string
+  year: number
+  first_edition: number
+  /** What the ranking measures and how the edition differs from the first, for the brief. */
+  note: string
+}
+
+export interface HundredDomain {
+  id: string
+  name: string
+}
+
+/** A band of years (negative is BCE) the act Hart ranks a person for falls in, the era reel. */
+export interface HundredEra {
+  id: string
+  name: string
+  from: number | null
+  to: number | null
+}
+
+/** One entry of Hart's ranking, as the dataset places it. */
+export interface HundredPerson {
+  /** Hart's rank, 1 to 100. */
+  rank: number
+  id: string
+  name: string
+  /** The name as Hart printed it ("Ts'ai Lun", "Asoka"). */
+  hart_name: string
+  /** The English Wikipedia title. */
+  wiki: string
+  /** The Wikidata item ("Q935"). */
+  wikidata: string
+  /** HundredDomain.id: what the person is ranked for. */
+  domain: string
+  /** HundredEra.id: when the act Hart ranks them for happened. */
+  era: string
+  /** Where they were based. */
+  region: string
+  /** Earliest birth and death years on Wikidata, astronomical (0 is 1 BCE, -383 is 384 BCE); null when not on record. */
+  born: number | null
+  died: number | null
+  flags: HundredFlag[]
+  /** What the brief must say up front, when anything. */
+  note?: string
+}
+
+export interface HundredDataset {
+  book: HundredBook
+  domains: HundredDomain[]
+  eras: HundredEra[]
+  regions: string[]
+  people: HundredPerson[]
+  lenses: NamedOption[]
+}
+
+/** A birth or death as Wikidata records it: the date at its own precision, and the place with its coordinates. */
+export interface HundredLifeEvent {
+  /** "4 January 1643", "c. 5th century BCE": formatted at the precision Wikidata gives. */
+  date: string | null
+  /** Astronomical year, as above. */
+  year: number | null
+  place: string | null
+  lat: number | null
+  lon: number | null
+}
+
+export type HundredSourceState = 'ok' | 'failed' | 'skipped'
+
+/**
+ * What a spin reads live about the person it drew (hundredPool.ts), after
+ * the draw: Wikidata (description, birth and death with places and
+ * coordinates, portrait, sitelinks), the English Wikipedia summary, and a
+ * year of monthly pageviews. Never blocks a spin: a source that fails is
+ * recorded and the brief says to look it up.
+ */
+export interface HundredProfile {
+  /** ISO timestamp the profile was read. */
+  asOf: string
+  wikidataUrl: string
+  wikipediaUrl: string
+  /** Wikidata's one-line description. */
+  description: string | null
+  /** The Wikipedia summary's first paragraph (CC BY-SA: context for the agent, never pasted onto the page). */
+  extract: string | null
+  born: HundredLifeEvent | null
+  died: HundredLifeEvent | null
+  /** The portrait (Wikimedia Commons, Special:FilePath) and its file page for the licence; null when withheld or missing. */
+  image: string | null
+  imagePage: string | null
+  /** Wikipedia editions with an article on the person: a rough measure of reach. */
+  sitelinks: number | null
+  /** English Wikipedia views by month (user agents only), oldest first. */
+  pageviews: Array<{ month: string; views: number }>
+  sources: { wikidata: HundredSourceState; wikipedia: HundredSourceState; pageviews: HundredSourceState; errors: string[]; notes: string[] }
+}
+
+export interface HundredPicks {
+  /** HundredDomain.id */
+  domain: string
+  /** HundredEra.id */
+  era: string
+  /** HundredPerson.rank */
+  rank: number
+  lens: string
+}
+
+export interface HundredSubject {
+  randomizer: 'hundred'
+  book: HundredBook
+  domain: HundredDomain
+  era: HundredEra
+  person: HundredPerson
+  lens: NamedOption
+  /** The people ranked just above and below: the comparison the rank invites. */
+  neighbours: { above: HundredPerson | null; below: HundredPerson | null }
+  /** Read after the draw (spins.ts); null on a spin replayed without the network. */
+  profile: HundredProfile | null
+  /** The next rank after the previous spin's (sequence mode). */
+  sequence: boolean
+}
+
 /* ---------- Footshorts ---------- */
 
 export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
@@ -1098,8 +1253,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -1120,6 +1275,9 @@ export interface SpinMeta {
   fieldId?: string
   prize?: string
   workLevel?: boolean
+  /** The 100 Desk: the domain, for the same-domain-twice rule, and the rank, for walking the ranking. */
+  domain?: string
+  rank?: number
 }
 
 export interface DrawResult {
@@ -1127,7 +1285,7 @@ export interface DrawResult {
   picks: SpinPicks
   subject: SpinSubject
   reels: Record<string, ReelValue>
-  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, team, course, laureate). */
+  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, team, course, laureate, person). */
   primary: string
   /** The full combination the 90-day block keys on. */
   combo: string

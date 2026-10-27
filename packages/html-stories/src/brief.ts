@@ -868,9 +868,18 @@ const LANDMARK_SPIN_RULES = [
   'Prize and work metadata are CC0 (Nobel Prize Outreach, Wikidata, OpenAlex): credit them as the assignment says, link to nobelprize.org and the publisher, and never rehost a paper, a book or a Nobel document.',
 ]
 
+/** A 100 Desk spin's brief carries a ranked person and their live profile: how the page uses them. */
+const HUNDRED_SPIN_RULES = [
+  "The rank is Michael Hart's argument, not a fact: attribute it (\"Hart ranks\", \"Hart argues\") and test it against the record. His book is copyrighted: paraphrase it, quote a phrase at most, and cite the edition and page.",
+  'The profile in the assignment (Wikidata dates and places, the Wikipedia summary, the pageviews) is where research starts, not a source to cite on its own: the life on the page comes from primary and scholarly sources. The Wikipedia text is CC BY-SA and never goes on the page.',
+  'A portrait is a Wikimedia Commons file under its own licence: hotlink it credited, as its file page says, or draw none. A person the assignment says not to depict is never shown, in any image or illustration.',
+  'Wikidata and pageviews data are CC0: credit them as the assignment says.',
+]
+
 function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
   if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
   if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES
+  if (spin.randomizer === 'hundred') return HUNDRED_SPIN_RULES
   return hasContext ? (SPIN_CONTEXT_RULES[app] ?? []) : []
 }
 

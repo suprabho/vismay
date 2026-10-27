@@ -69,11 +69,21 @@
  * the book from around the prize year), free-to-read copies weighted up,
  * retracted works out. The combination (prize, laureate, lens) is blocked
  * for 90 days; sequence mode follows one prize back a year at a time.
+ *
+ * The 100 Desk draws from Michael Hart's ranking of the most influential
+ * persons in history, which the dataset holds whole, so its draw is pure in
+ * one pass like the Atlas: a domain first (what the person is ranked for;
+ * re-drawn once when it repeats the last spin's), an era the domain has
+ * people in, then a person in both (minus people spun in the last 30 days),
+ * and a lens. The combination (person, lens) is blocked for 90 days.
+ * Sequence mode walks the ranking: the rank after the previous spin's,
+ * wrapping from 100 to 1. The person's live profile (Wikidata, Wikipedia)
+ * is read after the draw (spins.ts) and changes nothing in it.
  */
 
-import { ATLAS, DESK, EPICS, FOOTSHORTS, LANDMARK, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
-import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, landmarkAwardLabel, landmarkLicenceNote, ocwCourseLabel } from './stub'
+import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkLicenceNote, ocwCourseLabel } from './stub'
 import {
   GEO_STATUS_TEXT,
   RANDOMIZER_META,
@@ -96,6 +106,11 @@ import {
   type FootshortsNews,
   type FootshortsPicks,
   type FootshortsTeamNews,
+  type HundredDataset,
+  type HundredDomain,
+  type HundredEra,
+  type HundredPerson,
+  type HundredPicks,
   type LandmarkAward,
   type LandmarkDataset,
   type LandmarkEra,
@@ -183,7 +198,7 @@ export interface DrawInput {
   locks?: string[]
   /** Atlas: draw a second country. Footshorts and the NBA Desk: draw a head-to-head opponent. */
   pair?: boolean
-  /** Epics: continue from the previous spin's place. */
+  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. */
   sequence?: boolean
   /** Desk: live heat from desk_heat, overriding the dataset's seed values. */
   heat?: DeskHeatRow[]
@@ -196,7 +211,7 @@ export interface DrawInput {
   /** Landmark Desk: the awards planLandmark() asked for and the planned laureate's works (spins.ts). Required. */
   landmarkPool?: LandmarkPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -343,6 +358,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'landmark') {
     return drawLandmark(ctx, input.datasets?.landmark ?? LANDMARK, prev?.picks as LandmarkPicks | undefined, input.landmarkPool ?? null, !!input.sequence)
+  }
+  if (input.randomizer === 'hundred') {
+    return drawHundred(ctx, input.datasets?.hundred ?? HUNDRED, prev?.picks as HundredPicks | undefined, !!input.sequence)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -1421,6 +1439,154 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
     summary: `${award.name} · ${landmarkAwardLabel(prize, award.year)}`,
     rules: ctx.rules,
     meta: { fieldId: field.id, prize: prize.id, workLevel: prize.work_level },
+  }
+}
+
+/* ---------- The 100 Desk ---------- */
+
+/** The rules a person's flags fire: what the brief must handle before anything else. */
+function hundredFlagRules(ctx: Ctx, p: HundredPerson, domain: HundredDomain): void {
+  if (domain.id === 'faith') {
+    rule(ctx, 'faith', 'info', `${p.name} is ranked for a religion or an ethics. Describe beliefs as what adherents believe and what the texts say, keep the historical record and tradition apart, and attribute each.`)
+  }
+  if (p.flags.includes('legendary')) {
+    rule(ctx, 'historicity', 'warn', `Whether ${p.name} lived as the tradition describes is debated. Separate the tradition from what evidence supports, and say which is which.`)
+  }
+  if (p.flags.includes('no-portrait')) rule(ctx, 'depiction', 'warn', p.note ?? `No portrait of ${p.name} on the page.`)
+  if (p.flags.includes('duo')) rule(ctx, 'two people', 'info', p.note ?? `${p.name} is one entry for two people.`)
+  if (p.flags.includes('authorship')) rule(ctx, 'contested', 'warn', p.note ?? `The authorship Hart assumes for ${p.name} is contested.`)
+  if (p.flags.includes('harm')) {
+    rule(ctx, 'human cost', 'warn', `Hart ranks influence, not merit. The human cost on the record (deaths, conquest, persecution) is part of ${p.name}'s story: state it with sources, and keep any admiring tone off the page.`)
+  }
+}
+
+function drawHundred(ctx: Ctx, data: HundredDataset, prev: HundredPicks | undefined, sequence: boolean): DrawResult {
+  const { rng } = ctx
+  const byRank = (rank: number) => hundredByRank(rank, data)
+  const last = ctx.kept[ctx.kept.length - 1]
+  const lastPicks = last?.picks as HundredPicks | undefined
+
+  let person: HundredPerson | undefined
+  let continued = false
+
+  if (sequence) {
+    if (ctx.locked('domain') || ctx.locked('person')) {
+      rule(ctx, 'sequence', 'info', 'Walking the ranking ignores the domain, era and person reels, and they are locked here, so the locks win: drawing under them.')
+    } else if (lastPicks && byRank(lastPicks.rank)) {
+      const at = lastPicks.rank
+      person = byRank(at >= data.people.length ? 1 : at + 1)!
+      continued = true
+      rule(
+        ctx,
+        'sequence',
+        'good',
+        at >= data.people.length
+          ? `Walking the ranking: the last spin was #${at}, the end of the list, so the walk starts again at #1 ${person.name}.`
+          : `Walking the ranking: #${at} last time, so #${person.rank} ${person.name} now. The domain balance and the 30-day block pause while the walk runs.`,
+      )
+    } else {
+      rule(ctx, 'sequence', 'info', 'Walking the ranking needs a previous spin to walk on from. Drawing fresh.')
+    }
+  }
+
+  if (!person) {
+    const prevPerson = prev ? byRank(prev.rank) : undefined
+    if (ctx.locked('person') && prevPerson) {
+      person = prevPerson
+      rule(ctx, 'lock', 'info', `Person locked to #${person.rank} ${person.name}.`)
+    } else {
+      let domain: HundredDomain
+      const prevDomain = prev ? data.domains.find((d) => d.id === prev.domain) : undefined
+      if (ctx.locked('domain') && prevDomain) {
+        domain = prevDomain
+        rule(ctx, 'lock', 'info', `Domain locked to ${domain.name}.`)
+      } else {
+        domain = pick(data.domains, rng)
+        if (last?.meta.domain === domain.id) {
+          const again = pick(data.domains, rng)
+          rule(
+            ctx,
+            'balance',
+            'warn',
+            again.id === domain.id
+              ? `${domain.name} came up twice in a row, so the domain was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+              : `${domain.name} came up twice in a row, so the domain was re-drawn once, now ${again.name}.`,
+          )
+          domain = again
+        }
+        rule(ctx, 'balance', 'good', `Stratified draw: domain first (${domain.name}, 1 in ${data.domains.length}), then an era it has people in, then a person. The rulers, a quarter of the list, do not crowd out the artists.`)
+      }
+
+      const eras = hundredEras(domain.id, data)
+      let era: HundredEra
+      const prevEra = prev ? eras.find((e) => e.id === prev.era) : undefined
+      if (ctx.locked('era') && prevEra) {
+        era = prevEra
+        rule(ctx, 'lock', 'info', `Era locked to ${era.name}.`)
+      } else {
+        era = pick(eras, rng)
+      }
+
+      const inCell = data.people.filter((p) => p.domain === domain.id && p.era === era.id)
+      const cands = eligible(ctx, inCell, {
+        id: (p) => p.id,
+        name: (p) => p.name,
+        heat: () => 0,
+        heatLabel: '',
+        everyText: `Everyone in ${domain.name.toLowerCase()} in the ${era.name} was spun in the last 30 days.`,
+      })
+      person = pick(cands, rng)
+    }
+  }
+
+  const domain = data.domains.find((d) => d.id === person!.domain)!
+  const era = data.eras.find((e) => e.id === person!.era)!
+  let lens = (ctx.locked('lens') && prev && data.lenses.find((l) => l.name === prev.lens)) || pick(data.lenses, rng)
+
+  const combo = () => `${person!.id}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    const fresh = data.lenses.filter((l) => !r90.has(`${person!.id}|${l.name}`))
+    if (!ctx.locked('lens') && fresh.length) lens = pick(fresh, rng)
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${person.name} with the ${lens.name} lens ran in the last 90 days${ctx.locked('lens') ? ', and the lens is locked' : ', and every lens has run'}. It repeats.`
+        : `${person.name} with the first lens drawn ran in the last 90 days. The lens was re-drawn.`,
+    )
+  }
+
+  rule(ctx, 'rank', 'info', `#${person.rank} is ${data.book.author}'s argument, made in ${data.book.year}: the page tests it against the record, it does not repeat it. Hart ranks influence, not greatness.`)
+  hundredFlagRules(ctx, person, domain)
+
+  const picks: HundredPicks = { domain: domain.id, era: era.id, rank: person.rank, lens: lens.name }
+  return {
+    randomizer: 'hundred',
+    picks,
+    subject: {
+      randomizer: 'hundred',
+      book: data.book,
+      domain,
+      era,
+      person,
+      lens,
+      neighbours: { above: byRank(person.rank - 1) ?? null, below: byRank(person.rank + 1) ?? null },
+      profile: null,
+      sequence: continued,
+    },
+    reels: {
+      domain: { value: domain.name },
+      era: { value: era.name },
+      person: { value: person.name, sub: `#${person.rank} · ${hundredLife(person)}` },
+      lens: { value: lens.name },
+    },
+    primary: person.id,
+    combo: combo(),
+    summary: `#${person.rank} ${person.name} · ${lens.name}`,
+    rules: ctx.rules,
+    meta: { domain: domain.id, rank: person.rank },
   }
 }
 

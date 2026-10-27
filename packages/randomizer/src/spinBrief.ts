@@ -13,6 +13,10 @@ import {
   fixtureSummary,
   footshortsAngleMetrics,
   gameSummary,
+  hundredCreditLine,
+  hundredLensMetrics,
+  hundredLife,
+  hundredRankLabel,
   LANDMARK_WORK_LEVEL_LABEL,
   landmarkAwardLabel,
   landmarkCreditLine,
@@ -32,6 +36,7 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type HundredSubject,
   type LandmarkSubject,
   type OcwSubject,
   type SpinRecord,
@@ -326,6 +331,53 @@ function landmarkAssignment(s: LandmarkSubject): string[] {
   return out
 }
 
+function hundredAssignment(s: HundredSubject): string[] {
+  const p = s.person
+  const pr = s.profile
+  const event = (label: string, e: NonNullable<HundredSubject['profile']>['born']) =>
+    e ? `${label} ${[e.date, e.place].filter(Boolean).join(', ')}${e.lat !== null && e.lon !== null ? ` (${e.lat.toFixed(3)}, ${e.lon.toFixed(3)})` : ''}` : null
+  const life = pr ? [event('born', pr.born), event('died', pr.died)].filter(Boolean).join('; ') : ''
+  const near = (n: HundredSubject['neighbours']['above'], where: string) => (n ? `#${n.rank} ${n.name} ${where}` : null)
+  const out = [
+    `- Person: ${p.name}${p.hart_name !== p.name ? ` (Hart: "${p.hart_name}")` : ''}, ${hundredLife(p)}. ${hundredRankLabel(s)}.`,
+    `- Ranked for: ${s.domain.name}. Era: ${s.era.name}. Based in: ${p.region}.`,
+    `- Neighbours in the ranking: ${[near(s.neighbours.above, 'above'), near(s.neighbours.below, 'below')].filter(Boolean).join(', ')}.`,
+    `- Lens: ${s.lens.name}. ${s.lens.description}`,
+    `- Record: Wikidata ${pr?.wikidataUrl ?? `https://www.wikidata.org/wiki/${p.wikidata}`}${pr?.description ? ` ("${pr.description}")` : ''}; Wikipedia ${pr?.wikipediaUrl ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(p.wiki.replace(/ /g, '_'))}`}.`,
+  ]
+  if (life) out.push(`- Life on Wikidata: ${life}.${(p.born ?? p.died ?? Infinity) < 1000 ? ' Dates this old are traditional or estimated: say so on the page.' : ''}`)
+  if (p.note) out.push(`- Up front: ${p.note}`)
+  out.push(
+    '',
+    `About the book: ${s.book.note}`,
+    '',
+    '### Do this first',
+    '',
+    `1. Read ${s.book.author}'s chapter on ${p.hart_name} (#${p.rank}) if you can reach the book: it is the argument the page tests. It is copyrighted: paraphrase it, quote a phrase at most, and cite the page. If you cannot reach it, say so in the research file and test the rank against the record alone.`,
+    `2. Build the life from primary and scholarly sources (the person's own writings, contemporary documents, a standard scholarly biography), not from Wikipedia: use it only to find them.`,
+    `3. Apply the ${s.lens.name} lens to ${p.name} and the rank, not to ${s.domain.name.toLowerCase()} in general.`,
+    `4. ${hundredCreditLine(s)}`,
+  )
+  let n = 5
+  if (s.sequence) out.push(`${n++}. This spin walks the ranking: the previous spin covered #${p.rank === 1 ? 100 : p.rank - 1}. Link back to that story and compare the two ranks.`)
+  if (p.flags.includes('no-portrait')) out.push(`${n++}. No portrait, figure or likeness of ${p.name} anywhere on the page, the share card included.`)
+  else if (pr?.image) out.push(`${n++}. A portrait is on Wikimedia Commons (${pr.imagePage}): hotlink it only under the licence on its file page, credited, or draw none.`)
+  if (pr?.pageviews.length) {
+    out.push(
+      '',
+      `English Wikipedia views by month (Wikimedia pageviews, user agents, read ${pr.asOf.slice(0, 10)}; check the newest month is complete before charting it): ${pr.pageviews.map((v) => `${v.month}: ${v.views.toLocaleString('en-US')}`).join(', ')}.${pr.sitelinks ? ` Wikipedia editions with an article: ${pr.sitelinks}.` : ''}`,
+    )
+  }
+  if (pr && (pr.sources.errors.length || pr.sources.notes.length)) out.push('', `Profile notes: ${[...pr.sources.notes, ...pr.sources.errors.map((e) => `${e}: look it up by hand.`)].join(' ')}`)
+  if (!pr) out.push('', 'No live profile on this spin: look the life up on Wikidata and Wikipedia yourself.')
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${hundredLensMetrics(s.lens.name).join(', ')}.`,
+    'Start from: the person\'s own writings or works, contemporary documents, a scholarly biography, Wikidata for dates and places, and a public dataset for any number about the world.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -343,7 +395,9 @@ export function assignmentSection(spin: BriefSpin): string {
               ? ocwAssignment(s)
               : s.randomizer === 'landmark'
                 ? landmarkAssignment(s)
-                : epicsAssignment(s)
+                : s.randomizer === 'hundred'
+                  ? hundredAssignment(s)
+                  : epicsAssignment(s)
   const ready = insightReady(spin)
   const lead = ready
     ? [
@@ -381,7 +435,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
               ? '\n8. The resource is the primary source for what it says; quote it with its page or slide number. Anything about the world outside the resource (a number, a date, a history) follows the two-source rule like any other claim.'
               : spin.randomizer === 'landmark'
                 ? '\n8. The work is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it; otherwise the page says "representative work".'
-                : ''
+                : spin.randomizer === 'hundred'
+                  ? '\n8. Hart\'s rank and his reasons are his opinion, not a fact: attribute them ("Hart argues"), and test them. Separate what contemporary sources document from what later tradition, legend or hagiography added, and label each. A religious claim is stated as what a tradition holds, never as fact or as falsehood.'
+                  : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -508,6 +564,26 @@ Built like the best page of a journal club: one result, explained so a reader ou
 11. **Sources and claims log summary.**`
 }
 
+function hundredFormat(s: HundredSubject): string {
+  const p = s.person
+  const near = [s.neighbours.above, s.neighbours.below].filter((n): n is NonNullable<typeof n> => !!n).map((n) => `#${n.rank} ${n.name}`)
+  return `## Format: influence profile with charts
+
+Built like the best page of a reference book argued with: one person, what they changed, the numbers that show how far it reached, and whether the rank holds. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the claim about ${p.name}'s influence) and **dek** (one line, why it matters to a reader now).
+2. **The rank:** #${p.rank} of 100 in ${s.book.author}'s list (${s.book.year}), between ${near.join(' and ')}, and Hart's case in one line, attributed.
+3. **The life in a timeline:** dated points from birth to death, each sourced${p.flags.includes('legendary') ? ', with tradition and evidence marked apart' : ''}.
+4. **Map:** where they lived and acted, and where the influence spread (coordinates from Wikidata and your research).
+5. **Chart 1, the reach:** the measure of what they changed, over time (8 or more points).
+6. **Chart 2, the comparison:** ${p.name} against the people ranked around them, or against the alternative Hart's "without them" test names.
+7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+8. **The counter-case:** the strongest argument that the rank is wrong, and who the list leaves out.
+9. **Go further:** the person's own works or documents, the scholarly biography, linked.
+10. **Credit:** ${hundredCreditLine(s)}
+11. **Sources and claims log summary.**`
+}
+
 function atlasFormat(s: AtlasSubject): string {
   return `## Format: geography (route table)
 
@@ -552,6 +628,7 @@ export function formatSection(spin: BriefSpin): string {
   if (s.randomizer === 'viznba') return viznbaFormat(s)
   if (s.randomizer === 'ocw') return ocwFormat(s)
   if (s.randomizer === 'landmark') return landmarkFormat(s)
+  if (s.randomizer === 'hundred') return hundredFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -585,6 +662,12 @@ export function chartRules(spin: BriefSpin): string[] {
     return [
       'Landmark series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
       'A chart rebuilt from the work\'s own figure or table says so in its footer and cites the page; the citation chart names OpenAlex and the read date; a chart from a public dataset names the dataset.',
+    ]
+  }
+  if (spin.randomizer === 'hundred') {
+    return [
+      'Influence series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
+      'Draw the map with D3-geo from your timeline\'s coordinates. A number about the past names its source and how it was estimated (a census, a scholarly estimate); the pageviews chart names Wikimedia and the read date.',
     ]
   }
   return [
@@ -628,13 +711,14 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'viznba' ? ['Every score and stat line matches the box scores; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'ocw' ? ['The resource and the course page are linked, the CC BY-NC-SA credit names the course, the instructors and the term, and nothing on the page is sponsored.'] : []),
     ...(spin.randomizer === 'landmark' ? ['The work and the laureate page are linked, the motivation is quoted verbatim, a representative work is labelled as such, and the credit names the data sources.'] : []),
+    ...(spin.randomizer === 'hundred' ? ["Hart's rank and reasons are attributed to him and tested, not repeated; his text is paraphrased, not copied; tradition and record are labelled apart; the credit names the book and the data sources."] : []),
     'Contested claims are labelled and both sides stated fairly.',
     'The first 3 seconds of the script open on the surprising claim.',
     'No em dashes. No unverified claims on the page or in the script.',
