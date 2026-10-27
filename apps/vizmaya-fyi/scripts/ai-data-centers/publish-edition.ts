@@ -4,7 +4,9 @@
  * Sets status = 'published', assigns the sequential edition number and the
  * publish time, then asks vizmaya.fyi to re-render /ai-daily/doom-v-boom
  * and /ai-daily/doom-v-boom/[date]. A published row is never updated again
- * (a DB trigger enforces it); corrections run in the next edition.
+ * (a DB trigger enforces it); corrections run in the next edition. A draft
+ * with nothing scored (mood score null — an empty window) is marked
+ * skipped instead and never published; the run logs why (migration 096).
  *
  * The draft goes public at 09:00 UTC whether or not an editor has looked at
  * it — review is a window, not a gate. An editor's Hold moves

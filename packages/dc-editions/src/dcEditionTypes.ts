@@ -607,7 +607,14 @@ export interface EditionComposerRun {
   ieaIds: number[]
 }
 
-export type EditionStatus = 'draft' | 'published'
+/**
+ * draft → published (immutable, numbered) | skipped. A draft with nothing
+ * scored (mood_score null — an empty window, such as an RSS outage at
+ * 06:15) is marked skipped instead of published (migration 096): no number,
+ * never public, shown in the admin archive, reopened as a draft by a later
+ * recompose for that date.
+ */
+export type EditionStatus = 'draft' | 'published' | 'skipped'
 
 /** Archive-rail / navigator shape. */
 export interface DcEditionSummary {
