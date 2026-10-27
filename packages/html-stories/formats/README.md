@@ -296,7 +296,8 @@ swaps sides), `<section class="band wrap" data-unit>` (a `.head` and
 `.tiles`), `<footer class="end wrap">` (`.sheet`s). Everything on the board
 is a `.piece` (tilt `--tilt`, shadow) holding a `.tape` and a `.paper`
 (torn by `--cut: var(--torn-all | --torn-tb | --torn-t)`; colours
-`.accent .warm .dark .cool`; `.halftone`, `.ruled`). Labels are `.slip`s,
+`.accent .warm .dark .cool`; `.halftone` (figure sheets only, never
+running text), `.ruled`). Labels are `.slip`s,
 claims carry a `.stamp.documented | .contested | .inferred`, a number in
 running text sits on an `.n` patch, the headline is cut into `.strip`s and a
 `.ransom` number. Charts are cut from paper (`.cmp` strips of `.cbar`s with
