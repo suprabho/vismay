@@ -1,7 +1,7 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, DESK, EPICS, FOOTSHORTS, LANDMARK, OCW, VIZNBA, epicRoute, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
+import { ATLAS, DESK, EPICS, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planLandmark, planOcw } from './draw'
 import {
   awardsFromNobel,
@@ -21,9 +21,10 @@ import {
   type OpenAlexWork,
   type OpenLibraryDoc,
 } from './landmarkPool'
+import { commonsFilePage, completeMonths, formatWikidataTime, loadHundredProfile, pageviewWindow, pageviewsFromBody, parsePoint, profileFromSparql } from './hundredPool'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { HUNDRED_LENS_METRICS, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -35,6 +36,9 @@ import {
   type FootshortsNews,
   type FootshortsPicks,
   type FootshortsTeamNews,
+  type HundredPicks,
+  type HundredProfile,
+  type HundredSubject,
   type LandmarkAward,
   type LandmarkPicks,
   type LandmarkPlan,
@@ -310,7 +314,7 @@ const NEWS: FootshortsNews = {
 NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
 
 assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
-assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred'])
 assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
 assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
@@ -1254,11 +1258,214 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   )
 }
 
+// The 100 Desk: the committed ranking, then the draw (pure, one pass) and the profile mappings (no network).
+{
+  assert.equal(HUNDRED.people.length, 100)
+  assert.deepEqual(HUNDRED.people.map((p) => p.rank), Array.from({ length: 100 }, (_, i) => i + 1))
+  assert.equal(new Set(HUNDRED.people.map((p) => p.id)).size, 100)
+  assert.equal(new Set(HUNDRED.people.map((p) => p.wikidata)).size, 100)
+  for (const p of HUNDRED.people) {
+    assert.match(p.wikidata, /^Q\d+$/, p.name)
+    assert.ok(HUNDRED.domains.some((d) => d.id === p.domain), `${p.name}: domain`)
+    assert.ok(HUNDRED.eras.some((e) => e.id === p.era), `${p.name}: era`)
+    assert.ok(HUNDRED.regions.includes(p.region), `${p.name}: region`)
+    if (p.flags.includes('no-portrait') || p.flags.includes('duo') || p.flags.includes('authorship')) assert.ok(p.note, `${p.name}: a flag that needs a note`)
+  }
+  for (const d of HUNDRED.domains) assert.ok(hundredEras(d.id).length > 0, d.name)
+  assert.equal(hundredByRank(1)!.name, 'Muhammad')
+  assert.equal(hundredByRank(100)!.name, 'Mahavira')
+  assert.ok(hundredByRank(1)!.flags.includes('no-portrait'))
+  assert.ok(hundredByRank(31)!.flags.includes('authorship'))
+  assert.equal(HUNDRED.lenses.length, Object.keys(HUNDRED_LENS_METRICS).length)
+  for (const l of HUNDRED.lenses) assert.ok(HUNDRED_LENS_METRICS[l.name], `metrics for ${l.name}`)
+  assert.equal(reelPool('hundred', 'person').length, 100)
+  assert.deepEqual(normalizeLocks('hundred', ['person']), ['domain', 'era', 'person'])
+
+  // Years: astronomical in the data, BCE on the page.
+  assert.equal(hundredYear(1643), '1643')
+  assert.equal(hundredYear(-383), '384 BCE')
+  assert.equal(hundredLife({ born: -383, died: -321 }), 'c. 384 BCE to 322 BCE')
+  assert.equal(hundredLife({ born: 1643, died: 1727 }), '1643 to 1727')
+  assert.equal(hundredLife({ born: null, died: null }), 'dates not on record')
+  assert.equal(hundredLife({ born: -500, died: -500 }), 'c. 501 BCE')
+
+  // Determinism; the person sits in the drawn domain and era; the reels and rules say so.
+  for (let seed = 0; seed < 60; seed++) {
+    const a = draw({ randomizer: 'hundred', seed, now: NOW })
+    assert.deepEqual(a, draw({ randomizer: 'hundred', seed, now: NOW }))
+    const s = a.subject as HundredSubject
+    const p = a.picks as HundredPicks
+    assert.equal(s.person.rank, p.rank)
+    assert.equal(s.person.domain, p.domain)
+    assert.equal(s.person.era, p.era)
+    assert.equal(a.primary, s.person.id)
+    assert.equal(a.combo, `${s.person.id}|${p.lens}`)
+    assert.equal(s.profile, null, 'the profile is read after the draw')
+    assert.equal(s.neighbours.above?.rank ?? null, p.rank > 1 ? p.rank - 1 : null)
+    assert.ok(a.reels.person!.sub!.startsWith(`#${p.rank} · `))
+    assert.ok(a.rules.some((r) => r.tag === 'rank'))
+    for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  }
+
+  // Locks keep the person, or keep the draw inside the domain.
+  const first = draw({ randomizer: 'hundred', seed: 4, now: NOW })
+  const fp = first.picks as HundredPicks
+  for (let seed = 5; seed < 30; seed++) {
+    assert.equal((draw({ randomizer: 'hundred', seed, now: NOW, prev: first, locks: ['person'] }).picks as HundredPicks).rank, fp.rank)
+    assert.equal((draw({ randomizer: 'hundred', seed, now: NOW, prev: first, locks: ['domain'] }).picks as HundredPicks).domain, fp.domain)
+    const era = draw({ randomizer: 'hundred', seed, now: NOW, prev: first, locks: ['era'] }).picks as HundredPicks
+    assert.deepEqual([era.domain, era.era], [fp.domain, fp.era])
+  }
+
+  // The same domain twice in a row is re-drawn once.
+  let redrawn = false
+  for (let seed = 0; seed < 80 && !redrawn; seed++) {
+    const fresh = draw({ randomizer: 'hundred', seed, now: NOW })
+    const again = draw({ randomizer: 'hundred', seed, now: NOW, history: [entry(fresh, 1)] })
+    redrawn = again.rules.some((r) => r.tag === 'balance' && /twice in a row/.test(r.text))
+  }
+  assert.ok(redrawn, 'the same-domain rule fires')
+
+  // 30-day block: the only two people in a cell, both spun recently, lift to the one spun longest ago.
+  {
+    const cell = HUNDRED.people.filter((p) => p.domain === 'faith' && p.era === 'medieval')
+    assert.deepEqual(cell.map((p) => p.name), ['Muhammad', 'Pope Urban II'])
+    const fake = (rank: number, d: number) => {
+      const r = draw({ randomizer: 'hundred', seed: 1, now: NOW, prev: { picks: { domain: 'faith', era: 'medieval', rank, lens: 'Without them' } }, locks: ['person'] })
+      return entry(r, d)
+    }
+    const blockedOne = [fake(1, 5)]
+    const blockedBoth = [fake(1, 5), fake(51, 20)]
+    for (let seed = 0; seed < 40; seed++) {
+      const r = draw({ randomizer: 'hundred', seed, now: NOW, history: blockedOne, prev: { picks: { domain: 'faith', era: 'medieval', rank: 51, lens: 'x' } }, locks: ['era'] })
+      assert.equal((r.picks as HundredPicks).rank, 51, 'Muhammad is blocked for 30 days')
+      const lifted = draw({ randomizer: 'hundred', seed, now: NOW, history: blockedBoth, prev: { picks: { domain: 'faith', era: 'medieval', rank: 51, lens: 'x' } }, locks: ['era'] })
+      assert.equal((lifted.picks as HundredPicks).rank, 51, 'the block lifts to the one spun longest ago')
+    }
+  }
+
+  // Sequence mode walks the ranking, wrapping from 100 to 1; a person lock wins over it.
+  {
+    const at = (rank: number) => entry(draw({ randomizer: 'hundred', seed: 2, now: NOW, prev: { picks: { domain: hundredByRank(rank)!.domain, era: hundredByRank(rank)!.era, rank, lens: 'Without them' } }, locks: ['person'] }), 1)
+    const next = draw({ randomizer: 'hundred', seed: 9, now: NOW, history: [at(30)], sequence: true })
+    assert.equal((next.picks as HundredPicks).rank, 31)
+    assert.equal((next.subject as HundredSubject).sequence, true)
+    assert.ok(next.rules.some((r) => r.tag === 'contested'), 'Shakespeare carries the authorship rule')
+    assert.equal((draw({ randomizer: 'hundred', seed: 9, now: NOW, history: [at(100)], sequence: true }).picks as HundredPicks).rank, 1)
+    const none = draw({ randomizer: 'hundred', seed: 9, now: NOW, sequence: true })
+    assert.ok(none.rules.some((r) => r.tag === 'sequence' && /previous spin/.test(r.text)))
+    const prev = draw({ randomizer: 'hundred', seed: 9, now: NOW, history: [at(30)] })
+    const locked = draw({ randomizer: 'hundred', seed: 9, now: NOW, history: [at(30)], sequence: true, prev, locks: ['person'] })
+    assert.equal((locked.picks as HundredPicks).rank, (prev.picks as HundredPicks).rank)
+  }
+
+  // 90-day block re-draws the lens; flags fire their rules.
+  {
+    const hitler = { domain: 'power', era: 'modern', rank: 39, lens: 'Without them' }
+    const ran = draw({ randomizer: 'hundred', seed: 3, now: NOW, prev: { picks: hitler }, locks: ['person', 'lens'] })
+    assert.equal((ran.picks as HundredPicks).lens, 'Without them')
+    assert.ok(ran.rules.some((r) => r.tag === 'human cost'))
+    // Six of the seven lenses ran with him inside 90 days: every draw ends on the seventh.
+    const free = HUNDRED.lenses[HUNDRED.lenses.length - 1]!.name
+    const history = HUNDRED.lenses.filter((l) => l.name !== free).map((l, i) => entry({ ...ran, combo: `adolf-hitler|${l.name}` }, 40 + i))
+    let blocked = false
+    for (let seed = 0; seed < 20; seed++) {
+      const again = draw({ randomizer: 'hundred', seed, now: NOW, history, prev: { picks: hitler }, locks: ['person'] })
+      assert.equal((again.picks as HundredPicks).lens, free)
+      blocked ||= again.rules.some((r) => r.tag === '90 days' && r.kind === 'block')
+    }
+    assert.ok(blocked, 'the 90-day rule fires')
+    const muhammad = draw({ randomizer: 'hundred', seed: 3, now: NOW, prev: { picks: { domain: 'faith', era: 'medieval', rank: 1, lens: 'x' } }, locks: ['person'] })
+    assert.ok(muhammad.rules.some((r) => r.tag === 'depiction'))
+    assert.ok(muhammad.rules.some((r) => r.tag === 'faith'))
+    const moses = draw({ randomizer: 'hundred', seed: 3, now: NOW, prev: { picks: { domain: 'faith', era: 'ancient', rank: 15, lens: 'x' } }, locks: ['person'] })
+    assert.ok(moses.rules.some((r) => r.tag === 'historicity'))
+  }
+
+  // Profile mappings on recorded Wikidata, Wikipedia and pageviews shapes.
+  assert.deepEqual(formatWikidataTime('+1643-01-04T00:00:00Z', 11), { date: '4 January 1643', year: 1643 })
+  assert.deepEqual(formatWikidataTime('-0383-01-01T00:00:00Z', 9), { date: '384 BCE', year: -383 })
+  assert.deepEqual(formatWikidataTime('-0500-01-01T00:00:00Z', 7), { date: 'c. 6th century BCE', year: -500 })
+  assert.deepEqual(formatWikidataTime('+1640-01-01T00:00:00Z', 8), { date: 'c. 1640s', year: 1640 })
+  assert.equal(formatWikidataTime('nonsense', 11), null)
+  assert.deepEqual(parsePoint('Point(-0.630556 52.809167)'), { lat: 52.809167, lon: -0.630556 })
+  assert.equal(parsePoint(undefined), null)
+  assert.equal(commonsFilePage('https://commons.wikimedia.org/wiki/Special:FilePath/A%20b.jpg'), 'https://commons.wikimedia.org/wiki/File:A%20b.jpg')
+  const v = (value: string) => ({ value })
+  const newtonRows = [
+    { desc: v('English mathematician'), birth: v('+1642-01-01T00:00:00Z'), birthPrec: v('9'), death: v('+1727-03-31T00:00:00Z'), deathPrec: v('11'), bpLabel: v('Woolsthorpe Manor'), bpCoord: v('Point(-0.63 52.81)'), dpLabel: v('Kensington'), image: v('http://commons.wikimedia.org/wiki/Special:FilePath/N.jpg'), sitelinks: v('303') },
+    { birth: v('+1643-01-04T00:00:00Z'), birthPrec: v('11'), death: v('+1727-01-01T00:00:00Z'), deathPrec: v('9') },
+    { birth: v('+1001-01-01T00:00:00Z'), birthPrec: v('6') },
+  ]
+  const newton = profileFromSparql(newtonRows)
+  assert.equal(newton.born!.date, '1642 or 4 January 1643 (sources differ)', 'each year once, coarse values dropped')
+  assert.equal(newton.died!.date, '31 March 1727', 'the most precise value of a year')
+  assert.deepEqual([newton.born!.lat, newton.born!.lon, newton.died!.lat], [52.81, -0.63, null])
+  assert.equal(newton.image, 'https://commons.wikimedia.org/wiki/Special:FilePath/N.jpg')
+  assert.equal(newton.sitelinks, 303)
+  const blank = profileFromSparql([{ birth: v('-0627-01-01T00:00:00Z'), birthPrec: v('9'), bpLabel: v('http://www.wikidata.org/.well-known/genid/abc') }])
+  assert.deepEqual(blank.born, { date: '628 BCE', year: -627, place: null, lat: null, lon: null })
+  assert.equal(profileFromSparql([]).born, null)
+  assert.deepEqual(pageviewWindow(new Date('2026-10-27T06:00:00Z')), { start: '2025100100', end: '2026090100' })
+  assert.deepEqual(pageviewsFromBody({ items: [{ timestamp: '2026090100', views: 5 }, { timestamp: '2025100100', views: 9 }, { views: 1 }] }), [
+    { month: '2025-10', views: 9 },
+    { month: '2026-09', views: 5 },
+  ])
+
+  const months = (views: number[]) => views.map((v, i) => ({ month: `2026-${String(i + 1).padStart(2, '0')}`, views: v }))
+  assert.deepEqual(completeMonths(months([50, 60, 55, 2])), { series: months([50, 60, 55]), dropped: '2026-04' })
+  assert.deepEqual(completeMonths(months([50, 60, 55, 40])).dropped, null)
+  assert.deepEqual(completeMonths(months([50, 2])).dropped, null, 'too short to judge')
+
+  // The loader on a fake API: every source read; a portrait withheld; failures recorded, never thrown.
+  pending.push(
+    (async () => {
+      const fakeFetch = (async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.startsWith('https://query.wikidata.org/')) return Response.json({ results: { bindings: newtonRows } })
+        if (url.includes('/page/summary/')) return Response.json({ extract: ' Sir Isaac Newton was a polymath. ', content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Isaac_Newton' } } })
+        if (url.includes('/pageviews/')) return Response.json({ items: [{ timestamp: '2026080100', views: 146615 }] })
+        return new Response('nope', { status: 404 })
+      }) as typeof fetch
+      const newtonP = hundredByRank(2)!
+      const prof = await loadHundredProfile(newtonP, { fetch: fakeFetch, now: NOW })
+      assert.deepEqual([prof.sources.wikidata, prof.sources.wikipedia, prof.sources.pageviews], ['ok', 'ok', 'ok'])
+      assert.equal(prof.extract, 'Sir Isaac Newton was a polymath.')
+      assert.equal(prof.imagePage, 'https://commons.wikimedia.org/wiki/File:N.jpg')
+      assert.deepEqual(prof.pageviews, [{ month: '2026-08', views: 146615 }])
+      assert.equal(prof.wikidataUrl, `https://www.wikidata.org/wiki/${newtonP.wikidata}`)
+      const withheld = await loadHundredProfile(hundredByRank(1)!, { fetch: fakeFetch, now: NOW })
+      assert.equal(withheld.image, null)
+      assert.equal(withheld.imagePage, null)
+      assert.ok(withheld.sources.notes.some((n) => /withheld/.test(n)))
+      const down = await loadHundredProfile(newtonP, { fetch: (async () => new Response('down', { status: 503 })) as typeof fetch, now: NOW })
+      assert.deepEqual([down.sources.wikidata, down.sources.wikipedia, down.sources.pageviews], ['failed', 'failed', 'failed'])
+      assert.equal(down.sources.errors.length, 3)
+      assert.equal(down.wikipediaUrl, 'https://en.wikipedia.org/wiki/Isaac_Newton')
+
+      // The brief with a profile: the life, the pageviews, the credit, no portrait for the Prophet.
+      const spin = asSpin(draw({ randomizer: 'hundred', seed: 1, now: NOW, prev: { picks: { domain: 'science', era: 'early-modern', rank: 2, lens: 'Reach in numbers' } }, locks: ['person', 'lens'] }))
+      const withProfile = asSpin(spin, { subject: { ...(spin.subject as HundredSubject), profile: prof } })
+      const brief = assignmentSection(withProfile)
+      assert.ok(brief.includes('#2 of 100'))
+      assert.ok(brief.includes('2026-08: 146,615'))
+      assert.ok(brief.includes('Woolsthorpe Manor'))
+      assert.ok(brief.includes(hundredCreditLine(withProfile.subject as HundredSubject)))
+      assert.ok(researchStub(withProfile).includes('146615'))
+      const prophet = asSpin(draw({ randomizer: 'hundred', seed: 1, now: NOW, prev: { picks: { domain: 'faith', era: 'medieval', rank: 1, lens: 'x' } }, locks: ['person'] }))
+      const prophetBrief = assignmentSection(asSpin(prophet, { subject: { ...(prophet.subject as HundredSubject), profile: withheld as HundredProfile } }))
+      assert.ok(/No portrait, figure or likeness of Muhammad/.test(prophetBrief))
+      assert.ok(!prophetBrief.includes('Special:FilePath'))
+      for (const s of [brief, prophetBrief, formatSection(withProfile)]) assert.ok(!hasEmDash(s))
+    })(),
+  )
+}
+
 // Stub and brief sections.
 const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
 const LM_PLAN = planLandmark({ randomizer: 'landmark', seed: 21, now: NOW }, lmAwardsFor(planLandmark({ randomizer: 'landmark', seed: 21, now: NOW })))
 const LM_POOL = lmPoolFor(LM_PLAN, lmAwardsFor(LM_PLAN))
-for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'footshorts', 'viznba'] as const) {
+for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'footshorts', 'viznba'] as const) {
   const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))

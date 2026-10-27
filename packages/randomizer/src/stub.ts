@@ -9,7 +9,9 @@
  * course, the lens read, the data pull and the credit line. Landmark Desk
  * spins get a paper template: the award and its motivation, the work and how
  * it was tied to the award, what the award rewarded, the lens read, the data
- * pull with the citation record, and the credit line.
+ * pull with the citation record, and the credit line. The 100 Desk spins get
+ * a life template: the rank and Hart's case, the life on the record, the
+ * influence in numbers, the lens read, the counter-case and the credit line.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
@@ -23,6 +25,9 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type HundredLifeEvent,
+  type HundredPerson,
+  type HundredSubject,
   type LandmarkPrize,
   type LandmarkSubject,
   type LandmarkWorkLevel,
@@ -44,6 +49,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'footshorts' || s.randomizer === 'viznba') return s.opponent ? `${s.team.name} v ${s.opponent.name}` : s.team.name
   if (s.randomizer === 'ocw') return `${s.course.number} ${s.file.title}`
   if (s.randomizer === 'landmark') return s.award.name
+  if (s.randomizer === 'hundred') return s.person.name
   return s.epic.title
 }
 
@@ -517,6 +523,99 @@ function landmarkTemplate(s: LandmarkSubject): string[] {
   ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
 }
 
+/* ---------- The 100 Desk ---------- */
+
+/** An astronomical year (0 is 1 BCE) as a reader writes it: "1643", "384 BCE". */
+export function hundredYear(year: number): string {
+  return year > 0 ? String(year) : `${1 - year} BCE`
+}
+
+/** "1643 to 1727", "c. 384 BCE to 322 BCE", "dates not on record": the life from the dataset's years. */
+export function hundredLife(p: Pick<HundredPerson, 'born' | 'died'>): string {
+  if (p.born === null && p.died === null) return 'dates not on record'
+  const c = (p.born ?? p.died!) < 1000 ? 'c. ' : ''
+  if (p.born === null) return `died ${c}${hundredYear(p.died!)}`
+  if (p.died === null || p.died === p.born) return `${c}${hundredYear(p.born)}`
+  return `${c}${hundredYear(p.born)} to ${hundredYear(p.died)}`
+}
+
+/** "#31 of 100 in Hart's The 100 (1992)" */
+export function hundredRankLabel(s: Pick<HundredSubject, 'person' | 'book'>): string {
+  return `#${s.person.rank} of 100 in ${s.book.author}'s The 100 (${s.book.year} edition)`
+}
+
+/** The credit the page carries, written out. */
+export function hundredCreditLine(s: Pick<HundredSubject, 'book' | 'person' | 'profile'>): string {
+  const image = s.profile?.imagePage ? ` Portrait: Wikimedia Commons (${s.profile.imagePage}), under the licence on its file page.` : ''
+  return `Credit: "Ranking: ${s.book.author}, ${s.book.title} (${s.book.publisher}, ${s.book.year}). Life data: Wikidata (CC0). Page views: Wikimedia (CC0).${image}" with links to ${s.profile?.wikipediaUrl ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(s.person.wiki.replace(/ /g, '_'))}`} and https://www.wikidata.org/wiki/${s.person.wikidata}.`
+}
+
+/** What to chart per The 100 lens, when the data exists. */
+export const HUNDRED_LENS_METRICS: Record<string, string[]> = {
+  'The case for the rank': ['the reach of what they changed (followers, users, territory, people under it) over time', 'the same measure for the people ranked just above and below', 'English Wikipedia views by month (the counts in the brief)'],
+  'Without them': ['the dates of the rivals and near-misses who had the same idea or aim, on a timeline', 'what the record shows with and without the person (adoption, territory, output) by decade', 'how long until someone else did it, where someone did'],
+  'Reach in numbers': ['the headline reach measure by century or decade', 'its split by region today', 'English Wikipedia views by month and Wikipedia editions with an article (the counts in the brief)'],
+  'Map of a life': ['the dated places of the life, in order (birth and death coordinates are in the brief)', 'distance travelled or territory held over the life', 'where the influence reached by a dated point'],
+  'Myth and record': ['when each source about the person was written, against when they lived', 'the claims by layer: contemporary, near-contemporary, later tradition', 'how the story grew: mentions by century'],
+  'Who is missing': ['the collaborators, rivals and predecessors on a timeline', "the list's people by region, domain and sex, against the world's population at their time", 'what the change cost or gave the people it happened to, in numbers'],
+  "Explain like I'm 5": ['the change in everyday units (days, steps, people in a classroom), as a picture chart', 'before and after the person, side by side', 'the one number that shows the change'],
+}
+
+export function hundredLensMetrics(lens: string): string[] {
+  return HUNDRED_LENS_METRICS[lens] ?? ['the reach of what they changed, over time', 'the people ranked just above and below on the same measure', 'English Wikipedia views by month']
+}
+
+function hundredTemplate(s: HundredSubject): string[] {
+  const p = s.person
+  const pr = s.profile
+  const place = (e: HundredLifeEvent | null) =>
+    e ? [e.date, e.place, e.lat !== null && e.lon !== null ? `${e.lat.toFixed(3)}, ${e.lon.toFixed(3)}` : null].filter(Boolean).join(', ') : 'not on record'
+  const near = [s.neighbours.above ? `#${s.neighbours.above.rank} ${s.neighbours.above.name}` : null, s.neighbours.below ? `#${s.neighbours.below.rank} ${s.neighbours.below.name}` : null].filter(Boolean)
+  return [
+    '## The rank',
+    '',
+    `${hundredRankLabel(s)}${p.hart_name !== p.name ? `, printed as "${p.hart_name}"` : ''}. Ranked for: ${s.domain.name.toLowerCase()}. Neighbours: ${near.join(' and ')}.`,
+    ...(p.note ? [`Up front: ${p.note}`] : []),
+    '',
+    "Hart's case for the rank, in your own words (his text is copyrighted: paraphrase it, quote a phrase at most, and cite the page):",
+    '',
+    '## The life on the record',
+    '',
+    `Wikidata ${p.wikidata}${pr?.description ? `: ${pr.description}` : ''}. Born: ${place(pr?.born ?? null)}. Died: ${place(pr?.died ?? null)}.`,
+    '',
+    '| Year | Place | Lat, Lon | What happened | Source | Status |',
+    '|------|-------|----------|---------------|--------|--------|',
+    '| | | | | | |',
+    '',
+    '## What they changed',
+    '',
+    'Two sentences: the change, for a reader who has never heard of them.',
+    '',
+    '## Influence in numbers',
+    '',
+    'At least 8 data points per series where possible.',
+    '',
+    '| Metric | Period or case | Value | Unit | Source |',
+    '|--------|----------------|-------|------|--------|',
+    ...hundredLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    pr?.pageviews.length ? '' : '',
+    pr?.pageviews.length ? `English Wikipedia views by month (Wikimedia, read ${pr.asOf.slice(0, 10)}): ${pr.pageviews.map((v) => `${v.month}: ${v.views}`).join(', ')}.` : '',
+    pr?.sitelinks ? `Wikipedia editions with an article: ${pr.sitelinks}.` : '',
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `${s.lens.description} Applied to ${p.name}, not to ${s.domain.name.toLowerCase()} in general.`,
+    '',
+    '## The counter-case',
+    '',
+    'The strongest argument that the rank is too high or too low, from the record, and what the ranking leaves out.',
+    '',
+    '## Credit',
+    '',
+    hundredCreditLine(s),
+  ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -538,7 +637,9 @@ export function researchStub(spin: StubSpin): string {
               ? ocwTemplate(s)
               : s.randomizer === 'landmark'
                 ? landmarkTemplate(s)
-                : epicsTemplate(s)
+                : s.randomizer === 'hundred'
+                  ? hundredTemplate(s)
+                  : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -556,7 +657,9 @@ export function researchStub(spin: StubSpin): string {
           ? '> (the resource itself with its page or slide, a government statistic, a peer-reviewed paper). Mark each claim Verified, Contested or'
           : s.randomizer === 'landmark'
             ? '> (the work itself with its page or figure, the award\'s own documents, a peer-reviewed paper). Mark each claim Verified, Contested or'
-            : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+            : s.randomizer === 'hundred'
+              ? '> (a contemporary document, the original text, a scholarly biography, a census or survey). Mark each claim Verified, Contested or'
+              : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

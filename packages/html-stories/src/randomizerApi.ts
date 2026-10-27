@@ -34,6 +34,10 @@
  *                                                     works; without a query, the taxonomy (fields, prizes
  *                                                     with their award counts per era, eras, lenses)
  *   GET  /api/randomizer/cron/landmark              the Landmark Desk's daily spin (Vercel Cron, CRON_SECRET)
+ *   GET  /api/randomizer/hundred?rank=              The 100 Desk's pool (vizmaya only): Hart's ranking with
+ *                                                     its domains, eras and lenses; with `rank` (1 to 100),
+ *                                                     that person's live profile as a spin would read it
+ *   GET  /api/randomizer/cron/hundred               The 100 Desk's daily spin (Vercel Cron, CRON_SECRET)
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -42,8 +46,9 @@
  * Server only.
  */
 
-import { DESK, LANDMARK, OCW } from '@vismay/randomizer/datasets'
+import { DESK, HUNDRED, LANDMARK, OCW, hundredByRank } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
+import { loadHundredProfile } from '@vismay/randomizer/hundredPool'
 import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from '@vismay/randomizer/landmarkPool'
 import { loadOcwPool } from '@vismay/randomizer/ocwPool'
 import { assignmentSection } from '@vismay/randomizer/spinBrief'
@@ -400,8 +405,28 @@ export async function handleLandmarkPoolRequest(req: Request): Promise<Response>
 }
 
 /**
+ * GET /api/randomizer/hundred on vizmaya: The 100 Desk's pool. Without
+ * `rank` it answers the whole ranking (the book, domains, eras, regions,
+ * people and lenses); with `rank` (1 to 100) that person and their live
+ * profile, read the way a spin reads it (packages/randomizer
+ * hundredPool.ts: Wikidata, the Wikipedia summary, pageviews), for an agent
+ * that wants to look before locking a person. Read-only; a source that
+ * fails is recorded in the profile, never an error.
+ */
+export async function handleHundredPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const raw = new URL(req.url).searchParams.get('rank')?.trim()
+  if (!raw) return json({ ...HUNDRED, note: 'Pass rank (1 to 100) for that person\'s live profile, as a spin would read it.' })
+  const person = /^\d+$/.test(raw) ? hundredByRank(Number(raw)) : undefined
+  if (!person) return json({ error: `rank must be a whole number from 1 to ${HUNDRED.people.length}` }, 400)
+  return json({ person, profile: await loadHundredProfile(person) })
+}
+
+/**
  * The daily spin of a randomizer with a cron (the OCW Desk, the Landmark
- * Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
+ * Desk, The 100 Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
  * `Authorization: Bearer $CRON_SECRET`; it fails closed without the secret.
  * One spin per UTC day: when a kept spin of that randomizer already exists
  * today (someone spun by hand), it answers with that one and spins nothing.
@@ -430,4 +455,9 @@ export async function handleOcwDailySpinRequest(req: Request, origin: string): P
 /** GET /api/randomizer/cron/landmark on vizmaya: the Landmark Desk's daily spin. */
 export async function handleLandmarkDailySpinRequest(req: Request, origin: string): Promise<Response> {
   return handleDailySpinRequest(req, origin, 'landmark')
+}
+
+/** GET /api/randomizer/cron/hundred on vizmaya: The 100 Desk's daily spin. */
+export async function handleHundredDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'hundred')
 }

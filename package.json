@@ -16,6 +16,7 @@
     "gen:sources": "tsx scripts/gen-tailwind-sources.mts",
     "randomizer:ocw-taxonomy": "tsx scripts/randomizer/ocw-taxonomy.mts",
     "randomizer:landmark-taxonomy": "tsx scripts/randomizer/landmark-taxonomy.mts",
+    "randomizer:hundred-taxonomy": "tsx scripts/randomizer/hundred-taxonomy.mts",
     "travel:import": "tsx scripts/travel/import-pro-trip.ts",
     "travel:prepare-media": "tsx scripts/travel/prepare-media.ts",
     "travel:upload-media": "tsx scripts/travel/upload-media.ts",

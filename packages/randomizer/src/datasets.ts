@@ -11,7 +11,10 @@
  * eras and lenses are here too (landmark.json, refreshed by
  * scripts/randomizer/landmark-taxonomy.mts); its laureates and works come
  * from the live pool (LandmarkPool: the Nobel Prize API, Wikidata, OpenAlex,
- * Open Library and Unpaywall).
+ * Open Library and Unpaywall). The 100 Desk's whole ranking is here
+ * (hundred.json, refreshed by scripts/randomizer/hundred-taxonomy.mts); only
+ * the drawn person's profile is read live (HundredProfile: Wikidata,
+ * Wikipedia and its pageviews).
  */
 
 import type {
@@ -21,6 +24,8 @@ import type {
   EpicPlace,
   EpicsDataset,
   FootshortsDataset,
+  HundredDataset,
+  HundredPerson,
   LandmarkDataset,
   LandmarkPrize,
   OcwDataset,
@@ -33,6 +38,7 @@ import atlasJson from './data/atlas.json'
 import epicsJson from './data/epics.json'
 import ocwJson from './data/ocw.json'
 import landmarkJson from './data/landmark.json'
+import hundredJson from './data/hundred.json'
 import footshortsJson from './data/footshorts.json'
 import viznbaJson from './data/viznba.json'
 
@@ -41,6 +47,7 @@ export const ATLAS = atlasJson as unknown as AtlasDataset
 export const EPICS = epicsJson as unknown as EpicsDataset
 export const OCW = ocwJson as unknown as OcwDataset
 export const LANDMARK = landmarkJson as unknown as LandmarkDataset
+export const HUNDRED = hundredJson as unknown as HundredDataset
 export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
 export const VIZNBA = viznbaJson as unknown as ViznbaDataset
 
@@ -59,6 +66,16 @@ export function isWorkLevel(prize: Pick<LandmarkPrize, 'work_level'> | string | 
 /** A prize has awards in an era (at the last taxonomy refresh): the plan only draws stocked pairs. */
 export function landmarkStocked(prize: Pick<LandmarkPrize, 'awards'>, era?: string): boolean {
   return era ? (prize.awards[era] ?? 0) > 0 : Object.values(prize.awards).some((n) => n > 0)
+}
+
+/** The domain and era pairs with people in them: the draw only offers an era its domain has. */
+export function hundredEras(domain: string, data: HundredDataset = HUNDRED): HundredDataset['eras'] {
+  return data.eras.filter((e) => data.people.some((p) => p.domain === domain && p.era === e.id))
+}
+
+/** One person by Hart's rank. */
+export function hundredByRank(rank: number, data: HundredDataset = HUNDRED): HundredPerson | undefined {
+  return data.people.find((p) => p.rank === rank)
 }
 
 /** Types that count toward the one-in-three quota (playbook 3.2). */
@@ -111,6 +128,12 @@ export function reelPool(randomizer: RandomizerId, key: string, live: readonly s
     if (key === 'era') return LANDMARK.eras.map((e) => e.name)
     if (key === 'laureate' || key === 'work') return [...live]
     if (key === 'lens') return LANDMARK.lenses.map((l) => l.name)
+  }
+  if (randomizer === 'hundred') {
+    if (key === 'domain') return HUNDRED.domains.map((d) => d.name)
+    if (key === 'era') return HUNDRED.eras.map((e) => e.name)
+    if (key === 'person') return HUNDRED.people.map((p) => p.name)
+    if (key === 'lens') return HUNDRED.lenses.map((l) => l.name)
   }
   if (randomizer === 'footshorts') {
     if (key === 'competition') return FOOTSHORTS.competitions.map((c) => c.name)
