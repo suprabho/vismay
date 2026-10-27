@@ -1,23 +1,22 @@
-# Story formats: book, board, deck, diorama, collage, recap
+# Story formats: book, board, deck, collage, recap
 
 Agent-authored HTML stories (`packages/html-stories`) are scrolling pages by
 default. This folder holds the runtimes for five formats, which each site
 hosts so an agent only writes the content, its design and its charts. Three
-are not vertical scrollytelling; the diorama, the collage and the recap scroll:
-over a 3D model of a place, across a board of torn paper choreographed in
-stop-motion, and beside a 3D race replay that their runtimes drive:
+are not vertical scrollytelling; the collage and the recap scroll: across a
+board of torn paper choreographed in stop-motion, and beside a 3D race replay
+that their runtimes drive. (A sixth, the diorama, is retired; see below.)
 
 | Format | What the reader does | Runtime |
 |---|---|---|
 | **Book** | Turns pages: tap, drag a page across, or the arrow keys. A two-page spread on wide screens, one page at a time on phones. | `book@1.css` + `book@1.js` |
 | **Board** | Follows a guided tour while the camera flies between pinned items, or pans and zooms freely. Felt board or whiteboard. | `board@1.css` + `board@1.js` |
 | **Deck** | Steps through slides, or switches to a stack of cards and swipes them away. | `deck@1.css` + `deck@1.js` |
-| **Diorama** | Scrolls while the camera moves over a tilted model of the place: terrain strata, routes, certainty markers and data objects on the plinth (rulers, cutaways, trays, groves, crates, arcs, split stages, time-lapse plates, towers). | `diorama@1.css` + `diorama@1.js` |
 | **Collage** | Scrolls a kraft board of torn-paper pieces that land, stretch and stamp down in held poses as they come into view; a thread rail marks the scenes. | `collage@1.css` + `collage@1.js` |
 | **Recap** (vizf1) | Scrolls chapters while the 3D race replay beside them jumps to each moment, camera and car. | `recap@1.css` + `recap@1.js` |
 
 `examples/` tells the same story (`vizmaya-data/odyssey-voyage`) as a book, a
-board, a deck, a diorama and a cut-out collage, so the only difference between
+board, a deck and a cut-out collage, so the only difference between
 them is the format, and the 2024 Austrian Grand Prix as a recap. They are served at
 `<site>/formats/examples/<file>.html` (`FORMAT_EXAMPLES` in `src/formats.ts`)
 and the brief links to them.
@@ -279,123 +278,15 @@ portrait), `.hide-portrait`. `.bare` slides get no folio; `data-title` on
 **Known limits:** no slide-overview grid yet (a G key showing thumbnails
 would be a good next step), and no presenter notes.
 
-## Diorama (`diorama.css`, `diorama.js`)
+## Diorama (`diorama.css`, `diorama.js`) — retired
 
-A diorama is one model seen from many camera positions, in six layers:
-**01 sea and plinth** (the plate, a box with a caption on its front face),
-**02 terrain** (real coastlines, projected and stacked as paper strata),
-**03 routes and labels** (one layer per theory; markers show certainty),
-**04 props** (data objects whose height, size or position is the data: a
-deep-time ruler, a section cutaway, specimen trays, a unit grove, crate
-stacks, flow arcs, a split stage, time-lapse plates, towers, rings, pulses;
-plus leader lines and a ship), **05 atmosphere** (fog over what can't be
-mapped) and **06 the proscenium** (the HTML copy, which never tilts). The
-design reference is the Odyssey Diorama design canvas; `examples/odyssey-diorama.html`
-is it built.
+The diorama (a scroll story on a tilted 3D model of a place) is retired: no
+brief, admin picker or MCP tool offers it, and the lint warns on a page that
+declares it. `diorama@1.js` and `.css` are still built and served so stories
+already published as dioramas keep rendering; don't build on them. Its
+authoring brief, data contract and lint (`src/diorama.ts`) and its example
+page were removed; git history has them.
 
-**Authoring:** `<main class="stage">` holds `<script type="application/json"
-class="diorama-data">` (the story's data: plate, insets, places, routes,
-quantities, beats, sources; typed and checked in `../src/diorama.ts`) and
-`<div class="beats">` of `<section class="beat" data-unit data-beat="<id>">`,
-each with a `<div class="copy">`. The JSON beat (matched by id) gives the
-type (`cover`, `reveal`, `hinge`, `stepper`, `layers`, `interstitial`,
-`close-up`, `epilogue`), the camera pose (`target`, `zoom`, `tilt`,
-`azimuth`, `spin`), the layers (`routes`, `on`, `labels`, `labelsSm`,
-`places`, `fog`) and the props; the section gives the words. A stepper's
-copy holds `<ol class="stops">` of `<li data-stop="<place>">` cards; a layers
-beat gets its toggles in `.dio-chips`. `<footer class="dio-end">` after
-`.beats` holds method and sources. Tokens: `--dio-ground`, `--dio-paper`,
-`--dio-muted`, `--dio-accent`, `--dio-sea-1..3`, `--dio-land`,
-`--dio-strata-1..3`, `--dio-route-2..4`, `--dio-plinth`, `--dio-plinth-side`,
-`--dio-fog`, `--dio-serif`, `--dio-sans`, `--dio-mono`, `--dio-sheet`.
-
-**Runtime:**
-- Loads d3@7.9.0 and topojson-client@3.1.0 if the page hasn't, three@0.169.0
-  (a dynamic `import()` of its module build) for the stage, and
-  world-atlas@2.0.2 land (`land-50m`, or `land-10m` for a close-up), all from
-  jsDelivr. Places are projected with d3-geo (Mercator, or a conic equal-area
-  projection) fitted to the plate's bbox and clipped to it.
-- **The WebGL stage:** the plinth is a box; the sea a plane whose shader
-  reads a canvas texture (the radial gradient and a coastal glow) and adds a
-  slow swell; the land is one `ExtrudeGeometry` from the projected rings,
-  drawn as three strata under a paper top; over it, the **relief**: real
-  elevation from the Terrarium tiles (Mapzen terrain on AWS Open Data,
-  CORS-open), sampled on a grid over the land (up to 12 tiles), exaggerated
-  so the highest ground stands about 7% of the plate's height
-  (`plate.relief: { exaggeration }`, or `false` for flat land), tinted and
-  hill-shaded into a texture, with modern borders drawn on it when
-  `plate.borders` is set; routes, lines, markers and props drape over it;
-  routes, rings and lines are
-  ribbons whose shader dashes them by arc length, flows the dashes on a 1.4s
-  loop, draws a route up to a distance (the stepper) and clips them to the
-  plate; towers are boxes with hand-shaded faces that rise once over 2.6s;
-  fog is a noise-shaded plane. Colours are used as written (no colour
-  management), so the model matches the page's tokens.
-- **Without WebGL** (or `data-renderer="css"` on the stage, or `#css`) the
-  same model is an inline SVG plate tilted in CSS 3D, the land drawn four
-  times as strata with the shaded relief laid flat on it, towers as CSS
-  boxes: the design canvas's own build.
-- **Credits** for the map data (Natural Earth; the elevation tiles) show in
-  the view on wide screens and at the end of the page (in `.dio-end`).
-- **Labels and markers** are DOM in an overlay, positioned each frame by
-  projecting their points, so text stays crisp. At most 8 names per beat (4
-  on phones); the current stop is set in the display serif. A stop a route
-  only borrows (`gapFilled`) draws hollow in the route's colour.
-- **The camera rail.** The view is sticky behind the beats. The reading line
-  is the middle of the screen; a beat holds its pose until 55% of its section
-  has passed, then the camera eases to the next beat's pose on
-  `cubic-bezier(.2,.8,.2,1)`, scrubbed by scroll. A stepper's section is as
-  tall as its stops; the camera follows the stop at the reading line, the
-  route draws up to it, the ship (`data-ship`) rides along it. Layers fade
-  over ~0.4s when the current beat changes. The camera breathes ±1.4° of tilt
-  and ±2.2° of azimuth over 14–16s; an epilogue with `spin` turns the plinth
-  once every 80s. A beat on another plate (a close-up) cuts behind a quick
-  fade; an interstitial covers the model and the stage stops drawing.
-- `Story.enter` runs on each beat as it becomes current and on each stop
-  card. The phone layout puts the plate in the top half and the copy in a
-  bottom sheet. Keys: ←/→ move between beats (between stops inside a
-  stepper). `#beat=3` deep-links.
-- **Checks:** the runtime warns (console, and `vizmaya:format-check` to the
-  admin preview) about beats without JSON or sections, route stops that
-  aren't places, places without a certainty, too many labels, and
-  `[data-q]` numbers that read differently from their quantity. The lint
-  (`lintDiorama`) checks the JSON's contract and recomputes every `computed`
-  quantity from its derivation (`haversine`, `route`, `sum`, `ratio`,
-  `share`, `stops`, `count`), the beat sections, `data-q` references and that
-  every source is linked, keys put where the runtime doesn't read them (a
-  `fog` on the beat instead of under `layers`), colour tokens that aren't
-  hex, and a land colour that disappears into the ground (under 3:1) or the
-  sea (under 2:1); references inside objects (a span's or row's place, every
-  `value`), a story with fewer than three object kinds or more than half
-  its beats led by the map alone, and prop kinds the runtime doesn't draw
-  that the page doesn't register.
-- **Data objects (`Story.props`).** Beside `Story.charts`, a registry of
-  prop kinds: `{ layout(spec, api), play?(prop, k) }`. `layout` places the
-  object in plate pixels as parts (`box: [x, y, z, w, d, h]`, a lifted
-  `path: [[x, y, z], …]`, or a `land: [x, y, scale]` copy of the plate) with
-  an entrance (`delay`, `span`) and an optional `alt` state it turns into
-  (height, colour, lift, opacity: a grove's trees toppling, a tray row
-  lifting), plus captions at a point or on a part. Both renderers draw the
-  same parts: WebGL boxes with hand-shaded faces, ribbons for paths, the
-  land extrusion reused for copies; CSS cuboids, flat SVG paths and small
-  SVG plates without WebGL. The built-ins are `ruler`, `section`, `trays`,
-  `grove`, `stack`, `arc`, `split` and `lapse` (tower, ring, line, pulse and
-  ship keep their own code). Objects that aren't on the map (ruler, trays,
-  split, lapse) stand on a shelf in front of the plinth; every object
-  threads back to its place. A layout runs twice: once to check it and frame
-  `camera.target: "props"`, again once the plate's relief is in, so it stands
-  on the ground. Values share one scale per kind and unit across the story.
-  A page can register its own kinds after the runtime's script.
-- **Reduced motion:** no breathing, swell, dash flow, fog drift or bobbing;
-  camera moves become cuts behind a fade; props stand at full height.
-
-**Known limits:** labels don't avoid each other (keep to the label caps and
-set `label` sides); relief is the terrain tiles' resolution at the plate's
-scale (a continent shows ranges, not valleys); lakes inside the land
-(Natural Earth's land has none) don't show; a close-up's
-`land-10m` is a 3MB download (it loads in the background once the main plate
-is up). The device pixel ratio is capped at 2; frame rates on a mid-range
-phone haven't been measured yet.
 ## Collage (`collage.css`, `collage.js`)
 
 **Authoring:** `<main class="stage">` is the board. Its sections are the
@@ -509,10 +400,6 @@ the camera the reader has switched away from doesn't switch it back.
   Grand Prix as the FastF1 ingest stores it (lap times, positions, stints,
   pit lane times from OpenF1, the lap-65 telemetry), inlined, so it reads
   without the database; its replay needs the race's positions ingested.
-- **The diorama example** recomputes the research's distances from its own
-  coordinates (`vizmaya-data/odyssey-voyage/diorama/factcheck.md`): Troy to
-  Ithaca is 273 nm as the crow flies, not the research's ~565, and about 424
-  nm by sea round Cape Malea.
 - **Data:** `vizmaya-data/odyssey-voyage/voyage_stops.csv` had row 6
   (Laestrygonians) with `ships_after` and `men_after` swapped; it now reads
   `1,48` at the source.

@@ -57,7 +57,7 @@ import { HTML_STORY_APP_META } from './apps'
 import { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS, vizf1HtmlStoryBrief } from './vizf1Brief'
 import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from './viznbaBrief'
 import { travelHtmlStoryBrief, type TripLoader } from './travelBrief'
-import { HTML_STORY_FORMATS, formatsForApp, isFormatForApp, parseHtmlStoryFormat } from './formats'
+import { AUTHORABLE_HTML_STORY_FORMATS, formatsForApp, isFormatForApp, isRetiredHtmlStoryFormat, parseHtmlStoryFormat } from './formats'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
@@ -111,7 +111,10 @@ export async function handleHtmlStoryBriefRequest(
   const day = dayRaw != null ? Number(dayRaw) : null
   const spinId = url.searchParams.get('spin')?.trim() || null
   const format = parseHtmlStoryFormat(url.searchParams.get('format'))
-  if (!format) return new Response(`format must be one of ${HTML_STORY_FORMATS.join(', ')}`, { status: 400 })
+  if (!format) return new Response(`format must be one of ${AUTHORABLE_HTML_STORY_FORMATS.join(', ')}`, { status: 400 })
+  if (isRetiredHtmlStoryFormat(format)) {
+    return new Response(`the ${format} format is retired; use one of ${formatsForApp(app).join(', ')}`, { status: 400 })
+  }
   if (!isFormatForApp(app, format)) {
     return new Response(`the ${format} format isn't available on this site; use one of ${formatsForApp(app).join(', ')}`, { status: 400 })
   }

@@ -8,13 +8,13 @@
  */
 
 import type { HtmlStoryApp } from './apps'
-import { lintDiorama } from './diorama'
 import {
+  AUTHORABLE_HTML_STORY_FORMATS,
   FORMAT_META_NAME,
   HTML_STORY_FORMAT_META,
-  HTML_STORY_FORMATS,
   PAGED_HTML_STORY_FORMATS,
   isHtmlStoryFormat,
+  isRetiredHtmlStoryFormat,
   type HtmlStoryFormat,
 } from './formats'
 
@@ -197,7 +197,7 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
   const raw = metaContent(tags, FORMAT_META_NAME)
   if (raw !== null && !isHtmlStoryFormat(raw.trim().toLowerCase())) {
     warnings.push(
-      `<meta name="${FORMAT_META_NAME}" content="${raw}"> isn't a format; use ${HTML_STORY_FORMATS.join(', ')}. The page is listed as a scroll story.`,
+      `<meta name="${FORMAT_META_NAME}" content="${raw}"> isn't a format; use ${AUTHORABLE_HTML_STORY_FORMATS.join(', ')}. The page is listed as a scroll story.`,
     )
   }
   const format = extractFormatMeta(html)
@@ -209,6 +209,11 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
       )
     }
     return
+  }
+  if (isRetiredHtmlStoryFormat(format)) {
+    warnings.push(
+      `The ${format} format is retired: stories already published as ${format}s still render, but write a new story as one of ${AUTHORABLE_HTML_STORY_FORMATS.join(', ')}.`,
+    )
   }
   const unit = HTML_STORY_FORMAT_META[format].unit
   // An inline runtime (the page carries its own) sets html.<format>-on.
@@ -232,7 +237,6 @@ function lintFormat(html: string, tags: Record<string, string>[], warnings: stri
     )
   }
   if (format === 'recap') lintRecap(html, warnings)
-  if (format === 'diorama') lintDiorama(html, warnings)
   if (format === 'collage') lintCollage(html, warnings)
 }
 

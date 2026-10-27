@@ -17,7 +17,7 @@
 import { buildMatchContext, MAX_CONTEXT_MATCHES } from '@vismay/content-source/footshortsMatchBrief'
 import type { BriefSpin } from '@vismay/randomizer/spinBrief'
 import { htmlStoryBrief } from './brief'
-import type { HtmlStoryFormat } from './formats'
+import type { AuthorableHtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
 import type { HtmlStoryTone } from './tone'
 
@@ -32,7 +32,7 @@ export interface FootshortsBriefOptions {
   /** Editorial intent, surfaced at the top of the context. */
   prompt?: string
   /** The story format (./formats). Default: scroll. */
-  format?: HtmlStoryFormat | null
+  format?: AuthorableHtmlStoryFormat | null
   /** The story's voice (./tone). Default: straight. */
   tone?: HtmlStoryTone | null
   /** A Football Desk spin; its fixtures are the match context when `fixtureIds` is empty. */

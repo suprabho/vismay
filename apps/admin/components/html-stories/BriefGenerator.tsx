@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Basketball, Check, Compass, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
-import type { HtmlStoryFormat } from '@vismay/html-stories/formats'
+import type { AuthorableHtmlStoryFormat } from '@vismay/html-stories/formats'
 import {
   entityStoryStyle,
   pickRandomStyle,
@@ -77,7 +77,7 @@ export function BriefGenerator({
   entityStyles?: EntityStyleOption[]
 }) {
   const [style, setStyle] = useState<StoryStyle | null>(null)
-  const [format, setFormat] = useState<HtmlStoryFormat>('scroll')
+  const [format, setFormat] = useState<AuthorableHtmlStoryFormat>('scroll')
   const [tone, setTone] = useState<HtmlStoryTone>('straight')
   const [matches, setMatches] = useState<MatchContextPick | null>(null)
   const [picking, setPicking] = useState(false)

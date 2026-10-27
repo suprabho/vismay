@@ -9,7 +9,7 @@ import {
 } from '@vismay/html-stories/vizf1Brief'
 import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from '@vismay/html-stories/viznbaBrief'
 import { travelHtmlStoryBrief } from '@vismay/html-stories/travelBrief'
-import { HTML_STORY_FORMATS, isFormatForApp, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
+import { AUTHORABLE_HTML_STORY_FORMATS, isFormatForApp, isRetiredHtmlStoryFormat, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { StoryStyle } from '@vismay/html-stories/styles'
 import { HTML_STORY_TONES, parseHtmlStoryTone } from '@vismay/html-stories/tone'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
@@ -57,7 +57,8 @@ export async function POST(req: Request) {
   const app = parseHtmlStoryApp(b.app)
   if (!app) return NextResponse.json({ error: 'unknown app' }, { status: 400 })
   const format = parseHtmlStoryFormat(b.format)
-  if (!format) return NextResponse.json({ error: `format must be one of ${HTML_STORY_FORMATS.join(', ')}` }, { status: 400 })
+  if (!format) return NextResponse.json({ error: `format must be one of ${AUTHORABLE_HTML_STORY_FORMATS.join(', ')}` }, { status: 400 })
+  if (isRetiredHtmlStoryFormat(format)) return NextResponse.json({ error: `the ${format} format is retired` }, { status: 400 })
   if (!isFormatForApp(app, format)) {
     return NextResponse.json({ error: `the ${format} format isn't available for ${app}` }, { status: 400 })
   }

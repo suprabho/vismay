@@ -18,7 +18,7 @@
 import { VIZNBA } from '@vismay/randomizer/datasets'
 import type { BriefSpin } from '@vismay/randomizer/spinBrief'
 import { htmlStoryBrief } from './brief'
-import type { HtmlStoryFormat } from './formats'
+import type { AuthorableHtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
 import type { HtmlStoryTone } from './tone'
 
@@ -41,7 +41,7 @@ export interface ViznbaBriefOptions {
   /** Editorial intent, surfaced at the top of the context. */
   prompt?: string
   /** The story format (./formats). Default: scroll. */
-  format?: HtmlStoryFormat | null
+  format?: AuthorableHtmlStoryFormat | null
   /** The story's voice (./tone). Default: straight. */
   tone?: HtmlStoryTone | null
   /** An NBA Desk spin; its games are the context when `gameIds` is empty. */

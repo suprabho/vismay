@@ -1,22 +1,21 @@
 'use client'
 
-import { BookOpen, Cube, FilmStrip, Presentation, PushPin, Rows, Scissors, type Icon } from '@phosphor-icons/react'
+import { BookOpen, FilmStrip, Presentation, PushPin, Rows, Scissors, type Icon } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
-import { HTML_STORY_FORMATS, HTML_STORY_FORMAT_META, formatsForApp, type HtmlStoryFormat } from '@vismay/html-stories/formats'
+import { AUTHORABLE_HTML_STORY_FORMATS, HTML_STORY_FORMAT_META, formatsForApp, type AuthorableHtmlStoryFormat } from '@vismay/html-stories/formats'
 
-const ICONS: Record<HtmlStoryFormat, Icon> = {
+const ICONS: Record<AuthorableHtmlStoryFormat, Icon> = {
   scroll: Rows,
   book: BookOpen,
   board: PushPin,
   deck: Presentation,
-  diorama: Cube,
   collage: Scissors,
   recap: FilmStrip,
 }
 
 /**
  * Which story format the agent brief is for (packages/html-stories/src/formats):
- * a scrolling page, or a book, board, deck, diorama, cut-out collage or (vizf1)
+ * a scrolling page, or a book, board, deck, cut-out collage or (vizf1)
  * race recap on the site's hosted runtime. `app` limits the choice to the formats that site can
  * host; `suggested` marks the format a randomizer spin's kind of story suits.
  */
@@ -26,12 +25,12 @@ export function FormatPicker({
   suggested,
   app,
 }: {
-  value: HtmlStoryFormat
-  onChange: (format: HtmlStoryFormat) => void
-  suggested?: HtmlStoryFormat | null
+  value: AuthorableHtmlStoryFormat
+  onChange: (format: AuthorableHtmlStoryFormat) => void
+  suggested?: AuthorableHtmlStoryFormat | null
   app?: HtmlStoryApp
 }) {
-  const formats = app ? formatsForApp(app) : HTML_STORY_FORMATS.filter((f) => f !== 'recap')
+  const formats = app ? formatsForApp(app) : AUTHORABLE_HTML_STORY_FORMATS.filter((f) => f !== 'recap')
   return (
     <div role="radiogroup" aria-label="Story format" className="inline-flex items-center gap-0.5 p-0.5 border border-white/10 rounded-lg">
       {formats.map((f) => {

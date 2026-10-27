@@ -19,7 +19,7 @@ import {
 } from '@vismay/f1-viz/race-context'
 import { loadReplayMoments, replayMomentsMarkdown } from '@vismay/f1-viz/recap'
 import { htmlStoryBrief } from './brief'
-import type { HtmlStoryFormat } from './formats'
+import type { AuthorableHtmlStoryFormat } from './formats'
 import type { StoryStyle } from './styles'
 import type { HtmlStoryTone } from './tone'
 
@@ -36,7 +36,7 @@ export interface Vizf1BriefOptions {
   /** Editorial intent, surfaced at the top of the context. */
   prompt?: string
   /** The story format (./formats). Default: scroll. */
-  format?: HtmlStoryFormat | null
+  format?: AuthorableHtmlStoryFormat | null
   /** The story's voice (./tone). Default: straight. */
   tone?: HtmlStoryTone | null
 }

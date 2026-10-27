@@ -55,7 +55,7 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
-import { HTML_STORY_FORMATS } from '@vismay/html-stories/formats'
+import { AUTHORABLE_HTML_STORY_FORMATS } from '@vismay/html-stories/formats'
 import { HTML_STORY_TONES } from '@vismay/html-stories/tone'
 import {
   htmlStoriesToken,
@@ -102,9 +102,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'Pass format to write something other than a scrolling page: "book" (pages the reader turns; ' +
         'suits a chronology or a journey), "board" (a pinned board with a guided camera tour; suits a ' +
         'case built from many connected pieces), "deck" (slides or a stack of cards; suits an argument ' +
-        'made one point at a time), "diorama" (a scroll story on a tilted 3D model of a place: terrain, routes ' +
-        'and data props, the camera moving between beats; suits a story with a place, a route or a spatial ' +
-        'comparison at its heart; its brief carries the data contract and the fact-check rules), ' +
+        'made one point at a time), ' +
         '"collage" (a cut-out collage: torn-paper pieces on a kraft board, cut-paper ' +
         'charts and a stamp on each claim, choreographed in stop-motion as the page scrolls; suits places, objects ' +
         'or claims laid side by side) or, for vizf1 with a race in sessionKeys, "recap" (chapters the reader ' +
@@ -178,9 +176,9 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .optional()
           .describe('A randomizer spin id (vizmaya-fyi, footshorts or viznba, matching the spin); the brief carries its assignment and research.'),
         format: z
-          .enum(HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck', 'diorama', 'collage', 'recap'])
+          .enum(AUTHORABLE_HTML_STORY_FORMATS as unknown as ['scroll', 'book', 'board', 'deck', 'collage', 'recap'])
           .default('scroll')
-          .describe('The story format: scroll (one long page, the default), book, board, deck, diorama, collage (a cut-out collage on a kraft board), or recap (vizf1 only).'),
+          .describe('The story format: scroll (one long page, the default), book, board, deck, collage (a cut-out collage on a kraft board), or recap (vizf1 only).'),
         tone: z
           .enum(HTML_STORY_TONES as unknown as ['straight', 'humorous'])
           .default('straight')
