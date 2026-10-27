@@ -172,7 +172,7 @@ export function isRiffWav(buf: Buffer): boolean {
  * optionally `;rate=NNNN`) gets a header using the advertised rate. Anything
  * else (mp3, ogg, …) is rejected — downstream storage + whisper expect WAV.
  */
-function toWavBuffer(bytes: Uint8Array, mimeType: string): Buffer | null {
+export function toWavBuffer(bytes: Uint8Array, mimeType: string): Buffer | null {
   const buf = Buffer.from(bytes)
   if (isRiffWav(buf)) return buf
 
@@ -236,6 +236,8 @@ export function makeRateLimiter(minIntervalMs: number) {
 export interface TtsContext {
   voiceName: string
   rateLimit: () => Promise<void>
+  /** Speech alias or gateway id (default `speech.default`). */
+  model?: string
 }
 
 interface ErrorDetails {
@@ -313,7 +315,7 @@ async function synthesizeOnce(
   await ctx.rateLimit()
   try {
     const res = await generateSpeech({
-      model: 'speech.default',
+      model: ctx.model ?? 'speech.default',
       text,
       voice: ctx.voiceName,
       outputFormat: 'wav',

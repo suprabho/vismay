@@ -5,8 +5,10 @@
  *
  *   pnpm --filter @vismay/html-stories generate-audio <slug> [--force]
  *
- * Needs NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and
- * AI_GATEWAY_API_KEY. --force re-voices every section, even unchanged ones.
+ * Needs NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and
+ * ELEVENLABS_API_KEY (ElevenLabs) or AI_GATEWAY_API_KEY (Gemini); the voice
+ * env is in src/narrationVoice.ts. --force re-voices every section, even
+ * unchanged ones.
  */
 
 import { writeAudio } from '../src/audio'

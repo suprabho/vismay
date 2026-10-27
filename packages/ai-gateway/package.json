@@ -12,6 +12,7 @@
     "./image": "./src/image.ts",
     "./decide": "./src/decide.ts",
     "./speech": "./src/speech.ts",
+    "./elevenlabs": "./src/elevenlabs.ts",
     "./prompt": "./src/prompt.ts",
     "./cache": "./src/cache.ts"
   },

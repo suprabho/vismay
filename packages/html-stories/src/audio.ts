@@ -5,8 +5,7 @@
  * all end in ./publishApi or the admin routes) queues a GitHub Action,
  * render-html-story-audio.yml, which runs scripts/generate-audio.ts →
  * generateHtmlStoryAudio (./audioGenerate): the page's sections (./narration) are voiced
- * one clip apiece through the AI gateway (Gemini TTS, `speech.default`, the
- * same retry and quota handling as the viz-engine story audio) and the clips'
+ * one clip apiece by ElevenLabs or Gemini TTS (./narrationVoice) and the clips'
  * manifest lands in html_story_audio (migration 097). /s/<slug> reads the
  * manifest ({@link playableHtmlStoryAudio}) and injects the player
  * (./audioPlayer) while it matches the HTML being served.

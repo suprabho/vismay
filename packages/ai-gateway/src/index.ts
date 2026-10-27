@@ -35,6 +35,15 @@ export {
   type DecisionState,
 } from './decide'
 export { generateSpeech, type GenerateSpeechOptions, type SpeechResult } from './speech'
+// ElevenLabs isn't on the gateway, so it is called directly (./elevenlabs).
+export {
+  generateElevenLabsSpeech,
+  hasElevenLabsCredentials,
+  ElevenLabsError,
+  DEFAULT_ELEVENLABS_MODEL,
+  DEFAULT_ELEVENLABS_VOICE,
+  type ElevenLabsSpeechOptions,
+} from './elevenlabs'
 // Agentic tool helpers — re-exported so call sites define tools without taking a
 // direct dependency on the `ai` SDK (keeps that dependency centralised here).
 export { tool, type ToolSet } from 'ai'

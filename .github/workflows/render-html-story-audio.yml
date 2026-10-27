@@ -14,6 +14,16 @@ name: Render HTML story audio
 #   NEXT_PUBLIC_SUPABASE_URL    — same value as in Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY   — service role key for storage writes
 #   AI_GATEWAY_API_KEY          — Vercel AI Gateway key for TTS (Gemini TTS via the gateway)
+#   ELEVENLABS_API_KEY          — optional; when set, ElevenLabs narrates instead of Gemini
+#
+# Optional repo variables (Settings → Variables) pick the voice
+# (packages/html-stories/src/narrationVoice.ts):
+#   HTML_STORY_AUDIO_PROVIDER   — elevenlabs | gemini (default: elevenlabs when its key is set)
+#   HTML_STORY_AUDIO_VOICE      — ElevenLabs voice id, or Gemini voice name (default George / Orus)
+#   HTML_STORY_AUDIO_MODEL      — ElevenLabs model id (default eleven_multilingual_v2;
+#                                 eleven_flash_v2_5 is half the credits), or a gateway
+#                                 speech alias (speech.default, speech.lite)
+# Changing any of them re-voices every section on the next run.
 
 on:
   workflow_dispatch:
@@ -61,6 +71,10 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          HTML_STORY_AUDIO_PROVIDER: ${{ vars.HTML_STORY_AUDIO_PROVIDER }}
+          HTML_STORY_AUDIO_VOICE: ${{ vars.HTML_STORY_AUDIO_VOICE }}
+          HTML_STORY_AUDIO_MODEL: ${{ vars.HTML_STORY_AUDIO_MODEL }}
           SLUG: ${{ inputs.slug }}
           FORCE: ${{ inputs.force && '--force' || '' }}
         run: pnpm exec tsx scripts/generate-audio.ts "$SLUG" $FORCE

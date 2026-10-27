@@ -1,29 +1,21 @@
 /**
  * The generator behind section audio (./audio): run by the GitHub Action
  * render-html-story-audio.yml through scripts/generate-audio.ts, never by a
- * serving route.
+ * serving route. The voice (ElevenLabs or Gemini) comes from ./narrationVoice.
  *
  * Server only.
  */
 
-import { hasGatewayCredentials } from '@vismay/ai-gateway'
-import {
-  DailyQuotaExhaustedError,
-  isRiffWav,
-  makeRateLimiter,
-  synthesizeWithRetry,
-  wavDurationMs,
-  type TtsContext,
-} from '@vismay/content-source/storyAudioGenerate'
+import { DailyQuotaExhaustedError, isRiffWav, wavDurationMs } from '@vismay/content-source/storyAudioGenerate'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import {
-  DEFAULT_HTML_STORY_VOICE,
   HTML_STORY_AUDIO_BUCKET,
   getHtmlStoryAudio,
   writeAudio,
   type HtmlStoryAudioSection,
 } from './audio'
 import { extractNarrationSections, htmlHash, splitForSpeech } from './narration'
+import { assertNarrationCredentials, makeSpeaker, narrationVoiceFromEnv, type NarrationVoice } from './narrationVoice'
 
 /** The `fmt ` chunk and PCM payload of a WAV, for joining clips. */
 function wavParts(wav: Buffer): { fmt: Buffer; data: Buffer } | null {
@@ -66,8 +58,9 @@ export interface GenerateHtmlStoryAudioOptions {
   slug: string
   /** Re-voice every section, even ones whose clip already exists. */
   force?: boolean
-  voice?: string
-  /** Minimum ms between TTS calls (default `RATE_LIMIT_MS` env or 8000). */
+  /** Default: from the env (./narrationVoice). */
+  voice?: NarrationVoice
+  /** Minimum ms between TTS calls (default `RATE_LIMIT_MS` env, else 8000 for Gemini and 0 for ElevenLabs). */
   rateLimitMs?: number
 }
 
@@ -88,10 +81,8 @@ export interface GenerateHtmlStoryAudioResult {
  */
 export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions): Promise<GenerateHtmlStoryAudioResult> {
   const { slug, force = false } = opts
-  const voice = opts.voice ?? process.env.HTML_STORY_AUDIO_VOICE ?? DEFAULT_HTML_STORY_VOICE
-  if (!hasGatewayCredentials()) {
-    throw new Error('AI gateway credentials missing: set AI_GATEWAY_API_KEY (or VERCEL_OIDC_TOKEN) to voice HTML stories.')
-  }
+  const voice = opts.voice ?? narrationVoiceFromEnv()
+  assertNarrationCredentials(voice)
   const sb = createServiceClient()
   const { data: story, error } = await sb
     .from('html_stories')
@@ -104,23 +95,20 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
   if (story.app_slug === 'travel') throw new Error(`${slug} is a travel story: travel stories get no public audio`)
 
   const html = story.html as string
-  const sections = extractNarrationSections(html, voice)
+  const sections = extractNarrationSections(html, voice.key)
   const previous = await getHtmlStoryAudio(slug)
   const known = new Map<string, HtmlStoryAudioSection>()
   for (const s of previous?.sections ?? []) if (s.hash && s.url) known.set(s.hash, s)
 
   await writeAudio(slug, { status: 'generating', error: null })
 
-  const tts: TtsContext = {
-    voiceName: voice,
-    rateLimit: makeRateLimiter(opts.rateLimitMs ?? Number(process.env.RATE_LIMIT_MS ?? 8000)),
-  }
+  const speak = makeSpeaker(voice, { rateLimitMs: opts.rateLimitMs })
   const dir = `html-stories/${slug}`
   const out: HtmlStoryAudioSection[] = []
   const result: GenerateHtmlStoryAudioResult = { slug, sections: sections.length, voiced: 0, reused: 0, silent: 0, failed: 0 }
   let failure: string | null = null
 
-  console.log(`\n━━━ ${slug} ━━━  ${sections.length} sections, voice ${voice}`)
+  console.log(`\n━━━ ${slug} ━━━  ${sections.length} sections, voice ${voice.key}`)
   for (const s of sections) {
     const tag = `  [${s.index + 1}/${sections.length}] ${s.label}`
     if (!s.text) {
@@ -140,11 +128,10 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
     process.stdout.write(`${tag}: voicing ${s.text.split(' ').length} words… `)
     let wav: Buffer | null = null
     try {
+      const texts = splitForSpeech(s.text)
       const pieces: Buffer[] = []
-      for (const piece of splitForSpeech(s.text)) {
-        const buf = await synthesizeWithRetry(tts, piece)
-        if (!buf) throw new Error('TTS failed')
-        pieces.push(buf)
+      for (let i = 0; i < texts.length; i++) {
+        pieces.push(await speak(texts[i], { previous: texts[i - 1], next: texts[i + 1] }))
       }
       wav = concatWavs(pieces)
     } catch (e) {
@@ -186,7 +173,7 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
     status: failure ? 'failed' : 'ready',
     error: failure,
     html_hash: htmlHash(html),
-    voice,
+    voice: voice.key,
     sections: out,
     duration_ms: out.reduce((n, s) => n + s.durationMs, 0),
     generated_at: new Date().toISOString(),
