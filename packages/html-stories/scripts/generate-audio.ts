@@ -1,7 +1,7 @@
 /**
  * Voice a published HTML story section by section (src/audioGenerate.ts).
- * Run by .github/workflows/render-html-story-audio.yml, which publishing
- * dispatches; by hand:
+ * Run by .github/workflows/render-html-story-audio.yml, which admin's
+ * Section audio panel dispatches; by hand:
  *
  *   pnpm --filter @vismay/html-stories generate-audio <slug> [--force]
  *

@@ -1,10 +1,9 @@
 name: Render HTML story audio
 
 # Section-wise narration for an agent-authored HTML story. Dispatched with
-# `workflow_dispatch` whenever a story is published (the token-gated publish
-# API on every site, the MCP tool, the admin editor; see
-# packages/html-stories/src/audio.ts), and by the admin editor's
-# "Regenerate audio" button with force=true. Runs
+# `workflow_dispatch` by hand only, from the admin editor's Section audio
+# panel (Generate audio; Regenerate all with force=true; see
+# packages/html-stories/src/audio.ts). Publishing never dispatches it. Runs
 # packages/html-stories/scripts/generate-audio.ts, which voices each section
 # whose text changed and writes the manifest to html_story_audio
 # (migration 097).

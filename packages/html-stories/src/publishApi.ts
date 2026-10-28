@@ -27,9 +27,8 @@
  * On travel, the page must name its trip (`<meta name="travel:trip">`) and the
  * slug must sit under the trip's: the trip's password is the page's gate.
  *
- * A story that is published after the post gets its section audio queued
- * (./audio); the response's `audio` says what happened (`dispatched`,
- * `unchanged`, `skipped`, `unconfigured`, `failed`, or `none` for a draft).
+ * Publishing does not voice the story: section audio (./audio) is started by
+ * hand from admin's editor.
  *
  * Without a slug, one is derived from the document's <title>. The response
  * carries lint `warnings` so the agent can fix and re-post to the same slug.
@@ -41,7 +40,6 @@ import { timingSafeEqual } from 'node:crypto'
 import { getSpin, isSpinId, linkSpinStory, spinAllowsPublish } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import type { HtmlStoryApp } from './apps'
-import { audioQueueWarning, queueHtmlStoryAudio } from './audio'
 import { HtmlStorySlugTakenError, saveHtmlStory } from './htmlStories'
 import {
   HTML_STORY_STATUSES,
@@ -194,15 +192,8 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
         warnings.push(`Saved, but the spin was not updated: ${e instanceof Error ? e.message : String(e)}`)
       }
     }
-    let audio = 'none'
-    if (story.status === 'published') {
-      const queued = await queueHtmlStoryAudio({ slug: story.slug, app, html: parsed.html })
-      audio = queued.mode
-      const warning = audioQueueWarning(queued)
-      if (warning) warnings.push(warning)
-    }
     return json(
-      { ok: true, created, slug: story.slug, status: story.status, title: story.title, url, audio, warnings, ...(spinOut ? { spin: spinOut } : {}) },
+      { ok: true, created, slug: story.slug, status: story.status, title: story.title, url, warnings, ...(spinOut ? { spin: spinOut } : {}) },
       created ? 201 : 200,
     )
   } catch (e) {
