@@ -31,6 +31,13 @@
  * the cron. Requires --competition alongside it (discovery needs to know
  * which theanalyst.com competition to search).
  *
+ * The fixture mode also takes a LIST — --fixture-id=<uuid>,<uuid>,… with
+ * --competition=<slug>,<slug>,… naming every competition they span — so the
+ * HTML-stories match picker's "Fetch insights" scrapes every ticked match in
+ * ONE run. (One dispatch per match would not work: the workflow's concurrency
+ * group keeps a single pending run and cancels the rest.) Each competition
+ * only touches the listed fixtures that belong to it.
+ *
  * A fourth mode — --url=<theanalyst match-centre link> — scrapes ONE match
  * straight from a pasted URL (the admin Match facts tab's "Scrape from URL"
  * form; also `theanalyst.com/opta-football-match-centre?competitionId=…&
@@ -53,6 +60,7 @@
  *   npm run match-facts -- --dry --dump-events   # + Opta DOM dump (selector debugging)
  *   npm run match-facts -- --events-backfill     # re-scrape stats-done fixtures lacking events
  *   npm run match-facts -- --competition=premier-league --fixture-id=<uuid>  # manual, goals only
+ *   npm run match-facts -- --competition=premier-league,la-liga --fixture-id=<uuid>,<uuid>  # several at once
  *   npm run match-facts -- --url='https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…'
  *   npm run match-facts -- --url=… --fixture-id=<uuid>   # pin the fixture instead of matching by teams/date
  */
@@ -91,24 +99,33 @@ const LOOKBACK_DAYS = 30;
 // drains any backlog; a matchday burst never turns into a request burst.
 const MAX_SCRAPES_PER_RUN = 20;
 
+// A manual fixture-list run scrapes exactly the fixtures it names, up to the
+// HTML-stories brief's match cap (MAX_CONTEXT_MATCHES).
+const MAX_FIXTURES_PER_RUN = 40;
+
+/** Comma-separated CLI value → trimmed, de-duplicated, non-empty items. */
+function splitList(v: string): string[] {
+  return [...new Set(v.split(',').map((s) => s.trim()).filter(Boolean))];
+}
+
 function parseArgs(argv: string[]): {
-  competition: string | null;
+  competitions: string[];
   dry: boolean;
   dumpEvents: boolean;
   eventsBackfill: boolean;
   storiesBackfill: boolean;
-  fixtureId: string | null;
+  fixtureIds: string[];
   url: string | null;
 } {
-  let competition: string | null = null;
+  let competitions: string[] = [];
   let dry = false;
   let dumpEvents = false;
   let eventsBackfill = false;
   let storiesBackfill = false;
-  let fixtureId: string | null = null;
+  let fixtureIds: string[] = [];
   let url: string | null = null;
   for (const a of argv) {
-    if (a.startsWith('--competition=')) competition = a.slice('--competition='.length) || null;
+    if (a.startsWith('--competition=')) competitions = splitList(a.slice('--competition='.length));
     // Single pasted match-centre link — see the module doc comment.
     else if (a.startsWith('--url=')) url = a.slice('--url='.length).trim() || null;
     else if (a === '--dry') dry = true;
@@ -126,12 +143,12 @@ function parseArgs(argv: string[]): {
     // once. Off by default — a match whose page genuinely carries no cards
     // must not be re-scraped every run forever.
     else if (a === '--stories-backfill') storiesBackfill = true;
-    // Manual single-fixture mode (the studio's "Extract goals now" button) —
-    // see the module doc comment.
-    else if (a.startsWith('--fixture-id=')) fixtureId = a.slice('--fixture-id='.length) || null;
+    // Manual fixture mode (the studio's "Extract goals now" button, the
+    // match picker's "fetch") — one id or a comma list; see the module doc.
+    else if (a.startsWith('--fixture-id=')) fixtureIds = splitList(a.slice('--fixture-id='.length));
     else console.warn(`[match-facts] ignoring unknown arg: ${a}`);
   }
-  return { competition, dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureId, url };
+  return { competitions, dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureIds, url };
 }
 
 type FixtureRow = {
@@ -162,7 +179,7 @@ function sideName(teamId: string | null, teamName: string | null, names: Map<str
 async function discoverForCompetition(
   comp: TheanalystCompetition,
   dry: boolean,
-  fixtureId?: string | null
+  fixtureIds: string[] = []
 ): Promise<number> {
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
   let query = supabase
@@ -172,7 +189,7 @@ async function discoverForCompetition(
     .is('theanalyst_match_id', null)
     .in('status', ['finished', 'live'])
     .gte('kickoff_at', since);
-  if (fixtureId) query = query.eq('id', fixtureId);
+  if (fixtureIds.length > 0) query = query.in('id', fixtureIds);
   const { data, error } = await query;
   if (error) throw new Error(`fixtures query failed: ${error.message}`);
 
@@ -272,15 +289,15 @@ async function scrapeForCompetition(
     dumpEvents: boolean;
     eventsBackfill: boolean;
     storiesBackfill: boolean;
-    fixtureId?: string | null;
+    fixtureIds?: string[];
   }
 ): Promise<number> {
-  const { dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureId } = opts;
-  // Manual single-fixture mode always attempts the one fixture, bypassing the
+  const { dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureIds = [] } = opts;
+  // Manual fixture mode always attempts the named fixtures, bypassing the
   // "already done"/gap-fill skip gates below — a user clicking the button
   // expects an immediate attempt, not a silent no-op because an earlier
   // automated run already touched this fixture.
-  const forced = Boolean(fixtureId);
+  const forced = fixtureIds.length > 0;
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
   let query = supabase
     .from('fixtures')
@@ -291,7 +308,7 @@ async function scrapeForCompetition(
     .not('theanalyst_match_id', 'is', null)
     .eq('status', 'finished')
     .gte('kickoff_at', since);
-  if (fixtureId) query = query.eq('id', fixtureId);
+  if (forced) query = query.in('id', fixtureIds);
   const { data, error } = await query;
   if (error) throw new Error(`fixtures query failed: ${error.message}`);
 
@@ -809,29 +826,34 @@ async function writeFixtureEvents(
 }
 
 async function run() {
-  const { competition, dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureId, url } =
+  const { competitions, dry, dumpEvents, eventsBackfill, storiesBackfill, fixtureIds, url } =
     parseArgs(process.argv.slice(2));
   if (url) {
-    if (competition || eventsBackfill || storiesBackfill) {
+    if (competitions.length > 0 || eventsBackfill || storiesBackfill) {
       console.warn('[match-facts] --url ignores --competition/--events-backfill (the link is the scope)');
     }
-    await scrapeFromUrl(url, { fixtureId, dry, dumpEvents });
+    if (fixtureIds.length > 1) throw new Error('--url pins at most one --fixture-id');
+    await scrapeFromUrl(url, { fixtureId: fixtureIds[0] ?? null, dry, dumpEvents });
     return;
   }
-  if (fixtureId && !competition) {
-    throw new Error('--fixture-id requires --competition=<slug> (a single-fixture run must target exactly one competition)');
+  if (fixtureIds.length > 0 && competitions.length === 0) {
+    throw new Error('--fixture-id requires --competition=<slug>[,<slug>…] (a fixture run must name the competitions it spans)');
+  }
+  if (fixtureIds.length > MAX_FIXTURES_PER_RUN) {
+    throw new Error(`--fixture-id takes at most ${MAX_FIXTURES_PER_RUN} fixtures per run (got ${fixtureIds.length})`);
   }
   const comps = THEANALYST_COMPETITIONS.filter(
-    (c) => !competition || c.competitionSlug === competition
+    (c) => competitions.length === 0 || competitions.includes(c.competitionSlug)
   );
   if (comps.length === 0) {
     console.log(
-      `[match-facts] no tracked theanalyst competitions${competition ? ` matching '${competition}'` : ''} — populate theanalyst/competitions.ts`
+      `[match-facts] no tracked theanalyst competitions${competitions.length ? ` matching '${competitions.join(', ')}'` : ''} — populate theanalyst/competitions.ts`
     );
     return;
   }
 
-  const budget = { remaining: MAX_SCRAPES_PER_RUN };
+  // A fixture-list run scrapes every fixture it names; the cron keeps its budget.
+  const budget = { remaining: fixtureIds.length > 0 ? fixtureIds.length : MAX_SCRAPES_PER_RUN };
   // One competition's failure (a discovery timeout on theanalyst's calendar,
   // a Supabase hiccup) must not abort the rest of the run — the cron used to
   // die at the first throw, so a broken UCL discovery silently starved every
@@ -839,7 +861,7 @@ async function run() {
   const failed: string[] = [];
   for (const comp of comps) {
     try {
-      await discoverForCompetition(comp, dry, fixtureId);
+      await discoverForCompetition(comp, dry, fixtureIds);
     } catch (e: any) {
       console.error(`[match-facts] ${comp.competitionSlug}: discovery failed — ${e?.message ?? e}`);
       failed.push(`${comp.competitionSlug} (discovery)`);
@@ -850,7 +872,7 @@ async function run() {
         dumpEvents,
         eventsBackfill,
         storiesBackfill,
-        fixtureId,
+        fixtureIds,
       });
     } catch (e: any) {
       console.error(`[match-facts] ${comp.competitionSlug}: scrape failed — ${e?.message ?? e}`);

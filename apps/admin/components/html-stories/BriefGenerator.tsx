@@ -194,11 +194,17 @@ export function BriefGenerator({
         return 'failed'
       }
     }
+    return scrapeMany([{ fixtureId, competition }])
+  }
+  // Every ticked match in one worker run (the picker's "Fetch insights"; Opta fixtures only).
+  async function scrapeMany(
+    picks: { fixtureId: string; competition: string }[],
+  ): Promise<'dispatched' | 'unconfigured' | 'failed'> {
     try {
       const res = await fetch('/api/footshorts/data/matches/scrape', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fixtureId, competition }),
+        body: JSON.stringify({ matches: picks }),
       })
       if (!res.ok) return 'failed'
       return ((await res.json()) as { mode?: 'dispatched' | 'unconfigured' }).mode ?? 'failed'
@@ -395,6 +401,7 @@ export function BriefGenerator({
           searchTeams={searchTeams}
           loadTeamMatches={loadTeamMatches}
           onScrape={scrape}
+          onScrapeMany={scrapeMany}
           onCreate={async ({ fixtureIds, prompt }) => {
             setMatches({ fixtureIds, prompt })
             return true
