@@ -19,7 +19,8 @@ type Scope = 'competition' | 'team'
 /**
  * Match picker (footshorts only). Two ways in: a competition + season, or a
  * TEAM — its matches across every competition we hold, so one brief can gather
- * a club's league, cup and European games. Tick matches from any list (picks
+ * a club's league, cup and European games; "Last 5 results" and "Next 3"
+ * tick the club's latest results or upcoming fixtures in one go. Tick matches from any list (picks
  * persist while you switch competition, team or scope, and show in the
  * "Picked" strip), optionally narrow the timeline to one event type, and add
  * an editorial prompt; on submit the caller builds the brief.
@@ -219,6 +220,23 @@ export function MatchPicker({
       if (prev.some((x) => x.id === m.id)) return prev.filter((x) => x.id !== m.id)
       if (prev.length >= maxMatches) return prev
       return [...prev, m]
+    })
+  }
+
+  /** Tick a club's latest results or upcoming fixtures (team scope), as far as the cap allows. */
+  function pickClub(kind: 'last' | 'next', n: number) {
+    const now = new Date().toISOString()
+    const rows =
+      kind === 'last'
+        ? matches.filter((m) => m.status === 'finished').slice(0, n).reverse()
+        : matches
+            .filter((m) => m.status === 'live' || (m.status === 'scheduled' && m.kickoffAt >= now))
+            .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+            .slice(0, n)
+    setPicked((prev) => {
+      const next = [...prev]
+      for (const m of rows) if (next.length < maxMatches && !next.some((x) => x.id === m.id)) next.push(m)
+      return next
     })
   }
 
@@ -439,6 +457,26 @@ export function MatchPicker({
                     </span>
                   </span>
                   <div className="flex items-center gap-2">
+                    {scope === 'team' && team && !loadingMatches && matches.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => pickClub('last', 5)}
+                          disabled={atCap}
+                          title={`Tick ${team.name}'s five latest results`}
+                          className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
+                        >
+                          Last 5 results
+                        </button>
+                        <button
+                          onClick={() => pickClub('next', 3)}
+                          disabled={atCap}
+                          title={`Tick ${team.name}'s next three fixtures`}
+                          className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
+                        >
+                          Next 3
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => setReloadNonce((n) => n + 1)}
                       disabled={loadingMatches}

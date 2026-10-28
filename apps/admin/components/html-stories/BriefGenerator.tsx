@@ -42,7 +42,8 @@ interface MatchContextPick {
  * or team's own palette and fonts, set in the Asset Studio.
  *
  * For footshorts there is also a match picker — by competition, or by team
- * across every competition: tick up to MAX_CONTEXT_MATCHES (and
+ * across every competition (where Last 5 results / Next 3 tick a club's
+ * fixtures in one go): tick up to MAX_CONTEXT_MATCHES (and
  * write the editorial angle) and the brief gains their match context — Opta
  * facts and full stat set, timeline, insights, commentary, build-up, both
  * sides' form and schedule, the table, and the competition's next fixtures.

@@ -14,7 +14,10 @@
  * footshorts.com/match/<id> URL) and the site appends everything its match
  * tables know — Opta facts and the full stat set, the timeline, insights,
  * commentary, the build-up, both sides' form and schedule, the table and the
- * competition's next fixtures. That variant needs the publish token.
+ * competition's next fixtures. Or pass `club` (a team slug) and the context
+ * covers that club's fixtures across every competition: its last `clubLast`
+ * results (default 5) and next `clubNext` matches (default 3). That variant
+ * needs the publish token.
  *
  * A vizf1 brief can carry a RACE CONTEXT the same way: pass `sessionKeys` (up to
  * 24 telemetry session keys — races, sprints, qualifying, practice, across
@@ -86,7 +89,9 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'competitionStyle=<competition slug> or teamStyle=<team slug> for its own palette and fonts). For ' +
         'footshorts, pass fixtureIds (up to 40 fixture ids) to append the match context — Opta ' +
         'facts, timeline, insights, commentary, schedules and the table — the story must be ' +
-        'written from, plus an optional editorial prompt. For vizf1, pass sessionKeys (up to 24 telemetry ' +
+        'written from, plus an optional editorial prompt; or pass club=<team slug> (with clubLast / clubNext) ' +
+        "to cover that club's latest results and upcoming matches across every competition. " +
+        'For vizf1, pass sessionKeys (up to 24 telemetry ' +
         'session keys, e.g. 2026_australian_grand_prix_R, across races and seasons) and optionally drivers ' +
         '(up to 8 codes such as VER) to append the race context: classifications, lap-by-lap timing, sectors, ' +
         'speed traps, strategy, the head-to-head across sessions and the standings round by round. ' +
@@ -135,6 +140,28 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .max(40)
           .optional()
           .describe('footshorts only: fixture ids the story is about; their match context is appended to the brief.'),
+        club: z
+          .string()
+          .regex(/^[a-z0-9-]{1,80}$/)
+          .optional()
+          .describe(
+            "footshorts only: a team slug (e.g. arsenal); the club's fixtures across every competition (its last " +
+              'clubLast results and next clubNext matches) join the match context, after any fixtureIds.',
+          ),
+        clubLast: z
+          .number()
+          .int()
+          .min(0)
+          .max(20)
+          .optional()
+          .describe("footshorts only, with club: how many of the club's latest results to cover. Default 5."),
+        clubNext: z
+          .number()
+          .int()
+          .min(0)
+          .max(20)
+          .optional()
+          .describe("footshorts only, with club: how many of the club's upcoming matches to cover. Default 3."),
         sessionKeys: z
           .array(z.string().min(1))
           .max(24)
@@ -167,7 +194,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .string()
           .optional()
           .describe(
-            'footshorts (with fixtureIds), vizf1 (with sessionKeys), viznba (with gameIds) or travel (with tripSlug: how the day ' +
+            'footshorts (with fixtureIds or club), vizf1 (with sessionKeys), viznba (with gameIds) or travel (with tripSlug: how the day ' +
               'really went): the editorial angle, surfaced at the top of the context.',
           ),
         spinId: z
@@ -185,10 +212,13 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           .describe('The voice: straight (plain, the default) or humorous (wry, a little sarcastic; accuracy rules unchanged).'),
       },
     },
-    async ({ app, randomStyle, competitionStyle, teamStyle, fixtureIds, sessionKeys, drivers, gameIds, tripSlug, day, prompt, spinId, format, tone }) => {
+    async ({ app, randomStyle, competitionStyle, teamStyle, fixtureIds, club, clubLast, clubNext, sessionKeys, drivers, gameIds, tripSlug, day, prompt, spinId, format, tone }) => {
       const site = htmlStoriesUrlFor(config, app)
       const houseBrief = () => htmlStoryBrief({ app, siteUrl: site, format, tone })
       const ids = app === 'footshorts' ? (fixtureIds ?? []).filter(Boolean) : []
+      if ((club || clubLast != null || clubNext != null) && app !== 'footshorts') throw new Error('club is footshorts only.')
+      if ((clubLast != null || clubNext != null) && !club) throw new Error('clubLast and clubNext need club.')
+      const matchContext = ids.length > 0 || !!club
       const keys = app === 'vizf1' ? (sessionKeys ?? []).filter(Boolean) : []
       const games = app === 'viznba' ? (gameIds ?? []).filter(Boolean) : []
       const trip = app === 'travel' ? tripSlug ?? null : null
@@ -211,10 +241,13 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       if (format !== 'scroll') url.searchParams.set('format', format)
       if (tone !== 'straight') url.searchParams.set('tone', tone)
       if (spinId) url.searchParams.set('spin', spinId)
-      if (ids.length) {
-        url.searchParams.set('fixtures', ids.join(','))
-        if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
+      if (ids.length) url.searchParams.set('fixtures', ids.join(','))
+      if (club) {
+        url.searchParams.set('club', club)
+        if (clubLast != null) url.searchParams.set('last', String(clubLast))
+        if (clubNext != null) url.searchParams.set('next', String(clubNext))
       }
+      if (matchContext && prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
       if (keys.length) {
         url.searchParams.set('sessions', keys.join(','))
         if (drivers?.length) url.searchParams.set('drivers', drivers.join(','))
@@ -230,7 +263,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
       }
       const token = htmlStoriesToken(app)
-      if (ids.length && !token) {
+      if (matchContext && !token) {
         throw new Error(
           'The match context needs the footshorts publish token in the MCP server env ' +
             '(FOOTSHORTS_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
@@ -260,7 +293,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         return { content: [{ type: 'text', text: await res.text() }] }
       } catch (e) {
         const reason = e instanceof Error ? e.message : String(e)
-        if (ids.length) throw new Error(`Could not build the match context: ${reason}`)
+        if (matchContext) throw new Error(`Could not build the match context: ${reason}`)
         if (keys.length) throw new Error(`Could not build the race context: ${reason}`)
         if (games.length) throw new Error(`Could not build the game context: ${reason}`)
         if (trip) throw new Error(`Could not build the trip context: ${reason}`)
