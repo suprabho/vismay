@@ -55,6 +55,8 @@ export interface MatchCompetition {
   slug: string
   name: string
   season: string
+  /** 'espn': a cup from the private Cup fixtures import (HTML-stories brief only). */
+  source?: 'espn'
 }
 /** One fixture in that competition, badged with what a match brief could
  *  actually carry for it. */
@@ -72,8 +74,10 @@ export interface MatchOption {
   competition: string
   competitionName: string
   season: string
-  /** `opta_match_facts` has at least one side for this fixture. */
+  /** `opta_match_facts` has at least one side for this fixture (ESPN cup rows: the match detail is extracted). */
   facts: boolean
+  /** 'espn': an ESPN cup match (id = ESPN event id), from the Cup fixtures import. */
+  source?: 'espn'
   /** Rows in `fixture_events` — 0 means no timeline. */
   events: number
   /** Opta INSIGHTS cards — the season-context lines, the strongest reason to

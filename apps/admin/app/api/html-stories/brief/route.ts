@@ -16,6 +16,7 @@ import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
 import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
+import { buildCupMatchContext } from '@/lib/espnCups'
 
 /**
  * The agent brief for the admin "Copy agent brief" button, built server-side
@@ -29,7 +30,9 @@ import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
  * `format` is the story format (scroll, the default, or book, board, deck, collage, recap);
  * `tone` is the story's voice (straight, the default, or humorous);
  * `style` is the randomizer's pick (the client shows its swatches, so it must
- * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only;
+ * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only
+ * (numeric ids are ESPN event ids from the Cup fixtures import, whose context
+ * is built here from those private tables);
  * `sessionKeys` + `drivers` (codes) + `prompt` are vizf1-only;
  * `gameIds` (ESPN event ids) + `prompt` are viznba-only;
  * `tripSlug` + `day` (omitted: the whole trip) + `prompt` are travel-only;
@@ -115,7 +118,16 @@ export async function POST(req: Request) {
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl, style, fixtureIds, prompt, format, spin, tone })
+        ? await footshortsHtmlStoryBrief({
+            siteUrl,
+            style,
+            fixtureIds,
+            prompt,
+            format,
+            spin,
+            tone,
+            cupContext: (ids, { prompt }) => buildCupMatchContext(ids, { prompt, siteUrl }),
+          })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format, tone })
           : app === 'viznba'

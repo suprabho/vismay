@@ -19,7 +19,8 @@ type Scope = 'competition' | 'team'
 /**
  * Match picker (footshorts only). Two ways in: a competition + season, or a
  * TEAM — its matches across every competition we hold, so one brief can gather
- * a club's league, cup and European games. Tick matches from any list (picks
+ * a club's league, cup and European games; "Last 5 results" and "Next 3"
+ * tick the club's latest results or upcoming fixtures in one go. Tick matches from any list (picks
  * persist while you switch competition, team or scope, and show in the
  * "Picked" strip), optionally narrow the timeline to one event type, and add
  * an editorial prompt; on submit the caller builds the brief.
@@ -38,7 +39,9 @@ type Scope = 'competition' | 'team'
  * Every match is badged with what a brief would actually carry (`facts` = Opta
  * match centre scraped, `events` = timeline rows, `ins` = Opta insight cards),
  * so a fixture with nothing behind it is visibly a weak pick rather than a
- * silent one. The vizf1 analogue is TelemetrySessionPicker; keep the two in step.
+ * silent one. ESPN cup rows (`source: 'espn'`, from the Cup fixtures import,
+ * HTML-stories brief only) are badged `espn`; their "fetch" extracts the
+ * ESPN match detail on the spot (`onScrape` answers 'extracted'). The vizf1 analogue is TelemetrySessionPicker; keep the two in step.
  */
 export function MatchPicker({
   onClose,
@@ -72,7 +75,7 @@ export function MatchPicker({
   onScrape: (
     fixtureId: string,
     competition: string,
-  ) => Promise<'dispatched' | 'unconfigured' | 'failed'>
+  ) => Promise<'dispatched' | 'extracted' | 'unconfigured' | 'failed'>
   /** Scrape several matches in ONE worker run — one dispatch per match would
    *  cancel each other in the workflow's concurrency group. Without it the
    *  Picked strip has no bulk fetch. */
@@ -214,7 +217,10 @@ export function MatchPicker({
     if (queued.has(m.id)) return
     setNote(null)
     const mode = await onScrape(m.id, m.competition)
-    if (mode === 'dispatched') {
+    if (mode === 'extracted') {
+      setNote(`Extracted ${m.home} v ${m.away} from ESPN.`)
+      setReloadNonce((n) => n + 1)
+    } else if (mode === 'dispatched') {
       setQueued((s) => new Set(s).add(m.id))
       setNote(`Scraping ${m.home} v ${m.away} — the run takes a minute or two; hit Refresh then.`)
     } else if (mode === 'unconfigured') {
@@ -228,9 +234,10 @@ export function MatchPicker({
   }
 
   // Ticked matches with no Opta insights yet and no scrape queued — what the
-  // Picked strip's "Fetch insights" would scrape.
+  // Picked strip's "Fetch insights" would scrape. ESPN cup rows have no Opta
+  // page: their per-row "fetch" extracts the ESPN detail instead.
   const unfetched = useMemo(
-    () => picked.filter((m) => m.insights === 0 && !queued.has(m.id)),
+    () => picked.filter((m) => m.source !== 'espn' && m.insights === 0 && !queued.has(m.id)),
     [picked, queued],
   )
   const [fetchingMany, setFetchingMany] = useState(false)
@@ -268,6 +275,23 @@ export function MatchPicker({
       if (prev.some((x) => x.id === m.id)) return prev.filter((x) => x.id !== m.id)
       if (prev.length >= maxMatches) return prev
       return [...prev, m]
+    })
+  }
+
+  /** Tick a club's latest results or upcoming fixtures (team scope), as far as the cap allows. */
+  function pickClub(kind: 'last' | 'next', n: number) {
+    const now = new Date().toISOString()
+    const rows =
+      kind === 'last'
+        ? matches.filter((m) => m.status === 'finished').slice(0, n).reverse()
+        : matches
+            .filter((m) => m.status === 'live' || (m.status === 'scheduled' && m.kickoffAt >= now))
+            .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+            .slice(0, n)
+    setPicked((prev) => {
+      const next = [...prev]
+      for (const m of rows) if (next.length < maxMatches && !next.some((x) => x.id === m.id)) next.push(m)
+      return next
     })
   }
 
@@ -488,6 +512,26 @@ export function MatchPicker({
                     </span>
                   </span>
                   <div className="flex items-center gap-2">
+                    {scope === 'team' && team && !loadingMatches && matches.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => pickClub('last', 5)}
+                          disabled={atCap}
+                          title={`Tick ${team.name}'s five latest results`}
+                          className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
+                        >
+                          Last 5 results
+                        </button>
+                        <button
+                          onClick={() => pickClub('next', 3)}
+                          disabled={atCap}
+                          title={`Tick ${team.name}'s next three fixtures`}
+                          className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-200 disabled:opacity-40"
+                        >
+                          Next 3
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => setReloadNonce((n) => n + 1)}
                       disabled={loadingMatches}
@@ -586,8 +630,16 @@ export function MatchPicker({
                             <span className="min-w-0 flex-1 truncate text-neutral-200">
                               {m.home} {played ? `${m.homeScore}–${m.awayScore}` : 'v'} {m.away}
                             </span>
+                            {m.source === 'espn' && (
+                              <Chip tone="amber" title="An ESPN cup match from the Cup fixtures import">
+                                espn
+                              </Chip>
+                            )}
                             {m.facts && (
-                              <Chip tone="emerald" title="Opta match facts scraped for this match">
+                              <Chip
+                                tone="emerald"
+                                title={m.source === 'espn' ? 'ESPN match detail extracted' : 'Opta match facts scraped for this match'}
+                              >
                                 facts
                               </Chip>
                             )}
@@ -604,7 +656,7 @@ export function MatchPicker({
                                 {m.insights} ins
                               </Chip>
                             )}
-                            {m.insights === 0 &&
+                            {(m.source === 'espn' ? !m.facts : m.insights === 0) &&
                               (queued.has(m.id) ? (
                                 <Chip tone="amber" title="Scrape dispatched — hit Refresh shortly">
                                   queued
@@ -618,7 +670,11 @@ export function MatchPicker({
                                     e.stopPropagation()
                                     void scrape(m)
                                   }}
-                                  title="Scrape this match's Opta commentary + insights now"
+                                  title={
+                                    m.source === 'espn'
+                                      ? "Extract this match's ESPN timeline, line-ups and commentary now"
+                                      : "Scrape this match's Opta commentary + insights now"
+                                  }
                                   className="shrink-0 rounded-full border border-white/10 px-2 py-px text-[10px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:border-white/30 hover:text-neutral-100"
                                 >
                                   fetch

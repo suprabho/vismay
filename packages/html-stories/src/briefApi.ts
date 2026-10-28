@@ -22,6 +22,10 @@
  *     `prompt`. The context is read from the match tables with the service
  *     client, so this variant wants the same bearer token as publishing — the
  *     MCP server and admin send it; the plain brief stays public.
+ *   - footshorts only: `club=<team slug>` adds that club's fixtures across
+ *     every competition to the match context: its `last=<n>` results
+ *     (default 5) and `next=<n>` upcoming matches (default 3), each up to
+ *     MAX_CLUB_FIXTURES_SIDE, after any `fixtures`. Token-gated like them.
  *   - vizf1 only: `sessions=<key>,<key>` (telemetry session keys, up to
  *     MAX_RACE_CONTEXT_SESSIONS) appends the race context for those sessions
  *     (./vizf1Brief), following `drivers=VER,NOR` (codes or car numbers, up to
@@ -52,7 +56,14 @@
 
 import type { HtmlStoryApp } from './apps'
 import { htmlStoryBrief } from './brief'
-import { footshortsHtmlStoryBrief, MAX_CONTEXT_MATCHES } from './footshortsBrief'
+import {
+  CLUB_FIXTURES_DEFAULT,
+  footshortsHtmlStoryBrief,
+  isEspnEventId,
+  MAX_CLUB_FIXTURES_SIDE,
+  MAX_CONTEXT_MATCHES,
+  type ClubFixturesPick,
+} from './footshortsBrief'
 import { HTML_STORY_APP_META } from './apps'
 import { MAX_RACE_CONTEXT_DRIVERS, MAX_RACE_CONTEXT_SESSIONS, vizf1HtmlStoryBrief } from './vizf1Brief'
 import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from './viznbaBrief'
@@ -103,6 +114,25 @@ export async function handleHtmlStoryBriefRequest(
     }
   }
   const fixtureIds = app === 'footshorts' ? parseFixtureIds(url.searchParams) : []
+  const clubParam = url.searchParams.get('club')?.trim() || null
+  if (clubParam && app !== 'footshorts') return new Response('club is footshorts only', { status: 400 })
+  if (clubParam && !/^[a-z0-9-]{1,80}$/.test(clubParam)) return new Response('club must be a team slug', { status: 400 })
+  let club: ClubFixturesPick | null = null
+  if (clubParam) {
+    const count = (name: 'last' | 'next'): number | null => {
+      const raw = url.searchParams.get(name)?.trim()
+      if (!raw) return CLUB_FIXTURES_DEFAULT[name]
+      const n = Number(raw)
+      return Number.isInteger(n) && n >= 0 && n <= MAX_CLUB_FIXTURES_SIDE ? n : null
+    }
+    const last = count('last')
+    const next = count('next')
+    if (last == null || next == null) {
+      return new Response(`last and next must be whole numbers from 0 to ${MAX_CLUB_FIXTURES_SIDE}`, { status: 400 })
+    }
+    if (!last && !next) return new Response('club needs last or next above 0', { status: 400 })
+    club = { team: clubParam, last, next }
+  }
   const sessionKeys = app === 'vizf1' ? parseListParam(url.searchParams, 'sessions') : []
   const drivers = app === 'vizf1' ? parseListParam(url.searchParams, 'drivers').map((d) => d.toUpperCase()) : []
   const gameIds = app === 'viznba' ? parseListParam(url.searchParams, 'games') : []
@@ -142,6 +172,9 @@ export async function handleHtmlStoryBriefRequest(
   if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
     return new Response(`at most ${MAX_CONTEXT_MATCHES} matches per brief`, { status: 400 })
   }
+  if (fixtureIds.some(isEspnEventId)) {
+    return new Response('cup fixtures (ESPN event ids) are admin-only: build that brief in the admin', { status: 400 })
+  }
   if (sessionKeys.length > MAX_RACE_CONTEXT_SESSIONS) {
     return new Response(`at most ${MAX_RACE_CONTEXT_SESSIONS} sessions per brief`, { status: 400 })
   }
@@ -159,7 +192,7 @@ export async function handleHtmlStoryBriefRequest(
   }
   if (day != null && (!Number.isInteger(day) || day < 0)) return new Response('day must be a day number', { status: 400 })
   if (day != null && !tripSlug) return new Response('day needs a trip: pass trip=<slug> too', { status: 400 })
-  const contextKind = fixtureIds.length
+  const contextKind = fixtureIds.length || club
     ? 'match context'
     : sessionKeys.length
       ? 'race context'
@@ -199,7 +232,7 @@ export async function handleHtmlStoryBriefRequest(
   try {
     brief =
       app === 'footshorts'
-        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, prompt, format, spin, tone })
+        ? await footshortsHtmlStoryBrief({ siteUrl: url.origin, style, fixtureIds, club, prompt, format, spin, tone })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl: url.origin, style, sessionKeys, drivers, prompt, format, tone })
           : app === 'viznba'
@@ -216,7 +249,7 @@ export async function handleHtmlStoryBriefRequest(
   return new Response(brief, {
     headers: {
       'content-type': 'text/markdown; charset=utf-8',
-      // A random, match-, race-, trip- or spin-specific brief must differ per request; the house brief is cacheable.
+      // A random, match-, club-, race-, trip- or spin-specific brief must differ per request; the house brief is cacheable.
       'cache-control': random || contextKind || spin ? 'no-store' : 'public, s-maxage=3600',
     },
   })

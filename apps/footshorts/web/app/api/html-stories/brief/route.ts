@@ -5,7 +5,8 @@ import { handleHtmlStoryBriefRequest } from '@vismay/html-stories/briefApi'
  * can be told "read footshorts.com/api/html-stories/brief and write a story
  * about Saturday's match". `?style=random` draws a palette and fonts from the
  * footshorts editorial stories; `?fixtures=<id>,<id>&prompt=…` (with the
- * publish token as a bearer) appends the match context. See briefApi.ts.
+ * publish token as a bearer) appends the match context, and `?club=<team slug>`
+ * (`&last=5&next=3`) a club's latest results and upcoming fixtures. See briefApi.ts.
  */
 
 export const dynamic = 'force-dynamic'
