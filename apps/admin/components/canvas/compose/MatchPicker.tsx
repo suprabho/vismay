@@ -31,7 +31,9 @@ type Scope = 'competition' | 'team'
  *
  * Matches are scraped ON DEMAND, not backfilled: a fixture with no insights
  * shows a "fetch" button that dispatches the match-facts worker for that one
- * match, so an editor pulls exactly what a story needs.
+ * match, so an editor pulls exactly what a story needs. With `onScrapeMany`
+ * (the HTML-stories brief), "Fetch insights" in the Picked strip scrapes every
+ * ticked match still missing insights in one worker run.
  *
  * Every match is badged with what a brief would actually carry (`facts` = Opta
  * match centre scraped, `events` = timeline rows, `ins` = Opta insight cards),
@@ -45,6 +47,7 @@ export function MatchPicker({
   searchTeams,
   loadTeamMatches,
   onScrape,
+  onScrapeMany,
   onCreate,
   title = '⚽ Add match',
   subtitle = 'Opta match facts + the event timeline, attached as a source',
@@ -69,6 +72,12 @@ export function MatchPicker({
   onScrape: (
     fixtureId: string,
     competition: string,
+  ) => Promise<'dispatched' | 'unconfigured' | 'failed'>
+  /** Scrape several matches in ONE worker run — one dispatch per match would
+   *  cancel each other in the workflow's concurrency group. Without it the
+   *  Picked strip has no bulk fetch. */
+  onScrapeMany?: (
+    matches: { fixtureId: string; competition: string }[],
   ) => Promise<'dispatched' | 'unconfigured' | 'failed'>
   onCreate: (opts: {
     fixtureIds: string[]
@@ -186,6 +195,12 @@ export function MatchPicker({
         if (cancelled) return
         // Newest first: a brief is nearly always about a just-played match.
         setMatches([...rows].sort((a, b) => b.kickoffAt.localeCompare(a.kickoffAt)))
+        // Picks hold the row they were ticked from; take the fresh one so a
+        // fetched match's insights show up in the Picked strip after Refresh.
+        const fresh = new Map(rows.map((m) => [m.id, m]))
+        setPicked((prev) =>
+          prev.some((m) => fresh.has(m.id)) ? prev.map((m) => fresh.get(m.id) ?? m) : prev,
+        )
       })
       .finally(() => {
         if (!cancelled) setLoadingMatches(false)
@@ -209,6 +224,40 @@ export function MatchPicker({
       )
     } else {
       setNote('Could not start the scrape.')
+    }
+  }
+
+  // Ticked matches with no Opta insights yet and no scrape queued — what the
+  // Picked strip's "Fetch insights" would scrape.
+  const unfetched = useMemo(
+    () => picked.filter((m) => m.insights === 0 && !queued.has(m.id)),
+    [picked, queued],
+  )
+  const [fetchingMany, setFetchingMany] = useState(false)
+
+  async function scrapeMany() {
+    if (!onScrapeMany || unfetched.length === 0 || fetchingMany) return
+    const batch = unfetched
+    setNote(null)
+    setFetchingMany(true)
+    const mode = await onScrapeMany(batch.map((m) => ({ fixtureId: m.id, competition: m.competition })))
+    setFetchingMany(false)
+    const n = `${batch.length} match${batch.length === 1 ? '' : 'es'}`
+    if (mode === 'dispatched') {
+      setQueued((s) => {
+        const next = new Set(s)
+        for (const m of batch) next.add(m.id)
+        return next
+      })
+      setNote(`Scraping ${n} in one run — about a minute a match; hit Refresh then.`)
+    } else if (mode === 'unconfigured') {
+      const comps = [...new Set(batch.map((m) => m.competition))].join(',')
+      setNote(
+        'Worker dispatch is not configured here — run it locally: npm run match-facts -- ' +
+          `--competition=${comps} --fixture-id=${batch.map((m) => m.id).join(',')}`,
+      )
+    } else {
+      setNote(`Could not start the scrape for ${n}.`)
     }
   }
 
@@ -591,7 +640,14 @@ export function MatchPicker({
                 <p className="text-[11px] text-neutral-600">
                   A match with no badges still briefs its scoreline and card — the facts table and
                   timeline will be empty. <span className="text-neutral-500">Fetch</span> scrapes
-                  that one match&rsquo;s Opta commentary + insights on demand.
+                  that one match&rsquo;s Opta commentary + insights on demand
+                  {onScrapeMany && (
+                    <>
+                      ; tick several and <span className="text-neutral-500">Fetch insights</span> under
+                      Picked scrapes them all together
+                    </>
+                  )}
+                  .
                 </p>
                 {note && <p className="text-[11px] leading-relaxed text-amber-300/80">{note}</p>}
               </div>
@@ -605,12 +661,31 @@ export function MatchPicker({
                         — kept while you switch competition or team
                       </span>
                     </span>
-                    <button
-                      onClick={() => setPicked([])}
-                      className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-200"
-                    >
-                      Clear
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {onScrapeMany && (
+                        <button
+                          type="button"
+                          onClick={() => void scrapeMany()}
+                          disabled={unfetched.length === 0 || fetchingMany}
+                          title={
+                            unfetched.length === 0
+                              ? 'Every picked match has insights or a scrape queued'
+                              : `Scrape Opta commentary + insights for the ${unfetched.length} picked match(es) without them, in one run`
+                          }
+                          className="text-[11px] font-medium text-violet-300 transition-colors hover:text-violet-200 disabled:text-neutral-600"
+                        >
+                          {fetchingMany
+                            ? 'Fetching…'
+                            : `Fetch insights${unfetched.length > 0 ? ` (${unfetched.length})` : ''}`}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setPicked([])}
+                        className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-200"
+                      >
+                        Clear
+                      </button>
+                    </div>
                   </div>
                   <ul className="max-h-40 space-y-1 overflow-y-auto">
                     {picked.map((m) => {
@@ -628,6 +703,15 @@ export function MatchPicker({
                               · {m.competitionName} · {m.kickoffAt.slice(0, 10)}
                             </span>
                           </span>
+                          {m.insights > 0 ? (
+                            <Chip tone="violet" title={`${m.insights} Opta insight(s)`}>
+                              {m.insights} ins
+                            </Chip>
+                          ) : queued.has(m.id) ? (
+                            <Chip tone="amber" title="Scrape dispatched — hit Refresh shortly">
+                              queued
+                            </Chip>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => toggle(m)}
