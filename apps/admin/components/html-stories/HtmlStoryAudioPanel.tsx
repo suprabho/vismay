@@ -1,16 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowClockwise, Headphones } from '@phosphor-icons/react'
+import { ArrowClockwise, Headphones, Waveform } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import type { HtmlStoryAudio } from '@vismay/html-stories/audio'
 
 /**
  * A published story's section audio (packages/html-stories/src/audio.ts):
  * whether the live page offers the "Listen" player, each section's clip, and
- * Regenerate (every section, through render-html-story-audio.yml). Publishing
- * queues it on its own; this is for checking and redoing. Polls while a run
- * is pending.
+ * the buttons that make it (render-html-story-audio.yml): Generate audio
+ * voices the sections that changed, Regenerate all re-voices every one.
+ * Publishing never queues it; this is the only trigger. Polls while a run is
+ * pending.
  */
 export function HtmlStoryAudioPanel({
   slug,
@@ -54,27 +55,27 @@ export function HtmlStoryAudioPanel({
     return () => clearInterval(t)
   }, [running, load])
 
-  async function regenerate() {
+  async function generate(force: boolean) {
     setBusy(true)
     setMessage(null)
     try {
       const res = await fetch(`/api/html-stories/${slug}/audio`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ app }),
+        body: JSON.stringify({ app, force }),
       })
       const body = await res.json()
-      if (!res.ok) throw new Error(body.error ?? 'regenerate failed')
+      if (!res.ok) throw new Error(body.error ?? 'generate failed')
       if (body.ok) setMessage('Queued. Clips appear here as the run finishes, usually within a few minutes.')
       else
         setMessage(
           body.mode === 'unconfigured'
-            ? `Dispatch isn't configured here: run \`pnpm --filter @vismay/html-stories generate-audio ${slug} --force\`.`
+            ? `Dispatch isn't configured here: run \`pnpm --filter @vismay/html-stories generate-audio ${slug}${force ? ' --force' : ''}\`.`
             : body.reason,
         )
       await load()
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'regenerate failed')
+      setMessage(e instanceof Error ? e.message : 'generate failed')
     } finally {
       setBusy(false)
     }
@@ -84,12 +85,12 @@ export function HtmlStoryAudioPanel({
   const minutes = audio ? Math.max(1, Math.round(audio.durationMs / 60000)) : 0
   let summary: string
   if (!loaded) summary = 'Loading…'
-  else if (!audio) summary = 'No audio yet. It is made when the story is published.'
+  else if (!audio) summary = 'No audio yet. Generate it when the story is ready to be heard.'
   else if (running) summary = audio.status === 'pending' ? 'Queued…' : 'Voicing sections…'
   else if (!voiced.length) summary = 'No section was voiced.'
   else
     summary = `${voiced.length} of ${audio.sections.length} sections voiced · ${minutes} min${
-      current ? ' · live on the page' : ' · made from an older version, so the page has no player until it is redone'
+      current ? ' · live on the page' : ' · made from an older version, so the page has no player until you generate it again'
     }`
 
   return (
@@ -109,13 +110,27 @@ export function HtmlStoryAudioPanel({
               )}
             </div>
           </div>
-          <button
-            onClick={regenerate}
-            disabled={busy || running}
-            className="shrink-0 inline-flex items-center gap-1 text-neutral-400 hover:text-white disabled:opacity-50"
-          >
-            <ArrowClockwise size={14} /> Regenerate
-          </button>
+          <div className="shrink-0 flex items-center gap-3">
+            {!current && (
+              <button
+                onClick={() => generate(false)}
+                disabled={busy || running}
+                className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-neutral-200 hover:bg-white/15 hover:text-white disabled:opacity-50"
+              >
+                <Waveform size={14} /> Generate audio
+              </button>
+            )}
+            {audio && (
+              <button
+                onClick={() => generate(true)}
+                disabled={busy || running}
+                title="Re-voice every section, even unchanged ones"
+                className="inline-flex items-center gap-1 text-neutral-400 hover:text-white disabled:opacity-50"
+              >
+                <ArrowClockwise size={14} /> Regenerate all
+              </button>
+            )}
+          </div>
         </div>
         {message && <p className="text-neutral-400 mt-2">{message}</p>}
         {audio && audio.sections.length > 0 && (

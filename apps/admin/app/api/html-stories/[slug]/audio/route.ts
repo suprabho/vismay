@@ -7,8 +7,10 @@ import { isAuthed } from '@/lib/adminAuth'
 /**
  * A story's section audio (`?app=`): GET the manifest (and whether it was made
  * from the HTML now stored, i.e. whether /s/<slug> offers the player), POST to
- * regenerate every section (dispatches render-html-story-audio.yml with
- * force). Published stories only; travel stories get no audio.
+ * voice it (dispatches render-html-story-audio.yml; body `force: true`
+ * re-voices every section, else unchanged clips are reused). This is the only
+ * way audio gets made: publishing doesn't queue it. Published stories only;
+ * travel stories get no audio.
  */
 
 type Ctx = { params: Promise<{ slug: string }> }
@@ -37,9 +39,10 @@ export async function POST(req: Request, { params }: Ctx) {
   const story = await getHtmlStoryForAdmin(slug, app)
   if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
   if (story.status !== 'published') return NextResponse.json({ error: 'publish the story first' }, { status: 409 })
-  const result = await queueHtmlStoryAudio({ slug, app, html: story.html }, { force: true })
+  const result = await queueHtmlStoryAudio({ slug, app, html: story.html }, { force: b.force === true })
   if (result.mode === 'failed') return NextResponse.json({ error: result.reason }, { status: 502 })
-  if (result.mode === 'skipped' || result.mode === 'unconfigured') {
+  if (result.mode === 'skipped' || result.mode === 'unconfigured' || result.mode === 'unchanged') {
+    if (result.mode === 'unchanged') return NextResponse.json({ ok: false, mode: result.mode, reason: 'The audio is already up to date with this version.' })
     return NextResponse.json({ ok: false, mode: result.mode, reason: result.reason })
   }
   return NextResponse.json({ ok: true, mode: result.mode })

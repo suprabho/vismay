@@ -1,8 +1,8 @@
 /**
  * Section-wise audio for published HTML stories.
  *
- * Publishing a story (the token-gated API, the MCP tool and the admin editor
- * all end in ./publishApi or the admin routes) queues a GitHub Action,
+ * Audio is made by hand, never on publish: admin's editor (the Section audio
+ * panel → /api/html-stories/[slug]/audio) queues a GitHub Action,
  * render-html-story-audio.yml, which runs scripts/generate-audio.ts →
  * generateHtmlStoryAudio (./audioGenerate): the page's sections (./narration) are voiced
  * one clip apiece by ElevenLabs or Gemini TTS (./narrationVoice) and the clips'
@@ -33,7 +33,7 @@ export const HTML_STORY_AUDIO_WORKER: WorkerDef = {
   workflowFile: 'render-html-story-audio.yml',
   label: 'HTML story audio',
   description: 'Voices a published HTML story section by section.',
-  schedule: 'on publish',
+  schedule: 'manual (admin editor)',
 }
 
 export type HtmlStoryAudioStatus = 'pending' | 'generating' | 'ready' | 'failed'
@@ -110,10 +110,9 @@ export type QueueAudioResult =
   | { mode: 'skipped' | 'unconfigured' | 'failed'; reason: string }
 
 /**
- * Queue section audio for a story that is now published. Cheap to call on
- * every publish: a manifest already made from this HTML is left alone unless
- * `force`. Never throws: the publish has already succeeded, so a failure
- * comes back as a reason for the caller's warnings.
+ * Queue section audio for a published story. A manifest already made from
+ * this HTML is left alone unless `force`. Never throws: a failure comes back
+ * as a reason.
  */
 export async function queueHtmlStoryAudio(
   story: { slug: string; app: HtmlStoryApp; html?: string },
@@ -136,9 +135,4 @@ export async function queueHtmlStoryAudio(
   } catch (e) {
     return { mode: 'failed', reason: `section audio was not queued: ${e instanceof Error ? e.message : String(e)}` }
   }
-}
-
-/** A publish response's warning for a queue result, or null when there is nothing to say. */
-export function audioQueueWarning(result: QueueAudioResult): string | null {
-  return result.mode === 'unconfigured' || result.mode === 'failed' ? `Saved, but ${result.reason}.` : null
 }
