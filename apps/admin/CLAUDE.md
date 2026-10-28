@@ -195,7 +195,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   Randomizer tab: a wry, sarcastic voice under the same accuracy rules), the
   style randomizer (palettes/fonts from the app's own stories) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
-  Opta scrape and a team search, reused with its own labels and a 40-match cap) — whose picks make the brief carry
+  Opta scrape and a team search, reused with its own labels and a 40-match cap; **Fetch insights** in its Picked strip scrapes every ticked match still missing Opta insights in ONE worker run — `POST /api/footshorts/data/matches/scrape` with `{ matches: [...] }` dispatches the match-facts workflow with comma-list `fixture_id`/`competition`, since one dispatch per match would cancel each other in its concurrency group) — whose picks make the brief carry
   the match context (`buildMatchContext` in
   `@vismay/content-source/footshortsMatchBrief`); for vizf1, **Add races**
   ([RaceContextPicker.tsx](components/html-stories/RaceContextPicker.tsx)): any

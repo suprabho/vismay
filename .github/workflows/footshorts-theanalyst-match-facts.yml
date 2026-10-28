@@ -35,12 +35,12 @@ on:
   workflow_dispatch:
     inputs:
       competition:
-        description: 'Competition slug to limit to (e.g. premier-league). Blank = all tracked.'
+        description: 'Competition slug to limit to (e.g. premier-league), or a comma list spanning the fixture_id list. Blank = all tracked.'
         required: false
         type: string
         default: ''
       fixture_id:
-        description: 'Fixture id (uuid) to limit to — requires competition to also be set (or match_url, to pin which fixture the link belongs to). Blank = normal competition-wide run.'
+        description: 'Fixture id (uuid), or a comma list of up to 40, to limit to — requires competition to also be set (or match_url with a single id, to pin which fixture the link belongs to). Blank = normal competition-wide run.'
         required: false
         type: string
         default: ''
@@ -77,7 +77,9 @@ concurrency:
 jobs:
   match-facts:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # A fixture-list run (the HTML-stories picker's "Fetch insights") can
+    # scrape up to 40 match centres; the cron run stays capped at 20.
+    timeout-minutes: 45
     environment: Production
     defaults:
       run:
