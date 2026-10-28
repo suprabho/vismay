@@ -10,6 +10,11 @@
  * for that club's fixtures across every competition: its last results and
  * its next matches (pickClubFixtures), after any picked fixtures, up to the cap.
  *
+ * Numeric fixture ids are ESPN event ids: domestic cup matches from the
+ * admin's private Cup fixtures import. Their context comes from the caller's
+ * `cupContext` (the admin reads those tables; no public site may), after the
+ * match context of the other fixtures.
+ *
  * With a Football Desk spin (@vismay/randomizer), the brief carries the spin
  * (assignment, research protocol, format, research file) and, unless the
  * editor picked matches, the match context for the fixtures the spin drew:
@@ -86,6 +91,11 @@ export interface FootshortsBriefOptions {
   tone?: HtmlStoryTone | null
   /** A club whose recent results and next matches join the match context (after `fixtureIds`, up to the cap). */
   club?: ClubFixturesPick | null
+  /**
+   * Builds the context for ESPN cup matches (numeric fixture ids, from the
+   * admin's private Cup fixtures import). Without it, such ids are refused.
+   */
+  cupContext?: ((eventIds: string[], opts: { prompt?: string }) => Promise<string>) | null
   /** A Football Desk spin; its fixtures are the match context when neither `fixtureIds` nor `club` is set. */
   spin?: BriefSpin | null
 }
@@ -103,14 +113,27 @@ export async function footshortsHtmlStoryBrief({
   format,
   tone,
   club,
+  cupContext,
   spin,
 }: FootshortsBriefOptions): Promise<string> {
   const fromClub = club ? await clubFixtureIds(club) : []
   const picked = Array.from(new Set([...fixtureIds.filter(Boolean), ...fromClub])).slice(0, MAX_CONTEXT_MATCHES)
   const ids = picked.length ? picked : spinFixtureIds(spin)
   const angle = prompt ?? (spin && !picked.length ? `Football Desk spin: ${spin.subject.randomizer === 'footshorts' ? spinPrompt(spin.subject) : ''}` : undefined)
-  const context = ids.length ? await buildMatchContext(ids, { prompt: angle, siteUrl }) : null
+  const cupIds = ids.filter(isEspnEventId)
+  const matchIds = ids.filter((id) => !isEspnEventId(id))
+  if (cupIds.length && !cupContext) throw new Error('cup fixtures (ESPN event ids) are admin-only')
+  const parts = await Promise.all([
+    matchIds.length ? buildMatchContext(matchIds, { prompt: angle, siteUrl }) : null,
+    cupIds.length && cupContext ? cupContext(cupIds, { prompt: matchIds.length ? undefined : angle }) : null,
+  ])
+  const context = parts.filter(Boolean).join('\n\n') || null
   return htmlStoryBrief({ app: 'footshorts', siteUrl, style, context, format, spin, tone })
+}
+
+/** An ESPN event id (digits) — a cup match from the admin's Cup fixtures import — rather than a fixture uuid. */
+export function isEspnEventId(id: string): boolean {
+  return /^\d+$/.test(id)
 }
 
 function spinPrompt(s: Extract<BriefSpin['subject'], { randomizer: 'footshorts' }>): string {

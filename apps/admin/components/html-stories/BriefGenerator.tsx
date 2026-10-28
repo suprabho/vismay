@@ -48,7 +48,9 @@ interface MatchContextPick {
  * facts and full stat set, timeline, insights, commentary, build-up, both
  * sides' form and schedule, the table, and the competition's next fixtures.
  * Picking a match reuses the compose Sources-stage picker, badges and
- * on-demand scrape included.
+ * on-demand scrape included. The domestic cups imported in the Cup fixtures
+ * tab (ESPN) are listed too, as "<Cup> (ESPN)" seasons and among a club's
+ * matches; their context is the ESPN match detail (lib/espnCupContext).
  *
  * For vizf1 there is a race picker instead (./RaceContextPicker): tick any
  * ingested sessions across races and seasons and the drivers to follow, and
@@ -145,7 +147,7 @@ export function BriefGenerator({
   // The compose picker's loaders, against the shared footshorts data routes.
   async function loadCompetitions(): Promise<MatchCompetition[]> {
     try {
-      const res = await fetch('/api/footshorts/data/competitions', { cache: 'no-store' })
+      const res = await fetch('/api/footshorts/data/competitions?include=espn', { cache: 'no-store' })
       if (!res.ok) return []
       return ((await res.json()) as { competitions?: MatchCompetition[] }).competitions ?? []
     } catch {
@@ -175,14 +177,23 @@ export function BriefGenerator({
   }
   async function loadTeamMatches(teamSlug: string): Promise<MatchOption[]> {
     try {
-      const res = await fetch(`/api/footshorts/data/matches?team=${encodeURIComponent(teamSlug)}`, { cache: 'no-store' })
+      const res = await fetch(`/api/footshorts/data/matches?team=${encodeURIComponent(teamSlug)}&include=espn`, { cache: 'no-store' })
       if (!res.ok) return []
       return ((await res.json()) as { rows?: MatchOption[] }).rows ?? []
     } catch {
       return []
     }
   }
-  async function scrape(fixtureId: string, competition: string): Promise<'dispatched' | 'unconfigured' | 'failed'> {
+  async function scrape(fixtureId: string, competition: string): Promise<'dispatched' | 'extracted' | 'unconfigured' | 'failed'> {
+    // An ESPN cup match (numeric event id): extract its match detail now, as the Cup fixtures tab does.
+    if (/^\d+$/.test(fixtureId)) {
+      try {
+        const res = await fetch(`/api/footshorts/cup-fixtures/${fixtureId}/detail`, { method: 'POST' })
+        return res.ok ? 'extracted' : 'failed'
+      } catch {
+        return 'failed'
+      }
+    }
     try {
       const res = await fetch('/api/footshorts/data/matches/scrape', {
         method: 'POST',

@@ -9,6 +9,7 @@ import {
   type MatchBriefCoverage,
 } from '@vismay/content-source/footshortsData'
 import type { FixtureRowInput } from '@vismay/content-source/footshortsBlocks'
+import { listEspnCupMatchOptions, listEspnCupMatchOptionsForTeam, parseEspnSeasonLabel } from '@/lib/espnCups'
 
 /**
  * Fixtures ANNOTATED with what a match brief could actually carry for each one —
@@ -21,6 +22,12 @@ import type { FixtureRowInput } from '@vismay/content-source/footshortsBlocks'
  *   - `?team=<entity slug>` — one team's matches across every competition,
  *     newest first, so a brief can gather a club's league, cup and European
  *     games together.
+ *
+ * ESPN cups (the private Cup fixtures import): a "2025/26" season label with a
+ * cup slug lists that cup season's matches (ids are ESPN event ids; `facts` =
+ * the ESPN match detail is extracted, `events` = its timeline count), and with
+ * `&include=espn` the team scope adds the club's cup ties. Only the HTML-stories
+ * brief asks for them: the compose brief cannot read those tables.
  *
  * Feeds the match picker (compose Sources stage and the HTML-stories brief
  * generator), which badges every match so an editor doesn't brief a fixture
@@ -62,11 +69,18 @@ export async function GET(req: Request) {
   const competition = url.searchParams.get('competition')?.trim()
   const season = url.searchParams.get('season')?.trim()
   const team = url.searchParams.get('team')?.trim()
+  const withCups = url.searchParams.get('include') === 'espn'
   try {
     if (team) {
-      const fixtures = await fetchFixturesForTeam(team)
+      const [fixtures, cupRows] = await Promise.all([
+        fetchFixturesForTeam(team),
+        withCups ? listEspnCupMatchOptionsForTeam(team) : [],
+      ])
       const coverage = await fetchMatchBriefCoverageForIds(fixtures.map((f) => f.id))
-      return NextResponse.json({ ok: true, rows: await rows(fixtures, coverage) })
+      return NextResponse.json({ ok: true, rows: [...(await rows(fixtures, coverage)), ...cupRows] })
+    }
+    if (competition && season && parseEspnSeasonLabel(season) != null) {
+      return NextResponse.json({ ok: true, rows: await listEspnCupMatchOptions(competition, season) })
     }
     if (!competition || !season) {
       return NextResponse.json({ error: 'missing "competition" + "season", or "team"' }, { status: 400 })

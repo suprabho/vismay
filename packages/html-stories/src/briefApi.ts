@@ -59,6 +59,7 @@ import { htmlStoryBrief } from './brief'
 import {
   CLUB_FIXTURES_DEFAULT,
   footshortsHtmlStoryBrief,
+  isEspnEventId,
   MAX_CLUB_FIXTURES_SIDE,
   MAX_CONTEXT_MATCHES,
   type ClubFixturesPick,
@@ -170,6 +171,9 @@ export async function handleHtmlStoryBriefRequest(
 
   if (fixtureIds.length > MAX_CONTEXT_MATCHES) {
     return new Response(`at most ${MAX_CONTEXT_MATCHES} matches per brief`, { status: 400 })
+  }
+  if (fixtureIds.some(isEspnEventId)) {
+    return new Response('cup fixtures (ESPN event ids) are admin-only: build that brief in the admin', { status: 400 })
   }
   if (sessionKeys.length > MAX_RACE_CONTEXT_SESSIONS) {
     return new Response(`at most ${MAX_RACE_CONTEXT_SESSIONS} sessions per brief`, { status: 400 })

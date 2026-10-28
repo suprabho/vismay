@@ -37,7 +37,9 @@ type Scope = 'competition' | 'team'
  * Every match is badged with what a brief would actually carry (`facts` = Opta
  * match centre scraped, `events` = timeline rows, `ins` = Opta insight cards),
  * so a fixture with nothing behind it is visibly a weak pick rather than a
- * silent one. The vizf1 analogue is TelemetrySessionPicker; keep the two in step.
+ * silent one. ESPN cup rows (`source: 'espn'`, from the Cup fixtures import,
+ * HTML-stories brief only) are badged `espn`; their "fetch" extracts the
+ * ESPN match detail on the spot (`onScrape` answers 'extracted'). The vizf1 analogue is TelemetrySessionPicker; keep the two in step.
  */
 export function MatchPicker({
   onClose,
@@ -70,7 +72,7 @@ export function MatchPicker({
   onScrape: (
     fixtureId: string,
     competition: string,
-  ) => Promise<'dispatched' | 'unconfigured' | 'failed'>
+  ) => Promise<'dispatched' | 'extracted' | 'unconfigured' | 'failed'>
   onCreate: (opts: {
     fixtureIds: string[]
     eventFilter?: 'all' | 'goal' | 'card' | 'subst'
@@ -200,7 +202,10 @@ export function MatchPicker({
     if (queued.has(m.id)) return
     setNote(null)
     const mode = await onScrape(m.id, m.competition)
-    if (mode === 'dispatched') {
+    if (mode === 'extracted') {
+      setNote(`Extracted ${m.home} v ${m.away} from ESPN.`)
+      setReloadNonce((n) => n + 1)
+    } else if (mode === 'dispatched') {
       setQueued((s) => new Set(s).add(m.id))
       setNote(`Scraping ${m.home} v ${m.away} — the run takes a minute or two; hit Refresh then.`)
     } else if (mode === 'unconfigured') {
@@ -575,8 +580,16 @@ export function MatchPicker({
                             <span className="min-w-0 flex-1 truncate text-neutral-200">
                               {m.home} {played ? `${m.homeScore}–${m.awayScore}` : 'v'} {m.away}
                             </span>
+                            {m.source === 'espn' && (
+                              <Chip tone="amber" title="An ESPN cup match from the Cup fixtures import">
+                                espn
+                              </Chip>
+                            )}
                             {m.facts && (
-                              <Chip tone="emerald" title="Opta match facts scraped for this match">
+                              <Chip
+                                tone="emerald"
+                                title={m.source === 'espn' ? 'ESPN match detail extracted' : 'Opta match facts scraped for this match'}
+                              >
                                 facts
                               </Chip>
                             )}
@@ -593,7 +606,7 @@ export function MatchPicker({
                                 {m.insights} ins
                               </Chip>
                             )}
-                            {m.insights === 0 &&
+                            {(m.source === 'espn' ? !m.facts : m.insights === 0) &&
                               (queued.has(m.id) ? (
                                 <Chip tone="amber" title="Scrape dispatched — hit Refresh shortly">
                                   queued
@@ -607,7 +620,11 @@ export function MatchPicker({
                                     e.stopPropagation()
                                     void scrape(m)
                                   }}
-                                  title="Scrape this match's Opta commentary + insights now"
+                                  title={
+                                    m.source === 'espn'
+                                      ? "Extract this match's ESPN timeline, line-ups and commentary now"
+                                      : "Scrape this match's Opta commentary + insights now"
+                                  }
                                   className="shrink-0 rounded-full border border-white/10 px-2 py-px text-[10px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:border-white/30 hover:text-neutral-100"
                                 >
                                   fetch

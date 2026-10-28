@@ -1,7 +1,8 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { resolveTeamsByLabel, type TeamBrandRow } from '@vismay/content-source/footshortsData'
 import type { FixtureRow, FixtureStatus, FixtureTeamRef } from '@vismay/footshorts-viz/types'
-import { ESPN_CUPS, ESPN_CUP_TABLE, cupSeasonLabel, validCupSeason, type CupFixture, type CupStatus, type EspnCup } from '@footshorts/shared/espnCups'
+import { ESPN_CUPS, ESPN_CUP_TABLE, cupSeasonLabel, currentCupSeason, validCupSeason, type CupFixture, type CupStatus, type EspnCup } from '@footshorts/shared/espnCups'
+import { formatCupMatchContext, type CupContextTeam } from './espnCupContext'
 import { ESPN_MATCH_DETAIL_TABLE, extractEspnMatch, type EspnMatchDetail, type EspnMatchEvent } from '@footshorts/shared/espnMatch'
 
 // Do not send the raw archive payload to the browser. This data path is only
@@ -232,4 +233,116 @@ export function isEspnEventId(id: string): boolean {
 export async function listEspnFixtureEvents(eventId: string): Promise<EspnMatchEvent[]> {
   const detail = await getEspnMatchDetail(eventId)
   return detail?.events ?? []
+}
+
+// ── HTML-story brief bridge ──────────────────────────────────────────────────
+//
+// The HTML-stories match picker lists the imported cups next to the other
+// competitions, and the brief route builds their context from the stored
+// fixture + extracted detail (./espnCupContext). Admin-only, like the rest.
+
+/** A cup fixture as the match picker lists it (MatchOption's shape). `facts`
+ * = the ESPN match detail has been extracted; `events` = its timeline count. */
+export interface EspnCupMatchOption {
+  id: string
+  home: string
+  away: string
+  kickoffAt: string
+  status: FixtureStatus
+  homeScore: number | null
+  awayScore: number | null
+  matchday: null
+  stage: string | null
+  competition: string
+  competitionName: string
+  season: string
+  facts: boolean
+  events: number
+  insights: 0
+  source: 'espn'
+}
+
+function cupMatchOption(r: CupFixtureListRow, cup: EspnCup): EspnCupMatchOption {
+  return {
+    id: r.espn_event_id,
+    home: r.home_team_name,
+    away: r.away_team_name,
+    kickoffAt: r.kickoff_at ?? new Date(Date.UTC(r.season_start, 6, 1)).toISOString(),
+    status: STATUS_MAP[r.status] ?? 'scheduled',
+    homeScore: r.home_score,
+    awayScore: r.away_score,
+    matchday: null,
+    stage: r.round_label,
+    competition: cup.slug,
+    competitionName: `${cup.name} (ESPN)`,
+    season: cupSeasonLabel(r.season_start),
+    facts: r.detail_fetched_at != null,
+    events: r.detail_event_count ?? 0,
+    insights: 0,
+    source: 'espn',
+  }
+}
+
+/** One cup season's matches for the picker; empty unless `seasonLabel` is a "2025/26" cup season. */
+export async function listEspnCupMatchOptions(competitionSlug: string, seasonLabel: string): Promise<EspnCupMatchOption[]> {
+  const cup = findEspnCup(competitionSlug)
+  const season = parseEspnSeasonLabel(seasonLabel)
+  if (!cup || season == null) return []
+  return (await listEspnCups(season, cup.slug)).map(r => cupMatchOption(r, cup))
+}
+
+/** A team's cup ties (this season and last), matched by resolving ESPN's team
+ * names to our entities. Best-effort: any failure answers no cup ties. */
+export async function listEspnCupMatchOptionsForTeam(teamSlug: string, now = new Date()): Promise<EspnCupMatchOption[]> {
+  try {
+    const current = currentCupSeason(now)
+    const rows = (await Promise.all([listEspnCups(current), listEspnCups(current - 1)])).flat()
+    const teams = await resolveCupTeams(rows)
+    return rows
+      .filter(r => teams.get(r.home_team_name)?.slug === teamSlug || teams.get(r.away_team_name)?.slug === teamSlug)
+      .flatMap(r => {
+        const cup = findEspnCup(r.competition_slug)
+        return cup ? [cupMatchOption(r, cup)] : []
+      })
+  } catch (error) {
+    console.warn('[espnCups] team cup ties failed:', error instanceof Error ? error.message : error)
+    return []
+  }
+}
+
+/** The HTML-story brief's context for these cup matches (ESPN event ids). */
+export async function buildCupMatchContext(eventIds: string[], { prompt, siteUrl }: { prompt?: string; siteUrl: string }): Promise<string> {
+  const fixtures = (await Promise.all(eventIds.map(id => getEspnCupFixture(id)))).filter((f): f is CupFixture => !!f)
+  if (!fixtures.length) throw new Error('no such cup fixtures (import the cup in Cup fixtures first)')
+  const [details, teams] = await Promise.all([
+    Promise.all(fixtures.map(f => getEspnMatchDetail(f.espn_event_id).catch(() => null))),
+    resolveCupTeams(fixtures),
+  ])
+  const site = siteUrl.replace(/\/$/, '')
+  const team = (name: string, espnId: string | null, color: string | null | undefined): CupContextTeam => {
+    const ref = espnTeamRef(espnId, name, teams.get(name))
+    const entity = teams.get(name)
+    return {
+      name,
+      crestUrl: ref?.crest_url ?? null,
+      color: entity?.primary_color ?? color ?? null,
+      pageUrl: entity ? `${site}/team/${entity.slug}` : null,
+    }
+  }
+  return formatCupMatchContext(
+    fixtures.flatMap((f, i) => {
+      const cup = findEspnCup(f.competition_slug)
+      if (!cup) return []
+      const d = details[i] ?? null
+      return [{
+        fixture: f,
+        cupName: cup.name,
+        seasonLabel: cupSeasonLabel(f.season_start),
+        home: team(f.home_team_name, f.home_espn_id, d?.home.color),
+        away: team(f.away_team_name, f.away_espn_id, d?.away.color),
+        detail: d,
+      }]
+    }),
+    { prompt },
+  )
 }

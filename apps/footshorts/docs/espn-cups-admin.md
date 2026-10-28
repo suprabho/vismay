@@ -93,6 +93,23 @@ events** button runs the same ESPN extraction as the panel. These are
 admin-only routes; the consumer apps never read the ESPN tables. A shootout
 result is typed into the Match layer's Penalties field, as for any match.
 
+### Using cup matches in HTML stories
+
+The HTML stories tab's **Add matches** picker lists each imported cup season
+as `<Cup> (ESPN) · 2025/26` (`/api/footshorts/data/competitions?include=espn`
+and `/matches?competition=<cup>&season=2025/26`), and the **By team** scope
+adds the club's cup ties from this season and last (`&include=espn`, ESPN
+names resolved against `entities`). Rows carry an `espn` badge; `facts` means
+the match detail is extracted, and **fetch** runs the same extraction as the
+panel. The admin brief route (`POST /api/html-stories/brief`) routes numeric
+fixture ids to `buildCupMatchContext` (`apps/admin/lib/espnCups.ts`), which
+writes a "Cup match context" section from the stored fixture and detail:
+round, score and shootout, ESPN's notes, venue, attendance, referee, both
+teams (crest and colour from our entities when the name resolves), ESPN team
+statistics or the timeline-derived counts, the timeline, line-ups and the
+commentary at the key moments. The public brief and the MCP tool refuse ESPN
+event ids, so this stays admin-only.
+
 ## Worker commands
 
 From `apps/footshorts/worker`, using the existing Supabase URL/service-role key:

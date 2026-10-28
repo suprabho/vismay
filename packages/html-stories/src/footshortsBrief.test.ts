@@ -1,6 +1,6 @@
 /** A club brief's fixture pick. (run: npx tsx src/footshortsBrief.test.ts) */
 import assert from 'node:assert/strict'
-import { pickClubFixtures } from './footshortsBrief'
+import { footshortsHtmlStoryBrief, isEspnEventId, pickClubFixtures } from './footshortsBrief'
 
 const now = new Date('2026-10-28T12:00:00Z')
 // Newest first, as fetchFixturesForTeam returns them.
@@ -22,4 +22,23 @@ assert.deepEqual(pickClubFixtures(fixtures, { last: 2, next: 1, now }), ['r2', '
 assert.deepEqual(pickClubFixtures(fixtures, { last: 0, next: 0, now }), [])
 assert.deepEqual(pickClubFixtures([], { now }), [])
 
-console.log('footshortsBrief: ok')
+// ESPN cup matches (numeric ids) go to the caller's cupContext, and only there.
+assert.ok(isEspnEventId('735531'))
+assert.ok(!isEspnEventId('3f1c2b9e-0000-4000-8000-000000000000'))
+async function cups() {
+  const seen: string[][] = []
+  const brief = await footshortsHtmlStoryBrief({
+    siteUrl: 'https://footshorts.com',
+    fixtureIds: ['735531'],
+    prompt: 'The shootout',
+    cupContext: async (ids, { prompt }) => {
+      seen.push(ids)
+      return `# Cup match context — ${prompt}`
+    },
+  })
+  assert.deepEqual(seen, [['735531']])
+  assert.match(brief, /# Cup match context — The shootout/)
+  await assert.rejects(footshortsHtmlStoryBrief({ siteUrl: 'https://footshorts.com', fixtureIds: ['735531'] }), /admin-only/)
+}
+
+cups().then(() => console.log('footshortsBrief: ok'))

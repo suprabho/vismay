@@ -197,7 +197,15 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
   Opta scrape and a team search, reused with its own labels and a 40-match cap; in the team scope *Last 5 results* and *Next 3* tick a club's fixtures in one go) — whose picks make the brief carry
   the match context (`buildMatchContext` in
-  `@vismay/content-source/footshortsMatchBrief`); for vizf1, **Add races**
+  `@vismay/content-source/footshortsMatchBrief`). The picker also lists the
+  domestic cups from the **Cup fixtures** tab (the private ESPN import) as
+  "<Cup> (ESPN)" seasons and among a club's matches, badged `espn`; their
+  "fetch" extracts the ESPN match detail on the spot, and the brief route
+  builds their context from those tables (`buildCupMatchContext` in
+  [lib/espnCups.ts](lib/espnCups.ts), formatted by
+  [lib/espnCupContext.ts](lib/espnCupContext.ts); test:
+  `pnpm --filter admin exec tsx lib/espnCupContext.test.ts`). Cup matches are
+  admin-only: the public brief refuses ESPN event ids; for vizf1, **Add races**
   ([RaceContextPicker.tsx](components/html-stories/RaceContextPicker.tsx)): any
   ingested sessions by season and weekend (races, sprints, qualifying, practice;
   up to 24, "Pick the whole season" ticks them all), the drivers to follow by
