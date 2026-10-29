@@ -1427,7 +1427,7 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
         sub: work
           ? work.type === 'subject'
             ? 'named by the award as a subject · find its paper'
-            : [work.year ? String(work.year) : null, work.venue, work.oaUrl ? `free to read (${work.oaStatus ?? 'open'})` : 'no free copy', work.representative ? 'representative' : 'named by the award']
+            : [work.year ? String(work.year) : null, work.venue, work.oaUrl ? `free to read (${work.oaStatus ?? 'open'})` : 'no free copy on record', work.representative ? 'representative' : 'named by the award']
                 .filter(Boolean)
                 .join(' · ')
           : 'reconstruct it from the citation',

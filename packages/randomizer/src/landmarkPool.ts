@@ -34,6 +34,7 @@ import type {
   LandmarkSources,
   LandmarkWork,
   LandmarkWorkBasis,
+  LandmarkWorkLevel,
 } from './types'
 
 export const LANDMARK_RULES = {
@@ -443,15 +444,29 @@ export interface OpenLibraryDoc {
   author_key?: string[] | null
   publisher?: string[] | null
   isbn?: string[] | null
+  edition_count?: number | null
+  /** 'public' when the Internet Archive holds a free scan, whose identifiers are in ia. */
+  ebook_access?: string | null
+  ia?: string[] | null
 }
 
 /**
- * The laureate's books from around the prize year, as Open Library lists
- * them: first published in the four years to the prize, nearest the year
- * before the prize first, then the newest earlier book. A book whose title
- * matches a work the award names keeps that basis.
+ * The laureate's books as Open Library lists them. For a book prize, the
+ * books from around the prize year: first published in the four years to
+ * the prize, nearest the year before the prize first, then the newest
+ * earlier book. For any other prize (Open Library as the fallback), the
+ * books most reprinted before the prize, then the earliest: a science prize
+ * rewards work from long before it, and a book from the prize year is as
+ * likely a namesake's (Open Library files J.D. van der Waals Jr.'s 1909
+ * address under his father's author record). A book whose title matches a
+ * work the award names keeps that basis; a public scan on the Internet
+ * Archive is the free copy.
  */
-export function booksFromOpenLibrary(docs: OpenLibraryDoc[], award: Pick<LandmarkAward, 'name' | 'year' | 'openLibraryId' | 'namedWorks'>): LandmarkWork[] {
+export function booksFromOpenLibrary(
+  docs: OpenLibraryDoc[],
+  award: Pick<LandmarkAward, 'name' | 'year' | 'openLibraryId' | 'namedWorks'>,
+  level: LandmarkWorkLevel = 'book',
+): LandmarkWork[] {
   const tokens = fold(award.name).split(' ').filter((t) => t.length > 1)
   const mine = docs.filter((d) => {
     if (!d.key || !d.title) return false
@@ -464,20 +479,26 @@ export function booksFromOpenLibrary(docs: OpenLibraryDoc[], award: Pick<Landmar
   })
   const dated = mine.filter((d) => typeof d.first_publish_year === 'number' && d.first_publish_year <= award.year)
   const near = dated.filter((d) => d.first_publish_year! >= award.year - 3).sort((a, b) => Math.abs(a.first_publish_year! - (award.year - 1)) - Math.abs(b.first_publish_year! - (award.year - 1)))
-  const chosen = near.length ? near : [...dated].sort((a, b) => b.first_publish_year! - a.first_publish_year!).slice(0, 1)
+  const chosen =
+    level !== 'book'
+      ? [...dated].sort((a, b) => (b.edition_count ?? 1) - (a.edition_count ?? 1) || a.first_publish_year! - b.first_publish_year!)
+      : near.length
+        ? near
+        : [...dated].sort((a, b) => b.first_publish_year! - a.first_publish_year!).slice(0, 1)
   const named = award.namedWorks.map((w) => fold(w.title))
   return chosen.slice(0, LANDMARK_RULES.maxBooks).map((d) => {
     const key = d.key!.replace(/^\/works\//, '')
     const title = d.title!.trim()
     const isNamed = named.includes(fold(title))
+    const scan = d.ebook_access === 'public' && d.ia?.[0] ? `https://archive.org/details/${d.ia[0]}` : null
     return {
       id: `ol:${key}`,
       title: title.slice(0, 300),
       year: d.first_publish_year ?? null,
       doi: null,
       url: `${LANDMARK_RULES.openLibraryApi}/works/${key}`,
-      oaUrl: null,
-      oaStatus: null,
+      oaUrl: scan,
+      oaStatus: scan ? 'public scan' : null,
       venue: d.publisher?.[0] ?? null,
       authors: (d.author_name ?? []).slice(0, 4),
       citedBy: null,
@@ -664,13 +685,17 @@ export async function loadLandmarkWorks(
   if (prize.works === 'book' || !works.length) {
     try {
       const found = await getJson<{ docs?: OpenLibraryDoc[] }>(
-        `${LANDMARK_RULES.openLibraryApi}/search.json?${q({ author: award.name, fields: 'key,title,first_publish_year,author_name,author_key,publisher,isbn', limit: 40 })}`,
+        `${LANDMARK_RULES.openLibraryApi}/search.json?${q({ author: award.name, fields: 'key,title,first_publish_year,author_name,author_key,publisher,isbn,edition_count,ebook_access,ia', limit: 40 })}`,
         fetchImpl,
       )
-      const books = booksFromOpenLibrary(found.docs ?? [], { ...award, openLibraryId })
+      const books = booksFromOpenLibrary(found.docs ?? [], { ...award, openLibraryId }, prize.works)
       works.push(...books)
       sources.openlibrary = 'ok'
       if (books.length && prize.works === 'book') sources.notes.push('The books come from Open Library by author and year, not from the prize\'s own list: check the title against it.')
+      if (books.length && prize.works !== 'book')
+        sources.notes.push(
+          'The works come from Open Library, the fallback: its author records can merge namesakes (a father and a son), so confirm the title page names the laureate before tying the work to the prize.',
+        )
     } catch (e) {
       fail('openlibrary', e)
     }

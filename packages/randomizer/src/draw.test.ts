@@ -1163,6 +1163,22 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   assert.deepEqual(byName.map((b) => [b.id, b.basis, b.representative]), [['ol:OL4W', 'book', true], ['ol:OL17635697W', 'book', true]], 'the whole name, in any order; the year before the prize first')
   const older = booksFromOpenLibrary(olDocs, { name: 'Lyndal Roper', year: 2008, openLibraryId: 'OL1A', namedWorks: [] })
   assert.deepEqual(older.map((b) => b.id), ['ol:OL3907270W'], 'nothing in the window: the newest earlier book')
+  // Open Library files J.D. van der Waals Jr.'s 1909 address under his father's record: a science prize takes the most-reprinted earlier books, not the prize year's.
+  const vdw: OpenLibraryDoc[] = [
+    { key: '/works/OL45012449W', title: 'Over de vraag naar de meest fundamenteele wetten der natur', first_publish_year: 1909, author_key: ['OL119335A'], edition_count: 1 },
+    { key: '/works/OL1180607W', title: 'Statistische behandeling der stralingsverschijnselen', first_publish_year: 1900, author_key: ['OL119335A'], edition_count: 1, ebook_access: 'public', ia: ['statistischebeha00waal'] },
+    { key: '/works/OL1180608W', title: 'Thermodynamische theorie der capillariteit', first_publish_year: 1893, author_key: ['OL119335A'], edition_count: 1 },
+    { key: '/works/OL12854811W', title: 'Bijdrage tot de kennis van de wet der overeenstemmende toestanden', first_publish_year: 1881, author_key: ['OL119335A'], edition_count: 1 },
+    { key: '/works/OL1180610W', title: 'Die Continuität des gasförmigen und flüssigen Zustandes', first_publish_year: 1881, author_key: ['OL119335A'], edition_count: 4 },
+    { key: '/works/OL1180606W', title: 'Lehrbuch der Thermodynamik', first_publish_year: 1912, author_key: ['OL119335A'], edition_count: 1 },
+  ]
+  const science = booksFromOpenLibrary(vdw, { name: 'Johannes Diderik van der Waals', year: 1910, openLibraryId: 'OL119335A', namedWorks: [] }, 'paper')
+  assert.equal(science[0]!.id, 'ol:OL1180610W', 'the most-reprinted book first')
+  assert.ok(!science.some((b) => b.id === 'ol:OL45012449W'), 'not the namesake\'s address from the year before the prize')
+  assert.deepEqual(booksFromOpenLibrary(vdw, { name: 'Johannes Diderik van der Waals', year: 1910, openLibraryId: 'OL119335A', namedWorks: [] }).map((b) => b.id)[0], 'ol:OL45012449W', 'a book prize keeps the prize-year rule')
+  const scanned = booksFromOpenLibrary(vdw, { name: 'Johannes Diderik van der Waals', year: 1901, openLibraryId: 'OL119335A', namedWorks: [] })
+  assert.equal(scanned[0]!.oaUrl, 'https://archive.org/details/statistischebeha00waal', 'a public Internet Archive scan is the free copy')
+  assert.equal(scanned[0]!.oaStatus, 'public scan')
   const up = withUnpaywall(w, { is_oa: true, oa_status: 'green', best_oa_location: { url: 'https://arxiv.org/abs/1602.03837', url_for_pdf: 'https://arxiv.org/pdf/1602.03837' } })
   assert.equal(up.oaUrl, 'https://arxiv.org/pdf/1602.03837')
   assert.equal(up.oaStatus, 'green')

@@ -1266,7 +1266,7 @@ function LandmarkPool({ spin }: { spin: SpinRecord | null }) {
                     free to read · {w.oaStatus ?? 'open'}
                   </a>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full border text-neutral-400 border-white/10">no free copy{w.oaStatus ? ` · ${w.oaStatus}` : ''}</span>
+                  <span className="px-2 py-0.5 rounded-full border text-neutral-400 border-white/10">no free copy on record{w.oaStatus ? ` · ${w.oaStatus}` : ''}</span>
                 )}
                 {w.citedBy !== null && (
                   <span className="px-2 py-0.5 rounded-full border text-neutral-300 border-white/10 normal-case tracking-normal font-mono tabular-nums">
