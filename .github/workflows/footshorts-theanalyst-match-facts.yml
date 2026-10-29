@@ -76,7 +76,7 @@ concurrency:
 
 jobs:
   match-facts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # A fixture-list run (the HTML-stories picker's "Fetch insights") can
     # scrape up to 40 match centres; the cron run stays capped at 20.
     timeout-minutes: 45
