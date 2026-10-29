@@ -49,6 +49,85 @@ export type BriefSpin = Pick<
   'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'
 >
 
+/** The lens that turns a spin's page into a picture story for a five-year-old. */
+export const ELI5_LENS = "Explain like I'm 5"
+
+/**
+ * An "Explain like I'm 5" spin: its page is not the randomizer's format with
+ * one simple paragraph inside, it is a short picture story a child can follow.
+ * The research behind it stays as rigorous as any other spin's.
+ */
+export function isEli5Spin(spin: Pick<BriefSpin, 'subject'>): boolean {
+  const s = spin.subject
+  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw') && s.lens.name === ELI5_LENS
+}
+
+/** What the picture story is about, and what the grown-ups card credits, per randomizer. */
+function eli5Subject(spin: BriefSpin): { who: string; real: string; credit: string } {
+  const s = spin.subject
+  if (s.randomizer === 'hundred') {
+    return {
+      who: s.person.name,
+      real: `#${s.person.rank} of 100 in ${s.book.author}'s list, and what the record says ${s.person.name} changed`,
+      credit: hundredCreditLine(s),
+    }
+  }
+  if (s.randomizer === 'landmark') {
+    return {
+      who: s.award.name,
+      real: `the ${landmarkAwardLabel(s.prize, s.award.year)} and the work it rewarded`,
+      credit: landmarkCreditLine(s),
+    }
+  }
+  if (s.randomizer === 'ocw') {
+    return { who: `the idea in ${ocwCourseLabel(s.course)}`, real: 'the resource and its course page', credit: ocwCreditLine(s) }
+  }
+  return { who: 'the subject', real: 'the record', credit: '' }
+}
+
+/** A short notice for the top of the brief, so the reader is set before anything else is read. */
+export function eli5Banner(spin: BriefSpin | null | undefined): string {
+  if (!spin || !isEli5Spin(spin)) return ''
+  return `
+> **Reader: a five-year-old (required).** This page is a short picture story,
+> not an explainer. Read "Format: picture story" below before you write a word:
+> it replaces the randomizer's usual format, and it overrides every rule in this
+> brief that asks for more sections, more charts or more words on the page. The
+> research is as careful as ever; it stays in the research file. A page an adult
+> skims and a child cannot follow fails this brief even if every fact is right.
+`
+}
+
+function eli5Format(spin: BriefSpin): string {
+  const { who, real, credit } = eli5Subject(spin)
+  return `## Format: picture story for a five-year-old
+
+Built like a good picture book: a child looks at each page, hears one or two
+sentences, and gets it. Six beats at most, in this order. One beat is one
+section (a scroll chapter, a slide, a page).
+
+1. **Cover:** a question a child would ask, as the headline ("Why did the toy boat sink?"), and one big picture. No dek longer than eight words.
+2. **The scene:** the everyday stand-in (toys, food, a playground, a bedtime, a garden), shown in one big picture. One or two sentences.
+3. **The trick:** what ${who} figured out, told in the scene. Name the real person or idea once, here.
+4. **Why it helps:** what is different because of it, in the scene or in the child's own day. One or two sentences.
+5. **Where the picture stops:** one sentence a child can follow on where the stand-in is not the real thing ("Real science is much bigger than a bath tub.").
+6. **For grown-ups:** the one beat in adult words, set apart as a small card at the end: ${real} in two or three plain lines, the hero insight in one, the sources as links, and the credit. ${credit}
+
+**Words.**
+- At most 20 words per beat in beats 1 to 5, and about 100 words of story in all.
+- Short words a five-year-old knows. Short sentences. No year, no percentage, no number bigger than ten, no name except the one in beat 3.
+- Talk to the child: "you", "imagine", "look". Concrete things they can touch, never abstractions ("ideas", "methods", "influence").
+- No eyebrows or kickers ("THE ARGUMENT", "01 /"), no source line under each beat, no caveats in beats 1 to 5. Accuracy lives in the scene being true to the record, and in beat 6.
+
+**Pictures.**
+- Every beat in 1 to 5 is mostly picture: one big drawn illustration (inline SVG or CSS shapes: flat, round, friendly, bright, thick outlines), the words large beside or under it. The picture carries the idea; a child who cannot read follows the story from the pictures alone.
+- Draw the same stand-in, in the same colours, through every beat, so the pictures read as one story.
+- At most one chart, and only a picture count (five boats, three sink) a child can count. No axes, no timelines, no maps, no pageview or ranking charts.
+- A real portrait or document image, if you use one, goes in beat 3 or beat 6, small.
+
+**Not on this page** (they stay in the research file): the timeline, the map, the ranking comparison, the counter-case, the method and the claims log.`
+}
+
 /** Research is done and nothing public waits on a human any more. */
 function insightReady(spin: BriefSpin): boolean {
   if (!spin.heroInsight) return false
@@ -623,6 +702,7 @@ ${meaning}
 
 /** "## Format: …": the randomizer's output format, as required content. */
 export function formatSection(spin: BriefSpin): string {
+  if (isEli5Spin(spin)) return eli5Format(spin)
   const s = spin.subject
   if (s.randomizer === 'footshorts') return footshortsFormat(s)
   if (s.randomizer === 'viznba') return viznbaFormat(s)
@@ -634,6 +714,11 @@ export function formatSection(spin: BriefSpin): string {
 
 /** Extra bullets for the brief's Charts section. */
 export function chartRules(spin: BriefSpin): string[] {
+  if (isEli5Spin(spin)) {
+    return [
+      'Picture story rules: the Charts rules above apply only to beat 6 and to the one picture count, if there is one. The pictures are illustrations, not charts: no axes, units or source lines on them.',
+    ]
+  }
   if (spin.randomizer === 'desk') {
     return [
       'Desk series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
@@ -693,6 +778,16 @@ export function contentSection(desk: string, extra: string[] = []): string {
 - Write plainly. No hype. Lead with the finding. No em dashes anywhere in the page.${extra.map((l) => `\n- ${l}`).join('')}`
 }
 
+/** The Content section for a picture story: the claims log stays in the research file. */
+export function eli5ContentSection(desk: string): string {
+  return `## Content
+
+- Every beat is true to a Verified row in your claims log: the stand-in simplifies the record, it never changes it. Unverified claims stay off the page.
+- The page ends with the "For grown-ups" card, not a "Sources and claims log" section: the sources as links and one line on the claims log (how many claims, how many verified).
+- Byline "${desk}" plus the date, in the grown-ups card.
+- Write for the child: short, warm, concrete. No em dashes anywhere in the page.`
+}
+
 /** "## Reel script": playbook 0.4. */
 export function reelScriptSection(): string {
   return `## Reel script
@@ -723,6 +818,16 @@ export function checklistSection(spin: BriefSpin): string {
     'The first 3 seconds of the script open on the surprising claim.',
     'No em dashes. No unverified claims on the page or in the script.',
   ]
+  if (isEli5Spin(spin)) {
+    items.splice(
+      1,
+      1,
+      'Six beats at most; beats 1 to 5 have 20 words or fewer each and about 100 words in all. Count them.',
+      'Read beats 1 to 5 aloud as if to a five-year-old: every word is one they know, there is no year, percentage or big number, and the pictures alone tell the story.',
+      'The stand-in is the same, in the same colours, in every beat, and beat 5 says where it stops being true.',
+      'The timeline, map, ranking charts, counter-case and claims log are in the research file and the grown-ups card, not in the story.',
+    )
+  }
   return `Then the playbook's checklist:\n${items.map((i) => `- [ ] ${i}`).join('\n')}`
 }
 

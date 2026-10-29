@@ -58,7 +58,10 @@ import {
   checklistSection,
   contentSection as spinContentSection,
   deliverablesSection,
+  eli5Banner,
+  eli5ContentSection,
   formatSection,
+  isEli5Spin,
   postingLines,
   reelScriptSection,
   researchAppendix,
@@ -929,6 +932,7 @@ export function htmlStoryBrief({
   const meta = HTML_STORY_APP_META[app]
   const siteName = site.replace(/^https?:\/\//, '')
   const hasContext = !!context?.trim()
+  const eli5 = !!spin && isEli5Spin(spin)
   const assignment = spin
     ? `
 ${assignmentSection(spin)}
@@ -1051,7 +1055,7 @@ self-contained HTML file. It is hosted exactly as you write it at
 ${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
 charts, and the words.
-${toneBanner(tone)}${formatIntro}${assignment}
+${toneBanner(tone)}${eli5Banner(spin)}${formatIntro}${assignment}
 ## The hosting contract (must)
 
 1. One complete document: \`<!doctype html>\`, \`<html lang="en">\`, \`<head>\`, \`<body>\`.
@@ -1102,8 +1106,8 @@ ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapbo
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
   drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
 ${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
-${applyToneToVoice(spin ? spinContentSection(meta.desk, spinContextRules(spin, app, hasContext)) : contentSection(app, hasContext), tone)}
-${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${app === 'travel' ? '' : `\n${listenSection(unit)}\n`}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}\n` : ''}
+${applyToneToVoice(spin ? (eli5 ? eli5ContentSection(meta.desk) : spinContentSection(meta.desk, spinContextRules(spin, app, hasContext))) : contentSection(app, hasContext), tone)}
+${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${app === 'travel' ? '' : `\n${listenSection(unit)}\n`}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}${eli5 ? '\n\nWrite the script for the same five-year-old: the picture story told aloud in under 30 seconds, no word they would not know.' : ''}\n` : ''}
 ## Before you post: check your own work
 
 If you can run a browser, render the page at 375×812 and 1440×900 and look at
