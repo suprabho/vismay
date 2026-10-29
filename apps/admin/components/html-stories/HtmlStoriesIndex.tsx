@@ -67,7 +67,8 @@ export async function HtmlStoriesIndex({ app }: { app: HtmlStoryApp }) {
             {isVizf1 ? <>, or a <em>race recap</em> beside the 3D replay,</> : null} built on the runtime the site hosts at{' '}
             <code>/formats</code> (<code>?format=book</code> on that URL). <em>Randomize style</em>{' '}
             (or <code>?style=random</code> on that URL) swaps the house look for a palette and fonts from an existing{' '}
-            {meta.name} story.
+            {meta.name} story; to hand an agent the exact draw you see, use the <code>?style=story:…</code> value
+            on the style chip (the MCP tool takes it as <code>storyStyle</code>).
             {isFootshorts && (
               <>
                 {' '}

@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
-import { loadStoryStylePool } from '@vismay/html-stories/storyStyles'
-import type { StylePool } from '@vismay/html-stories/styles'
+import { loadEntityStyles, loadStoryStylePool } from '@vismay/html-stories/storyStyles'
+import type { EntityStyleOption, StylePool } from '@vismay/html-stories/styles'
 import { listSpins, loadFootshortsNews, loadViznbaNews } from '@vismay/randomizer/spins'
 import { randomizersFor, type FootshortsNews, type SpinRecord, type ViznbaNews } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
@@ -29,10 +29,11 @@ export default async function AppRandomizerPage({ params }: { params: Promise<{ 
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/randomizer`)
   const app = appSlug
 
-  const [spinsResult, newsResult, poolResult] = await Promise.allSettled([
+  const [spinsResult, newsResult, poolResult, entityStylesResult] = await Promise.allSettled([
     listSpins({ randomizers: randomizersFor(app), limit: 150 }),
     app === 'footshorts' ? loadFootshortsNews() : loadViznbaNews(),
     loadStoryStylePool(app),
+    loadEntityStyles(app),
   ])
   const spins: SpinRecord[] = spinsResult.status === 'fulfilled' ? spinsResult.value : []
   const loadError =
@@ -44,6 +45,8 @@ export default async function AppRandomizerPage({ params }: { params: Promise<{ 
   const news = newsResult.status === 'fulfilled' ? newsResult.value : null
   if (newsResult.status === 'rejected') console.error(`[randomizer] ${app} news failed`, newsResult.reason)
   const pool: StylePool | null = poolResult.status === 'fulfilled' ? poolResult.value : null
+  // Competition and team styles (footshorts; empty elsewhere) for the brief's Story style menu.
+  const entityStyles: EntityStyleOption[] = entityStylesResult.status === 'fulfilled' ? entityStylesResult.value : []
 
   return (
     <RandomizerClient
@@ -52,6 +55,7 @@ export default async function AppRandomizerPage({ params }: { params: Promise<{ 
       news={app === 'footshorts' ? (news as FootshortsNews | null) : null}
       nbaNews={app === 'viznba' ? (news as ViznbaNews | null) : null}
       pool={pool}
+      entityStyles={entityStyles}
       loadError={loadError}
       siteUrl={app === 'footshorts' ? footshortsPublicUrl : viznbaPublicUrl}
       storiesBasePath={htmlStoriesBasePath(app)}

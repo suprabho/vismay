@@ -272,7 +272,11 @@ story links.
   with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course /
   Landmark follow-the-prize / The 100 walk-the-ranking toggle, the style die, the rules that fired, the spin log, the hero insight
   gate (approve / send back with a note, paste research), the composed brief's
-  assignment with Copy agent brief and Copy research stub, the Desk heat table
+  assignment with Copy agent brief and Copy research stub (its toolbar also
+  carries the attached style: swatches, Randomize/Shuffle and, on footshorts,
+  the competition/team Story style menu; the agent URL and MCP hint carry it
+  as `?style=` / `storyStyle`, `story:<palette slug>[,<fonts slug>]` for a
+  draw, so a brief read by URL matches the copied one), the Desk heat table
   (stale and failed refreshes shown) and, on the OCW Desk tab, the **OCW pool**
   panel: the page of MIT OpenCourseWare files the spin was drawn from (query,
   count, offset), the course card with links, the resource, the course's other

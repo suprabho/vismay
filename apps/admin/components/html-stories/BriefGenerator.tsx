@@ -10,6 +10,7 @@ import {
   pickRandomStyle,
   type EntityStyleOption,
   type StoryStyle,
+  styleToken,
   type StylePool,
 } from '@vismay/html-stories/styles'
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
@@ -223,9 +224,10 @@ export function BriefGenerator({
         <div
           className={chip}
           title={
-            isEntityStyle
+            (isEntityStyle
               ? `${style.paletteFrom.title} style (Asset Studio)`
-              : `Colours: ${style.paletteFrom.title}\nType: ${style.fontsFrom.title}`
+              : `Colours: ${style.paletteFrom.title}\nType: ${style.fontsFrom.title}`) +
+            `\nAgents: ?style=${styleToken(style)} on the brief URL, or storyStyle "${styleToken(style)}"`
           }
         >
           {isEntityStyle && <span className="text-neutral-200">{style.paletteFrom.title}</span>}
