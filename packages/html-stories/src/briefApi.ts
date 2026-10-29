@@ -17,6 +17,10 @@
  *   - `style=competition:<slug>` or `style=team:<slug>` (footshorts) uses that
  *     competition's or team's style from the Asset Studio
  *     (`entities.story_style`); 404 when it has none.
+ *   - `style=story:<palette slug>[,<fonts slug>]` pins a draw: the palette of
+ *     one of the app's stories and the font trio of another (one slug: both
+ *     from it). This is what the admin's style die hands an agent, so the
+ *     brief it reads by URL matches the one copied; 404 when either is gone.
  *   - footshorts only: `fixtures=<id>,<id>` (up to MAX_CONTEXT_MATCHES) appends
  *     the match context for those matches (./footshortsBrief), with an optional
  *     `prompt`. The context is read from the match tables with the service
@@ -74,7 +78,14 @@ import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import { HTML_STORIES_TOKEN_ENV, isHtmlStoriesTokenRequest } from './publishApi'
 import { loadEntityStyle, loadStoryStylePool } from './storyStyles'
 import { HTML_STORY_TONES, parseHtmlStoryTone } from './tone'
-import { entityStoryStyle, pickRandomStyle, type EntityStyleKind, type StoryStyle } from './styles'
+import {
+  entityStoryStyle,
+  parseStoryStyleToken,
+  pickRandomStyle,
+  storyStyleFromPool,
+  type EntityStyleKind,
+  type StoryStyle,
+} from './styles'
 
 /** A list param as the pickers send it: a comma list, or repeated params. Deduplicated. */
 export function parseListParam(params: URLSearchParams, name: string): string[] {
@@ -107,6 +118,11 @@ export async function handleHtmlStoryBriefRequest(
   // style=competition:<slug> | team:<slug> — a footshorts competition's or team's Asset Studio style.
   const entityMatch = /^(competition|team):(.*)$/.exec(styleParam)
   const entityStyle = entityMatch ? { kind: entityMatch[1] as EntityStyleKind, slug: entityMatch[2]!.trim() } : null
+  // style=story:<palette slug>[,<fonts slug>] — a randomizer draw, pinned (the admin's style die).
+  const storySlugs = styleParam.startsWith('story:') ? parseStoryStyleToken(styleParam) : null
+  if (styleParam.startsWith('story:') && !storySlugs) {
+    return new Response('style=story:<palette story slug>[,<fonts story slug>] needs story slugs', { status: 400 })
+  }
   if (entityStyle) {
     if (app !== 'footshorts') return new Response(`${entityStyle.kind} styles are footshorts only`, { status: 400 })
     if (!/^[a-z0-9-]{1,80}$/.test(entityStyle.slug)) {
@@ -219,6 +235,13 @@ export async function handleHtmlStoryBriefRequest(
     } catch (e) {
       return new Response(`${entityStyle.kind} style lookup failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
     }
+  } else if (storySlugs) {
+    try {
+      style = storyStyleFromPool(await loadStoryStylePool(app), storySlugs)
+    } catch (e) {
+      return new Response(`style lookup failed: ${e instanceof Error ? e.message : String(e)}`, { status: 502 })
+    }
+    if (!style) return new Response(`no story palette ${storySlugs.palette} or fonts ${storySlugs.fonts} on this site`, { status: 404 })
   } else if (random) {
     try {
       style = pickRandomStyle(await loadStoryStylePool(app))

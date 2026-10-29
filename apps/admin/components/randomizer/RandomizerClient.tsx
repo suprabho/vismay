@@ -23,7 +23,14 @@ import {
 } from '@phosphor-icons/react'
 import { suggestedFormatFor, type AuthorableHtmlStoryFormat } from '@vismay/html-stories/formats'
 import type { DeskHeatTableRow } from '@vismay/html-stories/randomizerApi'
-import { pickRandomStyle, type StoryStyle, type StylePool } from '@vismay/html-stories/styles'
+import {
+  entityStoryStyle,
+  pickRandomStyle,
+  styleToken,
+  type EntityStyleOption,
+  type StoryStyle,
+  type StylePool,
+} from '@vismay/html-stories/styles'
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
@@ -50,6 +57,7 @@ import {
 } from '@vismay/randomizer/types'
 import { FormatPicker } from '@/components/html-stories/FormatPicker'
 import { ToneToggle } from '@/components/html-stories/ToneToggle'
+import { StoryStylePicker } from '@/components/html-stories/StoryStylePicker'
 
 const ITEM_H = 80
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
@@ -233,6 +241,7 @@ export function RandomizerClient({
   news = null,
   nbaNews = null,
   pool,
+  entityStyles = [],
   loadError,
   siteUrl,
   storiesBasePath = '/vizmaya/html-stories',
@@ -245,6 +254,8 @@ export function RandomizerClient({
   /** The NBA Desk's live news snapshot (viznba only). */
   nbaNews?: ViznbaNews | null
   pool: StylePool | null
+  /** Competition and team styles from the Asset Studio (footshorts only). */
+  entityStyles?: EntityStyleOption[]
   loadError: string | null
   siteUrl: string
   /** Where this site's HTML stories are managed in admin, for the spin's story link. */
@@ -277,6 +288,9 @@ export function RandomizerClient({
   const log = spins.filter((s) => s.randomizer === tab).slice(0, 12)
   const reels = meta.reels.filter((r) => !r.option || (r.option === 'pair' && !!current?.reels.pair))
   const canShuffle = !!pool?.palettes.length && !!pool.fonts.length
+  const isEntityStyle = style?.paletteFrom.kind === 'competition' || style?.paletteFrom.kind === 'team'
+  // The style as the agent asks for it (?style= / storyStyle), so a brief read by URL or MCP matches the copied one.
+  const token = styleToken(style)
   const canRespin = !!current && current.status !== 'rejected' && current.status !== 'published'
 
   // The composed brief for the spin on screen, built server-side (it reads the spin).
@@ -348,7 +362,7 @@ export function RandomizerClient({
       ])
       setSelected((prev) => ({ ...prev, [tab]: spin.id }))
       setAnim({ id: spin.id, strips })
-      if (canShuffle && pool) setStyle((prev) => pickRandomStyle(pool, { previous: prev }))
+      if (canShuffle && pool && !isEntityStyle) setStyle((prev) => pickRandomStyle(pool, { previous: prev }))
       setOtherReason('')
       setReviewNote('')
     } catch (e) {
@@ -651,6 +665,44 @@ export function RandomizerClient({
                 <div className="flex flex-wrap gap-2">
                   <FormatPicker value={format} onChange={setFormat} suggested={suggestedFormatFor(current.randomizer)} />
                   <ToneToggle value={tone} onChange={setTone} className={btn} />
+                  {style && (
+                    <span
+                      className="flex items-center gap-1.5 pl-2 pr-1 py-1 border border-white/10 rounded-lg text-xs text-neutral-300"
+                      title={
+                        isEntityStyle
+                          ? `${style.paletteFrom.title} style (Asset Studio), attached to the brief`
+                          : `Attached to the brief\nColours: ${style.paletteFrom.title}\nType: ${style.fontsFrom.title}`
+                      }
+                    >
+                      <span className="flex">
+                        {SWATCHES.map((k) => (
+                          <span key={k} className="w-3 h-3 rounded-full border border-white/20 -ml-1 first:ml-0" style={{ background: style.palette[k] }} />
+                        ))}
+                      </span>
+                      {isEntityStyle && <span className="text-neutral-200 max-w-[8rem] truncate">{style.paletteFrom.title}</span>}
+                      <button type="button" onClick={() => setStyle(null)} className="p-0.5 text-neutral-500 hover:text-white" aria-label="Back to house style" title="Back to house style">
+                        <X size={11} />
+                      </button>
+                    </span>
+                  )}
+                  {app === 'footshorts' && (
+                    <StoryStylePicker
+                      options={entityStyles}
+                      selected={isEntityStyle && style ? { kind: style.paletteFrom.kind as 'competition' | 'team', slug: style.paletteFrom.slug } : null}
+                      onPick={(o) => setStyle(entityStoryStyle(o))}
+                      className={btn}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => pool && setStyle((prev) => pickRandomStyle(pool, { previous: isEntityStyle ? null : prev }))}
+                    disabled={!canShuffle}
+                    className={btn}
+                    title={canShuffle ? 'Attach a palette and fonts drawn from an existing story' : 'No story themes to draw from'}
+                  >
+                    <Shuffle size={14} />
+                    {style && !isEntityStyle ? 'Shuffle' : 'Randomize style'}
+                  </button>
                   <button
                     type="button"
                     className={btn}
@@ -676,6 +728,7 @@ export function RandomizerClient({
                   {siteUrl}/api/html-stories/brief?spin={current.id}
                   {format !== 'scroll' ? `&format=${format}` : ''}
                   {tone !== 'straight' ? `&tone=${tone}` : ''}
+                  {token ? `&style=${token}` : ''}
                 </code>
                 , or call <code className="text-neutral-400">get_html_story_brief</code> with this <code>spinId</code>
                 {format !== 'scroll' ? (
@@ -688,6 +741,12 @@ export function RandomizerClient({
                   <>
                     {' '}
                     and <code>tone: &quot;{tone}&quot;</code>
+                  </>
+                ) : null}
+                {token ? (
+                  <>
+                    {' '}
+                    and <code>storyStyle: &quot;{token}&quot;</code>
                   </>
                 ) : null}
                 .

@@ -220,3 +220,44 @@ export function entityStoryStyle(option: Pick<EntityStyleOption, 'kind' | 'slug'
   const from: StyleSource = { slug: option.slug, title: option.name, kind: option.kind }
   return { palette: option.style.palette, fonts: option.style.fonts, paletteFrom: from, fontsFrom: from }
 }
+
+// ── style tokens: a picked style as one URL-safe value, so an agent reading the
+// brief by URL or MCP gets the same look the admin showed.
+
+const STYLE_SLUG = /^[a-z0-9][a-z0-9_-]{0,119}$/
+
+/**
+ * The brief's `style=` value for a picked style: `competition:<slug>` or
+ * `team:<slug>` for an Asset Studio style, `story:<palette slug>,<fonts slug>`
+ * (one slug when both halves come from the same story) for a randomizer draw.
+ * Null for the house style.
+ */
+export function styleToken(style: StoryStyle | null): string | null {
+  if (!style) return null
+  const kind = style.paletteFrom.kind
+  if (kind === 'competition' || kind === 'team') return `${kind}:${style.paletteFrom.slug}`
+  const p = style.paletteFrom.slug
+  const f = style.fontsFrom.slug
+  return `story:${p === f ? p : `${p},${f}`}`
+}
+
+/** Parse `story:<palette slug>[,<fonts slug>]` into its two slugs; null when malformed. */
+export function parseStoryStyleToken(value: string): { palette: string; fonts: string } | null {
+  const m = /^story:([^,]+)(?:,([^,]+))?$/.exec(value.trim())
+  if (!m) return null
+  const palette = m[1]!.trim()
+  const fonts = (m[2] ?? m[1]!).trim()
+  return STYLE_SLUG.test(palette) && STYLE_SLUG.test(fonts) ? { palette, fonts } : null
+}
+
+/**
+ * The style a `story:` token names, drawn from the pool by source slug: the
+ * palette of one story, the font trio of another. Null when either story
+ * has no usable half in the pool.
+ */
+export function storyStyleFromPool(pool: StylePool, slugs: { palette: string; fonts: string }): StoryStyle | null {
+  const p = pool.palettes.find((o) => o.from.slug === slugs.palette)
+  const f = pool.fonts.find((o) => o.from.slug === slugs.fonts)
+  if (!p || !f) return null
+  return { palette: p.palette, fonts: f.fonts, paletteFrom: p.from, fontsFrom: f.from }
+}

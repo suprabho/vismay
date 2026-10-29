@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
 import { parseHtmlStoryTone } from './tone'
-import { entityStoryStyle, parseEntityStyle } from './styles'
+import { entityStoryStyle, parseEntityStyle, parseStoryStyleToken, storyStyleFromPool, stylePoolFromStories, styleToken } from './styles'
 import { draw } from '@vismay/randomizer/draw'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
@@ -381,3 +381,22 @@ for (const randomizer of ['hundred'] as const) {
 }
 
 console.log('brief: ok')
+
+// Style tokens: a picked style survives the trip through ?style= / storyStyle.
+{
+  const colors = { background: '#111111', surface: '#222222', text: '#EEEEEE', muted: '#999999', accent: '#FF4346', accent2: '#00AAFF', teal: '#00CCAA' }
+  const pool = stylePoolFromStories([
+    { slug: 'alpha', title: 'Alpha', theme: { colors, fonts: { serif: 'Fraunces', sans: 'Inter', mono: 'JetBrains Mono' } } },
+    { slug: 'beta', title: 'Beta', theme: { colors: { ...colors, accent: '#00FF00' }, fonts: { serif: 'Lora', sans: 'Manrope', mono: 'IBM Plex Mono' } } },
+  ])
+  const drawn = storyStyleFromPool(pool, { palette: 'alpha', fonts: 'beta' })!
+  assert.equal(styleToken(drawn), 'story:alpha,beta')
+  assert.deepEqual(parseStoryStyleToken('story:alpha,beta'), { palette: 'alpha', fonts: 'beta' })
+  assert.deepEqual(parseStoryStyleToken('story:alpha'), { palette: 'alpha', fonts: 'alpha' })
+  assert.equal(parseStoryStyleToken('story:Bad Slug'), null)
+  assert.equal(styleToken(storyStyleFromPool(pool, { palette: 'beta', fonts: 'beta' })), 'story:beta')
+  assert.equal(storyStyleFromPool(pool, { palette: 'gone', fonts: 'beta' }), null)
+  assert.equal(styleToken(null), null)
+  const team = entityStoryStyle({ kind: 'team', slug: 'lille-osc', name: 'Lille OSC', style: { palette: drawn.palette, fonts: drawn.fonts } })
+  assert.equal(styleToken(team), 'team:lille-osc')
+}
