@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Check, Palette } from '@phosphor-icons/react'
 import type { EntityStyleKind, EntityStyleOption } from '@vismay/html-stories/styles'
 
 const SWATCHES = ['background', 'surface', 'text', 'accent', 'accent2', 'teal'] as const
+const MENU_W = 288
 const KIND_LABELS: Record<EntityStyleKind, string> = { competition: 'Competitions', team: 'Teams' }
 
 /**
@@ -36,6 +37,27 @@ export function StoryStylePicker({
   const [kind, setKind] = useState<EntityStyleKind>(selected?.kind ?? (counts.competition ? 'competition' : 'team'))
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  // The menu is fixed to the viewport, so a clipping panel (overflow-hidden)
+  // can't cut it off; it opens under the button, kept inside the window.
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const place = () => {
+      const r = buttonRef.current?.getBoundingClientRect()
+      if (!r) return
+      const left = Math.min(Math.max(8, r.left), window.innerWidth - MENU_W - 8)
+      setPos({ top: r.bottom + 4, left: Math.max(8, left) })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -57,6 +79,7 @@ export function StoryStylePicker({
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={empty}
@@ -72,8 +95,11 @@ export function StoryStylePicker({
         <Palette size={14} />
         Story style
       </button>
-      {open && (
-        <div className="absolute right-0 z-30 mt-1 w-72 rounded-lg border border-white/10 bg-neutral-950 p-1.5 shadow-xl">
+      {open && pos && (
+        <div
+          style={{ top: pos.top, left: pos.left, width: MENU_W }}
+          className="fixed z-50 rounded-lg border border-white/10 bg-neutral-950 p-1.5 shadow-xl"
+        >
           <div className="flex gap-0.5 rounded-md border border-white/10 p-0.5 text-xs">
             {(['competition', 'team'] as const).map((k) => (
               <button
