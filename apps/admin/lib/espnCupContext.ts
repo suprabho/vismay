@@ -1,5 +1,5 @@
 import type { CupFixture } from '@footshorts/shared/espnCups'
-import type { EspnMatchDetail, EspnSideFacts, EspnTimelineEntry } from '@footshorts/shared/espnMatch'
+import { fixturePatchFromDetail, type EspnMatchDetail, type EspnShootoutKick, type EspnSideFacts, type EspnTimelineEntry } from '@footshorts/shared/espnMatch'
 
 /**
  * The HTML-story brief's context for domestic cup matches from the private
@@ -42,6 +42,15 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: 'Cancelled',
   suspended: 'Suspended',
   unknown: 'Status unknown',
+}
+
+/** The fixture as the newer of its two ESPN reads tells it. The scoreboard
+ * import writes the fixture row; extracting the detail later (after full time)
+ * knows the result and the shootout even when the row was imported before
+ * kickoff and still says "scheduled". */
+export function reconcileCupFixture(f: CupFixture, d: EspnMatchDetail | null): CupFixture {
+  if (!d || d.fetched_at <= f.fetched_at) return f
+  return { ...f, ...fixturePatchFromDetail(d), fetched_at: d.fetched_at }
 }
 
 function played(f: CupFixture): boolean {
@@ -117,6 +126,41 @@ function timelineLine(e: EspnTimelineEntry): string {
   return `- ${e.clock_label || '?'}${team} ${e.label}${who}${second}`
 }
 
+const KICK_RESULT: Record<EspnShootoutKick['result'], string> = { scored: 'scored', saved: 'saved', missed: 'missed' }
+
+function kickLabel(k: EspnShootoutKick): string {
+  return `${k.team_name ? `${k.team_name} — ` : ''}${k.player ?? 'unnamed taker'} ${KICK_RESULT[k.result]}`
+}
+
+/** Kicks paired by round (ESPN's shootout card), with the shootout score after
+ * each round: the order within a round is not known, so none is claimed. */
+function shootoutRoundLines(kicks: EspnShootoutKick[]): string[] {
+  const rounds = new Map<number, EspnShootoutKick[]>()
+  for (const k of kicks) rounds.set(k.round!, [...(rounds.get(k.round!) ?? []), k])
+  let home = 0
+  let away = 0
+  return [...rounds.entries()].sort((a, b) => a[0] - b[0]).map(([round, ks]) => {
+    for (const k of ks) {
+      if (k.result === 'scored' && k.side === 'home') home++
+      if (k.result === 'scored' && k.side === 'away') away++
+    }
+    return `- Round ${round}${round > 5 ? ' (sudden death)' : ''}: ${ks.map(kickLabel).join(' · ')} → ${home}–${away}`
+  })
+}
+
+function shootoutLines(kicks: EspnShootoutKick[]): string[] {
+  if (kicks.length && kicks.every((k) => k.round != null)) return shootoutRoundLines(kicks)
+  let home = 0
+  let away = 0
+  return kicks.map((k) => {
+    if (k.result === 'scored' && k.side === 'home') home++
+    if (k.result === 'scored' && k.side === 'away') away++
+    const team = k.team_name ? ` (${k.team_name})` : ''
+    const tally = k.side ? ` · ${home}–${away}` : ''
+    return `- Kick ${k.order}${team} ${k.player ?? 'Unnamed taker'} — ${KICK_RESULT[k.result]}${tally}`
+  })
+}
+
 function lineupLines(name: string, l: { formation: string | null; starters: { name: string; jersey: string | null; position: string | null; subbed_out: boolean }[]; bench: { name: string; subbed_in: boolean }[] }): string[] {
   if (!l.starters.length) return []
   const xi = l.starters.map((p) => `${p.name}${p.position ? ` (${p.position})` : ''}${p.subbed_out ? ' ↓' : ''}`).join(', ')
@@ -138,7 +182,9 @@ function commentaryLines(d: EspnMatchDetail): string[] {
 
 export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { prompt?: string } = {}): string {
   if (!matches.length) throw new Error('no cup matches')
-  const ordered = [...matches].sort((a, b) => (a.fixture.kickoff_at ?? '').localeCompare(b.fixture.kickoff_at ?? ''))
+  const ordered = matches
+    .map((m) => ({ ...m, fixture: reconcileCupFixture(m.fixture, m.detail) }))
+    .sort((a, b) => (a.fixture.kickoff_at ?? '').localeCompare(b.fixture.kickoff_at ?? ''))
   const cups = Array.from(new Set(ordered.map((m) => m.cupName)))
   const lines: string[] = []
   lines.push(
@@ -200,6 +246,14 @@ export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { 
       continue
     }
 
+    if (d.status.state === 'in' || (d.status.state === 'pre' && played(f))) {
+      lines.push(
+        `_ESPN’s match detail was read while the match was in play${d.status.detail ? ` (${d.status.detail})` : ''}: ` +
+          'the timeline, statistics and commentary below stop there. Do not describe what happened after it._',
+      )
+      lines.push('')
+    }
+
     const facts = factsTable(d, m.home.name, m.away.name)
     if (facts.length) {
       lines.push(d.facts ? '### Match facts (ESPN team statistics)' : '### Match counts (from the timeline)')
@@ -221,10 +275,35 @@ export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { 
       for (const e of timeline) lines.push(timelineLine(e))
       lines.push('')
     }
+    const kicks = d.shootout ?? []
     if (f.home_penalties != null && f.away_penalties != null) {
+      const winner = f.home_penalties > f.away_penalties ? m.home.name : f.away_penalties > f.home_penalties ? m.away.name : null
+      lines.push('### Penalty shootout')
+      lines.push('')
       lines.push(
-        `_Decided on penalties, ${f.home_penalties}–${f.away_penalties}. ESPN does not list the kicks: do not name takers._`,
+        `${f.home_score}–${f.away_score} after ${/ET|extra/i.test(`${f.status_detail ?? ''} ${d.status.detail ?? ''}`) ? 'extra time' : 'normal time'}; ` +
+          `${winner ? `${winner} won` : 'decided'} ${Math.max(f.home_penalties, f.away_penalties)}–${Math.min(f.home_penalties, f.away_penalties)} on penalties.`,
       )
+      lines.push('')
+      if (kicks.length) {
+        const byRound = kicks.every((k) => k.round != null)
+        const rounds = byRound ? Math.max(...kicks.map((k) => k.round!)) : 0
+        if (rounds > 5) lines.push(`It went to sudden death: ${rounds} rounds.`, '')
+        lines.push(
+          byRound
+            ? '_Every kick, round by round as ESPN lists them, with the shootout score (home–away) after each round. ESPN does not say which side kicked first: do not claim an order within a round._'
+            : '_Every kick in the order taken, with the running shootout score (home–away)._',
+        )
+        lines.push('')
+        lines.push(...shootoutLines(kicks))
+      } else {
+        lines.push('_ESPN did not list the kicks for this shootout: do not name takers._')
+      }
+      lines.push('')
+    } else if (kicks.length) {
+      lines.push('### Penalty shootout')
+      lines.push('')
+      lines.push(...shootoutLines(kicks))
       lines.push('')
     }
 

@@ -310,12 +310,34 @@ export async function listEspnCupMatchOptionsForTeam(teamSlug: string, now = new
   }
 }
 
+/** True when a match that has kicked off has no full-time detail yet: never
+ * extracted, or extracted before or during the match (the timeline, score and
+ * shootout then stop where ESPN was at that moment). */
+export function cupDetailIsStale(f: Pick<CupFixture, 'kickoff_at'>, d: EspnMatchDetail | null, now = Date.now()): boolean {
+  if (!f.kickoff_at || Date.parse(f.kickoff_at) > now) return false
+  return !d || d.status.state !== 'post' || !d.status.completed
+}
+
+/** The stored detail, re-extracted from ESPN first when it is stale (which
+ * also refreshes the fixture's score, status and shootout). Best-effort: a
+ * failed refresh falls back to what is stored. */
+async function freshCupMatchDetail(f: CupFixture): Promise<EspnMatchDetail | null> {
+  const stored = await getEspnMatchDetail(f.espn_event_id).catch(() => null)
+  if (!cupDetailIsStale(f, stored)) return stored
+  try {
+    return await extractEspnMatchDetail(f.espn_event_id)
+  } catch (error) {
+    console.warn(`[espnCups] could not refresh match ${f.espn_event_id}:`, error instanceof Error ? error.message : error)
+    return stored
+  }
+}
+
 /** The HTML-story brief's context for these cup matches (ESPN event ids). */
 export async function buildCupMatchContext(eventIds: string[], { prompt, siteUrl }: { prompt?: string; siteUrl: string }): Promise<string> {
   const fixtures = (await Promise.all(eventIds.map(id => getEspnCupFixture(id)))).filter((f): f is CupFixture => !!f)
   if (!fixtures.length) throw new Error('no such cup fixtures (import the cup in Cup fixtures first)')
   const [details, teams] = await Promise.all([
-    Promise.all(fixtures.map(f => getEspnMatchDetail(f.espn_event_id).catch(() => null))),
+    Promise.all(fixtures.map(f => freshCupMatchDetail(f))),
     resolveCupTeams(fixtures),
   ])
   const site = siteUrl.replace(/\/$/, '')

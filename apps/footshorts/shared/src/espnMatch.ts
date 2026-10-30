@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ESPN_CUP_TABLE, type CupFixture, type EspnCup } from './espnCups';
+import { ESPN_CUP_TABLE, normalizeCupStatus, type CupFixture, type CupStatus, type EspnCup } from './espnCups';
 
 // ESPN match detail (the data behind espn.com/soccer/match, matchstats,
 // lineups and commentary pages) for one imported cup fixture. Stored in its
@@ -100,6 +100,19 @@ export interface EspnLineup {
   bench: EspnLineupPlayer[];
 }
 
+/** One kick of a penalty shootout. `order` is the order taken when the source
+ * gives it (key events, commentary); ESPN's shootout card pairs the kicks by
+ * `round` instead and does not say which side went first. */
+export interface EspnShootoutKick {
+  order: number;
+  round?: number | null;
+  side: 'home' | 'away' | null;
+  team_name: string | null;
+  player: string | null;
+  result: 'scored' | 'saved' | 'missed';
+  text: string;
+}
+
 export interface EspnCommentaryEntry {
   sequence: number;
   clock_label: string;
@@ -112,7 +125,8 @@ export interface EspnMatchDetail {
   source_url: string;
   fetched_at: string;
   kickoff_at: string | null;
-  status: { state: 'pre' | 'in' | 'post' | 'unknown'; description: string | null; detail: string | null; completed: boolean };
+  /** `name` is ESPN's status code (STATUS_FINAL_PEN, …); absent on rows extracted before it was kept. */
+  status: { state: 'pre' | 'in' | 'post' | 'unknown'; name?: string | null; description: string | null; detail: string | null; completed: boolean };
   season_name: string | null;
   venue: string | null;
   attendance: number | null;
@@ -125,6 +139,11 @@ export interface EspnMatchDetail {
   derived: { home: EspnDerivedFacts; away: EspnDerivedFacts };
   lineups: { home: EspnLineup; away: EspnLineup } | null;
   commentary: EspnCommentaryEntry[];
+  /** Shootout kicks in order (empty when there was no shootout or ESPN listed
+   * none). Absent on rows extracted before shootouts were read. */
+  shootout?: EspnShootoutKick[];
+  /** ESPN's notes on the match ("Liverpool advances 6-5 on penalties"). */
+  notes?: string[];
 }
 
 export interface StoredEspnMatchDetail {
@@ -378,6 +397,126 @@ function lineup(roster: JsonObject): EspnLineup {
   };
 }
 
+/** ESPN numbers the shootout as period 5 (after two halves and two halves of
+ * extra time); its kicks arrive as penalty key events that are not goals. */
+function isShootoutEntry(t: EspnTimelineEntry, slug: string): boolean {
+  return (t.kind === 'penalty-goal' || t.kind === 'penalty-missed' || t.kind === 'goal')
+    && ((t.period != null && t.period >= 5) || /shootout/i.test(slug));
+}
+
+function kickFromEntry(t: EspnTimelineEntry, order: number): EspnShootoutKick {
+  const result = t.kind === 'penalty-missed' ? (/sav/i.test(t.label + ' ' + t.text) ? 'saved' : 'missed') : 'scored';
+  return { order, side: t.side, team_name: t.team_name, player: t.player, result, text: t.text };
+}
+
+const KICK_LIST_KEYS = ['shots', 'attempts', 'kicks', 'penalties', 'shootout', 'plays'] as const;
+
+function kickResult(k: JsonObject): EspnShootoutKick['result'] | null {
+  for (const key of ['didScore', 'scored', 'isGoal', 'goal']) {
+    if (typeof k[key] === 'boolean') {
+      if (k[key]) return 'scored';
+      return /sav/i.test(JSON.stringify(k)) ? 'saved' : 'missed';
+    }
+  }
+  const label = [k.result, k.outcome, k.status, k.text, k.shortText, k.displayValue, object(k.type).text, object(k.type).type, object(k.result).text]
+    .map(v => text(v)).filter(Boolean).join(' ');
+  if (/sav/i.test(label)) return 'saved';
+  if (/miss|wide|over|post|bar|fail/i.test(label)) return 'missed';
+  if (/scor|goal|convert/i.test(label)) return 'scored';
+  return null;
+}
+
+function kickPlayer(k: JsonObject): string | null {
+  const athlete = object(k.athlete ?? k.player ?? object(list(k.participants)[0]).athlete);
+  return text(athlete.displayName) ?? text(athlete.fullName) ?? text(athlete.shortName)
+    ?? text(k.player) ?? text(k.playerName) ?? text(k.athleteName) ?? text(k.name);
+}
+
+function sideKicks(raw: unknown[], side: 'home' | 'away' | null, team: EspnTeamSummary | null, home: EspnTeamSummary, away: EspnTeamSummary): EspnShootoutKick[] {
+  const kicks: EspnShootoutKick[] = [];
+  raw.map(object).forEach((k, i) => {
+    const result = kickResult(k);
+    if (!result) return;
+    const kickSide = side ?? sideOf(object(k.team), home, away);
+    const kickTeam = team ?? (kickSide === 'home' ? home : kickSide === 'away' ? away : null);
+    kicks.push({
+      order: 0,
+      round: count(k.shotNumber ?? k.round ?? k.number ?? k.attempt) ?? (side ? i + 1 : null),
+      side: kickSide,
+      team_name: kickTeam?.name ?? text(object(k.team).displayName),
+      player: kickPlayer(k),
+      result,
+      text: text(k.text) ?? '',
+    });
+  });
+  return kicks;
+}
+
+/** The kicks behind ESPN's shootout card (Liverpool 6–5 Chelsea: eight rounds,
+ * each a home and an away kick marked Scored / Missed / Saved). ESPN has sent
+ * this per competitor and as one list with the team on each kick; both are
+ * read. Kicks are paired by round, home first, since ESPN does not say which
+ * side kicked first. */
+export function shootoutFromSummary(summary: unknown, home: EspnTeamSummary, away: EspnTeamSummary): EspnShootoutKick[] {
+  const s = object(summary);
+  const competition = object(list(object(s.header).competitions)[0]);
+  const kicks: EspnShootoutKick[] = [];
+  for (const c of list(competition.competitors).map(object)) {
+    const side = c.homeAway === 'home' ? 'home' : c.homeAway === 'away' ? 'away' : null;
+    if (!side) continue;
+    const raw = list(c.shootout ?? c.shootoutAttempts ?? c.penaltyShootout);
+    kicks.push(...sideKicks(raw, side, side === 'home' ? home : away, home, away));
+  }
+  if (!kicks.length) {
+    for (const source of [s.shootout, s.penaltyShootout, competition.shootout]) {
+      for (const item of list(source).map(object)) {
+        const nested = KICK_LIST_KEYS.map(key => item[key]).find(Array.isArray);
+        if (nested) {
+          const side = sideOf(object(item.team), home, away) ?? (item.homeAway === 'home' ? 'home' : item.homeAway === 'away' ? 'away' : null);
+          kicks.push(...sideKicks(nested, side, side === 'home' ? home : side === 'away' ? away : null, home, away));
+        } else kicks.push(...sideKicks([item], null, null, home, away));
+      }
+      if (kicks.length) break;
+    }
+  }
+  if (!kicks.length) return [];
+  const sideRank = (k: EspnShootoutKick) => (k.side === 'home' ? 0 : k.side === 'away' ? 1 : 2);
+  return kicks
+    .map((k, i) => ({ k, i }))
+    .sort((a, b) => (a.k.round ?? Infinity) - (b.k.round ?? Infinity) || sideRank(a.k) - sideRank(b.k) || a.i - b.i)
+    .map(({ k }, i) => ({ ...k, order: i + 1 }));
+}
+
+/** The shootout as ESPN's commentary tells it, between "Penalty Shootout
+ * begins" and "Penalty Shootout ends": "Goal! Liverpool 1(4), Chelsea 1(3).
+ * Cody Gakpo (Liverpool) converts the penalty…", "Penalty saved! Cole Palmer
+ * (Chelsea) fails to capitalise…", "Penalty missed! Bad penalty by X (Y)…". */
+export function shootoutFromCommentary(commentary: EspnCommentaryEntry[], home: EspnTeamSummary, away: EspnTeamSummary): EspnShootoutKick[] {
+  const kicks: EspnShootoutKick[] = [];
+  let inShootout = false;
+  for (const c of commentary) {
+    if (/penalty shoot-?out begins/i.test(c.text)) { inShootout = true; continue; }
+    if (/penalty shoot-?out ends/i.test(c.text)) break;
+    if (!inShootout) continue;
+    const head = /^\s*(Goal|Penalty saved|Penalty missed)!/i.exec(c.text);
+    if (!head) continue;
+    const result = /^goal/i.test(head[1]!) ? 'scored' : /saved/i.test(head[1]!) ? 'saved' : 'missed';
+    // The kicker is the first "Name (Team)" after the scoreline sentence.
+    const rest = result === 'scored' ? c.text.replace(/^[^.]*\.\s*/, '') : c.text.slice(head[0].length);
+    const who = /([^.!()]+?)\s*\(([^)]+)\)/.exec(rest);
+    const teamName = who ? who[2]!.trim() : null;
+    kicks.push({
+      order: kicks.length + 1,
+      side: teamName === home.name ? 'home' : teamName === away.name ? 'away' : null,
+      team_name: teamName,
+      player: who ? who[1]!.trim().replace(/^Bad penalty by\s+/i, '') : null,
+      result,
+      text: c.text,
+    });
+  }
+  return kicks;
+}
+
 /** Normalize one ESPN soccer summary payload. Throws when the payload is not
  * the requested event or has no two sides; degrades (nulls, empty lists) when
  * optional sections are missing, which is common for lower-round cup ties. */
@@ -397,9 +536,13 @@ export function normalizeEspnMatch(summary: unknown, ctx: { eventId: string; cup
   const state = statusType.state;
   const kickoff = text(competition.date);
 
-  const timeline = list(s.keyEvents)
-    .map(raw => timelineEntry(raw, home, away))
-    .filter((t): t is EspnTimelineEntry => !!t);
+  // Shootout kicks are not match goals: keep them out of the timeline, the
+  // fixture_events rows and the derived goal counts.
+  const allEntries = list(s.keyEvents)
+    .map(raw => ({ slug: text(object(object(raw).type).type) ?? '', entry: timelineEntry(raw, home, away) }))
+    .filter((t): t is { slug: string; entry: EspnTimelineEntry } => !!t.entry);
+  const timeline = allEntries.filter(t => !isShootoutEntry(t.entry, t.slug)).map(t => t.entry);
+  const shootoutEntries = allEntries.filter(t => isShootoutEntry(t.entry, t.slug)).map(t => t.entry);
 
   const boxTeams = list(object(s.boxscore).teams).map(object);
   const statsFor = (side: 'home' | 'away') => sideFacts(list(boxTeams.find(t => t.homeAway === side)?.statistics));
@@ -416,6 +559,19 @@ export function normalizeEspnMatch(summary: unknown, ctx: { eventId: string; cup
     .filter(c => c.text)
     .sort((a, b) => a.sequence - b.sequence);
 
+  // ESPN's shootout data (what its shootout card draws) first, then the key
+  // events, then the commentary.
+  const fromSummary = shootoutFromSummary(summary, home, away);
+  const shootout = fromSummary.length
+    ? fromSummary
+    : shootoutEntries.length
+      ? shootoutEntries.map((t, i) => kickFromEntry(t, i + 1))
+      : shootoutFromCommentary(commentary, home, away);
+  const notes = list(competition.notes).flatMap(n => {
+    const note = text(object(n).text) ?? text(object(n).headline) ?? text(n);
+    return note ? [note] : [];
+  });
+
   const gameInfo = object(s.gameInfo);
   return {
     espn_event_id: ctx.eventId,
@@ -425,6 +581,7 @@ export function normalizeEspnMatch(summary: unknown, ctx: { eventId: string; cup
     kickoff_at: kickoff && Number.isFinite(Date.parse(kickoff)) ? new Date(kickoff).toISOString() : null,
     status: {
       state: state === 'pre' || state === 'in' || state === 'post' ? state : 'unknown',
+      name: text(statusType.name),
       description: text(statusType.description),
       detail: text(statusType.detail),
       completed: statusType.completed === true,
@@ -441,6 +598,39 @@ export function normalizeEspnMatch(summary: unknown, ctx: { eventId: string; cup
     derived: { home: derivedFacts(timeline, 'home'), away: derivedFacts(timeline, 'away') },
     lineups: homeRoster && awayRoster ? { home: lineup(homeRoster), away: lineup(awayRoster) } : null,
     commentary,
+    shootout,
+    notes,
+  };
+}
+
+/** The detail's normalized cup status (the scoreboard import's vocabulary). */
+export function detailCupStatus(detail: Pick<EspnMatchDetail, 'status'>): CupStatus {
+  const st = detail.status;
+  return normalizeCupStatus({ name: st.name ?? undefined, state: st.state, completed: st.completed });
+}
+
+/** The fixture columns the match summary knows better than an older
+ * scoreboard import: status, score, shootout, winner, kickoff. A fixture
+ * imported before kickoff stays "scheduled" with no score until the next
+ * scoreboard import otherwise. Same rule as the import: no score before
+ * kickoff (ESPN sends "0" for unplayed games). */
+export function fixturePatchFromDetail(detail: EspnMatchDetail): Pick<CupFixture,
+  'status' | 'status_detail' | 'home_score' | 'away_score' | 'home_penalties' | 'away_penalties' | 'winner_espn_id'
+> & { kickoff_at?: string; notes?: string[] } {
+  const status = detailCupStatus(detail);
+  const hasScores = status === 'live' || status === 'finished' || status === 'suspended';
+  return {
+    status,
+    status_detail: detail.status.description,
+    home_score: hasScores ? detail.home.score : null,
+    away_score: hasScores ? detail.away.score : null,
+    home_penalties: hasScores ? detail.home.shootout_score : null,
+    away_penalties: hasScores ? detail.away.shootout_score : null,
+    winner_espn_id: status === 'finished'
+      ? (detail.home.winner ? detail.home.espn_id : detail.away.winner ? detail.away.espn_id : null)
+      : null,
+    ...(detail.kickoff_at ? { kickoff_at: detail.kickoff_at } : {}),
+    ...(detail.notes?.length ? { notes: detail.notes } : {}),
   };
 }
 
@@ -461,6 +651,7 @@ export function slimEspnSummary(summary: unknown): unknown {
   };
   return {
     header: s.header,
+    ...(s.shootout ? { shootout: s.shootout } : {}),
     keyEvents: s.keyEvents,
     boxscore: s.boxscore,
     gameInfo: s.gameInfo,
@@ -507,6 +698,12 @@ export async function extractEspnMatch(sb: SupabaseClient, fixture: Pick<CupFixt
   const row = toStoredEspnMatchDetail(detail, raw);
   const { error } = await sb.from(ESPN_MATCH_DETAIL_TABLE).upsert(row, { onConflict: 'espn_event_id' });
   if (error) throw new Error(`Match detail could not be saved: ${error.message}`);
+  // Bring the fixture row up to date too (same private table the import
+  // writes), so a match imported before kickoff gets its result and shootout.
+  const { error: fixtureError } = await sb.from(ESPN_CUP_TABLE)
+    .update({ ...fixturePatchFromDetail(detail), fetched_at: detail.fetched_at })
+    .eq('espn_event_id', fixture.espn_event_id);
+  if (fixtureError) throw new Error(`Cup fixture could not be updated: ${fixtureError.message}`);
   return row;
 }
 

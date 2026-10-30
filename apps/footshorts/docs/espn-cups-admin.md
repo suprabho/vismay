@@ -74,8 +74,19 @@ What ESPN provides, and what the extraction keeps:
 - **Lineups** — starters, bench, formation, subbed on/off flags. **Commentary**
   — the full text feed. Venue, attendance and referee from `gameInfo`.
 
-Penalty shootouts: the shootout score comes from the scoreboard import
-(`home_penalties` / `away_penalties`); ESPN's key events do not list the kicks.
+Penalty shootouts: the kicks (`detail.shootout`) come from ESPN's shootout
+data, the source of its shootout card, which pairs the kicks by round (home,
+away) and marks each Scored / Missed / Saved without saying who kicked first. If
+that data is missing, they come from period-5 penalty key events, then from the
+commentary between "Penalty Shootout begins" and "ends". Shootout kicks are kept
+out of the timeline, the share-card events and the derived goal counts.
+
+Extracting the detail also refreshes the fixture row (status, score, shootout
+score, winner, kickoff, ESPN's notes) from the summary header. Without that, a
+match imported before kickoff stayed "scheduled" with no score until the next
+scoreboard import. The HTML-story brief re-extracts a detail on its own when the
+match has kicked off but the stored detail is missing or was read before full
+time. It also says so when it can only offer a mid-match read.
 
 ### Using cup matches in Share cards
 
