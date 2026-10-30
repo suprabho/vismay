@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import type { CupFixture } from '@footshorts/shared/espnCups'
 import type { EspnMatchDetail } from '@footshorts/shared/espnMatch'
-import { cupScoreline, formatCupMatchContext } from './espnCupContext'
+import { cupScoreline, formatCupMatchContext, reconcileCupFixture } from './espnCupContext'
 
 const fixture: CupFixture = {
   espn_event_id: '735531',
@@ -86,7 +86,9 @@ assert.match(md, /- 70' \(Chelsea\) Substitution — Nicolas Jackson replaces Co
 assert.doesNotMatch(md, /Kickoff/)
 assert.match(md, /- 23': Goal! Saka finishes low\./)
 assert.doesNotMatch(md, /build from the back/)
-assert.match(md, /Decided on penalties, 4–3/)
+assert.match(md, /### Penalty shootout/)
+assert.match(md, /1–1 after normal time; Arsenal won 4–3 on penalties\./)
+assert.match(md, /ESPN did not list the kicks for this shootout: do not name takers\./)
 
 // Not extracted yet: the scoreline only, and a note saying so.
 const bare = formatCupMatchContext([
@@ -94,5 +96,60 @@ const bare = formatCupMatchContext([
 ])
 assert.match(bare, /has not been extracted/)
 assert.doesNotMatch(bare, /### Timeline/)
+
+// Imported before kickoff (still "scheduled", no score), detail extracted
+// after full time: the brief takes the result and the shootout from the detail.
+const stale: CupFixture = {
+  ...fixture, status: 'scheduled', status_detail: 'Scheduled', home_score: null, away_score: null,
+  home_penalties: null, away_penalties: null, winner_espn_id: null, notes: [], fetched_at: '2026-01-01T00:00:00Z',
+}
+const fresh: EspnMatchDetail = {
+  ...detail,
+  status: { state: 'post', name: 'STATUS_FINAL_PEN', description: 'Final', detail: 'FT-Pens', completed: true },
+  shootout: [
+    { order: 1, side: 'away', team_name: 'Chelsea', player: 'Cole Palmer', result: 'scored', text: '' },
+    { order: 2, side: 'home', team_name: 'Arsenal', player: 'Bukayo Saka', result: 'saved', text: '' },
+    { order: 3, side: 'away', team_name: 'Chelsea', player: 'Enzo Fernández', result: 'missed', text: '' },
+    { order: 4, side: 'home', team_name: 'Arsenal', player: 'Declan Rice', result: 'scored', text: '' },
+  ],
+}
+const healed = reconcileCupFixture(stale, fresh)
+assert.equal(healed.status, 'finished')
+assert.deepEqual([healed.home_score, healed.away_score, healed.home_penalties, healed.away_penalties], [1, 1, 4, 3])
+assert.equal(healed.winner_espn_id, '359')
+// An older detail never overrides a newer import.
+assert.equal(reconcileCupFixture(fixture, { ...fresh, fetched_at: '2025-01-01T00:00:00Z' }), fixture)
+
+const shootoutMd = formatCupMatchContext([
+  { fixture: stale, cupName: 'FA Cup', seasonLabel: '2025/26', home: { name: 'Arsenal', crestUrl: null, color: null, pageUrl: null }, away: { name: 'Chelsea', crestUrl: null, color: null, pageUrl: null }, detail: fresh },
+])
+assert.match(shootoutMd, /^# Cup match context — Arsenal 1–1 Chelsea \(4–3 pens\) \(FA Cup\)/)
+assert.match(shootoutMd, /Full time \(Final\)/)
+assert.doesNotMatch(shootoutMd, /Not played yet/)
+assert.match(shootoutMd, /- Kick 1 \(Chelsea\) Cole Palmer — scored · 0–1/)
+assert.match(shootoutMd, /- Kick 2 \(Arsenal\) Bukayo Saka — saved · 0–1/)
+assert.match(shootoutMd, /- Kick 4 \(Arsenal\) Declan Rice — scored · 1–1/)
+assert.doesNotMatch(shootoutMd, /did not list the kicks/)
+
+// Detail read mid-match: the brief says where it stops.
+const live = formatCupMatchContext([
+  { fixture: stale, cupName: 'FA Cup', seasonLabel: '2025/26', home: { name: 'Arsenal', crestUrl: null, color: null, pageUrl: null }, away: { name: 'Chelsea', crestUrl: null, color: null, pageUrl: null },
+    detail: { ...detail, status: { state: 'in', name: 'STATUS_SECOND_HALF', description: 'Second Half', detail: "82'", completed: false } } },
+])
+assert.match(live, /read while the match was in play \(82'\)/)
+assert.match(live, /In play/)
+
+// Kicks paired by round (ESPN's shootout card): no order claimed within a round.
+const rounds = formatCupMatchContext([
+  { fixture: stale, cupName: 'FA Cup', seasonLabel: '2025/26', home: { name: 'Arsenal', crestUrl: null, color: null, pageUrl: null }, away: { name: 'Chelsea', crestUrl: null, color: null, pageUrl: null },
+    detail: { ...fresh, shootout: Array.from({ length: 6 }, (_, r) => [
+      { order: 2 * r + 1, round: r + 1, side: 'home' as const, team_name: 'Arsenal', player: `H${r + 1}`, result: r === 5 ? 'saved' as const : 'scored' as const, text: '' },
+      { order: 2 * r + 2, round: r + 1, side: 'away' as const, team_name: 'Chelsea', player: `A${r + 1}`, result: r === 5 ? 'missed' as const : 'scored' as const, text: '' },
+    ]).flat() } },
+])
+assert.match(rounds, /It went to sudden death: 6 rounds\./)
+assert.match(rounds, /does not say which side kicked first/)
+assert.match(rounds, /- Round 1: Arsenal — H1 scored · Chelsea — A1 scored → 1–1/)
+assert.match(rounds, /- Round 6 \(sudden death\): Arsenal — H6 saved · Chelsea — A6 missed → 5–5/)
 
 console.log('espnCupContext: ok')

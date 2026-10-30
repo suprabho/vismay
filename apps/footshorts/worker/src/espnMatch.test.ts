@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import { ESPN_CUPS } from '@footshorts/shared/espnCups';
-import { classifyEspnEvent, normalizeEspnMatch, parseEspnClock, slimEspnSummary, timelineToEvents } from '@footshorts/shared/espnMatch';
+import { classifyEspnEvent, fixturePatchFromDetail, normalizeEspnMatch, parseEspnClock, slimEspnSummary, timelineToEvents } from '@footshorts/shared/espnMatch';
 
 const cup = ESPN_CUPS[0];
 const ctx = { eventId: '735531', cup, fetchedAt: '2026-09-18T08:00:00.000Z' };
@@ -188,4 +188,100 @@ test('team logo prefers the default variant, then any non-dark one, over array o
   ]).home.logo_url, 'https://a.espncdn.com/i/teamlogos/soccer/500-dark/384.png');
   // No logos at all: the flat `logo` field, then the CDN by id.
   assert.equal(withLogos([]).home.logo_url, 'https://a.espncdn.com/i/teamlogos/soccer/500/384.png');
+});
+
+function shootoutSummary(extra: { keyEvents?: unknown[]; commentary?: unknown[] }) {
+  const s = summary(extra);
+  const comp = s.header.competitions[0] as Record<string, unknown> & { competitors: Record<string, unknown>[] };
+  comp.status = { type: { name: 'STATUS_FINAL_PEN', state: 'post', completed: true, description: 'Final', detail: 'FT-Pens' } };
+  // competitors[0] is the away side (Manchester City), [1] the home side.
+  comp.competitors[0] = { ...comp.competitors[0], score: '1', shootoutScore: '3', winner: false };
+  comp.competitors[1] = { ...comp.competitors[1], score: '1', shootoutScore: '4', winner: true };
+  return s;
+}
+
+test('shootout kicks come from the commentary and stay out of the timeline', () => {
+  const d = normalizeEspnMatch(shootoutSummary({ commentary: [
+    { sequence: 100, time: { displayValue: "90'+5'" }, text: 'Second Half ends, Crystal Palace 1, Manchester City 1.' },
+    { sequence: 101, time: { displayValue: '' }, text: 'Penalty Shootout begins Crystal Palace 1, Manchester City 1.' },
+    { sequence: 102, time: { displayValue: '' }, text: 'Goal! Crystal Palace 1(1), Manchester City 1. Eberechi Eze (Crystal Palace) converts the penalty with a right footed shot to the bottom left corner.' },
+    { sequence: 103, time: { displayValue: '' }, text: 'Penalty saved! Erling Haaland (Manchester City) fails to capitalise on this great opportunity, left footed shot saved in the centre of the goal.' },
+    { sequence: 104, time: { displayValue: '' }, text: 'Penalty missed! Bad penalty by Jean-Philippe Mateta (Crystal Palace) right footed shot goes high.' },
+    { sequence: 105, time: { displayValue: '' }, text: 'Penalty Shootout ends, Crystal Palace 1(4), Manchester City 1(3).' },
+    { sequence: 106, time: { displayValue: '' }, text: 'Goal! Not part of the shootout (Nobody).' },
+  ] }), ctx);
+  assert.deepEqual(d.shootout?.map(k => [k.order, k.side, k.player, k.result]), [
+    [1, 'home', 'Eberechi Eze', 'scored'],
+    [2, 'away', 'Erling Haaland', 'saved'],
+    [3, 'home', 'Jean-Philippe Mateta', 'missed'],
+  ]);
+  assert.equal(d.status.name, 'STATUS_FINAL_PEN');
+  assert.deepEqual(fixturePatchFromDetail(d), {
+    status: 'finished', status_detail: 'Final', home_score: 1, away_score: 1, home_penalties: 4, away_penalties: 3,
+    winner_espn_id: '384', kickoff_at: '2025-05-17T15:30:00.000Z',
+  });
+});
+
+test('shootout key events (period 5) are kicks, not goals', () => {
+  const d = normalizeEspnMatch(shootoutSummary({ keyEvents: [
+    keyEvent('penalty---scored', 'Goal! Eze converts.', { clock: "120'", period: 5, team: '384', players: ['Eberechi Eze'], scoring: true, typeText: 'Penalty - Scored' }),
+    keyEvent('penalty---saved', 'Penalty saved. Haaland.', { clock: "120'", period: 5, team: '382', players: ['Erling Haaland'], typeText: 'Penalty - Saved' }),
+  ] }), ctx);
+  assert.equal(d.timeline.length, 0);
+  assert.equal(d.events.length, 0);
+  assert.equal(d.derived.home.goals, 0);
+  assert.deepEqual(d.shootout?.map(k => [k.side, k.player, k.result]), [['home', 'Eberechi Eze', 'scored'], ['away', 'Erling Haaland', 'saved']]);
+});
+
+test('an unplayed match patches no score', () => {
+  const s = summary();
+  (s.header.competitions[0] as Record<string, unknown>).status = { type: { state: 'pre', completed: false, description: 'Scheduled' } };
+  const patch = fixturePatchFromDetail(normalizeEspnMatch(s, ctx));
+  assert.equal(patch.status, 'scheduled');
+  assert.equal(patch.home_score, null);
+});
+
+// Liverpool 1–1 Chelsea, Carabao Cup fourth round 2026/27 (ESPN 401921842):
+// Liverpool advance 6–5 on penalties after eight rounds, as ESPN's shootout card shows it.
+const LIV_KICKS: [string, string][] = [['A. Mac Allister', 'Scored'], ['A. Isak', 'Scored'], ['C. Gakpo', 'Scored'], ['F. Wirtz', 'Scored'], ['K. Tsimikas', 'Missed'], ['B. Barcola', 'Scored'], ['R. Gravenberch', 'Saved'], ['J. Gomez', 'Scored']];
+const CHE_KICKS: [string, string][] = [['P. Neto', 'Scored'], ['M. Rogers', 'Scored'], ['R. Lavia', 'Scored'], ['V. Barco', 'Missed'], ['J. Henderson', 'Scored'], ['L. Colwill', 'Scored'], ['E. Emegha', 'Saved'], ['W. Fofana', 'Missed']];
+
+function liverpoolChelsea(shape: 'competitor' | 'top-level') {
+  const shots = (kicks: [string, string][]) => kicks.map(([name, result], i) => ({
+    shotNumber: i + 1, didScore: result === 'Scored', athlete: { displayName: name }, result: { text: result },
+  }));
+  const liv = { id: '364', homeAway: 'home', score: '1', shootoutScore: '6', winner: true, team: { id: '364', displayName: 'Liverpool' } };
+  const che = { id: '363', homeAway: 'away', score: '1', shootoutScore: '5', winner: false, team: { id: '363', displayName: 'Chelsea' } };
+  return {
+    header: { id: '401921842', competitions: [{
+      date: '2026-10-27T20:00Z',
+      status: { type: { name: 'STATUS_FINAL_PEN', state: 'post', completed: true, description: 'Final', detail: 'FT-Pens' } },
+      notes: [{ type: 'event', headline: 'Liverpool advances 6-5 on penalties' }],
+      competitors: shape === 'competitor'
+        ? [{ ...liv, shootout: shots(LIV_KICKS) }, { ...che, shootout: shots(CHE_KICKS) }]
+        : [liv, che],
+    }] },
+    ...(shape === 'top-level' ? { shootout: [
+      { team: { id: '363', displayName: 'Chelsea' }, shots: shots(CHE_KICKS) },
+      { team: { id: '364', displayName: 'Liverpool' }, shots: shots(LIV_KICKS) },
+    ] } : {}),
+    keyEvents: [],
+    commentary: [],
+  };
+}
+
+test("ESPN's shootout card data: kicks paired by round, home first", () => {
+  for (const shape of ['competitor', 'top-level'] as const) {
+    const d = normalizeEspnMatch(liverpoolChelsea(shape), { ...ctx, eventId: '401921842' });
+    assert.equal(d.shootout?.length, 16, shape);
+    assert.deepEqual(d.shootout?.slice(0, 2).map(k => [k.round, k.side, k.player, k.result]), [[1, 'home', 'A. Mac Allister', 'scored'], [1, 'away', 'P. Neto', 'scored']], shape);
+    assert.deepEqual(d.shootout?.filter(k => k.round === 7).map(k => k.result), ['saved', 'saved'], shape);
+    assert.equal(d.shootout?.filter(k => k.side === 'home' && k.result === 'scored').length, 6, shape);
+    assert.equal(d.shootout?.filter(k => k.side === 'away' && k.result === 'scored').length, 5, shape);
+    const patch = fixturePatchFromDetail(d);
+    assert.deepEqual([patch.status, patch.home_score, patch.away_score, patch.home_penalties, patch.away_penalties, patch.winner_espn_id], ['finished', 1, 1, 6, 5, '364']);
+    assert.deepEqual(patch.notes, ['Liverpool advances 6-5 on penalties']);
+  }
+  // The audit payload keeps the shootout.
+  assert.ok((slimEspnSummary(liverpoolChelsea('top-level')) as Record<string, unknown>).shootout);
 });

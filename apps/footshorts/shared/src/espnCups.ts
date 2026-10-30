@@ -62,7 +62,7 @@ export function validCupSeason(year: unknown): year is number {
   return typeof year === 'number' && Number.isInteger(year) && year >= 2000 && year <= currentCupSeason() + 1;
 }
 
-function normalizeStatus(type: JsonObject): CupStatus {
+export function normalizeCupStatus(type: JsonObject): CupStatus {
   const name = text(type.name) ?? '';
   if (/POSTPON/i.test(name)) return 'postponed';
   if (/CANCEL|ABANDON/i.test(name)) return 'cancelled';
@@ -91,7 +91,7 @@ export function normalizeCupEvent(event: unknown, cup: EspnCup, fetchedAt: strin
   const homeTeam = object(home.team);
   const awayTeam = object(away.team);
   const type = object(object(match.status ?? e.status).type);
-  const status = normalizeStatus(type);
+  const status = normalizeCupStatus(type);
   // ESPN sends score="0" for unplayed games; do not manufacture a 0–0 result.
   const hasScores = status === 'live' || status === 'finished' || status === 'suspended';
   const kickoff = text(match.date) ?? text(e.date);
