@@ -12,6 +12,7 @@ import type { SeasonBookViewProps } from '../BookWorkspace'
 import { BUTTON, ICON_BUTTON, PANEL, SELECT } from '../shared'
 import { EditorTabPanel } from './EditorTabs'
 import { SpreadCanvas } from './SpreadCanvas'
+import { ZoomFrame } from './ZoomFrame'
 import { useSubjectData, type SubjectData } from './useBookData'
 
 /** Everything a tab panel needs: the spread, its row, the one way to change it, and the subject's match data. */
@@ -103,8 +104,10 @@ export function SpreadEditorView({ plan, seasonStart, edit, spreads, spread, tab
             ))}
           </select>
         </header>
-        <SpreadCanvas spread={spread} row={row} seasonStart={seasonStart} data={{ rows: data.rows, competition: data.competition }} onModule={onModule} activeModule={activeModule}
-          className="w-full rounded-md shadow-lg shadow-black/40" />
+        <ZoomFrame>
+          <SpreadCanvas spread={spread} row={row} seasonStart={seasonStart} data={{ rows: data.rows, competition: data.competition }} onModule={onModule} activeModule={activeModule}
+            className="w-full rounded-md shadow-lg shadow-black/40" />
+        </ZoomFrame>
         <p className="text-xs text-neutral-500">
           {data.competition
             ? data.entry?.status === 'ready' ? row.pack ? `${data.rows.length} ${data.competition} matches, plus the spread’s data pack (${row.pack.hash.slice(0, 8)}).` : `${data.rows.length} ${data.competition} matches drawn; lineups, minutes, transfers, awards and cup ties arrive with the spread’s data pack.` : data.entry?.status === 'error' ? data.entry.error : `Reading ${data.competition}…`
