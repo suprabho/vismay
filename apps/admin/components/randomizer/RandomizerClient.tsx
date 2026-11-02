@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowCounterClockwise,
   ArrowSquareOut,
@@ -10,6 +10,7 @@ import {
   Copy,
   Crown,
   Fire,
+  Flask,
   GraduationCap,
   LockSimple,
   Medal,
@@ -35,12 +36,13 @@ import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
 import { hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
+import { EVIDENCE, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
   RESPIN_REASONS,
   randomizersFor,
+  type EvidenceFlag,
   type FootshortsNews,
   type HundredFlag,
   type LandmarkSources,
@@ -228,9 +230,9 @@ function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: 
 
 /**
  * One slot machine for a site's randomizers: Desk, Atlas, Epics, the OCW
- * Desk, the Landmark Desk and The 100 Desk on vizmaya (with the Desk heat
- * table, the OCW pool panel, the Landmark pool panel and The 100 profile
- * panel), the Football Desk on footshorts
+ * Desk, the Landmark Desk, The 100 Desk and the Evidence Desk on vizmaya
+ * (with the Desk heat table, the OCW pool panel, the Landmark pool panel,
+ * The 100 profile panel and the Evidence study panel), the Football Desk on footshorts
  * (with its live news table), the NBA Desk on viznba (with its news and
  * games).
  */
@@ -439,12 +441,14 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, six reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  One slot machine, seven reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
                   tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
                   MIT OpenCourseWare live for its course and resource reels; the Landmark Desk reads the prize lists (the Nobel Prize
                   API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; The
                   100 Desk draws a person from Michael Hart&rsquo;s ranking of the most influential persons in history and reads their
-                  profile (Wikidata, Wikipedia, pageviews) live; a cron spins each once a morning. The agent brief then carries the spin.
+                  profile (Wikidata, Wikipedia, pageviews) live; the Evidence Desk draws a study from an annotated collection of research on
+                  social media&rsquo;s effects and reads its citation record (OpenAlex) live; a cron spins each once a morning. The agent
+                  brief then carries the spin.
                 </>
               )}
             </p>
@@ -454,7 +458,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk)'} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk)'} been applied?
           </div>
         )}
 
@@ -760,6 +764,7 @@ export function RandomizerClient({
         {tab === 'ocw' && <OcwPool spin={current} />}
         {tab === 'landmark' && <LandmarkPool spin={current} />}
         {tab === 'hundred' && <HundredProfilePanel spin={current} />}
+        {tab === 'evidence' && <EvidenceStudyPanel spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -1506,6 +1511,147 @@ function HundredProfilePanel({ spin }: { spin: SpinRecord | null }) {
             <div key={`n${i}`} className="text-amber-300/90">{n}</div>
           ))}
           {pr?.sources.errors.map((e, i) => (
+            <div key={`e${i}`} className="text-red-300/90">{e}</div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const EVIDENCE_FLAG_LABEL: Record<EvidenceFlag, string> = {
+  contested: 'contested',
+  preprint: 'not peer-reviewed',
+  replication: 'did not replicate',
+  platform: 'with the platform',
+  'small-sample': 'small sample',
+  suicide: 'safe messaging',
+  correction: 'corrected',
+}
+
+/** The Evidence Desk's study: the entry the spin drew from the collection, its design, the studies it is in conversation with, and its live citation record. */
+function EvidenceStudyPanel({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'evidence' ? spin.subject : null
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-neutral-300 inline-flex items-center gap-1.5">
+          <Flask size={15} className="text-orange-400" />
+          Evidence study
+        </span>
+        <span>
+          {EVIDENCE.studies.length} studies from <i>{EVIDENCE.collection.title}</i>, in {EVIDENCE.themes.length} themes and {EVIDENCE.designs.length} designs. The
+          collection is committed; a spin reads the study&rsquo;s citation record live (OpenAlex) and keeps it on the spin.
+        </span>
+      </section>
+    )
+  }
+  const st = s.study
+  const r = s.record
+  const max = Math.max(1, ...(r?.countsByYear.map((c) => c.citations) ?? []))
+  const row = (label: string, body: ReactNode) => (
+    <>
+      <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">{label}</span>
+      <div className="min-w-0 text-xs text-neutral-300">{body}</div>
+    </>
+  )
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Flask size={15} className="text-orange-400" />
+          Evidence study
+        </h2>
+        <span className="text-xs text-neutral-500">
+          #{st.n} of {EVIDENCE.studies.length} in the collection ({s.collection.edition} edition){r ? `, record read ${new Date(r.asOf).toLocaleString()}` : ', no live record on this spin'}.
+          {s.from !== null ? ` Followed the debate from #${s.from}.` : ''}
+        </span>
+        {r && (
+          <span className="flex flex-wrap gap-1.5 sm:ml-auto">
+            {(['openalex', 'unpaywall'] as const).map((k) => (
+              <span key={k} className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${SOURCE_TONE[r.sources[k]]}`}>
+                {k === 'openalex' ? 'OpenAlex' : 'Unpaywall'} · {r.sources[k]}
+              </span>
+            ))}
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 border-b border-white/5 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Study</span>
+        <div className="min-w-0">
+          {st.url ? (
+            <a href={st.url} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+              {st.title}
+              <ArrowSquareOut size={13} className="text-neutral-500 shrink-0" />
+            </a>
+          ) : (
+            <span className="text-neutral-100">{st.title}</span>
+          )}
+          <div className="text-xs text-neutral-500">
+            {[st.label, st.venue, s.design.name, st.access === 'open' ? 'open access' : st.access === 'free-copy' ? 'free copy' : null].filter(Boolean).join(' · ')}
+          </div>
+          {st.flags.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wider">
+              {st.flags.map((f) => (
+                <span key={f} className="px-2 py-0.5 rounded-full border text-amber-300 border-amber-400/40">
+                  {EVIDENCE_FLAG_LABEL[f]}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {st.type_sample && row('Sample', st.type_sample)}
+        {row('Findings', <span className="text-neutral-400">{st.findings}</span>)}
+        {row('Theme', <span className="text-neutral-400">{s.theme.name}: {s.theme.bottom_line}</span>)}
+        {r && (r.citedBy !== null || r.fwci !== null) &&
+          row(
+            'Record',
+            <span>
+              {r.citedBy?.toLocaleString('en-US') ?? 'n/a'} citations{r.fwci !== null ? ` · FWCI ${r.fwci}` : ''}
+              {r.topOnePercent ? ' · top 1%' : ''}
+              {r.retracted ? <span className="text-red-300"> · retracted</span> : null}
+              {r.oaUrl && (
+                <>
+                  {' · '}
+                  <a href={r.oaUrl} target="_blank" rel="noreferrer" className="hover:underline">
+                    free to read
+                  </a>
+                </>
+              )}
+            </span>,
+          )}
+        {s.related.length > 0 &&
+          row(
+            'Linked',
+            <div className="flex flex-col gap-0.5">
+              {s.related.map((x) => (
+                <div key={x.n} className="text-neutral-400">
+                  <span className="text-neutral-500 font-mono">#{x.n}</span> {x.label}: {x.title}
+                </div>
+              ))}
+            </div>,
+          )}
+      </div>
+      {r && r.countsByYear.length > 0 && (
+        <div className="px-4 py-3 border-b border-white/5">
+          <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono mb-1.5">Citations by year (OpenAlex)</div>
+          <div className="flex items-end gap-1 h-16">
+            {r.countsByYear.map((c) => (
+              <div key={c.year} className="flex-1 min-w-0 flex flex-col items-center gap-1" title={`${c.year}: ${c.citations.toLocaleString('en-US')} citations`}>
+                <div className="w-full rounded-sm bg-orange-400/70" style={{ height: `${Math.max(2, Math.round((c.citations / max) * 48))}px` }} />
+                <span className="text-[9px] text-neutral-600 font-mono">{String(c.year).slice(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {(st.note || (r && (r.sources.notes.length > 0 || r.sources.errors.length > 0))) && (
+        <div className="px-4 py-3 text-xs text-neutral-500 flex flex-col gap-1">
+          {st.note && <div className="text-amber-300/90">{st.note}</div>}
+          {r?.sources.notes.map((n, i) => (
+            <div key={`n${i}`} className="text-amber-300/90">{n}</div>
+          ))}
+          {r?.sources.errors.map((e, i) => (
             <div key={`e${i}`} className="text-red-300/90">{e}</div>
           ))}
         </div>

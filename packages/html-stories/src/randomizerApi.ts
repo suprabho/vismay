@@ -38,6 +38,11 @@
  *                                                     its domains, eras and lenses; with `rank` (1 to 100),
  *                                                     that person's live profile as a spin would read it
  *   GET  /api/randomizer/cron/hundred               The 100 Desk's daily spin (Vercel Cron, CRON_SECRET)
+ *   GET  /api/randomizer/evidence?study=            the Evidence Desk's pool (vizmaya only): the annotated
+ *                                                     collection with its themes, designs and lenses; with
+ *                                                     `study` (1 to 83), that study and its live citation
+ *                                                     record as a spin would read it
+ *   GET  /api/randomizer/cron/evidence              the Evidence Desk's daily spin (Vercel Cron, CRON_SECRET)
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -46,8 +51,9 @@
  * Server only.
  */
 
-import { DESK, HUNDRED, LANDMARK, OCW, hundredByRank } from '@vismay/randomizer/datasets'
+import { DESK, EVIDENCE, HUNDRED, LANDMARK, OCW, evidenceByNumber, hundredByRank } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
+import { loadEvidenceRecord } from '@vismay/randomizer/evidencePool'
 import { loadHundredProfile } from '@vismay/randomizer/hundredPool'
 import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from '@vismay/randomizer/landmarkPool'
 import { loadOcwPool } from '@vismay/randomizer/ocwPool'
@@ -425,8 +431,29 @@ export async function handleHundredPoolRequest(req: Request): Promise<Response> 
 }
 
 /**
+ * GET /api/randomizer/evidence on vizmaya: the Evidence Desk's pool. Without
+ * `study` it answers the whole collection (its summary, key findings and
+ * caveats, the themes with their verdicts, the designs, the 83 studies and
+ * the lenses); with `study` (1 to 83) that study and its live citation
+ * record, read the way a spin reads it (packages/randomizer evidencePool.ts:
+ * OpenAlex, Unpaywall), for an agent that wants to look before locking a
+ * study. Read-only; a source that fails is recorded in the record, never an
+ * error.
+ */
+export async function handleEvidencePoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const raw = new URL(req.url).searchParams.get('study')?.trim()
+  if (!raw) return json({ ...EVIDENCE, note: `Pass study (1 to ${EVIDENCE.studies.length}) for that study's live citation record, as a spin would read it.` })
+  const study = /^\d+$/.test(raw) ? evidenceByNumber(Number(raw)) : undefined
+  if (!study) return json({ error: `study must be a whole number from 1 to ${EVIDENCE.studies.length}` }, 400)
+  return json({ study, record: await loadEvidenceRecord(study) })
+}
+
+/**
  * The daily spin of a randomizer with a cron (the OCW Desk, the Landmark
- * Desk, The 100 Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
+ * Desk, The 100 Desk, the Evidence Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
  * `Authorization: Bearer $CRON_SECRET`; it fails closed without the secret.
  * One spin per UTC day: when a kept spin of that randomizer already exists
  * today (someone spun by hand), it answers with that one and spins nothing.
@@ -460,4 +487,9 @@ export async function handleLandmarkDailySpinRequest(req: Request, origin: strin
 /** GET /api/randomizer/cron/hundred on vizmaya: The 100 Desk's daily spin. */
 export async function handleHundredDailySpinRequest(req: Request, origin: string): Promise<Response> {
   return handleDailySpinRequest(req, origin, 'hundred')
+}
+
+/** GET /api/randomizer/cron/evidence on vizmaya: the Evidence Desk's daily spin. */
+export async function handleEvidenceDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'evidence')
 }

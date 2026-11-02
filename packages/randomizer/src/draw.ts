@@ -79,9 +79,20 @@
  * Sequence mode walks the ranking: the rank after the previous spin's,
  * wrapping from 100 to 1. The person's live profile (Wikidata, Wikipedia)
  * is read after the draw (spins.ts) and changes nothing in it.
+ *
+ * The Evidence Desk draws from an annotated collection of research on social
+ * media's effects (83 papers and reports in 7 themes), also held whole, so it
+ * is pure in one pass too: a theme first (weighted by the square root of its
+ * study count, so the 25 mental-health studies do not crowd out the 3 on
+ * benefits; re-drawn once when it repeats the last spin's), a design the theme
+ * has studies of, a study in both (minus studies spun in the last 30 days),
+ * and a lens; the combination (study, lens) is blocked for 90 days. Sequence
+ * mode follows the debate: a study the collection links to the previous
+ * spin's (a rebuttal, a replication, a later trial). The study's live
+ * citation record (OpenAlex) is read after the draw and changes nothing in it.
  */
 
-import { ATLAS, DESK, EPICS, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
+import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
 import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkLicenceNote, ocwCourseLabel } from './stub'
 import {
@@ -106,6 +117,12 @@ import {
   type FootshortsNews,
   type FootshortsPicks,
   type FootshortsTeamNews,
+  type EvidenceDataset,
+  type EvidenceDesign,
+  type EvidencePicks,
+  type EvidenceRelated,
+  type EvidenceStudy,
+  type EvidenceTheme,
   type HundredDataset,
   type HundredDomain,
   type HundredEra,
@@ -198,7 +215,7 @@ export interface DrawInput {
   locks?: string[]
   /** Atlas: draw a second country. Footshorts and the NBA Desk: draw a head-to-head opponent. */
   pair?: boolean
-  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. */
+  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. The Evidence Desk: a study linked to the previous one. */
   sequence?: boolean
   /** Desk: live heat from desk_heat, overriding the dataset's seed values. */
   heat?: DeskHeatRow[]
@@ -211,7 +228,7 @@ export interface DrawInput {
   /** Landmark Desk: the awards planLandmark() asked for and the planned laureate's works (spins.ts). Required. */
   landmarkPool?: LandmarkPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -361,6 +378,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'hundred') {
     return drawHundred(ctx, input.datasets?.hundred ?? HUNDRED, prev?.picks as HundredPicks | undefined, !!input.sequence)
+  }
+  if (input.randomizer === 'evidence') {
+    return drawEvidence(ctx, input.datasets?.evidence ?? EVIDENCE, prev?.picks as EvidencePicks | undefined, !!input.sequence)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -1587,6 +1607,189 @@ function drawHundred(ctx: Ctx, data: HundredDataset, prev: HundredPicks | undefi
     summary: `#${person.rank} ${person.name} · ${lens.name}`,
     rules: ctx.rules,
     meta: { domain: domain.id, rank: person.rank },
+  }
+}
+
+/* ---------- The Evidence Desk ---------- */
+
+/** What a study's design lets the page say, as a rule on every spin. */
+function evidenceDesignRule(ctx: Ctx, st: EvidenceStudy, design: EvidenceDesign): void {
+  const kind: RuleFired['kind'] = design.id === 'experiment' || design.id === 'natural' ? 'info' : 'warn'
+  const verb =
+    design.id === 'experiment' || design.id === 'natural'
+      ? 'the page may say "caused" for that sample and period, and no further'
+      : design.id === 'report'
+        ? 'attribute every claim to the institution or author, and trace it to the studies behind it'
+        : 'the page says "is linked to" or "goes with", never "causes" or "leads to"'
+  rule(ctx, 'design', kind, `${st.label} is a ${design.name.toLowerCase()}: it can show ${design.can_show}. So ${verb}.`)
+}
+
+/** The rules a study's flags fire: what the brief must handle before anything else. */
+function evidenceFlagRules(ctx: Ctx, st: EvidenceStudy): void {
+  if (st.flags.includes('contested')) rule(ctx, 'contested', 'warn', st.note ?? `${st.label}'s finding is disputed in the field: put the strongest other side on the page, fairly.`)
+  if (st.flags.includes('preprint')) rule(ctx, 'not peer-reviewed', 'warn', `${st.label} is a preprint or working paper, not a peer-reviewed article: say so on the page, by the finding, and in the share card.`)
+  if (st.flags.includes('replication')) rule(ctx, 'replication', 'warn', st.note ?? `A later study did not reproduce ${st.label}'s finding: the page leads with that.`)
+  if (st.flags.includes('platform')) {
+    rule(ctx, 'platform', 'info', `${st.label} was run with or by the platform it studies. Say so, say what independence agreement or data access it had, and give the independent evidence on the same question.`)
+  }
+  if (st.flags.includes('small-sample')) rule(ctx, 'small sample', 'warn', `${st.label} has a small sample: give the n by every headline number, and do not generalize past it.`)
+  if (st.flags.includes('suicide')) {
+    rule(ctx, 'safe messaging', 'warn', 'The study concerns suicide or self-harm: follow safe-messaging guidance (no method detail, no "epidemic" or single-cause framing, risk stated as risk, not destiny), and end the page with a crisis line such as 988 (US) or findahelpline.com.')
+  }
+  if (st.flags.includes('correction')) rule(ctx, 'correction', 'info', st.note ?? `A correction to ${st.label} has been published: read it before quoting a number.`)
+}
+
+/** The collection's key findings that cite a study by number. */
+function evidenceFindingsCiting(data: EvidenceDataset, n: number): string[] {
+  return data.collection.key_findings.filter((k) => {
+    for (const m of k.matchAll(/#(\d+)(?:\s*[–-]\s*#(\d+))?/g)) {
+      const a = Number(m[1])
+      const b = m[2] ? Number(m[2]) : a
+      if (n >= a && n <= b) return true
+    }
+    return false
+  })
+}
+
+function drawEvidence(ctx: Ctx, data: EvidenceDataset, prev: EvidencePicks | undefined, sequence: boolean): DrawResult {
+  const { rng } = ctx
+  const byNumber = (n: number) => evidenceByNumber(n, data)
+  const last = ctx.kept[ctx.kept.length - 1]
+  const lastPicks = last?.picks as EvidencePicks | undefined
+
+  let study: EvidenceStudy | undefined
+  let from: number | null = null
+
+  if (sequence) {
+    const origin = lastPicks ? byNumber(lastPicks.study) : undefined
+    if (ctx.locked('theme') || ctx.locked('design') || ctx.locked('study')) {
+      rule(ctx, 'sequence', 'info', 'Following the debate ignores the theme, design and study reels, and they are locked here, so the locks win: drawing under them.')
+    } else if (origin && origin.related.some((n) => byNumber(n))) {
+      const linked = origin.related.map(byNumber).filter((x): x is EvidenceStudy => !!x)
+      const cands = eligible(ctx, linked, {
+        id: (x) => x.id,
+        name: (x) => x.label,
+        heat: () => 0,
+        heatLabel: '',
+        everyText: `Every study linked to ${origin.label} was spun in the last 30 days.`,
+      })
+      study = pick(cands, rng)
+      from = origin.n
+      rule(ctx, 'sequence', 'good', `Following the debate from #${origin.n} ${origin.label}: the collection links it to ${linked.length === 1 ? 'one study' : `${linked.length} studies`}, and this spin takes #${study.n} ${study.label}. The theme balance pauses while the debate runs.`)
+    } else if (origin) {
+      rule(ctx, 'sequence', 'info', `The collection links no other study to #${origin.n} ${origin.label}, so there is no debate to follow. Drawing fresh.`)
+    } else {
+      rule(ctx, 'sequence', 'info', 'Following the debate needs a previous spin to follow on from. Drawing fresh.')
+    }
+  }
+
+  if (!study) {
+    const prevStudy = prev ? byNumber(prev.study) : undefined
+    if (ctx.locked('study') && prevStudy) {
+      study = prevStudy
+      rule(ctx, 'lock', 'info', `Study locked to #${study.n} ${study.label}.`)
+    } else {
+      let theme: EvidenceTheme
+      const prevTheme = prev ? data.themes.find((t) => t.id === prev.theme) : undefined
+      const size = (t: EvidenceTheme) => Math.sqrt(data.studies.filter((x) => x.theme === t.id).length)
+      if (ctx.locked('theme') && prevTheme) {
+        theme = prevTheme
+        rule(ctx, 'lock', 'info', `Theme locked to ${theme.name}.`)
+      } else {
+        theme = weighted(data.themes, size, rng)
+        if (last?.meta.theme === theme.id) {
+          const again = weighted(data.themes, size, rng)
+          rule(
+            ctx,
+            'balance',
+            'warn',
+            again.id === theme.id
+              ? `${theme.name} came up twice in a row, so the theme was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+              : `${theme.name} came up twice in a row, so the theme was re-drawn once, now ${again.name}.`,
+          )
+          theme = again
+        }
+        rule(ctx, 'balance', 'good', `Stratified draw: theme first (${theme.name}, weighted by the square root of its study count), then a design it has studies of, then a study. The 25 mental-health studies do not crowd out the 3 on benefits.`)
+      }
+
+      const designs = evidenceDesigns(theme.id, data)
+      let design: EvidenceDesign
+      const prevDesign = prev ? designs.find((d) => d.id === prev.design) : undefined
+      if (ctx.locked('design') && prevDesign) {
+        design = prevDesign
+        rule(ctx, 'lock', 'info', `Design locked to ${design.name}.`)
+      } else {
+        design = pick(designs, rng)
+      }
+
+      const inCell = data.studies.filter((x) => x.theme === theme.id && x.design === design.id)
+      const cands = eligible(ctx, inCell, {
+        id: (x) => x.id,
+        name: (x) => x.label,
+        heat: () => 0,
+        heatLabel: '',
+        everyText: `Every ${design.name.toLowerCase()} on ${theme.name.toLowerCase()} was spun in the last 30 days.`,
+      })
+      study = pick(cands, rng)
+    }
+  }
+
+  const theme = data.themes.find((t) => t.id === study!.theme)!
+  const design = data.designs.find((d) => d.id === study!.design)!
+  let lens = (ctx.locked('lens') && prev && data.lenses.find((l) => l.name === prev.lens)) || pick(data.lenses, rng)
+
+  const combo = () => `${study!.id}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    const fresh = data.lenses.filter((l) => !r90.has(`${study!.id}|${l.name}`))
+    if (!ctx.locked('lens') && fresh.length) lens = pick(fresh, rng)
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${study.label} with the ${lens.name} lens ran in the last 90 days${ctx.locked('lens') ? ', and the lens is locked' : ', and every lens has run'}. It repeats.`
+        : `${study.label} with the first lens drawn ran in the last 90 days. The lens was re-drawn.`,
+    )
+  }
+
+  rule(ctx, 'evidence', 'info', `The collection's summary of #${study.n} is where research starts, not the source: every number on the page comes from the paper itself, with its page or table. Judge the effect against benchmarks (0.05 to 0.1 SD), not headlines.`)
+  evidenceDesignRule(ctx, study, design)
+  evidenceFlagRules(ctx, study)
+  if (!study.doi) rule(ctx, 'record', 'info', `#${study.n} has no DOI, so the spin reads no live citation record for it.`)
+
+  const related: EvidenceRelated[] = study.related
+    .map(byNumber)
+    .filter((x): x is EvidenceStudy => !!x)
+    .map((x) => ({ n: x.n, label: x.label, title: x.title, design: x.design, findings: x.findings, url: x.url, flags: x.flags }))
+
+  const picks: EvidencePicks = { theme: theme.id, design: design.id, study: study.n, lens: lens.name }
+  return {
+    randomizer: 'evidence',
+    picks,
+    subject: {
+      randomizer: 'evidence',
+      collection: { title: data.collection.title, edition: data.collection.edition, summary: data.collection.summary, source: data.collection.source },
+      theme,
+      design,
+      study,
+      lens,
+      related,
+      findings: evidenceFindingsCiting(data, study.n),
+      record: null,
+      from,
+    },
+    reels: {
+      theme: { value: theme.name },
+      design: { value: design.name },
+      study: { value: study.label, sub: `#${study.n} · ${study.title.length > 70 ? `${study.title.slice(0, 68).trimEnd()}…` : study.title}` },
+      lens: { value: lens.name },
+    },
+    primary: study.id,
+    combo: combo(),
+    summary: `#${study.n} ${study.label} · ${lens.name}`,
+    rules: ctx.rules,
+    meta: { theme: theme.id, study: study.n },
   }
 }
 

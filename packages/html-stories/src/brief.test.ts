@@ -312,7 +312,7 @@ const fsBook = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footsho
 assert.ok(fsBook.includes('https://footshorts.com/formats/book@1.js') && !fsBook.includes('vizmaya.fyi'))
 
 // An "Explain like I'm 5" spin swaps the randomizer's format for a picture story, for any randomizer that has the lens.
-for (const randomizer of ['hundred'] as const) {
+for (const randomizer of ['hundred', 'evidence'] as const) {
   const now = new Date('2026-10-05T12:00:00Z')
   const drawn = draw({ randomizer, seed: 5, now })
   const spin = {
@@ -328,7 +328,7 @@ for (const randomizer of ['hundred'] as const) {
   const b = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
   assert.ok(b.includes('## Format: picture story for a five-year-old'), `${randomizer}: eli5 format`)
   assert.ok(b.indexOf('**Reader: a five-year-old (required).**') < b.indexOf('## Your assignment'), `${randomizer}: banner first`)
-  assert.ok(!b.includes('## Format: influence profile') && !b.includes('## Format: landmark paper') && !b.includes('## Format: study note'))
+  assert.ok(!b.includes('## Format: influence profile') && !b.includes('## Format: landmark paper') && !b.includes('## Format: study note') && !b.includes('## Format: evidence explainer'))
   assert.ok(!b.includes('End with a "Sources and claims log" section') && b.includes('"For grown-ups" card'))
   assert.ok(b.includes('Write the script for the same five-year-old'))
   assert.ok(b.includes('20 words or fewer each'))

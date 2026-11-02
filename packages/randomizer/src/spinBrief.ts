@@ -10,6 +10,9 @@
  */
 
 import {
+  evidenceCreditLine,
+  evidenceLensMetrics,
+  evidenceStudyLabel,
   fixtureSummary,
   footshortsAngleMetrics,
   gameSummary,
@@ -34,6 +37,7 @@ import {
   type AtlasSubject,
   type DeskSubject,
   type EpicsSubject,
+  type EvidenceSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
   type HundredSubject,
@@ -59,7 +63,7 @@ export const ELI5_LENS = "Explain like I'm 5"
  */
 export function isEli5Spin(spin: Pick<BriefSpin, 'subject'>): boolean {
   const s = spin.subject
-  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw') && s.lens.name === ELI5_LENS
+  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw' || s.randomizer === 'evidence') && s.lens.name === ELI5_LENS
 }
 
 /** What the picture story is about, and what the grown-ups card credits, per randomizer. */
@@ -77,6 +81,13 @@ function eli5Subject(spin: BriefSpin): { who: string; real: string; credit: stri
       who: s.award.name,
       real: `the ${landmarkAwardLabel(s.prize, s.award.year)} and the work it rewarded`,
       credit: landmarkCreditLine(s),
+    }
+  }
+  if (s.randomizer === 'evidence') {
+    return {
+      who: `the people who ran ${s.study.label}`,
+      real: `${evidenceStudyLabel(s)}, what its design can show, and the strongest study on the other side`,
+      credit: evidenceCreditLine(s),
     }
   }
   if (s.randomizer === 'ocw') {
@@ -457,6 +468,55 @@ function hundredAssignment(s: HundredSubject): string[] {
   return out
 }
 
+function evidenceAssignment(s: EvidenceSubject): string[] {
+  const st = s.study
+  const r = s.record
+  const out = [
+    `- Study: ${evidenceStudyLabel(s)}. ${st.citation}`,
+    `- Link: ${st.url ?? 'none in the collection: find the paper on the publisher\'s site'}${st.access === 'open' ? ' (open access)' : st.access === 'free-copy' ? ' (a free author or working-paper copy is commonly available)' : ''}${r?.oaUrl && r.oaUrl !== st.url ? `. Free to read: ${r.oaUrl}` : ''}.`,
+    `- Theme: ${s.theme.name}${st.section_name ? ` (${st.section_name})` : ''}. The collection rates this theme's evidence "${s.theme.strength}" and reads it as: ${s.theme.bottom_line}`,
+    `- Design: ${s.design.name}. It can show ${s.design.can_show}.${st.type_sample ? ` Type and sample: ${st.type_sample}` : ''}`,
+    `- The collection's summary (to check against the paper, never to cite): ${st.findings}`,
+    `- Lens: ${s.lens.name}. ${s.lens.description}`,
+  ]
+  if (st.note) out.push(`- Up front: ${st.note}`)
+  if (s.findings.length) out.push(`- The collection's conclusions that rest on it: ${s.findings.map((f) => `"${f}"`).join(' ')}`)
+  if (r && (r.citedBy !== null || r.fwci !== null)) {
+    out.push(
+      `- Citation record (OpenAlex ${r.openalexUrl ?? ''}, read ${r.asOf.slice(0, 10)}): ${r.citedBy ?? 'n/a'} citations${r.fwci !== null ? `, field-weighted impact ${r.fwci} (1 is the field average)` : ''}${r.topOnePercent ? ', in the top 1% of its field' : ''}${r.retracted ? '. RETRACTED' : ''}.`,
+    )
+  }
+  if (s.related.length) {
+    out.push('', 'In conversation with (the collection links these to it; read the ones your lens needs):', '')
+    for (const x of s.related) out.push(`- #${x.n} ${x.label}: ${x.title}${x.url ? ` (${x.url})` : ''}. ${x.findings}`)
+  }
+  out.push(
+    '',
+    `About the collection: ${s.collection.summary}`,
+    '',
+    '### Do this first',
+    '',
+    `1. Read the paper itself: the abstract, the methods and the main results table. ${st.url ? `Start at ${st.url}.` : ''} If you cannot reach the full text, say so in the research file and use only what the abstract and the publisher's page state.`,
+    '2. Put every number the collection gives for it in the claims log and check each against the paper (page, table or figure). Where they differ, the paper wins and the research file says so.',
+    `3. Apply the ${s.lens.name} lens to ${st.label}, not to ${s.theme.name.toLowerCase()} in general.`,
+    `4. ${evidenceCreditLine(s)}`,
+  )
+  let n = 5
+  if (s.from !== null) out.push(`${n++}. This spin follows the debate from #${s.from} in the collection, the previous spin's study. Link back to that story and say how the two studies answer each other.`)
+  if (st.flags.includes('suicide')) out.push(`${n++}. The study concerns suicide or self-harm: follow safe-messaging guidance (no method detail, no single-cause or "epidemic" framing) and end the page with a crisis line such as 988 (US) or findahelpline.com.`)
+  if (r?.countsByYear.length) {
+    out.push('', `Citations by year (OpenAlex, read ${r.asOf.slice(0, 10)}; the newest year is partial): ${r.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}.`)
+  }
+  if (r && (r.sources.errors.length || r.sources.notes.length)) out.push('', `Record notes: ${[...r.sources.notes, ...r.sources.errors.map((e) => `${e}: look it up by hand.`)].join(' ')}`)
+  if (!r) out.push('', 'No live citation record on this spin: look the paper up on OpenAlex or the publisher\'s page yourself.')
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${evidenceLensMetrics(s.lens.name).join(', ')}.`,
+    'Start from: the paper itself, its preregistration and data if they are public, the studies the collection links to it, and a public dataset (a national survey, a platform transparency report) for any number about the world.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -476,7 +536,9 @@ export function assignmentSection(spin: BriefSpin): string {
                 ? landmarkAssignment(s)
                 : s.randomizer === 'hundred'
                   ? hundredAssignment(s)
-                  : epicsAssignment(s)
+                  : s.randomizer === 'evidence'
+                    ? evidenceAssignment(s)
+                    : epicsAssignment(s)
   const ready = insightReady(spin)
   const lead = ready
     ? [
@@ -516,7 +578,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
                 ? '\n8. The work is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it; otherwise the page says "representative work".'
                 : spin.randomizer === 'hundred'
                   ? '\n8. Hart\'s rank and his reasons are his opinion, not a fact: attribute them ("Hart argues"), and test them. Separate what contemporary sources document from what later tradition, legend or hagiography added, and label each. A religious claim is stated as what a tradition holds, never as fact or as falsehood.'
-                  : ''
+                  : spin.randomizer === 'evidence'
+                    ? '\n8. The paper is the primary source for what it found; cite it by page, table or figure. The collection\'s summary is a lead, never a source. A causal word ("causes", "leads to", "makes") is Verified only for a randomized or natural experiment, and then only for its sample and period. Every effect size goes on the page with its unit and its sample, against a benchmark. A preprint or working paper is labelled as such wherever its finding appears.'
+                    : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -700,6 +764,27 @@ ${meaning}
 6. **Hero insight.**`
 }
 
+function evidenceFormat(s: EvidenceSubject): string {
+  const st = s.study
+  const other = s.related.find((x) => st.flags.includes('contested') || x.flags.includes('contested')) ?? s.related[0]
+  return `## Format: evidence explainer with charts
+
+Built like the best page of a science desk: one study, what it found, how much that is, what its design can and cannot show, and where the question stands now. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the finding at its true strength: "is linked to" for a correlational design) and **dek** (one line, why it matters to a reader now).
+2. **The study card:** #${st.n} ${st.label}, the venue and year, the design (${s.design.name}), the sample in one line, a link to the paper${st.flags.includes('preprint') ? ', and "not yet peer-reviewed" beside it' : ''}.
+3. **The finding in a number:** the headline effect with its unit, translated into everyday terms, and set against a benchmark.
+4. **Chart 1, the effect in context:** this study's effect against the other studies on the same question (8 or more points where they exist).
+5. **What the design can show:** ${s.design.can_show}. One short paragraph and, if it helps, a diagram of the design.
+6. **Chart 2, the lens chart:** ${evidenceLensMetrics(s.lens.name)[0]}.
+7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+8. **The other side:** ${other ? `the strongest opposing or limiting study (start from #${other.n} ${other.label})` : 'the strongest opposing or limiting study you can find'}, stated fairly.
+9. **Where it stands:** what the collection's theme verdict says now, and what to watch next.
+10. **Go further:** the paper, its data or preregistration, the linked studies, all linked.
+11. **Credit:** ${evidenceCreditLine(s).replace(/^Credit: /, '')}
+12. **Sources and claims log summary.**`
+}
+
 /** "## Format: …": the randomizer's output format, as required content. */
 export function formatSection(spin: BriefSpin): string {
   if (isEli5Spin(spin)) return eli5Format(spin)
@@ -709,6 +794,7 @@ export function formatSection(spin: BriefSpin): string {
   if (s.randomizer === 'ocw') return ocwFormat(s)
   if (s.randomizer === 'landmark') return landmarkFormat(s)
   if (s.randomizer === 'hundred') return hundredFormat(s)
+  if (s.randomizer === 'evidence') return evidenceFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -753,6 +839,12 @@ export function chartRules(spin: BriefSpin): string[] {
     return [
       'Influence series rules: one message per chart, the title states the takeaway, axis units labelled, source and date in the footer, nothing decorative.',
       'Draw the map with D3-geo from your timeline\'s coordinates. A number about the past names its source and how it was estimated (a census, a scholarly estimate); the pageviews chart names Wikimedia and the read date.',
+    ]
+  }
+  if (spin.randomizer === 'evidence') {
+    return [
+      'Evidence series rules: one message per chart, the title states the takeaway at the strength the design allows, effect sizes on a labelled scale (SD, r, odds or risk ratio, points), the sample size in the footer with the source, nothing decorative.',
+      'Every estimate is drawn with its confidence interval where the paper reports one; studies of different designs are marked apart (shape or label), never averaged by eye. A number from a paper\'s table cites the table; the citation chart names OpenAlex and the read date.',
     ]
   }
   return [
@@ -806,13 +898,16 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'viznba' ? ['Every score and stat line matches the box scores; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'ocw' ? ['The resource and the course page are linked, the CC BY-NC-SA credit names the course, the instructors and the term, and nothing on the page is sponsored.'] : []),
     ...(spin.randomizer === 'landmark' ? ['The work and the laureate page are linked, the motivation is quoted verbatim, a representative work is labelled as such, and the credit names the data sources.'] : []),
+    ...(spin.randomizer === 'evidence'
+      ? ['Every number matches the paper (page or table), not the collection\'s summary; the causal language matches the design; a preprint is labelled; the opposing study is on the page; the credit links the paper itself.']
+      : []),
     ...(spin.randomizer === 'hundred' ? ["Hart's rank and reasons are attributed to him and tested, not repeated; his text is paraphrased, not copied; tradition and record are labelled apart; the credit names the book and the data sources."] : []),
     'Contested claims are labelled and both sides stated fairly.',
     'The first 3 seconds of the script open on the surprising claim.',

@@ -12,12 +12,13 @@ export const dynamic = 'force-dynamic'
 
 /**
  * The Vizmaya story randomizers (packages/randomizer, migrations 088, 093,
- * 094 and 096): one slot machine with six reel sets (Desk, Atlas, Epics, OCW
- * Desk, Landmark Desk, The 100 Desk). Spin draws a topic under the playbook's
- * rules and logs it; the composed agent brief carries the spin; the hero
- * insight gate, the Desk heat table, the OCW pool panel, the Landmark pool
- * panel and The 100 profile panel live here too. The OCW, Landmark and 100
- * Desks need nothing loaded up front: their pools and profiles are read per
+ * 094, 096 and 098): one slot machine with seven reel sets (Desk, Atlas,
+ * Epics, OCW Desk, Landmark Desk, The 100 Desk, Evidence Desk). Spin draws a
+ * topic under the playbook's rules and logs it; the composed agent brief
+ * carries the spin; the hero insight gate, the Desk heat table, the OCW pool
+ * panel, the Landmark pool panel, The 100 profile panel and the Evidence
+ * study panel live here too. The OCW, Landmark, 100 and Evidence Desks need
+ * nothing loaded up front: their pools, profiles and records are read per
  * spin and kept on the spin.
  */
 export default async function RandomizerPage() {
