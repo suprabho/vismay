@@ -6,6 +6,7 @@ import {
   bookIssues, bookSizeLabel, isEditorTab, isSeasonBookView, openBlockers, pageCount, spreadIssues, spreadRow,
   type EditorTabId, type PlanV2, type SeasonBookView,
 } from '@/lib/seasonBooks/seasonSpreads'
+import { seasonSlug } from '@/lib/seasonBooks/plan'
 import { SYSTEM_VERSION } from '@/lib/seasonBooks/system'
 import { type PlannerLocation, PlannerTabs, type SeasonBookViewProps } from '../BookWorkspace'
 import { PANEL } from '../shared'
@@ -15,6 +16,7 @@ import { LegacyView } from './LegacyView'
 import { RosterView } from './RosterView'
 import { SeasonSystemView } from './SeasonSystemView'
 import { SpreadEditorView } from './SpreadEditorView'
+import { SpreadPacksProvider } from './SpreadPacks'
 import { SpreadsView } from './SpreadsView'
 import { clubsByLeague, useLeagueData, usePlannedSpreads } from './useBookData'
 
@@ -82,6 +84,7 @@ export function SeasonSpreadsPlanner({ plan, seasonStart, title, edit, initial, 
   const viewProps: SeasonBookViewProps = { plan, seasonStart, title, edit, openSpread }
 
   return (
+    <SpreadPacksProvider slug={seasonSlug(seasonStart)}>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 border-b border-white/10 px-4 pt-4 sm:px-6">
         {header}
@@ -107,5 +110,6 @@ export function SeasonSpreadsPlanner({ plan, seasonStart, title, edit, initial, 
         {view === 'legacy' && <LegacyView {...viewProps} />}
       </div>
     </div>
+    </SpreadPacksProvider>
   )
 }

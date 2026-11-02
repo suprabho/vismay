@@ -363,8 +363,26 @@ the JSONB as `plan->version` for the shelf, so no column was added):
   the row alone, and the one-way `convertToSeasonSpreads()`.
   **Interim storage:** each spread's editorial row sits on the book plan under
   `spreads[key]` in the row's own shape until the spec's `admin_book_spreads`
-  table (per-spread `revision`), `admin_spread_packs` and the builder land;
-  moving it is a data move. The render (`season/SpreadCanvas`) follows the six
+  table (per-spread `revision`) lands; moving it is a data move. **Data packs** live in private
+  `admin_spread_packs` (footshorts migration
+  [20261102000000](../../supabase/footshorts/migrations/20261102000000_admin_spread_packs.sql),
+  zod in [lib/seasonBooks/spreadPack.ts](lib/seasonBooks/spreadPack.ts)):
+  one row per pack hash, newest wins, read once per book through `GET
+  /api/footshorts/books/[slug]/packs` into `season/SpreadPacks`. A team pack
+  carries the all-competition results, cup runs, XIs, minutes, transfers,
+  radar and the club's token; a league pack the awards, signings and scorers.
+  With a pack the canvas draws every module for real
+  ([season/PackModules](components/books/season/PackModules.tsx)), geometry in
+  [lib/seasonBooks/teamLayout.ts](lib/seasonBooks/teamLayout.ts), so moments
+  and story players stay editable and re-route; without one it falls back to
+  the match data, and a missing table only means no packs. Packs are built by
+  `vizmaya-data/football-seasons/scripts/spread_packs` and loaded with
+  `pnpm --filter @footshorts/worker history:spread-packs -- --season=2003
+  --push`; `--plan` fills the book's empty editorial fields from the same
+  folder's `rows.json` (`--replace` lets it win). Module notes double as the
+  climb and bubble titles. 2003-04 has packs for the 20 Premier League clubs
+  and the league; other subjects still render from match data.
+  The render (`season/SpreadCanvas`) follows the six
   reference spreads on the design canvas: the shared page-1 frame (kicker,
   two-line headline at 55 pt, kit-derived mark, story stat at 53 pt, story
   copy, season record, marks line, running line) and each template's modules
@@ -548,8 +566,10 @@ changes through review (bump `SYSTEM_VERSION`), never per book.
   spreads unless `format: 'claim-spreads'`), `GET|PUT|DELETE
   /api/footshorts/books/[slug]` (`PUT` takes a v1 or v2 plan),
   `GET /api/footshorts/books/matches?season=&competition=` (competition from
-  `BOOK_COMPETITIONS`). Missing tables answer 503 with the migration to apply.
-  The spec's per-spread, pack, draft, render and export routes are not built.
+  `BOOK_COMPETITIONS`), `GET /api/footshorts/books/[slug]/packs` (the newest
+  pack per spread key). Missing tables answer 503 with the migration to apply,
+  except packs, where a book simply has none.
+  The spec's per-spread, draft, render and export routes are not built.
 - **UI:** [components/books/](components/books/) — `BookWorkspace` (load,
   autosave, header, the convert action; hands the plan to
   `ClaimSpreadsPlanner` or `season/SeasonSpreadsPlanner` by format), one

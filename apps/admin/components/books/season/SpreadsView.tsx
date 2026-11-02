@@ -30,7 +30,7 @@ export function SpreadsView({ plan, seasonStart, spreads, issues, openSpread }: 
           <h2 className="text-lg font-semibold text-white">Spreads</h2>
           <p className="mt-1 max-w-3xl text-sm text-neutral-400">
             Every league, team and competition spread the roster calls for, grouped by part. The thumbnails are the templates’ module layout on the
-            1190 × 842 pt canvas; the charts draw once each spread has its data pack.
+            1190 × 842 pt canvas; a spread with a data pack draws its real charts.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -51,7 +51,7 @@ export function SpreadsView({ plan, seasonStart, spreads, issues, openSpread }: 
             <span className={`h-2 w-2 rounded-full ${STATUS_META[k].dot}`} /> {BOOK_SPREAD_STATUSES[k]} <span className="tabular-nums text-neutral-600">{counts[k]}</span>
           </span>
         ))}
-        <span className="inline-flex items-center gap-1.5 text-neutral-500"><Database size={12} /> pack · not built (the pack worker is not wired yet)</span>
+        <span className="inline-flex items-center gap-1.5 text-neutral-500"><Database size={12} /> pack · {rows.filter(r => r.row.pack).length} of {rows.length} built</span>
       </div>
       {bookWarnings.length > 0 && <ul className="space-y-1 text-sm text-amber-300">{bookWarnings.map((i, n) => <li key={n}>{i.message}</li>)}</ul>}
 
