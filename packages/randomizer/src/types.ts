@@ -1,8 +1,9 @@
 /**
- * Types for the story randomizers: the six Vizmaya ones (the playbook's
+ * Types for the story randomizers: the seven Vizmaya ones (the playbook's
  * Desk, Atlas and Epics, the OCW Desk on MIT OpenCourseWare, the Landmark
- * Desk on prize-winning research and The 100 Desk on Michael Hart's ranking
- * of the most influential persons in history), the
+ * Desk on prize-winning research, The 100 Desk on Michael Hart's ranking
+ * of the most influential persons in history and the Evidence Desk on an
+ * annotated collection of research on social media's effects), the
  * Footshorts one (teams, tournaments and their news) and the VizNBA one
  * (franchises, conferences and their news), their datasets (./data/*.json)
  * and the spins they produce.
@@ -10,9 +11,9 @@
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -46,7 +47,7 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark and The 100 sequence mode, Footshorts and NBA head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark, The 100 and Evidence sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
@@ -156,6 +157,21 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     ],
     option: { key: 'sequence', label: 'Walk the ranking (next rank)' },
     gated: true,
+  },
+  evidence: {
+    id: 'evidence',
+    app: 'vizmaya-fyi',
+    name: 'Evidence Desk',
+    hint: 'Social media research · 83 studies',
+    format: 'Evidence explainer with charts',
+    reels: [
+      { key: 'theme', label: 'Theme' },
+      { key: 'design', label: 'Design', parents: ['theme'] },
+      { key: 'study', label: 'Study', parents: ['design', 'theme'] },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: { key: 'sequence', label: 'Follow the debate (a linked study)' },
+    gated: false,
   },
   footshorts: {
     id: 'footshorts',
@@ -892,6 +908,172 @@ export interface HundredSubject {
   sequence: boolean
 }
 
+/* ---------- The Evidence Desk ---------- */
+
+/**
+ * What the brief must handle up front for one study: a finding the field
+ * disputes (#2 against #3), a paper not yet peer-reviewed, a finding a later
+ * study failed to replicate or reversed, a study run with or by the platform
+ * it studies, a small sample, content about suicide (safe-messaging rules
+ * apply), or a published correction.
+ */
+export type EvidenceFlag = 'contested' | 'preprint' | 'replication' | 'platform' | 'small-sample' | 'suicide' | 'correction'
+
+/** The annotated collection the desk draws from, for the credit line and the brief's context. */
+export interface EvidenceCollection {
+  title: string
+  edition: number
+  /** The collection's opening paragraph: its overall reading of the evidence. */
+  summary: string
+  tldr: string[]
+  /** Its six interpretive conclusions, citing studies by number. */
+  key_findings: string[]
+  caveats: string[]
+  /** What to watch through 2027. */
+  gaps: string
+  /** The markdown in the repo the dataset is parsed from. */
+  source: string
+}
+
+/** One of the collection's seven themes, with its overview-table verdict. */
+export interface EvidenceTheme {
+  id: string
+  /** The theme's number in the collection, 1 to 7. */
+  n: number
+  name: string
+  /** "Strength of evidence" in the collection's overview table. */
+  strength: string
+  bottom_line: string
+}
+
+/** How a study's finding was produced: the design reel. */
+export interface EvidenceDesign {
+  id: string
+  name: string
+  /** What a study of this design can show, for the evidence rule. */
+  can_show: string
+}
+
+/** A footnoted source the collection gives for an entry. */
+export interface EvidenceLink {
+  n: number
+  title: string
+  url: string
+}
+
+/** One entry of the collection, as the dataset parses it. */
+export interface EvidenceStudy {
+  /** The entry's number in the collection, 1 to 83 ("#14"). */
+  n: number
+  id: string
+  /** "Orben & Przybylski 2019": the reel value. */
+  label: string
+  /** The author list as cited; null for an unsigned article. */
+  authors: string | null
+  year: number
+  title: string
+  venue: string | null
+  /** The full citation, plain text. */
+  citation: string
+  /** The DOI (the collection's, or one filled in for a link-only entry and checked on OpenAlex); null when there is none. */
+  doi: string | null
+  /** Where the entry points: the DOI's doi.org URL, or the collection's link. Null only for #26, listed without either. */
+  url: string | null
+  arxiv: string | null
+  /** The collection's [OA] (open) and [Free copy] marks. */
+  access: 'open' | 'free-copy' | null
+  /** EvidenceTheme.id */
+  theme: string
+  /** The sub-section ("1a") and its name, where the theme has them. */
+  section: string | null
+  section_name: string | null
+  /** EvidenceDesign.id */
+  design: string
+  /** The collection's "Type/Sample" line. */
+  type_sample: string | null
+  /** The collection's "Findings" line. */
+  findings: string
+  /** Entries this one points to, that point to it, or that the desk pairs it with in a debate. */
+  related: number[]
+  flags: EvidenceFlag[]
+  /** What the brief must say up front, when anything. */
+  note?: string
+  sources: EvidenceLink[]
+  /** The OpenAlex work id ("W2911168426"), resolved by the taxonomy script; null when OpenAlex has no record. */
+  openalex: string | null
+}
+
+export interface EvidenceDataset {
+  collection: EvidenceCollection
+  themes: EvidenceTheme[]
+  designs: EvidenceDesign[]
+  studies: EvidenceStudy[]
+  lenses: NamedOption[]
+}
+
+export type EvidenceSourceState = 'ok' | 'failed' | 'skipped'
+
+/**
+ * What a spin reads live about the study it drew (evidencePool.ts), after
+ * the draw: the OpenAlex record by DOI (citations, citations by year, the
+ * field-weighted citation impact, whether it is retracted, a free-to-read
+ * link) and, with UNPAYWALL_EMAIL, Unpaywall's verdict on the free copy.
+ * Never blocks a spin: a source that fails is recorded and the brief says
+ * to look it up.
+ */
+export interface EvidenceRecord {
+  /** ISO timestamp the record was read. */
+  asOf: string
+  doi: string | null
+  openalexId: string | null
+  openalexUrl: string | null
+  /** The title OpenAlex has for the DOI, to check against the collection's. */
+  title: string | null
+  venue: string | null
+  year: number | null
+  type: string | null
+  citedBy: number | null
+  /** Field-weighted citation impact (1 is the field's average). */
+  fwci: number | null
+  topOnePercent: boolean | null
+  /** Citations by year, oldest first. */
+  countsByYear: Array<{ year: number; citations: number }>
+  oaUrl: string | null
+  oaStatus: string | null
+  retracted: boolean
+  sources: { openalex: EvidenceSourceState; unpaywall: EvidenceSourceState; errors: string[]; notes: string[] }
+}
+
+/** A study the spin's study is in conversation with, as the subject carries it. */
+export type EvidenceRelated = Pick<EvidenceStudy, 'n' | 'label' | 'title' | 'design' | 'findings' | 'url' | 'flags'>
+
+export interface EvidencePicks {
+  /** EvidenceTheme.id */
+  theme: string
+  /** EvidenceDesign.id */
+  design: string
+  /** EvidenceStudy.n */
+  study: number
+  lens: string
+}
+
+export interface EvidenceSubject {
+  randomizer: 'evidence'
+  collection: Pick<EvidenceCollection, 'title' | 'edition' | 'summary' | 'source'>
+  theme: EvidenceTheme
+  design: EvidenceDesign
+  study: EvidenceStudy
+  lens: NamedOption
+  /** The studies the collection puts this one in conversation with. */
+  related: EvidenceRelated[]
+  /** The collection's key findings that cite this study. */
+  findings: string[]
+  /** Read after the draw (spins.ts); null on a spin replayed without the network. */
+  record: EvidenceRecord | null
+  /** Followed the debate from the previous spin's study (sequence mode): that study's number. */
+  from: number | null
+}
+
 /* ---------- Footshorts ---------- */
 
 export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
@@ -1253,8 +1435,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -1278,6 +1460,9 @@ export interface SpinMeta {
   /** The 100 Desk: the domain, for the same-domain-twice rule, and the rank, for walking the ranking. */
   domain?: string
   rank?: number
+  /** The Evidence Desk: the theme, for the same-theme-twice rule, and the study's number, for following the debate. */
+  theme?: string
+  study?: number
 }
 
 export interface DrawResult {

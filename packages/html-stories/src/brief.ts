@@ -900,10 +900,19 @@ const HUNDRED_SPIN_RULES = [
   'Wikidata and pageviews data are CC0: credit them as the assignment says.',
 ]
 
+/** An Evidence Desk spin's brief carries one study from the annotated collection and its citation record: how the page uses them. */
+const EVIDENCE_SPIN_RULES = [
+  "The collection's annotation is a lead, not a source: every number on the page comes from the paper itself (page, table or figure), and the page links the paper, never a press release or news story about it.",
+  'Say what the design allows and no more: "caused" only for a randomized or natural experiment, and only for its sample and period; "is linked to" for everything else. A preprint or working paper is labelled wherever its finding appears.',
+  'Where the field disputes a finding, the strongest other side is on the page, stated fairly. Content about suicide or self-harm follows safe-messaging guidance and ends with a crisis line.',
+  'Citation counts are OpenAlex data (CC0): credit them as the assignment says, with the read date. A figure redrawn from a paper cites it; never paste a paper\'s figure.',
+]
+
 function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
   if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
   if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES
   if (spin.randomizer === 'hundred') return HUNDRED_SPIN_RULES
+  if (spin.randomizer === 'evidence') return EVIDENCE_SPIN_RULES
   return hasContext ? (SPIN_CONTEXT_RULES[app] ?? []) : []
 }
 

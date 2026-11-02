@@ -1,7 +1,7 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, DESK, EPICS, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
+import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planLandmark, planOcw } from './draw'
 import {
   awardsFromNobel,
@@ -21,10 +21,11 @@ import {
   type OpenAlexWork,
   type OpenLibraryDoc,
 } from './landmarkPool'
+import { loadEvidenceRecord, recordFromOpenAlex, titleOverlap } from './evidencePool'
 import { commonsFilePage, completeMonths, formatWikidataTime, loadHundredProfile, pageviewWindow, pageviewsFromBody, parsePoint, profileFromSparql } from './hundredPool'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { HUNDRED_LENS_METRICS, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { EVIDENCE_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -32,6 +33,8 @@ import {
   type DeskPicks,
   type DrawResult,
   type EpicsPicks,
+  type EvidencePicks,
+  type EvidenceSubject,
   type FootshortsFixtureRef,
   type FootshortsNews,
   type FootshortsPicks,
@@ -314,7 +317,7 @@ const NEWS: FootshortsNews = {
 NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
 
 assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
-assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence'])
 assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
 assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
@@ -1477,11 +1480,191 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   )
 }
 
+// The Evidence Desk: the committed collection, then the draw (pure, one pass) and the record mapping (no network).
+{
+  assert.equal(EVIDENCE.studies.length, 83)
+  assert.deepEqual(EVIDENCE.studies.map((x) => x.n), Array.from({ length: 83 }, (_, i) => i + 1))
+  assert.equal(new Set(EVIDENCE.studies.map((x) => x.id)).size, 83)
+  assert.equal(new Set(EVIDENCE.studies.map((x) => x.label)).size, 83, 'labels are unique (a/b suffixes)')
+  assert.equal(EVIDENCE.themes.length, 7)
+  for (const x of EVIDENCE.studies) {
+    assert.ok(EVIDENCE.themes.some((t) => t.id === x.theme), `#${x.n}: theme`)
+    assert.ok(EVIDENCE.designs.some((d) => d.id === x.design), `#${x.n}: design`)
+    assert.ok(x.findings.length > 20, `#${x.n}: findings`)
+    assert.ok(!/\\\[|\*\*/.test(x.findings + x.citation), `#${x.n}: markdown left in the text`)
+    assert.ok(x.url || x.note, `#${x.n}: a link or a note saying where to find it`)
+    for (const r of x.related) assert.ok(evidenceByNumber(r)?.related.includes(x.n), `#${x.n} -> #${r} is linked both ways`)
+    if (x.flags.includes('replication') || x.flags.includes('correction')) assert.ok(x.note, `#${x.n}: a flag that needs a note`)
+  }
+  for (const t of EVIDENCE.themes) assert.ok(evidenceDesigns(t.id).length > 0, t.name)
+  assert.equal(evidenceByNumber(2)!.label, 'Orben & Przybylski 2019')
+  assert.ok(evidenceByNumber(2)!.related.includes(3), '#2 and #3 are a debate')
+  assert.ok(evidenceByNumber(23)!.flags.includes('preprint'))
+  assert.ok(evidenceByNumber(31)!.flags.includes('replication'))
+  assert.deepEqual([evidenceByNumber(40)!.label, evidenceByNumber(41)!.label], ['Guess et al. 2023a', 'Guess et al. 2023b'])
+  assert.equal(EVIDENCE.lenses.length, Object.keys(EVIDENCE_LENS_METRICS).length)
+  for (const l of EVIDENCE.lenses) assert.ok(EVIDENCE_LENS_METRICS[l.name], `metrics for ${l.name}`)
+  assert.equal(reelPool('evidence', 'study').length, 83)
+  assert.deepEqual(normalizeLocks('evidence', ['study']), ['theme', 'design', 'study'])
+
+  // Determinism; the study sits in the drawn theme and design; the reels and rules say so.
+  for (let seed = 0; seed < 60; seed++) {
+    const a = draw({ randomizer: 'evidence', seed, now: NOW })
+    assert.deepEqual(a, draw({ randomizer: 'evidence', seed, now: NOW }))
+    const s = a.subject as EvidenceSubject
+    const p = a.picks as EvidencePicks
+    assert.equal(s.study.n, p.study)
+    assert.equal(s.study.theme, p.theme)
+    assert.equal(s.study.design, p.design)
+    assert.equal(a.primary, s.study.id)
+    assert.equal(a.combo, `${s.study.id}|${p.lens}`)
+    assert.equal(s.record, null, 'the record is read after the draw')
+    assert.deepEqual(s.related.map((x) => x.n), s.study.related)
+    assert.ok(a.reels.study!.sub!.startsWith(`#${p.study} · `))
+    assert.ok(a.rules.some((r) => r.tag === 'evidence') && a.rules.some((r) => r.tag === 'design'))
+    for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  }
+
+  // Every theme comes up, the big ones more often but not in proportion.
+  {
+    const counts = new Map<string, number>()
+    for (let seed = 0; seed < 1400; seed++) {
+      const t = (draw({ randomizer: 'evidence', seed, now: NOW }).picks as EvidencePicks).theme
+      counts.set(t, (counts.get(t) ?? 0) + 1)
+    }
+    assert.equal(counts.size, 7)
+    assert.ok(counts.get('mental-health')! > counts.get('benefits')!)
+    assert.ok(counts.get('mental-health')! / counts.get('benefits')! < 25 / 3, 'square-root weighting, not proportional')
+  }
+
+  // Locks keep the study, or keep the draw inside the theme.
+  const first = draw({ randomizer: 'evidence', seed: 4, now: NOW })
+  const fp = first.picks as EvidencePicks
+  for (let seed = 5; seed < 30; seed++) {
+    assert.equal((draw({ randomizer: 'evidence', seed, now: NOW, prev: first, locks: ['study'] }).picks as EvidencePicks).study, fp.study)
+    assert.equal((draw({ randomizer: 'evidence', seed, now: NOW, prev: first, locks: ['theme'] }).picks as EvidencePicks).theme, fp.theme)
+    const d = draw({ randomizer: 'evidence', seed, now: NOW, prev: first, locks: ['design'] }).picks as EvidencePicks
+    assert.deepEqual([d.theme, d.design], [fp.theme, fp.design])
+  }
+
+  // The same theme twice in a row is re-drawn once.
+  let redrawn = false
+  for (let seed = 0; seed < 80 && !redrawn; seed++) {
+    const fresh = draw({ randomizer: 'evidence', seed, now: NOW })
+    const again = draw({ randomizer: 'evidence', seed, now: NOW, history: [entry(fresh, 1)] })
+    redrawn = again.rules.some((r) => r.tag === 'balance' && /twice in a row/.test(r.text))
+  }
+  assert.ok(redrawn, 'the same-theme rule fires')
+
+  // Sequence mode follows the debate to a linked study; without links or a previous spin it draws fresh; a lock wins.
+  {
+    const at = (n: number, d = 1) => {
+      const x = evidenceByNumber(n)!
+      return entry(draw({ randomizer: 'evidence', seed: 2, now: NOW, prev: { picks: { theme: x.theme, design: x.design, study: n, lens: 'Since then' } }, locks: ['study'] }), d)
+    }
+    for (let seed = 0; seed < 30; seed++) {
+      const next = draw({ randomizer: 'evidence', seed, now: NOW, history: [at(2)], sequence: true })
+      assert.ok(evidenceByNumber(2)!.related.includes((next.picks as EvidencePicks).study), 'a study linked to #2')
+      assert.equal((next.subject as EvidenceSubject).from, 2)
+    }
+    // #3 is #2's only unblocked link once the others were spun recently.
+    const others = evidenceByNumber(2)!.related.filter((n) => n !== 3)
+    const r = draw({ randomizer: 'evidence', seed: 3, now: NOW, history: [...others.map((n) => at(n, 3)), at(2)], sequence: true })
+    assert.equal((r.picks as EvidencePicks).study, 3)
+    const none = draw({ randomizer: 'evidence', seed: 9, now: NOW, sequence: true })
+    assert.ok(none.rules.some((x) => x.tag === 'sequence' && /previous spin/.test(x.text)))
+    const prev = draw({ randomizer: 'evidence', seed: 9, now: NOW, history: [at(2)] })
+    const locked = draw({ randomizer: 'evidence', seed: 9, now: NOW, history: [at(2)], sequence: true, prev, locks: ['study'] })
+    assert.equal((locked.picks as EvidencePicks).study, (prev.picks as EvidencePicks).study)
+  }
+
+  // 90-day block re-draws the lens; flags fire their rules.
+  {
+    const x = evidenceByNumber(14)!
+    const picks = { theme: x.theme, design: x.design, study: 14, lens: 'Since then' }
+    const ran = entry(draw({ randomizer: 'evidence', seed: 1, now: NOW, prev: { picks }, locks: ['study', 'lens'] }), 40)
+    for (let seed = 0; seed < 20; seed++) {
+      const r = draw({ randomizer: 'evidence', seed, now: NOW, history: [ran], prev: { picks }, locks: ['study'] })
+      if (r.rules.some((q) => q.tag === '90 days')) assert.notEqual((r.picks as EvidencePicks).lens, 'Since then', 'the lens is re-drawn')
+      else assert.notEqual((r.picks as EvidencePicks).lens, 'Since then', 'only a fresh lens is drawn without the rule')
+    }
+    const suicide = draw({ randomizer: 'evidence', seed: 1, now: NOW, prev: { picks }, locks: ['study'] })
+    assert.ok(suicide.rules.some((q) => q.tag === 'safe messaging'))
+    const corr = draw({ randomizer: 'evidence', seed: 1, now: NOW, prev: { picks: { ...picks, study: 23 } }, locks: ['study'] }).rules
+    assert.ok(corr.some((q) => q.tag === 'not peer-reviewed') && corr.some((q) => q.tag === 'contested'))
+    const obs = draw({ randomizer: 'evidence', seed: 1, now: NOW, prev: { picks: { ...picks, study: 2 } }, locks: ['study'] }).rules.find((q) => q.tag === 'design')!
+    assert.match(obs.text, /never "causes"/)
+    const exp = draw({ randomizer: 'evidence', seed: 1, now: NOW, prev: { picks: { ...picks, study: 18 } }, locks: ['study'] }).rules.find((q) => q.tag === 'design')!
+    assert.match(exp.text, /may say "caused"/)
+  }
+
+  // The record: OpenAlex's shape mapped, a mismatched title noted, a study without a DOI skipped, a failure recorded.
+  {
+    const o: OpenAlexWork = {
+      id: 'https://openalex.org/W2911168426',
+      doi: 'https://doi.org/10.1038/s41562-018-0506-1',
+      title: 'The association between adolescent well-being and digital technology use',
+      publication_year: 2019,
+      cited_by_count: 1502,
+      fwci: 377.26312,
+      citation_normalized_percentile: { is_in_top_1_percent: true },
+      open_access: { is_oa: false, oa_status: 'closed', oa_url: null },
+      is_retracted: false,
+      type: 'article',
+      primary_location: { source: { display_name: 'Nature Human Behaviour' } },
+      counts_by_year: [
+        { year: 2020, cited_by_count: 210 },
+        { year: 2019, cited_by_count: 97 },
+      ],
+    }
+    const rec = recordFromOpenAlex(o, '2026-11-02T00:00:00Z', null)
+    assert.equal(rec.doi, '10.1038/s41562-018-0506-1')
+    assert.equal(rec.fwci, 377.26)
+    assert.deepEqual(rec.countsByYear.map((c) => c.year), [2019, 2020])
+    assert.equal(rec.venue, 'Nature Human Behaviour')
+    assert.ok(titleOverlap('The association between adolescent well-being and digital technology use', rec.title!) > 0.9)
+    assert.ok(titleOverlap('Fake news on Twitter during the 2016 election', rec.title!) < 0.5)
+
+    const ok = (body: unknown, status = 200) => async () => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+    const env = { openalexKey: null, email: null }
+    pending.push(
+      (async () => {
+        const seen: string[] = []
+        const fake = (async (url: string) => {
+          seen.push(String(url))
+          return ok(o)()
+        }) as typeof fetch
+        const got = await loadEvidenceRecord(evidenceByNumber(2)!, { fetch: fake, env, now: new Date('2026-11-02T00:00:00Z') })
+        assert.equal(got.citedBy, 1502)
+        assert.equal(got.sources.openalex, 'ok')
+        assert.equal(got.sources.unpaywall, 'skipped')
+        assert.ok(seen[0]!.includes(`/works/${evidenceByNumber(2)!.openalex}`), 'looks up by the resolved OpenAlex id')
+
+        const wrong = await loadEvidenceRecord({ ...evidenceByNumber(35)!, openalex: null }, { fetch: (async () => ok(o)()) as typeof fetch, env })
+        assert.ok(wrong.sources.notes.some((n) => /check the DOI/.test(n)))
+
+        const noDoi = await loadEvidenceRecord(evidenceByNumber(26)!, { fetch: (async () => { throw new Error('no call') }) as typeof fetch, env })
+        assert.equal(noDoi.sources.openalex, 'skipped')
+        assert.ok(noDoi.sources.notes.length > 0)
+
+        const broken = await loadEvidenceRecord(evidenceByNumber(2)!, { fetch: (async () => ok({}, 503)()) as typeof fetch, env })
+        assert.equal(broken.sources.openalex, 'failed')
+        assert.equal(broken.citedBy, null)
+      })(),
+    )
+
+    const drawn = draw({ randomizer: 'evidence', seed: 3, now: NOW })
+    const sub = { ...(drawn.subject as EvidenceSubject), record: rec }
+    assert.ok(evidenceCreditLine(sub).includes('OpenAlex'))
+    assert.ok(evidenceCreditLine({ ...sub, record: null }).startsWith('Credit: "Study: '))
+  }
+}
+
 // Stub and brief sections.
 const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
 const LM_PLAN = planLandmark({ randomizer: 'landmark', seed: 21, now: NOW }, lmAwardsFor(planLandmark({ randomizer: 'landmark', seed: 21, now: NOW })))
 const LM_POOL = lmPoolFor(LM_PLAN, lmAwardsFor(LM_PLAN))
-for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'footshorts', 'viznba'] as const) {
+for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'footshorts', 'viznba'] as const) {
   const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))

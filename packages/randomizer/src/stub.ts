@@ -12,6 +12,10 @@
  * pull with the citation record, and the credit line. The 100 Desk spins get
  * a life template: the rank and Hart's case, the life on the record, the
  * influence in numbers, the lens read, the counter-case and the credit line.
+ * Evidence Desk spins get a study template: the study and its design, what
+ * the collection says against what the paper says, what the design can show,
+ * the other side and what came since, the numbers, the lens read and the
+ * credit line.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
@@ -25,6 +29,7 @@ import {
   type EpicsSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type EvidenceSubject,
   type HundredLifeEvent,
   type HundredPerson,
   type HundredSubject,
@@ -50,6 +55,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'ocw') return `${s.course.number} ${s.file.title}`
   if (s.randomizer === 'landmark') return s.award.name
   if (s.randomizer === 'hundred') return s.person.name
+  if (s.randomizer === 'evidence') return s.study.label
   return s.epic.title
 }
 
@@ -616,6 +622,111 @@ function hundredTemplate(s: HundredSubject): string[] {
   ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
 }
 
+/* ---------- The Evidence Desk ---------- */
+
+/** "#14 Xiao et al. 2025 in the collection (2026 edition)" */
+export function evidenceStudyLabel(s: Pick<EvidenceSubject, 'study' | 'collection'>): string {
+  return `#${s.study.n} ${s.study.label} in the annotated collection (${s.collection.edition} edition)`
+}
+
+/** The credit the page carries, written out. */
+export function evidenceCreditLine(s: Pick<EvidenceSubject, 'study' | 'collection' | 'record'>): string {
+  const link = s.study.url ?? s.record?.openalexUrl ?? null
+  const counts = s.record?.citedBy !== null && s.record?.citedBy !== undefined ? ' Citation counts: OpenAlex (CC0).' : ''
+  return `Credit: "Study: ${s.study.citation}${link ? ` ${link}` : ''}. Selected from: ${s.collection.title}.${counts}" Link the study itself, never a press summary of it.`
+}
+
+/** What to chart per Evidence lens, when the data exists. */
+export const EVIDENCE_LENS_METRICS: Record<string, string[]> = {
+  'Read the number': [
+    "the headline effect against the collection's benchmarks (0.05 to 0.1 SD; 0.4% of variance) and the other studies on the same question",
+    'the effect translated into people (out of 100, or a classroom of 30)',
+    'the effect by the subgroups the study reports (sex, age, heavy users)',
+  ],
+  'Cause or correlation': [
+    'the studies on the same question by design, from correlational to randomized, with their effect sizes',
+    'the effect before and after adjustment, where the study reports both',
+    'when exposure and outcome were measured, on one timeline',
+  ],
+  'The other side': [
+    'this study and the strongest opposing one on the same measure, side by side',
+    'their samples, durations and designs compared',
+    'the citations each has drawn by year (OpenAlex)',
+  ],
+  'Who was studied': [
+    'the sample by age, sex and country against the population the claim is about',
+    'when the data were collected against which platforms existed and how big they were',
+    'the share of the sample on each platform, where reported',
+  ],
+  'Since then': [
+    'the later studies on the same question by year, with their effect sizes and designs',
+    'the citations this study has drawn by year (OpenAlex, the counts in the brief)',
+    'where the estimate stands now against the original',
+  ],
+  'What policy should take': [
+    'the policies on the table (bans, age limits, school phone rules, design rules) against the evidence each has',
+    'the effect this study finds against the effect a policy would need to matter',
+    'what the policy studies in the collection measured (use, wellbeing, compliance)',
+  ],
+  "Explain like I'm 5": ['the finding as a picture count (out of ten children)', 'before and after, side by side', 'the one number that shows it'],
+}
+
+export function evidenceLensMetrics(lens: string): string[] {
+  return EVIDENCE_LENS_METRICS[lens] ?? ['the headline effect against the benchmarks', 'the other studies on the same question', 'the citations by year (OpenAlex)']
+}
+
+function evidenceTemplate(s: EvidenceSubject): string[] {
+  const st = s.study
+  const r = s.record
+  return [
+    '## The study',
+    '',
+    `${evidenceStudyLabel(s)}. ${st.citation}${st.url ? ` ${st.url}` : ''}`,
+    `Theme: ${s.theme.name}${st.section_name ? ` (${st.section_name})` : ''}. Design: ${s.design.name}.${st.type_sample ? ` Type and sample: ${st.type_sample}` : ''}`,
+    ...(st.note ? [`Up front: ${st.note}`] : []),
+    '',
+    '## What the collection says (to check, not to cite)',
+    '',
+    st.findings,
+    '',
+    '## What the paper itself says',
+    '',
+    'Read the paper (abstract, methods, the main table). Every number on the page comes from here, with its page, table or figure.',
+    '',
+    '| Claim | Number | Unit or scale | Page, table or figure | Matches the collection? |',
+    '|-------|--------|---------------|-----------------------|-------------------------|',
+    '| | | | | |',
+    '',
+    `## The design: what it can show`,
+    '',
+    `${s.design.name}: ${s.design.can_show}. In two sentences, what would have to be true for this finding to mean cause, and the strongest other explanation.`,
+    '',
+    '## The other side and since then',
+    '',
+    ...(s.related.length
+      ? s.related.map((x) => `- #${x.n} ${x.label}: ${x.title}${x.url ? ` (${x.url})` : ''}. Agrees, disagrees or refines? Why?`)
+      : ['- The collection links no other study to this one: find the strongest opposing or follow-up study yourself.']),
+    '',
+    '## Numbers',
+    '',
+    'At least 8 data points per series where possible.',
+    '',
+    '| Metric | Study or case | Value | Unit | Source |',
+    '|--------|---------------|-------|------|--------|',
+    ...evidenceLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    '',
+    r?.countsByYear.length ? `Citations by year (OpenAlex, read ${r.asOf.slice(0, 10)}; the newest year is incomplete): ${r.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}. Total: ${r.citedBy ?? 'n/a'}.` : '',
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `${s.lens.description} Applied to ${st.label}, not to ${s.theme.name.toLowerCase()} in general.`,
+    '',
+    '## Credit',
+    '',
+    evidenceCreditLine(s),
+  ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -639,7 +750,9 @@ export function researchStub(spin: StubSpin): string {
                 ? landmarkTemplate(s)
                 : s.randomizer === 'hundred'
                   ? hundredTemplate(s)
-                  : epicsTemplate(s)
+                  : s.randomizer === 'evidence'
+                    ? evidenceTemplate(s)
+                    : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -659,7 +772,9 @@ export function researchStub(spin: StubSpin): string {
             ? '> (the work itself with its page or figure, the award\'s own documents, a peer-reviewed paper). Mark each claim Verified, Contested or'
             : s.randomizer === 'hundred'
               ? '> (a contemporary document, the original text, a scholarly biography, a census or survey). Mark each claim Verified, Contested or'
-              : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+              : s.randomizer === 'evidence'
+                ? '> (the paper itself with its page, table or figure, its preregistration or data, a peer-reviewed replication). Mark each claim Verified, Contested or'
+                : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

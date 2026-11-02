@@ -14,7 +14,11 @@
  * Open Library and Unpaywall). The 100 Desk's whole ranking is here
  * (hundred.json, refreshed by scripts/randomizer/hundred-taxonomy.mts); only
  * the drawn person's profile is read live (HundredProfile: Wikidata,
- * Wikipedia and its pageviews).
+ * Wikipedia and its pageviews). The Evidence Desk's whole collection is here
+ * too (evidence.json, parsed from the annotated research collection in
+ * scripts/randomizer/sources/ by scripts/randomizer/evidence-taxonomy.mts);
+ * only the drawn study's citation record is read live (EvidenceRecord:
+ * OpenAlex and Unpaywall).
  */
 
 import type {
@@ -23,6 +27,8 @@ import type {
   Epic,
   EpicPlace,
   EpicsDataset,
+  EvidenceDataset,
+  EvidenceStudy,
   FootshortsDataset,
   HundredDataset,
   HundredPerson,
@@ -39,6 +45,7 @@ import epicsJson from './data/epics.json'
 import ocwJson from './data/ocw.json'
 import landmarkJson from './data/landmark.json'
 import hundredJson from './data/hundred.json'
+import evidenceJson from './data/evidence.json'
 import footshortsJson from './data/footshorts.json'
 import viznbaJson from './data/viznba.json'
 
@@ -48,6 +55,7 @@ export const EPICS = epicsJson as unknown as EpicsDataset
 export const OCW = ocwJson as unknown as OcwDataset
 export const LANDMARK = landmarkJson as unknown as LandmarkDataset
 export const HUNDRED = hundredJson as unknown as HundredDataset
+export const EVIDENCE = evidenceJson as unknown as EvidenceDataset
 export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
 export const VIZNBA = viznbaJson as unknown as ViznbaDataset
 
@@ -76,6 +84,16 @@ export function hundredEras(domain: string, data: HundredDataset = HUNDRED): Hun
 /** One person by Hart's rank. */
 export function hundredByRank(rank: number, data: HundredDataset = HUNDRED): HundredPerson | undefined {
   return data.people.find((p) => p.rank === rank)
+}
+
+/** The designs a theme has studies of: the draw only offers a design its theme has. */
+export function evidenceDesigns(theme: string, data: EvidenceDataset = EVIDENCE): EvidenceDataset['designs'] {
+  return data.designs.filter((d) => data.studies.some((s) => s.theme === theme && s.design === d.id))
+}
+
+/** One study by its number in the collection ("#14"). */
+export function evidenceByNumber(n: number, data: EvidenceDataset = EVIDENCE): EvidenceStudy | undefined {
+  return data.studies.find((s) => s.n === n)
 }
 
 /** Types that count toward the one-in-three quota (playbook 3.2). */
@@ -134,6 +152,12 @@ export function reelPool(randomizer: RandomizerId, key: string, live: readonly s
     if (key === 'era') return HUNDRED.eras.map((e) => e.name)
     if (key === 'person') return HUNDRED.people.map((p) => p.name)
     if (key === 'lens') return HUNDRED.lenses.map((l) => l.name)
+  }
+  if (randomizer === 'evidence') {
+    if (key === 'theme') return EVIDENCE.themes.map((t) => t.name)
+    if (key === 'design') return EVIDENCE.designs.map((d) => d.name)
+    if (key === 'study') return EVIDENCE.studies.map((s) => s.label)
+    if (key === 'lens') return EVIDENCE.lenses.map((l) => l.name)
   }
   if (randomizer === 'footshorts') {
     if (key === 'competition') return FOOTSHORTS.competitions.map((c) => c.name)

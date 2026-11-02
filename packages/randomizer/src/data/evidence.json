@@ -1,0 +1,2971 @@
+{
+  "collection": {
+    "title": "Social Media and Its Effects on People and Society: An Annotated Research Collection (2026 edition)",
+    "edition": 2026,
+    "summary": "The research shows that social media's effects are real but usually smaller and more conditional than public debate suggests. Harms concentrate in heavy, compulsive (\"addictive\") use, in vulnerable subgroups such as early-adolescent girls, and in specific design features like engagement-ranked feeds. The best causal studies of average effects on polarization and population-level mental health mostly find small effects. This collection lists 83 papers and reports grouped by theme, each with a citation, DOI or link, design, sample and key finding. It gives most weight to influential and 2020–2026 work and flags where scholars disagree.",
+    "tldr": [
+      "Mental health: Correlations between total time on social media and youth depression or anxiety are consistent but small (Orben & Przybylski 2019 found technology use explains 0.4% of variance in adolescent well-being). Newer cohort studies point to addictive use, not hours, as the stronger risk signal: Xiao et al. 2025 in JAMA found 2–3× higher risk of suicidal behaviour. Whether reducing social media use improves mental health is still contested among meta-analyses (Ferguson 2024 null; Thrul et al. 2025 and Veber Lopes et al. 2026 positive).",
+      "Politics: The 2020 Meta–academic studies in Science, Nature and PNAS found that changing Facebook/Instagram feeds or deactivating accounts during an election changed what people saw but not polarization. Newer independent experiments on X (Gauthier et al. 2026 in Nature; Piccardi et al. 2025 in Science) show feed algorithms can shift attitudes and partisan animosity. \"No effect\" claims about algorithms therefore do not generalize across platforms.",
+      "Policy: Evidence for bans is weak so far. Australia's under-16 law left more than 8 in 10 under-16s still using restricted platforms after three months (BMJ 2026; eSafety 2026). UK school phone restrictions showed no wellbeing benefit (SMART Schools 2025). Design-level changes (feed reranking, accuracy prompts, prebunking) and voluntary reduction have stronger experimental support than access bans."
+    ],
+    "key_findings": [
+      "The \"how much\" matters less than the \"how.\" The strongest recent evidence ties harm to compulsive patterns and specific mechanisms: addictive use (#14, #26, #27), sleep displacement (#25), harassment (#11, #62) and appearance comparison (#17, #24). Policies aimed only at time limits will likely underperform those aimed at compulsive design.",
+      "Causal evidence for mental health harm exists but is modest. The Facebook college rollout (#17) and deactivation RCTs (#18, #19) show effects of roughly 0.04–0.1 SD: meaningful at population scale, but far from explaining the entire rise in youth distress. Neither the \"moral panic\" nor the \"proven epidemic cause\" camp is fully supported. The experimental meta-analyses (#21–#23) lean slightly toward benefits from reducing use, especially for interventions of 2–3 weeks or longer.",
+      "The politics literature has shifted since 2023. The 2020 Meta studies (#40–#44) found near-zero attitudinal effects from changing Meta's feeds for a few months, but independent 2025–2026 experiments on X (#46, #47) show algorithms and ranking objectives can move attitudes and animosity. Effects are platform-, period- and design-specific.",
+      "Misinformation is highly concentrated. False news spreads faster (#34), but exposure and sharing concentrate in small, older, highly partisan subgroups (#35, #36), so targeted interventions are more efficient than population-wide alarm.",
+      "People are trapped, not just hooked. Users value access individually yet many would prefer the platforms not exist (#64, #65). This supports coordinated policy (school norms, defaults, age rules) over individual willpower, provided it can be enforced.",
+      "Bans are not yet working as designed. Australia's law has been widely circumvented at three months (#72, #73) and UK school phone evidence is null for wellbeing (#75); design-level interventions (7b) have better experimental support so far."
+    ],
+    "caveats": [
+      "Correlational dominance: Most mental health and short-form video studies are correlational and rely on self-reported use. A preregistered meta-analysis of 106 effect sizes (Parry et al. 2021, Nature Human Behaviour) found that self-reported use \"correlates only moderately with logged measurements,\" and that problematic-use scales track usage logs even more weakly.",
+      "Platform partnerships: The 2020 Meta studies were run with Meta's cooperation under independent-researcher control agreements. Critics (Bagchi et al. 2024, Science eLetter) point to 63 emergency \"break-glass\" changes Meta made to Facebook's feed algorithm at the same time. The X studies (#46, #47) avoided platform cooperation but had smaller samples or shorter durations.",
+      "Preprints and working papers: #19, #23, #65 and #81 are not (or not yet) peer-reviewed journal articles; treat them as provisional.",
+      "Contested numbers: Haidt/Twenge and Orben/Przybylski/Odgers/Ferguson disagree on the same data; judge effect sizes against benchmarks (e.g., 0.05–0.1 SD) rather than headlines.",
+      "Citation details: A few DOIs and page ranges for older papers come from standard bibliographic records and should be verified before formal citation; #26 is listed without a DOI."
+    ],
+    "gaps": "eSafety's 6-, 12- and 24-month waves; peer review of #23; independent replications of the X algorithm findings; rigorous causal work on the creator economy and AI-generated content.",
+    "source": "scripts/randomizer/sources/social-media-research-2026.md"
+  },
+  "themes": [
+    {
+      "id": "mental-health",
+      "n": 1,
+      "name": "Mental health & wellbeing",
+      "strength": "Large, mostly correlational; growing experimental base",
+      "bottom_line": "Small average associations; stronger for girls, early adolescence, and addictive use. Causal direction partly established (Braghieri et al. 2022; Nagata et al. 2025), magnitude disputed."
+    },
+    {
+      "id": "attention",
+      "n": 2,
+      "name": "Attention, cognition & behavior",
+      "strength": "Mostly correlational; few RCTs",
+      "bottom_line": "Short-form video and compulsive checking are linked to poorer attention and inhibitory control. Causal evidence is thin, apart from smartphone-blocking RCTs."
+    },
+    {
+      "id": "politics",
+      "n": 3,
+      "name": "Politics & democracy",
+      "strength": "Strongest causal literature",
+      "bottom_line": "Falsehoods spread faster than truth. Echo chambers exist but are smaller than feared. X's algorithm shifted attitudes; Meta-feed changes in 2020 did not."
+    },
+    {
+      "id": "relationships",
+      "n": 4,
+      "name": "Social relationships & society",
+      "strength": "Mixed; cyberbullying evidence robust",
+      "bottom_line": "Builds bridging social capital and enables collective action. Cyberbullying is linked to poorer mental health, though offline victimisation explains much of that link."
+    },
+    {
+      "id": "economy",
+      "n": 5,
+      "name": "Economic & information ecosystem",
+      "strength": "Strong welfare experiments; descriptive news data",
+      "bottom_line": "Users value access individually but may prefer a world without the platforms (\"collective traps\"). Platform news withdrawals sharply cut news reach. Creator-economy causal evidence is sparse."
+    },
+    {
+      "id": "benefits",
+      "n": 6,
+      "name": "Positive effects",
+      "strength": "Mostly cross-sectional/qualitative",
+      "bottom_line": "Peer support, identity and community benefits are real, especially for LGBTQ+ and isolated youth; evidence quality is weaker."
+    },
+    {
+      "id": "policy",
+      "n": 7,
+      "name": "Policy & interventions",
+      "strength": "Early, growing fast",
+      "bottom_line": "Bans circumvented so far; school phone restrictions show null wellbeing effects; design and literacy interventions show modest gains; DSA transparency audits find large compliance gaps."
+    }
+  ],
+  "designs": [
+    {
+      "id": "experiment",
+      "name": "Randomized experiment",
+      "can_show": "cause, for the people in the sample, the platform and period studied, and the length of the intervention"
+    },
+    {
+      "id": "natural",
+      "name": "Natural experiment",
+      "can_show": "cause, if the as-good-as-random assumption holds (say what it is and how it was tested)"
+    },
+    {
+      "id": "cohort",
+      "name": "Cohort and longitudinal",
+      "can_show": "what comes before what, and within-person change; not cause on its own (confounders can still drive both)"
+    },
+    {
+      "id": "observational",
+      "name": "Observational and platform data",
+      "can_show": "association, prevalence and spread; not cause"
+    },
+    {
+      "id": "synthesis",
+      "name": "Meta-analysis and review",
+      "can_show": "what the studies it pools show together; no stronger than the designs it pools (say which it pooled)"
+    },
+    {
+      "id": "report",
+      "name": "Report and commentary",
+      "can_show": "an institution's or an expert's reading of the evidence: attribute it, and trace its claims to the studies behind them"
+    }
+  ],
+  "studies": [
+    {
+      "n": 1,
+      "id": "twenge-et-al-2018",
+      "label": "Twenge et al. 2018",
+      "authors": "Twenge, J. M., Joiner, T. E., Rogers, M. L., & Martin, G. N.",
+      "year": 2018,
+      "title": "Increases in depressive symptoms, suicide-related outcomes, and suicide rates among U.S. adolescents after 2010 and links to increased new media screen time",
+      "venue": "Clinical Psychological Science",
+      "citation": "Twenge, J. M., Joiner, T. E., Rogers, M. L., & Martin, G. N. (2018). Increases in depressive symptoms, suicide-related outcomes, and suicide rates among U.S. adolescents after 2010 and links to increased new media screen time. Clinical Psychological Science, 6(1), 3–17.",
+      "doi": "10.1177/2167702617723376",
+      "url": "https://doi.org/10.1177/2167702617723376",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "observational",
+      "type_sample": "Repeated cross-sectional trend analysis; Monitoring the Future and YRBSS (more than 500,000 adolescents).",
+      "findings": "Depressive symptoms and suicide-related outcomes rose after 2010, especially among girls, in step with smartphone and social media adoption. Foundational, but correlational at the population level.",
+      "related": [
+        2,
+        3,
+        5
+      ],
+      "flags": [
+        "contested",
+        "suicide"
+      ],
+      "sources": [],
+      "openalex": "W2770314219"
+    },
+    {
+      "n": 2,
+      "id": "orben-przybylski-2019",
+      "label": "Orben & Przybylski 2019",
+      "authors": "Orben, A., & Przybylski, A. K.",
+      "year": 2019,
+      "title": "The association between adolescent well-being and digital technology use",
+      "venue": "Nature Human Behaviour",
+      "citation": "Orben, A., & Przybylski, A. K. (2019). The association between adolescent well-being and digital technology use. Nature Human Behaviour, 3, 173–182.",
+      "doi": "10.1038/s41562-018-0506-1",
+      "url": "https://doi.org/10.1038/s41562-018-0506-1",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "observational",
+      "type_sample": "Specification-curve analysis; more than 355,000 adolescents (US and UK).",
+      "findings": "Digital technology use explained at most 0.4% of the variation in well-being, comparable to eating potatoes. The landmark \"small effects\" paper.",
+      "related": [
+        1,
+        3,
+        5
+      ],
+      "flags": [
+        "contested"
+      ],
+      "sources": [],
+      "openalex": "W2911168426",
+      "note": "The landmark \"small effects\" paper, and one side of the field's central dispute: #3 re-analyses the same data and finds larger associations for girls and social media specifically. Put both on the page."
+    },
+    {
+      "n": 3,
+      "id": "twenge-et-al-2022",
+      "label": "Twenge et al. 2022",
+      "authors": "Twenge, J. M., Haidt, J., Lozano, J., & Cummins, K. M.",
+      "year": 2022,
+      "title": "Specification curve analysis shows that social media use is linked to poor mental health, especially among girls",
+      "venue": "Acta Psychologica",
+      "citation": "Twenge, J. M., Haidt, J., Lozano, J., & Cummins, K. M. (2022). Specification curve analysis shows that social media use is linked to poor mental health, especially among girls. Acta Psychologica, 224, 103512.",
+      "doi": "10.1016/j.actpsy.2022.103512",
+      "url": "https://doi.org/10.1016/j.actpsy.2022.103512",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "observational",
+      "type_sample": "Re-analysis of the same datasets as #2.",
+      "findings": "Isolating social media (not all screen time) and girls yields substantially larger associations. The direct rebuttal to #2, showing how analytic choices drive conclusions.",
+      "related": [
+        1,
+        2,
+        5
+      ],
+      "flags": [
+        "contested"
+      ],
+      "sources": [],
+      "openalex": "W4210719381",
+      "note": "A direct rebuttal of #2 on the same datasets: the disagreement is about analytic choices. Put both on the page."
+    },
+    {
+      "n": 4,
+      "id": "orben-et-al-2022",
+      "label": "Orben et al. 2022",
+      "authors": "Orben, A., Przybylski, A. K., Blakemore, S.-J., & Kievit, R. A.",
+      "year": 2022,
+      "title": "Windows of developmental sensitivity to social media",
+      "venue": "Nature Communications",
+      "citation": "Orben, A., Przybylski, A. K., Blakemore, S.-J., & Kievit, R. A. (2022). Windows of developmental sensitivity to social media. Nature Communications, 13, 1649.",
+      "doi": "10.1038/s41467-022-29296-3",
+      "url": "https://doi.org/10.1038/s41467-022-29296-3",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "cohort",
+      "type_sample": "Longitudinal cohort; about 17,400 UK participants aged 10–80.",
+      "findings": "Higher use predicted lower later life satisfaction at specific ages (about 11–13 for girls, 14–15 for boys, 19 for both), suggesting sensitive developmental windows rather than uniform harm.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4220990449"
+    },
+    {
+      "n": 5,
+      "id": "odgers-2024",
+      "label": "Odgers 2024",
+      "authors": "Odgers, C. L.",
+      "year": 2024,
+      "title": "The great rewiring: is social media really behind an epidemic of teenage mental illness?",
+      "venue": "Nature",
+      "citation": "Odgers, C. L. (2024). The great rewiring: is social media really behind an epidemic of teenage mental illness? Nature, 628, 29–30.",
+      "doi": "10.1038/d41586-024-00902-2",
+      "url": "https://doi.org/10.1038/d41586-024-00902-2",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "report",
+      "type_sample": "Expert review of Haidt's The Anxious Generation (2024).",
+      "findings": "Argues \"there is no evidence that using these platforms is rewiring children's brains or driving an epidemic of mental illness,\" pointing to alternative causes such as post-2008 economic stress. Haidt replied on his After Babel Substack (not peer-reviewed), citing experimental evidence. Read the two together.",
+      "related": [
+        1,
+        2,
+        3,
+        9,
+        13,
+        17
+      ],
+      "flags": [
+        "contested"
+      ],
+      "sources": [
+        {
+          "n": 4,
+          "title": "The great rewiring: is social media really behind an epidemic of teenage mental illness?",
+          "url": "https://www.nature.com/articles/d41586-024-00902-2"
+        },
+        {
+          "n": 5,
+          "title": "An Anxious Generation? The Eternal Return of Media Effects on Children.",
+          "url": "https://cscolari.medium.com/an-anxious-generation-the-eternal-return-of-media-effects-on-children-34bb7747982c"
+        },
+        {
+          "n": 6,
+          "title": "Yes, Social Media Really Is a Cause of the Epidemic of Teenage Mental Illness",
+          "url": "https://www.afterbabel.com/p/phone-based-childhood-cause-epidemic"
+        }
+      ],
+      "openalex": "W4393310025",
+      "note": "An expert review, not a study: Haidt replied on his Substack (not peer-reviewed). Present it as one side of a dispute."
+    },
+    {
+      "n": 6,
+      "id": "valkenburg-et-al-2022",
+      "label": "Valkenburg et al. 2022",
+      "authors": "Valkenburg, P. M., Meier, A., & Beyens, I.",
+      "year": 2022,
+      "title": "Social media use and its impact on adolescent mental health: An umbrella review of the evidence",
+      "venue": "Current Opinion in Psychology",
+      "citation": "Valkenburg, P. M., Meier, A., & Beyens, I. (2022). Social media use and its impact on adolescent mental health: An umbrella review of the evidence. Current Opinion in Psychology, 44, 58–68.",
+      "doi": "10.1016/j.copsyc.2021.08.017",
+      "url": "https://doi.org/10.1016/j.copsyc.2021.08.017",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "synthesis",
+      "type_sample": "Umbrella review.",
+      "findings": "Reviews interpret the same weak-to-moderate associations very differently. Effects are heterogeneous: most adolescents show no effect, minorities show positive or negative effects.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3195706482"
+    },
+    {
+      "n": 7,
+      "id": "beyens-et-al-2020",
+      "label": "Beyens et al. 2020",
+      "authors": "Beyens, I., Pouwels, J. L., van Driel, I. I., Keijsers, L., & Valkenburg, P. M.",
+      "year": 2020,
+      "title": "The effect of social media on well-being differs from adolescent to adolescent",
+      "venue": "Scientific Reports",
+      "citation": "Beyens, I., Pouwels, J. L., van Driel, I. I., Keijsers, L., & Valkenburg, P. M. (2020). The effect of social media on well-being differs from adolescent to adolescent. Scientific Reports, 10, 10763.",
+      "doi": "10.1038/s41598-020-67727-7",
+      "url": "https://doi.org/10.1038/s41598-020-67727-7",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1a",
+      "section_name": "The core debate (Haidt/Twenge vs. Orben/Przybylski/Odgers)",
+      "design": "cohort",
+      "type_sample": "Experience sampling; 63 adolescents, 34,930 assessments.",
+      "findings": "46% felt better after passive use, 10% felt worse, the rest showed no effect. Key evidence for \"person-specific\" effects.",
+      "related": [
+        57,
+        58,
+        71
+      ],
+      "flags": [
+        "small-sample"
+      ],
+      "sources": [],
+      "openalex": "W3039124223"
+    },
+    {
+      "n": 8,
+      "id": "u-s-surgeon-general-2023",
+      "label": "U.S. Surgeon General 2023",
+      "authors": "U.S. Surgeon General",
+      "year": 2023,
+      "title": "Social Media and Youth Mental Health: The U.S. Surgeon General's Advisory",
+      "venue": "HHS",
+      "citation": "U.S. Surgeon General (2023). Social Media and Youth Mental Health: The U.S. Surgeon General's Advisory. HHS.",
+      "doi": null,
+      "url": "https://www.hhs.gov/sites/default/files/sg-youth-mental-health-social-media-advisory.pdf",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1b",
+      "section_name": "Major institutional reports",
+      "design": "report",
+      "type_sample": null,
+      "findings": "Up to 95% of US 13–17-year-olds use social media; those using more than 3 hours/day face double the risk of depression and anxiety symptoms. Concludes there is not enough evidence to call social media safe for youth, while noting benefits for marginalized youth such as LGBTQ+ peer support.",
+      "related": [],
+      "flags": [],
+      "sources": [
+        {
+          "n": 7,
+          "title": "Social Media & Depression in Teens: New Research",
+          "url": "https://www.ectelepsychiatry.com/articles/new-research-confirms-social-media-use-leads-to-depression-in-preteens-and-adolescents"
+        },
+        {
+          "n": 8,
+          "title": "Social Media and Youth Mental Health The U.S. Surgeon General’s Advisory 2023",
+          "url": "https://www.hhs.gov/sites/default/files/sg-youth-mental-health-social-media-advisory.pdf"
+        }
+      ],
+      "openalex": null
+    },
+    {
+      "n": 9,
+      "id": "national-academies-2024",
+      "label": "National Academies 2024",
+      "authors": "National Academies of Sciences, Engineering, and Medicine",
+      "year": 2024,
+      "title": "Social Media and Adolescent Health",
+      "venue": "National Academies Press",
+      "citation": "National Academies of Sciences, Engineering, and Medicine (2024). Social Media and Adolescent Health. National Academies Press.",
+      "doi": "10.17226/27396",
+      "url": "https://doi.org/10.17226/27396",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1b",
+      "section_name": "Major institutional reports",
+      "design": "report",
+      "type_sample": null,
+      "findings": "The evidence does not support the conclusion that social media causes population-level changes in adolescent mental health. Still recommends platform design standards, age-appropriate defaults and more researcher data access. The most cautious major review.",
+      "related": [
+        5,
+        13,
+        17
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4389670596"
+    },
+    {
+      "n": 10,
+      "id": "apa-2023",
+      "label": "APA 2023",
+      "authors": "American Psychological Association",
+      "year": 2023,
+      "title": "Health Advisory on Social Media Use in Adolescence",
+      "venue": "American Psychological Association",
+      "citation": "American Psychological Association (2023). Health Advisory on Social Media Use in Adolescence.",
+      "doi": null,
+      "url": "https://www.apa.org/topics/social-media-internet/health-advisory-adolescent-social-media-use",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1b",
+      "section_name": "Major institutional reports",
+      "design": "report",
+      "type_sample": null,
+      "findings": "Social media is \"not inherently beneficial or harmful\"; risks depend on content, features (infinite scroll, likes) and displacement of sleep and activity. Recommends monitoring in early adolescence.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": null
+    },
+    {
+      "n": 11,
+      "id": "kelly-et-al-2018",
+      "label": "Kelly et al. 2018",
+      "authors": "Kelly, Y., Zilanawala, A., Booker, C., & Sacker, A.",
+      "year": 2018,
+      "title": "Social media use and adolescent mental health: Findings from the UK Millennium Cohort Study",
+      "venue": "EClinicalMedicine",
+      "citation": "Kelly, Y., Zilanawala, A., Booker, C., & Sacker, A. (2018). Social media use and adolescent mental health: Findings from the UK Millennium Cohort Study. EClinicalMedicine, 6, 59–68.",
+      "doi": "10.1016/j.eclinm.2018.12.005",
+      "url": "https://doi.org/10.1016/j.eclinm.2018.12.005",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1c",
+      "section_name": "Large cohort studies",
+      "design": "cohort",
+      "type_sample": "Cohort; about 11,000 UK 14-year-olds.",
+      "findings": "Heavier use was associated with more depressive symptoms, more strongly in girls, largely accounted for by online harassment, poor sleep, low self-esteem and poor body image.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2908500884"
+    },
+    {
+      "n": 12,
+      "id": "riehm-et-al-2019",
+      "label": "Riehm et al. 2019",
+      "authors": "Riehm, K. E., Feder, K. A., Tormohlen, K. N., et al.",
+      "year": 2019,
+      "title": "Associations between time spent using social media and internalizing and externalizing problems among US youth",
+      "venue": "JAMA Psychiatry",
+      "citation": "Riehm, K. E., Feder, K. A., Tormohlen, K. N., et al. (2019). Associations between time spent using social media and internalizing and externalizing problems among US youth. JAMA Psychiatry, 76(12), 1266–1273.",
+      "doi": "10.1001/jamapsychiatry.2019.2325",
+      "url": "https://doi.org/10.1001/jamapsychiatry.2019.2325",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1c",
+      "section_name": "Large cohort studies",
+      "design": "cohort",
+      "type_sample": "Prospective cohort (PATH); 6,595 US adolescents.",
+      "findings": "More than 3 hours/day predicted elevated risk of later internalizing problems; the main source for the Surgeon General's \"3 hours\" threshold.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2972459530"
+    },
+    {
+      "n": 13,
+      "id": "nagata-et-al-2025",
+      "label": "Nagata et al. 2025",
+      "authors": "Nagata, J. M., Otmar, C. D., Shim, J., et al.",
+      "year": 2025,
+      "title": "Social media use and depressive symptoms during early adolescence",
+      "venue": "JAMA Network Open",
+      "citation": "Nagata, J. M., Otmar, C. D., Shim, J., et al. (2025). Social media use and depressive symptoms during early adolescence. JAMA Network Open, 8(5), e2511704.",
+      "doi": "10.1001/jamanetworkopen.2025.11704",
+      "url": "https://doi.org/10.1001/jamanetworkopen.2025.11704",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1c",
+      "section_name": "Large cohort studies",
+      "design": "cohort",
+      "type_sample": "Prospective cohort, within-person cross-lagged models; about 11,900 US children (ABCD Study), ages 9–13.",
+      "findings": "Within-person increases in use predicted higher depressive symptoms the next year (β = 0.07–0.09); depressive symptoms did not predict later use. Between-person differences were not significant after adjustment: real but small effects.",
+      "related": [
+        5,
+        9,
+        17
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 9,
+          "title": "Original Investigation",
+          "url": "https://jamanetwork.com/journals/jamanetworkopen/articlepdf/2834349/nagata_2025_oi_250397_1747250354.31608.pdf"
+        },
+        {
+          "n": 7,
+          "title": "Social Media & Depression in Teens: New Research",
+          "url": "https://www.ectelepsychiatry.com/articles/new-research-confirms-social-media-use-leads-to-depression-in-preteens-and-adolescents"
+        },
+        {
+          "n": 10,
+          "title": "Increased Social Media Use Linked to Rising Depressive Symptoms in Early Adolescents",
+          "url": "https://www.ajmc.com/view/increased-social-media-use-linked-to-rising-depressive-symptoms-in-early-adolescents"
+        },
+        {
+          "n": 11,
+          "title": "Higher Social Media Use Tied to Subsequent Depressive Symptoms in Youth",
+          "url": "https://www.psychiatryadvisor.com/news/higher-social-media-use-tied-to-subsequent-depressive-symptoms-in-youth/"
+        }
+      ],
+      "openalex": "W4410551898"
+    },
+    {
+      "n": 14,
+      "id": "xiao-et-al-2025",
+      "label": "Xiao et al. 2025",
+      "authors": "Xiao, Y., Meng, Y., Brown, T. T., Keyes, K. M., & Mann, J. J.",
+      "year": 2025,
+      "title": "Addictive screen use trajectories and suicidal behaviors, suicidal ideation, and mental health in US youths",
+      "venue": "JAMA",
+      "citation": "Xiao, Y., Meng, Y., Brown, T. T., Keyes, K. M., & Mann, J. J. (2025). Addictive screen use trajectories and suicidal behaviors, suicidal ideation, and mental health in US youths. JAMA, 334(3), 219–228.",
+      "doi": "10.1001/jama.2025.7829",
+      "url": "https://doi.org/10.1001/jama.2025.7829",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1c",
+      "section_name": "Large cohort studies",
+      "design": "cohort",
+      "type_sample": "Prospective cohort (ABCD), trajectory modeling; about 4,300 youths over 4 years.",
+      "findings": "Nearly one-third followed an increasing addictive social-media-use trajectory from age 11. High or increasing addictive use was associated with 2–3× higher risk of suicidal behaviors and ideation (risk ratio 2.14 for increasing addictive social media use); total screen time was not. Shifts focus from \"time\" to \"compulsive use.\"",
+      "related": [
+        26,
+        27
+      ],
+      "flags": [
+        "suicide"
+      ],
+      "sources": [
+        {
+          "n": 12,
+          "title": "Addictive Screen Use Trajectories and Suicidal Behaviors, Suicidal Ideation, and Mental Health in US Youths",
+          "url": "https://www.ovid.com/journals/jama/fulltext/10.1001/jama.2025.7829~addictive-screen-use-trajectories-and-suicidal-behaviors"
+        },
+        {
+          "n": 13,
+          "title": "Addictive Screen Use Trajectories and Suicidal Behaviors, Suicidal Ideation, and Mental Health in US Youths",
+          "url": "https://jamanetwork.com/journals/jama/fullarticle/2835481"
+        },
+        {
+          "n": 14,
+          "title": "JAMA Study Links Addictive Screen Use to Suicidal Behavior in Adolescents",
+          "url": "https://www.nyp.org/advances/article/pediatric-psychiatry/jama-study-links-addictive-screen-use-to-suicidal-behavior-in-adolescents"
+        }
+      ],
+      "openalex": "W4411413687"
+    },
+    {
+      "n": 15,
+      "id": "shakya-christakis-2017",
+      "label": "Shakya & Christakis 2017",
+      "authors": "Shakya, H. B., & Christakis, N. A.",
+      "year": 2017,
+      "title": "Association of Facebook use with compromised well-being: A longitudinal study",
+      "venue": "American Journal of Epidemiology",
+      "citation": "Shakya, H. B., & Christakis, N. A. (2017). Association of Facebook use with compromised well-being: A longitudinal study. American Journal of Epidemiology, 185(3), 203–211.",
+      "doi": "10.1093/aje/kww189",
+      "url": "https://doi.org/10.1093/aje/kww189",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1c",
+      "section_name": "Large cohort studies",
+      "design": "cohort",
+      "type_sample": "Three-wave longitudinal; 5,208 US adults (Gallup).",
+      "findings": "Liking others' content and clicking links predicted later declines in self-reported physical and mental health and life satisfaction; real-world networks had the opposite association.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2573955387"
+    },
+    {
+      "n": 16,
+      "id": "kross-et-al-2013",
+      "label": "Kross et al. 2013",
+      "authors": "Kross, E., Verduyn, P., Demiralp, E., et al.",
+      "year": 2013,
+      "title": "Facebook use predicts declines in subjective well-being in young adults",
+      "venue": "PLOS ONE",
+      "citation": "Kross, E., Verduyn, P., Demiralp, E., et al. (2013). Facebook use predicts declines in subjective well-being in young adults. PLOS ONE, 8(8), e69841.",
+      "doi": "10.1371/journal.pone.0069841",
+      "url": "https://doi.org/10.1371/journal.pone.0069841",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1c",
+      "section_name": "Large cohort studies",
+      "design": "cohort",
+      "type_sample": "Experience sampling; 82 young adults over 2 weeks.",
+      "findings": "More Facebook use predicted declines in momentary affect and in life satisfaction over time. A foundational early study.",
+      "related": [],
+      "flags": [
+        "small-sample"
+      ],
+      "sources": [],
+      "openalex": "W1994045792"
+    },
+    {
+      "n": 17,
+      "id": "braghieri-et-al-2022",
+      "label": "Braghieri et al. 2022",
+      "authors": "Braghieri, L., Levy, R., & Makarin, A.",
+      "year": 2022,
+      "title": "Social media and mental health",
+      "venue": "American Economic Review",
+      "citation": "Braghieri, L., Levy, R., & Makarin, A. (2022). Social media and mental health. American Economic Review, 112(11), 3660–3693.",
+      "doi": "10.1257/aer.20211218",
+      "url": "https://doi.org/10.1257/aer.20211218",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "natural",
+      "type_sample": "Natural experiment (staggered Facebook rollout across US colleges, 2004–2006); more than 430,000 National College Health Assessment responses.",
+      "findings": "Facebook's arrival worsened student mental health: severe depression rose about 7% and anxiety disorder about 20%, likely via unfavorable social comparison. Among the strongest causal designs.",
+      "related": [
+        5,
+        9,
+        13
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4307559973"
+    },
+    {
+      "n": 18,
+      "id": "allcott-et-al-2020",
+      "label": "Allcott et al. 2020",
+      "authors": "Allcott, H., Braghieri, L., Eichmeyer, S., & Gentzkow, M.",
+      "year": 2020,
+      "title": "The welfare effects of social media",
+      "venue": "American Economic Review",
+      "citation": "Allcott, H., Braghieri, L., Eichmeyer, S., & Gentzkow, M. (2020). The welfare effects of social media. American Economic Review, 110(3), 629–676.",
+      "doi": "10.1257/aer.20190658",
+      "url": "https://doi.org/10.1257/aer.20190658",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "experiment",
+      "type_sample": "Randomized 4-week deactivation before the 2018 midterms; 2,743 US Facebook users.",
+      "findings": "Deactivation increased offline activities, slightly improved well-being, reduced news knowledge and political polarization, and reduced later Facebook use. The landmark deactivation RCT.",
+      "related": [
+        19,
+        44,
+        66
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2911601927"
+    },
+    {
+      "n": 19,
+      "id": "allcott-et-al-2025",
+      "label": "Allcott et al. 2025",
+      "authors": "Allcott, H., Gentzkow, M., Mason, W., et al.",
+      "year": 2025,
+      "title": "The effect of deactivating Facebook and Instagram on users' emotional state",
+      "venue": "NBER Working Paper 33697",
+      "citation": "Allcott, H., Gentzkow, M., Mason, W., et al. (2025). The effect of deactivating Facebook and Instagram on users' emotional state. NBER Working Paper 33697.",
+      "doi": "10.3386/w33697",
+      "url": "https://www.nber.org/papers/w33697",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "experiment",
+      "type_sample": "Large RCT (2020 Meta election studies); about 19,900 Facebook and 15,600 Instagram users.",
+      "findings": "Six weeks of Facebook deactivation improved a happiness/anxiety/depression index by 0.060 SD; Instagram by 0.041 SD, driven by women under 25 and not significant after multiple-testing adjustment. Real but small.",
+      "related": [
+        18,
+        44,
+        66
+      ],
+      "flags": [
+        "preprint",
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 15,
+          "title": "NBER WORKING PAPER SERIES THE EFFECT OF DEACTIVATING FACEBOOK AND INSTAGRAM",
+          "url": "https://www.nber.org/system/files/working_papers/w33697/w33697.pdf"
+        }
+      ],
+      "openalex": "W4409633598",
+      "note": "An NBER working paper run inside the 2020 Meta election studies: say it is a working paper, and that Meta cooperated under an independence agreement."
+    },
+    {
+      "n": 20,
+      "id": "hunt-et-al-2018",
+      "label": "Hunt et al. 2018",
+      "authors": "Hunt, M. G., Marx, R., Lipson, C., & Young, J.",
+      "year": 2018,
+      "title": "No more FOMO: Limiting social media decreases loneliness and depression",
+      "venue": "Journal of Social and Clinical Psychology",
+      "citation": "Hunt, M. G., Marx, R., Lipson, C., & Young, J. (2018). No more FOMO: Limiting social media decreases loneliness and depression. Journal of Social and Clinical Psychology, 37(10), 751–768.",
+      "doi": "10.1521/jscp.2018.37.10.751",
+      "url": "https://doi.org/10.1521/jscp.2018.37.10.751",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "experiment",
+      "type_sample": "RCT; 143 US undergraduates.",
+      "findings": "Limiting Facebook, Instagram and Snapchat to 10 minutes per platform per day (30 minutes total) for 3 weeks reduced loneliness and depression, especially among those more depressed at baseline. Widely cited; small sample.",
+      "related": [
+        67
+      ],
+      "flags": [
+        "small-sample"
+      ],
+      "sources": [
+        {
+          "n": 8,
+          "title": "Social Media and Youth Mental Health The U.S. Surgeon General’s Advisory 2023",
+          "url": "https://www.hhs.gov/sites/default/files/sg-youth-mental-health-social-media-advisory.pdf"
+        }
+      ],
+      "openalex": "W2899535553"
+    },
+    {
+      "n": 21,
+      "id": "ferguson-2024",
+      "label": "Ferguson 2024",
+      "authors": "Ferguson, C. J.",
+      "year": 2024,
+      "title": "Do social media experiments prove a link with mental health: A methodological and meta-analytic review",
+      "venue": "Psychology of Popular Media",
+      "citation": "Ferguson, C. J. (2024). Do social media experiments prove a link with mental health: A methodological and meta-analytic review. Psychology of Popular Media, 14(2), 201–206.",
+      "doi": "10.1037/ppm0000541",
+      "url": "https://doi.org/10.1037/ppm0000541",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "synthesis",
+      "type_sample": "Meta-analysis of 27 experiments (2013–2023).",
+      "findings": "Pooled effect d = 0.088 (p =.104), not different from zero; Ferguson argues this undermines causal claims that cutting social media would improve adolescent mental health. Contested: see #22–#23.",
+      "related": [
+        22,
+        23
+      ],
+      "flags": [
+        "contested"
+      ],
+      "sources": [
+        {
+          "n": 16,
+          "title": "Social Media Reduction or Abstinence Interventions Are Providing Mental Health Benefits—Reanalysis of a Published Meta-Analysis - PMC",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12125955/"
+        },
+        {
+          "n": 17,
+          "title": "Frontiers",
+          "url": "https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2025.1548504/full"
+        },
+        {
+          "n": 18,
+          "title": "The Fundamental Flaws of The Only Meta-Analysis of Social Media Reduction Experiments (And Why It Matters), Part 1",
+          "url": "https://www.afterbabel.com/p/the-case-for-causality-part-1"
+        }
+      ],
+      "openalex": "W4396580677",
+      "note": "Contested by two later meta-analyses (#22, #23) that pool differently and find benefits. Put the dispute on the page."
+    },
+    {
+      "n": 22,
+      "id": "thrul-et-al-2025",
+      "label": "Thrul et al. 2025",
+      "authors": "Thrul, J., Devkota, J., Aljuboori, D., Regan, T., Alomairah, S., & Vidal, C.",
+      "year": 2025,
+      "title": "Social media reduction or abstinence interventions are providing mental health benefits—Reanalysis of a published meta-analysis",
+      "venue": "Psychology of Popular Media",
+      "citation": "Thrul, J., Devkota, J., Aljuboori, D., Regan, T., Alomairah, S., & Vidal, C. (2025). Social media reduction or abstinence interventions are providing mental health benefits—Reanalysis of a published meta-analysis. Psychology of Popular Media.",
+      "doi": "10.1037/ppm0000574",
+      "url": "https://doi.org/10.1037/ppm0000574",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "synthesis",
+      "type_sample": "Meta-analytic reanalysis.",
+      "findings": "Ferguson mixed reduction with exposure studies and ignored intervention length; restricting to reduction/abstinence and modeling duration showed benefits, with an optimal length of about 3 weeks. Ferguson's reply argues three meta-analyses now agree effects are of \"limited practical or clinical value.\"",
+      "related": [
+        21,
+        23
+      ],
+      "flags": [
+        "contested"
+      ],
+      "sources": [
+        {
+          "n": 19,
+          "title": "Social Media Reduction or Abstinence Interventions Are Providing Mental Health Benefits—Reanalysis of a Published Meta-Analysis - Johns Hopkins University",
+          "url": "https://pure.johnshopkins.edu/en/publications/social-media-reduction-or-abstinence-interventions-are-providing-"
+        },
+        {
+          "n": 20,
+          "title": "Effect of Social Media Constraints on Mental Health: A Systematic Review and Meta-Analysis of Experiments",
+          "url": "https://www.medrxiv.org/content/10.64898/2026.06.01.26354614v2.full"
+        },
+        {
+          "n": 16,
+          "title": "Social Media Reduction or Abstinence Interventions Are Providing Mental Health Benefits—Reanalysis of a Published Meta-Analysis - PMC",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12125955/"
+        },
+        {
+          "n": 21,
+          "title": "Article Type: comment/reply Journal Title: Psychology of Popular Media",
+          "url": "https://www.christopherjferguson.com/Narratives%20and%20Data.pdf"
+        }
+      ],
+      "openalex": "W4408907373",
+      "note": "A reanalysis of #21; Ferguson replied that the effects are of \"limited practical or clinical value\". Put the dispute on the page."
+    },
+    {
+      "n": 23,
+      "id": "veber-lopes-et-al-2026",
+      "label": "Veber Lopes et al. 2026",
+      "authors": "Veber Lopes, M. V., Branje, K., David, A., Goldfield, G. S., et al.",
+      "year": 2026,
+      "title": "Effect of social media constraints on mental health: A systematic review and meta-analysis of experiments",
+      "venue": "medRxiv",
+      "citation": "Veber Lopes, M. V., Branje, K., David, A., Goldfield, G. S., et al. (2026). Effect of social media constraints on mental health: A systematic review and meta-analysis of experiments. medRxiv (preprint, under review).",
+      "doi": "10.64898/2026.06.01.26354614",
+      "url": "https://doi.org/10.64898/2026.06.01.26354614",
+      "arxiv": null,
+      "access": "open",
+      "theme": "mental-health",
+      "section": "1d",
+      "section_name": "Experiments and natural experiments",
+      "design": "synthesis",
+      "type_sample": "Multilevel meta-analysis of RCTs; 35 studies, 7,160 participants.",
+      "findings": "Constraining use generally improved several mental health outcomes with \"no evidence of harm\"; the authors call it a low-cost, scalable strategy. Not yet peer-reviewed.",
+      "related": [
+        21,
+        22
+      ],
+      "flags": [
+        "contested",
+        "preprint"
+      ],
+      "sources": [
+        {
+          "n": 22,
+          "title": "Effect of Social Media Constraints on Mental Health: A Systematic Review and Meta-Analysis of Experiments",
+          "url": "https://www.medrxiv.org/content/10.64898/2026.06.01.26354614v1"
+        },
+        {
+          "n": 23,
+          "title": "The Effects of Social Media Restriction: Meta-Analytic Evidence from Randomized Controlled Trials",
+          "url": "https://www.researchgate.net/publication/391504047_The_Effects_of_Social_Media_Restriction_Meta-Analytic_Evidence_from_Randomized_Controlled_Trials"
+        },
+        {
+          "n": 24,
+          "title": "(PDF) Effect of Social Media Constraints on Mental Health: A Systematic Review and Meta-Analysis of Experiments",
+          "url": "https://www.researchgate.net/publication/405808251_Effect_of_Social_Media_Constraints_on_Mental_Health_A_Systematic_Review_and_Meta-Analysis_of_Experiments"
+        },
+        {
+          "n": 25,
+          "title": "OSF",
+          "url": "https://osf.io/r37mu/overview"
+        }
+      ],
+      "openalex": "W7163216603",
+      "note": "A medRxiv preprint, not yet peer-reviewed: say so on the page and in the share card."
+    },
+    {
+      "n": 24,
+      "id": "saiphoo-vahedi-2019",
+      "label": "Saiphoo & Vahedi 2019",
+      "authors": "Saiphoo, A. N., & Vahedi, Z.",
+      "year": 2019,
+      "title": "A meta-analytic review of the relationship between social media use and body image disturbance",
+      "venue": "Computers in Human Behavior",
+      "citation": "Saiphoo, A. N., & Vahedi, Z. (2019). A meta-analytic review of the relationship between social media use and body image disturbance. Computers in Human Behavior, 101, 259–275.",
+      "doi": "10.1016/j.chb.2019.07.028",
+      "url": "https://doi.org/10.1016/j.chb.2019.07.028",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1e",
+      "section_name": "Body image and sleep",
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "Small but significant association between social media use and body image disturbance, stronger for appearance-focused and photo-based activity.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2964768218"
+    },
+    {
+      "n": 25,
+      "id": "alonzo-et-al-2021",
+      "label": "Alonzo et al. 2021",
+      "authors": "Alonzo, R., Hussain, J., Stranges, S., & Anderson, K. K.",
+      "year": 2021,
+      "title": "Interplay between social media use, sleep quality, and mental health in youth: A systematic review",
+      "venue": "Sleep Medicine Reviews",
+      "citation": "Alonzo, R., Hussain, J., Stranges, S., & Anderson, K. K. (2021). Interplay between social media use, sleep quality, and mental health in youth: A systematic review. Sleep Medicine Reviews, 56, 101414.",
+      "doi": "10.1016/j.smrv.2020.101414",
+      "url": "https://doi.org/10.1016/j.smrv.2020.101414",
+      "arxiv": null,
+      "access": null,
+      "theme": "mental-health",
+      "section": "1e",
+      "section_name": "Body image and sleep",
+      "design": "synthesis",
+      "type_sample": "Systematic review of 36 cross-sectional studies.",
+      "findings": "Excessive use is consistently associated with poor sleep quality, which is linked to depression and anxiety. Sleep is one of the best-supported mechanisms.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3110734950"
+    },
+    {
+      "n": 26,
+      "id": "nguyen-et-al-2025",
+      "label": "Nguyen et al. 2025",
+      "authors": "Nguyen, L., Walters, J., Paul, S., Monreal Ijurco, S., Rainey, G. E., Parekh, N., Blair, G., & Darrah, M.",
+      "year": 2025,
+      "title": "Feeds, feelings, and focus: A systematic review and meta-analysis examining the cognitive and mental health correlates of short-form video use",
+      "venue": "Psychological Bulletin",
+      "citation": "Nguyen, L., Walters, J., Paul, S., Monreal Ijurco, S., Rainey, G. E., Parekh, N., Blair, G., & Darrah, M. (2025). Feeds, feelings, and focus: A systematic review and meta-analysis examining the cognitive and mental health correlates of short-form video use. Psychological Bulletin, 151(9), 1125–1146.",
+      "doi": null,
+      "url": null,
+      "arxiv": null,
+      "access": null,
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": "Meta-analysis; 71 studies, 98,299 participants.",
+      "findings": "Short-form video use was moderately associated with poorer cognition (r = −.34), especially attention (r = −.38) and inhibitory control (r = −.41), and weakly with poorer mental health (r = −.21), strongest for stress and anxiety; no association with body image or self-esteem. \"Addictive\" use drove effects more than duration. All included studies are correlational.",
+      "related": [
+        14,
+        27
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 26,
+          "title": "Short Videos, Big Impact on Youth Mental Health",
+          "url": "https://www.psychologytoday.com/us/blog/no-more-fomo/202602/short-videos-big-impact-on-youth-mental-health"
+        },
+        {
+          "n": 27,
+          "title": "Short-form video attention span: what the science really says · Focus Tools",
+          "url": "https://focus.tools/articles/short-form-video-attention-span/"
+        },
+        {
+          "n": 28,
+          "title": "Study: Short-Form Video Isn't Rotting Your Brain",
+          "url": "https://www.yahoo.com/news/articles/study-short-form-video-isnt-172407048.html"
+        }
+      ],
+      "openalex": null,
+      "note": "The collection lists this meta-analysis without a DOI: find it on the Psychological Bulletin (APA PsycNet) page and cite that, not a press summary."
+    },
+    {
+      "n": 27,
+      "id": "allcott-et-al-2022",
+      "label": "Allcott et al. 2022",
+      "authors": "Allcott, H., Gentzkow, M., & Song, L.",
+      "year": 2022,
+      "title": "Digital addiction",
+      "venue": "American Economic Review",
+      "citation": "Allcott, H., Gentzkow, M., & Song, L. (2022). Digital addiction. American Economic Review, 112(7), 2424–2463.",
+      "doi": "10.1257/aer.20210867",
+      "url": "https://doi.org/10.1257/aer.20210867",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": "Field experiment with structural model; about 2,000 US smartphone users.",
+      "findings": "Users showed habit formation and self-control problems, which the authors estimate account for 31% of social media use: economic evidence that some use is behaviorally \"addictive.\"",
+      "related": [
+        14,
+        26
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4283705510"
+    },
+    {
+      "n": 28,
+      "id": "castelo-et-al-2025",
+      "label": "Castelo et al. 2025",
+      "authors": "Castelo, N., Kushlev, K., Ward, A. F., Esterman, M., & Reiner, P. B.",
+      "year": 2025,
+      "title": "Blocking mobile internet on smartphones improves sustained attention, mental health, and subjective well-being",
+      "venue": "PNAS Nexus",
+      "citation": "Castelo, N., Kushlev, K., Ward, A. F., Esterman, M., & Reiner, P. B. (2025). Blocking mobile internet on smartphones improves sustained attention, mental health, and subjective well-being. PNAS Nexus, 4(2), pgaf017.",
+      "doi": "10.1093/pnasnexus/pgaf017",
+      "url": "https://doi.org/10.1093/pnasnexus/pgaf017",
+      "arxiv": null,
+      "access": "open",
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": "RCT (2-week mobile-internet block, calls and texts kept); 467 participants.",
+      "findings": "Blocking improved mental health, well-being and objectively measured sustained attention; 91% improved on at least one outcome. One of few causal attention studies.",
+      "related": [
+        78
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 23,
+          "title": "The Effects of Social Media Restriction: Meta-Analytic Evidence from Randomized Controlled Trials",
+          "url": "https://www.researchgate.net/publication/391504047_The_Effects_of_Social_Media_Restriction_Meta-Analytic_Evidence_from_Randomized_Controlled_Trials"
+        }
+      ],
+      "openalex": "W4407698196"
+    },
+    {
+      "n": 29,
+      "id": "sherman-et-al-2016",
+      "label": "Sherman et al. 2016",
+      "authors": "Sherman, L. E., Payton, A. A., Hernandez, L. M., Greenfield, P. M., & Dapretto, M.",
+      "year": 2016,
+      "title": "The power of the like in adolescence",
+      "venue": "Psychological Science",
+      "citation": "Sherman, L. E., Payton, A. A., Hernandez, L. M., Greenfield, P. M., & Dapretto, M. (2016). The power of the like in adolescence. Psychological Science, 27(7), 1027–1035.",
+      "doi": "10.1177/0956797616645673",
+      "url": "https://doi.org/10.1177/0956797616645673",
+      "arxiv": null,
+      "access": null,
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": "fMRI experiment; 32 adolescents.",
+      "findings": "Photos with many \"likes\" activated reward circuitry (nucleus accumbens), and teens were more likely to like them. Foundational for the \"dopamine/reward\" framing; small sample.",
+      "related": [],
+      "flags": [
+        "small-sample"
+      ],
+      "sources": [],
+      "openalex": "W2415638773"
+    },
+    {
+      "n": 30,
+      "id": "maza-et-al-2023",
+      "label": "Maza et al. 2023",
+      "authors": "Maza, M. T., Fox, K. A., Kwon, S.-J., et al.",
+      "year": 2023,
+      "title": "Association of habitual checking behaviors on social media with longitudinal functional brain development",
+      "venue": "JAMA Pediatrics",
+      "citation": "Maza, M. T., Fox, K. A., Kwon, S.-J., et al. (2023). Association of habitual checking behaviors on social media with longitudinal functional brain development. JAMA Pediatrics, 177(2), 160–167.",
+      "doi": "10.1001/jamapediatrics.2022.4924",
+      "url": "https://doi.org/10.1001/jamapediatrics.2022.4924",
+      "arxiv": null,
+      "access": null,
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "cohort",
+      "type_sample": "Longitudinal fMRI; 169 US 6th–7th graders.",
+      "findings": "Habitual checking was associated with changing neural sensitivity to social reward anticipation over 3 years; direction and clinical meaning are unclear, and the authors caution against causal claims.",
+      "related": [],
+      "flags": [
+        "small-sample"
+      ],
+      "sources": [],
+      "openalex": "W4313453658"
+    },
+    {
+      "n": 31,
+      "id": "ward-et-al-2017",
+      "label": "Ward et al. 2017",
+      "authors": "Ward, A. F., Duke, K., Gneezy, A., & Bos, M. W.",
+      "year": 2017,
+      "title": "Brain drain: The mere presence of one's own smartphone reduces available cognitive capacity",
+      "venue": "Journal of the Association for Consumer Research",
+      "citation": "Ward, A. F., Duke, K., Gneezy, A., & Bos, M. W. (2017). Brain drain: The mere presence of one's own smartphone reduces available cognitive capacity. Journal of the Association for Consumer Research, 2(2), 140–154.",
+      "doi": "10.1086/691462",
+      "url": "https://doi.org/10.1086/691462",
+      "arxiv": null,
+      "access": null,
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": "Lab experiments; about 800 participants.",
+      "findings": "A nearby phone, even silent, reduced working memory and fluid intelligence scores. A preregistered direct replication (Ruiz Pardo & Minda 2022, Acta Psychologica) found the \"brain drain\" effect did not replicate.",
+      "related": [],
+      "flags": [
+        "replication"
+      ],
+      "sources": [],
+      "openalex": "W2605310309",
+      "note": "A preregistered direct replication (Ruiz Pardo & Minda 2022, Acta Psychologica) did not reproduce the \"brain drain\" effect. The page leads with that."
+    },
+    {
+      "n": 32,
+      "id": "firth-et-al-2019",
+      "label": "Firth et al. 2019",
+      "authors": "Firth, J., Torous, J., Stubbs, B., et al.",
+      "year": 2019,
+      "title": "The \"online brain\": How the Internet may be changing our cognition",
+      "venue": "World Psychiatry",
+      "citation": "Firth, J., Torous, J., Stubbs, B., et al. (2019). The \"online brain\": How the Internet may be changing our cognition. World Psychiatry, 18(2), 119–129.",
+      "doi": "10.1002/wps.20617",
+      "url": "https://doi.org/10.1002/wps.20617",
+      "arxiv": null,
+      "access": "open",
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "Narrative review finding plausible effects of media multitasking on sustained attention; long-term structural effects are not established.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2944285188"
+    },
+    {
+      "n": 33,
+      "id": "beland-murphy-2016",
+      "label": "Beland & Murphy 2016",
+      "authors": "Beland, L.-P., & Murphy, R.",
+      "year": 2016,
+      "title": "Ill communication: Technology, distraction & student performance",
+      "venue": "Labour Economics",
+      "citation": "Beland, L.-P., & Murphy, R. (2016). Ill communication: Technology, distraction & student performance. Labour Economics, 41, 61–76.",
+      "doi": "10.1016/j.labeco.2016.04.004",
+      "url": "https://doi.org/10.1016/j.labeco.2016.04.004",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "attention",
+      "section": null,
+      "section_name": null,
+      "design": "natural",
+      "type_sample": "Difference-in-differences; English secondary schools.",
+      "findings": "Phone bans raised test scores by about 6.4% of a standard deviation, mostly for low achievers. Classic positive evidence for school restrictions; compare #75.",
+      "related": [
+        75
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 29,
+          "title": "School phone policies and their association with mental wellbeing, phone use, and social media use (SMART Schools): a cross-sectional observational study",
+          "url": "https://www.researchgate.net/publication/388693222_School_phone_policies_and_their_association_with_mental_wellbeing_phone_use_and_social_media_use_SMART_Schools_a_cross-sectional_observational_study"
+        }
+      ],
+      "openalex": "W2128474361"
+    },
+    {
+      "n": 34,
+      "id": "vosoughi-et-al-2018",
+      "label": "Vosoughi et al. 2018",
+      "authors": "Vosoughi, S., Roy, D., & Aral, S.",
+      "year": 2018,
+      "title": "The spread of true and false news online",
+      "venue": "Science",
+      "citation": "Vosoughi, S., Roy, D., & Aral, S. (2018). The spread of true and false news online. Science, 359(6380), 1146–1151.",
+      "doi": "10.1126/science.aap9559",
+      "url": "https://doi.org/10.1126/science.aap9559",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "politics",
+      "section": "3a",
+      "section_name": "Misinformation spread",
+      "design": "observational",
+      "type_sample": "Observational; about 126,000 Twitter rumor cascades, 2006–2017.",
+      "findings": "False news spread \"farther, faster, deeper, and more broadly\" than truth and was 70% more likely to be retweeted, driven by humans (novelty, emotion) rather than bots.",
+      "related": [
+        35,
+        36
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2790166049"
+    },
+    {
+      "n": 35,
+      "id": "grinberg-et-al-2019",
+      "label": "Grinberg et al. 2019",
+      "authors": "Grinberg, N., Joseph, K., Friedland, L., Swire-Thompson, B., & Lazer, D.",
+      "year": 2019,
+      "title": "Fake news on Twitter during the 2016 U.S. presidential election",
+      "venue": "Science",
+      "citation": "Grinberg, N., Joseph, K., Friedland, L., Swire-Thompson, B., & Lazer, D. (2019). Fake news on Twitter during the 2016 U.S. presidential election. Science, 363(6425), 374–378.",
+      "doi": "10.1126/science.aau2706",
+      "url": "https://doi.org/10.1126/science.aau2706",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3a",
+      "section_name": "Misinformation spread",
+      "design": "observational",
+      "type_sample": "Twitter accounts linked to voter records; 16,442 voters.",
+      "findings": "1% of users accounted for 80% of fake-news exposures and 0.1% for 80% of shares, mostly older and conservative users.",
+      "related": [
+        34,
+        36
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2913649461"
+    },
+    {
+      "n": 36,
+      "id": "guess-et-al-2019",
+      "label": "Guess et al. 2019",
+      "authors": "Guess, A., Nagler, J., & Tucker, J.",
+      "year": 2019,
+      "title": "Less than you think: Prevalence and predictors of fake news dissemination on Facebook",
+      "venue": "Science Advances",
+      "citation": "Guess, A., Nagler, J., & Tucker, J. (2019). Less than you think: Prevalence and predictors of fake news dissemination on Facebook. Science Advances, 5(1), eaau4586.",
+      "doi": "10.1126/sciadv.aau4586",
+      "url": "https://doi.org/10.1126/sciadv.aau4586",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3a",
+      "section_name": "Misinformation spread",
+      "design": "observational",
+      "type_sample": "Survey linked to Facebook data; about 3,500 US adults (2016).",
+      "findings": "Sharing fake news was rare (under 10% of users); users over 65 shared nearly seven times as many fake-news articles as the youngest group.",
+      "related": [
+        34,
+        35
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2910027323"
+    },
+    {
+      "n": 37,
+      "id": "pennycook-rand-2021",
+      "label": "Pennycook & Rand 2021",
+      "authors": "Pennycook, G., & Rand, D. G.",
+      "year": 2021,
+      "title": "The psychology of fake news",
+      "venue": "Trends in Cognitive Sciences",
+      "citation": "Pennycook, G., & Rand, D. G. (2021). The psychology of fake news. Trends in Cognitive Sciences, 25(5), 388–402.",
+      "doi": "10.1016/j.tics.2021.02.007",
+      "url": "https://doi.org/10.1016/j.tics.2021.02.007",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3a",
+      "section_name": "Misinformation spread",
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "People share misinformation more from inattention than motivated partisanship; the basis for \"accuracy nudges\" (#76).",
+      "related": [
+        76
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3137986835"
+    },
+    {
+      "n": 38,
+      "id": "bakshy-et-al-2015",
+      "label": "Bakshy et al. 2015",
+      "authors": "Bakshy, E., Messing, S., & Adamic, L. A.",
+      "year": 2015,
+      "title": "Exposure to ideologically diverse news and opinion on Facebook",
+      "venue": "Science",
+      "citation": "Bakshy, E., Messing, S., & Adamic, L. A. (2015). Exposure to ideologically diverse news and opinion on Facebook. Science, 348(6239), 1130–1132.",
+      "doi": "10.1126/science.aaa1160",
+      "url": "https://doi.org/10.1126/science.aaa1160",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "observational",
+      "type_sample": "Platform data; 10.1 million US Facebook users.",
+      "findings": "Individual choices limited cross-cutting exposure more than the News Feed algorithm did. The foundational, Facebook-authored filter-bubble paper.",
+      "related": [
+        40,
+        41,
+        42,
+        43,
+        44
+      ],
+      "flags": [
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 30,
+          "title": "The relationship between offline partisan geographical segregation and online partisan segregation",
+          "url": "https://arxiv.org/pdf/2512.07121"
+        }
+      ],
+      "openalex": "W1686065478"
+    },
+    {
+      "n": 39,
+      "id": "bail-et-al-2018",
+      "label": "Bail et al. 2018",
+      "authors": "Bail, C. A., Argyle, L. P., Brown, T. W., et al.",
+      "year": 2018,
+      "title": "Exposure to opposing views on social media can increase political polarization",
+      "venue": "PNAS",
+      "citation": "Bail, C. A., Argyle, L. P., Brown, T. W., et al. (2018). Exposure to opposing views on social media can increase political polarization. PNAS, 115(37), 9216–9221.",
+      "doi": "10.1073/pnas.1804840115",
+      "url": "https://doi.org/10.1073/pnas.1804840115",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "experiment",
+      "type_sample": "Field experiment (paid to follow a bot retweeting the other side for a month).",
+      "findings": "Republicans became significantly more conservative; Democrats' shift was not significant. Challenges the assumption that breaking echo chambers depolarizes.",
+      "related": [],
+      "flags": [],
+      "sources": [
+        {
+          "n": 30,
+          "title": "The relationship between offline partisan geographical segregation and online partisan segregation",
+          "url": "https://arxiv.org/pdf/2512.07121"
+        }
+      ],
+      "openalex": "W2889127731"
+    },
+    {
+      "n": 40,
+      "id": "guess-et-al-2023a",
+      "label": "Guess et al. 2023a",
+      "authors": "Guess, A. M., Malhotra, N., Pan, J., et al.",
+      "year": 2023,
+      "title": "How do social media feed algorithms affect attitudes and behavior in an election campaign?",
+      "venue": "Science",
+      "citation": "Guess, A. M., Malhotra, N., Pan, J., et al. (2023). How do social media feed algorithms affect attitudes and behavior in an election campaign? Science, 381(6656), 398–404.",
+      "doi": "10.1126/science.abp9364",
+      "url": "https://doi.org/10.1126/science.abp9364",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "experiment",
+      "type_sample": "Field RCT (2020 Facebook & Instagram Election Study); about 23,000 Facebook and 21,000 Instagram users.",
+      "findings": "A reverse-chronological feed sharply cut time on platform and increased exposure to political and untrustworthy content, but did not change polarization, knowledge or other attitudes over 3 months. A 2024 Science eLetter by Bagchi, Menczer, Grabowicz and colleagues argues that Meta made 63 unreported emergency \"break-glass\" changes to Facebook's feed algorithm during the study, which may have affected the comparison. Guess et al. replied that their results apply only to the feed-ranking algorithm in use at the time.",
+      "related": [
+        38,
+        41,
+        42,
+        43,
+        44,
+        46,
+        47
+      ],
+      "flags": [
+        "contested",
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 31,
+          "title": "How do social media feed algorithms affect attitudes and behavior in an election campaign?",
+          "url": "https://www.science.org/doi/10.1126/science.abp9364"
+        },
+        {
+          "n": 32,
+          "title": "How do social media feed algorithms affect attitudes and behavior in an election campaign?",
+          "url": "https://www.semanticscholar.org/paper/How-do-social-media-feed-algorithms-affect-and-in-Guess-Malhotra/f48409576a7b05ec99dcc44429e655bcc6992bdb"
+        },
+        {
+          "n": 33,
+          "title": "How do social media feed algorithms affect attitudes and behavior in an election campaign?",
+          "url": "https://www.ovid.com/journals/scie/fulltext/10.1126/science.abp9364~how-do-social-media-feed-algorithms-affect-attitudes-and"
+        }
+      ],
+      "openalex": "W4385298751",
+      "note": "Critics (Bagchi et al. 2024, Science eLetter) report 63 emergency \"break-glass\" changes Meta made to the feed during the study; the authors reply the results apply to the algorithm in use at the time. Put both on the page."
+    },
+    {
+      "n": 41,
+      "id": "guess-et-al-2023b",
+      "label": "Guess et al. 2023b",
+      "authors": "Guess, A. M., Malhotra, N., Pan, J., et al.",
+      "year": 2023,
+      "title": "Reshares on social media amplify political news but do not detectably affect beliefs or opinions",
+      "venue": "Science",
+      "citation": "Guess, A. M., Malhotra, N., Pan, J., et al. (2023). Reshares on social media amplify political news but do not detectably affect beliefs or opinions. Science, 381(6656), 404–408.",
+      "doi": "10.1126/science.add8424",
+      "url": "https://doi.org/10.1126/science.add8424",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Removing reshares cut exposure to political news and untrustworthy sources and reduced news knowledge, with no detectable effect on polarization or attitudes.",
+      "related": [
+        38,
+        40,
+        42,
+        43,
+        44
+      ],
+      "flags": [
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 34,
+          "title": "The political effects of X’s feed algorithm",
+          "url": "https://www.nature.com/articles/s41586-026-10098-2"
+        }
+      ],
+      "openalex": "W4385298633"
+    },
+    {
+      "n": 42,
+      "id": "gonzalez-bailon-et-al-2023",
+      "label": "González-Bailón et al. 2023",
+      "authors": "González-Bailón, S., Lazer, D., Barberá, P., et al.",
+      "year": 2023,
+      "title": "Asymmetric ideological segregation in exposure to political news on Facebook",
+      "venue": "Science",
+      "citation": "González-Bailón, S., Lazer, D., Barberá, P., et al. (2023). Asymmetric ideological segregation in exposure to political news on Facebook. Science, 381(6656), 392–398.",
+      "doi": "10.1126/science.ade7138",
+      "url": "https://doi.org/10.1126/science.ade7138",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "observational",
+      "type_sample": "Platform data; about 208 million US adult Facebook users.",
+      "findings": "Ideological segregation was high and asymmetric, with a large conservative-only \"corner\" where most fact-checked-false content concentrated.",
+      "related": [
+        38,
+        40,
+        41,
+        43,
+        44
+      ],
+      "flags": [
+        "platform"
+      ],
+      "sources": [],
+      "openalex": "W4385298725"
+    },
+    {
+      "n": 43,
+      "id": "nyhan-et-al-2023",
+      "label": "Nyhan et al. 2023",
+      "authors": "Nyhan, B., Settle, J., Thorson, E., et al.",
+      "year": 2023,
+      "title": "Like-minded sources on Facebook are prevalent but not polarizing",
+      "venue": "Nature",
+      "citation": "Nyhan, B., Settle, J., Thorson, E., et al. (2023). Like-minded sources on Facebook are prevalent but not polarizing. Nature, 620, 137–144.",
+      "doi": "10.1038/s41586-023-06297-w",
+      "url": "https://doi.org/10.1038/s41586-023-06297-w",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "experiment",
+      "type_sample": "Field RCT; 23,377 US Facebook users.",
+      "findings": "Cutting like-minded content by about one-third for 3 months had no measurable effect on affective or ideological polarization.",
+      "related": [
+        38,
+        40,
+        41,
+        42,
+        44
+      ],
+      "flags": [
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 35,
+          "title": "Changes to the Facebook Algorithm Decreased News Visibility Between 2021-2024",
+          "url": "https://arxiv.org/pdf/2507.19373"
+        }
+      ],
+      "openalex": "W4385325063"
+    },
+    {
+      "n": 44,
+      "id": "allcott-et-al-2024",
+      "label": "Allcott et al. 2024",
+      "authors": "Allcott, H., Gentzkow, M., Mason, W., Wilkins, A., Barberá, P., et al.",
+      "year": 2024,
+      "title": "The effects of Facebook and Instagram on the 2020 election: A deactivation experiment",
+      "venue": "PNAS",
+      "citation": "Allcott, H., Gentzkow, M., Mason, W., Wilkins, A., Barberá, P., et al. (2024). The effects of Facebook and Instagram on the 2020 election: A deactivation experiment. PNAS, 121(21), e2321584121.",
+      "doi": "10.1073/pnas.2321584121",
+      "url": "https://doi.org/10.1073/pnas.2321584121",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3b",
+      "section_name": "Polarization, echo chambers and the 2020 Meta–academic election studies",
+      "design": "experiment",
+      "type_sample": "RCT (6-week pre-election deactivation); 19,857 Facebook and 15,585 Instagram users.",
+      "findings": "Deactivation reduced online political participation, with precisely estimated near-zero effects on polarization, perceived election legitimacy, candidate favorability and turnout (bounds rule out effects larger than about 1.6 points). A correction was published in 2026 (DOI: 10.1073/pnas.2607249123).",
+      "related": [
+        18,
+        19,
+        38,
+        40,
+        41,
+        42,
+        43,
+        66
+      ],
+      "flags": [
+        "platform",
+        "correction"
+      ],
+      "sources": [
+        {
+          "n": 30,
+          "title": "The relationship between offline partisan geographical segregation and online partisan segregation",
+          "url": "https://arxiv.org/pdf/2512.07121"
+        },
+        {
+          "n": 36,
+          "title": "The effects of Facebook and Instagram on the 2020 election: A deactivation experiment - Princeton University",
+          "url": "https://collaborate.princeton.edu/en/publications/the-effects-of-facebook-and-instagram-on-the-2020-election-a-deac/"
+        },
+        {
+          "n": 37,
+          "title": "The effects of Facebook and Instagram on the 2020 election: A deactivation experiment",
+          "url": "https://www.pnas.org/doi/10.1073/pnas.2321584121"
+        },
+        {
+          "n": 38,
+          "title": "The Effects of Facebook and Instagram on the 2020 Election: A Deactivation Experiment - NYU’s Center for Social Media, AI, and Politics",
+          "url": "https://csmapnyu.org/research/academic-research/the-effects-of-facebook-and-instagram-on-the-2020-election-a-deactivation-experiment"
+        },
+        {
+          "n": 39,
+          "title": "Correction for Allcott et al., The effects of Facebook and Instagram on the 2020 election: A deactivation experiment",
+          "url": "https://www.pnas.org/doi/10.1073/pnas.2607249123"
+        }
+      ],
+      "openalex": "W4396852275",
+      "note": "A correction was published in 2026 (DOI 10.1073/pnas.2607249123): read it before quoting any number."
+    },
+    {
+      "n": 45,
+      "id": "huszar-et-al-2022",
+      "label": "Huszár et al. 2022",
+      "authors": "Huszár, F., Ktena, S. I., O'Brien, C., Belli, L., Schlaikjer, A., & Hardt, M.",
+      "year": 2022,
+      "title": "Algorithmic amplification of politics on Twitter",
+      "venue": "PNAS",
+      "citation": "Huszár, F., Ktena, S. I., O'Brien, C., Belli, L., Schlaikjer, A., & Hardt, M. (2022). Algorithmic amplification of politics on Twitter. PNAS, 119(1), e2025334119.",
+      "doi": "10.1073/pnas.2025334119",
+      "url": "https://doi.org/10.1073/pnas.2025334119",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3c",
+      "section_name": "Algorithmic amplification: newer independent evidence",
+      "design": "experiment",
+      "type_sample": "Randomized holdout (Twitter-authored); nearly 2 million accounts.",
+      "findings": "The algorithm amplified right-leaning political content more than left-leaning content in 6 of 7 countries.",
+      "related": [
+        46,
+        48
+      ],
+      "flags": [
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 40,
+          "title": "Reranking Social Media Feeds: A Practical Guide for Field Experiments",
+          "url": "https://arxiv.org/pdf/2406.19571"
+        }
+      ],
+      "openalex": "W3206593531"
+    },
+    {
+      "n": 46,
+      "id": "gauthier-et-al-2026",
+      "label": "Gauthier et al. 2026",
+      "authors": "Gauthier, G., Hodler, R., Widmer, P., & Zhuravskaya, E.",
+      "year": 2026,
+      "title": "The political effects of X's feed algorithm",
+      "venue": "Nature",
+      "citation": "Gauthier, G., Hodler, R., Widmer, P., & Zhuravskaya, E. (2026). The political effects of X's feed algorithm. Nature, 652, 416–423.",
+      "doi": "10.1038/s41586-026-10098-2",
+      "url": "https://doi.org/10.1038/s41586-026-10098-2",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3c",
+      "section_name": "Algorithmic amplification: newer independent evidence",
+      "design": "experiment",
+      "type_sample": "Independent field RCT (no platform cooperation); 4,965 active US X users, 7 weeks in 2023.",
+      "findings": "Switching from chronological to algorithmic feed increased engagement and shifted policy priorities and account-following in a conservative direction; switching it off had no comparable effect, suggesting persistence through whom users follow. Null effects on partisanship and affective polarization. The first major experiment to contradict the \"algorithms don't matter\" reading of the Meta studies.",
+      "related": [
+        40,
+        45,
+        47,
+        48
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 34,
+          "title": "The political effects of X’s feed algorithm",
+          "url": "https://www.nature.com/articles/s41586-026-10098-2"
+        },
+        {
+          "n": 41,
+          "title": "The political effects of X’s feed algorithm",
+          "url": "https://www.prosocialdesign.org/citations/the-political-effects-of-xs-feed-algorithm"
+        },
+        {
+          "n": 42,
+          "title": "Social sciences: X’s algorithm may influence political attitudes (Nature)",
+          "url": "https://www.natureasia.com/en/info/press-releases/detail/9242"
+        },
+        {
+          "n": 43,
+          "title": "How X’s algorithm shifts political attitudes",
+          "url": "https://cepr.org/voxeu/columns/how-xs-algorithm-shifts-political-attitudes"
+        },
+        {
+          "n": 44,
+          "title": "The political effects of X's feed algorithm",
+          "url": "https://www.nature.com/articles/s41586-026-10098-2.pdf"
+        }
+      ],
+      "openalex": "W7130386561"
+    },
+    {
+      "n": 47,
+      "id": "piccardi-et-al-2025",
+      "label": "Piccardi et al. 2025",
+      "authors": "Piccardi, T., Saveski, M., Jia, C., Hancock, J. T., Tsai, J. L., & Bernstein, M. S.",
+      "year": 2025,
+      "title": "Reranking partisan animosity in algorithmic social media feeds alters affective polarization",
+      "venue": "Science",
+      "citation": "Piccardi, T., Saveski, M., Jia, C., Hancock, J. T., Tsai, J. L., & Bernstein, M. S. (2025). Reranking partisan animosity in algorithmic social media feeds alters affective polarization. Science, 390(6776), eadu5584.",
+      "doi": "10.1126/science.adu5584",
+      "url": "https://doi.org/10.1126/science.adu5584",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "politics",
+      "section": "3c",
+      "section_name": "Algorithmic amplification: newer independent evidence",
+      "design": "experiment",
+      "type_sample": "Preregistered field experiment via LLM browser extension; 1,256 X users, 10 days, 2024 campaign.",
+      "findings": "More antidemocratic/animosity posts made feelings toward the other party colder by 2.48 points on a 100-point thermometer; fewer made them warmer by 2.11 points, with no partisan asymmetry.",
+      "related": [
+        40,
+        46,
+        78
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 40,
+          "title": "Reranking Social Media Feeds: A Practical Guide for Field Experiments",
+          "url": "https://arxiv.org/pdf/2406.19571"
+        },
+        {
+          "n": 45,
+          "title": "Dryad",
+          "url": "https://datadryad.org/dataset/doi:10.5061/dryad.hmgqnk9tj"
+        },
+        {
+          "n": 46,
+          "title": "Australian politicians call opponents racist and evil",
+          "url": "https://ctindale.substack.com/p/a-duty-of-care"
+        },
+        {
+          "n": 47,
+          "title": "Reranking partisan animosity in algorithmic social media feeds alters affective polarization",
+          "url": "https://www.science.org/doi/10.1126/science.adu5584"
+        }
+      ],
+      "openalex": "W4416752539"
+    },
+    {
+      "n": 48,
+      "id": "hosseinmardi-et-al-2024",
+      "label": "Hosseinmardi et al. 2024",
+      "authors": "Hosseinmardi, H., Ghasemian, A., Rivera-Lanas, M., Horta Ribeiro, M., West, R., & Watts, D. J.",
+      "year": 2024,
+      "title": "Causally estimating the effect of YouTube's recommender system using counterfactual bots",
+      "venue": "PNAS",
+      "citation": "Hosseinmardi, H., Ghasemian, A., Rivera-Lanas, M., Horta Ribeiro, M., West, R., & Watts, D. J. (2024). Causally estimating the effect of YouTube's recommender system using counterfactual bots. PNAS, 121(8), e2313377121.",
+      "doi": "10.1073/pnas.2313377121",
+      "url": "https://doi.org/10.1073/pnas.2313377121",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3c",
+      "section_name": "Algorithmic amplification: newer independent evidence",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Bots relying exclusively on YouTube's recommender consumed less partisan content than the real users they mimicked, especially heavy partisan consumers. Evidence against the strong \"rabbit hole\" hypothesis: user demand matters more.",
+      "related": [
+        45,
+        46
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 48,
+          "title": "Causally estimating the effect of YouTube's recommender system using counterfactual bots - Princeton University",
+          "url": "https://collaborate.princeton.edu/en/publications/causally-estimating-the-effect-of-youtubes-recommender-system-usi/"
+        },
+        {
+          "n": 49,
+          "title": "The YouTube Algorithm Isn’t Radicalizing People",
+          "url": "https://almanac.upenn.edu/articles/the-youtube-algorithm-isnt-radicalizing-people"
+        },
+        {
+          "n": 50,
+          "title": "PennMAP",
+          "url": "https://css.engineering.upenn.edu/project/penn-map/"
+        }
+      ],
+      "openalex": "W4391773993"
+    },
+    {
+      "n": 49,
+      "id": "rathje-et-al-2021",
+      "label": "Rathje et al. 2021",
+      "authors": "Rathje, S., Van Bavel, J. J., & van der Linden, S.",
+      "year": 2021,
+      "title": "Out-group animosity drives engagement on social media",
+      "venue": "PNAS",
+      "citation": "Rathje, S., Van Bavel, J. J., & van der Linden, S. (2021). Out-group animosity drives engagement on social media. PNAS, 118(26), e2024292118.",
+      "doi": "10.1073/pnas.2024292118",
+      "url": "https://doi.org/10.1073/pnas.2024292118",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3c",
+      "section_name": "Algorithmic amplification: newer independent evidence",
+      "design": "observational",
+      "type_sample": "Content analysis; about 2.7 million Facebook and Twitter posts.",
+      "findings": "Each out-group word raised the odds of sharing by 67%, explaining why engagement-optimized ranking may favor divisive content.",
+      "related": [],
+      "flags": [],
+      "sources": [
+        {
+          "n": 46,
+          "title": "Australian politicians call opponents racist and evil",
+          "url": "https://ctindale.substack.com/p/a-duty-of-care"
+        }
+      ],
+      "openalex": "W3176626547"
+    },
+    {
+      "n": 50,
+      "id": "bond-et-al-2012",
+      "label": "Bond et al. 2012",
+      "authors": "Bond, R. M., Fariss, C. J., Jones, J. J., et al.",
+      "year": 2012,
+      "title": "A 61-million-person experiment in social influence and political mobilization",
+      "venue": "Nature",
+      "citation": "Bond, R. M., Fariss, C. J., Jones, J. J., et al. (2012). A 61-million-person experiment in social influence and political mobilization. Nature, 489, 295–298.",
+      "doi": "10.1038/nature11421",
+      "url": "https://doi.org/10.1038/nature11421",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "politics",
+      "section": "3d",
+      "section_name": "Elections, hate, protest and syntheses",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "A social \"I Voted\" message showing friends' faces increased 2010 turnout, directly and through close friends (an estimated 340,000 additional votes).",
+      "related": [
+        71
+      ],
+      "flags": [
+        "platform"
+      ],
+      "sources": [
+        {
+          "n": 51,
+          "title": "Moving towards informative and actionable social media research",
+          "url": "https://arxiv.org/pdf/2505.09254"
+        }
+      ],
+      "openalex": "W2033198212"
+    },
+    {
+      "n": 51,
+      "id": "fujiwara-et-al-2024",
+      "label": "Fujiwara et al. 2024",
+      "authors": "Fujiwara, T., Müller, K., & Schwarz, C.",
+      "year": 2024,
+      "title": "The effect of social media on elections: Evidence from the United States",
+      "venue": "Journal of the European Economic Association",
+      "citation": "Fujiwara, T., Müller, K., & Schwarz, C. (2024). The effect of social media on elections: Evidence from the United States. Journal of the European Economic Association, 22(3), 1495–1539.",
+      "doi": "10.1093/jeea/jvad058",
+      "url": "https://doi.org/10.1093/jeea/jvad058",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "politics",
+      "section": "3d",
+      "section_name": "Elections, hate, protest and syntheses",
+      "design": "natural",
+      "type_sample": "Natural experiment (Twitter adoption driven by the 2007 SXSW festival), US counties.",
+      "findings": "Greater Twitter exposure lowered Republican vote share in 2016 and 2020, with no effect on earlier elections.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4387574371"
+    },
+    {
+      "n": 52,
+      "id": "muller-schwarz-2021",
+      "label": "Müller & Schwarz 2021",
+      "authors": "Müller, K., & Schwarz, C.",
+      "year": 2021,
+      "title": "Fanning the flames of hate: Social media and hate crime",
+      "venue": "Journal of the European Economic Association",
+      "citation": "Müller, K., & Schwarz, C. (2021). Fanning the flames of hate: Social media and hate crime. Journal of the European Economic Association, 19(4), 2131–2167.",
+      "doi": "10.1093/jeea/jvaa045",
+      "url": "https://doi.org/10.1093/jeea/jvaa045",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "politics",
+      "section": "3d",
+      "section_name": "Elections, hate, protest and syntheses",
+      "design": "natural",
+      "type_sample": null,
+      "findings": "Anti-refugee Facebook sentiment predicted violent crimes against refugees in German municipalities; the link vanished during local internet or Facebook outages.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3122907670"
+    },
+    {
+      "n": 53,
+      "id": "asimovic-et-al-2021",
+      "label": "Asimovic et al. 2021",
+      "authors": "Asimovic, N., Nagler, J., Bonneau, R., & Tucker, J. A.",
+      "year": 2021,
+      "title": "Testing the effects of Facebook usage in an ethnically polarized setting",
+      "venue": "PNAS",
+      "citation": "Asimovic, N., Nagler, J., Bonneau, R., & Tucker, J. A. (2021). Testing the effects of Facebook usage in an ethnically polarized setting. PNAS, 118(25), e2022819118.",
+      "doi": "10.1073/pnas.2022819118",
+      "url": "https://doi.org/10.1073/pnas.2022819118",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3d",
+      "section_name": "Elections, hate, protest and syntheses",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Deactivation in Bosnia and Herzegovina worsened outgroup attitudes among users with little offline contact: social media can also expose people to the other side.",
+      "related": [
+        71
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 30,
+          "title": "The relationship between offline partisan geographical segregation and online partisan segregation",
+          "url": "https://arxiv.org/pdf/2512.07121"
+        }
+      ],
+      "openalex": "W3171472364"
+    },
+    {
+      "n": 54,
+      "id": "lorenz-spreen-et-al-2023",
+      "label": "Lorenz-Spreen et al. 2023",
+      "authors": "Lorenz-Spreen, P., Oswald, L., Lewandowsky, S., & Hertwig, R.",
+      "year": 2023,
+      "title": "A systematic review of worldwide causal and correlational evidence on digital media and democracy",
+      "venue": "Nature Human Behaviour",
+      "citation": "Lorenz-Spreen, P., Oswald, L., Lewandowsky, S., & Hertwig, R. (2023). A systematic review of worldwide causal and correlational evidence on digital media and democracy. Nature Human Behaviour, 7, 74–101.",
+      "doi": "10.1038/s41562-022-01460-1",
+      "url": "https://doi.org/10.1038/s41562-022-01460-1",
+      "arxiv": null,
+      "access": "open",
+      "theme": "politics",
+      "section": "3d",
+      "section_name": "Elections, hate, protest and syntheses",
+      "design": "synthesis",
+      "type_sample": "Systematic review of 496 articles.",
+      "findings": "Digital media use is associated with more participation and information, but also declining trust, populism, polarization, hate and misinformation. More beneficial in emerging democracies, more harmful in established ones.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4308433048"
+    },
+    {
+      "n": 55,
+      "id": "zhuravskaya-et-al-2020",
+      "label": "Zhuravskaya et al. 2020",
+      "authors": "Zhuravskaya, E., Petrova, M., & Enikolopov, R.",
+      "year": 2020,
+      "title": "Political effects of the Internet and social media",
+      "venue": "Annual Review of Economics",
+      "citation": "Zhuravskaya, E., Petrova, M., & Enikolopov, R. (2020). Political effects of the Internet and social media. Annual Review of Economics, 12, 415–438.",
+      "doi": "10.1146/annurev-economics-081919-050239",
+      "url": "https://doi.org/10.1146/annurev-economics-081919-050239",
+      "arxiv": null,
+      "access": null,
+      "theme": "politics",
+      "section": "3d",
+      "section_name": "Elections, hate, protest and syntheses",
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "Social media lowers collective-action costs (aiding protest) and enables both accountability and manipulation; effects are context-dependent.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3123948795"
+    },
+    {
+      "n": 56,
+      "id": "kraut-et-al-1998",
+      "label": "Kraut et al. 1998",
+      "authors": "Kraut, R., Patterson, M., Lundmark, V., Kiesler, S., Mukophadhyay, T., & Scherlis, W.",
+      "year": 1998,
+      "title": "Internet paradox",
+      "venue": "American Psychologist",
+      "citation": "Kraut, R., Patterson, M., Lundmark, V., Kiesler, S., Mukophadhyay, T., & Scherlis, W. (1998). Internet paradox. American Psychologist, 53(9), 1017–1031.",
+      "doi": "10.1037/0003-066X.53.9.1017",
+      "url": "https://doi.org/10.1037/0003-066X.53.9.1017",
+      "arxiv": null,
+      "access": null,
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "cohort",
+      "type_sample": "Longitudinal field trial; 169 people in 73 Pittsburgh households.",
+      "findings": "More internet use was associated with less family communication and more loneliness and depression. A 3-year follow-up of 208 participants (Kraut et al. 2002, \"Internet Paradox Revisited,\" Journal of Social Issues) found that these negative effects had dissipated.",
+      "related": [],
+      "flags": [
+        "replication",
+        "small-sample"
+      ],
+      "sources": [],
+      "openalex": "W2147050295",
+      "note": "The three-year follow-up (Kraut et al. 2002, \"Internet Paradox Revisited\") found the negative effects had dissipated. The page says so."
+    },
+    {
+      "n": 57,
+      "id": "ellison-et-al-2007",
+      "label": "Ellison et al. 2007",
+      "authors": "Ellison, N. B., Steinfield, C., & Lampe, C.",
+      "year": 2007,
+      "title": "The benefits of Facebook \"friends:\" Social capital and college students' use of online social network sites",
+      "venue": "Journal of Computer-Mediated Communication",
+      "citation": "Ellison, N. B., Steinfield, C., & Lampe, C. (2007). The benefits of Facebook \"friends.\" Journal of Computer-Mediated Communication, 12(4), 1143–1168.",
+      "doi": "10.1111/j.1083-6101.2007.00367.x",
+      "url": "https://doi.org/10.1111/j.1083-6101.2007.00367.x",
+      "arxiv": null,
+      "access": "open",
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "observational",
+      "type_sample": "Survey; 286 US undergraduates.",
+      "findings": "Facebook intensity was strongly associated with bridging social capital, especially for students with low self-esteem.",
+      "related": [
+        7,
+        58,
+        71
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2099556653"
+    },
+    {
+      "n": 58,
+      "id": "verduyn-et-al-2017",
+      "label": "Verduyn et al. 2017",
+      "authors": "Verduyn, P., Ybarra, O., Résibois, M., Jonides, J., & Kross, E.",
+      "year": 2017,
+      "title": "Do social network sites enhance or undermine subjective well-being? A critical review",
+      "venue": "Social Issues and Policy Review",
+      "citation": "Verduyn, P., Ybarra, O., Résibois, M., Jonides, J., & Kross, E. (2017). Do social network sites enhance or undermine subjective well-being? A critical review. Social Issues and Policy Review, 11(1), 274–302.",
+      "doi": "10.1111/sipr.12033",
+      "url": "https://doi.org/10.1111/sipr.12033",
+      "arxiv": null,
+      "access": null,
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "Passive use undermines well-being via upward comparison and envy; active use may enhance it. Later within-person studies (#7) challenge the simple split.",
+      "related": [
+        7,
+        57
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2579516306"
+    },
+    {
+      "n": 59,
+      "id": "primack-et-al-2017",
+      "label": "Primack et al. 2017",
+      "authors": "Primack, B. A., Shensa, A., Sidani, J. E., et al.",
+      "year": 2017,
+      "title": "Social media use and perceived social isolation among young adults in the U.S",
+      "venue": "American Journal of Preventive Medicine",
+      "citation": "Primack, B. A., Shensa, A., Sidani, J. E., et al. (2017). Social media use and perceived social isolation among young adults in the U.S. American Journal of Preventive Medicine, 53(1), 1–8.",
+      "doi": "10.1016/j.amepre.2017.01.010",
+      "url": "https://doi.org/10.1016/j.amepre.2017.01.010",
+      "arxiv": null,
+      "access": null,
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "observational",
+      "type_sample": "National survey; 1,787 US adults aged 19–32.",
+      "findings": "The highest-use quartile had about twice the odds of perceived social isolation; causal direction unknown.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2593658891"
+    },
+    {
+      "n": 60,
+      "id": "kowalski-et-al-2014",
+      "label": "Kowalski et al. 2014",
+      "authors": "Kowalski, R. M., Giumetti, G. W., Schroeder, A. N., & Lattanner, M. R.",
+      "year": 2014,
+      "title": "Bullying in the digital age: A critical review and meta-analysis of cyberbullying research among youth",
+      "venue": "Psychological Bulletin",
+      "citation": "Kowalski, R. M., Giumetti, G. W., Schroeder, A. N., & Lattanner, M. R. (2014). Bullying in the digital age: A critical review and meta-analysis of cyberbullying research among youth. Psychological Bulletin, 140(4), 1073–1137.",
+      "doi": "10.1037/a0035618",
+      "url": "https://doi.org/10.1037/a0035618",
+      "arxiv": null,
+      "access": null,
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": "Meta-analysis of 131 studies.",
+      "findings": "Cyberbullying victimization is associated with depression, anxiety, low self-esteem, suicidal ideation and somatic symptoms.",
+      "related": [
+        61,
+        62
+      ],
+      "flags": [
+        "suicide"
+      ],
+      "sources": [
+        {
+          "n": 52,
+          "title": "Sadness, Anger, or Anxiety: Twitter Users' Emotional Responses to Toxicity in Public Conversations",
+          "url": "https://arxiv.org/pdf/2310.11436"
+        },
+        {
+          "n": 53,
+          "title": "Cyberbullying, mental health, and substance use experimentation among early adolescents: a prospective cohort study - PMC",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12230417/"
+        }
+      ],
+      "openalex": "W2068511562"
+    },
+    {
+      "n": 61,
+      "id": "lee-et-al-2026",
+      "label": "Lee et al. 2026",
+      "authors": "Lee, J., Choo, H., Zhang, Y., Cheung, H. S., Zhang, Q., & Ang, R. P.",
+      "year": 2026,
+      "title": "Cyberbullying victimization and mental health symptoms among children and adolescents: A meta-analysis of longitudinal studies",
+      "venue": "Trauma, Violence, & Abuse",
+      "citation": "Lee, J., Choo, H., Zhang, Y., Cheung, H. S., Zhang, Q., & Ang, R. P. (2026). Cyberbullying victimization and mental health symptoms among children and adolescents: A meta-analysis of longitudinal studies. Trauma, Violence, & Abuse.",
+      "doi": "10.1177/15248380241313051",
+      "url": "https://doi.org/10.1177/15248380241313051",
+      "arxiv": null,
+      "access": null,
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "Victimization prospectively predicted worse mental health symptoms (r =.23; 27 effect sizes), mainly depression and anxiety.",
+      "related": [
+        60,
+        62
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 54,
+          "title": "Cyberbullying Victimization and Mental Health Symptoms Among Children and Adolescents: A Meta-Analysis of Longitudinal Studies - Jungup Lee, Hyekyung Choo, Yijing Zhang, Hoi Shan Cheung, Qiyang Zhang, Rebecca P. Ang, 2026",
+          "url": "https://journals.sagepub.com/doi/10.1177/15248380241313051"
+        }
+      ],
+      "openalex": "W4406628186"
+    },
+    {
+      "n": 62,
+      "id": "e-risk-study-team-2025",
+      "label": "E-Risk Study team 2025",
+      "authors": "E-Risk Longitudinal Twin Study team",
+      "year": 2025,
+      "title": "Cybervictimisation and mental health conditions in young people: findings from a nationally representative longitudinal cohort",
+      "venue": "The Lancet Child & Adolescent Health",
+      "citation": "E-Risk Longitudinal Twin Study team (2025). Cybervictimisation and mental health conditions in young people: findings from a nationally representative longitudinal cohort. The Lancet Child & Adolescent Health.",
+      "doi": "10.1016/S2352-4642(25)00311-6",
+      "url": "https://www.thelancet.com/journals/lanchi/article/PIIS2352-4642(25)00311-6/fulltext",
+      "arxiv": null,
+      "access": null,
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "cohort",
+      "type_sample": "UK cohort; 2,063 young people.",
+      "findings": "20.3% were moderately or severely cybervictimised between ages 12 and 18, but 97.6% of them also experienced offline victimisation, which attenuated the mental health associations by 17.7–52.3%. Cyberbullying is largely a marker of broader victimisation.",
+      "related": [
+        60,
+        61
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 1,
+          "title": "Cybervictimisation and mental health conditions in young people: findings from a nationally representative longitudinal cohort - The Lancet Child & Adolescent Health",
+          "url": "https://www.thelancet.com/journals/lanchi/article/PIIS2352-4642(25)00311-6/fulltext"
+        }
+      ],
+      "openalex": "W4417137884"
+    },
+    {
+      "n": 63,
+      "id": "enikolopov-et-al-2020",
+      "label": "Enikolopov et al. 2020",
+      "authors": "Enikolopov, R., Makarin, A., & Petrova, M.",
+      "year": 2020,
+      "title": "Social media and protest participation: Evidence from Russia",
+      "venue": "Econometrica",
+      "citation": "Enikolopov, R., Makarin, A., & Petrova, M. (2020). Social media and protest participation: Evidence from Russia. Econometrica, 88(4), 1479–1514.",
+      "doi": "10.3982/ECTA14281",
+      "url": "https://doi.org/10.3982/ECTA14281",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "relationships",
+      "section": null,
+      "section_name": null,
+      "design": "natural",
+      "type_sample": "Natural experiment (VK penetration driven by founders' classmates' origins).",
+      "findings": "Higher VK penetration increased 2011–2012 protest participation, mainly by reducing coordination costs.",
+      "related": [
+        71
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3124327028"
+    },
+    {
+      "n": 64,
+      "id": "brynjolfsson-et-al-2019",
+      "label": "Brynjolfsson et al. 2019",
+      "authors": "Brynjolfsson, E., Collis, A., & Eggers, F.",
+      "year": 2019,
+      "title": "Using massive online choice experiments to measure changes in well-being",
+      "venue": "PNAS",
+      "citation": "Brynjolfsson, E., Collis, A., & Eggers, F. (2019). Using massive online choice experiments to measure changes in well-being. PNAS, 116(15), 7250–7255.",
+      "doi": "10.1073/pnas.1815663116",
+      "url": "https://doi.org/10.1073/pnas.1815663116",
+      "arxiv": null,
+      "access": "open",
+      "theme": "economy",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "The median user would need about $48 a month to give up Facebook; free digital goods generate large welfare that GDP misses.",
+      "related": [
+        65
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2924156503"
+    },
+    {
+      "n": 65,
+      "id": "bursztyn-et-al-2023",
+      "label": "Bursztyn et al. 2023",
+      "authors": "Bursztyn, L., Handel, B. R., Jiménez-Durán, R., & Roth, C.",
+      "year": 2023,
+      "title": "When product markets become collective traps: The case of social media",
+      "venue": "NBER Working Paper 31771",
+      "citation": "Bursztyn, L., Handel, B. R., Jiménez-Durán, R., & Roth, C. (2023). When product markets become collective traps: The case of social media. NBER Working Paper 31771.",
+      "doi": "10.3386/w31771",
+      "url": "https://www.nber.org/papers/w31771",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "economy",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": "Incentivized experiments; about 1,000 US college students.",
+      "findings": "Users demanded $59 to deactivate TikTok and $47 for Instagram for a month, yet would pay $28 and $10 to have everyone, themselves included, deactivate. 64% of active TikTok users and 48% of Instagram users experience negative welfare from the product's existence: a \"social media trap\" driven by fear of missing out, and an economic rationale for collective solutions.",
+      "related": [
+        64
+      ],
+      "flags": [
+        "preprint"
+      ],
+      "sources": [
+        {
+          "n": 55,
+          "title": "EconPapers: When Product Markets Become Collective Traps: The Case of Social Media",
+          "url": "https://econpapers.repec.org/paper/nbrnberwo/31771.htm"
+        },
+        {
+          "n": 56,
+          "title": "When Product Markets Become Collective Traps",
+          "url": "https://bfi.uchicago.edu/wp-content/uploads/2023/10/Collective-Traps-10.12.pdf"
+        },
+        {
+          "n": 57,
+          "title": "Product market traps: The case of social media",
+          "url": "https://cepr.org/voxeu/columns/product-market-traps-case-social-media"
+        },
+        {
+          "n": 58,
+          "title": "When Product Markets Become Collective Traps: The Case of Social Media∗",
+          "url": "https://www.tse-fr.eu/sites/default/files/TSE/documents/sem2023/eco_platforms/jimenez-duran.pdf"
+        }
+      ],
+      "openalex": "W4387444395",
+      "note": "An NBER working paper, not a peer-reviewed article: say so on the page."
+    },
+    {
+      "n": 66,
+      "id": "mosquera-et-al-2020",
+      "label": "Mosquera et al. 2020",
+      "authors": "Mosquera, R., Odunowo, M., McNamara, T., Guo, X., & Petrie, R.",
+      "year": 2020,
+      "title": "The economic effects of Facebook",
+      "venue": "Experimental Economics",
+      "citation": "Mosquera, R., Odunowo, M., McNamara, T., Guo, X., & Petrie, R. (2020). The economic effects of Facebook. Experimental Economics, 23, 575–602.",
+      "doi": "10.1007/s10683-019-09625-y",
+      "url": "https://doi.org/10.1007/s10683-019-09625-y",
+      "arxiv": null,
+      "access": null,
+      "theme": "economy",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "One-week deactivation reduced news consumption and current-events knowledge but improved well-being, replicating the trade-off in #18.",
+      "related": [
+        18,
+        19,
+        44
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2914278636"
+    },
+    {
+      "n": 67,
+      "id": "collis-eggers-2022",
+      "label": "Collis & Eggers 2022",
+      "authors": "Collis, A., & Eggers, F.",
+      "year": 2022,
+      "title": "Effects of restricting social media usage on wellbeing and performance: A randomized control trial among students",
+      "venue": "PLOS ONE",
+      "citation": "Collis, A., & Eggers, F. (2022). Effects of restricting social media usage on wellbeing and performance: A randomized control trial among students. PLOS ONE, 17(8), e0272416.",
+      "doi": "10.1371/journal.pone.0272416",
+      "url": "https://doi.org/10.1371/journal.pone.0272416",
+      "arxiv": null,
+      "access": "open",
+      "theme": "economy",
+      "section": null,
+      "section_name": null,
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Limiting use to 10 minutes/day per platform did not change academic performance and modestly improved some well-being measures.",
+      "related": [
+        20
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 59,
+          "title": "Social Media Harm Abatement: Mechanisms for Transparent Public Health Assessment",
+          "url": "https://arxiv.org/pdf/2503.10458"
+        }
+      ],
+      "openalex": "W4293105030"
+    },
+    {
+      "n": 68,
+      "id": "media-ecosystem-observatory-2024",
+      "label": "Media Ecosystem Observatory 2024",
+      "authors": "Media Ecosystem Observatory (Bridgman, A., et al.)",
+      "year": 2024,
+      "title": "Old News, New Reality: A Year of Meta's News Ban in Canada",
+      "venue": "McGill University / University of Toronto",
+      "citation": "Media Ecosystem Observatory (Bridgman, A., et al.) (2024). Old News, New Reality: A Year of Meta's News Ban in Canada. McGill University / University of Toronto.",
+      "doi": null,
+      "url": "https://meo.ca/work/old-news-new-reality-a-year-of-metas-news-ban-in-canada",
+      "arxiv": null,
+      "access": "open",
+      "theme": "economy",
+      "section": null,
+      "section_name": null,
+      "design": "observational",
+      "type_sample": null,
+      "findings": "After Meta blocked news in response to the Online News Act, Canadian outlets lost 85% of Facebook and Instagram engagement, a net 43% drop across platforms (about 11 million fewer news views per day). About 30% of local outlets (212) went inactive on social media, only 22% of Canadians knew about the ban, and Canadians did not seek news elsewhere.",
+      "related": [],
+      "flags": [],
+      "sources": [
+        {
+          "n": 60,
+          "title": "Old News, New Reality: A Year of Meta's News Ban in Canada",
+          "url": "https://mediatechdemocracy.com/en/publications/meta-news-ban_2024/"
+        },
+        {
+          "n": 2,
+          "title": "Old News, New Reality: A Year of Meta's News Ban in Canada — Media Ecosystem Observatory",
+          "url": "https://meo.ca/work/old-news-new-reality-a-year-of-metas-news-ban-in-canada"
+        },
+        {
+          "n": 61,
+          "title": "How Meta's news ban reshaped Canadian media - Digital Content Next",
+          "url": "https://digitalcontentnext.org/blog/2024/09/12/how-metas-news-ban-reshaped-canadian-media/"
+        }
+      ],
+      "openalex": null
+    },
+    {
+      "n": 69,
+      "id": "berger-et-al-2022",
+      "label": "Berger et al. 2022",
+      "authors": "Berger, M. N., Taba, M., Marino, J. L., Lim, M. S. C., & Skinner, S. R.",
+      "year": 2022,
+      "title": "Social media use and health and well-being of lesbian, gay, bisexual, transgender, and queer youth: Systematic review",
+      "venue": "Journal of Medical Internet Research",
+      "citation": "Berger, M. N., Taba, M., Marino, J. L., Lim, M. S. C., & Skinner, S. R. (2022). Social media use and health and well-being of lesbian, gay, bisexual, transgender, and queer youth: Systematic review. Journal of Medical Internet Research, 24(9), e38449.",
+      "doi": "10.2196/38449",
+      "url": "https://doi.org/10.2196/38449",
+      "arxiv": null,
+      "access": "open",
+      "theme": "benefits",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": "Systematic review of 26 studies.",
+      "findings": "Social media supported LGBTQ+ youths' well-being through peer connection, identity management and social support, with reduced anxiety and depression in some studies; harms came from discrimination and platform policies. Evidence is weak and mostly cross-sectional or qualitative.",
+      "related": [],
+      "flags": [],
+      "sources": [
+        {
+          "n": 62,
+          "title": "[PDF] Social Media Use and Health and Well-being of Lesbian, Gay, Bisexual, Transgender, and Queer Youth: Systematic Review",
+          "url": "https://www.semanticscholar.org/paper/Social-Media-Use-and-Health-and-Well-being-of-Gay,-Berger-Taba/40a479e1cb72ddca65b875e917e68d6255e7f27a"
+        },
+        {
+          "n": 63,
+          "title": "Journal Club: The Value of Social Media for Queer Youth - Assigned Media",
+          "url": "https://assignedmedia.org/breaking-news/journal-club-value-social-media-queer-youth/"
+        },
+        {
+          "n": 64,
+          "title": "Social Media Use and Health and Well-being of Lesbian, Gay, Bisexual, Transgender, and Queer Youth: Systematic Review",
+          "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9536523/"
+        },
+        {
+          "n": 3,
+          "title": "(PDF) Social Media Use and Health and Well-being of Lesbian, Gay, Bisexual, Transgender, and Queer Youth: Systematic Review",
+          "url": "https://www.researchgate.net/publication/363058935_Social_Media_Use_and_Health_and_Well-being_of_Lesbian_Gay_Bisexual_Transgender_and_Queer_Youth_Systematic_Review"
+        }
+      ],
+      "openalex": "W4293439969"
+    },
+    {
+      "n": 70,
+      "id": "naslund-et-al-2016",
+      "label": "Naslund et al. 2016",
+      "authors": "Naslund, J. A., Aschbrenner, K. A., Marsch, L. A., & Bartels, S. J.",
+      "year": 2016,
+      "title": "The future of mental health care: Peer-to-peer support and social media",
+      "venue": "Epidemiology and Psychiatric Sciences",
+      "citation": "Naslund, J. A., Aschbrenner, K. A., Marsch, L. A., & Bartels, S. J. (2016). The future of mental health care: Peer-to-peer support and social media. Epidemiology and Psychiatric Sciences, 25(2), 113–122.",
+      "doi": "10.1017/S2045796015001067",
+      "url": "https://doi.org/10.1017/S2045796015001067",
+      "arxiv": null,
+      "access": "open",
+      "theme": "benefits",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "People with serious mental illness use social media for peer support, coping strategies, and reducing stigma and isolation, with risks of hostile interactions and misinformation.",
+      "related": [],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2315849398"
+    },
+    {
+      "n": 71,
+      "id": "boulianne-2015",
+      "label": "Boulianne 2015",
+      "authors": "Boulianne, S.",
+      "year": 2015,
+      "title": "Social media use and participation: A meta-analysis of current research",
+      "venue": "Information, Communication & Society",
+      "citation": "Boulianne, S. (2015). Social media use and participation: A meta-analysis of current research. Information, Communication & Society, 18(5), 524–538.",
+      "doi": "10.1080/1369118X.2015.1008542",
+      "url": "https://doi.org/10.1080/1369118X.2015.1008542",
+      "arxiv": null,
+      "access": null,
+      "theme": "benefits",
+      "section": null,
+      "section_name": null,
+      "design": "synthesis",
+      "type_sample": null,
+      "findings": "Across 36 studies, use is positively associated with civic and political participation, though effects are often small and rarely shown to be causal. See also #7, #50, #53, #57 and #63 for other positive findings.",
+      "related": [
+        7,
+        50,
+        53,
+        57,
+        63
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W2016614869"
+    },
+    {
+      "n": 72,
+      "id": "barnes-et-al-2026",
+      "label": "Barnes et al. 2026",
+      "authors": "Barnes, C., Hall, A., Mantach, S., Oldmeadow, C., Attia, J., Backholer, K., Williams, C., Tefera, Y., Kay, F., & Wolfenden, L.",
+      "year": 2026,
+      "title": "Assessing early effects of Australia's Social Media Minimum Age Act on adolescents' social media use: observational study",
+      "venue": "BMJ",
+      "citation": "Barnes, C., Hall, A., Mantach, S., Oldmeadow, C., Attia, J., Backholer, K., Williams, C., Tefera, Y., Kay, F., & Wolfenden, L. (2026). Assessing early effects of Australia's Social Media Minimum Age Act on adolescents' social media use: observational study. BMJ, 393, e363695.",
+      "doi": "10.1136/bmj-2026-363695",
+      "url": "https://doi.org/10.1136/bmj-2026-363695",
+      "arxiv": null,
+      "access": "open",
+      "theme": "policy",
+      "section": "7a",
+      "section_name": "Age restrictions and school phone policies",
+      "design": "cohort",
+      "type_sample": "Pre-post cohort; 408 Australian adolescents aged 12–16, before and 3 months after the December 10, 2025 start.",
+      "findings": "More than 85% of under-16s still used restricted platforms, mainly via their own accounts (54–68%); age assurance was usually self-declared age or a selfie. Daily use was stable at 12–13, fell slightly at 14–15, and rose at 16+. The authors describe \"limited implementation, incomplete compliance, and substantial circumvention.\" Mental health was not measured.",
+      "related": [
+        73,
+        74
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 65,
+          "title": "Did Australia's social media age limit change teenage behaviour? - National Elf Service",
+          "url": "https://www.nationalelfservice.net/treatment/digital-health/did-australias-social-media-age-limit-change-teenage-behaviour/"
+        },
+        {
+          "n": 66,
+          "title": "Assessing early effects of Australia's Social Media Minimum Age Act on adolescents' social media use: observational study - PubMed",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42342272/"
+        },
+        {
+          "n": 67,
+          "title": "Assessing early effects of Australia’s Social Media Minimum Age Act on adolescents’ social media use: observational study",
+          "url": "https://digital.library.adelaide.edu.au/items/91b60cfd-abd1-433e-8617-a87001e75fa0"
+        },
+        {
+          "n": 68,
+          "title": "Despite Australia’s Ban, Youth Still Use Social Media Daily",
+          "url": "https://alert.psychnews.org/despite-australias-ban-youth-still-use-social-media-daily"
+        },
+        {
+          "n": 69,
+          "title": "Australia teen social media ban has little impact - study",
+          "url": "https://www.rte.ie/news/world/2026/0625/1580220-australia-social-media/"
+        },
+        {
+          "n": 70,
+          "title": "expert reaction to study assessing early evidence of association between Australia’s Social Media Minimum Age Act and adolescents’ social media use",
+          "url": "https://www.sciencemediacentre.org/expert-reaction-to-study-assessing-early-evidence-of-association-between-australias-social-media-minimum-age-act-and-adolescents-social-media-use/"
+        },
+        {
+          "n": 71,
+          "title": "Australia's social media ban for under-16s shows limited early impact: study-Xinhua",
+          "url": "https://english.news.cn/asiapacific/20260625/3b78784155f84348890c48f587b0b6aa/c.html"
+        }
+      ],
+      "openalex": "W7165927786"
+    },
+    {
+      "n": 73,
+      "id": "esafety-commissioner-2026",
+      "label": "eSafety Commissioner 2026",
+      "authors": "eSafety Commissioner",
+      "year": 2026,
+      "title": "Early days, early insights: Understanding experiences of social media age restrictions at the three-month follow-up",
+      "venue": "Australian Government (with Stanford Social Media Lab)",
+      "citation": "eSafety Commissioner (2026). Early days, early insights: Understanding experiences of social media age restrictions at the three-month follow-up. Australian Government (with Stanford Social Media Lab).",
+      "doi": null,
+      "url": "https://www.esafety.gov.au/research/social-media-age-restrictions-evaluation/early-days-early-insights-three-months-report",
+      "arxiv": null,
+      "access": "open",
+      "theme": "policy",
+      "section": "7a",
+      "section_name": "Age restrictions and school phone policies",
+      "design": "cohort",
+      "type_sample": "Official longitudinal evaluation; baseline of 4,121 nationally representative children aged 10–16 plus a parent; 803 children aged 10–15 analysed at 3 months.",
+      "findings": "Account ownership on restricted platforms fell from 52.4% to 42.1%, but use of any restricted platform only fell from 85.9% to 81.5%. Use rose on uncovered platforms (Pinterest 16.6% to 21.8%), and parents unaware of their child's use rose from 23.3% to 33.3%. 65.4% of children said the restrictions had no impact on them; effect sizes were small (Cohen's d.09–.27). Waves at 6, 12 and 24 months are planned.",
+      "related": [
+        72,
+        74
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 72,
+          "title": "Social media age restrictions",
+          "url": "https://www.esafety.gov.au/about-us/industry-regulation/social-media-age-restrictions"
+        },
+        {
+          "n": 73,
+          "title": "Early-days-Early-Insights-SMMA-Evaluation-Understanding-experiences-of-social-media-age-restrictions-August2026.pdf",
+          "url": "https://www.esafety.gov.au/sites/default/files/2026-08/Early-days-Early-Insights-SMMA-Evaluation-Understanding-experiences-of-social-media-age-restrictions-August2026.pdf"
+        }
+      ],
+      "openalex": null
+    },
+    {
+      "n": 74,
+      "id": "stevens-et-al-2026",
+      "label": "Stevens et al. 2026",
+      "authors": "Stevens, M. W. R., Radunz, M., Király, O., Griffiths, M. D., Delfabbro, P., Demetrovics, Z., et al.",
+      "year": 2026,
+      "title": "Beyond the debate: toward pragmatic evaluation of Australia's social media age restrictions",
+      "venue": "The Lancet Regional Health – Western Pacific",
+      "citation": "Stevens, M. W. R., Radunz, M., Király, O., Griffiths, M. D., Delfabbro, P., Demetrovics, Z., et al. (2026). Beyond the debate: toward pragmatic evaluation of Australia's social media age restrictions. The Lancet Regional Health – Western Pacific.",
+      "doi": "10.1016/j.lanwpc.2026.101818",
+      "url": "https://doi.org/10.1016/j.lanwpc.2026.101818",
+      "arxiv": null,
+      "access": "open",
+      "theme": "policy",
+      "section": "7a",
+      "section_name": "Age restrictions and school phone policies",
+      "design": "report",
+      "type_sample": null,
+      "findings": "Argues the ban should be judged on mental and physical health, school performance and unintended consequences, not just whether teens stay offline, and that access restrictions may achieve little unless platforms must also build safer environments.",
+      "related": [
+        72,
+        73
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 74,
+          "title": "Taking the long view on teen social media ban impacts",
+          "url": "https://www.eurekalert.org/news-releases/1120195"
+        }
+      ],
+      "openalex": "W7130817797"
+    },
+    {
+      "n": 75,
+      "id": "goodyear-et-al-2025",
+      "label": "Goodyear et al. 2025",
+      "authors": "Goodyear, V. A., Randhawa, A., Adab, P., et al.",
+      "year": 2025,
+      "title": "School phone policies and their association with mental wellbeing, phone use, and social media use (SMART Schools): a cross-sectional observational study",
+      "venue": "The Lancet Regional Health – Europe",
+      "citation": "Goodyear, V. A., Randhawa, A., Adab, P., et al. (2025). School phone policies and their association with mental wellbeing, phone use, and social media use (SMART Schools): a cross-sectional observational study. The Lancet Regional Health – Europe, 51, 101211.",
+      "doi": "10.1016/j.lanepe.2025.101211",
+      "url": "https://doi.org/10.1016/j.lanepe.2025.101211",
+      "arxiv": null,
+      "access": "open",
+      "theme": "policy",
+      "section": "7a",
+      "section_name": "Age restrictions and school phone policies",
+      "design": "observational",
+      "type_sample": "Cross-sectional; 1,227 students aged 12–15 in 30 English schools (20 restrictive, 10 permissive).",
+      "findings": "Restrictive policies cut in-school phone use by about 30 minutes, but students compensated outside school. No differences in wellbeing, anxiety, depression, sleep, physical activity or attainment. Compare #33.",
+      "related": [
+        33
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 75,
+          "title": "SMART Schools - University of Birmingham",
+          "url": "https://www.birmingham.ac.uk/research/projects/smart-schools"
+        },
+        {
+          "n": 76,
+          "title": "School phone policies and their association with mental wellbeing, phone use, and social media use (SMART Schools): a cross-sectional observational study",
+          "url": "https://colab.ws/articles/10.1016/j.lanepe.2025.101211"
+        },
+        {
+          "n": 77,
+          "title": "Smartphone use and mental health: going beyond school restriction policies",
+          "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11850730/"
+        },
+        {
+          "n": 78,
+          "title": "Smartphone use and mental health: going beyond school restriction policies - The Lancet Regional Health",
+          "url": "https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762(25)00029-8/fulltext"
+        }
+      ],
+      "openalex": "W4407121726"
+    },
+    {
+      "n": 76,
+      "id": "pennycook-et-al-2021",
+      "label": "Pennycook et al. 2021",
+      "authors": "Pennycook, G., Epstein, Z., Mosleh, M., Arechar, A. A., Eckles, D., & Rand, D. G.",
+      "year": 2021,
+      "title": "Shifting attention to accuracy can reduce misinformation online",
+      "venue": "Nature",
+      "citation": "Pennycook, G., Epstein, Z., Mosleh, M., Arechar, A. A., Eckles, D., & Rand, D. G. (2021). Shifting attention to accuracy can reduce misinformation online. Nature, 592, 590–595.",
+      "doi": "10.1038/s41586-021-03344-2",
+      "url": "https://doi.org/10.1038/s41586-021-03344-2",
+      "arxiv": null,
+      "access": null,
+      "theme": "policy",
+      "section": "7b",
+      "section_name": "Design, literacy and misinformation interventions",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Prompts asking users to judge a headline's accuracy improved the quality of news they later shared on Twitter; a low-cost, scalable intervention, though effects are modest and decay.",
+      "related": [
+        37,
+        77,
+        78
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3124726575"
+    },
+    {
+      "n": 77,
+      "id": "guess-et-al-2020",
+      "label": "Guess et al. 2020",
+      "authors": "Guess, A. M., Lerner, M., Lyons, B., et al.",
+      "year": 2020,
+      "title": "A digital media literacy intervention increases discernment between mainstream and false news in the United States and India",
+      "venue": "PNAS",
+      "citation": "Guess, A. M., Lerner, M., Lyons, B., et al. (2020). A digital media literacy intervention increases discernment between mainstream and false news in the United States and India. PNAS, 117(27), 15536–15545.",
+      "doi": "10.1073/pnas.1920498117",
+      "url": "https://doi.org/10.1073/pnas.1920498117",
+      "arxiv": null,
+      "access": "open",
+      "theme": "policy",
+      "section": "7b",
+      "section_name": "Design, literacy and misinformation interventions",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Brief \"tips to spot false news\" improved discernment by 26.5% in the US; effects were smaller in India and decayed over weeks.",
+      "related": [
+        76,
+        78
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W3037661194"
+    },
+    {
+      "n": 78,
+      "id": "roozenbeek-et-al-2022",
+      "label": "Roozenbeek et al. 2022",
+      "authors": "Roozenbeek, J., van der Linden, S., Goldberg, B., Rathje, S., & Lewandowsky, S.",
+      "year": 2022,
+      "title": "Psychological inoculation improves resilience against misinformation on social media",
+      "venue": "Science Advances",
+      "citation": "Roozenbeek, J., van der Linden, S., Goldberg, B., Rathje, S., & Lewandowsky, S. (2022). Psychological inoculation improves resilience against misinformation on social media. Science Advances, 8(34), eabo6254.",
+      "doi": "10.1126/sciadv.abo6254",
+      "url": "https://doi.org/10.1126/sciadv.abo6254",
+      "arxiv": null,
+      "access": "open",
+      "theme": "policy",
+      "section": "7b",
+      "section_name": "Design, literacy and misinformation interventions",
+      "design": "experiment",
+      "type_sample": null,
+      "findings": "Short \"prebunking\" videos improved recognition of manipulation techniques, including when shown as YouTube ads to millions of users. See also #28 and #47 for design-change evidence.",
+      "related": [
+        28,
+        47,
+        76,
+        77
+      ],
+      "flags": [],
+      "sources": [],
+      "openalex": "W4293105742"
+    },
+    {
+      "n": 79,
+      "id": "kaushal-et-al-2024",
+      "label": "Kaushal et al. 2024",
+      "authors": "Kaushal, R., van de Kerkhof, J., Goanta, C., Spanakis, G., & Iamnitchi, A.",
+      "year": 2024,
+      "title": "Automated transparency: A legal and empirical analysis of the Digital Services Act Transparency Database",
+      "venue": "ACM FAccT '24",
+      "citation": "Kaushal, R., van de Kerkhof, J., Goanta, C., Spanakis, G., & Iamnitchi, A. (2024). Automated transparency: A legal and empirical analysis of the Digital Services Act Transparency Database. ACM FAccT '24.",
+      "doi": "10.1145/3630106.3658960",
+      "url": "https://doi.org/10.1145/3630106.3658960",
+      "arxiv": null,
+      "access": "free-copy",
+      "theme": "policy",
+      "section": "7c",
+      "section_name": "EU Digital Services Act (DSA): early empirical evidence",
+      "design": "observational",
+      "type_sample": "Audit of 131 million statements of reasons from all VLOPs, November 2023.",
+      "findings": "More than 99.8% of moderation decisions cited terms-of-service breaches and only about 0.2% concerned illegal content; the database leaves platforms wide discretion over what they report.",
+      "related": [
+        80,
+        81,
+        82,
+        83
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 79,
+          "title": "2404.02894",
+          "url": "https://arxiv.org/pdf/2404.02894"
+        },
+        {
+          "n": 80,
+          "title": "(PDF) Automated Transparency: A Legal and Empirical Analysis of the Digital Services Act Transparency Database",
+          "url": "https://www.researchgate.net/publication/380759192_Automated_Transparency_A_Legal_and_Empirical_Analysis_of_the_Digital_Services_Act_Transparency_Database"
+        }
+      ],
+      "openalex": "W4399363642"
+    },
+    {
+      "n": 80,
+      "id": "trujillo-et-al-2025",
+      "label": "Trujillo et al. 2025",
+      "authors": "Trujillo, A., Fagni, T., & Cresci, S.",
+      "year": 2025,
+      "title": "The DSA Transparency Database: Auditing self-reported moderation actions by social media",
+      "venue": "Proceedings of the ACM on Human-Computer Interaction",
+      "citation": "Trujillo, A., Fagni, T., & Cresci, S. (2025). The DSA Transparency Database: Auditing self-reported moderation actions by social media. Proceedings of the ACM on Human-Computer Interaction, 9(2), CSCW, Article 187.",
+      "doi": "10.1145/3711085",
+      "url": "https://doi.org/10.1145/3711085",
+      "arxiv": "2312.10269",
+      "access": "free-copy",
+      "theme": "policy",
+      "section": "7c",
+      "section_name": "EU Digital Services Act (DSA): early empirical evidence",
+      "design": "observational",
+      "type_sample": "Audit of 353 million records from the 8 largest platforms (first 100 days).",
+      "findings": "Platforms formally complied but omitted optional fields, and records often contradicted their own transparency reports; X reported only manual moderation despite acknowledging automated detection elsewhere.",
+      "related": [
+        79,
+        81,
+        82,
+        83
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 81,
+          "title": "Trading nuance for scale? Platform observability and content governance under the DSA",
+          "url": "https://policyreview.info/articles/analysis/platform-observability-and-content-governance"
+        },
+        {
+          "n": 82,
+          "title": "The DSA Transparency Database: Auditing Self-reported Moderation Actions by Social Media",
+          "url": "https://www.researchgate.net/publication/391423645_The_DSA_Transparency_Database_Auditing_Self-reported_Moderation_Actions_by_Social_Media"
+        },
+        {
+          "n": 83,
+          "title": "When Transparency Falls Short: Auditing Platform Moderation During a High-Stakes Election",
+          "url": "https://arxiv.org/pdf/2604.19285"
+        }
+      ],
+      "openalex": "W4410049613"
+    },
+    {
+      "n": 81,
+      "id": "drolsbach-prollochs-2023",
+      "label": "Drolsbach & Pröllochs 2023",
+      "authors": "Drolsbach, C. P., & Pröllochs, N.",
+      "year": 2023,
+      "title": "Content moderation on social media in the EU: Insights from the DSA Transparency Database",
+      "venue": "arXiv preprint",
+      "citation": "Drolsbach, C. P., & Pröllochs, N. (2023/2024). Content moderation on social media in the EU: Insights from the DSA Transparency Database.",
+      "doi": "10.48550/arXiv.2312.04431",
+      "url": "https://arxiv.org/abs/2312.04431",
+      "arxiv": "2312.04431",
+      "access": "open",
+      "theme": "policy",
+      "section": "7c",
+      "section_name": "EU Digital Services Act (DSA): early empirical evidence",
+      "design": "observational",
+      "type_sample": null,
+      "findings": "Of 156 million statements of reasons, TikTok submitted more than 100 million, mostly automated, over 350 times more moderation actions per user than X.",
+      "related": [
+        79,
+        80,
+        82,
+        83
+      ],
+      "flags": [
+        "preprint"
+      ],
+      "sources": [
+        {
+          "n": 84,
+          "title": "[2312.04431] Content Moderation on Social Media in the EU: Insights From the DSA Transparency Database",
+          "url": "https://arxiv.org/abs/2312.04431"
+        },
+        {
+          "n": 81,
+          "title": "Trading nuance for scale? Platform observability and content governance under the DSA",
+          "url": "https://policyreview.info/articles/analysis/platform-observability-and-content-governance"
+        },
+        {
+          "n": 85,
+          "title": "Content Moderation on Social Media in the EU: Insights From the DSA Transparency Database",
+          "url": "https://www.researchgate.net/publication/380539449_Content_Moderation_on_Social_Media_in_the_EU_Insights_From_the_DSA_Transparency_Database"
+        }
+      ],
+      "openalex": "W4396844279",
+      "note": "An arXiv preprint: say so on the page."
+    },
+    {
+      "n": 82,
+      "id": "groesch-et-al-2026",
+      "label": "Groesch et al. 2026",
+      "authors": "Groesch, S., Birrer, A., Just, N., & Saurwein, F.",
+      "year": 2026,
+      "title": "Big data, small answers: How the DSA Transparency Database falls short of its regulatory objectives",
+      "venue": "Telecommunications Policy",
+      "citation": "Groesch, S., Birrer, A., Just, N., & Saurwein, F. (2026). Big data, small answers: How the DSA Transparency Database falls short of its regulatory objectives. Telecommunications Policy, 50(1), 103088.",
+      "doi": "10.1016/j.telpol.2025.103088",
+      "url": "https://doi.org/10.1016/j.telpol.2025.103088",
+      "arxiv": null,
+      "access": null,
+      "theme": "policy",
+      "section": "7c",
+      "section_name": "EU Digital Services Act (DSA): early empirical evidence",
+      "design": "observational",
+      "type_sample": null,
+      "findings": "Analysing 3.52 billion statements of reasons over 20 months, the authors conclude the database falls short of its transparency, scrutiny and illegal-content-tracking objectives because of missing data and unreliable reporting.",
+      "related": [
+        79,
+        80,
+        81,
+        83
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 86,
+          "title": "Big data, small answers: How the DSA Transparency Database falls short of its regulatory objectives",
+          "url": "https://ideas.repec.org/a/eee/telpol/v50y2026i1s0308596125001855.html"
+        },
+        {
+          "n": 87,
+          "title": "Big data, small answers: How the DSA Transparency Database falls short of its regulatory objectives - ScienceDirect",
+          "url": "https://www.sciencedirect.com/science/article/pii/S0308596125001855"
+        }
+      ],
+      "openalex": "W4415616857"
+    },
+    {
+      "n": 83,
+      "id": "finally-access-2026",
+      "label": "Finally, Access 2026",
+      "authors": null,
+      "year": 2026,
+      "title": "Finally, Access: How Article 40 DSA Changes Platform Research in Practice",
+      "venue": "Political Communication",
+      "citation": "\"Finally, Access: How Article 40 DSA Changes Platform Research in Practice.\" (2026). Political Communication.",
+      "doi": "10.1080/10584609.2026.2664157",
+      "url": "https://doi.org/10.1080/10584609.2026.2664157",
+      "arxiv": null,
+      "access": null,
+      "theme": "policy",
+      "section": "7c",
+      "section_name": "EU Digital Services Act (DSA): early empirical evidence",
+      "design": "report",
+      "type_sample": null,
+      "findings": "Researcher data access under Article 40 has been hampered by narrow platform readings of \"systemic risk,\" exclusion of non-academic researchers, delays and incomplete data. No peer-reviewed quantitative evaluation of DSA systemic-risk assessments was found; the European Board for Digital Services' first Article 35(2) report (November 2025) is qualitative.",
+      "related": [
+        79,
+        80,
+        81,
+        82
+      ],
+      "flags": [],
+      "sources": [
+        {
+          "n": 88,
+          "title": "Full article: Finally, Access: How Article 40 DSA Changes Platform Research in Practice",
+          "url": "https://www.tandfonline.com/doi/full/10.1080/10584609.2026.2664157"
+        },
+        {
+          "n": 89,
+          "title": "Report Article 35.2 DSA: effectiveness of systemic risk mitigation measures",
+          "url": "https://www.ecija.com/en/news-and-insights/informe-articulo-352-dsa-eficacia-de-las-medidas-de-mitigacion-de-riesgos-sistemicos/"
+        }
+      ],
+      "openalex": "W7155560464"
+    }
+  ],
+  "lenses": [
+    {
+      "name": "Read the number",
+      "description": "What the headline effect size means in everyday terms: translate it (hours, people in a classroom, points on a thermometer), set it against the collection's benchmarks (0.05 to 0.1 SD; 0.4% of variance) and say whether it matters at population scale."
+    },
+    {
+      "name": "Cause or correlation",
+      "description": "What this design can and cannot show: walk the reader through how the finding was produced, what would have to be true for it to mean cause, and the strongest alternative explanation."
+    },
+    {
+      "name": "The other side",
+      "description": "The strongest study in the collection that points the other way, side by side with this one: same question, different answer, and why (data, design, analytic choices)."
+    },
+    {
+      "name": "Who was studied",
+      "description": "The sample under the microscope: who, where, when, which ages and platforms, and how far the finding can travel beyond them (other countries, other platforms, other years)."
+    },
+    {
+      "name": "Since then",
+      "description": "How later work, up to 2026, confirmed, refined or overturned this finding: a dated chain of studies, ending on where the question stands now."
+    },
+    {
+      "name": "What policy should take",
+      "description": "What this finding does and does not justify for bans, age limits, design rules, schools and parents, set against the policy evidence in the collection."
+    },
+    {
+      "name": "Explain like I'm 5",
+      "description": "The finding as a picture story a five-year-old can follow, with the numbers and caveats kept for the grown-ups."
+    }
+  ]
+}
