@@ -123,11 +123,12 @@ export type OpenF1Driver = {
   driver_number: number
   name_acronym: string
   full_name: string
-  first_name: string
-  last_name: string
+  // Null on stub rows, usually a stand-in driver's race entry (see resolveDrivers).
+  first_name: string | null
+  last_name: string | null
   country_code: string | null
-  team_name: string
-  team_colour: string // hex without '#'
+  team_name: string | null
+  team_colour: string | null // hex without '#'
   headshot_url: string | null
 }
 
@@ -156,7 +157,7 @@ export function listLaps(sessionKey: number): Promise<OpenF1Lap[]> {
 }
 
 // =====================================================
-// Position (final classification at session end)
+// Position (running order on track — ignores post-session penalties)
 // =====================================================
 
 export type OpenF1Position = {
@@ -168,6 +169,28 @@ export type OpenF1Position = {
 
 export function listPositions(sessionKey: number): Promise<OpenF1Position[]> {
   return fetchOpenF1<OpenF1Position>(`/position?session_key=${sessionKey}`, { treat404AsEmpty: true })
+}
+
+// =====================================================
+// Session result (official classification, penalties applied)
+// =====================================================
+
+export type OpenF1SessionResult = {
+  session_key: number
+  driver_number: number
+  position: number | null // null when not classified
+  number_of_laps: number | null
+  points: number | null
+  dnf: boolean
+  dns: boolean
+  dsq: boolean
+  gap_to_leader: number | string | null // seconds, or "+1 LAP" for lapped cars
+}
+
+export function listSessionResults(sessionKey: number): Promise<OpenF1SessionResult[]> {
+  return fetchOpenF1<OpenF1SessionResult>(`/session_result?session_key=${sessionKey}`, {
+    treat404AsEmpty: true,
+  })
 }
 
 // =====================================================

@@ -4,8 +4,10 @@ name: VizF1 - race-weekend ingest
 # Sprint Q/Sprint/Race), per-driver lap data, and final positions. After session
 # data lands, derives circuit outlines for any new circuits.
 #
-# Runs every 6h on Fri/Sat/Sun (race-weekend cadence). On other days, the daily
-# news ingest is enough; race data won't change.
+# Runs every 6h on Fri/Sat/Sun (race-weekend cadence), plus twice early Monday
+# UTC. Races in the Americas end late on Sunday UTC, and OpenF1 answers 401 around
+# live sessions, so the Sunday runs can miss them. On other days, the daily news
+# ingest is enough; race data won't change.
 #
 # Required repo secrets (in `Production` — shared project-wide with vizmaya /
 # energy-profile workflows):
@@ -16,6 +18,8 @@ on:
   schedule:
     # Every 6h on Fri (5), Sat (6), Sun (0). 30-minute offset to avoid top-of-hour spikes.
     - cron: '30 */6 * * 5,6,0'
+    # 00:30 and 06:30 UTC Monday, to catch late Sunday races.
+    - cron: '30 0,6 * * 1'
   workflow_dispatch:
     inputs:
       year:
