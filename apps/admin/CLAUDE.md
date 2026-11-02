@@ -362,18 +362,22 @@ the JSONB as `plan->version` for the shelf, so no column was added):
   one row per pack hash, newest wins, read once per book through `GET
   /api/footshorts/books/[slug]/packs` into `season/SpreadPacks`. A team pack
   carries the all-competition results, cup runs, XIs, minutes, transfers,
-  radar and the club's token; a league pack the awards, signings and scorers.
+  radar and the club's token; a league pack the awards, signings and scorers;
+  a competition pack the map, bracket, groups, finalists, the final's shots
+  and the scorers (its oddities stay on the row, so they stay editable).
   With a pack the canvas draws every module for real
-  ([season/PackModules](components/books/season/PackModules.tsx)), geometry in
-  [lib/seasonBooks/teamLayout.ts](lib/seasonBooks/teamLayout.ts), so moments
-  and story players stay editable and re-route; without one it falls back to
+  ([season/PackModules](components/books/season/PackModules.tsx),
+  [season/CompetitionPack](components/books/season/CompetitionPack.tsx)),
+  team geometry in [lib/seasonBooks/teamLayout.ts](lib/seasonBooks/teamLayout.ts),
+  so moments and story players stay editable and re-route; without one it falls back to
   the match data, and a missing table only means no packs. Packs are built by
   `vizmaya-data/football-seasons/scripts/spread_packs` and loaded with
   `pnpm --filter @footshorts/worker history:spread-packs -- --season=2003
   --push`; `--plan` fills the book's empty editorial fields from the same
   folder's `rows.json` (`--replace` lets it win). Module notes double as the
-  climb and bubble titles. 2003-04 has packs for the 20 Premier League clubs
-  and the league; other subjects still render from match data.
+  climb and bubble titles. 2003-04 has packs for the 20 Premier League clubs,
+  the league, Barcelona and the Champions League; other subjects still render
+  from match data.
   The render (`season/SpreadCanvas`) follows the six
   reference spreads on the design canvas: the shared page-1 frame (kicker,
   two-line headline at 55 pt, kit-derived mark, story stat at 53 pt, story

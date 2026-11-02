@@ -305,5 +305,6 @@ assert.equal(radarRadius(radarRange, RADAR_AXES[0], 2.5), 41.5, 'the best value 
 assert.equal(radarRadius(radarRange, RADAR_AXES[3], 2.5), 5, 'most conceded is the centre')
 
 assert.equal(spreadPackSchema.safeParse({ kind: 'team', name: 'x' }).success, false, 'a partial pack is refused')
+assert.equal(spreadPackSchema.safeParse({ kind: 'competition', name: 'x' }).success, false, 'a partial competition pack is refused')
 
 console.log('teamLayout ok')

@@ -113,7 +113,7 @@ async function main() {
     const part = partOf(next, key, r);
     if (!part) throw new Error(`${key}: not in the book's parts`);
     const current: Json = next.spreads[key] ?? blankRow(key, r, part);
-    const incoming: Json = { editorial: r.editorial, palette: r.palette, ...(r.team ? { team: r.team } : {}), ...(r.league ? { league: r.league } : {}) };
+    const incoming: Json = { editorial: r.editorial, palette: r.palette, ...(r.team ? { team: r.team } : {}), ...(r.league ? { league: r.league } : {}), ...(r.competition ? { competition: r.competition } : {}) };
     const merged = fill(current, incoming);
     if (args.includes('--replace')) merged.editorial = { ...merged.editorial, ...r.editorial };
     if (merged.palette === null && r.palette) merged.palette = r.palette;

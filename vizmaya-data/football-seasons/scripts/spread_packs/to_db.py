@@ -147,6 +147,14 @@ rows['comp:champions-league']=dict(subject='Champions League',kind='competition'
     story='Seventy-two clubs set out in July. The last two were Porto, second in their group, and Monaco, twice through on away goals. Porto won 3-0.',moments=[],notes={}))
 rows['team:barcelona']=dict(subject='Barcelona',kind='team',palette=None,editorial=dict(headline='The Turnaround',storyStat=dict(value='12 → 2',label='January low → final place',source='Season data pack'),
     story='Ronaldinho brought the spark. Davids brought balance. Rijkaard’s first season turned.',moments=[],notes={}),team=dict(turningPoint=None,coach=dict(name='',context='',assistants='',sourceUrl=''),xiSplitDate=None,storyPlayers=[]))
+more=load('more_packs')
+pk,odd=more.ucl_pack(SP,T,tok,z,io)
+packs['comp:champions-league']=pk
+rows['comp:champions-league'].update(palette={'page1Ground':'#0E1E5B','page2Ground':'#0A1440','accent':'#D7263D','highlight':'#F2C94C','draw':'#C9D1DC','card':'#1B2C73','grid':'#2B3C8A','eliminationCard':'#5E1424'},competition=dict(oddities=odd,pinned=['Porto','Monaco'],mapGrouping='country'))
+packs['team:barcelona']=more.barca_pack(SP,T,tok,gen)
+rows['team:barcelona'].update(palette={'page1Ground':'#164F91','page2Ground':'#10243A','accent':'#A82045','eliminationCard':'#72243E','highlight':'#E7B94C','draw':'#CBD4DF','grid':'#3A4E64','card':'#243C52'})
+rows['team:barcelona']['editorial'].update(moments=[dict(date='2003-09-03',text='Ronaldinho’s first goal, at 1:30 a.m.',eventId=None),dict(date='2003-12-06',text='1–2 v Madrid; Rijkaard under fire',eventId=None),dict(date='2004-01-04',text='0–3 at Racing: 12th, the low point',eventId=None),dict(date='2004-04-25',text='2–1 at the Bernabéu',eventId=None)],notes=dict(climb='The Climb',bubble='THE PEOPLE: RONALDINHO AND THE REST'))
+rows['team:barcelona']['team']=dict(turningPoint='2004-01-04',coach=dict(name='Frank Rijkaard',context='Dutch, 40 at the start of the season. First season at a big club, a year after leaving relegated Sparta Rotterdam.',assistants='Henk ten Cate, Albert Roca',sourceUrl='https://en.wikipedia.org/wiki/Frank_Rijkaard'),xiSplitDate='2004-01-14',storyPlayers=['Ronaldinho','Saviola','Kluivert','Luis García','Xavi','Cocu'])
 W='https://en.wikipedia.org/wiki/'
 COACH_URL={'team:arsenal':'Ars%C3%A8ne_Wenger','team:chelsea':'Claudio_Ranieri','team:man-united':'Alex_Ferguson','team:liverpool':'G%C3%A9rard_Houllier','team:newcastle':'Bobby_Robson','team:aston-villa':"David_O'Leary",
  'team:charlton':'Alan_Curbishley','team:bolton':'Sam_Allardyce','team:fulham':'Chris_Coleman_(footballer)','team:birmingham':'Steve_Bruce','team:middlesbrough':'Steve_McClaren','team:southampton':'Paul_Sturrock',

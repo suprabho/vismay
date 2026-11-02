@@ -8,6 +8,7 @@ import {
   DEFAULT_SPREAD_PALETTE, FRAME_REGIONS, POSITION_COLOURS, REFERENCE_PALETTES, resultColours, SPREAD_CANVAS, SPREAD_ICONS, SPREAD_TEMPLATES,
 } from '@/lib/seasonBooks/spreadLayouts'
 import type { LeaguePack, TeamPack } from '@/lib/seasonBooks/spreadPack'
+import { CompetitionPackPages } from './CompetitionPack'
 import { KitToken, LeagueMoney, LeaguePlayers, TeamPackPages } from './PackModules'
 import { useSpreadPack } from './SpreadPacks'
 
@@ -974,7 +975,9 @@ export function SpreadCanvas({ spread, row, seasonStart, data, onModule, classNa
         ? <TeamPackPages pack={teamPack} row={row} seasonStart={seasonStart} p={p} onModule={onModule} active={activeModule} modules={SPREAD_MODULES.team} />
         : <TeamPages {...pages} />)}
       {spread.kind === 'league' && <LeaguePages {...pages} pack={leaguePack} />}
-      {spread.kind === 'competition' && <CompetitionPages {...pages} />}
+      {spread.kind === 'competition' && (pack?.kind === 'competition'
+        ? <CompetitionPackPages pack={pack} row={row} seasonStart={seasonStart} p={p} onModule={onModule} active={activeModule} modules={SPREAD_MODULES.competition} />
+        : <CompetitionPages {...pages} />)}
       {showRegions && [...FRAME_REGIONS, ...SPREAD_TEMPLATES[spread.kind].regions].map(r => (
         <g key={r.id}>
           <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="#FFFFFF" strokeOpacity={0.7} strokeWidth={0.8} strokeDasharray="4 3" />
