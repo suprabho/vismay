@@ -6,6 +6,7 @@
  *   /sessions        → sessions (FP1, FP2, FP3, Quali, Sprint Q, Sprint, Race)
  *   /drivers         → drivers (headshot, team_colour, country)
  *   /laps + /position → session_results (best lap, position, gap)
+ *   /session_result  → official position, points and status for race + sprint
  *
  * Idempotent — every upsert is keyed on natural IDs so re-runs are no-ops.
  *
@@ -21,14 +22,17 @@ import {
   listDrivers,
   listLaps,
   listPositions,
+  listSessionResults,
   aggregateLapsByDriver,
   normaliseSessionName,
   type OpenF1Meeting,
   type OpenF1Session,
   type OpenF1Driver,
+  type OpenF1SessionResult,
 } from './openf1'
 
 type SupabaseClient = ReturnType<typeof getSupabase>
+type NamedDriver = OpenF1Driver & { first_name: string; last_name: string }
 
 function slug(s: string): string {
   return s
@@ -51,6 +55,44 @@ const CANCELED_GRACE_MS = 48 * 60 * 60 * 1000
 
 function looksCanceled(s: OpenF1Session): boolean {
   return new Date(s.date_end).getTime() < Date.now() - CANCELED_GRACE_MS
+}
+
+// OpenF1 sometimes ships a stub for a stand-in driver: number and full_name
+// only, with name and team null (#50 Hirakawa in the 2026 Mexico City race,
+// though his qualifying row that weekend was complete). Fill the gaps from the
+// weekend's earlier sessions so the driver keeps their result.
+function resolveDrivers(drivers: OpenF1Driver[], roster: Map<number, OpenF1Driver>): NamedDriver[] {
+  const resolved: NamedDriver[] = []
+  for (const d of drivers) {
+    const known = roster.get(d.driver_number)
+    const [firstFromFull, ...restOfFull] = (d.full_name ?? '').trim().split(/\s+/)
+    const first_name = d.first_name ?? known?.first_name ?? firstFromFull
+    const last_name = d.last_name ?? known?.last_name ?? restOfFull.join(' ')
+    if (!first_name || !last_name) {
+      console.warn(`[drivers] skipped #${d.driver_number} in session ${d.session_key}: no name`)
+      continue
+    }
+    const driver = {
+      ...d,
+      first_name,
+      last_name,
+      team_name: d.team_name ?? known?.team_name ?? null,
+      team_colour: d.team_colour ?? known?.team_colour ?? null,
+      headshot_url: d.headshot_url ?? known?.headshot_url ?? null,
+    }
+    if (driver.team_name) roster.set(d.driver_number, driver)
+    resolved.push(driver)
+  }
+  return resolved
+}
+
+// Same wording as the telemetry ingest's _build_results (openf1_ingest.py).
+function officialStatus(r: OpenF1SessionResult): string {
+  if (r.dsq) return 'Disqualified'
+  if (r.dns) return 'Did not start'
+  if (r.dnf) return 'DNF'
+  if (typeof r.gap_to_leader === 'string') return r.gap_to_leader
+  return r.position == null ? 'Not classified' : 'Finished'
 }
 
 async function upsertCircuit(sb: SupabaseClient, m: OpenF1Meeting) {
@@ -103,7 +145,7 @@ async function upsertRace(
   return data.id as string
 }
 
-async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
+async function upsertDrivers(sb: SupabaseClient, drivers: NamedDriver[]) {
   if (drivers.length === 0) return
 
   // Constructors first — vizf1_drivers.constructor_id has a FK referencing
@@ -111,6 +153,7 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
   // so the parent rows must exist before drivers upsert.
   const constructors = new Map<string, { name: string; color: string | null }>()
   for (const d of drivers) {
+    if (!d.team_name) continue
     const id = slug(d.team_name)
     if (!constructors.has(id)) {
       constructors.set(id, {
@@ -132,7 +175,7 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
   if (cErr) console.error('[ingest:sessions] constructors upsert failed:', cErr)
 
   // Dedupe drivers by slug, then upsert.
-  const byId = new Map<string, OpenF1Driver>()
+  const byId = new Map<string, NamedDriver>()
   for (const d of drivers) {
     const id = slug(`${d.first_name}_${d.last_name}`)
     if (!byId.has(id)) byId.set(id, d)
@@ -145,15 +188,32 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
     permanent_number: String(d.driver_number),
     nationality: d.country_code,
     headshot_url: d.headshot_url,
-    constructor_id: slug(d.team_name),
+    constructor_id: d.team_name ? slug(d.team_name) : null,
     primary_color: d.team_colour ? `#${d.team_colour}` : null,
     updated_at: new Date().toISOString(),
   }))
-  const { error } = await sb.from('vizf1_drivers').upsert(rows, { onConflict: 'driver_id' })
-  if (error) console.error('[ingest:sessions] drivers upsert failed:', error)
+  const withTeam = rows.filter((r) => r.constructor_id)
+  const teamless = rows.filter((r) => !r.constructor_id)
+  if (withTeam.length > 0) {
+    const { error } = await sb.from('vizf1_drivers').upsert(withTeam, { onConflict: 'driver_id' })
+    if (error) console.error('[ingest:sessions] drivers upsert failed:', error)
+  }
+  // No team known yet: create the row so results can reference the driver, but
+  // never blank the team on one that already exists.
+  if (teamless.length > 0) {
+    const { error } = await sb
+      .from('vizf1_drivers')
+      .upsert(teamless, { onConflict: 'driver_id', ignoreDuplicates: true })
+    if (error) console.error('[ingest:sessions] teamless drivers upsert failed:', error)
+  }
 }
 
-async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: OpenF1Session) {
+async function ingestSession(
+  sb: SupabaseClient,
+  raceId: string,
+  openf1Session: OpenF1Session,
+  roster: Map<number, OpenF1Driver>,
+) {
   const sessionType = normaliseSessionName(openf1Session.session_name)
   if (!sessionType) return
 
@@ -183,11 +243,14 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
   if (status !== 'finished') return
 
   // For finished sessions, pull laps + final position, then upsert results.
-  const [laps, positions, drivers] = await Promise.all([
+  const isClassified = sessionType === 'race' || sessionType === 'sprint'
+  const [laps, positions, rawDrivers, sessionResults] = await Promise.all([
     listLaps(openf1Session.session_key),
     listPositions(openf1Session.session_key),
     listDrivers(openf1Session.session_key),
+    isClassified ? listSessionResults(openf1Session.session_key) : [],
   ])
+  const drivers = resolveDrivers(rawDrivers, roster)
 
   // No timing data at all — don't fabricate results off the pre-seeded entry
   // list (that used to leave all-NULL husk rows for the canceled 2026
@@ -213,6 +276,11 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
   const finalPos = new Map<number, number>()
   for (const p of positions) finalPos.set(p.driver_number, p.position)
 
+  // Race + sprint: the official classification wins over the last on-track
+  // position, which misses post-race penalties and numbers retirements. It can
+  // land after the timing data, so until then fall back to on-track order.
+  const official = new Map(sessionResults.map((r) => [r.driver_number, r]))
+
   const driverNumberToId = new Map<number, string>()
   for (const d of drivers) driverNumberToId.set(d.driver_number, slug(`${d.first_name}_${d.last_name}`))
 
@@ -225,18 +293,24 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
 
   const results = Array.from(driverNumberToId.entries()).map(([num, driver_id]) => {
     const lapAgg = lapsByDriver.get(num) ?? { bestLapMs: null, lapsCompleted: 0 }
-    const position = finalPos.get(num) ?? null
-    const gap =
+    const result = official.get(num)
+    const position = official.size > 0 ? (result?.position ?? null) : (finalPos.get(num) ?? null)
+    const bestLapGap =
       leaderBest != null && lapAgg.bestLapMs != null && lapAgg.bestLapMs !== leaderBest
         ? lapAgg.bestLapMs - leaderBest
         : 0
+    const officialGap =
+      typeof result?.gap_to_leader === 'number' ? Math.round(result.gap_to_leader * 1000) : 0
+    const gap = official.size > 0 ? officialGap : bestLapGap
     return {
       session_id: sessionId,
       driver_id,
       position,
       best_lap_ms: lapAgg.bestLapMs,
-      laps_completed: lapAgg.lapsCompleted,
+      laps_completed: result?.number_of_laps ?? lapAgg.lapsCompleted,
       gap_to_leader_ms: gap || null,
+      points: result?.points ?? null,
+      status: result ? officialStatus(result) : null,
     }
   })
 
@@ -317,8 +391,9 @@ export async function runIngestSessions(year?: number) {
       const circuitId = await upsertCircuit(sb, m)
       const sessions = await listSessions(m.meeting_key)
       const raceId = await upsertRace(sb, m, circuitId, i, sessions)
+      const roster = new Map<number, OpenF1Driver>()
       for (const s of sessions) {
-        await ingestSession(sb, raceId, s)
+        await ingestSession(sb, raceId, s, roster)
       }
       console.log(`[meeting ${i}] ${m.meeting_name} — ${sessions.length} sessions`)
     } catch (e) {

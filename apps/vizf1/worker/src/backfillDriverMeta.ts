@@ -112,6 +112,8 @@ async function collectMeta(years: number[]): Promise<{
   const constructors = new Map<string, ConstructorMeta>()
 
   const applyDriver = (d: OpenF1Driver) => {
+    // Stub rows (see resolveDrivers in ingestSessions.ts) have nothing to backfill.
+    if (!d.first_name || !d.last_name || !d.team_name) return
     const id = slug(`${d.first_name}_${d.last_name}`)
     const constructorId = slug(d.team_name)
     const color = hex(d.team_colour)
