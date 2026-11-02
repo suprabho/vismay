@@ -186,7 +186,7 @@ function CalendarModule({ pack, row, seasonStart, p, hit }: ModuleProps) {
 
 function SeasonRecord({ pack, seasonStart, p, hit }: ModuleProps) {
   const items: [string, string, number][] = [
-    [ordinal(pack.league.pos), 'PREMIER LEAGUE', 40], [String(pack.league.pts), 'LEAGUE PTS', 150],
+    [ordinal(pack.league.pos), pack.leagueName.toUpperCase(), 40], [String(pack.league.pts), 'LEAGUE PTS', 150],
     [`${pack.all.GF}:${pack.all.GA}`, 'ALL COMPETITIONS GF:GA', 263], [`${pack.all.W}-${pack.all.D}-${pack.all.L}`, 'ALL COMPETITIONS W-D-L', 416],
   ]
   return hit('season-record', 40, 680, 515, 60, (
@@ -206,7 +206,7 @@ function SeasonRecord({ pack, seasonStart, p, hit }: ModuleProps) {
 // Right page
 
 const RUN_NAMES: Record<string, [string, string]> = {
-  UCL: ['UCL', 'CHAMPIONS LEAGUE'], UC: ['UC', 'UEFA CUP'], FAC: ['FAC', 'FA CUP'], LC: ['LC', 'LEAGUE CUP'], CS: ['', 'COMMUNITY SHIELD'],
+  UCL: ['UCL', 'CHAMPIONS LEAGUE'], UC: ['UC', 'UEFA CUP'], FAC: ['FAC', 'FA CUP'], LC: ['LC', 'LEAGUE CUP'], CDR: ['CDR', 'COPA DEL REY'], CS: ['', 'COMMUNITY SHIELD'],
 }
 
 function RunMark({ comp, p }: { comp: string; p: P }) {
@@ -218,6 +218,15 @@ function RunMark({ comp, p }: { comp: string; p: P }) {
         {comp === 'UCL'
           ? <><path d="M4 4 H8 V12 H4 M8 8 H10.5 M20 4 H16 V12 H20 M16 8 H13.5" fill="none" stroke="#F7F6F2" strokeWidth={1.1} strokeLinecap="round" /><circle cx={12} cy={8} r={1.4} fill="#F7F6F2" /></>
           : <g fill="#F7F6F2">{[[5, 3], [5, 6.3], [5, 9.7], [5, 13], [12, 4.65], [12, 11.35]].map(([cx, cy]) => <circle key={`${cx}${cy}`} cx={cx} cy={cy} r={1.25} />)}<circle cx={19} cy={8} r={1.6} /></g>}
+      </g>
+    )
+  }
+  if (comp === 'CDR') {
+    return (
+      <g>
+        <rect width={24} height={16} rx={2.5} fill="#C8102E" stroke={dark} strokeWidth={0.8} />
+        <rect y={4} width={24} height={8} fill="#FFC400" />
+        <rect x={9.25} y={5.25} width={5.5} height={5.5} fill="#FFFFFF" stroke={dark} strokeWidth={1.3} transform="rotate(45 12 8)" />
       </g>
     )
   }
@@ -425,7 +434,7 @@ function Radar({ pack, p, hit }: ModuleProps) {
   const labels: [number, number, 'middle' | 'start' | 'end'][] = [[1022.5, 629, 'middle'], [1065.4, 662.8, 'start'], [1065.4, 712.2, 'start'], [1022.5, 744, 'middle'], [979.6, 712.2, 'end'], [979.6, 662.8, 'end']]
   return hit('radar', 895, 593, 255, 185, (
     <>
-      <Head x={895} y={593} icon="radar" title="The team / Against the Premier League" p={p} />
+      <Head x={895} y={593} icon="radar" title={`The team / Against ${pack.leagueName === 'Premier League' ? 'the Premier League' : pack.leagueName}`} p={p} />
       <text x={895} y={619} fontSize={9} fill={p.text}>Centre = league’s worst · edge = league’s best</text>
       <g transform="translate(895 627)">
         {[5, 17.2, 29.3, 41.5].map(r => <polygon key={r} points={ring(r)} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={0.5} />)}
