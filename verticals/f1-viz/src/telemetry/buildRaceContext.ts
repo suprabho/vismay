@@ -29,8 +29,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { analyseRace, deriveSignals, isCleanLap, type LapRow, type RaceAnalysis, type StintRow } from './signals'
 
-/** Most sessions one context covers: a season's races plus a few qualifyings. */
-export const MAX_RACE_CONTEXT_SESSIONS = 24
+/**
+ * Most sessions one context covers. Sized so a whole season's races and
+ * sprints fit (up to ~24 races + ~8 sprints), with headroom for a few
+ * qualifyings.
+ */
+export const MAX_RACE_CONTEXT_SESSIONS = 40
 /** Most drivers one context follows; past this the per-driver tables stop reading. */
 export const MAX_RACE_CONTEXT_DRIVERS = 8
 /** With no drivers picked, the context follows this many (by points across the picked sessions). */
