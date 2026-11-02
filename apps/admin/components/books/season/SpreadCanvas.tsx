@@ -7,6 +7,9 @@ import { competitionCode, HEADLINE_CHARS_PER_LINE, LEAGUE_COUNTRY, sameClub, SPR
 import {
   DEFAULT_SPREAD_PALETTE, FRAME_REGIONS, POSITION_COLOURS, REFERENCE_PALETTES, resultColours, SPREAD_CANVAS, SPREAD_ICONS, SPREAD_TEMPLATES,
 } from '@/lib/seasonBooks/spreadLayouts'
+import type { LeaguePack, TeamPack } from '@/lib/seasonBooks/spreadPack'
+import { KitToken, LeagueMoney, LeaguePlayers, TeamPackPages } from './PackModules'
+import { useSpreadPack } from './SpreadPacks'
 
 export const CANVAS = SPREAD_CANVAS
 const FONT = "var(--font-archivo, Archivo), 'Helvetica Neue', Helvetica, Arial, sans-serif"
@@ -88,12 +91,14 @@ function CompTile({ x, y, scale = 1, p, european }: { x: number; y: number; scal
   )
 }
 
-function Mark({ spread, p }: { spread: PlannedSpread; p: P }) {
-  const code = spread.kind === 'team' ? code3(spread.subjectId) : competitionCode(spread.subjectId)
+function Mark({ spread, p, pack }: { spread: PlannedSpread; p: P; pack: TeamPack | null }) {
+  const code = pack?.code ?? (spread.kind === 'team' ? code3(spread.subjectId) : competitionCode(spread.subjectId))
   const x = 470
   return (
     <g transform={`translate(${x} 45)`} data-module="identity">
-      {spread.kind === 'team' && <g transform="translate(6 0)"><Token x={0} y={0} size={64} colour={p.page1Ground === DEFAULT_SPREAD_PALETTE.page1Ground ? undefined : p.accent} /></g>}
+      {spread.kind === 'team' && (pack
+        ? <KitToken t={pack.token} x={6} y={0} size={64} keyline={pack.design.keyline} />
+        : <g transform="translate(6 0)"><Token x={0} y={0} size={64} colour={p.page1Ground === DEFAULT_SPREAD_PALETTE.page1Ground ? undefined : p.accent} /></g>)}
       {spread.kind === 'league' && (
         <g transform="translate(6 10)">
           <rect x={0.5} y={0.5} width={63} height={43} rx={5} fill="#FFFFFF" stroke="#15161A" />
@@ -106,42 +111,55 @@ function Mark({ spread, p }: { spread: PlannedSpread; p: P }) {
   )
 }
 
-function Frame({ spread, row, seasonStart, p, compact, onModule, active, storyWidth, copySize }: {
+/** A story stat's first word set at 53 pt, the rest beside it at 22 pt: `30 pts`, `17 / 38`, `18th → 6th`. */
+function statParts(value: string): [string, string] {
+  const at = value.indexOf(' ')
+  return at < 0 ? [value, ''] : [value.slice(0, at), value.slice(at + 1)]
+}
+
+function Frame({ spread, row, seasonStart, p, compact, onModule, active, storyWidth, copySize, pack, sources }: {
   spread: PlannedSpread; row: BookSpread; seasonStart: number; p: P; compact: boolean; onModule?: (m: SpreadModule) => void; active: string | null
-  storyWidth: number; copySize: { size: number; leading: number; chars: number }
+  storyWidth: number; copySize: { size: number; leading: number; chars: number }; pack: TeamPack | null; sources: string | null
 }) {
   const e = row.editorial
   const season = seasonLabel(seasonStart).replace('–', '-')
-  const headline = wrap((e.headline || (compact ? '' : 'Two-line headline')).toUpperCase(), HEADLINE_CHARS_PER_LINE).slice(0, 3)
+  const breaks = pack?.design.headline
+  const headline = breaks?.join(' ') === e.headline ? breaks.map(l => l.toUpperCase()) : wrap((e.headline || (compact ? '' : 'Two-line headline')).toUpperCase(), HEADLINE_CHARS_PER_LINE).slice(0, 3)
   const copy = wrap(e.story || (compact ? '' : 'Story copy: at most thirty words, set under the story statistic.'), copySize.chars).slice(0, 5)
   const mod = (id: string) => SPREAD_MODULES[spread.kind].find(m => m.id === id)
   const click = (id: string) => () => { const m = mod(id); if (m && onModule) onModule(m) }
   const cur = onModule ? 'pointer' : undefined
-  const kicker = `${spread.subjectId} / ${season}`
+  const kicker = `${pack?.kicker ?? spread.subjectId} / ${season}`
+  const [statBig, statSmall] = statParts(e.storyStat.value)
   return (
     <>
       <g data-module="identity" onClick={click('identity')} style={{ cursor: cur }}>
         <text x={40} y={41} fontSize={10} fontWeight={700} fill={p.highlight} letterSpacing={0.2}>{kicker.toUpperCase()}</text>
         {headline.map((line, i) => <text key={i} x={38} y={121 + i * 56} fontSize={55} fontWeight={800} fill={p.text} letterSpacing={-0.55}>{line}</text>)}
         {!compact && headline.length > 2 && <text x={38} y={240} fontSize={7} fill={p.accent}>A third line: the headline needs cutting</text>}
-        <Mark spread={spread} p={p} />
+        <Mark spread={spread} p={p} pack={pack} />
         {active === 'identity' && <rect x={34} y={28} width={515} height={110} fill="none" stroke={p.highlight} strokeWidth={1.5} strokeDasharray="5 3" />}
       </g>
       <g data-module="story-stat" onClick={click('story-stat')} style={{ cursor: cur }}>
-        <text x={40} y={268} fontSize={53} fontWeight={800} fill={p.highlight} style={{ fontVariantNumeric: 'tabular-nums' }}>{e.storyStat.value || (compact ? '' : '00')}</text>
+        <text x={40} y={268} fontSize={53} fontWeight={800} fill={p.highlight} style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {statBig || (compact ? '' : '00')}
+          {statSmall && <tspan fontSize={22} dx={12} fillOpacity={0.9}>{statSmall}</tspan>}
+        </text>
         <text x={40} y={290} fontSize={7.5} fontWeight={500} fill={p.text} letterSpacing={0.3}>{(e.storyStat.label || (compact ? '' : 'Story statistic label')).toUpperCase()}</text>
         {copy.map((line, i) => <text key={i} x={40} y={300 + copySize.size + i * copySize.leading} fontSize={copySize.size} fill={p.text}>{line}</text>)}
         {active === 'story-stat' && <rect x={34} y={216} width={storyWidth + 12} height={180} fill="none" stroke={p.highlight} strokeWidth={1.5} strokeDasharray="5 3" />}
       </g>
       <text x={40} y={783} fontSize={6.5} fill={p.text} opacity={0.75}>
-        {spread.kind === 'team' ? `Club mark: kit-derived token (${code3(spread.subjectId)}), not the official crest · League and competition marks: flag tiles and abstract glyphs` : 'Club marks: kit-derived tokens whose shape follows each club’s crest, not the official crests · Competition and league marks: abstract glyphs and flag tiles'}
+        {spread.kind === 'team' ? `Club mark: kit-derived token (${pack ? `${pack.code} · ${pack.token.family} · ${pack.token.pattern}` : code3(spread.subjectId)}), not the official crest · League and competition marks: flag tiles and abstract glyphs` : 'Club marks: kit-derived tokens whose shape follows each club’s crest, not the official crests · Competition and league marks: abstract glyphs and flag tiles'}
       </text>
       <Rule y={790} page={1} p={p} />
       <Rule y={790} page={2} p={p} />
       <text x={40} y={808} fontSize={8.5} fill={p.text} opacity={0.85} letterSpacing={0.25}>{`${kicker}  •  ${e.headline || spread.label}`.toUpperCase()}</text>
-      <text x={625} y={805} fontSize={6.5} fill={p.text} opacity={0.85}>
-        {row.pack ? `Sources: the data pack (${row.pack.hash.slice(0, 8)}, ${row.pack.builtAt.slice(0, 10)})` : 'Sources: admin_historical_matches (results, standings) · the data pack adds lineups, minutes, transfers and awards'}
-      </text>
+      {sources
+        ? wrap(sources, 150).slice(0, 4).map((l, i) => <text key={i} x={625} y={805 + i * 9} fontSize={6.5} fill={p.text} opacity={0.8}>{l}</text>)
+        : <text x={625} y={805} fontSize={6.5} fill={p.text} opacity={0.85}>
+            {row.pack ? `Sources: the data pack (${row.pack.hash.slice(0, 8)}, ${row.pack.builtAt.slice(0, 10)})` : 'Sources: admin_historical_matches (results, standings) · the data pack adds lineups, minutes, transfers and awards'}
+          </text>}
     </>
   )
 }
@@ -497,7 +515,7 @@ function radarLabels(me: StandingRow | undefined, table: StandingRow[], league: 
 // ---------------------------------------------------------------------------
 // League template
 
-function LeaguePages({ spread, row, p, data, compact, onModule, active }: { spread: PlannedSpread; row: BookSpread; seasonStart: number; p: P; data?: CanvasData; compact: boolean; onModule?: (m: SpreadModule) => void; active: string | null }) {
+function LeaguePages({ spread, row, p, data, compact, onModule, active, pack }: { spread: PlannedSpread; row: BookSpread; seasonStart: number; p: P; data?: CanvasData; compact: boolean; onModule?: (m: SpreadModule) => void; active: string | null; pack: LeaguePack | null }) {
   const league = useMemo(() => leagueMatches(data?.rows ?? []), [data])
   const table = useMemo(() => standings(league), [league])
   const clubs = table.map(r => r.team)
@@ -608,7 +626,8 @@ function LeaguePages({ spread, row, p, data, compact, onModule, active }: { spre
         <text x={635} y={372} fontSize={7} fill={p.text} opacity={0.85}>Results in order, win / draw / loss · relegated marked · dashed line at the halfway places · R19 place and places gained come with the pack</text>
       </Hit>
 
-      {en('players') && (
+      {en('players') && pack && <LeaguePlayers pack={pack} p={p} hit={(id, x, y, w, h, children) => <Hit id={id} kind="league" x={x} y={y} w={w} h={h} onModule={onModule} active={active}>{children}</Hit>} />}
+      {en('players') && !pack && (
         <Hit id="players" kind="league" x={635} y={386} w={515} h={200} onModule={onModule} active={active}>
           <Header x={635} y={386} icon="people" title="The players / Awards and honours" p={p} wide />
           <g transform="translate(635 402)" fontSize={7} fill={p.text}>
@@ -626,15 +645,38 @@ function LeaguePages({ spread, row, p, data, compact, onModule, active }: { spre
       {en('signings') && (
         <Hit id="signings" kind="league" x={635} y={606} w={515} h={170} onModule={onModule} active={active}>
           <Header x={635} y={606} icon="money" title="The money" p={p} wide />
-          <text x={635} y={629} fontSize={7} fontWeight={700} fill={p.highlight} letterSpacing={0.3}>£5M-PLUS SIGNINGS, 1 JUNE – 1 SEPTEMBER</text>
-          {Array.from({ length: 9 }, (_, i) => <g key={i} transform={`translate(635 ${636 + i * 15})`}><Token x={0} y={2} size={10} dashed /><rect x={14} y={4} width={80} height={4} rx={1} fill={p.text} opacity={0.15} /><Token x={110} y={2} size={10} dashed /><rect x={130} y={4} width={30} height={4} rx={1} fill={p.text} opacity={0.15} /></g>)}
           <Header x={810} y={606} icon="trophy" title="The scorers" p={p} wide />
-          {Array.from({ length: 9 }, (_, i) => <g key={i} transform={`translate(810 ${636 + i * 15})`}><text y={8} fontSize={7} fill={p.text} opacity={0.8}>{i + 1}</text><rect x={12} y={4} width={90} height={4} rx={1} fill={p.text} opacity={0.15} /><rect x={120} y={4} width={30} height={4} rx={1} fill={p.text} opacity={0.15} /></g>)}
+          {pack ? <LeagueMoney pack={pack} p={p} /> : (
+            <>
+              <text x={635} y={629} fontSize={7} fontWeight={700} fill={p.highlight} letterSpacing={0.3}>£5M-PLUS SIGNINGS, 1 JUNE – 1 SEPTEMBER</text>
+              {Array.from({ length: 9 }, (_, i) => <g key={i} transform={`translate(635 ${636 + i * 15})`}><Token x={0} y={2} size={10} dashed /><rect x={14} y={4} width={80} height={4} rx={1} fill={p.text} opacity={0.15} /><Token x={110} y={2} size={10} dashed /><rect x={130} y={4} width={30} height={4} rx={1} fill={p.text} opacity={0.15} /></g>)}
+              {Array.from({ length: 9 }, (_, i) => <g key={i} transform={`translate(810 ${636 + i * 15})`}><text y={8} fontSize={7} fill={p.text} opacity={0.8}>{i + 1}</text><rect x={12} y={4} width={90} height={4} rx={1} fill={p.text} opacity={0.15} /><rect x={120} y={4} width={30} height={4} rx={1} fill={p.text} opacity={0.15} /></g>)}
+            </>
+          )}
           <Header x={985} y={606} icon="map" title="The grid" p={p} wide />
-          <g transform="translate(985 636)">{Array.from({ length: 36 }, (_, i) => <rect key={i} x={(i % 6) * 27} y={Math.floor(i / 6) * 22} width={25} height={20} fill={p.card} opacity={0.6} />)}</g>
+          <ResultsGrid rows={data?.rows ?? []} p={p} />
         </Hit>
       )}
     </>
+  )
+}
+
+/** Every home-and-away result, clubs in final-table order: W ink, D draw, L accent, the diagonal dark. */
+function ResultsGrid({ rows, p }: { rows: MatchRow[]; p: P }) {
+  const matches = useMemo(() => leagueMatches(rows), [rows])
+  const clubs = useMemo(() => standings(matches).map(r => r.team), [matches])
+  const rc = resultColours(p)
+  const size = 7.2
+  if (!clubs.length) return <g transform="translate(985 636)">{Array.from({ length: 36 }, (_, i) => <rect key={i} x={(i % 6) * 27} y={Math.floor(i / 6) * 22} width={25} height={20} fill={p.card} opacity={0.6} />)}</g>
+  return (
+    <g transform="translate(1004 632)">
+      {matches.map((m, i) => {
+        const [x, y] = [clubs.indexOf(m.a), clubs.indexOf(m.h)]
+        if (x < 0 || y < 0) return null
+        return <rect key={i} x={x * size} y={y * size} width={size - 0.5} height={size - 0.5} fill={m.hg > m.ag ? rc.W : m.hg === m.ag ? rc.D : rc.L} />
+      })}
+      {clubs.map((c, i) => <text key={c} x={-3} y={i * size + 5.5} fontSize={4.6} fill={p.text} textAnchor="end">{c.slice(0, 3).toUpperCase()}</text>)}
+    </g>
   )
 }
 
@@ -918,15 +960,20 @@ export function SpreadCanvas({ spread, row, seasonStart, data, onModule, classNa
   showRegions?: boolean
 }) {
   const p = spreadPalette(row)
+  const pack = useSpreadPack(row.key)
+  const teamPack = pack?.kind === 'team' ? pack : null
+  const leaguePack = pack?.kind === 'league' ? pack : null
   const pages = { spread, row, seasonStart, p, data, compact, onModule, active: activeModule }
-  const copy = spread.kind === 'league' ? { size: 11, leading: 14.6, chars: 40 } : { size: 12, leading: 17, chars: 36 }
+  const copy = spread.kind === 'league' ? { size: 11, leading: 14.6, chars: 40 } : teamPack ? { size: 11, leading: 15, chars: 41 } : { size: 12, leading: 17, chars: 36 }
   return (
     <svg viewBox={`0 0 ${CANVAS.width} ${CANVAS.height}`} className={className} role="img" aria-label={`${spread.label} spread`} style={{ fontFamily: FONT }}>
       <rect x={0} y={0} width={CANVAS.fold} height={CANVAS.height} fill={p.page1Ground} />
       <rect x={CANVAS.fold} y={0} width={CANVAS.fold} height={CANVAS.height} fill={p.page2Ground} />
-      <Frame spread={spread} row={row} seasonStart={seasonStart} p={p} compact={compact} onModule={onModule} active={activeModule} storyWidth={spread.kind === 'league' ? 220 : 205} copySize={copy} />
-      {spread.kind === 'team' && <TeamPages {...pages} />}
-      {spread.kind === 'league' && <LeaguePages {...pages} />}
+      <Frame spread={spread} row={row} seasonStart={seasonStart} p={p} compact={compact} onModule={onModule} active={activeModule} storyWidth={spread.kind === 'league' ? 220 : 205} copySize={copy} pack={teamPack} sources={pack?.sources ?? null} />
+      {spread.kind === 'team' && (teamPack
+        ? <TeamPackPages pack={teamPack} row={row} seasonStart={seasonStart} p={p} onModule={onModule} active={activeModule} modules={SPREAD_MODULES.team} />
+        : <TeamPages {...pages} />)}
+      {spread.kind === 'league' && <LeaguePages {...pages} pack={leaguePack} />}
       {spread.kind === 'competition' && <CompetitionPages {...pages} />}
       {showRegions && [...FRAME_REGIONS, ...SPREAD_TEMPLATES[spread.kind].regions].map(r => (
         <g key={r.id}>

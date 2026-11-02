@@ -10,6 +10,9 @@ import {
   markFingerprint, markKit, markRim, markRow, markState, matchesCrestFilter, sniffCrestType, unsafeSvg, type ClubMarkView, type CrestView,
 } from './crests'
 
+import { spreadPackSchema, type TeamPack } from './spreadPack'
+import { calendarMonths, cellCentre, climbRange, goalAxis, placeBubbles, placeRuns, radarRadius, RADAR_AXES, routeLeaders } from './teamLayout'
+
 // A four-team league: Blues lead at September's end, Reds overtake in October
 // on goal difference and finish unbeaten (checked by hand).
 const m = (d: string, h: string, a: string, hg: number, ag: number): MatchRow => ({ d, s: 'League', h, a, hg, ag })
@@ -258,3 +261,49 @@ assert.ok(planV2Schema.safeParse(starterPlanV2(2003)).success)
 assert.ok(!planV2Schema.safeParse({ ...v2, spreads: { 'nope:x': reds } }).success)
 
 console.log('seasonSpreads ok')
+
+// ---- team spread layout -----------------------------------------------------
+assert.deepEqual(climbRange([1, 7, 3]), [1, 7], 'an even span keeps the range')
+assert.deepEqual(climbRange([4, 19]), [3, 19], 'an odd span widens towards first place')
+assert.deepEqual(climbRange([1, 2]), [1, 3], 'first and second still get a middle tick')
+assert.deepEqual(goalAxis(30), { top: 30, step: 10 })
+assert.deepEqual(goalAxis(12), { top: 15, step: 5 })
+assert.deepEqual(goalAxis(0), { top: 5, step: 5 })
+
+// 2003-04's calendar, checked against the Arsenal reference: 21 Sep and 25 Apr's rings.
+const calendar = calendarMonths(seasonMonths(2003).slice(0, 10))
+const sepRing = cellCentre(calendar[1], 21)
+assert.deepEqual([Number(sepRing.x.toFixed(1)), Number(sepRing.y.toFixed(2))], [216.9, 482.25])
+const aprRing = cellCentre(calendar[8], 25)
+assert.deepEqual([Number(aprRing.x.toFixed(1)), Number(aprRing.y.toFixed(2))], [427.7, 574.25])
+
+const leaders = routeLeaders(['2003-09-21', '2003-11-25', '2004-04-25', '2004-05-15'], ['2003-09-21', '2003-10-04'], calendar)
+assert.equal(leaders.length, 4)
+assert.deepEqual(leaders.map(l => l.date), ['2003-09-21', '2003-11-25', '2004-04-25', '2004-05-15'], 'moments read left to right by ring')
+assert.ok(leaders.every(l => !l.bad && l.d.endsWith('V640')), 'no leader crosses another')
+assert.deepEqual(routeLeaders([], [], calendar), [])
+
+const run = (comp: 'UC' | 'LC' | 'FAC', n: number) => ({ comp, sub: '', rows: Array.from({ length: n }, (_, i) => ({ label: `R${i}`, opp: 'X', token: null, legs: '', right: '' })) })
+const placed = placeRuns([run('UC', 6), run('LC', 1), run('FAC', 2)])
+assert.equal(placed.placed.find(p => p.run.comp === 'UC')?.x, 625, 'the longest run stays left')
+assert.equal(placed.bottom, 32 + 31 + 18 + 20 * 5, 'bottom of the tallest column')
+
+const players: TeamPack['bubbles'] = [
+  { label: 'Owen', pos: 'FW', min: 2484, goals: 16, games: 29 }, { label: 'Twin', pos: 'DF', min: 1800, goals: 0, games: 20 },
+  { label: 'Other', pos: 'DF', min: 1800, goals: 0, games: 20 }, { label: 'Benched', pos: 'MF', min: 0, goals: 0, games: 0 },
+]
+const bubbles = placeBubbles(players, 140, ['Owen', 'Nobody'])
+assert.equal(bubbles.bubbles.length, 3, 'a player with no minutes is not drawn')
+assert.deepEqual(bubbles.labels.map(l => l.text), ['Owen'], 'an unknown story player draws no label')
+const [a, b] = bubbles.bubbles.filter(q => q.label !== 'Owen')
+assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= a.r + b.r, 'identical players are moved apart')
+assert.ok(a.moved && b.moved)
+
+const range = { min: 0.5, max: 2.5, avg: 1.5 }
+const radarRange = { gpg: range, win: range, away: range, cpg: range, cs: range, cards: range }
+assert.equal(radarRadius(radarRange, RADAR_AXES[0], 2.5), 41.5, 'the best value is the edge')
+assert.equal(radarRadius(radarRange, RADAR_AXES[3], 2.5), 5, 'most conceded is the centre')
+
+assert.equal(spreadPackSchema.safeParse({ kind: 'team', name: 'x' }).success, false, 'a partial pack is refused')
+
+console.log('teamLayout ok')

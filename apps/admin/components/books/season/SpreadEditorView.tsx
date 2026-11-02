@@ -107,7 +107,7 @@ export function SpreadEditorView({ plan, seasonStart, edit, spreads, spread, tab
           className="w-full rounded-md shadow-lg shadow-black/40" />
         <p className="text-xs text-neutral-500">
           {data.competition
-            ? data.entry?.status === 'ready' ? `${data.rows.length} ${data.competition} matches drawn; lineups, minutes, transfers, awards and cup ties arrive with the spread’s data pack.` : data.entry?.status === 'error' ? data.entry.error : `Reading ${data.competition}…`
+            ? data.entry?.status === 'ready' ? row.pack ? `${data.rows.length} ${data.competition} matches, plus the spread’s data pack (${row.pack.hash.slice(0, 8)}).` : `${data.rows.length} ${data.competition} matches drawn; lineups, minutes, transfers, awards and cup ties arrive with the spread’s data pack.` : data.entry?.status === 'error' ? data.entry.error : `Reading ${data.competition}…`
             : 'No competition data for this spread.'}
           {' '}Click a module to open the tab that drives it.
         </p>
