@@ -10,6 +10,8 @@ import type { EditorialGrid } from '@/lib/editorialStories'
 const editorialCss = `
 .vf-editorial .bcard{border-radius:16px}
 .vf-editorial .bcard .bn-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.78) 0%,rgba(0,0,0,.28) 45%,transparent 70%),linear-gradient(to bottom,rgba(0,0,0,.45) 0%,transparent 30%)}
+.vf-editorial .bcard .bcard-h,.vf-editorial .bcard .bcard-p{position:relative;z-index:1;width:fit-content;max-width:100%;padding:.2em .55em;border-radius:8px;background:rgba(8,8,16,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-decoration-break:clone;-webkit-box-decoration-break:clone;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.vf-editorial .bcard .bcard-p{margin-top:10px;padding:.35em .6em;background:rgba(8,8,16,.5)}
 .vf-editorial .bcard .bn-thumb img{transition:transform .6s cubic-bezier(.22,1,.36,1)}
 .vf-editorial .bcard:hover .bn-thumb img{transform:scale(1.04)}
 .vf-editorial .bento-slide:has(> .bcard:only-child){grid-template-rows:1fr}
