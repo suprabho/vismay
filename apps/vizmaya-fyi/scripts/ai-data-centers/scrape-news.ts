@@ -358,8 +358,20 @@ function normaliseHorizonPart(v: unknown): string | null {
   return s || null
 }
 
+/** True when the text names the place by slug, name or any alias (whole-word, case-insensitive). */
+function placeIsMentioned(place: PlaceRow | undefined, text: string): boolean {
+  if (!place) return false
+  const terms = [place.slug.replace(/-/g, ' '), place.name, ...(place.aliases ?? [])]
+  return terms.some((term) => {
+    const t = term.trim()
+    if (!t) return false
+    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(text)
+  })
+}
+
 /** Validate + normalise the model's JSON against the vocabularies and the seeded lists. */
-function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Classification {
+function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sourceText: string): Classification {
   const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
     .filter((t): t is string => typeof t === 'string')
     .map((t) => t.toLowerCase().trim())
@@ -389,7 +401,11 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Cla
   }
 
   const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
-  const place = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
+  const placeGuess = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
+  // Grounding: the model may only tag a hub the headline or summary actually
+  // names (slug, name or an alias). A loose guess ("India chips" → Bengaluru)
+  // becomes null, and the region below still comes from the model.
+  const place = placeGuess && placeIsMentioned(ctx.placeBySlug.get(placeGuess), sourceText) ? placeGuess : null
   const region: DcRegionKey | null = place
     ? ctx.placeBySlug.get(place)!.region
     : typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region)
@@ -501,7 +517,7 @@ async function classify(
   }
   // A refusal or max_tokens cut can still yield unparseable text — treat as off-topic.
   const parsed = parseJsonText(text)
-  const cls = parsed ? normalise(parsed, ctx) : REJECTED
+  const cls = parsed ? normalise(parsed, ctx, `${item.title}\n${item.summary ?? ''}`) : REJECTED
   if (!cls.relevant || cls.facts.figures.length === 0) return cls
   // Jev judges each extracted figure as a typed yes/no: literally stated, and
   // tagged right. Drops below the threshold; keeps the score on the rest.
