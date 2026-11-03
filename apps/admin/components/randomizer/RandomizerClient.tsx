@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import {
   ArrowCounterClockwise,
   ArrowSquareOut,
+  Atom,
   Check,
   CheckCircle,
   ClipboardText,
@@ -35,8 +36,8 @@ import {
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
-import { hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { EVIDENCE, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
+import { frontierAbsUrl, frontierHeadline, hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
@@ -225,14 +226,19 @@ function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: 
     if (key === 'work') return [spin.subject.work, ...spin.subject.related].flatMap((w) => (w ? [w.title] : []))
     return undefined
   }
+  if (tab === 'frontier' && spin.subject.randomizer === 'frontier') {
+    if (key === 'paper') return spin.subject.pool.titles.length ? spin.subject.pool.titles : [spin.subject.paper.title]
+    return undefined
+  }
   return news?.teams.map((t) => t.name)
 }
 
 /**
  * One slot machine for a site's randomizers: Desk, Atlas, Epics, the OCW
- * Desk, the Landmark Desk, The 100 Desk and the Evidence Desk on vizmaya
- * (with the Desk heat table, the OCW pool panel, the Landmark pool panel,
- * The 100 profile panel and the Evidence study panel), the Football Desk on footshorts
+ * Desk, the Landmark Desk, The 100 Desk, the Evidence Desk and the Frontier
+ * Desk on vizmaya (with the Desk heat table, the OCW pool panel, the Landmark
+ * pool panel, The 100 profile panel, the Evidence study panel and the
+ * Frontier paper panel), the Football Desk on footshorts
  * (with its live news table), the NBA Desk on viznba (with its news and
  * games).
  */
@@ -441,13 +447,14 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, seven reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  One slot machine, eight reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
                   tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
                   MIT OpenCourseWare live for its course and resource reels; the Landmark Desk reads the prize lists (the Nobel Prize
                   API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; The
                   100 Desk draws a person from Michael Hart&rsquo;s ranking of the most influential persons in history and reads their
                   profile (Wikidata, Wikipedia, pageviews) live; the Evidence Desk draws a study from an annotated collection of research on
-                  social media&rsquo;s effects and reads its citation record (OpenAlex) live; a cron spins each once a morning. The agent
+                  social media&rsquo;s effects and reads its citation record (OpenAlex) live; the Frontier Desk draws an arXiv paper from the ones
+                  AI Daily keeps each morning (read live from its papers table) and reads its arXiv and OpenAlex record; a cron spins each once a morning. The agent
                   brief then carries the spin.
                 </>
               )}
@@ -458,7 +465,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk)'} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk)'} been applied?
           </div>
         )}
 
@@ -765,6 +772,7 @@ export function RandomizerClient({
         {tab === 'landmark' && <LandmarkPool spin={current} />}
         {tab === 'hundred' && <HundredProfilePanel spin={current} />}
         {tab === 'evidence' && <EvidenceStudyPanel spin={current} />}
+        {tab === 'frontier' && <FrontierPaperPanel spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -1652,6 +1660,135 @@ function EvidenceStudyPanel({ spin }: { spin: SpinRecord | null }) {
             <div key={`n${i}`} className="text-amber-300/90">{n}</div>
           ))}
           {r?.sources.errors.map((e, i) => (
+            <div key={`e${i}`} className="text-red-300/90">{e}</div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** The Frontier Desk's paper: the arXiv paper the spin drew from AI Daily's kept papers, what the gate read, the papers beside it, and its live record. */
+function FrontierPaperPanel({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'frontier' ? spin.subject : null
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-neutral-300 inline-flex items-center gap-1.5">
+          <Atom size={15} className="text-cyan-400" />
+          Frontier paper
+        </span>
+        <span>
+          The arXiv papers {FRONTIER.source.name}&rsquo;s papers job keeps each morning (<code>{FRONTIER.source.table}</code>), in {FRONTIER.areas.length} areas
+          and {FRONTIER.windows.length} windows. A spin reads the last year of kept papers live, then the drawn paper&rsquo;s arXiv and OpenAlex record, and
+          keeps both on the spin.
+        </span>
+      </section>
+    )
+  }
+  const p = s.paper
+  const r = s.record
+  const head = frontierHeadline(p)
+  const row = (label: string, body: ReactNode) => (
+    <>
+      <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">{label}</span>
+      <div className="min-w-0 text-xs text-neutral-300">{body}</div>
+    </>
+  )
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Atom size={15} className="text-cyan-400" />
+          Frontier paper
+        </h2>
+        <span className="text-xs text-neutral-500">
+          One of {s.pool.size.toLocaleString('en-US')} kept papers from the last {s.pool.windowDays} days (pool read {new Date(s.pool.asOf).toLocaleString()})
+          {r ? `, record read ${new Date(r.asOf).toLocaleString()}` : ', no live record on this spin'}.{s.from ? ` Followed the thread from ${s.from}.` : ''}
+        </span>
+        {r && (
+          <span className="flex flex-wrap gap-1.5 sm:ml-auto">
+            {(['arxiv', 'openalex'] as const).map((k) => (
+              <span key={k} className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${SOURCE_TONE[r.sources[k]]}`}>
+                {k === 'arxiv' ? 'arXiv' : 'OpenAlex'} · {r.sources[k]}
+              </span>
+            ))}
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 border-b border-white/5 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Paper</span>
+        <div className="min-w-0">
+          <a href={frontierAbsUrl(p.arxivId)} target="_blank" rel="noreferrer" className="text-neutral-100 hover:underline inline-flex items-center gap-1">
+            {p.title}
+            <ArrowSquareOut size={13} className="text-neutral-500 shrink-0" />
+          </a>
+          <div className="text-xs text-neutral-500">
+            {[`arXiv:${p.arxivId}${r?.version && r.version > 1 ? ` v${r.version}` : ''}`, p.publishedAt.slice(0, 10), s.area.name, s.window.name, p.category, p.kind ? FRONTIER.kinds[p.kind] : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wider">
+            {p.importance !== null && <span className="px-2 py-0.5 rounded-full border text-cyan-300 border-cyan-400/40">importance {p.importance}/5</span>}
+            {p.weightsReleased && <span className="px-2 py-0.5 rounded-full border text-emerald-300 border-emerald-400/40">weights</span>}
+            {p.codeReleased && <span className="px-2 py-0.5 rounded-full border text-emerald-300 border-emerald-400/40">code</span>}
+            {!p.weightsReleased && !p.codeReleased && <span className="px-2 py-0.5 rounded-full border text-amber-300 border-amber-400/40">nothing released</span>}
+            {r?.journalRef ? (
+              <span className="px-2 py-0.5 rounded-full border text-emerald-300 border-emerald-400/40">published</span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full border text-amber-300 border-amber-400/40">preprint</span>
+            )}
+          </div>
+        </div>
+        {p.authors && row('Authors', <span>{p.authors}{p.affiliations ? <span className="text-neutral-500"> · {p.affiliations}</span> : null}</span>)}
+        {p.why && row('Why', <span className="text-neutral-400">{p.why}</span>)}
+        {row(
+          'Gate read',
+          <span className="text-neutral-400">
+            {head ?? 'no headline number'}
+            {p.computeBucket !== null ? ` · ${FRONTIER.compute_buckets[p.computeBucket] ?? p.computeBucket}` : ''}
+            {p.scale ? ` · ${p.scale}` : ''}
+          </span>,
+        )}
+        {p.tags.length > 0 && row('Tags', <span className="text-neutral-400">{p.tags.join(', ')}</span>)}
+        {p.editions.length > 0 &&
+          row(
+            FRONTIER.source.series,
+            <span className="flex flex-wrap gap-x-2">
+              {p.editions.map((d) => (
+                <a key={d} href={`${s.source.edition_url}${d}`} target="_blank" rel="noreferrer" className="hover:underline">
+                  {d}
+                </a>
+              ))}
+            </span>,
+          )}
+        {r && (r.journalRef || r.comment || r.citedBy !== null) &&
+          row(
+            'Record',
+            <span>
+              {[r.journalRef ? `published: ${r.journalRef}` : null, r.citedBy !== null ? `${r.citedBy.toLocaleString('en-US')} citations` : null, r.comment ? `“${r.comment}”` : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>,
+          )}
+        {s.related.length > 0 &&
+          row(
+            'Beside it',
+            <div className="flex flex-col gap-0.5">
+              {s.related.map((x) => (
+                <a key={x.arxivId} href={frontierAbsUrl(x.arxivId)} target="_blank" rel="noreferrer" className="text-neutral-400 hover:underline">
+                  <span className="text-neutral-500 font-mono">{x.arxivId}</span> {x.title}
+                </a>
+              ))}
+            </div>,
+          )}
+      </div>
+      {r && (r.sources.notes.length > 0 || r.sources.errors.length > 0) && (
+        <div className="px-4 py-3 text-xs text-neutral-500 flex flex-col gap-1">
+          {r.sources.notes.map((n, i) => (
+            <div key={`n${i}`} className="text-amber-300/90">{n}</div>
+          ))}
+          {r.sources.errors.map((e, i) => (
             <div key={`e${i}`} className="text-red-300/90">{e}</div>
           ))}
         </div>

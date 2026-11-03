@@ -1,7 +1,7 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
+import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, frontierWindowOf, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planLandmark, planOcw } from './draw'
 import {
   awardsFromNobel,
@@ -22,10 +22,11 @@ import {
   type OpenLibraryDoc,
 } from './landmarkPool'
 import { loadEvidenceRecord, recordFromOpenAlex, titleOverlap } from './evidencePool'
+import { arxivEntryFromAtom, frontierPoolFromRows, loadFrontierRecord } from './frontierPool'
 import { commonsFilePage, completeMonths, formatWikidataTime, loadHundredProfile, pageviewWindow, pageviewsFromBody, parsePoint, profileFromSparql } from './hundredPool'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { EVIDENCE_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -35,6 +36,8 @@ import {
   type EpicsPicks,
   type EvidencePicks,
   type EvidenceSubject,
+  type FrontierPicks,
+  type FrontierSubject,
   type FootshortsFixtureRef,
   type FootshortsNews,
   type FootshortsPicks,
@@ -317,7 +320,7 @@ const NEWS: FootshortsNews = {
 NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
 
 assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
-assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier'])
 assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
 assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
@@ -1660,12 +1663,219 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   }
 }
 
+// The Frontier Desk: the dataset, the pool mapping, the draw (pure, one pass over a pool) and the record (no network).
+const FR_AREAS = ['reason', 'arch', 'infer', 'multi', 'align', 'evalb']
+const frRow = (i: number, area: string, ageDays: number, extra: Record<string, unknown> = {}) => ({
+  arxiv_id: `2610.${String(10000 + i)}`,
+  title: `Paper ${i} on ${area}`,
+  abstract: 'We show a thing.',
+  authors: 'Novak, Adeyemi, Sørensen',
+  affiliations: 'Example Lab',
+  kind: i % 3 === 0 ? 'lab' : 'academic',
+  category: 'cs.LG',
+  area,
+  bench: i % 2 ? 'GPQA' : null,
+  baseline: i % 2 ? 60 : null,
+  result: i % 2 ? 64.5 : null,
+  unit: i % 2 ? 'pts' : null,
+  compute_bucket: i % 4,
+  scale: '7B-class',
+  weights_released: i % 5 === 0,
+  code_released: i % 2 === 0,
+  why: 'It moves the frontier a little.',
+  tags: [`t${i % 7}`, area],
+  importance: (i % 5) + 1,
+  published_at: daysAgo(ageDays),
+  ...extra,
+})
+// Every area gets papers in every window, and "reason" is the busy one.
+const FR_ROWS = [
+  ...FR_AREAS.flatMap((a, k) => [frRow(k * 10 + 1, a, 2), frRow(k * 10 + 2, a, 12), frRow(k * 10 + 3, a, 90)]),
+  ...Array.from({ length: 20 }, (_, j) => frRow(100 + j, 'reason', 1 + j * 9)),
+  frRow(200, 'align', 40, { area: 'not-an-area' }),
+  { arxiv_id: '2610.99999', title: '', published_at: daysAgo(3) },
+]
+const FR_EDITIONS = [
+  { edition_date: '2026-10-04', paper_ids: ['2610.10001', '2610.10011'] },
+  { edition_date: '2026-10-03', paper_ids: ['2610.10001'] },
+]
+const FR_POOL = frontierPoolFromRows(FR_ROWS, FR_EDITIONS, { asOf: NOW.toISOString(), windowDays: 365 })
+{
+  assert.deepEqual(FRONTIER.areas.map((a) => a.id), FR_AREAS, 'the areas match dc_papers.area')
+  assert.equal(FRONTIER.lenses.length, Object.keys(FRONTIER_LENS_METRICS).length)
+  for (const l of FRONTIER.lenses) assert.ok(FRONTIER_LENS_METRICS[l.name], `metrics for ${l.name}`)
+  assert.equal(reelPool('frontier', 'area').length, 6)
+  assert.deepEqual(reelPool('frontier', 'paper', ['A']), ['A'])
+  assert.deepEqual(normalizeLocks('frontier', ['paper']), ['area', 'window', 'paper'])
+  assert.equal(frontierWindowOf({ publishedAt: daysAgo(2) }, NOW.getTime()).id, 'week')
+  assert.equal(frontierWindowOf({ publishedAt: daysAgo(7) }, NOW.getTime()).id, 'month')
+  assert.equal(frontierWindowOf({ publishedAt: daysAgo(31) }, NOW.getTime()).id, 'archive')
+
+  // The pool: rows without a title dropped, newest first, featured editions attached and sorted.
+  assert.equal(FR_POOL.papers.length, FR_ROWS.length - 1)
+  assert.ok(FR_POOL.papers.every((p, i, a) => i === 0 || a[i - 1]!.publishedAt >= p.publishedAt))
+  assert.deepEqual(FR_POOL.papers.find((p) => p.arxivId === '2610.10001')!.editions, ['2026-10-03', '2026-10-04'])
+  assert.equal(FR_POOL.papers.find((p) => p.arxivId === '2610.10002')!.baseline, null)
+  assert.equal(FR_POOL.editionsRead, 2)
+
+  assert.throws(() => draw({ randomizer: 'frontier', seed: 1, now: NOW }), /ingest-dc-papers/)
+  assert.throws(() => draw({ randomizer: 'frontier', seed: 1, now: NOW, frontierPool: { ...FR_POOL, papers: [] } }), /none were found/)
+
+  const spinFr = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'frontierPool'>) => draw({ randomizer: 'frontier', frontierPool: FR_POOL, ...input })
+
+  // Determinism; the paper sits in the drawn area and window; the reels, rules and subject say so.
+  for (let seed = 0; seed < 60; seed++) {
+    const a = spinFr({ seed, now: NOW })
+    assert.deepEqual(a, spinFr({ seed, now: NOW }))
+    const s = a.subject as FrontierSubject
+    const p = a.picks as FrontierPicks
+    assert.equal(s.paper.arxivId, p.paper)
+    assert.equal(s.paper.area, p.area)
+    assert.notEqual(s.paper.area, 'not-an-area', 'a paper with an unknown area is never drawn')
+    assert.equal(frontierWindowOf(s.paper, NOW.getTime()).id, p.window)
+    assert.equal(a.primary, p.paper)
+    assert.equal(a.combo, `${p.paper}|${p.lens}`)
+    assert.equal(s.record, null, 'the record is read after the draw')
+    assert.ok(!s.related.some((x) => x.arxivId === p.paper))
+    assert.ok(a.reels.paper!.sub!.startsWith(`${p.paper} · `))
+    assert.ok(a.rules.some((r) => r.tag === 'preprint') && a.rules.some((r) => r.tag === 'gate'))
+    for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  }
+
+  // Every area comes up; the busy one more often but not in proportion.
+  {
+    const counts = new Map<string, number>()
+    for (let seed = 0; seed < 1200; seed++) {
+      const t = (spinFr({ seed, now: NOW }).picks as FrontierPicks).area
+      counts.set(t, (counts.get(t) ?? 0) + 1)
+    }
+    assert.equal(counts.size, 6)
+    assert.ok(counts.get('reason')! > counts.get('multi')!)
+    assert.ok(counts.get('reason')! / counts.get('multi')! < 23 / 3, 'square-root weighting, not proportional')
+  }
+
+  // Locks keep the paper, or keep the draw inside the area and window.
+  const first = spinFr({ seed: 4, now: NOW })
+  const fp = first.picks as FrontierPicks
+  for (let seed = 5; seed < 30; seed++) {
+    assert.equal((spinFr({ seed, now: NOW, prev: first, locks: ['paper'] }).picks as FrontierPicks).paper, fp.paper)
+    assert.equal((spinFr({ seed, now: NOW, prev: first, locks: ['area'] }).picks as FrontierPicks).area, fp.area)
+    const d = spinFr({ seed, now: NOW, prev: first, locks: ['window'] }).picks as FrontierPicks
+    assert.deepEqual([d.area, d.window], [fp.area, fp.window])
+  }
+  // A locked paper that has left the pool is ignored, with a warning.
+  const gone = spinFr({ seed: 5, now: NOW, prev: { picks: { ...fp, paper: '1901.00001' } }, locks: ['paper'] })
+  assert.ok(gone.rules.some((r) => r.tag === 'lock' && /no longer in the pool/.test(r.text)))
+
+  // A paper is drawn once: in a cell of two, the unspun one; with both spun, the one spun longest ago.
+  {
+    const multiWeek = FR_POOL.papers.filter((p) => p.area === 'multi' && frontierWindowOf(p, NOW.getTime()).id === 'week').map((p) => p.arxivId)
+    assert.equal(multiWeek.length, 1)
+    const cell = { picks: { area: 'multi', window: 'week', paper: multiWeek[0]!, lens: 'Hype check' } }
+    const spunAt = (paper: string, d: number) => entry(spinFr({ seed: 1, now: NOW, prev: { picks: { ...cell.picks, paper } }, locks: ['paper'] }), d)
+    // multi has one paper per window, so "week" holds only that one: once spun, the block lifts back to it.
+    const solo = spinFr({ seed: 2, now: NOW, prev: cell, locks: ['window'], history: [spunAt(multiWeek[0]!, 10)] })
+    assert.equal((solo.picks as FrontierPicks).paper, multiWeek[0])
+    assert.ok(solo.rules.some((r) => r.tag === '90 days' && /lifted/.test(r.text)))
+    // reason (This week) has several: a spun one is left out.
+    const reasonWeek = FR_POOL.papers.filter((p) => p.area === 'reason' && frontierWindowOf(p, NOW.getTime()).id === 'week').map((p) => p.arxivId)
+    assert.ok(reasonWeek.length >= 2)
+    const hist = reasonWeek.slice(1).map((id, i) => spunAt(id, 5 + i))
+    for (let seed = 0; seed < 20; seed++) {
+      const r = spinFr({ seed, now: NOW, prev: { picks: { area: 'reason', window: 'week', paper: reasonWeek[0]!, lens: 'Hype check' } }, locks: ['window'], history: hist })
+      assert.equal((r.picks as FrontierPicks).paper, reasonWeek[0])
+    }
+  }
+
+  // The same area twice in a row is re-drawn once.
+  let redrawn = false
+  for (let seed = 0; seed < 80 && !redrawn; seed++) {
+    const fresh = spinFr({ seed, now: NOW })
+    redrawn = spinFr({ seed, now: NOW, history: [entry(fresh, 1)] }).rules.some((r) => r.tag === 'balance' && /twice in a row/.test(r.text))
+  }
+  assert.ok(redrawn, 'the same-area rule fires')
+
+  // Sequence mode follows the thread to a paper sharing tags or the benchmark; without a previous spin it draws fresh; a lock wins.
+  {
+    const origin = FR_POOL.papers.find((p) => p.arxivId === '2610.10001')!
+    const at = entry(spinFr({ seed: 2, now: NOW, prev: { picks: { area: 'reason', window: 'week', paper: origin.arxivId, lens: 'Hype check' } }, locks: ['paper'] }), 1)
+    for (let seed = 0; seed < 30; seed++) {
+      const next = spinFr({ seed, now: NOW, history: [at], sequence: true })
+      const p = (next.subject as FrontierSubject).paper
+      assert.notEqual(p.arxivId, origin.arxivId)
+      assert.ok(p.tags.some((t) => origin.tags.includes(t)) || (p.bench && p.bench === origin.bench), 'shares a tag or the benchmark')
+      assert.equal((next.subject as FrontierSubject).from, origin.arxivId)
+    }
+    const none = spinFr({ seed: 9, now: NOW, sequence: true })
+    assert.ok(none.rules.some((x) => x.tag === 'sequence' && /previous spin/.test(x.text)))
+    const prev = spinFr({ seed: 9, now: NOW, history: [at] })
+    const locked = spinFr({ seed: 9, now: NOW, history: [at], sequence: true, prev, locks: ['paper'] })
+    assert.equal((locked.picks as FrontierPicks).paper, (prev.picks as FrontierPicks).paper)
+  }
+
+  // 90-day (paper, lens) block re-draws the lens; the featured paper fires the edition rule.
+  {
+    const picks = { area: 'reason', window: 'week', paper: '2610.10001', lens: 'Hype check' }
+    const ran = entry(spinFr({ seed: 1, now: NOW, prev: { picks }, locks: ['paper', 'lens'] }), 40)
+    for (let seed = 0; seed < 20; seed++) {
+      assert.notEqual((spinFr({ seed, now: NOW, history: [ran], prev: { picks }, locks: ['paper'] }).picks as FrontierPicks).lens, 'Hype check')
+    }
+    const ed = spinFr({ seed: 1, now: NOW, prev: { picks }, locks: ['paper'] })
+    assert.ok(ed.rules.some((q) => q.tag === 'edition' && /2026-10-03 and 2026-10-04/.test(q.text)))
+    assert.ok(ed.rules.some((q) => q.tag === 'benchmark' && /60 to 64.5 pts on GPQA/.test(q.text)))
+    assert.ok(ed.rules.some((q) => q.tag === 'fresh'))
+  }
+
+  // arXiv's Atom answer and the record: a revised, published paper; OpenAlex without a record; a failure.
+  {
+    const atom = `<?xml version="1.0"?><feed><id>http://arxiv.org/api/x</id><entry><id>http://arxiv.org/abs/2610.10001v3</id><updated>2026-10-20T10:00:00Z</updated><title>Paper 1</title><arxiv:comment xmlns:arxiv="http://arxiv.org/schemas/atom">Accepted at NeurIPS 2026 &amp; code released</arxiv:comment><arxiv:journal_ref xmlns:arxiv="http://arxiv.org/schemas/atom">NeurIPS 2026</arxiv:journal_ref><arxiv:doi xmlns:arxiv="http://arxiv.org/schemas/atom">10.1000/xyz</arxiv:doi></entry></feed>`
+    const e = arxivEntryFromAtom(atom, '2610.10001')!
+    assert.deepEqual(e, { version: 3, updated: '2026-10-20T10:00:00Z', journalRef: 'NeurIPS 2026', doi: '10.1000/xyz', comment: 'Accepted at NeurIPS 2026 & code released' })
+    assert.equal(arxivEntryFromAtom(atom, '2610.10002'), null)
+    const env = { openalexKey: null, email: null }
+    const paper = FR_POOL.papers.find((p) => p.arxivId === '2610.10001')!
+    pending.push(
+      (async () => {
+        const seen: string[] = []
+        const fake = (async (url: string) => {
+          seen.push(String(url))
+          if (String(url).includes('arxiv.org')) return new Response(atom, { status: 200 })
+          return new Response(JSON.stringify({ id: 'https://openalex.org/W1', cited_by_count: 12, counts_by_year: [{ year: 2026, cited_by_count: 12 }] }), { status: 200 })
+        }) as typeof fetch
+        const rec = await loadFrontierRecord(paper, { fetch: fake, env, now: NOW })
+        assert.equal(rec.version, 3)
+        assert.equal(rec.journalRef, 'NeurIPS 2026')
+        assert.equal(rec.citedBy, 12)
+        assert.equal(rec.openalexUrl, 'https://openalex.org/W1')
+        assert.deepEqual([rec.sources.arxiv, rec.sources.openalex], ['ok', 'ok'])
+        assert.ok(seen.some((u) => u.includes('doi%3A10.48550%2Farxiv.2610.10001') || u.includes('doi:10.48550%2Farxiv.2610.10001')), 'OpenAlex by the arXiv DOI')
+        assert.ok(rec.sources.notes.some((n) => /v3/.test(n)))
+
+        const missing = await loadFrontierRecord(paper, { fetch: (async (url: string) => (String(url).includes('arxiv.org') ? new Response(atom) : new Response('{}', { status: 404 }))) as typeof fetch, env })
+        assert.equal(missing.sources.openalex, 'skipped')
+        assert.equal(missing.citedBy, null)
+
+        const broken = await loadFrontierRecord(paper, { fetch: (async () => new Response('x', { status: 503 })) as typeof fetch, env })
+        assert.deepEqual([broken.sources.arxiv, broken.sources.openalex], ['failed', 'failed'])
+        assert.equal(broken.sources.errors.length, 2)
+
+        const drawn = spinFr({ seed: 3, now: NOW })
+        const sub = { ...(drawn.subject as FrontierSubject), record: rec }
+        assert.ok(frontierCreditLine(sub).includes('OpenAlex') && frontierCreditLine(sub).includes('https://arxiv.org/abs/'))
+        assert.ok(!frontierCreditLine({ ...sub, record: null }).includes('OpenAlex'))
+        const brief = assignmentSection(asSpin({ ...drawn, subject: sub }))
+        assert.ok(brief.includes('Published since') && brief.includes('Now at v3'))
+      })(),
+    )
+  }
+}
+
 // Stub and brief sections.
 const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
 const LM_PLAN = planLandmark({ randomizer: 'landmark', seed: 21, now: NOW }, lmAwardsFor(planLandmark({ randomizer: 'landmark', seed: 21, now: NOW })))
 const LM_POOL = lmPoolFor(LM_PLAN, lmAwardsFor(LM_PLAN))
-for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'footshorts', 'viznba'] as const) {
-  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL }))
+for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'footshorts', 'viznba'] as const) {
+  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL, frontierPool: FR_POOL }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))
   assert.ok(stub.includes('## HERO INSIGHT'))

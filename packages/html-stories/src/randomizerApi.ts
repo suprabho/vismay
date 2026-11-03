@@ -43,6 +43,12 @@
  *                                                     `study` (1 to 83), that study and its live citation
  *                                                     record as a spin would read it
  *   GET  /api/randomizer/cron/evidence              the Evidence Desk's daily spin (Vercel Cron, CRON_SECRET)
+ *   GET  /api/randomizer/frontier?paper=            the Frontier Desk's pool (vizmaya only): AI Daily's kept
+ *                                                     arXiv papers as a spin reads them (areas, windows, lenses,
+ *                                                     counts per area and window, the newest papers); with
+ *                                                     `paper` (an arXiv id), that paper and its live arXiv and
+ *                                                     OpenAlex record
+ *   GET  /api/randomizer/cron/frontier              the Frontier Desk's daily spin (Vercel Cron, CRON_SECRET)
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -51,9 +57,10 @@
  * Server only.
  */
 
-import { DESK, EVIDENCE, HUNDRED, LANDMARK, OCW, evidenceByNumber, hundredByRank } from '@vismay/randomizer/datasets'
+import { DESK, EVIDENCE, FRONTIER, HUNDRED, LANDMARK, OCW, evidenceByNumber, frontierWindowOf, hundredByRank } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
 import { loadEvidenceRecord } from '@vismay/randomizer/evidencePool'
+import { loadFrontierRecord } from '@vismay/randomizer/frontierPool'
 import { loadHundredProfile } from '@vismay/randomizer/hundredPool'
 import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from '@vismay/randomizer/landmarkPool'
 import { loadOcwPool } from '@vismay/randomizer/ocwPool'
@@ -68,6 +75,7 @@ import {
   listDeskHeat,
   listSpins,
   loadFootshortsNews,
+  loadFrontierPool,
   loadViznbaNews,
   refreshDeskHeat,
   saveSpinResearch,
@@ -452,8 +460,49 @@ export async function handleEvidencePoolRequest(req: Request): Promise<Response>
 }
 
 /**
+ * GET /api/randomizer/frontier on vizmaya: the Frontier Desk's pool, read
+ * from AI Daily's dc_papers the way a spin reads it. Without `paper` it
+ * answers the areas, windows and lenses, how many kept papers sit in each
+ * area and window today, and the 30 newest; with `paper` (an arXiv id such
+ * as 2609.11902) that paper as the pool holds it and its live record
+ * (packages/randomizer frontierPool.ts: arXiv, OpenAlex), for an agent that
+ * wants to look before locking a paper. Read-only; a source that fails is
+ * recorded in the record, never an error.
+ */
+export async function handleFrontierPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  if (!hasRandomizerEnv()) return json({ error: 'the Frontier Desk needs Supabase service credentials to read dc_papers' }, 503)
+  const raw = new URL(req.url).searchParams.get('paper')?.trim().replace(/^arxiv:/i, '').replace(/v\d+$/, '')
+  if (raw !== undefined && raw !== '' && !/^\d{4}\.\d{4,5}$/.test(raw)) return json({ error: 'paper must be an arXiv id like 2609.11902' }, 400)
+  try {
+    const pool = await loadFrontierPool()
+    if (raw) {
+      const paper = pool.papers.find((p) => p.arxivId === raw)
+      if (!paper) return json({ error: `${raw} is not among AI Daily's kept papers from the last ${pool.windowDays} days` }, 404)
+      return json({ paper, window: frontierWindowOf(paper, Date.now()), record: await loadFrontierRecord(paper) })
+    }
+    const now = Date.now()
+    const counts = FRONTIER.areas.map((a) => ({
+      area: a.id,
+      name: a.name,
+      windows: Object.fromEntries(FRONTIER.windows.map((w) => [w.id, pool.papers.filter((p) => p.area === a.id && frontierWindowOf(p, now).id === w.id).length])),
+    }))
+    const newest = pool.papers.slice(0, 30).map(({ abstract: _a, ...p }) => p)
+    return json({
+      ...FRONTIER,
+      pool: { asOf: pool.asOf, windowDays: pool.windowDays, size: pool.papers.length, editionsRead: pool.editionsRead, counts, newest },
+      note: "Pass paper (an arXiv id) for that paper's live arXiv and OpenAlex record, as a spin would read it.",
+    })
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+/**
  * The daily spin of a randomizer with a cron (the OCW Desk, the Landmark
- * Desk, The 100 Desk, the Evidence Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
+ * Desk, The 100 Desk, the Evidence Desk, the Frontier Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
  * `Authorization: Bearer $CRON_SECRET`; it fails closed without the secret.
  * One spin per UTC day: when a kept spin of that randomizer already exists
  * today (someone spun by hand), it answers with that one and spins nothing.
@@ -492,4 +541,9 @@ export async function handleHundredDailySpinRequest(req: Request, origin: string
 /** GET /api/randomizer/cron/evidence on vizmaya: the Evidence Desk's daily spin. */
 export async function handleEvidenceDailySpinRequest(req: Request, origin: string): Promise<Response> {
   return handleDailySpinRequest(req, origin, 'evidence')
+}
+
+/** GET /api/randomizer/cron/frontier on vizmaya: the Frontier Desk's daily spin. */
+export async function handleFrontierDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'frontier')
 }

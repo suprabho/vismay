@@ -18,7 +18,10 @@
  * too (evidence.json, parsed from the annotated research collection in
  * scripts/randomizer/sources/ by scripts/randomizer/evidence-taxonomy.mts);
  * only the drawn study's citation record is read live (EvidenceRecord:
- * OpenAlex and Unpaywall).
+ * OpenAlex and Unpaywall). The Frontier Desk's areas, windows and lenses
+ * are here (frontier.json); its papers are read live from AI Daily's
+ * dc_papers table at spin time (spins.ts loadFrontierPool), and the drawn
+ * paper's record from arXiv and OpenAlex after the draw (frontierPool.ts).
  */
 
 import type {
@@ -30,6 +33,9 @@ import type {
   EvidenceDataset,
   EvidenceStudy,
   FootshortsDataset,
+  FrontierDataset,
+  FrontierPaper,
+  FrontierWindow,
   HundredDataset,
   HundredPerson,
   LandmarkDataset,
@@ -46,6 +52,7 @@ import ocwJson from './data/ocw.json'
 import landmarkJson from './data/landmark.json'
 import hundredJson from './data/hundred.json'
 import evidenceJson from './data/evidence.json'
+import frontierJson from './data/frontier.json'
 import footshortsJson from './data/footshorts.json'
 import viznbaJson from './data/viznba.json'
 
@@ -56,6 +63,7 @@ export const OCW = ocwJson as unknown as OcwDataset
 export const LANDMARK = landmarkJson as unknown as LandmarkDataset
 export const HUNDRED = hundredJson as unknown as HundredDataset
 export const EVIDENCE = evidenceJson as unknown as EvidenceDataset
+export const FRONTIER = frontierJson as unknown as FrontierDataset
 export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
 export const VIZNBA = viznbaJson as unknown as ViznbaDataset
 
@@ -96,6 +104,17 @@ export function evidenceByNumber(n: number, data: EvidenceDataset = EVIDENCE): E
   return data.studies.find((s) => s.n === n)
 }
 
+/** A paper's age in whole days at `now` (never negative). */
+export function frontierAgeDays(paper: Pick<FrontierPaper, 'publishedAt'>, now: number): number {
+  return Math.max(0, Math.floor((now - Date.parse(paper.publishedAt)) / 864e5))
+}
+
+/** The window a paper falls in at `now`: This week, This month or the back catalogue. */
+export function frontierWindowOf(paper: Pick<FrontierPaper, 'publishedAt'>, now: number, data: FrontierDataset = FRONTIER): FrontierWindow {
+  const age = frontierAgeDays(paper, now)
+  return data.windows.find((w) => age >= w.min_days && (w.max_days === null || age < w.max_days)) ?? data.windows[data.windows.length - 1]!
+}
+
 /** Types that count toward the one-in-three quota (playbook 3.2). */
 export function isPhilosophical(types: readonly string[] | undefined): boolean {
   return !!types?.some((t) => t === 'Philosophical and spiritual' || t === 'Foundational and creation')
@@ -111,7 +130,8 @@ export function epicRoute(epic: Epic): Array<{ episodeId: string; place: EpicPla
  * `live` fills the reels no dataset has: the Footshorts team and opponent
  * reels (names from the news snapshot), the OCW course and resource reels
  * (names from the spin's pool), the Landmark laureate and work reels (names
- * and titles from the spin's pool).
+ * and titles from the spin's pool), the Frontier paper reel (titles from
+ * the spin's pool).
  */
 export function reelPool(randomizer: RandomizerId, key: string, live: readonly string[] = []): string[] {
   if (randomizer === 'desk') {
@@ -158,6 +178,12 @@ export function reelPool(randomizer: RandomizerId, key: string, live: readonly s
     if (key === 'design') return EVIDENCE.designs.map((d) => d.name)
     if (key === 'study') return EVIDENCE.studies.map((s) => s.label)
     if (key === 'lens') return EVIDENCE.lenses.map((l) => l.name)
+  }
+  if (randomizer === 'frontier') {
+    if (key === 'area') return FRONTIER.areas.map((a) => a.name)
+    if (key === 'window') return FRONTIER.windows.map((w) => w.name)
+    if (key === 'paper') return [...live]
+    if (key === 'lens') return FRONTIER.lenses.map((l) => l.name)
   }
   if (randomizer === 'footshorts') {
     if (key === 'competition') return FOOTSHORTS.competitions.map((c) => c.name)

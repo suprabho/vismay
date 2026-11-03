@@ -6,6 +6,7 @@ import { themeMetaContent } from './meta'
 import { parseHtmlStoryTone } from './tone'
 import { entityStoryStyle, parseEntityStyle, parseStoryStyleToken, storyStyleFromPool, stylePoolFromStories, styleToken } from './styles'
 import { draw } from '@vismay/randomizer/draw'
+import { frontierPoolFromRows } from '@vismay/randomizer/frontierPool'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
 // vizmaya: unchanged defaults.
@@ -312,9 +313,18 @@ const fsBook = htmlStoryBrief({ siteUrl: 'https://footshorts.com', app: 'footsho
 assert.ok(fsBook.includes('https://footshorts.com/formats/book@1.js') && !fsBook.includes('vizmaya.fyi'))
 
 // An "Explain like I'm 5" spin swaps the randomizer's format for a picture story, for any randomizer that has the lens.
-for (const randomizer of ['hundred', 'evidence'] as const) {
+// The Frontier Desk draws from AI Daily's papers: a two-paper pool stands in for dc_papers.
+const frontierPool = frontierPoolFromRows(
+  [
+    { arxiv_id: '2610.00001', title: 'Sparse attention at a million tokens', area: 'infer', tags: ['attention'], bench: 'RULER', baseline: 61, result: 70, unit: 'pts', importance: 4, published_at: '2026-10-03T00:00:00Z' },
+    { arxiv_id: '2610.00002', title: 'Cheaper attention kernels', area: 'infer', tags: ['attention'], importance: 3, published_at: '2026-09-20T00:00:00Z' },
+  ],
+  [],
+  { asOf: '2026-10-05T12:00:00Z', windowDays: 365 },
+)
+for (const randomizer of ['hundred', 'evidence', 'frontier'] as const) {
   const now = new Date('2026-10-05T12:00:00Z')
-  const drawn = draw({ randomizer, seed: 5, now })
+  const drawn = draw({ randomizer, seed: 5, now, frontierPool })
   const spin = {
     ...drawn,
     subject: { ...drawn.subject, lens: { name: "Explain like I'm 5", description: 'For a five-year-old.' } },
@@ -328,7 +338,7 @@ for (const randomizer of ['hundred', 'evidence'] as const) {
   const b = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
   assert.ok(b.includes('## Format: picture story for a five-year-old'), `${randomizer}: eli5 format`)
   assert.ok(b.indexOf('**Reader: a five-year-old (required).**') < b.indexOf('## Your assignment'), `${randomizer}: banner first`)
-  assert.ok(!b.includes('## Format: influence profile') && !b.includes('## Format: landmark paper') && !b.includes('## Format: study note') && !b.includes('## Format: evidence explainer'))
+  assert.ok(!b.includes('## Format: influence profile') && !b.includes('## Format: landmark paper') && !b.includes('## Format: study note') && !b.includes('## Format: evidence explainer') && !b.includes('## Format: paper explainer'))
   assert.ok(!b.includes('End with a "Sources and claims log" section') && b.includes('"For grown-ups" card'))
   assert.ok(b.includes('Write the script for the same five-year-old'))
   assert.ok(b.includes('20 words or fewer each'))

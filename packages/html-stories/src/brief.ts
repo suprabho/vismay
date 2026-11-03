@@ -908,11 +908,19 @@ const EVIDENCE_SPIN_RULES = [
   'Citation counts are OpenAlex data (CC0): credit them as the assignment says, with the read date. A figure redrawn from a paper cites it; never paste a paper\'s figure.',
 ]
 
+/** A Frontier Desk spin's brief carries one arXiv paper from AI Daily and its live record: how the page uses them. */
+const FRONTIER_SPIN_RULES = [
+  "AI Daily's gate fields (area, headline benchmark and numbers, compute, scale, what was released, why it matters) are a model's reading of the abstract: leads, not sources. Every number on the page comes from the paper itself (table or figure, and the version read), and the page links the arXiv page, never a press release or a post about it.",
+  'An arXiv paper is a preprint: label it wherever its result appears, and report its claims as the authors\' ("the authors report") until a replication or a peer-reviewed version confirms them. A benchmark number goes on the page with its baseline and setting.',
+  'Any figure about compute, energy, chips or money that the paper does not state names its public source and every assumption. Citation counts are OpenAlex data (CC0): credit them with the read date. Redraw a figure from the paper with a citation; never paste it.',
+]
+
 function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
   if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
   if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES
   if (spin.randomizer === 'hundred') return HUNDRED_SPIN_RULES
   if (spin.randomizer === 'evidence') return EVIDENCE_SPIN_RULES
+  if (spin.randomizer === 'frontier') return FRONTIER_SPIN_RULES
   return hasContext ? (SPIN_CONTEXT_RULES[app] ?? []) : []
 }
 
