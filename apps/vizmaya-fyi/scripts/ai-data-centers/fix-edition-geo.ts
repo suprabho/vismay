@@ -35,7 +35,15 @@ async function main() {
     .eq('edition_date', date)
     .maybeSingle()
   if (error) throw new Error(`read failed: ${error.message}`)
-  if (!data) throw new Error(`no edition for ${date}`)
+  if (!data) {
+    const { data: recent } = await sb
+      .from('dc_editions')
+      .select('edition_date, status')
+      .order('edition_date', { ascending: false })
+      .limit(8)
+    const list = (recent ?? []).map((r) => `${r.edition_date} (${r.status})`).join(', ')
+    throw new Error(`no edition for ${date}. Most recent: ${list || 'none'}`)
+  }
   if (data.status !== 'published') {
     console.log(`Edition ${date} is ${data.status}, not published — use Recompose in admin instead.`)
     return
