@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr'
-import { listEditions } from '@vismay/dc-editions/dcEditions'
+import { listEditionGeoSeries, listEditions } from '@vismay/dc-editions/dcEditions'
 import type { DcEditionSummary } from '@vismay/dc-editions/dcEditionTypes'
 import { formatEditionDate, formatSigned } from '@vismay/dc-editions/dcEditionTypes'
 import JsonLd from '@/components/JsonLd'
@@ -9,6 +9,7 @@ import { buildBreadcrumbJsonLd, buildDailyCollectionJsonLd } from '@/lib/jsonLd'
 import { SERIES_HREF, boomScore, editionHref } from './components/editionUtils'
 import BoomScore from './components/BoomScore'
 import DailyMasthead from './components/DailyMasthead'
+import GeoTimeline, { type GeoDay } from './components/GeoTimeline'
 import EditionThemeStyle from './components/EditionThemeStyle'
 import MoodTrend from './components/MoodTrend'
 import { StaticRing } from './components/ScoreRing'
@@ -34,10 +35,14 @@ export const metadata: Metadata = {
 }
 
 export default async function DoomVBoomLanding() {
-  const [editions, themeOverrides] = await Promise.all([
+  const [editions, geoDays, themeOverrides] = await Promise.all([
     listEditions(400).catch((err) => {
       console.warn(`ai-daily/doom-v-boom: listEditions failed: ${err}`)
       return [] as DcEditionSummary[]
+    }),
+    listEditionGeoSeries(400).catch((err) => {
+      console.warn(`ai-daily/doom-v-boom: listEditionGeoSeries failed: ${err}`)
+      return [] as GeoDay[]
     }),
     loadThemeOverrides(),
   ])
@@ -99,6 +104,20 @@ export default async function DoomVBoomLanding() {
               </div>
               <MoodTrend editions={editions.slice(0, TREND_DAYS)} />
             </section>
+
+            {geoDays.some((d) => d.places.length > 0) && (
+              <section className="border-t border-[var(--line)] py-14" aria-labelledby="geo-h">
+                <div className="chapter-head">
+                  <h2 id="geo-h">Where it’s happening</h2>
+                  <p className="lede">
+                    Every edition’s story clusters on one map. Cumulative grows each place by its running story count through the morning you pick —
+                    that morning’s places at full strength, new ones ringed; That morning shows one edition alone. Press play to watch the build-out
+                    spread, or drag along the strip: one bar per edition, its height the stories that carried a place.
+                  </p>
+                </div>
+                <GeoTimeline days={geoDays} />
+              </section>
+            )}
 
             <Methodology />
 
