@@ -6,6 +6,7 @@ import { themeMetaContent } from './meta'
 import { parseHtmlStoryTone } from './tone'
 import { entityStoryStyle, parseEntityStyle, parseStoryStyleToken, storyStyleFromPool, stylePoolFromStories, styleToken } from './styles'
 import { draw } from '@vismay/randomizer/draw'
+import { researchProtocolSection } from '@vismay/randomizer/spinBrief'
 import { frontierPoolFromRows } from '@vismay/randomizer/frontierPool'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
@@ -344,6 +345,14 @@ for (const randomizer of ['hundred', 'evidence', 'frontier'] as const) {
   assert.ok(b.includes('20 words or fewer each'))
   // The research protocol is unchanged: the claims log still gets built.
   assert.ok(b.includes('Build the claims log first'))
+  // Two insights, a stand-in table, one precedence line, and the picture story's own modules.
+  assert.ok(b.includes('STORY INSIGHT') && b.includes('STAND-IN TABLE') && b.includes('| Stand-in | Real thing | Claim row |'), `${randomizer}: insight split and stand-in table`)
+  assert.ok(b.includes('format > reader > tone > house rules') && b.indexOf('format > reader > tone') < b.indexOf('## Your assignment'), `${randomizer}: precedence`)
+  assert.ok(!b.includes('## Photography and media') && !b.includes('## Maps') && !b.includes('Wikimedia Commons.') && !b.includes('Mapbox'), `${randomizer}: no photo or map modules`)
+  assert.ok(b.includes('## Pictures') && b.includes('Background `#fff8ec`') && !b.includes("Background `#0a0e14`"), `${randomizer}: light palette`)
+  const humorous = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin, tone: 'humorous' })
+  assert.ok(humorous.includes('gentle silliness') && !humorous.includes('sardonic columnist'), `${randomizer}: kids tone`)
+  assert.ok(b.includes('valid ending, not a failure'), `${randomizer}: hand-back ending`)
   // Another lens keeps the usual format.
   const other = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin: { ...spin, subject: drawn.subject } })
   if ((drawn.subject as { lens: { name: string } }).lens.name !== "Explain like I'm 5") assert.ok(!other.includes('picture story'), `${randomizer}: other lens`)
@@ -410,3 +419,10 @@ console.log('brief: ok')
   const team = entityStoryStyle({ kind: 'team', slug: 'lille-osc', name: 'Lille OSC', style: { palette: drawn.palette, fonts: drawn.fonts } })
   assert.equal(styleToken(team), 'team:lille-osc')
 }
+
+// The landmark work picker switches to a work the award documents cite.
+{
+  const protocol = researchProtocolSection({ id: 'x', randomizer: 'landmark', createdAt: '2026-10-05T00:00:00Z', subject: { randomizer: 'landmark', award: { name: 'A' }, lens: { name: 'x' } } } as unknown as Parameters<typeof researchProtocolSection>[0])
+  assert.ok(protocol.includes('switch to the cited work they emphasise most, and record why'), 'landmark: automatic switch rule')
+}
+console.log('brief eli5 extras: ok')

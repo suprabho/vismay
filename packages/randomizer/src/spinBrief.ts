@@ -110,6 +110,10 @@ function eli5Subject(spin: BriefSpin): { who: string; real: string; credit: stri
   return { who: 'the subject', real: 'the record', credit: '' }
 }
 
+/** One line near the top of every spun brief: which rule wins when two clash. */
+export const PRECEDENCE_LINE =
+  'When rules in this brief clash, the higher one wins: format > reader > tone > house rules. A format\'s unit counts, chart counts and image rules beat the generic sections below.'
+
 /** A short notice for the top of the brief, so the reader is set before anything else is read. */
 export function eli5Banner(spin: BriefSpin | null | undefined): string {
   if (!spin || !isEli5Spin(spin)) return ''
@@ -120,6 +124,13 @@ export function eli5Banner(spin: BriefSpin | null | undefined): string {
 > brief that asks for more sections, more charts or more words on the page. The
 > research is as careful as ever; it stays in the research file. A page an adult
 > skims and a child cannot follow fails this brief even if every fact is right.
+>
+> The page is built from the research file's STORY INSIGHT, not its HERO INSIGHT:
+> the hero insight is the most surprising verified fact and goes on the
+> grown-ups card. The story insight is the one thing the child leaves knowing.
+> Write the sentence a child would repeat to a parent; if you cannot, pick a
+> different insight and record why. A finding about the sources (a catalog
+> mismatch, a disputed date) is never the story insight.
 `
 }
 
@@ -133,10 +144,10 @@ section (a scroll chapter, a slide, a page).
 
 1. **Cover:** a question a child would ask, as the headline ("Why did the toy boat sink?"), and one big picture. No dek longer than eight words.
 2. **The scene:** the everyday stand-in (toys, food, a playground, a bedtime, a garden), shown in one big picture. One or two sentences.
-3. **The trick:** what ${who} figured out, told in the scene. Name the real person or idea once, here.
+3. **The trick:** the story insight, what ${who} figured out, told in the scene. Name the real person or idea once, here.
 4. **Why it helps:** what is different because of it, in the scene or in the child's own day. One or two sentences.
 5. **Where the picture stops:** one sentence a child can follow on where the stand-in is not the real thing ("Real science is much bigger than a bath tub.").
-6. **For grown-ups:** the one beat in adult words, set apart as a small card at the end: ${real} in two or three plain lines, the hero insight in one, the sources as links, and the credit. ${credit}
+6. **For grown-ups:** the one beat in adult words, set apart as a small card at the end: ${real} in two or three plain lines, the hero insight (the research finding) in one, the sources as links, and the credit. ${credit}
 
 **Words.**
 - At most 20 words per beat in beats 1 to 5, and about 100 words of story in all.
@@ -150,7 +161,7 @@ section (a scroll chapter, a slide, a page).
 - At most one chart, and only a picture count (five boats, three sink) a child can count. No axes, no timelines, no maps, no pageview or ranking charts.
 - A real portrait or document image, if you use one, goes in beat 3 or beat 6, small.
 
-**Not on this page** (they stay in the research file): the timeline, the map, the ranking comparison, the counter-case, the method and the claims log.`
+**Not on this page** (they stay in the research file; this format overrides any deck, chart-count, photo or search rule elsewhere in the brief): the timeline, the map, the ranking comparison, the counter-case, the method and the claims log.`
 }
 
 /** Research is done and nothing public waits on a human any more. */
@@ -374,6 +385,10 @@ function ocwAssignment(s: OcwSubject): string[] {
   return out
 }
 
+/** The automatic work-picker rule: the award's own documents beat any fallback title. */
+export const LANDMARK_SWITCH_RULE =
+  'If the award documents cite works and the selected title is not among them, switch to the cited work they emphasise most, and record why in the research file. Do not spend research effort proving a fallback title that none of them mention.'
+
 function landmarkAssignment(s: LandmarkSubject): string[] {
   const a = s.award
   const w = s.work
@@ -412,7 +427,7 @@ function landmarkAssignment(s: LandmarkSubject): string[] {
   )
   let n = 3
   if (w?.representative) {
-    out.push(`${n++}. Confirm the work. The award's account decides which paper or book won; if it names another, switch to it and say so in the research file. If you cannot tell, the page keeps the label "representative work".`)
+    out.push(`${n++}. Confirm the work against the award's own documents (for a Nobel Prize: the committee's reading list or the references of the scientific background). ${LANDMARK_SWITCH_RULE} If the documents cite no works, the page keeps the label "representative work".`)
   }
   out.push(`${n++}. Apply the ${s.lens.name} lens to the work itself, not to ${a.name}'s career or to ${s.field.name.toLowerCase()} in general.`)
   out.push(`${n++}. ${landmarkCreditLine(s)} The motivation is quoted verbatim and never altered.`)
@@ -607,15 +622,25 @@ export function assignmentSection(spin: BriefSpin): string {
                       ? frontierAssignment(s)
                       : epicsAssignment(s)
   const ready = insightReady(spin)
+  const eli5 = isEli5Spin(spin)
   const lead = ready
-    ? [
-        'The research for this spin is done. Build from its hero insight, which is approved:',
-        '',
-        `> ${spin.heroInsight}`,
-        '',
-        'The research file is at the end of this brief. Everything on the page comes from it. Skip to the deliverables.',
-        '',
-      ]
+    ? eli5
+      ? [
+          'The research for this spin is done. Its hero insight, the research finding, is approved and goes on the grown-ups card:',
+          '',
+          `> ${spin.heroInsight}`,
+          '',
+          'Build the story itself from the STORY INSIGHT and the STAND-IN TABLE in the research file at the end of this brief. If either is missing, write it there first. Everything on the page comes from the file. Skip to the deliverables.',
+          '',
+        ]
+      : [
+          'The research for this spin is done. Build from its hero insight, which is approved:',
+          '',
+          `> ${spin.heroInsight}`,
+          '',
+          'The research file is at the end of this brief. Everything on the page comes from it. Skip to the deliverables.',
+          '',
+        ]
     : []
   return [
     '## Your assignment',
@@ -642,7 +667,7 @@ export function researchProtocolSection(spin: BriefSpin): string {
             : spin.randomizer === 'ocw'
               ? '\n8. The resource is the primary source for what it says; quote it with its page or slide number. Anything about the world outside the resource (a number, a date, a history) follows the two-source rule like any other claim.'
               : spin.randomizer === 'landmark'
-                ? '\n8. The work is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it; otherwise the page says "representative work".'
+                ? '\n8. The work is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it; otherwise the page says "representative work". ' + LANDMARK_SWITCH_RULE
                 : spin.randomizer === 'hundred'
                   ? '\n8. Hart\'s rank and his reasons are his opinion, not a fact: attribute them ("Hart argues"), and test them. Separate what contemporary sources document from what later tradition, legend or hagiography added, and label each. A religious claim is stated as what a tradition holds, never as fact or as falsehood.'
                   : spin.randomizer === 'evidence'
@@ -650,6 +675,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
                     : spin.randomizer === 'frontier'
                       ? '\n8. The paper is the primary source for what it claims; cite it by table or figure, and the version you read. AI Daily\'s gate fields (area, headline, compute, scale, release) are leads, never sources. An arXiv preprint is labelled "preprint" wherever its result appears, and its claims are reported as claims ("the authors report") until an independent replication or a peer-reviewed version confirms them. A benchmark number goes on the page with its baseline and setting.'
                       : ''
+  const eli5Items = isEli5Spin(spin)
+    ? `\n9. Because the reader is a five-year-old, add two more sections after HERO INSIGHT. \`STORY INSIGHT\`: the one thing the child should walk away knowing, in the format's own words; write the sentence a child would repeat to a parent, and if you cannot, pick a different insight. \`STAND-IN TABLE\`: one row per part of the stand-in, with columns Stand-in, Real thing, Claim row (for example: fibbing about hunger | private information | 5). A part of the stand-in with no claims log row does not go in the story. HERO INSIGHT is the research finding, for the research file and the grown-ups card; STORY INSIGHT is what the pages say.`
+    : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -658,7 +686,7 @@ export function researchProtocolSection(spin: BriefSpin): string {
 4. Mark every claim Verified, Contested or Unverified. Unverified claims never go on the page or into the script.
 5. Separate fact, interpretation and speculation in the write-up, and label each.
 6. Record what you could not find. Gaps are part of the story.
-7. End the file with a section called \`HERO INSIGHT\`: one sentence, the single most surprising and defensible finding, plus the three claims log rows that support it.${geoStatus}
+7. End the file with a section called \`HERO INSIGHT\`: one sentence, the single most surprising and defensible finding, plus the three claims log rows that support it. It is the research finding: pick it for truth and surprise, not for how well it tells.${geoStatus}${eli5Items}
 
 Sensitivity:
 - Describe communities, religions and nations by what sources document, never by stereotype. Do not rank cultures.
@@ -671,6 +699,7 @@ export function deliverablesSection(spin: BriefSpin, siteUrl: string): string {
   const site = siteUrl.replace(/\/$/, '')
   const gated = RANDOMIZER_META[spin.randomizer].gated
   const ready = insightReady(spin)
+  const eli5 = isEli5Spin(spin)
   const gate = gated
     ? ready
       ? 'The hero insight is approved, so the page can go public.'
@@ -680,9 +709,9 @@ export function deliverablesSection(spin: BriefSpin, siteUrl: string): string {
 
 Make them in this order. Nothing public is written before the hero insight.
 
-A. **Research file** \`${researchFileName(spin)}\`: the claims log, gaps and the HERO INSIGHT section. Save it to the spin: the \`save_spin_research\` MCP tool with \`spinId: "${spin.id}"\`, or \`PUT ${site}/api/randomizer/spins/${spin.id}\` with JSON \`{ "research": "<markdown>" }\` and the publish token as a bearer. Otherwise hand it to the user with the page.
-B. **One HTML story** built from the hero insight, in the format below.
-C. **A reel script** (rules below), written from the hero insight only.
+A. **Research file** \`${researchFileName(spin)}\`: the claims log, gaps and the HERO INSIGHT section${eli5 ? ', plus the STORY INSIGHT and the STAND-IN TABLE' : ''}. Save it to the spin: the \`save_spin_research\` MCP tool with \`spinId: "${spin.id}"\`, or \`PUT ${site}/api/randomizer/spins/${spin.id}\` with JSON \`{ "research": "<markdown>" }\` and the publish token as a bearer. Otherwise hand it to the user with the page.
+B. **One HTML story** built from the ${eli5 ? 'story insight and the stand-in table' : 'hero insight'}, in the format below.
+C. **A reel script** (rules below), written from the ${eli5 ? 'story insight' : 'hero insight'} only.
 
 ${gate}`
 }
@@ -971,17 +1000,17 @@ export function contentSection(desk: string, extra: string[] = []): string {
 export function eli5ContentSection(desk: string): string {
   return `## Content
 
-- Every beat is true to a Verified row in your claims log: the stand-in simplifies the record, it never changes it. Unverified claims stay off the page.
+- Every beat maps to a row of the stand-in table, and every row of that table to a Verified claim: the stand-in simplifies the record, it never changes it. Unverified claims stay off the page.
 - The page ends with the "For grown-ups" card, not a "Sources and claims log" section: the sources as links and one line on the claims log (how many claims, how many verified).
 - Byline "${desk}" plus the date, in the grown-ups card.
 - Write for the child: short, warm, concrete. No em dashes anywhere in the page.`
 }
 
 /** "## Reel script": playbook 0.4. */
-export function reelScriptSection(): string {
+export function reelScriptSection(eli5 = false): string {
   return `## Reel script
 
-A short vertical video script, written from the hero insight only. Everything else stays in the research file for comments and follow-ups.
+A short vertical video script, written from the ${eli5 ? 'story insight' : 'hero insight'} only. Everything else stays in the research file for comments and follow-ups.
 
 - First 3 seconds: the surprising claim or the concrete stake. Never open with the topic name.
 - One idea per reel. If a second idea appears, it becomes its own spin.
@@ -1020,6 +1049,7 @@ export function checklistSection(spin: BriefSpin): string {
       'Six beats at most; beats 1 to 5 have 20 words or fewer each and about 100 words in all. Count them.',
       'Read beats 1 to 5 aloud as if to a five-year-old: every word is one they know, there is no year, percentage or big number, and the pictures alone tell the story.',
       'The stand-in is the same, in the same colours, in every beat, and beat 5 says where it stops being true.',
+      'The story insight is a sentence a child would repeat to a parent, every part of the stand-in has a row in the stand-in table, and every row points at a Verified claim.',
       'The timeline, map, ranking charts, counter-case and claims log are in the research file and the grown-ups card, not in the story.',
     )
   }
