@@ -24,6 +24,7 @@ import {
   SCORE_METHOD,
   STOCK_CATEGORY_TO_LAYER,
   type CapacityViz,
+  type DcCountry,
   type DcEditionStory,
   type DcLayerKey,
   type DcMood,
@@ -37,6 +38,7 @@ import {
   type EditionCounts,
   type EditionEnergy,
   type EditionGeo,
+  type EditionGeoCountry,
   type EditionGeoRegion,
   type EditionLayerNote,
   type EditionLayerViz,
@@ -1053,18 +1055,37 @@ export function continuingFromThreads(threads: CarryOverThread[], stories: DcEdi
 // ---------------------------------------------------------------------------
 // Geography
 
-export function buildGeo(stories: DcEditionStory[], places: DcPlace[]): EditionGeo {
+/**
+ * The edition's geography in three layers. A story counts toward its
+ * locality pin (`places`), its country (`countries`, with `unplaced` = the
+ * stories that carry the country but no locality — what a country-level dot
+ * on the map stands for), and its region. The region comes from the story's
+ * own tag, else its country's, else its locality's, so editions tagged before
+ * migration 100 (no country) still fill the region bar.
+ */
+export function buildGeo(stories: DcEditionStory[], places: DcPlace[], countries: DcCountry[] = []): EditionGeo {
   const bySlug = new Map(places.map((p) => [p.slug, p]))
+  const byCode = new Map(countries.map((c) => [c.code, c]))
   const placeCounts = new Map<string, { count: number; energy: boolean }>()
+  const countryCounts = new Map<string, { count: number; unplaced: number; energy: boolean }>()
   const regionCounts = new Map<DcRegionKey, EditionGeoRegion>()
   for (const s of stories) {
-    if (s.place && bySlug.has(s.place)) {
-      const cur = placeCounts.get(s.place) ?? { count: 0, energy: false }
+    const place = s.place && bySlug.has(s.place) ? bySlug.get(s.place)! : null
+    if (place) {
+      const cur = placeCounts.get(place.slug) ?? { count: 0, energy: false }
       cur.count += 1
       cur.energy = cur.energy || s.energy
-      placeCounts.set(s.place, cur)
+      placeCounts.set(place.slug, cur)
     }
-    const region = s.region ?? (s.place ? bySlug.get(s.place)?.region : null) ?? null
+    const code = s.country && byCode.has(s.country) ? s.country : place?.country && byCode.has(place.country) ? place.country : null
+    if (code) {
+      const cur = countryCounts.get(code) ?? { count: 0, unplaced: 0, energy: false }
+      cur.count += 1
+      if (!place) cur.unplaced += 1
+      cur.energy = cur.energy || s.energy
+      countryCounts.set(code, cur)
+    }
+    const region = s.region ?? (code ? byCode.get(code)?.region : null) ?? place?.region ?? null
     if (region) {
       const cur = regionCounts.get(region) ?? { key: region, count: 0, byLayer: {} }
       cur.count += 1
@@ -1077,6 +1098,12 @@ export function buildGeo(stories: DcEditionStory[], places: DcPlace[]): EditionG
       .map(([slug, v]) => {
         const p = bySlug.get(slug)!
         return { slug, name: p.name, region: p.region, lat: p.lat, lng: p.lng, count: v.count, energy: v.energy }
+      })
+      .sort((a, b) => b.count - a.count),
+    countries: [...countryCounts]
+      .map(([code, v]): EditionGeoCountry => {
+        const c = byCode.get(code)!
+        return { code, name: c.name, region: c.region, lat: c.lat, lng: c.lng, count: v.count, unplaced: v.unplaced, energy: v.energy }
       })
       .sort((a, b) => b.count - a.count),
     regions: DC_REGION_KEYS.map((k) => regionCounts.get(k)).filter((r): r is EditionGeoRegion => !!r),
@@ -1359,44 +1386,30 @@ export function buildLayerViz(
 // ---------------------------------------------------------------------------
 // Energy chapter
 
-/** Country behind a place, for the "read alongside" Energy Profile links. */
-export const PLACE_COUNTRY: Record<string, { code: string; name: string }> = {
-  abilene: { code: 'US', name: 'United States' },
-  'n-virginia': { code: 'US', name: 'United States' },
-  columbus: { code: 'US', name: 'United States' },
-  boise: { code: 'US', name: 'United States' },
-  louisiana: { code: 'US', name: 'United States' },
-  phoenix: { code: 'US', name: 'United States' },
-  dallas: { code: 'US', name: 'United States' },
-  atlanta: { code: 'US', name: 'United States' },
-  chicago: { code: 'US', name: 'United States' },
-  'santa-clara': { code: 'US', name: 'United States' },
-  seattle: { code: 'US', name: 'United States' },
-  memphis: { code: 'US', name: 'United States' },
-  montreal: { code: 'CA', name: 'Canada' },
-  seoul: { code: 'KR', name: 'South Korea' },
-  hsinchu: { code: 'TW', name: 'Taiwan' },
-  tokyo: { code: 'JP', name: 'Japan' },
-  shanghai: { code: 'CN', name: 'China' },
-  beijing: { code: 'CN', name: 'China' },
-  singapore: { code: 'SG', name: 'Singapore' },
-  dublin: { code: 'IE', name: 'Ireland' },
-  amsterdam: { code: 'NL', name: 'Netherlands' },
-  veldhoven: { code: 'NL', name: 'Netherlands' },
-  frankfurt: { code: 'DE', name: 'Germany' },
-  london: { code: 'GB', name: 'United Kingdom' },
-  paris: { code: 'FR', name: 'France' },
-  oslo: { code: 'NO', name: 'Norway' },
-  madrid: { code: 'ES', name: 'Spain' },
-  jamnagar: { code: 'IN', name: 'India' },
-  mumbai: { code: 'IN', name: 'India' },
-  bengaluru: { code: 'IN', name: 'India' },
-  'abu-dhabi': { code: 'AE', name: 'United Arab Emirates' },
-  riyadh: { code: 'SA', name: 'Saudi Arabia' },
-  doha: { code: 'QA', name: 'Qatar' },
-  sydney: { code: 'AU', name: 'Australia' },
-  'sao-paulo': { code: 'BR', name: 'Brazil' },
-  johannesburg: { code: 'ZA', name: 'South Africa' },
+/**
+ * Country behind a story, for the "read alongside" Energy Profile links:
+ * the story's own country tag, else its locality's (migration 100), else the
+ * legacy hub→country table for editions tagged before the country layer.
+ */
+export function storyCountry(story: DcEditionStory, places: Map<string, DcPlace>): string | null {
+  if (story.country) return story.country
+  const p = story.place ? places.get(story.place) : null
+  if (p?.country) return p.country
+  return story.place ? (LEGACY_PLACE_COUNTRY[story.place] ?? null) : null
+}
+
+const LEGACY_PLACE_COUNTRY: Record<string, string> = {
+  abilene: 'US', 'n-virginia': 'US', columbus: 'US', boise: 'US', louisiana: 'US', phoenix: 'US', dallas: 'US', atlanta: 'US',
+  chicago: 'US', 'santa-clara': 'US', seattle: 'US', memphis: 'US', montreal: 'CA', seoul: 'KR', hsinchu: 'TW', tokyo: 'JP',
+  shanghai: 'CN', beijing: 'CN', singapore: 'SG', dublin: 'IE', amsterdam: 'NL', veldhoven: 'NL', frankfurt: 'DE', london: 'GB',
+  paris: 'FR', oslo: 'NO', madrid: 'ES', jamnagar: 'IN', mumbai: 'IN', bengaluru: 'IN', 'abu-dhabi': 'AE', riyadh: 'SA', doha: 'QA',
+  sydney: 'AU', 'sao-paulo': 'BR', johannesburg: 'ZA',
+}
+
+const COUNTRY_NAMES: Record<string, string> = {
+  US: 'United States', CA: 'Canada', KR: 'South Korea', TW: 'Taiwan', JP: 'Japan', CN: 'China', SG: 'Singapore', IE: 'Ireland',
+  NL: 'Netherlands', DE: 'Germany', GB: 'United Kingdom', FR: 'France', NO: 'Norway', ES: 'Spain', IN: 'India',
+  AE: 'United Arab Emirates', SA: 'Saudi Arabia', QA: 'Qatar', AU: 'Australia', BR: 'Brazil', ZA: 'South Africa',
 }
 
 /** Power committed in the window's disclosed deals: one part per story, GW. */
@@ -1437,6 +1450,8 @@ export function buildEnergy(
   ieaStories: DcEditionStory[],
   opts: {
     places: Map<string, DcPlace>
+    /** dc_countries by code (migration 100); names the Energy Profile links. Optional before the migration. */
+    countries?: Map<string, DcCountry>
     stocks: Map<string, StockName>
     /** Previous editions' disclosed power, oldest first (this edition is appended); null = disclosed none. */
     history: { date: string; label: string; gw: number | null }[]
@@ -1484,11 +1499,11 @@ export function buildEnergy(
 
   const countryCounts = new Map<string, { name: string; n: number }>()
   for (const s of energyStories) {
-    const c = s.place ? PLACE_COUNTRY[s.place] : null
-    if (!c) continue
-    const cur = countryCounts.get(c.code) ?? { name: c.name, n: 0 }
+    const code = storyCountry(s, opts.places)
+    if (!code) continue
+    const cur = countryCounts.get(code) ?? { name: opts.countries?.get(code)?.name ?? COUNTRY_NAMES[code] ?? code, n: 0 }
     cur.n += 1
-    countryCounts.set(c.code, cur)
+    countryCounts.set(code, cur)
   }
   const links = [...countryCounts]
     .sort((a, b) => b[1].n - a[1].n)

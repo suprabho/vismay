@@ -63,6 +63,8 @@ export interface PipelineNewsItem {
   snapshot?: {
     layer: string | null
     place: string | null
+    /** ISO 3166-1 alpha-2 (migration 100). */
+    country: string | null
     region: string | null
     theme: string | null
     mood: number | null
@@ -217,6 +219,7 @@ async function dcNews(opts: Omit<PipelineNewsQuery, 'epic'>): Promise<PipelineNe
     snapshot: {
       layer: r.layer,
       place: r.place,
+      country: r.country,
       region: r.region,
       theme: r.theme,
       mood: r.mood,

@@ -17,6 +17,8 @@
 /** The four AI layers — the same buckets dc_stocks.category uses. */
 export type DcLayerKey = 'dc' | 'hyper' | 'semi' | 'equip'
 export type DcRegionKey = 'na' | 'ea' | 'eu' | 'me' | 'other'
+/** A locality is a metro hub (Hsinchu, Abilene) or a sub-division (a US or Indian state, a Canadian province). */
+export type DcPlaceKind = 'city' | 'subdivision'
 export type DcThemeKey = 'power' | 'permit' | 'memory' | 'capacity' | 'equip' | 'chips' | 'sustain'
 /** -1 doom · 0 neutral · 1 boom */
 export type DcMood = -1 | 0 | 1
@@ -91,7 +93,7 @@ export const DC_COMPUTE_BUCKETS = ['<10²² FLOP', '10²²–10²³', '10²⁴',
  * Shared so the composer can name the version an edition was built from.
  * v4 adds relevance, impact, the canonical event line and actors.
  */
-export const DC_CLASSIFIER_VERSION = 'v4-events-2026-09'
+export const DC_CLASSIFIER_VERSION = 'v5-geo-2026-11'
 
 /** Stock category → layer key (dc_stocks.category is the layer taxonomy). */
 export const STOCK_CATEGORY_TO_LAYER: Record<string, DcLayerKey> = {
@@ -182,8 +184,16 @@ export interface DcEditionStory {
   topics: string[]
   tickers: string[]
   layer: DcLayerKey | null
-  /** dc_places.slug */
+  /**
+   * Geography, three independent layers (migration 100):
+   * `place` — dc_places.slug, a locality the text names (city hub or
+   * sub-division); `country` — ISO 3166-1 alpha-2 from dc_countries, where
+   * the development happens or the home of the company the story is about;
+   * `region` — derived from the country, the classifier's own pick only when
+   * no country fits. Any layer can be null on its own.
+   */
   place: string | null
+  country: string | null
   region: DcRegionKey | null
   theme: DcThemeKey | null
   mood: DcMood | null
@@ -216,6 +226,22 @@ export interface DcPlace {
   region: DcRegionKey
   lat: number
   lng: number
+  aliases: string[]
+  /** ISO 3166-1 alpha-2 (dc_countries.code). Null only before migration 100. */
+  country: string | null
+  kind: DcPlaceKind
+}
+
+/** A row of dc_countries — the classifier's country vocabulary (migration 100). */
+export interface DcCountry {
+  /** ISO 3166-1 alpha-2 */
+  code: string
+  name: string
+  region: DcRegionKey
+  /** Centroid, for country-level dots on the map. */
+  lat: number
+  lng: number
+  /** Demonyms and short forms, used by the audit to check a tag against the text. */
   aliases: string[]
 }
 
@@ -360,14 +386,32 @@ export interface EditionGeoPlace {
   energy: boolean
 }
 
+export interface EditionGeoCountry {
+  code: string
+  name: string
+  region: DcRegionKey
+  lat: number
+  lng: number
+  /** Stories tagged with this country (whether or not they also carry a locality). */
+  count: number
+  /** Of those, stories with no locality — what a country-level dot stands for on the map. */
+  unplaced: number
+  energy: boolean
+}
+
 export interface EditionGeoRegion {
   key: DcRegionKey
   count: number
   byLayer: Partial<Record<DcLayerKey, number>>
 }
 
+/**
+ * The edition's frozen geography. `countries` is absent on editions composed
+ * before migration 100; readers default it to [].
+ */
 export interface EditionGeo {
   places: EditionGeoPlace[]
+  countries: EditionGeoCountry[]
   regions: EditionGeoRegion[]
 }
 
@@ -704,7 +748,7 @@ export function emptyEnergy(): EditionEnergy {
 }
 
 export function emptyGeo(): EditionGeo {
-  return { places: [], regions: [] }
+  return { places: [], countries: [], regions: [] }
 }
 
 /** Edition window for a UTC date: 06:15 the day before → 06:15 on the date. */

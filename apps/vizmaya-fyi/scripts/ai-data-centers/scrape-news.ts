@@ -5,10 +5,19 @@
  *
  * The classifier is one structured-output call per article that returns:
  *   * the relevance gate + topic tags + tracked tickers (migration 065), and
- *   * the daily-snapshot tags (migration 078): the AI layer, a place from the
- *     seeded dc_places list (+ its region), a theme, a mood (-1/0/1), an
- *     energy flag and `facts` — the action, the figures and the horizon the
- *     story states, which the edition's per-layer visualisations read.
+ *   * the daily-snapshot tags (migration 078): the AI layer, the geography,
+ *     a theme, a mood (-1/0/1), an energy flag and `facts` — the action, the
+ *     figures and the horizon the story states, which the edition's per-layer
+ *     visualisations read.
+ *   * (classifier v5, migration 100) the geography in three independent
+ *     layers: `place` — a locality from dc_places (a city hub or a
+ *     sub-division), kept ONLY when the headline/summary names it or one of
+ *     its aliases (resolveGeo); `country` — ISO 3166-1 alpha-2 from
+ *     dc_countries, where the development happens or the home country of the
+ *     company the story is about (model-inferred, so Samsung's capex is KR
+ *     without "Korea" in the text); `region` — derived from the country, the
+ *     model's own pick only when no country fits. A place always implies its
+ *     country; a country always implies its region.
  *   * (classifier v3) per figure: the canonical `subject`, a `scope` (site /
  *     company / market / policy), a `status` (committed / target / forecast /
  *     queued / stated) and the size in the dimension's base unit — the tags
@@ -38,11 +47,18 @@
  *               pnpm ai-data-centers:scrape-news -- --reclassify-days 7
  *                 (re-classifies every relevant row in the window whatever
  *                  its version — run after a prompt change that doesn't bump
- *                  the classifier version, e.g. the place rules)
+ *                  the classifier version)
+ *               pnpm ai-data-centers:scrape-news -- --retag-geo-days 60
+ *                 (re-derives ONLY place / country / region for every relevant
+ *                  row in the window with a small geo-only Haiku call — the
+ *                  other tags, grades and facts are untouched. RETAG_DRY_RUN=1
+ *                  prints the changes without writing; GEO_RETAG_LOG=<path>
+ *                  appends one JSON line per row (before, after, the model's
+ *                  stated basis) for the audit)
  * Run in CI:    .github/workflows/scrape-ai-data-centers-news.yml (daily cron)
  *
  * Required env:
- *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — read dc_stocks / dc_places, write dc_news
+ *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — read dc_stocks / dc_places / dc_countries, write dc_news
  *   ANTHROPIC_API_KEY                                    — classification
  *   AI_GATEWAY_API_KEY                                   — optional; enables the Jev figure gate
  *
@@ -62,6 +78,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { appendFileSync } from 'node:fs'
 import {
   DC_CLASSIFIER_VERSION,
   DC_FIGURE_SCOPES,
@@ -75,6 +92,7 @@ import {
   type DcFigureStatus,
   type DcLayerKey,
   type DcMood,
+  type DcPlaceKind,
   type DcRegionKey,
   type DcStoryAction,
   type DcStoryFacts,
@@ -112,8 +130,10 @@ const CONCURRENCY = 4
 // Stop pulling new items past this, well under the workflow's 30-minute
 // timeout, so the job always exits green with a summary instead of being
 // hard-killed mid-loop.
-const DEADLINE_MS = 25 * 60_000
+const DEADLINE_MS = (Number(process.env.DEADLINE_MINUTES) > 0 ? Number(process.env.DEADLINE_MINUTES) : 25) * 60_000
 const MAX_FIGURES = 6
+/** The geo-only re-tag call is a third of the prompt and no Jev pass, so it runs wider. */
+const GEO_CONCURRENCY = 8
 
 const nullable = (schema: Record<string, unknown>) => ({ anyOf: [schema, { type: 'null' }] })
 
@@ -125,6 +145,7 @@ const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
     tickers: { type: 'array', items: { type: 'string' } },
     layer: nullable({ type: 'string', enum: DC_LAYER_KEYS }),
     place: nullable({ type: 'string' }),
+    country: nullable({ type: 'string' }),
     region: nullable({ type: 'string', enum: DC_REGION_KEYS }),
     theme: nullable({ type: 'string', enum: DC_THEME_KEYS }),
     mood: { type: 'integer', enum: [-1, 0, 1] },
@@ -167,7 +188,21 @@ const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
       additionalProperties: false,
     },
   },
-  required: ['relevant', 'topics', 'tickers', 'layer', 'place', 'region', 'theme', 'mood', 'relevance', 'impact', 'event', 'actors', 'energy', 'facts'],
+  required: ['relevant', 'topics', 'tickers', 'layer', 'place', 'country', 'region', 'theme', 'mood', 'relevance', 'impact', 'event', 'actors', 'energy', 'facts'],
+  additionalProperties: false,
+}
+
+/** The geo-only re-tag answer: the three layers plus how the model got the country (audit only, never stored). */
+const GEO_BASES = ['place-named', 'country-named', 'company-home', 'inferred', 'none'] as const
+const GEO_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    place: nullable({ type: 'string' }),
+    country: nullable({ type: 'string' }),
+    region: nullable({ type: 'string', enum: DC_REGION_KEYS }),
+    basis: { type: 'string', enum: GEO_BASES },
+  },
+  required: ['place', 'country', 'region', 'basis'],
   additionalProperties: false,
 }
 
@@ -228,6 +263,16 @@ interface PlaceRow {
   name: string
   region: DcRegionKey
   aliases: string[]
+  /** ISO 3166-1 alpha-2; null only before migration 100. */
+  country: string | null
+  kind: DcPlaceKind
+}
+
+interface CountryRow {
+  code: string
+  name: string
+  region: DcRegionKey
+  aliases: string[]
 }
 
 /** Everything the classifier needs to validate the model's answer. */
@@ -237,13 +282,36 @@ interface ClassifierContext {
   placeBySlug: Map<string, PlaceRow>
   /** lower-cased slug / name / alias → slug */
   placeLookup: Map<string, string>
+  countryByCode: Map<string, CountryRow>
+  /** lower-cased code / name / alias → code */
+  countryLookup: Map<string, string>
 }
 
-function classifierSystem(stocks: TrackedStock[], places: PlaceRow[]): string {
-  const tickerList = stocks.map((s) => `${s.ticker} — ${s.name} (${s.category})`).join('\n')
-  const placeList = places
-    .map((p) => `${p.slug} — ${p.name} [${p.region}]${p.aliases.length ? ` (${p.aliases.join(', ')})` : ''}`)
+function placeList(places: PlaceRow[]): string {
+  return places
+    .map((p) => `${p.slug} — ${p.name}${p.country ? `, ${p.country}` : ''}${p.kind === 'subdivision' ? ' (state/province)' : ''}${p.aliases.length ? ` (${p.aliases.join(', ')})` : ''}`)
     .join('\n')
+}
+
+function countryList(countries: CountryRow[]): string {
+  return countries.map((c) => `${c.code} ${c.name}`).join(' · ')
+}
+
+/** The geography rules, shared by the full classifier and the geo-only re-tag. */
+function geoRules(places: PlaceRow[], countries: CountryRow[]): string {
+  return `Geography is three independent layers. Fill each from the text; any of them may be null on its own.
+
+Place — the LOCALITY the story is about: a city hub or a state/province from this list. Use a slug ONLY when the headline or summary names that locality or one of its aliases in brackets. A country, a company's headquarters or an industry is NOT a locality: "Samsung raises HBM output" has no place; "TSMC's Arizona fab" is phoenix; "a fab in Odisha" is odisha, not bengaluru; "Google invests in Finland" has no place. null when nothing on the list is named.
+${placeList(places)}
+
+Country — the ISO code from this list for the country the development happens in (the site, the rule, the market), or, when the story is about a company itself (its capex, guidance, earnings, IPO, a deal with no stated location), that company's home country (Samsung → KR, TSMC → TW, Micron → US, Reliance → IN). null for a story with no single country: a deal or dispute between two countries, a global market, or analysis / commentary / a forecast / an index move where no one company or country is the subject (a bank's outlook on AI spending is not US just because the bank is). Never a code outside the list.
+${countryList(countries)}
+
+Region — "na" North America · "ea" East & Southeast Asia · "eu" Europe · "me" India, Middle East & North Africa · "other" · null. The region of the country when one is set; your own pick only when no country fits (a story about "Europe" or "Southeast Asia" as a whole).`
+}
+
+function classifierSystem(stocks: TrackedStock[], places: PlaceRow[], countries: CountryRow[]): string {
+  const tickerList = stocks.map((s) => `${s.ticker} — ${s.name} (${s.category})`).join('\n')
   return `You classify news headlines for a dashboard tracking the AI infrastructure build-out: AI data centers, microprocessors, and the semiconductor industry. Each story also feeds a frozen daily edition, so you extract a small set of tags and the facts the story states.
 
 Topic vocabulary (use ONLY these tags):
@@ -261,10 +329,7 @@ Layer (which part of the AI stack the story is mainly about):
 - "semi"  — accelerators, memory/HBM, foundry, packaging
 - "equip" — lithography, deposition, etch, test tools, and chip export rules
 
-Places (pick the slug the story is mainly about, or null when no listed place fits — never invent one). Tag a place only when the story names that city or one of its aliases, or its main subject is a company or site that clearly operates there (e.g. Micron → boise). A country, state or industry match is NOT enough: a story about another Indian state is not Bengaluru or Mumbai just because the hub is in India; use null and set the region instead:
-${placeList}
-
-Region (of the place, or of the story when no place fits): "na" North America · "ea" East Asia · "eu" Europe · "me" India & Middle East · "other" · null.
+${geoRules(places, countries)}
 
 Theme (one): "power" (deals, grid queues, turbines, PPAs) · "permit" (freezes, rules, rezonings, policy) · "memory" (HBM/DRAM allocation) · "capacity" (MW added, leased, paused; new sites) · "equip" (tools, export rules) · "chips" (accelerators, foundry, packaging, nodes) · "sustain" (water, carbon, energy outlooks).
 
@@ -306,13 +371,13 @@ Facts (only what the headline/summary literally state — never estimate):
 - horizon: a stated time window as strings like "2027", "2027-Q1", "2027-06", "FY27" — {"from": null, "to": "2027"} for "booked through 2027", {"from": "2028", "to": "2027"} for orders pulled from 2028 into 2027. null when the story states no window.
 
 Rules:
-- relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false, empty arrays, layer/place/region/theme null, mood 0, relevance 1, impact 1, event null, energy false, facts {"action": null, "figures": [], "horizon": null}.
+- relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false, empty arrays, layer/place/country/region/theme null, mood 0, relevance 1, impact 1, event null, energy false, facts {"action": null, "figures": [], "horizon": null}.
 - topics: every vocabulary tag that clearly applies (usually 1–2).
 - tickers: ONLY companies explicitly named in the headline or summary, or the unmistakable primary subject. Use the exact ticker strings from the list. Empty array if none.
-- place: ONLY a slug from the list above, and only under the rule above; null when unsure.
+- place: ONLY a slug from the list above, and only when the text names it; null when unsure. country: ONLY a code from the list.
 
 Respond ONLY with valid JSON in this exact shape, no markdown fences:
-{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "relevance": 5, "impact": 3, "event": "TSMC doubles CoWoS-L packaging output for Nvidia", "actors": ["TSMC", "Nvidia"], "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output", "subject": "TSMC", "scope": "company", "status": "target"}], "horizon": null}}`
+{"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": null, "country": "TW", "region": "ea", "theme": "chips", "mood": 1, "relevance": 5, "impact": 3, "event": "TSMC doubles CoWoS-L packaging output for Nvidia", "actors": ["TSMC", "Nvidia"], "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output", "subject": "TSMC", "scope": "company", "status": "target"}], "horizon": null}}`
 }
 
 interface Classification {
@@ -321,6 +386,7 @@ interface Classification {
   tickers: string[]
   layer: DcLayerKey | null
   place: string | null
+  country: string | null
   region: DcRegionKey | null
   theme: DcThemeKey | null
   mood: DcMood
@@ -338,6 +404,7 @@ const REJECTED: Classification = {
   tickers: [],
   layer: null,
   place: null,
+  country: null,
   region: null,
   theme: null,
   mood: 0,
@@ -374,22 +441,35 @@ function placeIsMentioned(place: PlaceRow | undefined, text: string): boolean {
   })
 }
 
-/**
- * Hubs the model uses as an India-wide catch-all. Most hubs are regional
- * clusters (Seoul = Korea, Singapore = Southeast Asia, Dallas = Texas) and the
- * model's pick is trusted. These two attract stories from anywhere in India
- * (an Odisha fab filed under Bengaluru), so their tag must be named in the text.
- */
-const STRICT_PLACES = new Set(['bengaluru', 'mumbai'])
+export interface GeoTags {
+  place: string | null
+  country: string | null
+  region: DcRegionKey | null
+}
 
 /**
- * A model-picked hub is kept unless it is a strict hub the headline/summary
- * doesn't name (slug, name or alias — Mumbai's own aliases include "India").
- * A dropped place becomes null; the region still comes from the model.
+ * The three geography layers from a model answer, validated against the
+ * seeded lists and the text:
+ *   place   — must be a dc_places slug/name/alias AND named in the text
+ *             (slug, name or alias, whole word). An unnamed pick is dropped,
+ *             never reassigned.
+ *   country — must be a dc_countries code; a kept place overrides it with
+ *             the place's own country, so the layers can never disagree.
+ *   region  — the country's region when one is set; else the model's pick.
  */
-function placeIsGrounded(place: PlaceRow | undefined, text: string): boolean {
-  if (!place) return false
-  return STRICT_PLACES.has(place.slug) ? placeIsMentioned(place, text) : true
+export function resolveGeo(parsed: { place?: unknown; country?: unknown; region?: unknown }, ctx: ClassifierContext, text: string): GeoTags {
+  const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
+  const placeGuess = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
+  const placeRow = placeGuess ? ctx.placeBySlug.get(placeGuess) : undefined
+  const place = placeRow && placeIsMentioned(placeRow, text) ? placeRow.slug : null
+
+  const countryRaw = typeof parsed.country === 'string' ? parsed.country.trim().toLowerCase() : ''
+  const countryGuess = countryRaw ? (ctx.countryLookup.get(countryRaw) ?? null) : null
+  const country = (place ? ctx.placeBySlug.get(place)?.country : null) ?? countryGuess ?? null
+
+  const modelRegion = typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region) ? (parsed.region as DcRegionKey) : null
+  const region: DcRegionKey | null = (country ? ctx.countryByCode.get(country)?.region : null) ?? (place ? ctx.placeBySlug.get(place)?.region : null) ?? modelRegion
+  return { place, country, region }
 }
 
 /** Validate + normalise the model's JSON against the vocabularies and the seeded lists. */
@@ -422,14 +502,7 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sour
     layer = topics.includes('data-centers') ? 'dc' : topics.includes('semiconductors') || topics.includes('microprocessors') ? 'semi' : 'hyper'
   }
 
-  const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
-  const placeGuess = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
-  const place = placeGuess && placeIsGrounded(ctx.placeBySlug.get(placeGuess), sourceText) ? placeGuess : null
-  const region: DcRegionKey | null = place
-    ? ctx.placeBySlug.get(place)!.region
-    : typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region)
-      ? (parsed.region as DcRegionKey)
-      : null
+  const { place, country, region } = resolveGeo(parsed, ctx, sourceText)
   const theme = typeof parsed.theme === 'string' && (DC_THEME_KEYS as string[]).includes(parsed.theme) ? (parsed.theme as DcThemeKey) : null
   const moodNum = Number(parsed.mood)
   const mood: DcMood = moodNum === 1 ? 1 : moodNum === -1 ? -1 : 0
@@ -466,6 +539,7 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sour
     tickers,
     layer,
     place,
+    country,
     region,
     theme,
     mood,
@@ -564,6 +638,7 @@ function tagColumns(cls: Classification) {
   return {
     layer: cls.layer,
     place: cls.place,
+    country: cls.country,
     region: cls.region,
     theme: cls.theme,
     mood: cls.mood,
@@ -577,8 +652,12 @@ function tagColumns(cls: Classification) {
   }
 }
 
+function geoLabel(g: GeoTags): string {
+  return [g.place, g.country, g.region].filter(Boolean).join('/') || '—'
+}
+
 function describe(cls: Classification): string {
-  const bits = [cls.layer, cls.place, cls.theme, cls.mood === 1 ? 'boom' : cls.mood === -1 ? 'doom' : 'neutral', `R${cls.relevance}·I${cls.impact}`]
+  const bits = [cls.layer, geoLabel(cls), cls.theme, cls.mood === 1 ? 'boom' : cls.mood === -1 ? 'doom' : 'neutral', `R${cls.relevance}·I${cls.impact}`]
   if (cls.energy) bits.push('energy')
   if (cls.facts.figures.length) {
     const tagged = cls.facts.figures.filter((f) => f.status).length
@@ -593,14 +672,14 @@ interface Args {
   backfillDays: number | null
   /** Re-tag relevant rows classified by an older classifier version in the last N days. */
   retagDays: number | null
-  /** Re-check stored place tags with the grounding rule in the last N days (no model call). */
-  retagPlacesDays: number | null
+  /** Re-derive place / country / region only, for every relevant row in the last N days (geo-only model call). */
+  retagGeoDays: number | null
   /** Re-classify every relevant row in the last N days, whatever its classifier version. */
   reclassifyDays: number | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { backfillDays: null, retagDays: null, reclassifyDays: null, retagPlacesDays: null }
+  const args: Args = { backfillDays: null, retagDays: null, reclassifyDays: null, retagGeoDays: null }
   const days = (flag: string, raw: string | undefined): number => {
     const n = Number(raw)
     if (!Number.isFinite(n) || n <= 0) throw new Error(`Invalid ${flag} value: ${raw}`)
@@ -611,7 +690,7 @@ function parseArgs(argv: string[]): Args {
     if (a === '--') continue
     if (a === '--backfill-days') args.backfillDays = days(a, argv[++i])
     else if (a === '--retag-days') args.retagDays = days(a, argv[++i])
-    else if (a === '--retag-places-days') args.retagPlacesDays = days(a, argv[++i])
+    else if (a === '--retag-geo-days') args.retagGeoDays = days(a, argv[++i])
     else if (a === '--reclassify-days') args.reclassifyDays = days(a, argv[++i])
     else throw new Error(`Unknown flag: ${a}`)
   }
@@ -633,14 +712,34 @@ async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierCon
   if (stocks.length === 0) {
     throw new Error('dc_stocks is empty — apply migration 065 before scraping')
   }
-  // Same for places (migration 078): the model picks from this list or null.
+  // Same for places (migration 078) and countries (migration 100): the model
+  // picks from these lists or null.
   const { data: placeRows, error: placesErr } = await sb
     .from('dc_places')
-    .select('slug, name, region, aliases')
+    .select('slug, name, region, aliases, country, kind')
     .eq('is_active', true)
     .order('slug')
-  if (placesErr) throw new Error(`dc_places read failed: ${placesErr.message} — apply migration 078`)
-  const places = (placeRows ?? []) as PlaceRow[]
+  if (placesErr) throw new Error(`dc_places read failed: ${placesErr.message} — apply migrations 078 and 100`)
+  const places = ((placeRows ?? []) as Record<string, unknown>[]).map(
+    (r): PlaceRow => ({
+      slug: r.slug as string,
+      name: r.name as string,
+      region: r.region as DcRegionKey,
+      aliases: (r.aliases as string[]) ?? [],
+      country: typeof r.country === 'string' && r.country ? r.country.toUpperCase() : null,
+      kind: r.kind === 'subdivision' ? 'subdivision' : 'city',
+    }),
+  )
+  const { data: countryRows, error: countriesErr } = await sb
+    .from('dc_countries')
+    .select('code, name, region, aliases')
+    .eq('is_active', true)
+    .order('code')
+  if (countriesErr) throw new Error(`dc_countries read failed: ${countriesErr.message} — apply migration 100`)
+  const countries = ((countryRows ?? []) as Record<string, unknown>[]).map(
+    (r): CountryRow => ({ code: (r.code as string).toUpperCase(), name: r.name as string, region: r.region as DcRegionKey, aliases: (r.aliases as string[]) ?? [] }),
+  )
+  if (countries.length === 0) throw new Error('dc_countries is empty — apply migration 100 before scraping')
 
   const placeLookup = new Map<string, string>()
   for (const p of places) {
@@ -648,53 +747,134 @@ async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierCon
     placeLookup.set(p.name.toLowerCase(), p.slug)
     for (const a of p.aliases ?? []) placeLookup.set(a.toLowerCase(), p.slug)
   }
+  const countryLookup = new Map<string, string>()
+  for (const c of countries) {
+    countryLookup.set(c.code.toLowerCase(), c.code)
+    countryLookup.set(c.name.toLowerCase(), c.code)
+    for (const a of c.aliases ?? []) countryLookup.set(a.toLowerCase(), c.code)
+  }
   return {
-    system: classifierSystem(stocks, places),
+    system: classifierSystem(stocks, places, countries),
     ctx: {
       validTickers: new Set(stocks.map((s) => s.ticker)),
       stockCategory: new Map(stocks.map((s) => [s.ticker, s.category])),
       placeBySlug: new Map(places.map((p) => [p.slug, p])),
       placeLookup,
+      countryByCode: new Map(countries.map((c) => [c.code, c])),
+      countryLookup,
     },
   }
 }
 
+const GEO_RETAG_SYSTEM = (ctx: ClassifierContext) =>
+  `You tag the geography of news headlines for a dashboard tracking the AI infrastructure build-out (AI data centers, chips, hyperscalers). You see a headline, a summary and the outlet.
+
+${geoRules([...ctx.placeBySlug.values()], [...ctx.countryByCode.values()])}
+
+Also say how you got the country, as basis: "place-named" (the text names a listed locality) · "country-named" (the text names the country or its people, e.g. "Korean", "U.S.") · "company-home" (inferred from the home of the company the story is about) · "inferred" (any other reasoning) · "none" (no country).
+
+Respond ONLY with JSON: {"place": "<slug or null>", "country": "<code or null>", "region": "<key or null>", "basis": "<one of the five>"}`
+
+interface GeoRetagRow {
+  id: number
+  title: string
+  summary: string | null
+  source: string | null
+  place: string | null
+  country: string | null
+  region: DcRegionKey | null
+}
+
 /**
- * Re-applies the place grounding rule (placeIsGrounded) to rows already
- * tagged: a stored strict-hub place (STRICT_PLACES) that the headline/summary
- * doesn't name is cleared. Only `place` changes (region and every other
- * tag stay), and no model call is made. --dry-run-style preview: set
- * RETAG_DRY_RUN=1 to print what would change without writing.
+ * Re-derives ONLY the three geography columns for every relevant row in the
+ * window: one small Haiku call per row against the current place and country
+ * lists, validated by the same resolveGeo the full classifier uses. Layer,
+ * theme, mood, grades, event, actors, facts and classifier_version are left
+ * exactly as they are. RETAG_DRY_RUN=1 prints the changes without writing;
+ * GEO_RETAG_LOG=<path> appends one JSON line per row with the stored tags,
+ * the model's raw answer (incl. its basis) and what was written, for the audit.
  */
-async function retagPlaces(sb: Sb, ctx: ClassifierContext, days: number) {
+async function retagGeo(sb: Sb, anthropic: Anthropic, ctx: ClassifierContext, days: number, startedAt: number) {
   const dry = process.env.RETAG_DRY_RUN === '1'
+  const log = process.env.GEO_RETAG_LOG || null
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
-  const { data, error } = await sb
-    .from('dc_news')
-    .select('id, title, summary, place')
-    .eq('relevant', true)
-    .not('place', 'is', null)
-    .gte('published_at', since)
-    .limit(5000)
-  if (error) throw new Error(`retag-places read failed: ${error.message}`)
-  const rows = (data ?? []) as { id: number; title: string; summary: string | null; place: string }[]
-  console.log(`[retag-places]${dry ? ' (dry run)' : ''} ${rows.length} place-tagged rows in the last ${days} days`)
-  let cleared = 0
-  let failed = 0
-  for (const row of rows) {
-    if (placeIsGrounded(ctx.placeBySlug.get(row.place), `${row.title}\n${row.summary ?? ''}`)) continue
-    if (!dry) {
-      const { error: updErr } = await sb.from('dc_news').update({ place: null }).eq('id', row.id)
-      if (updErr) {
-        failed++
-        console.error(`  ✗ #${row.id}: ${updErr.message}`)
-        continue
-      }
-    }
-    cleared++
-    console.log(`  ✓ #${row.id} ${row.place} → null  ${row.title}`)
+  const rows: GeoRetagRow[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb
+      .from('dc_news')
+      .select('id, title, summary, source, place, country, region')
+      .eq('relevant', true)
+      .gte('published_at', since)
+      .order('id', { ascending: true })
+      .range(from, from + 999)
+    if (error) throw new Error(`retag-geo read failed: ${error.message}`)
+    rows.push(...((data ?? []) as GeoRetagRow[]))
+    if (!data || data.length < 1000) break
   }
-  console.log(`\n[retag-places] done: ${cleared} ${dry ? 'would be cleared' : 'cleared'}, ${rows.length - cleared - failed} kept, ${failed} failed`)
+  console.log(`[retag-geo]${dry ? ' (dry run)' : ''} ${rows.length} relevant rows in the last ${days} days`)
+  const system = GEO_RETAG_SYSTEM(ctx)
+  let changed = 0
+  let same = 0
+  let failed = 0
+  let skipped = 0
+  await pool(rows, GEO_CONCURRENCY, async (row) => {
+    if (Date.now() - startedAt > DEADLINE_MS) {
+      skipped++
+      return
+    }
+    const text = `${row.title}\n${row.summary ?? ''}`
+    const userText = `Headline: ${row.title}\n\n${row.summary ? `Summary: ${row.summary}` : '(no summary available)'}\n\nOutlet: ${row.source ?? 'unknown'}`
+    try {
+      let parsed: Record<string, unknown> | null = null
+      for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+        try {
+          const response = await anthropic.messages.create({
+            model: CLASSIFIER_MODEL,
+            max_tokens: 120,
+            system,
+            messages: [{ role: 'user', content: userText }],
+            ...(useSchema ? { output_config: { format: { type: 'json_schema', schema: GEO_SCHEMA } } } : {}),
+          })
+          const block = response.content.find((b) => b.type === 'text')
+          parsed = block && block.type === 'text' ? parseJsonText(block.text) : null
+        } catch (err) {
+          if (useSchema && isSchemaRejection(err)) {
+            useSchema = false
+            continue
+          }
+          if (attempt === 1) throw err
+          await sleep(5000)
+        }
+      }
+      if (!parsed) throw new Error('unparseable answer')
+      const next = resolveGeo(parsed, ctx, text)
+      const before: GeoTags = { place: row.place, country: row.country, region: row.region }
+      const diff = before.place !== next.place || before.country !== next.country || before.region !== next.region
+      if (log) {
+        appendFileSync(log, `${JSON.stringify({ id: row.id, title: row.title, before, model: { place: parsed.place ?? null, country: parsed.country ?? null, region: parsed.region ?? null, basis: parsed.basis ?? null }, after: next })}\n`)
+      }
+      if (!diff) {
+        same++
+        return
+      }
+      if (!dry) {
+        const { error: updErr } = await sb.from('dc_news').update(next).eq('id', row.id)
+        if (updErr) {
+          failed++
+          console.error(`  ✗ #${row.id}: ${updErr.message}`)
+          return
+        }
+      }
+      changed++
+      console.log(`  ✓ #${row.id} ${geoLabel(before)} → ${geoLabel(next)} [${parsed.basis ?? '?'}]  ${row.title.slice(0, 90)}`)
+    } catch (err) {
+      failed++
+      console.error(`  ✗ #${row.id}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  })
+  if (skipped > 0) console.log(`\n[retag-geo] deadline reached — ${skipped} rows left; run again with a longer DEADLINE_MINUTES or a shorter window`)
+  console.log(`\n[retag-geo] done: ${changed} ${dry ? 'would change' : 'changed'}, ${same} unchanged, ${failed} failed`)
+  if (failed > 0 && changed + same === 0) throw new Error('every geo re-tag failed — check ANTHROPIC_API_KEY')
 }
 
 /**
@@ -782,8 +962,8 @@ async function main() {
     await backfill(sb, anthropic, system, ctx, { days: args.backfillDays, mode: 'untagged' }, startedAt)
     return
   }
-  if (args.retagPlacesDays != null) {
-    await retagPlaces(sb, ctx, args.retagPlacesDays)
+  if (args.retagGeoDays != null) {
+    await retagGeo(sb, anthropic, ctx, args.retagGeoDays, startedAt)
     return
   }
   if (args.reclassifyDays != null) {

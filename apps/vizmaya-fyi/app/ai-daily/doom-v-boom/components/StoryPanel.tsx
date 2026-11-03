@@ -310,6 +310,19 @@ function buildSpec(key: string, data: PanelData): Spec | null {
       if (!p) return null
       return listPanel(`By geography · ${DC_REGIONS[p.region]}`, p.name, stories.filter((s) => s.place === val))
     }
+    case 'country': {
+      // The country ring on the map: stories tagged to the country but to no locality.
+      const c = (geo.countries ?? []).find((x) => x.code === val)
+      if (!c) return null
+      const inCountry = stories.filter((s) => s.country === val)
+      const placed = inCountry.length - inCountry.filter((s) => !s.place).length
+      return listPanel(
+        `By geography · ${DC_REGIONS[c.region]}`,
+        c.name,
+        inCountry,
+        `${inCountry.length} stor${inCountry.length === 1 ? 'y' : 'ies'} in the 24-hour window${placed ? ` · ${placed} also pinned to a locality` : ''}`,
+      )
+    }
     case 'layer': {
       const l = val as DcLayerKey
       if (!DC_LAYERS[l]) return null

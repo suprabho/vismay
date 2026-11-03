@@ -823,8 +823,10 @@ export interface DcNewsItem {
   /* Snapshot tags (migration 078) — null until the classifier has run on the row. */
   /** AI layer: dc | hyper | semi | equip. */
   layer: string | null
-  /** dc_places.slug the story is about. */
+  /** dc_places.slug — the locality the text names (city hub or sub-division). */
   place: string | null
+  /** ISO 3166-1 alpha-2 (dc_countries), migration 100; null before it. */
+  country: string | null
   /** na | ea | eu | me | other. */
   region: string | null
   /** power | permit | memory | capacity | equip | chips | sustain. */
@@ -836,7 +838,9 @@ export interface DcNewsItem {
 }
 
 const DC_NEWS_BASE_COLUMNS = 'id, source_url, title, summary, source, published_at, topics, tickers'
-const DC_NEWS_TAG_COLUMNS = 'layer, place, region, theme, mood, energy'
+const DC_NEWS_TAG_COLUMNS_V3 = 'layer, place, region, theme, mood, energy'
+/** + the country layer (migration 100). */
+const DC_NEWS_TAG_COLUMNS = `${DC_NEWS_TAG_COLUMNS_V3}, country`
 
 function mapDcNewsItemRow(r: any): DcNewsItem {
   return {
@@ -850,6 +854,7 @@ function mapDcNewsItemRow(r: any): DcNewsItem {
     tickers: (r.tickers as string[]) ?? [],
     layer: (r.layer as string | null) ?? null,
     place: (r.place as string | null) ?? null,
+    country: (r.country as string | null) ?? null,
     region: (r.region as string | null) ?? null,
     theme: (r.theme as string | null) ?? null,
     mood: r.mood == null ? null : Number(r.mood),
@@ -878,6 +883,7 @@ export async function getDcNews(opts?: {
   // when the code is deployed ahead of the migration, same as the epic
   // pillar columns.
   let { data, error } = await run(`${DC_NEWS_BASE_COLUMNS}, ${DC_NEWS_TAG_COLUMNS}`)
+  if (error && isMissingColumnError(error)) ({ data, error } = await run(`${DC_NEWS_BASE_COLUMNS}, ${DC_NEWS_TAG_COLUMNS_V3}`))
   if (error && isMissingColumnError(error)) ({ data, error } = await run(DC_NEWS_BASE_COLUMNS))
   if (error) throw new Error(`getDcNews: ${error.message}`)
   return (data ?? []).map(mapDcNewsItemRow)
@@ -993,6 +999,7 @@ export async function listDcNewsForAdmin(opts?: {
   }
   const adminBase = `${DC_NEWS_BASE_COLUMNS}, relevant, fetched_at`
   let { data, error } = await run(`${adminBase}, ${DC_NEWS_TAG_COLUMNS}`)
+  if (error && isMissingColumnError(error)) ({ data, error } = await run(`${adminBase}, ${DC_NEWS_TAG_COLUMNS_V3}`))
   if (error && isMissingColumnError(error)) ({ data, error } = await run(adminBase))
   if (error) throw new Error(`listDcNewsForAdmin: ${error.message}`)
   return (data ?? []).map((r: any) => ({

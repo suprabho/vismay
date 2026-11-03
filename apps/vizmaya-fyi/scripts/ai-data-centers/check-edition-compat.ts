@@ -149,6 +149,7 @@ const story = (id: number, title: string, over: Partial<DcEditionStory> = {}): D
   tickers: [],
   layer: 'dc',
   place: null,
+  country: null,
   region: null,
   theme: 'capacity',
   mood: 1,

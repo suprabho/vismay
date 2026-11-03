@@ -46,6 +46,7 @@ import {
   type DcMood,
   type DcPaper,
   type DcPaperArea,
+  type DcCountry,
   type DcPlace,
   type DcRegionKey,
   type DcFigureScope,
@@ -106,15 +107,20 @@ const DC_NEWS_TAGGED_COLUMNS_V3 =
   'layer, place, region, theme, mood, energy, facts'
 
 /** v4 adds the Doom v Boom grades and the event line + actors the clustering reads (migration 080). */
-export const DC_NEWS_TAGGED_COLUMNS = `${DC_NEWS_TAGGED_COLUMNS_V3}, relevance, impact, event, actors`
+const DC_NEWS_TAGGED_COLUMNS_V4 = `${DC_NEWS_TAGGED_COLUMNS_V3}, relevance, impact, event, actors`
+
+/** v5 adds the country layer between place and region (migration 100). */
+export const DC_NEWS_TAGGED_COLUMNS = `${DC_NEWS_TAGGED_COLUMNS_V4}, country`
 
 /**
- * Run a dc_news read with the v4 columns, retrying with the v3 list when the
- * code is deployed ahead of migration 080: the edition then scores ungraded
- * events (weight as 3/3) instead of failing to render.
+ * Run a dc_news read with the v5 columns, falling back a version at a time
+ * when the code is deployed ahead of a migration: without 100 the stories
+ * carry no country (region still renders); without 080 the edition scores
+ * ungraded events (weight as 3/3) instead of failing to render.
  */
 async function withTaggedColumns<T>(run: (cols: string) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>) {
   let res = await run(DC_NEWS_TAGGED_COLUMNS)
+  if (res.error && isMissingColumnError(res.error)) res = await run(DC_NEWS_TAGGED_COLUMNS_V4)
   if (res.error && isMissingColumnError(res.error)) res = await run(DC_NEWS_TAGGED_COLUMNS_V3)
   return res
 }
@@ -232,6 +238,7 @@ export function mapDcStoryRow(r: any, kind: 'news' | 'iea' = 'news'): DcEditionS
     tickers: (r.tickers as string[]) ?? [],
     layer: (r.layer as DcLayerKey | null) ?? null,
     place: (r.place as string | null) ?? null,
+    country: typeof r.country === 'string' && r.country ? (r.country as string).toUpperCase() : null,
     region: (r.region as DcRegionKey | null) ?? null,
     theme: (r.theme as DcThemeKey | null) ?? null,
     mood: r.mood == null ? null : (Number(r.mood) as DcMood),
@@ -274,6 +281,19 @@ function mapPaperRow(r: any): DcPaper {
 function mapPlaceRow(r: any): DcPlace {
   return {
     slug: r.slug as string,
+    name: r.name as string,
+    region: r.region as DcRegionKey,
+    lat: Number(r.lat),
+    lng: Number(r.lng),
+    aliases: (r.aliases as string[]) ?? [],
+    country: typeof r.country === 'string' && r.country ? (r.country as string).toUpperCase() : null,
+    kind: r.kind === 'subdivision' ? 'subdivision' : 'city',
+  }
+}
+
+function mapCountryRow(r: any): DcCountry {
+  return {
+    code: (r.code as string).toUpperCase(),
     name: r.name as string,
     region: r.region as DcRegionKey,
     lat: Number(r.lat),
@@ -349,13 +369,29 @@ export function mapEditionRow(r: any): DcEdition {
 
 export async function listDcPlaces(): Promise<DcPlace[]> {
   const sb = createServiceClient()
+  // `country` and `kind` arrive with migration 100; before it the hubs read
+  // as cities with no country and the country layer is simply empty.
+  const read = (cols: string) => sb.from('dc_places').select(cols).eq('is_active', true).order('slug')
+  let res: { data: unknown[] | null; error: { code?: string; message: string } | null } = await read('slug, name, region, lat, lng, aliases, country, kind')
+  if (res.error && isMissingColumnError(res.error)) res = await read('slug, name, region, lat, lng, aliases')
+  if (res.error) throw new Error(`listDcPlaces: ${res.error.message}`)
+  return (res.data ?? []).map(mapPlaceRow)
+}
+
+/** The country vocabulary (migration 100). Empty before the migration, never a throw. */
+export async function listDcCountries(): Promise<DcCountry[]> {
+  const sb = createServiceClient()
   const { data, error } = await sb
-    .from('dc_places')
-    .select('slug, name, region, lat, lng, aliases')
+    .from('dc_countries')
+    .select('code, name, region, lat, lng, aliases')
     .eq('is_active', true)
-    .order('slug')
-  if (error) throw new Error(`listDcPlaces: ${error.message}`)
-  return (data ?? []).map(mapPlaceRow)
+    .order('code')
+  if (error) {
+    // 42P01 = relation does not exist (PostgREST reports a missing table as PGRST205).
+    if (error.code === '42P01' || error.code === 'PGRST205' || /dc_countries/.test(error.message)) return []
+    throw new Error(`listDcCountries: ${error.message}`)
+  }
+  return (data ?? []).map(mapCountryRow)
 }
 
 export async function listDcStockNames(): Promise<StockName[]> {
@@ -917,8 +953,9 @@ export async function assembleEditionNumbers(input: {
 
   // Closes from a week before the first history session through today's, for the market term.
   const closesFrom = new Date(historyStart.getTime() - 8 * 86_400_000).toISOString().slice(0, 10)
-  const [places, stocks, tape, closes, marketStocks, calibration, historyRowsR, publishedR, papersR] = await Promise.all([
+  const [places, countries, stocks, tape, closes, marketStocks, calibration, historyRowsR, publishedR, papersR] = await Promise.all([
     listDcPlaces(),
+    listDcCountries(),
     listDcStockNames(),
     getDcTapeMoves(end).catch((err) => {
       console.warn(`[editions] tape unavailable (${err instanceof Error ? err.message : err})`)
@@ -1035,8 +1072,8 @@ export async function assembleEditionNumbers(input: {
     layerCounts[k] = stories.filter((s) => s.layer === k).length
     layerViz[k] = buildLayerViz(k, stories, { places: placeMap, stocks: stockMap, today })
   }
-  const geo = buildGeo(stories, places)
-  const energy = buildEnergy(stories, ieaStories, { places: placeMap, stocks: stockMap, history: powerHistory, editionDate })
+  const geo = buildGeo(stories, places, countries)
+  const energy = buildEnergy(stories, ieaStories, { places: placeMap, countries: new Map(countries.map((c) => [c.code, c])), stocks: stockMap, history: powerHistory, editionDate })
   const baseline = fieldBaseline((papersR.data ?? []) as { area: DcPaperArea | null }[], 30)
 
   return {

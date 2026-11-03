@@ -501,7 +501,7 @@ export default function EditionsClient() {
                         {s.title}
                       </a>
                       <span className="block text-xs text-neutral-500 mt-0.5">
-                        {s.source ?? '—'} · {s.layer ?? 'untagged'} · {s.place ?? '—'} · {s.theme ?? '—'} · {s.mood === 1 ? 'boom' : s.mood === -1 ? 'doom' : 'neutral'}
+                        {s.source ?? '—'} · {s.layer ?? 'untagged'} · {[s.place, s.country, s.region].filter(Boolean).join('/') || '—'} · {s.theme ?? '—'} · {s.mood === 1 ? 'boom' : s.mood === -1 ? 'doom' : 'neutral'}
                         {s.energy ? ' · energy' : ''} · R{s.relevance ?? '–'}·I{s.impact ?? '–'}
                       </span>
                       {(event || dupOf) && (

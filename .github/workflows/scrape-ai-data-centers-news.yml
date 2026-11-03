@@ -3,8 +3,9 @@ name: Scrape AI Data Centers news
 # Daily pull of Google News' RSS search across four AI-infrastructure queries
 # (AI data centers, semiconductors, microprocessors, AI infra). Each new
 # article is classified by Claude Haiku — relevance gate, topic tags,
-# tracked tickers from dc_stocks, plus the daily-snapshot tags (layer, place,
-# theme, mood, energy, facts; migration 078) — and upserted into dc_news.
+# tracked tickers from dc_stocks, plus the daily-snapshot tags (layer, the
+# place / country / region geography, theme, mood, energy, facts; migrations
+# 078 + 100) — and upserted into dc_news.
 # Idempotent on source_url (off-topic items persist with relevant=false so
 # they aren't re-classified), so re-runs and manual dispatches are safe.
 #
@@ -41,11 +42,11 @@ on:
         type: string
         required: false
         default: ''
-      retag_places_days:
+      retag_geo_days:
         type: string
         required: false
         default: ''
-      retag_places_dry_run:
+      retag_geo_dry_run:
         type: string
         required: false
         default: ''
@@ -63,12 +64,12 @@ on:
         description: 'Re-classify every relevant row from the last N days, whatever its classifier version (Haiku call per row)'
         required: false
         default: ''
-      retag_places_days:
-        description: 'Clear Bengaluru/Mumbai place tags the headline/summary does not name, from the last N days (no model call)'
+      retag_geo_days:
+        description: 'Re-derive only place / country / region for every relevant row from the last N days (small geo-only Haiku call per row; other tags untouched)'
         required: false
         default: ''
-      retag_places_dry_run:
-        description: 'Set to 1 to only print what retag_places_days would clear'
+      retag_geo_dry_run:
+        description: 'Set to 1 to only print what retag_geo_days would change'
         required: false
         default: ''
 
@@ -105,11 +106,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          RETAG_DRY_RUN: ${{ inputs.retag_places_dry_run }}
+          RETAG_DRY_RUN: ${{ inputs.retag_geo_dry_run }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: >
           pnpm ai-data-centers:scrape-news
           ${{ inputs.backfill_days != '' && format('-- --backfill-days {0}', inputs.backfill_days) || '' }}
           ${{ inputs.retag_days != '' && format('-- --retag-days {0}', inputs.retag_days) || '' }}
           ${{ inputs.reclassify_days != '' && format('-- --reclassify-days {0}', inputs.reclassify_days) || '' }}
-          ${{ inputs.retag_places_days != '' && format('-- --retag-places-days {0}', inputs.retag_places_days) || '' }}
+          ${{ inputs.retag_geo_days != '' && format('-- --retag-geo-days {0}', inputs.retag_geo_days) || '' }}
