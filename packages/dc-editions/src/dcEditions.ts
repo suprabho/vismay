@@ -60,6 +60,7 @@ import {
   type EditionCounts,
   type EditionEnergy,
   type EditionGeo,
+  type EditionGeoPlace,
   type EditionLayer,
   type EditionLayerNote,
   type EditionMoodCounts,
@@ -761,6 +762,32 @@ export async function getMoodSeries(days = 30): Promise<EditionMoodPoint[]> {
   if (error) throw new Error(`getMoodSeries: ${error.message}`)
   return (data ?? [])
     .map((r: any) => ({ date: r.edition_date as string, score: r.mood_score == null ? null : Number(r.mood_score) }))
+    .reverse()
+}
+
+/** One published edition's frozen places, for the landing page's geography timeline. */
+export interface EditionGeoDay {
+  date: string
+  number: number | null
+  places: EditionGeoPlace[]
+}
+
+/** The geo block of the last `limit` published editions, oldest first. */
+export async function listEditionGeoSeries(limit = 400): Promise<EditionGeoDay[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_editions')
+    .select('edition_date, number, geo')
+    .eq('status', 'published')
+    .order('edition_date', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 400))
+  if (error) throw new Error(`listEditionGeoSeries: ${error.message}`)
+  return (data ?? [])
+    .map((r: any) => ({
+      date: r.edition_date as string,
+      number: r.number == null ? null : Number(r.number),
+      places: Array.isArray(r.geo?.places) ? (r.geo.places as EditionGeoPlace[]) : [],
+    }))
     .reverse()
 }
 
