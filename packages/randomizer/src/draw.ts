@@ -90,9 +90,21 @@
  * mode follows the debate: a study the collection links to the previous
  * spin's (a rebuttal, a replication, a later trial). The study's live
  * citation record (OpenAlex) is read after the draw and changes nothing in it.
+ *
+ * The Frontier Desk draws from AI Daily's kept arXiv papers (dc_papers), read
+ * live before the draw (spins.ts loadFrontierPool) and passed in, so the
+ * draw itself stays pure and one pass: an area first (weighted by the square
+ * root of its paper count; re-drawn once when it repeats the last spin's), a
+ * window the area has papers in (This week 3, This month 2, the back
+ * catalogue 1), a paper in both (weighted by the gate's importance, plus one
+ * for a paper a Doom v Boom edition featured; a paper spun in the last 90
+ * days is left out), and a lens; (paper, lens) is blocked for 90 days.
+ * Sequence mode follows the thread: a pool paper sharing tags or the
+ * benchmark with the previous spin's. The paper's arXiv and OpenAlex record
+ * is read after the draw and changes nothing in it.
  */
 
-import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
+import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, frontierAgeDays, frontierWindowOf, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
 import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkLicenceNote, ocwCourseLabel } from './stub'
 import {
@@ -123,6 +135,13 @@ import {
   type EvidenceRelated,
   type EvidenceStudy,
   type EvidenceTheme,
+  type FrontierArea,
+  type FrontierDataset,
+  type FrontierPaper,
+  type FrontierPicks,
+  type FrontierPool,
+  type FrontierRelated,
+  type FrontierWindow,
   type HundredDataset,
   type HundredDomain,
   type HundredEra,
@@ -200,6 +219,10 @@ export const DRAW_RULES = {
   /** Landmark Desk: at most this many other works kept on a spin as related reading, and laureate names from the pool. */
   maxLandmarkRelated: 8,
   maxLandmarkNames: 80,
+  /** Frontier Desk: how far back the pool reads dc_papers, how many neighbouring papers a spin keeps, and titles kept for the paper reel. */
+  frontierPoolDays: 365,
+  maxFrontierRelated: 5,
+  maxFrontierTitles: 40,
 } as const
 
 const DAY = 864e5
@@ -215,7 +238,7 @@ export interface DrawInput {
   locks?: string[]
   /** Atlas: draw a second country. Footshorts and the NBA Desk: draw a head-to-head opponent. */
   pair?: boolean
-  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. The Evidence Desk: a study linked to the previous one. */
+  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. The Evidence Desk: a study linked to the previous one. The Frontier Desk: a paper beside the previous one. */
   sequence?: boolean
   /** Desk: live heat from desk_heat, overriding the dataset's seed values. */
   heat?: DeskHeatRow[]
@@ -227,8 +250,10 @@ export interface DrawInput {
   ocwPool?: OcwPool | null
   /** Landmark Desk: the awards planLandmark() asked for and the planned laureate's works (spins.ts). Required. */
   landmarkPool?: LandmarkPool | null
+  /** Frontier Desk: AI Daily's kept papers (spins.ts loadFrontierPool). Required. */
+  frontierPool?: FrontierPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; frontier?: FrontierDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -381,6 +406,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'evidence') {
     return drawEvidence(ctx, input.datasets?.evidence ?? EVIDENCE, prev?.picks as EvidencePicks | undefined, !!input.sequence)
+  }
+  if (input.randomizer === 'frontier') {
+    return drawFrontier(ctx, input.datasets?.frontier ?? FRONTIER, prev?.picks as FrontierPicks | undefined, input.frontierPool ?? null, !!input.sequence)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -1790,6 +1818,199 @@ function drawEvidence(ctx: Ctx, data: EvidenceDataset, prev: EvidencePicks | und
     summary: `#${study.n} ${study.label} · ${lens.name}`,
     rules: ctx.rules,
     meta: { theme: theme.id, study: study.n },
+  }
+}
+
+/* ---------- The Frontier Desk ---------- */
+
+/** "2609.11902 · Sparse attention at 1M tokens" trimmed for the reel's sub-line. */
+function frontierReelSub(p: FrontierPaper): string {
+  return `${p.arxivId} · ${p.title.length > 70 ? `${p.title.slice(0, 68).trimEnd()}…` : p.title}`
+}
+
+/** How closely two papers sit together: shared tags, the same benchmark, the same area. */
+function frontierAffinity(a: FrontierPaper, b: FrontierPaper): number {
+  const tags = new Set(a.tags.map((t) => t.toLowerCase()))
+  const shared = b.tags.filter((t) => tags.has(t.toLowerCase())).length
+  const bench = a.bench && b.bench && a.bench.trim().toLowerCase() === b.bench.trim().toLowerCase() ? 2 : 0
+  const area = a.area && a.area === b.area ? 1 : 0
+  return shared * 2 + bench + (shared || bench ? area : 0)
+}
+
+/** A paper's weight in the paper draw: the gate's importance, plus one for a paper an edition featured. */
+const frontierWeight = (p: FrontierPaper) => (p.importance ?? 2) + (p.editions.length ? 1 : 0)
+
+/**
+ * Papers spun in the history the draw sees (90 days) are left out; when that
+ * empties the pool, the one spun longest ago comes back.
+ */
+function frontierUnspun(ctx: Ctx, pool: FrontierPaper[], what: string): FrontierPaper[] {
+  const last = lastSpun(ctx)
+  const spun = pool.filter((p) => last.has(p.arxivId))
+  const left = pool.filter((p) => !last.has(p.arxivId))
+  if (spun.length && left.length) rule(ctx, '90 days', 'block', `Left out ${spun.length === 1 ? 'one paper' : `${spun.length} papers`} ${what} already spun in the last 90 days: a paper is drawn once.`)
+  if (left.length || !pool.length) return left
+  const oldest = [...spun].sort((a, b) => last.get(a.arxivId)! - last.get(b.arxivId)!)[0]!
+  rule(ctx, '90 days', 'warn', `Every paper ${what} was spun in the last 90 days. The block is lifted for the one spun longest ago: ${oldest.arxivId}.`)
+  return [oldest]
+}
+
+function frontierRules(ctx: Ctx, data: FrontierDataset, p: FrontierPaper, window: FrontierWindow): void {
+  rule(ctx, 'preprint', 'warn', `${p.arxivId} is an arXiv preprint: not peer-reviewed unless the record shows a journal or conference version. Label it "preprint" wherever its result appears.`)
+  rule(ctx, 'gate', 'info', `AI Daily's papers gate read the abstract with a model and filed the area, benchmark, numbers, compute and scale. They are leads: every number on the page comes from the paper itself, with its table or figure.`)
+  if (p.bench && p.result !== null) {
+    const base = p.baseline !== null ? `${p.baseline} to ${p.result}` : `${p.result}`
+    rule(ctx, 'benchmark', 'info', `The headline as the gate read it: ${base}${p.unit ? ` ${p.unit}` : ''} on ${p.bench}. Check the baseline is the strongest fair one, the setting matches, and whether the benchmark could be in the training data.`)
+  } else {
+    rule(ctx, 'benchmark', 'info', 'The gate found no headline benchmark number in the abstract. Find the main result in the paper, or tell the story without one.')
+  }
+  if (!p.weightsReleased && !p.codeReleased) rule(ctx, 'release', 'warn', 'No weights or code released (as the gate read it): outsiders cannot reproduce the result yet. Say so, and check the paper and its comment line for a later release.')
+  if (p.computeBucket !== null && p.computeBucket >= 2) rule(ctx, 'compute', 'info', `Compute bucket ${data.compute_buckets[p.computeBucket] ?? p.computeBucket}: a frontier-scale experiment. Tie it to the chips, power and capital AI Daily tracks.`)
+  if (p.editions.length) {
+    rule(ctx, 'edition', 'good', `Featured in ${p.editions.length === 1 ? 'the Doom v Boom edition' : `${p.editions.length} Doom v Boom editions`} of ${list(p.editions)}: link ${p.editions.length === 1 ? 'it' : 'the first'} from the page.`)
+  }
+  if (window.id === 'week') rule(ctx, 'fresh', 'info', 'Submitted this week: nobody has replicated it yet. Say what would confirm or sink it.')
+}
+
+function drawFrontier(ctx: Ctx, data: FrontierDataset, prev: FrontierPicks | undefined, pool: FrontierPool | null, sequence: boolean): DrawResult {
+  const { rng } = ctx
+  if (!pool?.papers.length) {
+    throw new Error(`The Frontier Desk draws from AI Daily's kept papers (dc_papers), and none were found in the last ${pool?.windowDays ?? DRAW_RULES.frontierPoolDays} days. Is the ingest-dc-papers job running?`)
+  }
+  const papers = pool.papers.filter((p) => p.area && data.areas.some((a) => a.id === p.area))
+  if (!papers.length) throw new Error('None of the kept papers has an area the Frontier Desk knows. Check dc_papers.area against frontier.json.')
+  const byId = new Map(papers.map((p) => [p.arxivId, p]))
+  const windowOf = (p: FrontierPaper) => frontierWindowOf(p, ctx.now, data)
+  const last = ctx.kept[ctx.kept.length - 1]
+  const lastPicks = last?.picks as FrontierPicks | undefined
+
+  let paper: FrontierPaper | undefined
+  let from: string | null = null
+
+  if (sequence) {
+    const origin = lastPicks ? byId.get(lastPicks.paper) : undefined
+    if (ctx.locked('area') || ctx.locked('window') || ctx.locked('paper')) {
+      rule(ctx, 'sequence', 'info', 'Following the thread ignores the area, window and paper reels, and they are locked here, so the locks win: drawing under them.')
+    } else if (origin) {
+      const near = papers.filter((p) => p.arxivId !== origin.arxivId && frontierAffinity(origin, p) > 0)
+      const cands = frontierUnspun(ctx, near, `beside ${origin.arxivId}`)
+      if (cands.length) {
+        paper = weighted(cands, (p) => frontierAffinity(origin, p) + frontierWeight(p) / 2, rng)
+        from = origin.arxivId
+        rule(ctx, 'sequence', 'good', `Following the thread from ${origin.arxivId}: ${near.length === 1 ? 'one paper' : `${near.length} papers`} in the pool share its tags or benchmark, weighted by how much they share. This spin takes ${paper.arxivId}. The area balance pauses while the thread runs.`)
+      } else {
+        rule(ctx, 'sequence', 'info', `No paper in the pool shares a tag or the benchmark with ${origin.arxivId}, so there is no thread to follow. Drawing fresh.`)
+      }
+    } else if (lastPicks) {
+      rule(ctx, 'sequence', 'info', `The previous spin's paper ${lastPicks.paper} has left the pool's window, so there is no thread to follow. Drawing fresh.`)
+    } else {
+      rule(ctx, 'sequence', 'info', 'Following the thread needs a previous spin to follow on from. Drawing fresh.')
+    }
+  }
+
+  if (!paper) {
+    const prevPaper = prev ? byId.get(prev.paper) : undefined
+    if (ctx.locked('paper') && prevPaper) {
+      paper = prevPaper
+      rule(ctx, 'lock', 'info', `Paper locked to ${paper.arxivId}.`)
+    } else {
+      if (ctx.locked('paper') && prev) rule(ctx, 'lock', 'warn', `${prev.paper} is no longer in the pool's window, so its lock is ignored.`)
+      const stocked = data.areas.filter((a) => papers.some((p) => p.area === a.id))
+      const size = (a: FrontierArea) => Math.sqrt(papers.filter((p) => p.area === a.id).length)
+      let area: FrontierArea
+      const prevArea = prev ? stocked.find((a) => a.id === prev.area) : undefined
+      if (ctx.locked('area') && prevArea) {
+        area = prevArea
+        rule(ctx, 'lock', 'info', `Area locked to ${area.name}.`)
+      } else {
+        area = weighted(stocked, size, rng)
+        if (last?.meta.area === area.id && stocked.length > 1) {
+          const again = weighted(stocked, size, rng)
+          rule(
+            ctx,
+            'balance',
+            'warn',
+            again.id === area.id
+              ? `${area.name} came up twice in a row, so the area was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+              : `${area.name} came up twice in a row, so the area was re-drawn once, now ${again.name}.`,
+          )
+          area = again
+        }
+        rule(ctx, 'balance', 'good', `Stratified draw: area first (${area.name}, weighted by the square root of its paper count, so a busy area does not crowd out a quiet one), then a window it has papers in, then a paper weighted by the gate's importance.`)
+      }
+
+      const inArea = papers.filter((p) => p.area === area.id)
+      const windows = data.windows.filter((w) => inArea.some((p) => windowOf(p).id === w.id))
+      let window: FrontierWindow
+      const prevWindow = prev ? windows.find((w) => w.id === prev.window) : undefined
+      if (ctx.locked('window') && prevWindow) {
+        window = prevWindow
+        rule(ctx, 'lock', 'info', `Window locked to ${window.name}.`)
+      } else {
+        window = weighted(windows, (w) => w.weight, rng)
+      }
+
+      const cell = inArea.filter((p) => windowOf(p).id === window.id)
+      const cands = frontierUnspun(ctx, cell, `in ${area.name.toLowerCase()} (${window.name.toLowerCase()})`)
+      paper = weighted(cands, frontierWeight, rng)
+    }
+  }
+
+  const area = data.areas.find((a) => a.id === paper!.area)!
+  const window = windowOf(paper)
+  let lens = (ctx.locked('lens') && prev && data.lenses.find((l) => l.name === prev.lens)) || pick(data.lenses, rng)
+
+  const combo = () => `${paper!.arxivId}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    const fresh = data.lenses.filter((l) => !r90.has(`${paper!.arxivId}|${l.name}`))
+    if (!ctx.locked('lens') && fresh.length) lens = pick(fresh, rng)
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${paper.arxivId} with the ${lens.name} lens ran in the last 90 days${ctx.locked('lens') ? ', and the lens is locked' : ', and every lens has run'}. It repeats.`
+        : `${paper.arxivId} with the first lens drawn ran in the last 90 days. The lens was re-drawn.`,
+    )
+  }
+
+  frontierRules(ctx, data, paper, window)
+
+  const related: FrontierRelated[] = papers
+    .filter((p) => p.arxivId !== paper!.arxivId && frontierAffinity(paper!, p) > 0)
+    .sort((a, b) => frontierAffinity(paper!, b) - frontierAffinity(paper!, a) || (b.importance ?? 0) - (a.importance ?? 0) || b.publishedAt.localeCompare(a.publishedAt))
+    .slice(0, DRAW_RULES.maxFrontierRelated)
+    .map((p) => ({ arxivId: p.arxivId, title: p.title, area: p.area, bench: p.bench, baseline: p.baseline, result: p.result, unit: p.unit, why: p.why, publishedAt: p.publishedAt, tags: p.tags }))
+  const titles = papers.filter((p) => p.area === area.id).slice(0, DRAW_RULES.maxFrontierTitles).map((p) => p.title)
+
+  const picks: FrontierPicks = { area: area.id, window: window.id, paper: paper.arxivId, lens: lens.name }
+  return {
+    randomizer: 'frontier',
+    picks,
+    subject: {
+      randomizer: 'frontier',
+      source: { name: data.source.name, series: data.source.series, series_url: data.source.series_url, edition_url: data.source.edition_url, note: data.source.note },
+      area,
+      window,
+      paper,
+      lens,
+      related,
+      pool: { asOf: pool.asOf, windowDays: pool.windowDays, size: papers.length, titles },
+      record: null,
+      from,
+    },
+    reels: {
+      area: { value: area.name },
+      window: { value: window.name, sub: `${frontierAgeDays(paper, ctx.now)} days old` },
+      paper: { value: paper.title.length > 60 ? `${paper.title.slice(0, 58).trimEnd()}…` : paper.title, sub: frontierReelSub(paper) },
+      lens: { value: lens.name },
+    },
+    primary: paper.arxivId,
+    combo: combo(),
+    summary: `${paper.arxivId} ${paper.title.length > 50 ? `${paper.title.slice(0, 48).trimEnd()}…` : paper.title} · ${lens.name}`,
+    rules: ctx.rules,
+    meta: { area: area.id, arxiv: paper.arxivId },
   }
 }
 

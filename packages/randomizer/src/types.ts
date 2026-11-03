@@ -2,8 +2,9 @@
  * Types for the story randomizers: the seven Vizmaya ones (the playbook's
  * Desk, Atlas and Epics, the OCW Desk on MIT OpenCourseWare, the Landmark
  * Desk on prize-winning research, The 100 Desk on Michael Hart's ranking
- * of the most influential persons in history and the Evidence Desk on an
- * annotated collection of research on social media's effects), the
+ * of the most influential persons in history, the Evidence Desk on an
+ * annotated collection of research on social media's effects and the
+ * Frontier Desk on the arXiv papers AI Daily ingests), the
  * Footshorts one (teams, tournaments and their news) and the VizNBA one
  * (franchises, conferences and their news), their datasets (./data/*.json)
  * and the spins they produce.
@@ -11,9 +12,9 @@
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'frontier' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -47,7 +48,7 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark, The 100 and Evidence sequence mode, Footshorts and NBA head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark, The 100, Evidence and Frontier sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
@@ -171,6 +172,21 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
       { key: 'lens', label: 'Lens' },
     ],
     option: { key: 'sequence', label: 'Follow the debate (a linked study)' },
+    gated: false,
+  },
+  frontier: {
+    id: 'frontier',
+    app: 'vizmaya-fyi',
+    name: 'Frontier Desk',
+    hint: 'AI Daily papers · arXiv',
+    format: 'Paper explainer with charts',
+    reels: [
+      { key: 'area', label: 'Area' },
+      { key: 'window', label: 'Window', parents: ['area'] },
+      { key: 'paper', label: 'Paper', parents: ['window', 'area'], live: true },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: { key: 'sequence', label: 'Follow the thread (a related paper)' },
     gated: false,
   },
   footshorts: {
@@ -1074,6 +1090,156 @@ export interface EvidenceSubject {
   from: number | null
 }
 
+/* ---------- The Frontier Desk ---------- */
+
+/** Where the papers come from: AI Daily's papers job and the table it writes. */
+export interface FrontierSource {
+  name: string
+  series: string
+  /** The Supabase table the pool is read from. */
+  table: string
+  /** The ingest script that fills it. */
+  ingest: string
+  series_url: string
+  /** An edition's URL is this plus its date (YYYY-MM-DD). */
+  edition_url: string
+  note: string
+}
+
+/** One of the six areas AI Daily's papers gate files a paper under (dc_papers.area). */
+export interface FrontierArea {
+  id: string
+  name: string
+  description: string
+}
+
+/** How old the paper is: the freshness reel. */
+export interface FrontierWindow {
+  id: 'week' | 'month' | 'archive'
+  name: string
+  /** Age in days, from (inclusive) and to (exclusive; null = no limit). */
+  min_days: number
+  max_days: number | null
+  /** The window's weight in the draw: news first, the back catalogue less often. */
+  weight: number
+  description: string
+}
+
+export interface FrontierDataset {
+  source: FrontierSource
+  areas: FrontierArea[]
+  windows: FrontierWindow[]
+  /** dc_papers.kind → label. */
+  kinds: Record<string, string>
+  /** dc_papers.compute_bucket 0 to 3 → label. */
+  compute_buckets: string[]
+  lenses: NamedOption[]
+}
+
+/** One kept paper from dc_papers, as the pool holds it. */
+export interface FrontierPaper {
+  /** arXiv id without the version ("2609.11902"). */
+  arxivId: string
+  title: string
+  abstract: string | null
+  authors: string | null
+  affiliations: string | null
+  kind: 'lab' | 'academic' | 'mixed' | null
+  /** Primary arXiv category, e.g. cs.CL. */
+  category: string | null
+  /** FrontierArea.id */
+  area: string | null
+  /** The benchmark or metric the headline result is on, as the gate read it. */
+  bench: string | null
+  baseline: number | null
+  result: number | null
+  unit: string | null
+  computeBucket: number | null
+  scale: string | null
+  weightsReleased: boolean
+  codeReleased: boolean
+  /** The gate's one line on why it matters. */
+  why: string | null
+  tags: string[]
+  /** 1 to 5 from the gate. */
+  importance: number | null
+  /** arXiv v1 submission time, ISO. */
+  publishedAt: string
+  /** Dates (YYYY-MM-DD) of the published Doom v Boom editions that featured it. */
+  editions: string[]
+}
+
+/**
+ * What a spin reads from dc_papers before the draw (spins.ts
+ * loadFrontierPool): every kept paper from the last `windowDays`, with the
+ * published editions that featured each. Frozen into the spin as a sample,
+ * so a logged spin replays without the database.
+ */
+export interface FrontierPool {
+  asOf: string
+  windowDays: number
+  papers: FrontierPaper[]
+  /** Published editions read for the featured marks. */
+  editionsRead: number
+}
+
+export type FrontierSourceState = 'ok' | 'failed' | 'skipped'
+
+/**
+ * What a spin reads live about the paper it drew (frontierPool.ts), after
+ * the draw: arXiv's own record (the latest version, when it was updated, a
+ * journal reference or DOI once published, the authors' comment line) and
+ * OpenAlex's citations through the arXiv DOI. Never blocks a spin.
+ */
+export interface FrontierRecord {
+  asOf: string
+  absUrl: string
+  pdfUrl: string
+  /** The newest version on arXiv (1 = never revised). */
+  version: number | null
+  updated: string | null
+  /** Where it was published since, as arXiv records it. */
+  journalRef: string | null
+  /** The publisher's DOI, when arXiv has one (not the 10.48550 arXiv DOI). */
+  doi: string | null
+  /** The authors' comment ("Accepted at NeurIPS 2026; code at ..."). */
+  comment: string | null
+  citedBy: number | null
+  countsByYear: Array<{ year: number; citations: number }>
+  openalexUrl: string | null
+  sources: { arxiv: FrontierSourceState; openalex: FrontierSourceState; errors: string[]; notes: string[] }
+}
+
+/** A paper the spin's paper sits beside (shared tags, the same benchmark, the same area), as the subject carries it. */
+export type FrontierRelated = Pick<FrontierPaper, 'arxivId' | 'title' | 'area' | 'bench' | 'baseline' | 'result' | 'unit' | 'why' | 'publishedAt' | 'tags'>
+
+export interface FrontierPicks {
+  /** FrontierArea.id */
+  area: string
+  /** FrontierWindow.id */
+  window: string
+  /** FrontierPaper.arxivId */
+  paper: string
+  lens: string
+}
+
+export interface FrontierSubject {
+  randomizer: 'frontier'
+  source: Pick<FrontierSource, 'name' | 'series' | 'series_url' | 'edition_url' | 'note'>
+  area: FrontierArea
+  window: FrontierWindow
+  paper: FrontierPaper
+  lens: NamedOption
+  /** The pool's other papers it sits beside, best match first. */
+  related: FrontierRelated[]
+  /** When the pool was read, its window and size, and titles from it for the paper reel. */
+  pool: { asOf: string; windowDays: number; size: number; titles: string[] }
+  /** Read after the draw (spins.ts); null on a spin replayed without the network. */
+  record: FrontierRecord | null
+  /** Followed the thread from the previous spin's paper (sequence mode): its arXiv id. */
+  from: string | null
+}
+
 /* ---------- Footshorts ---------- */
 
 export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
@@ -1435,8 +1601,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FrontierSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FrontierPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -1463,6 +1629,9 @@ export interface SpinMeta {
   /** The Evidence Desk: the theme, for the same-theme-twice rule, and the study's number, for following the debate. */
   theme?: string
   study?: number
+  /** The Frontier Desk: the area, for the same-area-twice rule, and the paper's arXiv id, for following the thread. */
+  area?: string
+  arxiv?: string
 }
 
 export interface DrawResult {

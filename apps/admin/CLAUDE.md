@@ -259,18 +259,18 @@ league and team rows only).
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094, 096 and 098;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094, 096, 098 and 099;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
-Desk, Atlas, Epics, the OCW Desk, the Landmark Desk, The 100 Desk and the Evidence Desk on `/vizmaya/randomizer`, the Football Desk on
+Desk, Atlas, Epics, the OCW Desk, the Landmark Desk, The 100 Desk, the Evidence Desk and the Frontier Desk on `/vizmaya/randomizer`, the Football Desk on
 `/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
-  seven tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  eight tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
   with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course /
-  Landmark follow-the-prize / The 100 walk-the-ranking / Evidence follow-the-debate toggle, the style die, the rules that fired, the spin log, the hero insight
+  Landmark follow-the-prize / The 100 walk-the-ranking / Evidence follow-the-debate / Frontier follow-the-thread toggle, the style die, the rules that fired, the spin log, the hero insight
   gate (approve / send back with a note, paste research), the composed brief's
   assignment with Copy agent brief and Copy research stub (its toolbar also
   carries the attached style: swatches, Randomize/Shuffle and, on footshorts,
@@ -309,7 +309,14 @@ story links.
   (citations, FWCI, top 1%, retraction, free-to-read link), the studies the
   collection links to it, citations by year as bars, and the sources' states
   (OpenAlex, Unpaywall) with notes and errors. Not gated; a cron spins it each
-  morning.
+  morning. On the Frontier Desk tab (the arXiv papers AI Daily keeps in
+  `dc_papers`, read live per spin), the **Frontier paper** panel: the paper with
+  its arXiv id and version, date, area, window, category and kind, chips for
+  the gate's importance, what was released and preprint or published, the
+  authors, the gate's why and headline (benchmark, compute, scale), tags, the
+  Doom v Boom editions that featured it, the arXiv and OpenAlex record, the
+  pool papers beside it, and the sources' states with notes and errors. Not
+  gated; a cron spins it each morning at 09:20 UTC.
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel

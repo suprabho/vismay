@@ -1,0 +1,39 @@
+{
+  "source": {
+    "name": "AI Daily",
+    "series": "Doom v Boom",
+    "table": "dc_papers",
+    "ingest": "apps/vizmaya-fyi/scripts/ai-data-centers/ingest-papers.ts",
+    "series_url": "https://vizmaya.fyi/ai-daily/doom-v-boom",
+    "edition_url": "https://vizmaya.fyi/ai-daily/doom-v-boom/",
+    "note": "Every morning AI Daily's papers job reads the arXiv listings in cs.AI, cs.CL, cs.LG, cs.CV, cs.AR and cs.DC, keeps the papers with a data-center-scale or frontier-AI bearing (a keyword gate, then a Claude Haiku gate) and extracts the area, the headline benchmark with its baseline and result, a compute bucket, the scale, what was released, a one-line why-it-matters and a 1 to 5 importance. Those fields are a model's reading of the abstract: leads to check against the paper, never sources."
+  },
+  "areas": [
+    { "id": "reason", "name": "Reasoning & agents", "description": "Chain-of-thought, planning, tool use, agents and the test-time compute behind them." },
+    { "id": "arch", "name": "Architectures & training", "description": "New model shapes, training recipes, scaling laws and the data that feeds them." },
+    { "id": "infer", "name": "Inference efficiency", "description": "Serving cost: quantization, sparsity, speculative decoding, caching, kernels and the hardware they run on." },
+    { "id": "multi", "name": "Multimodal", "description": "Vision, audio, video and models that read and write more than text." },
+    { "id": "align", "name": "Alignment & safety", "description": "Making models do what is meant: preference training, interpretability, red-teaming and evaluations of risk." },
+    { "id": "evalb", "name": "Evaluation & benchmarks", "description": "How capability is measured: new benchmarks, contamination, and what the leaderboards miss." }
+  ],
+  "windows": [
+    { "id": "week", "name": "This week", "min_days": 0, "max_days": 7, "weight": 3, "description": "Submitted to arXiv in the last seven days: the page is news, and nobody has replicated anything yet." },
+    { "id": "month", "name": "This month", "min_days": 7, "max_days": 30, "weight": 2, "description": "Eight to thirty days old: early reactions, a code release or a second version may already be out." },
+    { "id": "archive", "name": "Back catalogue", "min_days": 30, "max_days": null, "weight": 1, "description": "Older than a month: enough time to ask what happened next, who built on it and whether it held." }
+  ],
+  "kinds": {
+    "lab": "Industry lab",
+    "academic": "Academic",
+    "mixed": "Academic + industry"
+  },
+  "compute_buckets": ["under 10^22 FLOP", "10^22 to 10^23 FLOP", "about 10^24 FLOP", "over 10^25 FLOP"],
+  "lenses": [
+    { "name": "The one number", "description": "The headline result against its baseline: what the benchmark measures, how big the gain is in plain terms, whether the baseline is the strongest fair one, and what the number does not say." },
+    { "name": "What it costs", "description": "The compute, chips, energy and money behind the result, and what it would cost to use: tie the paper to the data centers, power and hardware AI Daily tracks." },
+    { "name": "Who built it", "description": "The lab or the lecture hall: who wrote it, with what resources, what they released (weights, code, data) and what that says about where frontier research now happens." },
+    { "name": "Hype check", "description": "The claims in the title and abstract against what the experiments show: the settings, the cherry-picks, contamination risk, and how the paper is being described outside arXiv." },
+    { "name": "Where it fits", "description": "The lineage: the two or three papers it builds on or argues with, what changed, and where this line of work is heading." },
+    { "name": "If it works", "description": "Take the result at face value and follow it out: who would use it, what it would change for the people who build, buy or are affected by AI, and what has to happen first." },
+    { "name": "Explain like I'm 5", "description": "The idea told to a five-year-old as a short picture story: one everyday stand-in, what the researchers figured out, and where the picture stops being true." }
+  ]
+}

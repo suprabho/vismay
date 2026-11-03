@@ -15,12 +15,14 @@
  * Evidence Desk spins get a study template: the study and its design, what
  * the collection says against what the paper says, what the design can show,
  * the other side and what came since, the numbers, the lens read and the
- * credit line.
+ * credit line. Frontier Desk spins get a paper template: the paper, what
+ * AI Daily's gate read (to check), what the paper says, how strong it is,
+ * the papers beside it, the numbers, the lens read and the credit line.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
 
-import { FOOTSHORTS, VIZNBA } from './datasets'
+import { FOOTSHORTS, FRONTIER, VIZNBA } from './datasets'
 import { slugify } from './text'
 import {
   RANDOMIZER_META,
@@ -30,6 +32,8 @@ import {
   type FootshortsFixtureRef,
   type FootshortsSubject,
   type EvidenceSubject,
+  type FrontierPaper,
+  type FrontierSubject,
   type HundredLifeEvent,
   type HundredPerson,
   type HundredSubject,
@@ -56,6 +60,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'landmark') return s.award.name
   if (s.randomizer === 'hundred') return s.person.name
   if (s.randomizer === 'evidence') return s.study.label
+  if (s.randomizer === 'frontier') return s.paper.arxivId
   return s.epic.title
 }
 
@@ -727,6 +732,127 @@ function evidenceTemplate(s: EvidenceSubject): string[] {
   ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
 }
 
+/* ---------- The Frontier Desk ---------- */
+
+/** "arXiv:2609.11902, Sparse attention at 1M tokens (Novak, Adeyemi et al.)": no quotation marks, so it sits inside a quoted credit. */
+export function frontierPaperLabel(p: Pick<FrontierPaper, 'arxivId' | 'title' | 'authors'>): string {
+  const names = (p.authors ?? '').split(',').map((a) => a.trim()).filter(Boolean)
+  const by = names.length ? ` (${names.length > 2 ? `${names.slice(0, 2).join(', ')} et al.` : names.join(' and ')})` : ''
+  return `arXiv:${p.arxivId}, ${p.title}${by}`
+}
+
+/** The paper's abstract page on arXiv. */
+export function frontierAbsUrl(arxivId: string): string {
+  return `https://arxiv.org/abs/${arxivId}`
+}
+
+/** The headline as the gate read it: "71.2 to 78.9 pts on GPQA", or null when it found none. */
+export function frontierHeadline(p: Pick<FrontierPaper, 'bench' | 'baseline' | 'result' | 'unit'>): string | null {
+  if (!p.bench || p.result === null) return null
+  const unit = p.unit ? ` ${p.unit}` : ''
+  return `${p.baseline !== null ? `${p.baseline} to ${p.result}` : p.result}${unit} on ${p.bench}`
+}
+
+/** The credit the page carries, written out. */
+export function frontierCreditLine(s: Pick<FrontierSubject, 'paper' | 'source' | 'record'>): string {
+  const counts = s.record?.citedBy !== null && s.record?.citedBy !== undefined ? ' Citation counts: OpenAlex (CC0).' : ''
+  const ed = s.paper.editions[0]
+  return `Credit: "Paper: ${frontierPaperLabel(s.paper)}, arXiv preprint, ${s.paper.publishedAt.slice(0, 10)}, ${frontierAbsUrl(s.paper.arxivId)}. Picked from ${s.source.name}'s papers${ed ? `, featured in ${s.source.series} on ${ed} (${s.source.edition_url}${ed})` : ` (${s.source.series_url})`}.${counts}" Link the arXiv page itself, never a press release or a post about it.`
+}
+
+/** What to chart per Frontier lens, when the data exists. */
+export const FRONTIER_LENS_METRICS: Record<string, string[]> = {
+  'The one number': [
+    'the headline result against its baseline and the other published results on the same benchmark',
+    'the result across every setting or model size the paper reports, not just the best one',
+    'the benchmark leaderboard over time, to show how fast it is being saturated',
+  ],
+  'What it costs': [
+    'the compute behind the result (FLOP, GPU hours or chips) against comparable papers',
+    'the cost per token or per query before and after, where the paper reports it',
+    'what that compute means in data-center terms: megawatts, chips or dollars, from a public source',
+  ],
+  'Who built it': [
+    'the authors by affiliation (lab, university, country)',
+    'what was released (weights, code, data) against the papers beside it in the pool',
+    'the share of the area\'s papers in AI Daily from labs versus universities',
+  ],
+  'Hype check': [
+    'the claim in the abstract against the result in the table, setting by setting',
+    'the result with and without the paper\'s best-case choices (prompting, sampling, data filtering)',
+    'how outlets described it against what the paper shows',
+  ],
+  'Where it fits': [
+    'the papers it builds on and the papers beside it, by date, with their headline results',
+    'the line of results on its benchmark over time',
+    'citations by year for the work it extends (OpenAlex)',
+  ],
+  'If it works': [
+    'the gain carried out to deployment scale (queries a day, chips, energy), with every assumption stated',
+    'who would adopt it first and how big that market is, from a public source',
+    'the steps between the preprint and use, as a timeline',
+  ],
+  "Explain like I'm 5": ['the idea as a picture count (out of ten tries)', 'before and after, side by side', 'the one number that shows it'],
+}
+
+export function frontierLensMetrics(lens: string): string[] {
+  return FRONTIER_LENS_METRICS[lens] ?? ['the headline result against its baseline', 'the other results on the same benchmark', 'the compute behind it']
+}
+
+function frontierTemplate(s: FrontierSubject): string[] {
+  const p = s.paper
+  const r = s.record
+  const head = frontierHeadline(p)
+  return [
+    '## The paper',
+    '',
+    `${frontierPaperLabel(p)}. Submitted ${p.publishedAt.slice(0, 10)}. ${frontierAbsUrl(p.arxivId)}`,
+    `Area: ${s.area.name}. Category: ${p.category ?? 'n/a'}. Affiliations: ${p.affiliations ?? 'not listed on arXiv'}.`,
+    r?.journalRef ? `Published since: ${r.journalRef}${r.doi ? ` (doi:${r.doi})` : ''}.` : 'Peer review: none on record yet (preprint).',
+    '',
+    '## What AI Daily\'s gate read (to check, not to cite)',
+    '',
+    `- Why it matters: ${p.why ?? 'n/a'}`,
+    `- Headline: ${head ?? 'no benchmark number found'}`,
+    `- Compute: ${p.computeBucket !== null ? (FRONTIER.compute_buckets[p.computeBucket] ?? p.computeBucket) : 'n/a'}. Scale: ${p.scale ?? 'n/a'}.`,
+    `- Released: weights ${p.weightsReleased ? 'yes' : 'no'}, code ${p.codeReleased ? 'yes' : 'no'}.`,
+    '',
+    '## What the paper itself says',
+    '',
+    'Read the abstract, the method and the main results table. Every number on the page comes from here, with its table or figure.',
+    '',
+    '| Claim | Number | Unit | Table or figure | Matches the gate? |',
+    '|-------|--------|------|-----------------|-------------------|',
+    '| | | | | |',
+    '',
+    '## How strong is it',
+    '',
+    'The baseline (is it the strongest fair one?), the settings it was tested in, whether the benchmark could be in the training data, and what was released for others to check.',
+    '',
+    '## Beside it',
+    '',
+    ...(s.related.length
+      ? s.related.map((x) => `- ${x.arxivId}: ${x.title} (${frontierAbsUrl(x.arxivId)}). Builds on, competes with, or unrelated?`)
+      : ['- No paper in the pool shares its tags or benchmark: find the closest prior work in its references.']),
+    '',
+    '## Numbers',
+    '',
+    'At least 8 data points per series where possible.',
+    '',
+    '| Metric | Paper or case | Value | Unit | Source |',
+    '|--------|---------------|-------|------|--------|',
+    ...frontierLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `${s.lens.description} Applied to this paper, not to ${s.area.name.toLowerCase()} in general.`,
+    '',
+    '## Credit',
+    '',
+    frontierCreditLine(s),
+  ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -752,7 +878,9 @@ export function researchStub(spin: StubSpin): string {
                   ? hundredTemplate(s)
                   : s.randomizer === 'evidence'
                     ? evidenceTemplate(s)
-                    : epicsTemplate(s)
+                    : s.randomizer === 'frontier'
+                      ? frontierTemplate(s)
+                      : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -774,7 +902,9 @@ export function researchStub(spin: StubSpin): string {
               ? '> (a contemporary document, the original text, a scholarly biography, a census or survey). Mark each claim Verified, Contested or'
               : s.randomizer === 'evidence'
                 ? '> (the paper itself with its page, table or figure, its preregistration or data, a peer-reviewed replication). Mark each claim Verified, Contested or'
-                : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+                : s.randomizer === 'frontier'
+                  ? '> (the paper itself with its table or figure, its released code or weights, an independent replication). Mark each claim Verified, Contested or'
+                  : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

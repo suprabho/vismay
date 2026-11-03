@@ -15,6 +15,11 @@ import {
   evidenceStudyLabel,
   fixtureSummary,
   footshortsAngleMetrics,
+  frontierAbsUrl,
+  frontierCreditLine,
+  frontierHeadline,
+  frontierLensMetrics,
+  frontierPaperLabel,
   gameSummary,
   hundredCreditLine,
   hundredLensMetrics,
@@ -32,6 +37,7 @@ import {
   researchStub,
   viznbaAngleMetrics,
 } from './stub'
+import { FRONTIER } from './datasets'
 import {
   RANDOMIZER_META,
   type AtlasSubject,
@@ -40,6 +46,7 @@ import {
   type EvidenceSubject,
   type FootshortsFixtureRef,
   type FootshortsSubject,
+  type FrontierSubject,
   type HundredSubject,
   type LandmarkSubject,
   type OcwSubject,
@@ -63,7 +70,7 @@ export const ELI5_LENS = "Explain like I'm 5"
  */
 export function isEli5Spin(spin: Pick<BriefSpin, 'subject'>): boolean {
   const s = spin.subject
-  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw' || s.randomizer === 'evidence') && s.lens.name === ELI5_LENS
+  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw' || s.randomizer === 'evidence' || s.randomizer === 'frontier') && s.lens.name === ELI5_LENS
 }
 
 /** What the picture story is about, and what the grown-ups card credits, per randomizer. */
@@ -88,6 +95,13 @@ function eli5Subject(spin: BriefSpin): { who: string; real: string; credit: stri
       who: `the people who ran ${s.study.label}`,
       real: `${evidenceStudyLabel(s)}, what its design can show, and the strongest study on the other side`,
       credit: evidenceCreditLine(s),
+    }
+  }
+  if (s.randomizer === 'frontier') {
+    return {
+      who: `the people who wrote "${s.paper.title}"`,
+      real: `${frontierPaperLabel(s.paper)}, what it claims, and how strong the evidence is so far`,
+      credit: frontierCreditLine(s),
     }
   }
   if (s.randomizer === 'ocw') {
@@ -517,6 +531,57 @@ function evidenceAssignment(s: EvidenceSubject): string[] {
   return out
 }
 
+function frontierAssignment(s: FrontierSubject): string[] {
+  const p = s.paper
+  const r = s.record
+  const head = frontierHeadline(p)
+  const kind = p.kind ? FRONTIER.kinds[p.kind] ?? p.kind : null
+  const out = [
+    `- Paper: ${frontierPaperLabel(p)}. Submitted to arXiv ${p.publishedAt.slice(0, 10)} (${s.window.name.toLowerCase()} when spun).`,
+    `- Link: ${frontierAbsUrl(p.arxivId)} (PDF: https://arxiv.org/pdf/${p.arxivId}).${r?.version && r.version > 1 ? ` Now at v${r.version}${r.updated ? `, updated ${r.updated.slice(0, 10)}` : ''}: read the latest version.` : ''}`,
+    `- Authors: ${p.authors ?? 'n/a'}.${p.affiliations ? ` Affiliations: ${p.affiliations}.` : ''}${kind ? ` (${kind}.)` : ''}`,
+    `- Area: ${s.area.name}. ${s.area.description}${p.category ? ` Primary arXiv category: ${p.category}.` : ''}`,
+    `- Why AI Daily kept it (the gate's line, to check): ${p.why ?? 'n/a'}`,
+    `- Headline as the gate read it (to check against the paper): ${head ?? 'none found in the abstract'}.${p.scale ? ` Scale: ${p.scale}.` : ''}${p.computeBucket !== null ? ` Compute: ${FRONTIER.compute_buckets[p.computeBucket] ?? p.computeBucket}.` : ''}`,
+    `- Released (as the gate read it): weights ${p.weightsReleased ? 'yes' : 'no'}, code ${p.codeReleased ? 'yes' : 'no'}.`,
+    `- Lens: ${s.lens.name}. ${s.lens.description}`,
+  ]
+  if (p.tags.length) out.push(`- Tags: ${p.tags.join(', ')}.`)
+  if (p.editions.length) out.push(`- In ${s.source.series}: featured on ${p.editions.map((d) => `${d} (${s.source.edition_url}${d})`).join(', ')}. Link the edition from the page.`)
+  if (r?.journalRef || r?.doi) out.push(`- Published since (arXiv's record): ${[r.journalRef, r.doi ? `doi:${r.doi}` : null].filter(Boolean).join(', ')}. Cite the published version for anything that changed.`)
+  if (r?.comment) out.push(`- The authors' comment on arXiv: "${r.comment}"`)
+  if (r && r.citedBy !== null) out.push(`- Citations (OpenAlex ${r.openalexUrl ?? ''}, read ${r.asOf.slice(0, 10)}): ${r.citedBy}. A new preprint has few; say so rather than reading much into it.`)
+  if (s.related.length) {
+    out.push('', `Beside it in ${s.source.name}'s pool (shared tags or benchmark; read the ones your lens needs):`, '')
+    for (const x of s.related) {
+      const h = frontierHeadline(x)
+      out.push(`- ${x.arxivId} (${x.publishedAt.slice(0, 10)}): ${x.title}. ${frontierAbsUrl(x.arxivId)}${h ? `. Headline: ${h}` : ''}${x.why ? `. ${x.why}` : ''}`)
+    }
+  }
+  out.push(
+    '',
+    `About the source: ${s.source.note}`,
+    '',
+    '### Do this first',
+    '',
+    `1. Read the paper itself: the abstract, the method and the main results table, at ${frontierAbsUrl(p.arxivId)}. If you cannot reach the full text, say so in the research file and use only what the abstract states.`,
+    '2. Put every number the gate gives (headline, baseline, compute, scale) in the claims log and check each against the paper\'s table or figure. Where they differ, the paper wins and the research file says so.',
+    `3. Apply the ${s.lens.name} lens to this paper, not to ${s.area.name.toLowerCase()} in general.`,
+    `4. ${frontierCreditLine(s)}`,
+  )
+  let n = 5
+  if (s.from) out.push(`${n++}. This spin follows the thread from ${s.from}, the previous spin's paper. Link back to that story and say how the two papers relate.`)
+  if (s.window.id === 'week') out.push(`${n++}. The paper is days old: nobody has replicated it. Say what result or release would confirm or sink it, and do not report the claim as settled.`)
+  if (r && (r.sources.errors.length || r.sources.notes.length)) out.push('', `Record notes: ${[...r.sources.notes, ...r.sources.errors.map((e) => `${e}: look it up by hand.`)].join(' ')}`)
+  if (!r) out.push('', 'No live record on this spin: check arXiv for the latest version and a journal reference yourself.')
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${frontierLensMetrics(s.lens.name).join(', ')}.`,
+    'Start from: the paper and its appendix, its code or model card if released, the benchmark\'s own leaderboard or paper, the papers it cites as baselines, and a public dataset (Epoch AI, the IEA, company filings) for any number about compute, energy or money.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -538,7 +603,9 @@ export function assignmentSection(spin: BriefSpin): string {
                   ? hundredAssignment(s)
                   : s.randomizer === 'evidence'
                     ? evidenceAssignment(s)
-                    : epicsAssignment(s)
+                    : s.randomizer === 'frontier'
+                      ? frontierAssignment(s)
+                      : epicsAssignment(s)
   const ready = insightReady(spin)
   const lead = ready
     ? [
@@ -580,7 +647,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
                   ? '\n8. Hart\'s rank and his reasons are his opinion, not a fact: attribute them ("Hart argues"), and test them. Separate what contemporary sources document from what later tradition, legend or hagiography added, and label each. A religious claim is stated as what a tradition holds, never as fact or as falsehood.'
                   : spin.randomizer === 'evidence'
                     ? '\n8. The paper is the primary source for what it found; cite it by page, table or figure. The collection\'s summary is a lead, never a source. A causal word ("causes", "leads to", "makes") is Verified only for a randomized or natural experiment, and then only for its sample and period. Every effect size goes on the page with its unit and its sample, against a benchmark. A preprint or working paper is labelled as such wherever its finding appears.'
-                    : ''
+                    : spin.randomizer === 'frontier'
+                      ? '\n8. The paper is the primary source for what it claims; cite it by table or figure, and the version you read. AI Daily\'s gate fields (area, headline, compute, scale, release) are leads, never sources. An arXiv preprint is labelled "preprint" wherever its result appears, and its claims are reported as claims ("the authors report") until an independent replication or a peer-reviewed version confirms them. A benchmark number goes on the page with its baseline and setting.'
+                      : ''
   return `## Research protocol (forensic, lawyer grade)
 
 1. Open the research file \`${researchFileName(spin)}\`. Start from the stub at the end of this brief.
@@ -785,6 +854,27 @@ Built like the best page of a science desk: one study, what it found, how much t
 12. **Sources and claims log summary.**`
 }
 
+function frontierFormat(s: FrontierSubject): string {
+  const p = s.paper
+  const other = s.related[0]
+  return `## Format: paper explainer with charts
+
+Built like the best page of a tech desk: one new paper, what it claims, how much that is, how strong the evidence is, what it would take to matter, and where it sits in the race. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the result at its true strength: "claims" or "reports" for an unreplicated preprint) and **dek** (one line, why it matters to a reader now).
+2. **The paper card:** the title, the authors and their affiliations, the arXiv id and date, "preprint" beside it, a link to the paper${p.editions.length ? `, and a link to the ${s.source.series} edition that featured it` : ''}.
+3. **The claim in a number:** the headline result with its unit and baseline, translated into plain terms.
+4. **Chart 1, the result in context:** this paper's number against the other published results on the same benchmark or task (8 or more points where they exist).
+5. **How strong is it:** the baseline, the settings, contamination risk and what was released, in one short paragraph.
+6. **Chart 2, the lens chart:** ${frontierLensMetrics(s.lens.name)[0]}.
+7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+8. **Beside it:** ${other ? `the closest related work (start from ${other.arxivId}, "${other.title}")` : 'the closest prior or competing work'}, and how this paper differs.
+9. **What it would take:** what has to happen for the result to matter outside the paper (a replication, a release, a product), and what to watch.
+10. **Go further:** the paper, its code or weights if released, the benchmark, the related work, all linked.
+11. **Credit:** ${frontierCreditLine(s).replace(/^Credit: /, '')}
+12. **Sources and claims log summary.**`
+}
+
 /** "## Format: …": the randomizer's output format, as required content. */
 export function formatSection(spin: BriefSpin): string {
   if (isEli5Spin(spin)) return eli5Format(spin)
@@ -795,6 +885,7 @@ export function formatSection(spin: BriefSpin): string {
   if (s.randomizer === 'landmark') return landmarkFormat(s)
   if (s.randomizer === 'hundred') return hundredFormat(s)
   if (s.randomizer === 'evidence') return evidenceFormat(s)
+  if (s.randomizer === 'frontier') return frontierFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -845,6 +936,12 @@ export function chartRules(spin: BriefSpin): string[] {
     return [
       'Evidence series rules: one message per chart, the title states the takeaway at the strength the design allows, effect sizes on a labelled scale (SD, r, odds or risk ratio, points), the sample size in the footer with the source, nothing decorative.',
       'Every estimate is drawn with its confidence interval where the paper reports one; studies of different designs are marked apart (shape or label), never averaged by eye. A number from a paper\'s table cites the table; the citation chart names OpenAlex and the read date.',
+    ]
+  }
+  if (spin.randomizer === 'frontier') {
+    return [
+      'Paper series rules: one message per chart, the title states the takeaway at the strength a preprint allows, the benchmark and its metric on every chart, the source (paper table, leaderboard, dataset) and date in the footer, nothing decorative.',
+      'This paper\'s point is marked apart from the others (colour or label) and its setting matches theirs, or the chart says how it differs. A number from a paper\'s table cites the table; a compute or energy figure names its source and every assumption.',
     ]
   }
   return [
@@ -898,7 +995,7 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence' || spin.randomizer === 'frontier'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
@@ -907,6 +1004,9 @@ export function checklistSection(spin: BriefSpin): string {
     ...(spin.randomizer === 'landmark' ? ['The work and the laureate page are linked, the motivation is quoted verbatim, a representative work is labelled as such, and the credit names the data sources.'] : []),
     ...(spin.randomizer === 'evidence'
       ? ['Every number matches the paper (page or table), not the collection\'s summary; the causal language matches the design; a preprint is labelled; the opposing study is on the page; the credit links the paper itself.']
+      : []),
+    ...(spin.randomizer === 'frontier'
+      ? ['Every number matches the paper (table or figure), not AI Daily\'s gate; the result is labelled a preprint and reported as a claim; its baseline and setting are stated; the related work is on the page; the credit links the arXiv page itself.']
       : []),
     ...(spin.randomizer === 'hundred' ? ["Hart's rank and reasons are attributed to him and tested, not repeated; his text is paraphrased, not copied; tradition and record are labelled apart; the credit names the book and the data sources."] : []),
     'Contested claims are labelled and both sides stated fairly.',
