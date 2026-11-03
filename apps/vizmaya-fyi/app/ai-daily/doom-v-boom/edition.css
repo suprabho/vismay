@@ -201,7 +201,12 @@ html:has(.dcd){scroll-behavior:smooth}
 .dcd .mapbox .legend{position:absolute;left:var(--gutter);top:14px;z-index:2;display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .dcd .mapbox .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:middle}
 .dcd .mapbox .legend i.energy{background:var(--energy)}
-.dcd .mapbox .legend i.country{background:transparent;border:1.5px dashed var(--accent);width:7px;height:7px}
+.dcd .mapbox .layerswitch{position:absolute;left:var(--gutter);top:40px;z-index:2;display:inline-flex;padding:2px;border:1px solid var(--line-strong);border-radius:999px;background:color-mix(in srgb,var(--surface) 86%,transparent);backdrop-filter:blur(8px)}
+.dcd .mapbox .layerswitch button{display:inline-flex;align-items:baseline;gap:6px;padding:5px 12px;border-radius:999px;font-family:var(--mono);font-size:11px;color:var(--muted);transition:background .15s,color .15s}
+.dcd .mapbox .layerswitch button span{font-size:10px;color:var(--dim)}
+.dcd .mapbox .layerswitch button:hover{color:var(--bone)}
+.dcd .mapbox .layerswitch button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.dcd .mapbox .layerswitch button[aria-pressed="true"] span{color:var(--accent-ink);opacity:.75}
 .dcd .mapbox .stamp{position:absolute;right:var(--gutter);top:14px;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
 .dcd .maptip{position:absolute;z-index:3;pointer-events:none;background:var(--raised);border:1px solid var(--line-strong);border-radius:6px;padding:8px 10px;box-shadow:var(--shadow);display:grid;gap:2px;min-width:150px}
 .dcd .maptip b{font-weight:500;font-size:13px}
@@ -673,6 +678,9 @@ body.dcd-panel-open{overflow:hidden}
   .dcd .regionbar{position:static;flex-wrap:wrap}
   .dcd .regionbar button{flex:1 1 45%;padding:10px 16px}
   .dcd .mapbox .legend{display:none}
+  .dcd .mapbox .layerswitch{top:12px;left:12px}
+  .dcd .mapbox .layerswitch button{padding:5px 9px}
+  .dcd .mapbox .layerswitch button span{display:none}
   .dcd .sources{columns:1}
 }
 

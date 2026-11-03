@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { EditionGeoCountry, EditionGeoPlace, EditionGeoRegion } from '@vismay/dc-editions/dcEditionTypes'
+import type { DcRegionKey, EditionGeoCountry, EditionGeoPlace, EditionGeoRegion } from '@vismay/dc-editions/dcEditionTypes'
 import { DC_LAYERS, DC_REGIONS, type DcLayerKey } from '@vismay/dc-editions/dcEditionTypes'
 import { LAND_MASK } from './landMask'
 import { PANEL_EVENT } from './editionUtils'
@@ -14,54 +14,86 @@ interface Props {
   stamp: string
 }
 
+/** The three geography layers a story carries (migration 100). */
+export type GeoLayer = 'place' | 'country' | 'region'
+
+export const GEO_LAYERS: { key: GeoLayer; label: string; desc: string }[] = [
+  { key: 'place', label: 'Localities', desc: 'City hubs and states the story names' },
+  { key: 'country', label: 'Countries', desc: 'Where the development happens, or the company’s home' },
+  { key: 'region', label: 'Regions', desc: 'Five world regions' },
+]
+
 const W = 1400
 const H = 640
 const PAD = 40
 const px = (lon: number) => PAD + ((lon + 180) / 360) * (W - PAD * 2)
 const py = (lat: number) => PAD + ((84 - lat) / 142) * (H - PAD * 2)
 
+/** Where a region's bubble sits — a fixed anchor, so the bubble never wanders with the day's mix. */
+export const REGION_ANCHOR: Record<DcRegionKey, [lng: number, lat: number]> = {
+  na: [-100, 42],
+  ea: [112, 30],
+  eu: [12, 50],
+  me: [58, 26],
+  other: [24, -24],
+}
+
 interface Pin {
-  /** `place:<slug>` or `country:<code>` — the panel key the pin opens. */
+  /** `place:<slug>`, `country:<code>` or `region:<key>` — the panel key the pin opens. */
   key: string
   name: string
-  region: EditionGeoPlace['region']
-  /** Stories: at the locality, or in the country with no locality. */
+  region: DcRegionKey
   count: number
+  /** Countries: how many of the stories are also pinned to a locality. */
+  placed?: number
   energy: boolean
-  /** A country ring stands for stories tagged to the country but to no locality. */
-  kind: 'place' | 'country'
+  kind: GeoLayer
   x: number
   y: number
   r: number
 }
 
+function buildPins(layer: GeoLayer, places: EditionGeoPlace[], countries: EditionGeoCountry[], regions: EditionGeoRegion[]): Pin[] {
+  if (layer === 'place') {
+    return places.map((p) => ({ key: `place:${p.slug}`, name: p.name, region: p.region, count: p.count, energy: p.energy, kind: 'place' as const, x: px(p.lng), y: py(p.lat), r: 5 + Math.min(p.count, 12) * 2.2 }))
+  }
+  if (layer === 'country') {
+    const lead = Math.max(1, ...countries.map((c) => c.count))
+    // Area ∝ stories, scaled to the day's most-reported country, so the US
+    // disc doesn't swallow East Asia on a US-heavy morning.
+    return countries.map((c) => ({ key: `country:${c.code}`, name: c.name, region: c.region, count: c.count, placed: c.count - c.unplaced, energy: c.energy, kind: 'country' as const, x: px(c.lng), y: py(c.lat), r: 6 + 24 * Math.sqrt(c.count / lead) }))
+  }
+  const lead = Math.max(1, ...regions.map((r) => r.count))
+  return regions.map((r) => {
+    const [lng, lat] = REGION_ANCHOR[r.key]
+    const energy = countries.some((c) => c.region === r.key && c.energy) || places.some((p) => p.region === r.key && p.energy)
+    return { key: `region:${r.key}`, name: DC_REGIONS[r.key], region: r.key, count: r.count, energy, kind: 'region' as const, x: px(lng), y: py(lat), r: 14 + 46 * Math.sqrt(r.count / lead) }
+  })
+}
+
 /**
  * Chapter III — full-bleed dot-matrix world map. The land mask is a flat
- * array shipped with the page (no fetch, no map library). Two kinds of pin:
- * a solid disc per locality (sized by story count, coloured by the energy
- * tag) and a hollow ring at a country's centroid for the stories tagged to
- * that country but to no locality — so "Samsung raises HBM output" shows up
- * over Korea instead of vanishing or being drawn on Seoul. Hover shows the
- * name/count in a tooltip (nothing is lettered on the map), click opens the
- * stories; the region bar below is proportional to story share with
- * per-layer micro-bars, and highlights the region's pins on hover.
+ * array shipped with the page (no fetch, no map library). The switch at the
+ * top picks which of the story's three geography layers is drawn: a solid
+ * disc per locality (city hub or state the text names), a disc per country
+ * at its centroid (where the development happens, or the company's home),
+ * or one bubble per world region at a fixed anchor. Discs are sized by story
+ * count and coloured by the energy tag. Hover shows the name/count in a
+ * tooltip (nothing is lettered on the map), click opens the stories; the
+ * region bar below is proportional to story share with per-layer micro-bars,
+ * and highlights the region's pins on hover in every mode.
  */
 export default function GeoMap({ places, countries = [], regions, stamp }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const boxRef = useRef<HTMLDivElement | null>(null)
+  // Countries is the fullest layer (most stories carry one); editions frozen
+  // before the country layer existed open on their localities.
+  const [layer, setLayer] = useState<GeoLayer>(countries.length > 0 ? 'country' : 'place')
   const [hot, setHot] = useState<string | null>(null)
   const [hotPin, setHotPin] = useState<string | null>(null)
   const [tip, setTip] = useState<{ left: number; top: number; pin: Pin } | null>(null)
 
-  const pins = useMemo<Pin[]>(
-    () => [
-      ...countries
-        .filter((c) => c.unplaced > 0)
-        .map((c): Pin => ({ key: `country:${c.code}`, name: c.name, region: c.region, count: c.unplaced, energy: c.energy, kind: 'country', x: px(c.lng), y: py(c.lat), r: 6 + Math.min(c.unplaced, 12) * 2 })),
-      ...places.map((p): Pin => ({ key: `place:${p.slug}`, name: p.name, region: p.region, count: p.count, energy: p.energy, kind: 'place', x: px(p.lng), y: py(p.lat), r: 5 + Math.min(p.count, 12) * 2.2 })),
-    ],
-    [places, countries],
-  )
+  const pins = useMemo<Pin[]>(() => buildPins(layer, places, countries, regions), [layer, places, countries, regions])
 
   const draw = useCallback(() => {
     const cv = canvasRef.current
@@ -100,19 +132,24 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
       const col = p.energy ? en : acc
       const on = hot === null || hot === p.region
       const isHot = hotPin === p.key
-      if (p.kind === 'country') {
-        // Country ring: stroke only, so a locality disc inside the same country still reads.
-        c.globalAlpha = on ? (isHot ? 0.95 : 0.6) : 0.2
+      if (p.kind === 'region') {
+        // Region bubble: a wash the size of its share, a dashed rim, a core dot.
+        c.globalAlpha = (on ? 1 : 0.3) * (isHot ? 0.22 : 0.14)
+        c.fillStyle = col
+        c.beginPath()
+        c.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        c.fill()
+        c.globalAlpha = on ? (isHot ? 1 : 0.7) : 0.25
         c.strokeStyle = col
-        c.lineWidth = isHot ? 2.4 : 1.6
-        c.setLineDash([3, 4])
+        c.lineWidth = isHot ? 2 : 1.4
+        c.setLineDash([4, 5])
         c.beginPath()
         c.arc(p.x, p.y, p.r, 0, Math.PI * 2)
         c.stroke()
         c.setLineDash([])
         c.fillStyle = col
         c.beginPath()
-        c.arc(p.x, p.y, 2, 0, Math.PI * 2)
+        c.arc(p.x, p.y, 4, 0, Math.PI * 2)
         c.fill()
         c.globalAlpha = 1
         continue
@@ -176,31 +213,52 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
     let best: Pin | null = null
     let bd = Infinity
     for (const p of pins) {
-      // A locality disc wins over the country ring around it.
-      const d = Math.hypot(p.x - x, p.y - y) + (p.kind === 'country' ? 6 : 0)
+      const d = Math.hypot(p.x - x, p.y - y)
       if (d < bd) {
         bd = d
         best = p
       }
     }
-    return bd < 30 ? best : null
+    // A region bubble is hit anywhere inside it; discs within 30px.
+    if (!best) return null
+    return bd < Math.max(30, best.kind === 'region' ? best.r : 0) ? best : null
   }
 
   const openPin = (key: string) => {
     window.dispatchEvent(new CustomEvent(PANEL_EVENT, { detail: { key } }))
   }
 
+  const pickLayer = (next: GeoLayer) => {
+    setLayer(next)
+    setHotPin(null)
+    setTip(null)
+  }
+
   const total = regions.reduce((a, r) => a + r.count, 0) || 1
+  const empty =
+    layer === 'place'
+      ? 'No story in this window named a locality.'
+      : layer === 'country'
+        ? countries.length === 0 && places.length > 0
+          ? 'This edition was frozen before the country layer existed — switch to Localities.'
+          : 'No story in this window carried a country.'
+        : 'No story in this window carried a region.'
+  const tipDetail = (p: Pin) => {
+    const n = `${p.count} stor${p.count === 1 ? 'y' : 'ies'}`
+    if (p.kind === 'country') return `${n}${p.placed ? ` · ${p.placed} at a named locality` : ''} · ${DC_REGIONS[p.region]}`
+    if (p.kind === 'region') return `${n} across the region`
+    return `${n} · ${DC_REGIONS[p.region]}`
+  }
 
   return (
-    <div className="mapbox" id="mapbox" ref={boxRef}>
+    <div className="mapbox" id="mapbox" ref={boxRef} data-geo-layer={layer}>
       <div className="map-scroll">
         <canvas
           ref={canvasRef}
           id="map"
           width={W}
           height={H}
-          aria-label="World map with pins where the edition's stories cluster"
+          aria-label={`World map of the edition's stories by ${GEO_LAYERS.find((l) => l.key === layer)?.label.toLowerCase()}`}
           style={{ cursor: hotPin ? 'pointer' : 'default' }}
           onMouseMove={(e) => {
             const p = nearest(e)
@@ -227,17 +285,14 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
         />
         {pins.length === 0 && (
           <div className="notice" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 90 }}>
-            No story in this window carried a place or country tag.
+            {empty}
           </div>
         )}
       </div>
       {tip && (
         <div className="maptip" style={{ left: tip.left, top: tip.top }}>
           <b>{tip.pin.name}</b>
-          <span>
-            {tip.pin.count} stor{tip.pin.count === 1 ? 'y' : 'ies'}
-            {tip.pin.kind === 'country' ? ' · country-level, no locality' : ''} · {DC_REGIONS[tip.pin.region]}
-          </span>
+          <span>{tipDetail(tip.pin)}</span>
           <em>Click to read</em>
         </div>
       )}
@@ -245,24 +300,29 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
       <div className="legend">
         <span>
           <i />
-          Story cluster
+          {layer === 'place' ? 'Story cluster' : layer === 'country' ? 'Stories in the country' : 'Stories in the region'}
         </span>
         <span>
           <i className="energy" />
           Energy-tagged
         </span>
-        {pins.some((p) => p.kind === 'country') && (
-          <span>
-            <i className="country" />
-            Country only
-          </span>
-        )}
       </div>
-      {/* Pins are also reachable by keyboard: one button per place, visually hidden. */}
+      <div className="layerswitch" role="group" aria-label="Geography layer">
+        {GEO_LAYERS.map((l) => {
+          const n = l.key === 'place' ? places.length : l.key === 'country' ? countries.length : regions.length
+          return (
+            <button key={l.key} type="button" aria-pressed={layer === l.key} title={l.desc} onClick={() => pickLayer(l.key)}>
+              {l.label}
+              <span>{n}</span>
+            </button>
+          )
+        })}
+      </div>
+      {/* Pins are also reachable by keyboard: one button per pin, visually hidden. */}
       <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {pins.map((p) => (
           <button key={p.key} type="button" data-panel={p.key}>
-            {p.name}, {p.count} stories{p.kind === 'country' ? ' (country level)' : ''}
+            {p.name}, {p.count} stories
           </button>
         ))}
       </div>

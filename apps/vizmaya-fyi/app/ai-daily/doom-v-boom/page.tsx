@@ -105,14 +105,14 @@ export default async function DoomVBoomLanding() {
               <MoodTrend editions={editions.slice(0, TREND_DAYS)} />
             </section>
 
-            {geoDays.some((d) => d.places.length > 0) && (
+            {geoDays.some((d) => d.places.length > 0 || d.countries.length > 0) && (
               <section className="border-t border-[var(--line)] py-14" aria-labelledby="geo-h">
                 <div className="chapter-head">
                   <h2 id="geo-h">Where it’s happening</h2>
                   <p className="lede">
-                    Every edition’s story clusters on one map. Cumulative grows each place by its running story count through the morning you pick —
-                    that morning’s places at full strength, new ones ringed; That morning shows one edition alone. Press play to watch the build-out
-                    spread, or drag along the strip: one bar per edition, its height the stories that carried a place.
+                    Every edition’s story clusters on one map, read by locality, by country or by region. Cumulative grows each point by its running
+                    story count through the morning you pick — that morning’s at full strength, new ones ringed; That morning shows one edition alone.
+                    Press play to watch the build-out spread, or drag along the strip: one bar per edition, its height the stories tagged in that layer.
                   </p>
                 </div>
                 <GeoTimeline days={geoDays} />

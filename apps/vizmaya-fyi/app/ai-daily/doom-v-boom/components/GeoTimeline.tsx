@@ -3,15 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PauseIcon, PlayIcon } from '@phosphor-icons/react'
-import type { EditionGeoPlace } from '@vismay/dc-editions/dcEditionTypes'
+import type { EditionGeoCountry, EditionGeoPlace, EditionGeoRegion } from '@vismay/dc-editions/dcEditionTypes'
 import { DC_REGIONS, formatEditionDate, type DcRegionKey } from '@vismay/dc-editions/dcEditionTypes'
 import { LAND_MASK } from './landMask'
 import { editionHref } from './editionUtils'
+import { GEO_LAYERS, REGION_ANCHOR, type GeoLayer } from './GeoMap'
 
 export interface GeoDay {
   date: string
   number: number | null
   places: EditionGeoPlace[]
+  /** Empty on editions frozen before the country layer (migration 100). */
+  countries: EditionGeoCountry[]
+  regions: EditionGeoRegion[]
 }
 
 type Mode = 'cumulative' | 'day'
@@ -23,20 +27,25 @@ const px = (lon: number) => PAD + ((lon + 180) / 360) * (W - PAD * 2)
 const py = (lat: number) => PAD + ((84 - lat) / 142) * (H - PAD * 2)
 const STEP_MS = 650
 
-/** A place as drawn for the selected morning, in either mode. */
-interface Spot {
-  slug: string
+/** One point of one layer on one morning: a locality, a country or a region. */
+interface GeoPoint {
+  key: string
   name: string
   region: DcRegionKey
+  lat: number
+  lng: number
+  count: number
+  energy: boolean
+}
+
+/** A point as drawn for the selected morning, in either mode. */
+interface Spot extends GeoPoint {
   x: number
   y: number
-  /** Stories: that morning's, or the running total through it. */
-  count: number
   /** Mornings it appeared on (1 in day mode). */
   days: number
   firstDate: string
   lastDate: string
-  energy: boolean
   /** In the selected morning's edition. */
   today: boolean
   /** First appeared on the selected morning. */
@@ -50,47 +59,65 @@ interface Drawn {
   alpha: number
 }
 
-function aggregate(days: GeoDay[], idx: number, mode: Mode): Spot[] {
+/** The frozen geo block of one morning read through one layer. */
+function pointsOf(day: GeoDay, layer: GeoLayer): GeoPoint[] {
+  if (layer === 'place') {
+    return day.places.map((p) => ({ key: p.slug, name: p.name, region: p.region, lat: p.lat, lng: p.lng, count: p.count, energy: p.energy }))
+  }
+  if (layer === 'country') {
+    return day.countries.map((c) => ({ key: c.code, name: c.name, region: c.region, lat: c.lat, lng: c.lng, count: c.count, energy: c.energy }))
+  }
+  return day.regions.map((r) => {
+    const [lng, lat] = REGION_ANCHOR[r.key]
+    const energy = day.countries.some((c) => c.region === r.key && c.energy) || day.places.some((p) => p.region === r.key && p.energy)
+    return { key: r.key, name: DC_REGIONS[r.key], region: r.key, lat, lng, count: r.count, energy }
+  })
+}
+
+/** Radius for a point: localities by count, countries and regions by share of the lead. */
+function radius(layer: GeoLayer, count: number, lead: number, mode: Mode): number {
+  if (layer === 'region') return 14 + 46 * Math.sqrt(count / lead)
+  if (layer === 'country') return 6 + 24 * Math.sqrt(count / lead)
+  return mode === 'day' ? 5 + Math.min(count, 12) * 2.2 : 4 + 20 * Math.sqrt(count / lead)
+}
+
+function aggregate(days: GeoDay[], idx: number, mode: Mode, layer: GeoLayer): Spot[] {
   if (idx < 0 || idx >= days.length) return []
-  const today = new Map(days[idx].places.map((p) => [p.slug, p]))
+  const todayPoints = pointsOf(days[idx], layer)
+  const today = new Map(todayPoints.map((p) => [p.key, p]))
   if (mode === 'day') {
-    return days[idx].places.map((p) => ({
-      slug: p.slug,
-      name: p.name,
-      region: p.region,
+    const lead = Math.max(1, ...todayPoints.map((p) => p.count))
+    return todayPoints.map((p) => ({
+      ...p,
       x: px(p.lng),
       y: py(p.lat),
-      count: p.count,
       days: 1,
       firstDate: days[idx].date,
       lastDate: days[idx].date,
-      energy: p.energy,
       today: true,
       fresh: false,
-      r: 5 + Math.min(p.count, 12) * 2.2,
+      r: radius(layer, p.count, lead, mode),
       alpha: 1,
     }))
   }
-  const acc = new Map<string, { p: EditionGeoPlace; count: number; days: number; energyDays: number; first: string; last: string }>()
+  const acc = new Map<string, { p: GeoPoint; count: number; days: number; energyDays: number; first: string; last: string }>()
   for (let i = 0; i <= idx; i++) {
     const d = days[i]
-    for (const p of d.places) {
-      const cur = acc.get(p.slug)
+    for (const p of pointsOf(d, layer)) {
+      const cur = acc.get(p.key)
       if (cur) {
         cur.count += p.count
         cur.days += 1
         cur.energyDays += p.energy ? 1 : 0
         cur.last = d.date
         cur.p = p
-      } else acc.set(p.slug, { p, count: p.count, days: 1, energyDays: p.energy ? 1 : 0, first: d.date, last: d.date })
+      } else acc.set(p.key, { p, count: p.count, days: 1, energyDays: p.energy ? 1 : 0, first: d.date, last: d.date })
     }
   }
   const date = days[idx].date
   const lead = Math.max(1, ...[...acc.values()].map((a) => a.count))
   return [...acc.values()].map((a) => ({
-    slug: a.p.slug,
-    name: a.p.name,
-    region: a.p.region,
+    ...a.p,
     x: px(a.p.lng),
     y: py(a.p.lat),
     count: a.count,
@@ -98,21 +125,29 @@ function aggregate(days: GeoDay[], idx: number, mode: Mode): Spot[] {
     firstDate: a.first,
     lastDate: a.last,
     energy: a.energyDays * 2 >= a.days,
-    today: today.has(a.p.slug),
+    today: today.has(a.p.key),
     fresh: a.first === date,
-    // Area ∝ running total, scaled to the most-reported place so far.
-    r: 4 + 20 * Math.sqrt(a.count / lead),
-    alpha: today.has(a.p.slug) ? 1 : 0.5,
+    // Area ∝ running total, scaled to the most-reported point so far.
+    r: radius(layer, a.count, lead, mode),
+    alpha: today.has(a.p.key) ? 1 : 0.5,
   }))
+}
+
+const LAYER_NOUN: Record<GeoLayer, { one: string; many: string }> = {
+  place: { one: 'locality', many: 'localities' },
+  country: { one: 'country', many: 'countries' },
+  region: { one: 'region', many: 'regions' },
 }
 
 /**
  * The series landing's geography: every edition's frozen story clusters on
  * the same dot-matrix world as the edition's Chapter III, played back over
- * time. "Cumulative" grows each place by its running story total through the
- * selected morning (that morning's places at full strength, new ones ringed);
- * "That morning" shows only the selected edition's clusters. The strip below
- * is the scrubber — one bar per edition, its height the stories with a place.
+ * time, read through one of the story's three geography layers (localities,
+ * countries, regions — the same switch as the edition map). "Cumulative"
+ * grows each point by its running story total through the selected morning
+ * (that morning's points at full strength, new ones ringed); "That morning"
+ * shows only the selected edition's. The strip below is the scrubber — one
+ * bar per edition, its height the stories tagged in the chosen layer.
  */
 export default function GeoTimeline({ days }: { days: GeoDay[] }) {
   const router = useRouter()
@@ -125,14 +160,27 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
   // Spots that just left the map keep their position while they fade out.
   const lastSpot = useRef<Map<string, Spot>>(new Map())
 
+  const hasCountries = useMemo(() => days.some((d) => d.countries.length > 0), [days])
   const [idx, setIdx] = useState(days.length - 1)
   const [mode, setMode] = useState<Mode>('cumulative')
+  const [layer, setLayerState] = useState<GeoLayer>(hasCountries ? 'country' : 'place')
   const [playing, setPlaying] = useState(false)
-  const [hotSlug, setHotSlug] = useState<string | null>(null)
+  const [hotKey, setHotKey] = useState<string | null>(null)
   const [tip, setTip] = useState<{ left: number; top: number; spot: Spot } | null>(null)
 
-  const spots = useMemo(() => aggregate(days, idx, mode).sort((a, b) => b.r - a.r), [days, idx, mode])
-  const bySlug = useMemo(() => new Map(spots.map((s) => [s.slug, s])), [spots])
+  const spots = useMemo(() => aggregate(days, idx, mode, layer).sort((a, b) => b.r - a.r), [days, idx, mode, layer])
+  const byKey = useMemo(() => new Map(spots.map((s) => [s.key, s])), [spots])
+
+  // A layer change is a different set of keys: drop the old spots instead of
+  // tweening a locality disc into a country disc that happens to share a key.
+  const setLayer = (next: GeoLayer) => {
+    if (next === layer) return
+    drawnRef.current.clear()
+    lastSpot.current.clear()
+    setHotKey(null)
+    setTip(null)
+    setLayerState(next)
+  }
 
   // ---- drawing -----------------------------------------------------------
 
@@ -175,16 +223,38 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
       c.stroke()
       c.setLineDash([])
 
-      // Draw every place that is still visible (including ones fading out), biggest first.
+      // Draw every point that is still visible (including ones fading out), biggest first.
       const all = [...drawn.entries()]
         .filter(([, d]) => d.r > 0.4 && d.alpha > 0.01)
-        .map(([slug, d]) => ({ slug, d, s: bySlug.get(slug) ?? lastSpot.current.get(slug) }))
-        .filter((e): e is { slug: string; d: Drawn; s: Spot } => !!e.s)
+        .map(([key, d]) => ({ key, d, s: byKey.get(key) ?? lastSpot.current.get(key) }))
+        .filter((e): e is { key: string; d: Drawn; s: Spot } => !!e.s)
         .sort((a, b) => b.d.r - a.d.r)
-      for (const { slug, d, s } of all) {
+      for (const { key, d, s } of all) {
         const col = s.energy ? tok.en : tok.acc
-        const hot = hotSlug === slug
-        const a = hotSlug && !hot ? d.alpha * 0.45 : d.alpha
+        const hot = hotKey === key
+        const a = hotKey && !hot ? d.alpha * 0.45 : d.alpha
+        if (layer === 'region') {
+          // Region bubble: a wash the size of its share, a dashed rim, a core dot.
+          c.globalAlpha = a * (hot ? 0.22 : 0.14)
+          c.fillStyle = col
+          c.beginPath()
+          c.arc(s.x, s.y, d.r, 0, Math.PI * 2)
+          c.fill()
+          c.globalAlpha = a * (hot ? 1 : 0.7)
+          c.strokeStyle = col
+          c.lineWidth = hot ? 2 : 1.4
+          c.setLineDash([4, 5])
+          c.beginPath()
+          c.arc(s.x, s.y, d.r, 0, Math.PI * 2)
+          c.stroke()
+          c.setLineDash([])
+          c.fillStyle = col
+          c.beginPath()
+          c.arc(s.x, s.y, 4, 0, Math.PI * 2)
+          c.fill()
+          c.globalAlpha = 1
+          continue
+        }
         c.globalAlpha = a * 0.16
         c.fillStyle = col
         c.beginPath()
@@ -204,7 +274,7 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
           c.arc(s.x, s.y, Math.max(1, d.r - 5), 0, Math.PI * 2)
           c.fill()
         }
-        if (s.fresh && mode === 'cumulative' && bySlug.has(slug)) {
+        if (s.fresh && mode === 'cumulative' && byKey.has(key)) {
           c.globalAlpha = a * 0.9
           c.strokeStyle = col
           c.lineWidth = 1.2
@@ -232,24 +302,24 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
         c.stroke()
       }
     },
-    [bySlug, hotSlug, mode, readTokens],
+    [byKey, hotKey, mode, layer, readTokens],
   )
 
   useEffect(() => {
-    for (const s of spots) lastSpot.current.set(s.slug, s)
+    for (const s of spots) lastSpot.current.set(s.key, s)
     const drawn = drawnRef.current
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const target = (slug: string): Drawn => {
-      const s = bySlug.get(slug)
+    const target = (key: string): Drawn => {
+      const s = byKey.get(key)
       return s ? { r: s.r, alpha: s.alpha } : { r: 0, alpha: 0 }
     }
-    for (const s of spots) if (!drawn.has(s.slug)) drawn.set(s.slug, { r: 0, alpha: s.alpha })
+    for (const s of spots) if (!drawn.has(s.key)) drawn.set(s.key, { r: 0, alpha: s.alpha })
 
     if (reduce) {
-      for (const slug of [...drawn.keys()]) {
-        const t = target(slug)
-        if (t.r === 0) drawn.delete(slug)
-        else drawn.set(slug, t)
+      for (const key of [...drawn.keys()]) {
+        const t = target(key)
+        if (t.r === 0) drawn.delete(key)
+        else drawn.set(key, t)
       }
       paint(drawn)
       return
@@ -257,15 +327,15 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
 
     const tick = () => {
       let moving = false
-      for (const [slug, d] of [...drawn]) {
-        const t = target(slug)
+      for (const [key, d] of [...drawn]) {
+        const t = target(key)
         const nr = d.r + (t.r - d.r) * 0.22
         const na = d.alpha + (t.alpha - d.alpha) * 0.22
         if (Math.abs(nr - t.r) < 0.15 && Math.abs(na - t.alpha) < 0.01) {
-          if (t.r === 0) drawn.delete(slug)
-          else drawn.set(slug, t)
+          if (t.r === 0) drawn.delete(key)
+          else drawn.set(key, t)
         } else {
-          drawn.set(slug, { r: nr, alpha: na })
+          drawn.set(key, { r: nr, alpha: na })
           moving = true
         }
       }
@@ -278,7 +348,7 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
       rafRef.current = null
     }
-  }, [spots, bySlug, paint])
+  }, [spots, byKey, paint])
 
   // Repaint on theme changes.
   useEffect(() => {
@@ -352,11 +422,14 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
 
   const perDay = useMemo(
     () =>
-      days.map((d) => ({
-        total: d.places.reduce((a, p) => a + p.count, 0),
-        energy: d.places.filter((p) => p.energy).reduce((a, p) => a + p.count, 0),
-      })),
-    [days],
+      days.map((d) => {
+        const pts = pointsOf(d, layer)
+        return {
+          total: pts.reduce((a, p) => a + p.count, 0),
+          energy: pts.filter((p) => p.energy).reduce((a, p) => a + p.count, 0),
+        }
+      }),
+    [days, layer],
   )
   const maxDay = Math.max(1, ...perDay.map((d) => d.total))
   const months = useMemo(() => {
@@ -381,11 +454,21 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
   const regions = regionTotals(spots)
   const dateLabel = formatEditionDate(day.date)
   const stamp = mode === 'cumulative' ? `Through ${formatEditionDate(day.date, { weekday: false })}` : formatEditionDate(day.date, { weekday: false })
+  const noun = LAYER_NOUN[layer]
+  const Noun = noun.many.charAt(0).toUpperCase() + noun.many.slice(1)
+  const pill = (on: boolean) => `rounded-full! px-4! py-1.5! transition-colors ${on ? 'bg-[var(--accent)]! text-[var(--accent-ink)]!' : 'text-[var(--muted)]! hover:text-[var(--bone)]!'}`
 
   return (
     <div className="grid gap-6">
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
+        <div role="radiogroup" aria-label="Geography layer" className="inline-flex rounded-full border border-[var(--line-strong)] p-0.5 font-[family-name:var(--mono)] text-xs">
+          {GEO_LAYERS.map((l) => (
+            <button key={l.key} type="button" role="radio" aria-checked={layer === l.key} title={l.desc} onClick={() => setLayer(l.key)} className={pill(layer === l.key)}>
+              {l.label}
+            </button>
+          ))}
+        </div>
         <div role="radiogroup" aria-label="Map mode" className="inline-flex rounded-full border border-[var(--line-strong)] p-0.5 font-[family-name:var(--mono)] text-xs">
           {(
             [
@@ -393,14 +476,7 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
               ['day', 'That morning'],
             ] as [Mode, string][]
           ).map(([m, label]) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={mode === m}
-              onClick={() => setMode(m)}
-              className={`rounded-full! px-4! py-1.5! transition-colors ${mode === m ? 'bg-[var(--accent)]! text-[var(--accent-ink)]!' : 'text-[var(--muted)]! hover:text-[var(--bone)]!'}`}
-            >
+            <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)} className={pill(mode === m)}>
               {label}
             </button>
           ))}
@@ -423,17 +499,17 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
       </div>
 
       {/* Map */}
-      <div className="mapbox overflow-hidden rounded-xl border border-[var(--line)]" ref={boxRef}>
+      <div className="mapbox overflow-hidden rounded-xl border border-[var(--line)]" ref={boxRef} data-geo-layer={layer}>
         <div className="map-scroll">
           <canvas
             ref={canvasRef}
             width={W}
             height={H}
-            aria-label={`World map of where the editions' stories cluster — ${mode === 'cumulative' ? 'running totals through' : 'the edition of'} ${dateLabel}`}
-            style={{ cursor: hotSlug ? 'pointer' : 'default' }}
+            aria-label={`World map of the editions' stories by ${noun.one} — ${mode === 'cumulative' ? 'running totals through' : 'the edition of'} ${dateLabel}`}
+            style={{ cursor: hotKey ? 'pointer' : 'default' }}
             onMouseMove={(e) => {
               const s = nearest(e)
-              if ((s?.slug ?? null) !== hotSlug) setHotSlug(s?.slug ?? null)
+              if ((s?.key ?? null) !== hotKey) setHotKey(s?.key ?? null)
               if (s && boxRef.current) {
                 const bb = boxRef.current.getBoundingClientRect()
                 const x = e.clientX - bb.left
@@ -442,7 +518,7 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
               } else setTip(null)
             }}
             onMouseLeave={() => {
-              setHotSlug(null)
+              setHotKey(null)
               setTip(null)
             }}
             onClick={(e) => {
@@ -452,7 +528,9 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
           />
           {spots.length === 0 && (
             <div className="notice" style={{ position: 'absolute', left: 'var(--gutter)', bottom: 24 }}>
-              No story in this edition carried a place tag.
+              {layer === 'country' && day.countries.length === 0 && day.places.length > 0
+                ? 'This edition was frozen before the country layer existed — switch to Localities.'
+                : `No story in this edition carried a ${noun.one}.`}
             </div>
           )}
         </div>
@@ -460,7 +538,8 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
           <div className="maptip" style={{ left: tip.left, top: tip.top }}>
             <b>{tip.spot.name}</b>
             <span>
-              {tip.spot.count} stor{tip.spot.count === 1 ? 'y' : 'ies'} · {DC_REGIONS[tip.spot.region]}
+              {tip.spot.count} stor{tip.spot.count === 1 ? 'y' : 'ies'}
+              {layer !== 'region' ? ` · ${DC_REGIONS[tip.spot.region]}` : ''}
             </span>
             {mode === 'cumulative' && (
               <span>
@@ -474,7 +553,7 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
         <div className="legend">
           <span>
             <i />
-            Story cluster
+            {layer === 'place' ? 'Story cluster' : `Stories in the ${noun.one}`}
           </span>
           <span>
             <i className="energy" />
@@ -550,11 +629,11 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
         </div>
       )}
 
-      {/* Figures + leading places */}
+      {/* Figures + leading points */}
       <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-5 self-start">
-          <Figure label={mode === 'cumulative' ? 'Places so far' : 'Places'} value={spots.length} />
-          <Figure label={mode === 'cumulative' ? 'Placed stories so far' : 'Placed stories'} value={stories} />
+          <Figure label={mode === 'cumulative' ? `${Noun} so far` : Noun} value={spots.length} />
+          <Figure label={mode === 'cumulative' ? 'Tagged stories so far' : 'Tagged stories'} value={stories} />
           {mode === 'cumulative' ? (
             <>
               <Figure label="Mornings" value={idx + 1} />
@@ -586,24 +665,24 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
         </dl>
 
         <div className="grid gap-3 self-start">
-          <h3 className="eyebrow">{mode === 'cumulative' ? 'Most-reported places so far' : 'This morning’s places'}</h3>
+          <h3 className="eyebrow">{mode === 'cumulative' ? `Most-reported ${noun.many} so far` : `This morning’s ${noun.many}`}</h3>
           {top.length === 0 ? (
-            <p className="text-[15px] text-[var(--muted)]">No placed stories.</p>
+            <p className="text-[15px] text-[var(--muted)]">No tagged stories.</p>
           ) : (
             <ol className="grid">
               {top.map((s) => (
-                <li key={s.slug} className="border-t border-[var(--line)]">
+                <li key={s.key} className="border-t border-[var(--line)]">
                   <a
                     href={editionHref(s.today ? day.date : s.lastDate)}
-                    onMouseEnter={() => setHotSlug(s.slug)}
-                    onMouseLeave={() => setHotSlug(null)}
-                    onFocus={() => setHotSlug(s.slug)}
-                    onBlur={() => setHotSlug(null)}
+                    onMouseEnter={() => setHotKey(s.key)}
+                    onMouseLeave={() => setHotKey(null)}
+                    onFocus={() => setHotKey(s.key)}
+                    onBlur={() => setHotKey(null)}
                     className="grid grid-cols-[minmax(0,10rem)_1fr_2.5rem] items-center gap-4 py-2.5 transition-colors hover:bg-[var(--accent-wash)]"
                   >
                     <span className="truncate text-[15px]">
                       {s.name}
-                      <span className="ml-2 font-[family-name:var(--mono)] text-[10.5px] text-[var(--dim)]">{DC_REGIONS[s.region]}</span>
+                      {layer !== 'region' && <span className="ml-2 font-[family-name:var(--mono)] text-[10.5px] text-[var(--dim)]">{DC_REGIONS[s.region]}</span>}
                     </span>
                     <span className="h-1.5 overflow-hidden rounded-full bg-[var(--line)]">
                       <i

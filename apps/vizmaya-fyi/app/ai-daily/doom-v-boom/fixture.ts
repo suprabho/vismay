@@ -51,6 +51,18 @@ export const SAMPLE_DATE = '2026-09-22'
 
 const FIXTURE_COUNTRY: Record<string, string> = {'abilene': 'US', 'n-virginia': 'US', 'columbus': 'US', 'boise': 'US', 'louisiana': 'US', 'seoul': 'KR', 'hsinchu': 'TW', 'tokyo': 'JP', 'shanghai': 'CN', 'dublin': 'IE', 'amsterdam': 'NL', 'veldhoven': 'NL', 'jamnagar': 'IN', 'abu-dhabi': 'AE'}
 
+const COUNTRIES: DcCountry[] = [
+  { code: 'US', name: 'United States', region: 'na', lat: 39.8, lng: -98.6, aliases: [] },
+  { code: 'KR', name: 'South Korea', region: 'ea', lat: 36.5, lng: 127.9, aliases: [] },
+  { code: 'TW', name: 'Taiwan', region: 'ea', lat: 23.7, lng: 121.0, aliases: [] },
+  { code: 'JP', name: 'Japan', region: 'ea', lat: 36.2, lng: 138.3, aliases: [] },
+  { code: 'CN', name: 'China', region: 'ea', lat: 35.9, lng: 104.2, aliases: [] },
+  { code: 'IE', name: 'Ireland', region: 'eu', lat: 53.4, lng: -8.2, aliases: [] },
+  { code: 'NL', name: 'Netherlands', region: 'eu', lat: 52.1, lng: 5.3, aliases: [] },
+  { code: 'IN', name: 'India', region: 'me', lat: 20.6, lng: 79.0, aliases: [] },
+  { code: 'AE', name: 'United Arab Emirates', region: 'me', lat: 23.4, lng: 53.8, aliases: [] },
+]
+
 const PLACES: DcPlace[] = [
   { slug: 'abilene', name: 'Abilene, TX', region: 'na', lat: 32.45, lng: -99.73, aliases: [], country: 'US', kind: 'city' },
   { slug: 'n-virginia', name: 'Northern Virginia', region: 'na', lat: 39.04, lng: -77.49, aliases: [], country: 'US', kind: 'city' },
@@ -297,7 +309,7 @@ function build(): DcEditionWithContent {
   // The tape's moves are the previous session's, so they stand in for the close series here (no caps: equal weights per layer).
   const moves = TAPE.map((t) => ({ ticker: t.ticker, layer: STOCK_CATEGORY_TO_LAYER[t.category], pct: t.changePct, capUsdBn: null }))
   const mood = scoreMoodEvents(STORIES, { market: scoreMarket(moves, marketSession(SAMPLE_DATE)) })
-  const geo = buildGeo(STORIES, PLACES)
+  const geo = buildGeo(STORIES, PLACES, COUNTRIES)
   const energy = buildEnergy(STORIES, IEA_STORIES, { places: placeMap, stocks: stockMap, history: POWER_HISTORY, editionDate: SAMPLE_DATE })
   const layers = {} as Record<DcLayerKey, EditionLayer>
   for (const k of DC_LAYER_KEYS) {
