@@ -26,6 +26,7 @@ import {
 import {
   DC_LAYER_KEYS,
   STOCK_CATEGORY_TO_LAYER,
+  type DcCountry,
   type DcEditionNeighbours,
   type DcEditionStory,
   type DcEditionSummary,
