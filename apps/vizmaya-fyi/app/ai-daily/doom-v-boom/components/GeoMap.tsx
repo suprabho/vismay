@@ -5,6 +5,7 @@ import type { DcRegionKey, EditionGeoCountry, EditionGeoPlace, EditionGeoRegion 
 import { DC_LAYERS, DC_REGIONS, type DcLayerKey } from '@vismay/dc-editions/dcEditionTypes'
 import { LAND_MASK } from './landMask'
 import { PANEL_EVENT } from './editionUtils'
+import { countryDots, nearestDot, regionDots } from './landFill'
 
 interface Props {
   places: EditionGeoPlace[]
@@ -29,7 +30,7 @@ const PAD = 40
 const px = (lon: number) => PAD + ((lon + 180) / 360) * (W - PAD * 2)
 const py = (lat: number) => PAD + ((84 - lat) / 142) * (H - PAD * 2)
 
-/** Where a region's bubble sits — a fixed anchor, so the bubble never wanders with the day's mix. */
+/** A fixed anchor per region (the series timeline still draws region bubbles here). */
 export const REGION_ANCHOR: Record<DcRegionKey, [lng: number, lat: number]> = {
   na: [-100, 42],
   ea: [112, 30],
@@ -51,7 +52,16 @@ interface Pin {
   x: number
   y: number
   r: number
+  /** Countries and regions: the land-mask dots the pin fills (indices into LAND_MASK pairs). */
+  dots?: number[]
+  /** Countries and regions: 0–1 share of the day's lead, which sets the fill's strength. */
+  strength?: number
+  /** A country owning three dots or fewer also gets a ring, so Singapore can be found. */
+  small?: boolean
 }
+
+const dotX = (i: number) => px(LAND_MASK[i * 2] / 10)
+const dotY = (i: number) => py(LAND_MASK[i * 2 + 1] / 10)
 
 function buildPins(layer: GeoLayer, places: EditionGeoPlace[], countries: EditionGeoCountry[], regions: EditionGeoRegion[]): Pin[] {
   if (layer === 'place') {
@@ -59,26 +69,40 @@ function buildPins(layer: GeoLayer, places: EditionGeoPlace[], countries: Editio
   }
   if (layer === 'country') {
     const lead = Math.max(1, ...countries.map((c) => c.count))
-    // Area ∝ stories, scaled to the day's most-reported country, so the US
-    // disc doesn't swallow East Asia on a US-heavy morning.
-    return countries.map((c) => ({ key: `country:${c.code}`, name: c.name, region: c.region, count: c.count, placed: c.count - c.unplaced, energy: c.energy, kind: 'country' as const, x: px(c.lng), y: py(c.lat), r: 6 + 24 * Math.sqrt(c.count / lead) }))
+    // Each country fills its own land dots; strength ∝ stories against the
+    // day's most-reported country. A country too small to own a dot borrows
+    // the one nearest its centroid.
+    return countries.map((c) => {
+      const own = countryDots(c.code)
+      const dots = own.length > 0 ? own : [nearestDot(c.lng, c.lat)]
+      return { key: `country:${c.code}`, name: c.name, region: c.region, count: c.count, placed: c.count - c.unplaced, energy: c.energy, kind: 'country' as const, x: px(c.lng), y: py(c.lat), r: 0, dots, strength: Math.sqrt(c.count / lead), small: own.length <= 3 }
+    })
   }
   const lead = Math.max(1, ...regions.map((r) => r.count))
   return regions.map((r) => {
     const [lng, lat] = REGION_ANCHOR[r.key]
     const energy = countries.some((c) => c.region === r.key && c.energy) || places.some((p) => p.region === r.key && p.energy)
-    return { key: `region:${r.key}`, name: DC_REGIONS[r.key], region: r.key, count: r.count, energy, kind: 'region' as const, x: px(lng), y: py(lat), r: 14 + 46 * Math.sqrt(r.count / lead) }
+    return { key: `region:${r.key}`, name: DC_REGIONS[r.key], region: r.key, count: r.count, energy, kind: 'region' as const, x: px(lng), y: py(lat), r: 0, dots: regionDots(r.key), strength: Math.sqrt(r.count / lead) }
   })
+}
+
+/** Which pin each filled dot belongs to. A country's own dots win over a borrowed one. */
+function dotOwners(pins: Pin[]): Map<number, Pin> {
+  const owners = new Map<number, Pin>()
+  for (const p of pins) if (!p.small) for (const i of p.dots ?? []) owners.set(i, p)
+  for (const p of pins) if (p.small) for (const i of p.dots ?? []) if (!owners.has(i)) owners.set(i, p)
+  return owners
 }
 
 /**
  * Chapter III — full-bleed dot-matrix world map. The land mask is a flat
  * array shipped with the page (no fetch, no map library). The switch at the
  * top picks which of the story's three geography layers is drawn: a solid
- * disc per locality (city hub or state the text names), a disc per country
- * at its centroid (where the development happens, or the company's home),
- * or one bubble per world region at a fixed anchor. Discs are sized by story
- * count and coloured by the energy tag. Hover shows the name/count in a
+ * disc per locality (city hub or state the text names), or — for countries
+ * (where the development happens, or the company's home) and world regions —
+ * the land dots inside that country or region filled in (landCountry.ts tags
+ * every dot). Discs are sized, fills strengthened, by story count; both are
+ * coloured by the energy tag. Hover shows the name/count in a
  * tooltip (nothing is lettered on the map), click opens the stories; the
  * region bar below is proportional to story share with per-layer micro-bars,
  * and highlights the region's pins on hover in every mode.
@@ -94,6 +118,7 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
   const [tip, setTip] = useState<{ left: number; top: number; pin: Pin } | null>(null)
 
   const pins = useMemo<Pin[]>(() => buildPins(layer, places, countries, regions), [layer, places, countries, regions])
+  const owners = useMemo(() => dotOwners(pins), [pins])
 
   const draw = useCallback(() => {
     const cv = canvasRef.current
@@ -115,10 +140,29 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
     c.clearRect(0, 0, W, H)
     c.fillStyle = dot
     for (let i = 0; i < LAND_MASK.length; i += 2) {
+      if (owners.has(i / 2)) continue
       c.beginPath()
       c.arc(px(LAND_MASK[i] / 10), py(LAND_MASK[i + 1] / 10), 2.4, 0, Math.PI * 2)
       c.fill()
     }
+    // Countries and regions: fill the dots they own, stronger for more stories.
+    for (const [i, p] of owners) {
+      const on = hot === null || hot === p.region
+      const isHot = hotPin === p.key
+      const base = 0.4 + 0.6 * (p.strength ?? 1)
+      c.fillStyle = p.energy ? en : acc
+      if (isHot) {
+        c.globalAlpha = 0.18
+        c.beginPath()
+        c.arc(dotX(i), dotY(i), 4.6, 0, Math.PI * 2)
+        c.fill()
+      }
+      c.globalAlpha = isHot ? 1 : on ? base : base * 0.3
+      c.beginPath()
+      c.arc(dotX(i), dotY(i), isHot ? 2.9 : 2.6, 0, Math.PI * 2)
+      c.fill()
+    }
+    c.globalAlpha = 1
     c.strokeStyle = dot
     c.lineWidth = 0.6
     c.setLineDash([2, 7])
@@ -132,26 +176,18 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
       const col = p.energy ? en : acc
       const on = hot === null || hot === p.region
       const isHot = hotPin === p.key
-      if (p.kind === 'region') {
-        // Region bubble: a wash the size of its share, a dashed rim, a core dot.
-        c.globalAlpha = (on ? 1 : 0.3) * (isHot ? 0.22 : 0.14)
-        c.fillStyle = col
-        c.beginPath()
-        c.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        c.fill()
-        c.globalAlpha = on ? (isHot ? 1 : 0.7) : 0.25
-        c.strokeStyle = col
-        c.lineWidth = isHot ? 2 : 1.4
-        c.setLineDash([4, 5])
-        c.beginPath()
-        c.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        c.stroke()
-        c.setLineDash([])
-        c.fillStyle = col
-        c.beginPath()
-        c.arc(p.x, p.y, 4, 0, Math.PI * 2)
-        c.fill()
-        c.globalAlpha = 1
+      if (p.kind !== 'place') {
+        // Filled above; a country of a dot or three also gets a ring to find it by.
+        if (p.small) {
+          const i = p.dots?.[0]
+          c.globalAlpha = on ? (isHot ? 1 : 0.75) : 0.25
+          c.strokeStyle = col
+          c.lineWidth = isHot ? 1.8 : 1.2
+          c.beginPath()
+          c.arc(i === undefined ? p.x : dotX(i), i === undefined ? p.y : dotY(i), isHot ? 10 : 8, 0, Math.PI * 2)
+          c.stroke()
+          c.globalAlpha = 1
+        }
         continue
       }
       c.globalAlpha = (on ? 1 : 0.25) * 0.16
@@ -187,7 +223,7 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
       c.lineTo(x + 12 * sx, y)
       c.stroke()
     }
-  }, [pins, hot, hotPin])
+  }, [pins, owners, hot, hotPin])
 
   useEffect(() => {
     draw()
@@ -210,6 +246,19 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
     const b = cv.getBoundingClientRect()
     const x = ((e.clientX - b.left) * W) / b.width
     const y = ((e.clientY - b.top) * H) / b.height
+    if (layer !== 'place') {
+      // Hit the filled dot under the cursor (within one grid step).
+      let hit: Pin | null = null
+      let hd = 9
+      for (const [i, p] of owners) {
+        const d = Math.hypot(dotX(i) - x, dotY(i) - y)
+        if (d < hd) {
+          hd = d
+          hit = p
+        }
+      }
+      return hit
+    }
     let best: Pin | null = null
     let bd = Infinity
     for (const p of pins) {
@@ -219,9 +268,8 @@ export default function GeoMap({ places, countries = [], regions, stamp }: Props
         best = p
       }
     }
-    // A region bubble is hit anywhere inside it; discs within 30px.
-    if (!best) return null
-    return bd < Math.max(30, best.kind === 'region' ? best.r : 0) ? best : null
+    // Discs within 30px.
+    return best && bd < 30 ? best : null
   }
 
   const openPin = (key: string) => {
