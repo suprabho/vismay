@@ -64,7 +64,7 @@ on:
         required: false
         default: ''
       retag_places_days:
-        description: 'Clear Bengaluru/Mumbai place tags the headline/summary doesn't name, from the last N days (no model call)'
+        description: 'Clear Bengaluru/Mumbai place tags the headline/summary does not name, from the last N days (no model call)'
         required: false
         default: ''
       retag_places_dry_run:
