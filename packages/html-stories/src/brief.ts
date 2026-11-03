@@ -63,6 +63,7 @@ import {
   formatSection,
   isEli5Spin,
   postingLines,
+  PRECEDENCE_LINE,
   reelScriptSection,
   researchAppendix,
   researchProtocolSection,
@@ -75,7 +76,16 @@ import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type AuthorableHtmlStoryForma
 import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
 import { isLightPalette, type StoryStyle } from './styles'
 import { editorialHubPath } from './seo'
-import { applyToneToVoice, toneBanner, toneChecks, toneSection, type HtmlStoryTone } from './tone'
+import {
+  applyToneToVoice,
+  kidsToneBanner,
+  kidsToneChecks,
+  kidsToneSection,
+  toneBanner,
+  toneChecks,
+  toneSection,
+  type HtmlStoryTone,
+} from './tone'
 
 export interface BriefOptions {
   /** e.g. https://vizmaya.fyi */
@@ -205,6 +215,28 @@ const TRAVEL_PALETTE: ThemeColors = {
   teal: '#2ca089',
 }
 
+/**
+ * A picture story for a child sets its own palette: a light, bright page,
+ * not the dark editorial one the house styles share. Used unless the style
+ * drawn for the story is already a light page.
+ */
+export const ELI5_PALETTE: ThemeColors = {
+  background: '#fff8ec',
+  surface: '#ffffff',
+  text: '#2b2540',
+  muted: '#6f6a85',
+  line: '#f0e3cc',
+  accent: '#ff6b4a',
+  accent2: '#5b6cff',
+  teal: '#22b8a0',
+}
+
+const ELI5_STYLE = `Style for a picture story (the format sets the palette; it overrides the house style's dark page):
+- A light, bright page. Background \`#fff8ec\`, surface \`#ffffff\`, text \`#2b2540\`, muted \`#6f6a85\`, hairlines \`#f0e3cc\`.
+- Accent \`#ff6b4a\` (the one colour that means "look here"), secondary \`#5b6cff\`, teal \`#22b8a0\`. Flat, round, friendly shapes with thick outlines; no gradients or texture that muddy a drawing.
+- Type: Fraunces or any round, friendly serif for headlines and the story words, Inter for the grown-ups card. Story words 28px or larger on a phone, line-height 1.4.
+- Keep these colours for the same things in every picture, so the stand-in is recognisable from beat to beat.`
+
 export const HOUSE_PALETTES: Record<HtmlStoryApp, ThemeColors> = {
   'vizmaya-fyi': VIZMAYA_PALETTE,
   footshorts: FOOTSHORTS_PALETTE,
@@ -279,7 +311,8 @@ const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
   Body 18–20px, line-height 1.6, measure 60–70 characters.`,
 }
 
-function styleSection(app: HtmlStoryApp, style: StoryStyle | null | undefined): string {
+function styleSection(app: HtmlStoryApp, style: StoryStyle | null | undefined, eli5 = false): string {
+  if (eli5 && !(style && isLightPalette(style.palette))) return ELI5_STYLE
   if (!style) return HOUSE_STYLE[app]
   const { palette: c, fonts } = style
   const kind = style.paletteFrom.kind
@@ -734,6 +767,45 @@ leave out; these are the parts only you can write.
 `
 }
 
+/** A picture story's title and slug are a child's question, not a search-first name. */
+function eli5SearchSection(): string {
+  return `## Search (should)
+
+A picture story is found by a grown-up and read by a child, so the format wins
+over the usual "name the subject first" rule:
+- \`<title>\` and the \`<h1>\` are the child's question ("Why did the toy boat sink?"),
+  and the real subject is named in the grown-ups card and the description.
+- \`<meta name="description">\`: 120–160 characters for the grown-up, naming the
+  real person or idea and what the story shows.
+- Every beat's words are real text in the markup, and each picture has alt text
+  that says what it shows.
+- The slug names the real subject (not the question), so the link still means something.
+`
+}
+
+/** A picture story draws its own pictures: no photo hunt, no uploads. */
+function eli5PicturesSection(): string {
+  return `## Pictures
+
+Every picture is drawn, inline SVG or CSS, in the story's palette: flat, round,
+friendly, thick outlines. No stock or Commons photos, no AI-generated images and
+no uploads, so no token or assets endpoint is needed.
+- A real portrait or document image is optional, small, in beat 3 or the grown-ups
+  card, openly licensed and credited in its caption, linked from its source's https URL.
+- Alt text says what the picture shows, in plain words.
+- Under reduced motion, show every picture in its final state.
+- \`og:image\`: an absolute https URL, 1200×630. A drawn picture cannot be hosted
+  from inside the page, so say in your hand-back note which cover image to render and upload.`
+}
+
+/** A picture story has no charts section: at most one picture count, in the format. */
+function eli5ChartsSection(): string {
+  return `## Charts
+
+None, beyond the format's one picture count (five boats, three sink). No axes, no
+legends, no source lines under a beat; the grown-ups card carries the sources.`
+}
+
 function vizf1ContentSection(hasContext: boolean): string {
   const meta = HTML_STORY_APP_META.vizf1
   const contextRules = hasContext
@@ -950,6 +1022,10 @@ export function htmlStoryBrief({
   const siteName = site.replace(/^https?:\/\//, '')
   const hasContext = !!context?.trim()
   const eli5 = !!spin && isEli5Spin(spin)
+  const storyPalette = eli5 && !(style && isLightPalette(style.palette)) ? ELI5_PALETTE : (style?.palette ?? HOUSE_PALETTES[app])
+  // Precedence is stated once, near the top, whenever a format, a reader or a tone can clash with the generic rules.
+  const precedence = spin || paged || tone === 'humorous' ? `\n> **Precedence:** ${PRECEDENCE_LINE}\n` : ''
+  const toneBannerText = eli5 ? kidsToneBanner(tone) : toneBanner(tone)
   const assignment = spin
     ? `
 ${assignmentSection(spin)}
@@ -1056,7 +1132,7 @@ charts. "${formatHeading(paged)}" below says how.
   credited "© OpenStreetMap contributors"). Not MapLibre or another WebGL map
   library: their web workers can't talk to a page in the site's sandbox, so
   the map never gets its tiles. Don't use Mapbox: this deployment has no token for it.`
-  const checks = [...(paged ? formatChecks(paged, app) : []), ...toneChecks(tone)].map((c) => `\n- ${c}`).join('')
+  const checks = [...(paged ? formatChecks(paged, app) : []), ...(eli5 ? kidsToneChecks(tone) : toneChecks(tone))].map((c) => `\n- ${c}`).join('')
   const tripMeta =
     app === 'travel'
       ? `
@@ -1072,7 +1148,7 @@ self-contained HTML file. It is hosted exactly as you write it at
 ${site}/s/<slug>. ${chrome}, so don't add your own site logo,
 masthead or site footer. Everything in between is yours: the design, the
 charts, and the words.
-${toneBanner(tone)}${eli5Banner(spin)}${formatIntro}${assignment}
+${precedence}${toneBannerText}${eli5Banner(spin)}${formatIntro}${assignment}
 ## The hosting contract (must)
 
 1. One complete document: \`<!doctype html>\`, \`<html lang="en">\`, \`<head>\`, \`<body>\`.
@@ -1082,7 +1158,7 @@ ${toneBanner(tone)}${eli5Banner(spin)}${formatIntro}${assignment}
    - \`<title>\`: the story headline. It becomes the story's title.
    - \`<meta name="description">\`: a one-sentence summary.
    - \`og:title\`, \`og:description\`, \`og:image\` (absolute https URL, 1200×630) and \`twitter:card\` = \`summary_large_image\`.
-   - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(style?.palette ?? HOUSE_PALETTES[app])}">\`:
+   - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(storyPalette)}">\`:
      your page's colours, as hex. The ${meta.name} header, footer and logo are tinted
      to match. Copy it as given, and update it if you change the palette.${formatMeta}${tripMeta}
 3. Every asset is inline or an absolute \`https://\` URL. There is no folder next
@@ -1090,28 +1166,29 @@ ${toneBanner(tone)}${eli5Banner(spin)}${formatIntro}${assignment}
 4. Load libraries from a CDN (jsdelivr, unpkg, cdnjs) with pinned versions.
 5. The page runs in a sandbox: no cookies, and \`localStorage\`/\`sessionStorage\`
    throw. Wrap any storage use in try/catch, or don't use it.
-6. Stay under ${MAX_HTML_BYTES / 1024 / 1024} MB. Link photos and video by https URL (see
-   "Photography and media"); never base64 them into the page.
+6. Stay under ${MAX_HTML_BYTES / 1024 / 1024} MB. ${eli5
+     ? 'A picture story\'s pictures are inline SVG or CSS, so there is nothing to upload. Never base64 an image into the page.'
+     : 'Link photos and video by https URL (see "Photography and media"); never base64 them into the page.'}
 7. It must work from 360px to 1600px wide with no horizontal scroll, and charts
    must redraw on resize.
 8. Respect \`prefers-reduced-motion\`. Content must never be hidden if a script fails.
 
-${app === 'travel' ? '' : searchSection(app, site, editorialHubPath(app))}
+${app === 'travel' ? '' : eli5 ? eli5SearchSection() : searchSection(app, site, editorialHubPath(app))}
 ## Design direction
 
 Aim for the bar of the best newsroom visual stories (The Pudding, FT, Reuters
 Graphics, NYT Upshot${newsrooms}): editorial, calm, confident. One idea per ${unit}.
 
-${styleSection(app, style)}
-- Lots of space. Big standalone numbers. Short paragraphs. Pull quotes sparingly.
+${styleSection(app, style, eli5)}
+- ${eli5 ? 'One big picture and a few big words per screen.' : 'Lots of space.'} Big standalone numbers. Short paragraphs. Pull quotes sparingly.
 
 ${iconsSection(app)}
 
-${mediaSection(app, site, unit)}
+${eli5 ? eli5PicturesSection() : mediaSection(app, site, unit)}
 
 ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapboxToken(mapboxToken) : null }) : motionSection(app, mapbox)}
 
-## Charts
+${eli5 ? eli5ChartsSection() : `## Charts
 
 - D3 v7 or Observable Plot for bespoke charts; ECharts is fine for standard
   ones. ${mapsLine}
@@ -1121,10 +1198,10 @@ ${paged ? storyFormatSection(paged, app, { mapboxToken: travelBoard ? storyMapbo
 - Bars start at zero. Show units. Use tabular numerals. Round sensibly.
 - Put a source line under every chart, linked to the original.
 - On phones, labels must not overlap or clip: shorten them, rotate nothing, and
-  drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}
-${mapbox ? `\n${mapsSection(app, mapbox)}\n` : ''}
+  drop to fewer ticks. Test this.${spin ? chartRules(spin).map((r) => `\n- ${r}`).join('') : ''}`}
+${mapbox && !eli5 ? `\n${mapsSection(app, mapbox)}\n` : ''}
 ${applyToneToVoice(spin ? (eli5 ? eli5ContentSection(meta.desk) : spinContentSection(meta.desk, spinContextRules(spin, app, hasContext))) : contentSection(app, hasContext), tone)}
-${tone === 'humorous' ? `\n${toneSection(app, tone)}` : ''}${app === 'travel' ? '' : `\n${listenSection(unit)}\n`}${spin ? `\n${reelScriptSection()}${tone === 'humorous' ? '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").' : ''}${eli5 ? '\n\nWrite the script for the same five-year-old: the picture story told aloud in under 30 seconds, no word they would not know.' : ''}\n` : ''}
+${tone === 'humorous' ? `\n${eli5 ? kidsToneSection(tone) : toneSection(app, tone)}` : ''}${app === 'travel' ? '' : `\n${listenSection(unit)}\n`}${spin ? `\n${reelScriptSection(eli5)}${tone === 'humorous' ? (eli5 ? '\n\nWrite the script in the same gentle, silly voice as the page (see "Tone").' : '\n\nWrite the script in the same funny, sarcastic voice as the page (see "Tone").') : ''}${eli5 ? '\n\nWrite the script for the same five-year-old: the picture story told aloud in under 30 seconds, no word they would not know.' : ''}\n` : ''}
 ## Before you post: check your own work
 
 If you can run a browser, render the page at 375×812 and 1440×900 and look at
@@ -1145,8 +1222,14 @@ Pick the first one you can do:
   body (\`Content-Type: text/html\`) and \`Authorization: Bearer $HTML_STORIES_TOKEN\`.
   Add \`&publish=1\` to make it public right away; otherwise it saves as a draft.
   The response lists \`warnings\`. Fix them and post again to the same slug.
-- **Otherwise**: give the user the complete HTML file. They will paste it into
-  the admin's HTML stories tab for ${siteName}.
+- **Otherwise (a valid ending, not a failure)**: hand back the complete HTML file
+  and any image files you made, with this checklist for whoever posts it:
+  - [ ] Paste the HTML into the admin's HTML stories tab for ${siteName}${spin ? ` and tie it to spin \`${spin.id}\`` : ''}.
+  - [ ] Upload each image file and replace its placeholder URL in the page (list each
+    placeholder and the file that belongs there).
+  - [ ] Add or confirm the credit and licence for every image you did not draw.
+  - [ ] Set \`og:image\` to the 1200×630 cover once it is hosted.
+  - [ ] Say what you could not do (no token, a rate-limited source, a missing tool).
 
 Slugs are lowercase words joined by hyphens, e.g. \`${slugExample}\`.${
     app === 'travel' ? ' A trip story\'s slug starts with its trip\'s slug (`<trip>-day-3`, `<trip>-highlights`).' : ''
