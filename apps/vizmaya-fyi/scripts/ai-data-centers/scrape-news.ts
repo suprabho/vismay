@@ -35,9 +35,10 @@
  *                  version, no feed fetch — run once after a classifier
  *                  change so the current edition window carries the new
  *                  figure tags)
- *               pnpm ai-data-centers:scrape-news -- --retag-places-days 7
- *                 (clears stored place tags the headline/summary doesn't
- *                  name; no model call, other tags untouched)
+ *               pnpm ai-data-centers:scrape-news -- --reclassify-days 7
+ *                 (re-classifies every relevant row in the window whatever
+ *                  its version — run after a prompt change that doesn't bump
+ *                  the classifier version, e.g. the place rules)
  * Run in CI:    .github/workflows/scrape-ai-data-centers-news.yml (daily cron)
  *
  * Required env:
@@ -260,7 +261,7 @@ Layer (which part of the AI stack the story is mainly about):
 - "semi"  — accelerators, memory/HBM, foundry, packaging
 - "equip" — lithography, deposition, etch, test tools, and chip export rules
 
-Places (pick the slug the story is mainly about, or null when no listed place fits — never invent one):
+Places (pick the slug the story is mainly about, or null when no listed place fits — never invent one). Tag a place only when the story names that city or one of its aliases, or its main subject is a company or site that clearly operates there (e.g. Micron → boise). A country, state or industry match is NOT enough: a story about another Indian state is not Bengaluru or Mumbai just because the hub is in India; use null and set the region instead:
 ${placeList}
 
 Region (of the place, or of the story when no place fits): "na" North America · "ea" East Asia · "eu" Europe · "me" India & Middle East · "other" · null.
@@ -308,7 +309,7 @@ Rules:
 - relevant=false when the story is NOT materially about AI compute, data centers, chip making, chip markets, or a tracked company's AI/semiconductor/data-center business. Consumer gadget reviews, gaming deals, unrelated corporate or general-market news → relevant=false, empty arrays, layer/place/region/theme null, mood 0, relevance 1, impact 1, event null, energy false, facts {"action": null, "figures": [], "horizon": null}.
 - topics: every vocabulary tag that clearly applies (usually 1–2).
 - tickers: ONLY companies explicitly named in the headline or summary, or the unmistakable primary subject. Use the exact ticker strings from the list. Empty array if none.
-- place: ONLY a slug from the list above.
+- place: ONLY a slug from the list above, and only under the rule above; null when unsure.
 
 Respond ONLY with valid JSON in this exact shape, no markdown fences:
 {"relevant": true, "topics": ["semiconductors"], "tickers": ["NVDA"], "layer": "semi", "place": "hsinchu", "region": "ea", "theme": "chips", "mood": 1, "relevance": 5, "impact": 3, "event": "TSMC doubles CoWoS-L packaging output for Nvidia", "actors": ["TSMC", "Nvidia"], "energy": false, "facts": {"action": "add", "figures": [{"value": 2, "unit": "×", "label": "CoWoS-L output", "subject": "TSMC", "scope": "company", "status": "target"}], "horizon": null}}`
@@ -373,6 +374,24 @@ function placeIsMentioned(place: PlaceRow | undefined, text: string): boolean {
   })
 }
 
+/**
+ * Hubs the model uses as an India-wide catch-all. Most hubs are regional
+ * clusters (Seoul = Korea, Singapore = Southeast Asia, Dallas = Texas) and the
+ * model's pick is trusted. These two attract stories from anywhere in India
+ * (an Odisha fab filed under Bengaluru), so their tag must be named in the text.
+ */
+const STRICT_PLACES = new Set(['bengaluru', 'mumbai'])
+
+/**
+ * A model-picked hub is kept unless it is a strict hub the headline/summary
+ * doesn't name (slug, name or alias — Mumbai's own aliases include "India").
+ * A dropped place becomes null; the region still comes from the model.
+ */
+function placeIsGrounded(place: PlaceRow | undefined, text: string): boolean {
+  if (!place) return false
+  return STRICT_PLACES.has(place.slug) ? placeIsMentioned(place, text) : true
+}
+
 /** Validate + normalise the model's JSON against the vocabularies and the seeded lists. */
 function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sourceText: string): Classification {
   const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
@@ -405,10 +424,7 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sour
 
   const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
   const placeGuess = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
-  // Grounding: the model may only tag a hub the headline or summary actually
-  // names (slug, name or an alias). A loose guess ("India chips" → Bengaluru)
-  // becomes null, and the region below still comes from the model.
-  const place = placeGuess && placeIsMentioned(ctx.placeBySlug.get(placeGuess), sourceText) ? placeGuess : null
+  const place = placeGuess && placeIsGrounded(ctx.placeBySlug.get(placeGuess), sourceText) ? placeGuess : null
   const region: DcRegionKey | null = place
     ? ctx.placeBySlug.get(place)!.region
     : typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region)
@@ -577,12 +593,14 @@ interface Args {
   backfillDays: number | null
   /** Re-tag relevant rows classified by an older classifier version in the last N days. */
   retagDays: number | null
-  /** Re-check stored place tags against the headline/summary in the last N days (no model call). */
+  /** Re-check stored place tags with the grounding rule in the last N days (no model call). */
   retagPlacesDays: number | null
+  /** Re-classify every relevant row in the last N days, whatever its classifier version. */
+  reclassifyDays: number | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { backfillDays: null, retagDays: null, retagPlacesDays: null }
+  const args: Args = { backfillDays: null, retagDays: null, reclassifyDays: null, retagPlacesDays: null }
   const days = (flag: string, raw: string | undefined): number => {
     const n = Number(raw)
     if (!Number.isFinite(n) || n <= 0) throw new Error(`Invalid ${flag} value: ${raw}`)
@@ -594,6 +612,7 @@ function parseArgs(argv: string[]): Args {
     if (a === '--backfill-days') args.backfillDays = days(a, argv[++i])
     else if (a === '--retag-days') args.retagDays = days(a, argv[++i])
     else if (a === '--retag-places-days') args.retagPlacesDays = days(a, argv[++i])
+    else if (a === '--reclassify-days') args.reclassifyDays = days(a, argv[++i])
     else throw new Error(`Unknown flag: ${a}`)
   }
   return args
@@ -641,11 +660,14 @@ async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierCon
 }
 
 /**
- * Re-applies the place grounding check to rows already tagged: a stored place
- * the headline/summary doesn't name (slug, name or alias) is cleared. Region
- * and every other tag are left alone, and no model call is made.
+ * Re-applies the place grounding rule (placeIsGrounded) to rows already
+ * tagged: a stored strict-hub place (STRICT_PLACES) that the headline/summary
+ * doesn't name is cleared. Only `place` changes (region and every other
+ * tag stay), and no model call is made. --dry-run-style preview: set
+ * RETAG_DRY_RUN=1 to print what would change without writing.
  */
 async function retagPlaces(sb: Sb, ctx: ClassifierContext, days: number) {
+  const dry = process.env.RETAG_DRY_RUN === '1'
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   const { data, error } = await sb
     .from('dc_news')
@@ -656,21 +678,23 @@ async function retagPlaces(sb: Sb, ctx: ClassifierContext, days: number) {
     .limit(5000)
   if (error) throw new Error(`retag-places read failed: ${error.message}`)
   const rows = (data ?? []) as { id: number; title: string; summary: string | null; place: string }[]
-  console.log(`[retag-places] ${rows.length} place-tagged rows in the last ${days} days`)
+  console.log(`[retag-places]${dry ? ' (dry run)' : ''} ${rows.length} place-tagged rows in the last ${days} days`)
   let cleared = 0
   let failed = 0
   for (const row of rows) {
-    if (placeIsMentioned(ctx.placeBySlug.get(row.place), `${row.title}\n${row.summary ?? ''}`)) continue
-    const { error: updErr } = await sb.from('dc_news').update({ place: null }).eq('id', row.id)
-    if (updErr) {
-      failed++
-      console.error(`  ✗ #${row.id}: ${updErr.message}`)
-      continue
+    if (placeIsGrounded(ctx.placeBySlug.get(row.place), `${row.title}\n${row.summary ?? ''}`)) continue
+    if (!dry) {
+      const { error: updErr } = await sb.from('dc_news').update({ place: null }).eq('id', row.id)
+      if (updErr) {
+        failed++
+        console.error(`  ✗ #${row.id}: ${updErr.message}`)
+        continue
+      }
     }
     cleared++
     console.log(`  ✓ #${row.id} ${row.place} → null  ${row.title}`)
   }
-  console.log(`\n[retag-places] done: ${cleared} cleared, ${rows.length - cleared - failed} kept, ${failed} failed`)
+  console.log(`\n[retag-places] done: ${cleared} ${dry ? 'would be cleared' : 'cleared'}, ${rows.length - cleared - failed} kept, ${failed} failed`)
 }
 
 /**
@@ -685,7 +709,7 @@ async function backfill(
   anthropic: Anthropic,
   system: string,
   ctx: ClassifierContext,
-  opts: { days: number; mode: 'untagged' | 'stale' },
+  opts: { days: number; mode: 'untagged' | 'stale' | 'all' },
   startedAt: number,
 ) {
   const { days, mode } = opts
@@ -695,11 +719,12 @@ async function backfill(
     .select('id, source_url, title, summary, source, published_at')
     .eq('relevant', true)
     .gte('published_at', since)
-  q = mode === 'untagged' ? q.is('layer', null) : q.or(`classifier_version.is.null,classifier_version.neq.${CLASSIFIER_VERSION}`)
+  if (mode === 'untagged') q = q.is('layer', null)
+  else if (mode === 'stale') q = q.or(`classifier_version.is.null,classifier_version.neq.${CLASSIFIER_VERSION}`)
   const { data, error } = await q.order('published_at', { ascending: false }).limit(3000)
   if (error) throw new Error(`backfill read failed: ${error.message}`)
   const rows = (data ?? []) as { id: number; source_url: string; title: string; summary: string | null; source: string | null; published_at: string }[]
-  console.log(`[backfill] ${rows.length} ${mode === 'untagged' ? 'untagged' : `pre-${CLASSIFIER_VERSION}`} relevant rows in the last ${days} days`)
+  console.log(`[backfill] ${rows.length} ${mode === 'untagged' ? 'untagged' : mode === 'all' ? 'all' : `pre-${CLASSIFIER_VERSION}`} relevant rows in the last ${days} days`)
 
   let tagged = 0
   let skipped = 0
@@ -759,6 +784,10 @@ async function main() {
   }
   if (args.retagPlacesDays != null) {
     await retagPlaces(sb, ctx, args.retagPlacesDays)
+    return
+  }
+  if (args.reclassifyDays != null) {
+    await backfill(sb, anthropic, system, ctx, { days: args.reclassifyDays, mode: 'all' }, startedAt)
     return
   }
   if (args.retagDays != null) {

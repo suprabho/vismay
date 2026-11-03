@@ -37,7 +37,15 @@ on:
         type: string
         required: false
         default: ''
+      reclassify_days:
+        type: string
+        required: false
+        default: ''
       retag_places_days:
+        type: string
+        required: false
+        default: ''
+      retag_places_dry_run:
         type: string
         required: false
         default: ''
@@ -51,8 +59,16 @@ on:
         description: 'Re-tag rows classified by an older classifier version from the last N days instead of scraping (run once after a classifier change)'
         required: false
         default: ''
+      reclassify_days:
+        description: 'Re-classify every relevant row from the last N days, whatever its classifier version (Haiku call per row)'
+        required: false
+        default: ''
       retag_places_days:
-        description: 'Clear stored place tags the headline/summary does not name, from the last N days (no model call)'
+        description: 'Clear Bengaluru/Mumbai place tags the headline/summary does not name, from the last N days (no model call)'
+        required: false
+        default: ''
+      retag_places_dry_run:
+        description: 'Set to 1 to only print what retag_places_days would clear'
         required: false
         default: ''
 
@@ -89,9 +105,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RETAG_DRY_RUN: ${{ inputs.retag_places_dry_run }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: >
           pnpm ai-data-centers:scrape-news
           ${{ inputs.backfill_days != '' && format('-- --backfill-days {0}', inputs.backfill_days) || '' }}
           ${{ inputs.retag_days != '' && format('-- --retag-days {0}', inputs.retag_days) || '' }}
+          ${{ inputs.reclassify_days != '' && format('-- --reclassify-days {0}', inputs.reclassify_days) || '' }}
           ${{ inputs.retag_places_days != '' && format('-- --retag-places-days {0}', inputs.retag_places_days) || '' }}
