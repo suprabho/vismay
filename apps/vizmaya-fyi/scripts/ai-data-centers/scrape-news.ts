@@ -375,14 +375,21 @@ function placeIsMentioned(place: PlaceRow | undefined, text: string): boolean {
 }
 
 /**
- * A hub is kept when the text names it (slug, name or alias), or when the story
- * names a tracked company — the model legitimately places "Micron" at Boise or
- * "Samsung" at Seoul without the city appearing. A place with neither is a
- * loose regional guess (an Odisha story filed under Bengaluru) and is dropped;
- * the region still comes from the model.
+ * Hubs the model uses as an India-wide catch-all. Most hubs are regional
+ * clusters (Seoul = Korea, Singapore = Southeast Asia, Dallas = Texas) and the
+ * model's pick is trusted. These two attract stories from anywhere in India
+ * (an Odisha fab filed under Bengaluru), so their tag must be named in the text.
  */
-function placeIsGrounded(place: PlaceRow | undefined, text: string, tickers: string[]): boolean {
-  return !!place && (tickers.length > 0 || placeIsMentioned(place, text))
+const STRICT_PLACES = new Set(['bengaluru', 'mumbai'])
+
+/**
+ * A model-picked hub is kept unless it is a strict hub the headline/summary
+ * doesn't name (slug, name or alias — Mumbai's own aliases include "India").
+ * A dropped place becomes null; the region still comes from the model.
+ */
+function placeIsGrounded(place: PlaceRow | undefined, text: string): boolean {
+  if (!place) return false
+  return STRICT_PLACES.has(place.slug) ? placeIsMentioned(place, text) : true
 }
 
 /** Validate + normalise the model's JSON against the vocabularies and the seeded lists. */
@@ -417,7 +424,7 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sour
 
   const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
   const placeGuess = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
-  const place = placeGuess && placeIsGrounded(ctx.placeBySlug.get(placeGuess), sourceText, tickers) ? placeGuess : null
+  const place = placeGuess && placeIsGrounded(ctx.placeBySlug.get(placeGuess), sourceText) ? placeGuess : null
   const region: DcRegionKey | null = place
     ? ctx.placeBySlug.get(place)!.region
     : typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region)
@@ -654,8 +661,8 @@ async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierCon
 
 /**
  * Re-applies the place grounding rule (placeIsGrounded) to rows already
- * tagged: a stored place that neither the headline/summary names nor a tracked
- * company justifies is cleared. Only `place` changes (region and every other
+ * tagged: a stored strict-hub place (STRICT_PLACES) that the headline/summary
+ * doesn't name is cleared. Only `place` changes (region and every other
  * tag stay), and no model call is made. --dry-run-style preview: set
  * RETAG_DRY_RUN=1 to print what would change without writing.
  */
@@ -664,18 +671,18 @@ async function retagPlaces(sb: Sb, ctx: ClassifierContext, days: number) {
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   const { data, error } = await sb
     .from('dc_news')
-    .select('id, title, summary, place, tickers')
+    .select('id, title, summary, place')
     .eq('relevant', true)
     .not('place', 'is', null)
     .gte('published_at', since)
     .limit(5000)
   if (error) throw new Error(`retag-places read failed: ${error.message}`)
-  const rows = (data ?? []) as { id: number; title: string; summary: string | null; place: string; tickers: string[] | null }[]
+  const rows = (data ?? []) as { id: number; title: string; summary: string | null; place: string }[]
   console.log(`[retag-places]${dry ? ' (dry run)' : ''} ${rows.length} place-tagged rows in the last ${days} days`)
   let cleared = 0
   let failed = 0
   for (const row of rows) {
-    if (placeIsGrounded(ctx.placeBySlug.get(row.place), `${row.title}\n${row.summary ?? ''}`, row.tickers ?? [])) continue
+    if (placeIsGrounded(ctx.placeBySlug.get(row.place), `${row.title}\n${row.summary ?? ''}`)) continue
     if (!dry) {
       const { error: updErr } = await sb.from('dc_news').update({ place: null }).eq('id', row.id)
       if (updErr) {
