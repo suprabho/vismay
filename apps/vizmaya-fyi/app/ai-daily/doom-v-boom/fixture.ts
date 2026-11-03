@@ -49,21 +49,23 @@ import { SAMPLE_CHARTS, SAMPLE_CHART_SKIPS } from './sampleCharts'
 
 export const SAMPLE_DATE = '2026-09-22'
 
+const FIXTURE_COUNTRY: Record<string, string> = {'abilene': 'US', 'n-virginia': 'US', 'columbus': 'US', 'boise': 'US', 'louisiana': 'US', 'seoul': 'KR', 'hsinchu': 'TW', 'tokyo': 'JP', 'shanghai': 'CN', 'dublin': 'IE', 'amsterdam': 'NL', 'veldhoven': 'NL', 'jamnagar': 'IN', 'abu-dhabi': 'AE'}
+
 const PLACES: DcPlace[] = [
-  { slug: 'abilene', name: 'Abilene, TX', region: 'na', lat: 32.45, lng: -99.73, aliases: [] },
-  { slug: 'n-virginia', name: 'Northern Virginia', region: 'na', lat: 39.04, lng: -77.49, aliases: [] },
-  { slug: 'columbus', name: 'Columbus, OH', region: 'na', lat: 39.96, lng: -83.0, aliases: [] },
-  { slug: 'boise', name: 'Boise, ID', region: 'na', lat: 43.62, lng: -116.21, aliases: [] },
-  { slug: 'louisiana', name: 'Louisiana', region: 'na', lat: 32.35, lng: -91.75, aliases: [] },
-  { slug: 'seoul', name: 'Seoul', region: 'ea', lat: 37.57, lng: 126.98, aliases: [] },
-  { slug: 'hsinchu', name: 'Hsinchu', region: 'ea', lat: 24.8, lng: 120.97, aliases: [] },
-  { slug: 'tokyo', name: 'Tokyo', region: 'ea', lat: 35.68, lng: 139.69, aliases: [] },
-  { slug: 'shanghai', name: 'Shanghai', region: 'ea', lat: 31.23, lng: 121.47, aliases: [] },
-  { slug: 'dublin', name: 'Dublin', region: 'eu', lat: 53.35, lng: -6.26, aliases: [] },
-  { slug: 'amsterdam', name: 'Amsterdam', region: 'eu', lat: 52.37, lng: 4.9, aliases: [] },
-  { slug: 'veldhoven', name: 'Veldhoven', region: 'eu', lat: 51.42, lng: 5.4, aliases: [] },
-  { slug: 'jamnagar', name: 'Jamnagar', region: 'me', lat: 22.47, lng: 70.06, aliases: [] },
-  { slug: 'abu-dhabi', name: 'Abu Dhabi', region: 'me', lat: 24.45, lng: 54.38, aliases: [] },
+  { slug: 'abilene', name: 'Abilene, TX', region: 'na', lat: 32.45, lng: -99.73, aliases: [], country: 'US', kind: 'city' },
+  { slug: 'n-virginia', name: 'Northern Virginia', region: 'na', lat: 39.04, lng: -77.49, aliases: [], country: 'US', kind: 'city' },
+  { slug: 'columbus', name: 'Columbus, OH', region: 'na', lat: 39.96, lng: -83.0, aliases: [], country: 'US', kind: 'city' },
+  { slug: 'boise', name: 'Boise, ID', region: 'na', lat: 43.62, lng: -116.21, aliases: [], country: 'US', kind: 'city' },
+  { slug: 'louisiana', name: 'Louisiana', region: 'na', lat: 32.35, lng: -91.75, aliases: [], country: 'US', kind: 'city' },
+  { slug: 'seoul', name: 'Seoul', region: 'ea', lat: 37.57, lng: 126.98, aliases: [], country: 'KR', kind: 'city' },
+  { slug: 'hsinchu', name: 'Hsinchu', region: 'ea', lat: 24.8, lng: 120.97, aliases: [], country: 'TW', kind: 'city' },
+  { slug: 'tokyo', name: 'Tokyo', region: 'ea', lat: 35.68, lng: 139.69, aliases: [], country: 'JP', kind: 'city' },
+  { slug: 'shanghai', name: 'Shanghai', region: 'ea', lat: 31.23, lng: 121.47, aliases: [], country: 'CN', kind: 'city' },
+  { slug: 'dublin', name: 'Dublin', region: 'eu', lat: 53.35, lng: -6.26, aliases: [], country: 'IE', kind: 'city' },
+  { slug: 'amsterdam', name: 'Amsterdam', region: 'eu', lat: 52.37, lng: 4.9, aliases: [], country: 'NL', kind: 'city' },
+  { slug: 'veldhoven', name: 'Veldhoven', region: 'eu', lat: 51.42, lng: 5.4, aliases: [], country: 'NL', kind: 'city' },
+  { slug: 'jamnagar', name: 'Jamnagar', region: 'me', lat: 22.47, lng: 70.06, aliases: [], country: 'IN', kind: 'city' },
+  { slug: 'abu-dhabi', name: 'Abu Dhabi', region: 'me', lat: 24.45, lng: 54.38, aliases: [], country: 'AE', kind: 'city' },
 ]
 
 const STOCKS: StockName[] = [
@@ -143,6 +145,7 @@ const STORIES: DcEditionStory[] = ROWS.map((r, i) => ({
   tickers: r[9],
   layer: r[6],
   place: r[7],
+  country: r[7] ? FIXTURE_COUNTRY[r[7]] ?? null : null,
   region: r[8],
   theme: r[1],
   mood: r[0],
@@ -167,6 +170,7 @@ const IEA_STORIES: DcEditionStory[] = [
     tickers: [],
     layer: 'dc',
     place: 'abu-dhabi',
+    country: 'AE',
     region: 'me',
     theme: 'sustain',
     mood: 0,

@@ -15,6 +15,7 @@ const story = (id: number, over: Partial<DcEditionStory>): DcEditionStory => ({
   tickers: [],
   layer: 'dc',
   place: null,
+  country: null,
   region: 'na',
   theme: 'capacity',
   mood: 1,

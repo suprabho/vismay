@@ -171,7 +171,7 @@ function parseArgs(argv: string[]): Args {
 
 const COMPOSER_SYSTEM = `You are the editor of "AI Data Centers Daily", a frozen morning edition for operators, investors, analysts and policy people who need to know what happened in AI infrastructure yesterday, from every angle, with every claim traceable to a source.
 
-You receive the window's stories (each with an idx, outlet, layer, place, theme, mood, energy flag, tickers and the FACTS the story states), the kept research papers, the tracked stocks' moves and a few numbers the page already computes. You write the prose layer only; the page computes every chart and count itself.
+You receive the window's stories (each with an idx, outlet, layer, place, country, region, theme, mood, energy flag, tickers and the FACTS the story states), the kept research papers, the tracked stocks' moves and a few numbers the page already computes. You write the prose layer only; the page computes every chart and count itself.
 
 Readers come every morning, so each edition must lead with what is NEW in its window. News keeps being re-reported for days: a story carrying a "continuing" object reports a development an earlier edition already carried — "since" is the edition date, "previously" is what readers were told, "newFigures" lists anything this window states that the earlier reports did not. "previousEdition" is the last edition's front page.
 
@@ -316,6 +316,7 @@ function buildComposerInput(input: {
       moodCounts: { boom: numbers.moodCounts.boom, doom: numbers.moodCounts.doom, neutral: numbers.moodCounts.neutral },
       storiesByLayer: numbers.layerCounts,
       topPlaces: numbers.geo.places.slice(0, 6).map((p) => `${p.name} (${p.count})`),
+      topCountries: (numbers.geo.countries ?? []).slice(0, 6).map((c) => `${c.name} (${c.count})`),
       powerCommittedGw: numbers.energy.hero?.value ?? 0,
       energyStories: numbers.energy.storyCount,
       largestMoves: numbers.tape.slice(0, 4).concat(numbers.tape.slice(-3)).map((t) => `${t.ticker} ${t.changePct > 0 ? '+' : ''}${t.changePct}%`),
@@ -329,6 +330,7 @@ function buildComposerInput(input: {
       layer: s.layer ? DC_LAYERS[s.layer].name : null,
       layerKey: s.layer,
       place: s.place ? (places.get(s.place)?.name ?? s.place) : null,
+      country: s.country,
       region: s.region ? DC_REGIONS[s.region] : null,
       theme: s.theme ? DC_THEMES[s.theme].name : null,
       mood: s.mood === 1 ? 'boom' : s.mood === -1 ? 'doom' : 'neutral',

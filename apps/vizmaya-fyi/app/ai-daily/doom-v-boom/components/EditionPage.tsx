@@ -173,7 +173,7 @@ export default function EditionPage({ edition: e, neighbours, previous, themeOve
             </div>
           </div>
           <div className="bleed">
-            <GeoMap places={e.geo.places} regions={e.geo.regions} stamp={stamp} />
+            <GeoMap places={e.geo.places} countries={e.geo.countries} regions={e.geo.regions} stamp={stamp} />
           </div>
         </section>
 

@@ -340,13 +340,14 @@ export default function PipelineClient({ initialEpic }: { initialEpic: string })
 // classifier hasn't seen yet shows "untagged" so backfill gaps are visible.
 function SnapshotTags({ tags }: { tags: NonNullable<PipelineNewsItem['snapshot']> }) {
   const mood = tags.mood === 1 ? 'boom' : tags.mood === -1 ? 'doom' : tags.mood === 0 ? 'neutral' : null
-  if (!tags.layer && !tags.place && !tags.theme && mood == null) {
+  const geo = [tags.place, tags.country, tags.region].filter(Boolean).join(' · ')
+  if (!tags.layer && !geo && !tags.theme && mood == null) {
     return <span className="text-[10px] font-mono text-neutral-600">untagged</span>
   }
   return (
     <>
       {tags.layer && <Badge>layer:{tags.layer}</Badge>}
-      {tags.place && <Badge>{tags.place}{tags.region ? ` · ${tags.region}` : ''}</Badge>}
+      {geo && <Badge>{geo}</Badge>}
       {tags.theme && <Badge>{tags.theme}</Badge>}
       {mood && (
         <span

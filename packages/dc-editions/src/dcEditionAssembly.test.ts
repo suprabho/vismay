@@ -5,6 +5,7 @@ import type { DcEditionStory, DcLayerKey } from './dcEditionTypes'
 import {
   type EventIdf,
   buildCapacityViz,
+  buildGeo,
   buildIdf,
   buildMatrixViz,
   blendMoodScore,
@@ -43,6 +44,7 @@ const story = (id: number, over: Partial<DcEditionStory>): DcEditionStory => ({
   tickers: [],
   layer: 'dc',
   place: null,
+  country: null,
   region: 'na',
   theme: 'capacity',
   mood: 1,
@@ -484,6 +486,41 @@ const vineland = [
   assert.equal(fitMarketScale(moves.slice(0, 5), newsReadings), null, 'too little history')
   assert.equal(correlation([1, 2, 3, 4], [2, 4, 6, 8]), 1)
   assert.equal(correlation([1, 2, 3], [5, 5, 5]), null)
+}
+
+// Geography: three layers. A locality counts toward its pin, its country and
+// its region; a country-only story counts as `unplaced` on the country and
+// fills the region from the country; a story with only a region still fills
+// the region bar; a pre-migration story (place but no country) still gets a
+// country through its locality.
+{
+  const geoPlaces = [
+    { slug: 'seoul', name: 'Seoul', region: 'ea' as const, lat: 37.6, lng: 127, aliases: [], country: 'KR', kind: 'city' as const },
+    { slug: 'texas', name: 'Texas', region: 'na' as const, lat: 31, lng: -99, aliases: [], country: 'US', kind: 'subdivision' as const },
+  ]
+  const geoCountries = [
+    { code: 'KR', name: 'South Korea', region: 'ea' as const, lat: 36.5, lng: 128, aliases: [] },
+    { code: 'US', name: 'United States', region: 'na' as const, lat: 40, lng: -98, aliases: [] },
+  ]
+  const geo = buildGeo(
+    [
+      story(1, { place: 'seoul', country: 'KR', region: 'ea', layer: 'semi' }),
+      story(2, { place: null, country: 'KR', region: 'ea', layer: 'semi', energy: true }),
+      story(3, { place: null, country: null, region: 'eu', layer: 'dc' }),
+      story(4, { place: 'texas', country: null, region: null, layer: 'dc', energy: false }),
+      story(5, { place: 'nowhere', country: 'ZZ', region: null, layer: 'dc' }),
+    ],
+    geoPlaces,
+    geoCountries,
+  )
+  assert.deepEqual(geo.places.map((p) => [p.slug, p.count]), [['seoul', 1], ['texas', 1]])
+  assert.deepEqual(geo.countries.map((c) => [c.code, c.count, c.unplaced, c.energy]), [['KR', 2, 1, true], ['US', 1, 0, false]])
+  assert.deepEqual(geo.regions.map((r) => [r.key, r.count]), [['na', 1], ['ea', 2], ['eu', 1]])
+  assert.deepEqual(geo.regions.find((r) => r.key === 'ea')?.byLayer, { semi: 2 })
+  // No country list (pre-migration): places and regions still come out, countries empty.
+  const legacy = buildGeo([story(1, { place: 'seoul', country: null, region: null })], geoPlaces)
+  assert.deepEqual(legacy.countries, [])
+  assert.deepEqual(legacy.regions.map((r) => r.key), ['ea'])
 }
 
 console.log('dcEditionAssembly.test: ok')
