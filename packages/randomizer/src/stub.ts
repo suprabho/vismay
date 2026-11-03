@@ -49,6 +49,8 @@ import {
 export type StubSpin = Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels'>
 
 export const HERO_INSIGHT_HEADING = 'HERO INSIGHT'
+export const STORY_INSIGHT_HEADING = 'STORY INSIGHT'
+export const STAND_IN_HEADING = 'STAND-IN TABLE'
 const HERO_PLACEHOLDER = '_One sentence: the single most surprising finding you can defend._'
 
 function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
@@ -854,6 +856,28 @@ function frontierTemplate(s: FrontierSubject): string[] {
 }
 
 /** The research MD a spin starts from. */
+/** An "Explain like I'm 5" spin: the stub gains the story insight and the stand-in table. */
+function isEli5Stub(s: StubSpin['subject']): boolean {
+  return (s as { lens?: { name?: string } }).lens?.name === "Explain like I'm 5"
+}
+
+function eli5StubSections(): string[] {
+  return [
+    `## ${STORY_INSIGHT_HEADING}`,
+    '',
+    '_The one thing the child walks away knowing, in a child\'s words. Write the sentence a child would repeat to a parent. If you cannot, pick a different insight. It may differ from the HERO INSIGHT above, which is the grown-ups card\'s finding._',
+    '',
+    `## ${STAND_IN_HEADING}`,
+    '',
+    'Map every part of the stand-in to the real thing and to a claims log row. A part with no row does not go in the story.',
+    '',
+    '| Stand-in | Real thing | Claim row |',
+    '|----------|------------|-----------|',
+    '| | | |',
+    '',
+  ]
+}
+
 export function researchStub(spin: StubSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
   const s = spin.subject
@@ -936,6 +960,7 @@ export function researchStub(spin: StubSpin): string {
     '2.',
     '3.',
     '',
+    ...(isEli5Stub(s) ? eli5StubSections() : []),
   ].join('\n')
 }
 

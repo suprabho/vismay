@@ -154,3 +154,40 @@ export function applyToneToVoice(section: string, tone: HtmlStoryTone | null | u
     .replace(/Write plainly\. No hype\./g, 'Voice: funny and sarcastic, per "Tone" below (never hype).')
     .replace(/not a press release: plain, specific, no hype\./g, 'not a press release: specific, sarcastic, funny (see "Tone" below).')
 }
+
+/**
+ * What the tone means when the reader is a five-year-old: the sarcasm is
+ * swapped for gentle silliness, and the sharp jokes move to the grown-ups card.
+ */
+export function kidsToneBanner(tone: HtmlStoryTone | null | undefined): string {
+  if (tone !== 'humorous') return ''
+  return `
+> **Voice for a child: gentle silliness (required).** The tone asked for is funny;
+> for a five-year-old that means silly sounds, funny pictures and a joke a child
+> can get, never sarcasm. Read "Tone" below. The sharp, sardonic jokes go on the
+> "For grown-ups" card only.
+`
+}
+
+export function kidsToneSection(tone: HtmlStoryTone | null | undefined): string {
+  if (tone !== 'humorous') return ''
+  return `## Tone: gentle silliness for a child (required)
+
+Funny the way a picture book is funny: a silly sound word, a character who gets
+it wrong in an obvious way, a surprise on the turn of the page. This overrides
+"write plainly" in the Content section.
+
+- No sarcasm, irony, scare quotes or jokes at anyone's expense. A five-year-old
+  reads sarcasm as a lie.
+- The funny part is in the scene and the pictures; the words stay short and kind.
+- The true thing stays true: the joke never changes what the record says.
+- Put the dry, sardonic version of the story on the "For grown-ups" card: one or
+  two lines there, aimed at institutions and claims, never at the child.`
+}
+
+export function kidsToneChecks(tone: HtmlStoryTone | null | undefined): string[] {
+  if (tone !== 'humorous') return []
+  return [
+    'the voice: every joke in beats 1 to 5 is silly, not sarcastic, and a five-year-old would get it; the sharp lines are only on the grown-ups card',
+  ]
+}
