@@ -61,7 +61,9 @@ import {
   type EditionCounts,
   type EditionEnergy,
   type EditionGeo,
+  type EditionGeoCountry,
   type EditionGeoPlace,
+  type EditionGeoRegion,
   type EditionLayer,
   type EditionLayerNote,
   type EditionMoodCounts,
@@ -801,11 +803,14 @@ export async function getMoodSeries(days = 30): Promise<EditionMoodPoint[]> {
     .reverse()
 }
 
-/** One published edition's frozen places, for the landing page's geography timeline. */
+/** One published edition's frozen geography, for the landing page's geography timeline. */
 export interface EditionGeoDay {
   date: string
   number: number | null
   places: EditionGeoPlace[]
+  /** Empty on editions frozen before migration 100 (unless fix-edition-geo re-derived them). */
+  countries: EditionGeoCountry[]
+  regions: EditionGeoRegion[]
 }
 
 /** The geo block of the last `limit` published editions, oldest first. */
@@ -823,6 +828,8 @@ export async function listEditionGeoSeries(limit = 400): Promise<EditionGeoDay[]
       date: r.edition_date as string,
       number: r.number == null ? null : Number(r.number),
       places: Array.isArray(r.geo?.places) ? (r.geo.places as EditionGeoPlace[]) : [],
+      countries: Array.isArray(r.geo?.countries) ? (r.geo.countries as EditionGeoCountry[]) : [],
+      regions: Array.isArray(r.geo?.regions) ? (r.geo.regions as EditionGeoRegion[]) : [],
     }))
     .reverse()
 }
