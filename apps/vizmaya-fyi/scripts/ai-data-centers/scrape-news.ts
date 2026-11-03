@@ -35,6 +35,9 @@
  *                  version, no feed fetch — run once after a classifier
  *                  change so the current edition window carries the new
  *                  figure tags)
+ *               pnpm ai-data-centers:scrape-news -- --retag-places-days 7
+ *                 (clears stored place tags the headline/summary doesn't
+ *                  name; no model call, other tags untouched)
  * Run in CI:    .github/workflows/scrape-ai-data-centers-news.yml (daily cron)
  *
  * Required env:
@@ -358,8 +361,20 @@ function normaliseHorizonPart(v: unknown): string | null {
   return s || null
 }
 
+/** True when the text names the place by slug, name or any alias (whole-word, case-insensitive). */
+function placeIsMentioned(place: PlaceRow | undefined, text: string): boolean {
+  if (!place) return false
+  const terms = [place.slug.replace(/-/g, ' '), place.name, ...(place.aliases ?? [])]
+  return terms.some((term) => {
+    const t = term.trim()
+    if (!t) return false
+    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(text)
+  })
+}
+
 /** Validate + normalise the model's JSON against the vocabularies and the seeded lists. */
-function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Classification {
+function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext, sourceText: string): Classification {
   const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
     .filter((t): t is string => typeof t === 'string')
     .map((t) => t.toLowerCase().trim())
@@ -389,7 +404,11 @@ function normalise(parsed: Record<string, unknown>, ctx: ClassifierContext): Cla
   }
 
   const placeRaw = typeof parsed.place === 'string' ? parsed.place.trim().toLowerCase() : ''
-  const place = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
+  const placeGuess = placeRaw ? (ctx.placeLookup.get(placeRaw) ?? null) : null
+  // Grounding: the model may only tag a hub the headline or summary actually
+  // names (slug, name or an alias). A loose guess ("India chips" → Bengaluru)
+  // becomes null, and the region below still comes from the model.
+  const place = placeGuess && placeIsMentioned(ctx.placeBySlug.get(placeGuess), sourceText) ? placeGuess : null
   const region: DcRegionKey | null = place
     ? ctx.placeBySlug.get(place)!.region
     : typeof parsed.region === 'string' && (DC_REGION_KEYS as string[]).includes(parsed.region)
@@ -501,7 +520,7 @@ async function classify(
   }
   // A refusal or max_tokens cut can still yield unparseable text — treat as off-topic.
   const parsed = parseJsonText(text)
-  const cls = parsed ? normalise(parsed, ctx) : REJECTED
+  const cls = parsed ? normalise(parsed, ctx, `${item.title}\n${item.summary ?? ''}`) : REJECTED
   if (!cls.relevant || cls.facts.figures.length === 0) return cls
   // Jev judges each extracted figure as a typed yes/no: literally stated, and
   // tagged right. Drops below the threshold; keeps the score on the rest.
@@ -558,10 +577,12 @@ interface Args {
   backfillDays: number | null
   /** Re-tag relevant rows classified by an older classifier version in the last N days. */
   retagDays: number | null
+  /** Re-check stored place tags against the headline/summary in the last N days (no model call). */
+  retagPlacesDays: number | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { backfillDays: null, retagDays: null }
+  const args: Args = { backfillDays: null, retagDays: null, retagPlacesDays: null }
   const days = (flag: string, raw: string | undefined): number => {
     const n = Number(raw)
     if (!Number.isFinite(n) || n <= 0) throw new Error(`Invalid ${flag} value: ${raw}`)
@@ -572,6 +593,7 @@ function parseArgs(argv: string[]): Args {
     if (a === '--') continue
     if (a === '--backfill-days') args.backfillDays = days(a, argv[++i])
     else if (a === '--retag-days') args.retagDays = days(a, argv[++i])
+    else if (a === '--retag-places-days') args.retagPlacesDays = days(a, argv[++i])
     else throw new Error(`Unknown flag: ${a}`)
   }
   return args
@@ -616,6 +638,39 @@ async function loadContext(sb: Sb): Promise<{ system: string; ctx: ClassifierCon
       placeLookup,
     },
   }
+}
+
+/**
+ * Re-applies the place grounding check to rows already tagged: a stored place
+ * the headline/summary doesn't name (slug, name or alias) is cleared. Region
+ * and every other tag are left alone, and no model call is made.
+ */
+async function retagPlaces(sb: Sb, ctx: ClassifierContext, days: number) {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString()
+  const { data, error } = await sb
+    .from('dc_news')
+    .select('id, title, summary, place')
+    .eq('relevant', true)
+    .not('place', 'is', null)
+    .gte('published_at', since)
+    .limit(5000)
+  if (error) throw new Error(`retag-places read failed: ${error.message}`)
+  const rows = (data ?? []) as { id: number; title: string; summary: string | null; place: string }[]
+  console.log(`[retag-places] ${rows.length} place-tagged rows in the last ${days} days`)
+  let cleared = 0
+  let failed = 0
+  for (const row of rows) {
+    if (placeIsMentioned(ctx.placeBySlug.get(row.place), `${row.title}\n${row.summary ?? ''}`)) continue
+    const { error: updErr } = await sb.from('dc_news').update({ place: null }).eq('id', row.id)
+    if (updErr) {
+      failed++
+      console.error(`  ✗ #${row.id}: ${updErr.message}`)
+      continue
+    }
+    cleared++
+    console.log(`  ✓ #${row.id} ${row.place} → null  ${row.title}`)
+  }
+  console.log(`\n[retag-places] done: ${cleared} cleared, ${rows.length - cleared - failed} kept, ${failed} failed`)
 }
 
 /**
@@ -700,6 +755,10 @@ async function main() {
 
   if (args.backfillDays != null) {
     await backfill(sb, anthropic, system, ctx, { days: args.backfillDays, mode: 'untagged' }, startedAt)
+    return
+  }
+  if (args.retagPlacesDays != null) {
+    await retagPlaces(sb, ctx, args.retagPlacesDays)
     return
   }
   if (args.retagDays != null) {

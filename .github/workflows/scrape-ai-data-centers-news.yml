@@ -37,6 +37,10 @@ on:
         type: string
         required: false
         default: ''
+      retag_places_days:
+        type: string
+        required: false
+        default: ''
   workflow_dispatch:
     inputs:
       backfill_days:
@@ -45,6 +49,10 @@ on:
         default: ''
       retag_days:
         description: 'Re-tag rows classified by an older classifier version from the last N days instead of scraping (run once after a classifier change)'
+        required: false
+        default: ''
+      retag_places_days:
+        description: 'Clear stored place tags the headline/summary does not name, from the last N days (no model call)'
         required: false
         default: ''
 
@@ -86,3 +94,4 @@ jobs:
           pnpm ai-data-centers:scrape-news
           ${{ inputs.backfill_days != '' && format('-- --backfill-days {0}', inputs.backfill_days) || '' }}
           ${{ inputs.retag_days != '' && format('-- --retag-days {0}', inputs.retag_days) || '' }}
+          ${{ inputs.retag_places_days != '' && format('-- --retag-places-days {0}', inputs.retag_places_days) || '' }}
