@@ -175,7 +175,8 @@ picture-story format like the other desks.
 ## 8. Nightly runs, the composer and the evaluation (done)
 
 - `.github/workflows/curious-collect.yml` (one source per run; GDELT and the
-  Library of Congress nightly, Europeana and Gallica by hand) and
+  Library of Congress nightly, Europeana by hand, Gallica disabled until it
+  can run from a network BnF allows) and
   `curious-detect.yml` (detect → grade → verify as one job, each stage under
   its cap and a 25-minute deadline), dispatched by Vercel cron through
   `apps/vizmaya-fyi/app/api/curious/cron/[job]` at 02:20, 02:40 and 03:50
