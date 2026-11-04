@@ -652,3 +652,30 @@ a verdict stamps `checked_by` (admin email) and `checked_at`.
   empty (migrations were applied by hand), so `supabase db push` would re-run
   all of them. Apply a single file with `supabase db query --linked -f <file>`
   from a directory laid out as `supabase/{config.toml,migrations,.temp}`.
+
+
+## Curious claims tab (/vizmaya/curious)
+
+Review queue for the Curious Desk's claim pipeline
+([packages/curious-pipeline](../../packages/curious-pipeline), migration
+`101_curious_claims.sql`): candidate facts and anecdotes discovered from GDELT,
+the Library of Congress, Europeana and Gallica, split into atomic claims with a
+verbatim evidence quote (at most 300 characters), graded A to E from explicit
+features (`score_features`), their sources grouped by independence lineage.
+Approve is the only transition into `curious_claim_pool`, which the Curious
+Desk draws from and the composer's "Curious claims" library reads.
+
+- **Page:** [app/vizmaya/(tabbed)/curious/](<app/vizmaya/(tabbed)/curious/>)
+  → [components/curious/CuriousClaimsClient.tsx](components/curious/CuriousClaimsClient.tsx)
+  (filters by status, grade, theme, source, text; `j`/`k` move, `a` approve,
+  `s` send back (needs a note), `r` reject, `e` note, `o` open the source,
+  `g` the grade's features; "Fix the wording" edits the claim text on save).
+  `?claim=<uuid>` opens one claim.
+- **API (`isAuthed()`-gated, private no-store):** `GET /api/vizmaya/curious/claims?status&grade&theme&source&q&limit&offset&id`
+  and `PATCH /api/vizmaya/curious/claims/[id]` (`{ action: 'approve'|'send_back'|'reject', note?, text? }`,
+  same-origin), backed by `listClaimsForReview` / `reviewClaim` in
+  `@vismay/curious-pipeline/store`; the reviewer's email lands in `reviewed_by`.
+- **Pipeline CLIs** (in `apps/vizmaya-fyi`): `pnpm curious:collect -- --source loc|gdelt|europeana|gallica --query …`,
+  `pnpm curious:detect -- --limit 400 --llm-cap 300`, `pnpm curious:grade -- --queue`,
+  `pnpm curious:verify -- --limit 150`, `pnpm curious:seed-fixture` (the Disco
+  Dancer worked example as approved claims).

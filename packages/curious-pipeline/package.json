@@ -15,7 +15,11 @@
     "./detect": "./src/detect.ts",
     "./extract": "./src/extract.ts",
     "./dedupe": "./src/dedupe.ts",
-    "./contradict": "./src/contradict.ts"
+    "./contradict": "./src/contradict.ts",
+    "./grade": "./src/grade.ts",
+    "./gradeRun": "./src/gradeRun.ts",
+    "./verify": "./src/verify/index.ts",
+    "./archive": "./src/archive.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

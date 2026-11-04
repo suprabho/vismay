@@ -122,6 +122,11 @@ create table if not exists curious_claims (
   evidence_end       integer,
   evidence_page      integer,
   evidence_media_ts  numeric,
+  is_quotation       boolean not null default false,
+  is_anonymous       boolean not null default false, -- the passage names no source for it
+  is_hearsay         boolean not null default false, -- "reportedly", "it is said", "legend has it"
+  speaker            text,                        -- whom the passage attributes it to
+  extractor_confidence numeric check (extractor_confidence is null or (extractor_confidence >= 0 and extractor_confidence <= 1)),
   detector_rules     text[] not null default '{}',
   detector_version   text not null,
   extractor_model    text,
@@ -162,6 +167,10 @@ create table if not exists curious_claim_sources (
   span_end              integer,
   page                  integer,
   external_ref          text,                     -- doi:… | isbn:… | qid:… | url:…
+  source_year           integer,                  -- year of the cited work when there is no document row
+  work_type             text,                     -- Crossref type: journal-article, book-chapter, monograph…
+  cites_cluster         boolean not null default false, -- the cited work's references point back into the claim's cluster
+  quote_found           boolean not null default false, -- the claim's quotation was found in this source
   verified_by           text not null check (verified_by in ('detector','verify-crossref','verify-books','verify-wikidata','human')),
   created_at            timestamptz not null default now()
 );
@@ -180,8 +189,12 @@ create table if not exists curious_entities (
   country_code      text,
   lat               double precision,
   lng               double precision,
+  birth_year        integer,                     -- astronomical years (-383 is 384 BCE)
+  death_year        integer,
+  year              integer,                      -- a work's or event's date
   sensitive         boolean not null default false,
   is_living_private boolean not null default false,
+  resolved_at       timestamptz,
   created_at        timestamptz not null default now(),
   unique (kind, name_norm)
 );
@@ -200,6 +213,7 @@ create or replace view curious_claim_pool as
 select
   c.id, c.text, c.kind, c.subject, c.era, c.region, c.theme, c.year_from, c.year_to, c.place, c.country_code,
   c.grade, c.score, c.score_features, c.flags, c.evidence_quote, c.evidence_page, c.cluster_id,
+  c.is_quotation, c.is_anonymous, c.is_hearsay, c.speaker,
   c.reviewed_at as approved_at, c.updated_at,
   d.id as document_id, d.source_id, d.title as document_title, d.publisher, d.author, d.canonical_url, d.archive_url,
   d.published_at, d.published_precision, d.language,

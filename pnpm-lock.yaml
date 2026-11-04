@@ -68,6 +68,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../../packages/content-source
+      '@vismay/curious-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/curious-pipeline
       '@vismay/dc-editions':
         specifier: workspace:*
         version: link:../../packages/dc-editions

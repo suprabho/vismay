@@ -1,0 +1,8 @@
+{
+  "search": {"Mithun Chakraborty": {"search": [{"id": "Q2616", "label": "Mithun Chakraborty", "description": "Indian actor and politician"}]}, "Disco Dancer": {"search": [{"id": "Q1226594", "label": "Disco Dancer", "description": "1982 film by Babbar Subhash"}]}, "Private Person": {"search": [{"id": "Q99999999", "label": "Private Person"}]}},
+  "entities": {
+    "Q2616": {"labels": {"en": {"value": "Mithun Chakraborty"}}, "descriptions": {"en": {"value": "Indian actor and politician"}}, "claims": {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}], "P569": [{"mainsnak": {"datavalue": {"value": {"time": "+1950-06-16T00:00:00Z"}}}}], "P27": [{"mainsnak": {"datavalue": {"value": {"id": "Q668"}}}}]}, "sitelinks": {"enwiki": {}, "hiwiki": {}, "bnwiki": {}, "ruwiki": {}, "commonswiki": {}}},
+    "Q1226594": {"labels": {"en": {"value": "Disco Dancer"}}, "claims": {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q11424"}}}}], "P577": [{"mainsnak": {"datavalue": {"value": {"time": "+1982-12-10T00:00:00Z"}}}}], "P17": [{"mainsnak": {"datavalue": {"value": {"id": "Q668"}}}}]}, "sitelinks": {"enwiki": {}, "ruwiki": {}}},
+    "Q99999999": {"labels": {"en": {"value": "Private Person"}}, "claims": {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}], "P569": [{"mainsnak": {"datavalue": {"value": {"time": "+1990-01-01T00:00:00Z"}}}}]}, "sitelinks": {"enwiki": {}}}
+  }
+}

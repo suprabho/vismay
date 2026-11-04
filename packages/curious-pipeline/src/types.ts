@@ -105,6 +105,10 @@ export interface ClaimSourceUpsert {
   span_end: number | null
   page: number | null
   external_ref: string | null
+  source_year?: number | null
+  work_type?: string | null
+  cites_cluster?: boolean
+  quote_found?: boolean
   verified_by: VerifiedBy
 }
 
@@ -128,6 +132,11 @@ export interface ClaimRow {
   evidence_end: number | null
   evidence_page: number | null
   evidence_media_ts: number | null
+  is_quotation: boolean
+  is_anonymous: boolean
+  is_hearsay: boolean
+  speaker: string | null
+  extractor_confidence: number | null
   detector_rules: string[]
   detector_version: string
   extractor_model: string | null
@@ -148,6 +157,24 @@ export interface ClaimRow {
 }
 
 /** Environment the collectors and verifiers read; the CLIs build it from process.env. */
+export interface EntityRow {
+  id: number
+  name: string
+  name_norm: string
+  kind: EntityKind
+  wikidata_qid: string | null
+  aliases: string[]
+  country_code: string | null
+  lat: number | null
+  lng: number | null
+  birth_year: number | null
+  death_year: number | null
+  year: number | null
+  sensitive: boolean
+  is_living_private: boolean
+  resolved_at: string | null
+}
+
 export interface CuriousEnv {
   europeanaKey: string | null
   crossrefMailto: string | null

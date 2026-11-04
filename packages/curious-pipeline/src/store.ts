@@ -237,3 +237,86 @@ export async function listRecentClaims(days: number, sb: Sb = createServiceClien
   }
   return out
 }
+
+/** What the review queue shows: the claim with its document, its sources by lineage and its entities. */
+export interface ReviewClaim extends ClaimRow {
+  document: Pick<DocumentRow, 'id' | 'source_id' | 'title' | 'publisher' | 'author' | 'canonical_url' | 'archive_url' | 'published_at' | 'published_precision' | 'language'> | null
+  sources: Array<ClaimSourceUpsert & { id: number; document_title: string | null; document_url: string | null; document_published_at: string | null }>
+  entities: Array<{ id: number; name: string; kind: EntityKind; wikidata_qid: string | null; is_living_private: boolean }>
+  lineages: number
+}
+
+export interface ReviewCounts {
+  byStatus: Record<string, number>
+  byGrade: Record<string, number>
+}
+
+export async function listClaimsForReview(opts: {
+  sb?: Sb
+  status?: ClaimStatus | ClaimStatus[]
+  grade?: string
+  theme?: string
+  source?: SourceId
+  q?: string
+  limit?: number
+  offset?: number
+  ids?: string[]
+}): Promise<{ claims: ReviewClaim[]; total: number; counts: ReviewCounts }> {
+  const sb = opts.sb ?? createServiceClient()
+  const { claims, total } = await listClaims({ ...opts, sb, limit: opts.limit ?? 50, offset: opts.offset ?? 0 })
+  const ids = claims.map((c) => c.id)
+  const [docs, sources, countsRes] = await Promise.all([
+    getDocuments([...new Set(claims.map((c) => c.document_id))], sb),
+    listClaimSources(ids, sb),
+    sb.from('curious_claims').select('status, grade'),
+  ])
+  const sourceDocIds = [...new Set([...sources.values()].flat().map((s) => s.document_id).filter((d): d is string => !!d && !docs.has(d)))]
+  const moreDocs = sourceDocIds.length ? await getDocuments(sourceDocIds, sb) : new Map<string, DocumentRow>()
+  for (const [k, v] of moreDocs) docs.set(k, v)
+  const entities = new Map<string, ReviewClaim['entities']>()
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await sb.from('curious_claim_entities').select('claim_id, curious_entities(id, name, kind, wikidata_qid, is_living_private)').in('claim_id', ids.slice(i, i + 200))
+    for (const r of (data ?? []) as unknown as Array<{ claim_id: string; curious_entities: ReviewClaim['entities'][number] | ReviewClaim['entities'][number][] | null }>) {
+      const e = Array.isArray(r.curious_entities) ? r.curious_entities[0] : r.curious_entities
+      if (!e) continue
+      const list = entities.get(r.claim_id) ?? []
+      list.push(e)
+      entities.set(r.claim_id, list)
+    }
+  }
+  const counts: ReviewCounts = { byStatus: {}, byGrade: {} }
+  for (const r of (countsRes.data ?? []) as Array<{ status: string; grade: string | null }>) {
+    counts.byStatus[r.status] = (counts.byStatus[r.status] ?? 0) + 1
+    if (r.grade) counts.byGrade[r.grade] = (counts.byGrade[r.grade] ?? 0) + 1
+  }
+  const out: ReviewClaim[] = claims.map((c) => {
+    const d = docs.get(c.document_id) ?? null
+    const srcs = (sources.get(c.id) ?? []).map((s) => {
+      const sd = s.document_id ? docs.get(s.document_id) : null
+      return { ...s, document_title: sd?.title ?? null, document_url: sd?.canonical_url ?? null, document_published_at: sd?.published_at ?? null }
+    })
+    return {
+      ...c,
+      document: d ? { id: d.id, source_id: d.source_id, title: d.title, publisher: d.publisher, author: d.author, canonical_url: d.canonical_url, archive_url: d.archive_url ?? null, published_at: d.published_at, published_precision: d.published_precision, language: d.language } : null,
+      sources: srcs,
+      entities: entities.get(c.id) ?? [],
+      lineages: new Set(srcs.filter((s) => s.relation === 'supports' || s.relation === 'cites').map((s) => s.independence_group)).size,
+    }
+  })
+  return { claims: out, total, counts }
+}
+
+/** Write what Wikidata said about an entity. */
+export async function updateEntityFacts(
+  entity: { name: string; kind: EntityKind },
+  facts: { wikidata_qid: string | null; birth_year: number | null; death_year: number | null; year: number | null; country_code: string | null; is_living_private: boolean },
+  sb: Sb = createServiceClient(),
+): Promise<void> {
+  const { normalizeText } = await import('./text')
+  const { error } = await sb
+    .from('curious_entities')
+    .update({ ...facts, resolved_at: new Date().toISOString() })
+    .eq('kind', entity.kind)
+    .eq('name_norm', normalizeText(entity.name).slice(0, 200))
+  if (error) throw new Error(`curious_entities: ${error.message}`)
+}

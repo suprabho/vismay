@@ -1,0 +1,153 @@
+{
+  "note": "The design's worked example. Two claims from one 2026 article; the popularity claim has a contemporaneous Soviet source and a scholarly citation, the spy claim has three retellings of one anonymous account. Expected grades: A or B, and D. seed-fixture.ts loads this into Supabase as approved claims so the desk has a local pool.",
+  "documents": [
+    {
+      "key": "rediff",
+      "source_id": "gdelt",
+      "external_id": "fixture-rediff-20261103",
+      "canonical_url": "https://rediff.com/movies/report/mithun-jimmy-jimmy-soviet-spies/20261103.htm",
+      "title": "How Mithun's Jimmy Jimmy became a Soviet spy test",
+      "publisher": "rediff.com",
+      "author": "A Correspondent",
+      "language": "english",
+      "published_at": "2026-11-03T09:00:00Z",
+      "published_precision": "minute",
+      "rights_uri": null,
+      "extraction_method": "html-text",
+      "text": null,
+      "query": "\"Jimmy Jimmy\" Mithun",
+      "lineage_hint": "rediff.com"
+    },
+    {
+      "key": "rbth",
+      "source_id": "gdelt",
+      "external_id": "fixture-rbth-20261103",
+      "canonical_url": "https://rbth.com/arts/2026/11/03/disco-dancer-ussr-60-million",
+      "title": "Disco Dancer: the Indian film 60 million Soviets queued for",
+      "publisher": "rbth.com",
+      "author": null,
+      "language": "english",
+      "published_at": "2026-11-03T14:15:00Z",
+      "published_precision": "minute",
+      "rights_uri": null,
+      "extraction_method": "html-text",
+      "text": null,
+      "query": "\"Disco Dancer\" Soviet",
+      "lineage_hint": "rbth.com"
+    },
+    {
+      "key": "sovexport",
+      "source_id": "europeana",
+      "external_id": "/fixture/sovexportfilm-1985",
+      "canonical_url": "https://europeana.eu/item/fixture/sovexportfilm-1985",
+      "title": "Sovexportfilm distribution bulletin, 1985: foreign releases by admissions",
+      "publisher": "Fixture film archive",
+      "author": "Sovexportfilm",
+      "language": "ru",
+      "published_at": "1985-01-01T00:00:00Z",
+      "published_precision": "year",
+      "rights_uri": "http://creativecommons.org/publicdomain/mark/1.0/",
+      "extraction_method": "api-json",
+      "text": "Танцор диско (Индия, 1982). Прокат 1984 года: 60,9 млн зрителей. Disco Dancer (India, 1982). 1984 release: 60.9 million admissions.",
+      "query": "Танцор диско",
+      "lineage_hint": "fixture film archive"
+    },
+    {
+      "key": "blog1",
+      "source_id": "gdelt",
+      "external_id": "fixture-blog1",
+      "canonical_url": "https://example-blog.com/2026/11/jimmy-jimmy-kgb",
+      "title": "The Bollywood song the KGB used to catch spies",
+      "publisher": "example-blog.com",
+      "author": null,
+      "language": "english",
+      "published_at": "2026-11-03T18:00:00Z",
+      "published_precision": "minute",
+      "rights_uri": null,
+      "extraction_method": "html-text",
+      "text": null,
+      "query": "\"Jimmy Jimmy\" Mithun",
+      "lineage_hint": "example-blog.com"
+    },
+    {
+      "key": "blog2",
+      "source_id": "gdelt",
+      "external_id": "fixture-blog2",
+      "canonical_url": "https://another-site.example/jimmy-jimmy-spy-test",
+      "title": "Jimmy Jimmy: the spy test every Soviet kid could pass",
+      "publisher": "another-site.example",
+      "author": null,
+      "language": "english",
+      "published_at": "2026-11-04T07:00:00Z",
+      "published_precision": "minute",
+      "rights_uri": null,
+      "extraction_method": "html-text",
+      "text": null,
+      "query": "\"Jimmy Jimmy\" Mithun",
+      "lineage_hint": "another-site.example"
+    }
+  ],
+  "claims": [
+    {
+      "key": "popularity",
+      "document": "rbth",
+      "text": "Disco Dancer (1982) drew about 60.9 million admissions in its 1984 Soviet release.",
+      "kind": "number",
+      "subject": "Disco Dancer",
+      "theme": "film-tv",
+      "region": "europe",
+      "year_from": 1984,
+      "year_to": null,
+      "place": "Soviet Union",
+      "country_code": "RU",
+      "evidence_quote": "about 60.9 million Soviet viewers bought tickets to Disco Dancer in 1984",
+      "is_quotation": false,
+      "is_anonymous": false,
+      "is_hearsay": false,
+      "speaker": "Sovexportfilm distribution records",
+      "extractor_confidence": 0.92,
+      "entities": [
+        { "name": "Disco Dancer", "kind": "work", "year": 1982, "country_code": "IN" },
+        { "name": "Soviet Union", "kind": "place", "country_code": "RU" },
+        { "name": "Mithun Chakraborty", "kind": "person", "birth_year": 1950, "country_code": "IN" }
+      ],
+      "sources": [
+        { "document": "rbth", "relation": "supports", "independence_group": "pub:rbth.com", "is_primary": false, "is_contemporaneous": false, "institutional_quality": 0.3, "verified_by": "detector", "quote": "about 60.9 million Soviet viewers bought tickets to Disco Dancer in 1984" },
+        { "document": "sovexport", "relation": "supports", "independence_group": "pub:fixture-film-archive", "is_primary": true, "is_contemporaneous": true, "institutional_quality": 0.9, "verified_by": "human", "quote": "Прокат 1984 года: 60,9 млн зрителей", "page": 1 },
+        { "document": null, "relation": "cites", "independence_group": "doi:10.1080/19472498.2022.2101762", "is_primary": false, "is_contemporaneous": false, "institutional_quality": 0.9, "external_ref": "doi:10.1080/19472498.2022.2101762", "source_year": 2022, "work_type": "journal-article", "verified_by": "verify-crossref" },
+        { "document": "rediff", "relation": "derived_from", "independence_group": "pub:rbth.com", "is_primary": false, "is_contemporaneous": false, "institutional_quality": 0.3, "verified_by": "detector" }
+      ],
+      "expect": ["A", "B"]
+    },
+    {
+      "key": "spy",
+      "document": "rediff",
+      "text": "The Soviet government used the song Jimmy Jimmy Aaja to identify foreign spies, who could not give the response Aaja Aaja.",
+      "kind": "anecdote",
+      "subject": "Jimmy Jimmy Aaja",
+      "theme": "film-tv",
+      "region": "europe",
+      "year_from": 1985,
+      "year_to": 1991,
+      "place": "Soviet Union",
+      "country_code": "RU",
+      "evidence_quote": "the former Soviet government could identify spies with the song",
+      "is_quotation": false,
+      "is_anonymous": true,
+      "is_hearsay": true,
+      "speaker": null,
+      "extractor_confidence": 0.7,
+      "entities": [
+        { "name": "Jimmy Jimmy Aaja", "kind": "work", "year": 1982, "country_code": "IN" },
+        { "name": "Soviet Union", "kind": "place", "country_code": "RU" },
+        { "name": "KGB", "kind": "org", "country_code": "RU" }
+      ],
+      "sources": [
+        { "document": "rediff", "relation": "supports", "independence_group": "attr:anonymous-soviet-anecdote:2026", "is_primary": false, "is_contemporaneous": false, "institutional_quality": 0.3, "verified_by": "detector", "quote": "the former Soviet government could identify spies with the song" },
+        { "document": "blog1", "relation": "derived_from", "independence_group": "attr:anonymous-soviet-anecdote:2026", "is_primary": false, "is_contemporaneous": false, "institutional_quality": 0.3, "verified_by": "detector", "quote": "the KGB used the song to catch spies" },
+        { "document": "blog2", "relation": "derived_from", "independence_group": "attr:anonymous-soviet-anecdote:2026", "is_primary": false, "is_contemporaneous": false, "institutional_quality": 0.3, "verified_by": "detector", "quote": "a spy test every Soviet kid could pass" }
+      ],
+      "expect": ["D"]
+    }
+  ]
+}

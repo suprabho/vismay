@@ -22,6 +22,33 @@ import { AtomicClaimsSchema, extractClaims, locateQuote, type AtomicClaim, type 
 import { claimHash, independenceGroup, lexicalClusters, provenanceDedupe } from './dedupe'
 import { contradicts, findContradictions } from './contradict'
 import { ERAS, eraOf, REGION_IDS, THEME_IDS, THEME_NAMES } from './taxonomy'
+import { GRADE_LABELS, GRADE_WEIGHTS, gradeFlags, gradeFor, scoreClaim, scoreFeatures, type ScoreFeatures } from './grade'
+import { bookFromVolume, entityFromWikidata, titleOverlap, verifyClaim, workFromCrossref } from './verify/index'
+import type { CrossrefWork } from './verify/crossref'
+import type { BooksVolume } from './verify/googleBooks'
+import { waybackSnapshot } from './archive'
+import type { ClaimKind, EntityKind, SourceRelation, VerifiedBy } from './types'
+
+interface DiscoFixture {
+  documents: Array<{ key: string; source_id: 'gdelt' | 'europeana'; published_at: string; language: string }>
+  claims: Array<{
+    key: string
+    document: string
+    text: string
+    kind: ClaimKind
+    year_from: number | null
+    year_to: number | null
+    country_code: string | null
+    evidence_quote: string
+    is_quotation: boolean
+    is_anonymous: boolean
+    is_hearsay: boolean
+    extractor_confidence: number
+    entities: Array<{ name: string; kind: EntityKind; birth_year?: number; year?: number; country_code?: string }>
+    sources: Array<{ document: string | null; relation: SourceRelation; independence_group: string; is_primary: boolean; is_contemporaneous: boolean; institutional_quality: number; external_ref?: string; source_year?: number; work_type?: string; verified_by: VerifiedBy }>
+    expect: string[]
+  }>
+}
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const fixture = <T>(name: string): T => JSON.parse(readFileSync(join(HERE, 'fixtures', name), 'utf8')) as T
@@ -493,6 +520,131 @@ pending.push(
   assert.equal(ERAS.length, 8)
   for (const t of THEME_IDS) assert.ok(THEME_NAMES[t])
 }
+
+// ── Phase 3 ──────────────────────────────────────────────────────────────────
+
+// 16. The grader on the worked example: weights, thresholds, the two expected grades, the notes.
+{
+  const w = Object.values(GRADE_WEIGHTS).reduce((a, b) => a + b, 0)
+  assert.ok(Math.abs(w - 1) < 1e-9, `weights sum to ${w}`)
+  assert.equal(gradeFor(0.75), 'A')
+  assert.equal(gradeFor(0.749), 'B')
+  assert.equal(gradeFor(0.4), 'C')
+  assert.equal(gradeFor(0.3), 'D')
+  assert.equal(gradeFor(0.1), 'E')
+  assert.equal(gradeFor(0.1, { nSources: 3, contradiction: 0, circular: 0, chronPlausible: 1 }), 'D', 'the repeated-anecdote floor')
+  assert.equal(gradeFor(0.1, { nSources: 3, contradiction: 1, circular: 0, chronPlausible: 1 }), 'E', 'no floor when contradicted')
+  assert.equal(gradeFor(0.1, { nSources: 1, contradiction: 0, circular: 0, chronPlausible: 1 }), 'E', 'no floor for one account')
+  for (const g of ['A', 'B', 'C', 'D', 'E'] as const) assert.ok(GRADE_LABELS[g])
+
+  const fx = fixture<DiscoFixture>('disco-dancer.json')
+  const docs = new Map(fx.documents.map((d) => [d.key, { published_at: d.published_at, source_id: d.source_id, ocr_confidence: null, language: d.language }]))
+  const grades: Record<string, { grade: string; f: ScoreFeatures }> = {}
+  for (const c of fx.claims) {
+    const f = scoreFeatures({
+      claim: { text: c.text, kind: c.kind, year_from: c.year_from, year_to: c.year_to, country_code: c.country_code, flags: [], evidence_quote: c.evidence_quote, isQuotation: c.is_quotation, isAnonymous: c.is_anonymous, isHearsay: c.is_hearsay, extractorConfidence: c.extractor_confidence, language: 'english' },
+      sources: c.sources.map((s) => ({ relation: s.relation, independence_group: s.independence_group, is_primary: s.is_primary, is_contemporaneous: s.is_contemporaneous, institutional_quality: s.institutional_quality, external_ref: s.external_ref ?? null, verified_by: s.verified_by, document_id: s.document, source_year: s.source_year ?? null, work_type: s.work_type ?? null, cites_cluster: false, quote_found: false })),
+      documents: docs as never,
+      entities: c.entities.map((e) => ({ name: e.name, kind: e.kind, birthYear: e.birth_year ?? null, deathYear: null, year: e.year ?? null, countryCode: e.country_code ?? null })),
+    })
+    const score = scoreClaim(f)
+    const grade = gradeFor(score, f)
+    grades[c.key] = { grade, f }
+    assert.ok(c.expect.includes(grade), `${c.key}: expected ${c.expect.join('/')} got ${grade} (${score}) ${JSON.stringify(f.notes)}`)
+  }
+  const pop = grades.popularity.f
+  assert.equal(pop.primary, 1)
+  assert.equal(pop.secondaryScholarship, 1)
+  assert.equal(pop.nGroups, 3)
+  assert.equal(pop.nDerived, 1)
+  assert.equal(pop.contradiction, 0)
+  const spy = grades.spy.f
+  assert.equal(spy.primary, 0)
+  assert.equal(spy.nGroups, 1)
+  assert.equal(spy.nSources, 3)
+  assert.equal(spy.anonymousRepetition, 1, 'three retellings of one anonymous account')
+  assert.ok(gradeFlags(spy).includes('anonymous-repetition') && gradeFlags(spy).includes('unverified-popular'))
+  assert.ok(spy.notes.some((n) => /retellings of one anonymous account/.test(n)))
+
+  // Penalties clamp at zero; a contradiction costs a quarter.
+  const base = { ...spy, contradiction: 1 as const }
+  assert.ok(scoreClaim(base) < scoreClaim(spy))
+  assert.equal(scoreClaim({ ...spy, primary: 0, independentContemporaneous: 0, institutional: 0, chronPlausible: 0, geoConsistent: 0, textConfidence: 0, circular: 1, contradiction: 1 }), 0)
+  // Chronology: a person born after the event.
+  const impossible = scoreFeatures({ claim: { text: 'x', kind: 'fact', year_from: 1940, year_to: null, country_code: null, flags: [], evidence_quote: 'x' }, sources: [], entities: [{ name: 'Mithun', kind: 'person', birthYear: 1950 }] })
+  assert.equal(impossible.chronPlausible, 0)
+  assert.ok(impossible.notes.some((n) => /born in 1950/.test(n)))
+  // Time gap: the only source is 40 years late and nothing primary.
+  const late = scoreFeatures({ claim: { text: 'x', kind: 'fact', year_from: 1950, year_to: null, country_code: null, flags: [], evidence_quote: 'x' }, sources: [{ relation: 'supports', independence_group: 'pub:a', is_primary: false, is_contemporaneous: false, institutional_quality: 0.3, external_ref: null, verified_by: 'detector', document_id: null, source_year: 1990 }] })
+  assert.equal(late.timeGap, 1)
+}
+
+// 17. Verification: Crossref, Google Books and Wikidata mappings, and verifyClaim on a fake fetch.
+pending.push(
+  (async () => {
+    const cr = fixture<{ message: { items: CrossrefWork[] } }>('crossref.json')
+    const w = workFromCrossref(cr.message.items[0])
+    assert.equal(w.doi, '10.1080/19472498.2022.2101762')
+    assert.equal(w.year, 2022)
+    assert.equal(w.type, 'journal-article')
+    assert.deepEqual(w.referenceDois, ['10.1017/s0026749x0700256x'])
+    assert.equal(w.authors[0], 'Spandan Bhattacharya')
+    const bk = fixture<{ items: BooksVolume[] }>('books.json')
+    const b = bookFromVolume(bk.items[0])
+    assert.equal(b.isbn13, '9780253220998')
+    assert.equal(b.year, 2008)
+    assert.ok(b.snippet && !b.snippet.includes('<b>'))
+    const wd = fixture<{ search: Record<string, unknown>; entities: Record<string, never> }>('wikidata.json')
+    const mithun = entityFromWikidata('Q2616', wd.entities.Q2616)
+    assert.equal(mithun.birthYear, 1950)
+    assert.equal(mithun.isHuman, true)
+    assert.equal(mithun.countryCode, 'IN')
+    assert.equal(mithun.isLivingPrivate, false, 'five editions: a public figure')
+    const film = entityFromWikidata('Q1226594', wd.entities.Q1226594)
+    assert.equal(film.year, 1982)
+    assert.equal(film.isHuman, false)
+    const priv = entityFromWikidata('Q99999999', wd.entities.Q99999999)
+    assert.equal(priv.isLivingPrivate, true)
+
+    const clock = fakeClock(0)
+    const calls: string[] = []
+    const fake = (async (url: string) => {
+      const s = String(url)
+      calls.push(s)
+      if (s.startsWith('https://api.crossref.org/works/')) return new Response(JSON.stringify({ message: cr.message.items[0] }), { status: 200 })
+      if (s.startsWith('https://api.crossref.org/works?')) return new Response(JSON.stringify(cr), { status: 200 })
+      if (s.startsWith('https://www.googleapis.com/books')) return new Response(JSON.stringify(bk), { status: 200 })
+      if (s.includes('wbsearchentities')) {
+        const name = new URL(s).searchParams.get('search') ?? ''
+        return new Response(JSON.stringify(wd.search[name] ?? { search: [] }), { status: 200 })
+      }
+      if (s.includes('wbgetentities')) return new Response(JSON.stringify({ entities: wd.entities }), { status: 200 })
+      return new Response('x', { status: 404 })
+    }) as typeof fetch
+    const r = await verifyClaim(
+      { claimId: 'c1', text: 'Disco Dancer drew 60.9 million', isQuotation: true, evidenceQuote: 'Disco Dancer drew sixty million viewers in its first year of Soviet release', entities: [{ name: 'Indian Films in Soviet Cinemas', kind: 'work' }, { name: 'Disco Dancer', kind: 'work' }, { name: 'Mithun Chakraborty', kind: 'person' }], dois: ['10.1080/19472498.2022.2101762'], clusterDois: ['10.1017/s0026749x0700256x'] },
+      { fetch: fake, env: { ...env, crossrefMailto: 'x@example.org' }, clock, now: NOW },
+    )
+    assert.deepEqual(r.errors, [])
+    const cites = r.sources.filter((s) => s.relation === 'cites')
+    assert.ok(cites.some((s) => s.external_ref === 'doi:10.1080/19472498.2022.2101762' && s.work_type === 'journal-article' && s.cites_cluster === true), JSON.stringify(cites))
+    assert.ok(cites.some((s) => s.external_ref === 'isbn:9780253220998' && s.work_type === 'book'), JSON.stringify(cites))
+    assert.equal(cites.filter((s) => s.external_ref?.startsWith('doi:')).length, 1, 'the DOI found twice is kept once')
+    assert.ok(r.sources.some((s) => s.relation === 'supports' && s.quote_found && s.verified_by === 'verify-books'), 'the quotation was found in print')
+    assert.equal(r.entities.find((e) => e.name === 'Mithun Chakraborty')?.birthYear, 1950)
+    assert.equal(r.entities.find((e) => e.name === 'Disco Dancer')?.year, 1982)
+    assert.ok(calls.some((c) => c.includes('mailto=x%40example.org')), 'polite pool')
+    // Title overlap refuses a wrong match.
+    assert.equal(titleOverlap('Indian Films in Soviet Cinemas', 'Indian films in Soviet cinemas: the culture of movie-going'), 1)
+    assert.ok(titleOverlap('A completely different title here', 'Indian Films in Soviet Cinemas') < 0.2)
+    // A failing source is an error, not a throw.
+    const dead = (async () => new Response('x', { status: 500 })) as typeof fetch
+    const r2 = await verifyClaim({ claimId: 'c2', text: 'x', isQuotation: false, evidenceQuote: 'x', entities: [{ name: 'Disco Dancer', kind: 'work' }] }, { fetch: dead, env, clock, now: NOW })
+    assert.ok(r2.errors.length >= 2)
+    assert.equal(r2.sources.length, 0)
+    assert.equal(await waybackSnapshot('https://example.org/x', { fetch: (async () => new Response(JSON.stringify({ archived_snapshots: { closest: { available: true, url: 'http://web.archive.org/web/2026/https://example.org/x' } } }))) as typeof fetch }), 'https://web.archive.org/web/2026/https://example.org/x')
+  })(),
+)
 
 Promise.all(pending).then(
   () => console.log('curious-pipeline: ok'),
