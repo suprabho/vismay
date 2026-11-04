@@ -5,7 +5,7 @@
  * Usage:
  *   pnpm curious:collect -- --source gdelt --query '"for the first time in history"' --since 2026-10-01 --limit 500
  *   pnpm curious:collect -- --source loc --collection chronicling-america --query '"strange incident"' --since 1900-01-01 --until 1925-12-31 --limit 200 --full-text
- *   pnpm curious:collect -- --source loc --limit 50 --dry-run         # rotates queries.json by day of year, prints 5 rows, writes nothing
+ *   pnpm curious:collect -- --source loc --limit 50 --dry-run         # rotates queries.json by day of year (up to three queries when one finds nothing), prints 5 rows, writes nothing
  *
  * Flags: --source gdelt|loc|europeana|gallica (required), --query, --query-file (default scripts/curious/queries.json),
  *        --since YYYY-MM-DD, --until YYYY-MM-DD, --days N (lower bound when --since is absent; GDELT defaults to 2),
@@ -75,22 +75,25 @@ function parseArgs(argv: string[]): Args {
   return a
 }
 
-function pickQuery(file: string, source: CollectorId, now: Date): string {
+/** The source's queries from the file, rotated so today's comes first; an empty day moves on to the next. */
+function queriesFor(file: string, source: CollectorId, now: Date): string[] {
   const parsed = JSON.parse(readFileSync(resolve(file), 'utf8')) as { queries: Array<{ query: string; sources: string[] }> }
-  const mine = parsed.queries.filter((q) => q.sources.includes(source))
+  const mine = parsed.queries.filter((q) => q.sources.includes(source)).map((q) => q.query)
   if (!mine.length) throw new Error(`${file} has no query for ${source}`)
   const day = Math.floor((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86_400_000)
-  return mine[day % mine.length].query
+  const start = day % mine.length
+  return [...mine.slice(start), ...mine.slice(0, start)]
 }
+
+/** How many rotated queries a run tries before giving up on an empty day. */
+const EMPTY_QUERY_TRIES = 3
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const now = new Date()
-  const query = args.query ?? pickQuery(args.queryFile, args.source, now)
+  const queries = args.query ? [args.query] : queriesFor(args.queryFile, args.source, now).slice(0, EMPTY_QUERY_TRIES)
   const started = Date.now()
   const stop = () => Date.now() - started > DEADLINE_MS
-  console.log(`Curious collect: ${args.source} · ${query}${args.collection ? ` · ${args.collection}` : ''}${args.since ? ` · since ${args.since}` : args.days ? ` · last ${args.days} days` : ''}${args.until ? ` · until ${args.until}` : ''} · limit ${args.limit}${args.dryRun ? ' · DRY RUN' : ''}`)
-
   const collector = collectorFor(args.source)
   const stats = emptyStats()
   const buffer: DocumentUpsert[] = []
@@ -98,6 +101,7 @@ async function main() {
   let written = 0
   let skipped = 0
   const errors: string[] = []
+  const tried: string[] = []
 
   const flush = async () => {
     if (!buffer.length || args.dryRun) return
@@ -107,39 +111,49 @@ async function main() {
     errors.push(...s.errors)
   }
 
-  try {
-    for await (const doc of collector.collect({
-      query,
-      since: args.since,
-      until: args.until,
-      days: args.days,
-      stats,
-      limit: args.limit,
-      collection: args.collection,
-      fullText: args.fullText,
-      env: curiousEnv(),
-      now,
-      log: (l) => console.log(l),
-      stop,
-    })) {
-      collected++
-      if (args.dryRun) {
-        if (collected <= 5) console.log(JSON.stringify({ ...doc, text: doc.text ? `${doc.text.slice(0, 160)}… (${doc.text.length} chars)` : null }, null, 2))
-        continue
+  for (const query of queries) {
+    if (stats.throttled || stop()) break
+    if (tried.length) console.log(`  · "${tried[tried.length - 1]}" found nothing today; trying the next query in the rotation`)
+    tried.push(query)
+    const before = collected
+    console.log(`Curious collect: ${args.source} · ${query}${args.collection ? ` · ${args.collection}` : ''}${args.since ? ` · since ${args.since}` : args.days ? ` · last ${args.days} days` : ''}${args.until ? ` · until ${args.until}` : ''} · limit ${args.limit}${args.dryRun ? ' · DRY RUN' : ''}`)
+    try {
+      for await (const doc of collector.collect({
+        query,
+        since: args.since,
+        until: args.until,
+        days: args.days,
+        stats,
+        limit: args.limit - collected,
+        collection: args.collection,
+        fullText: args.fullText,
+        env: curiousEnv(),
+        now,
+        log: (l) => console.log(l),
+        stop,
+      })) {
+        collected++
+        if (args.dryRun) {
+          if (collected <= 5) console.log(JSON.stringify({ ...doc, text: doc.text ? `${doc.text.slice(0, 160)}… (${doc.text.length} chars)` : null }, null, 2))
+          continue
+        }
+        buffer.push(doc)
+        if (buffer.length >= UPSERT_EVERY) await flush()
+        if (stop()) {
+          console.warn(`  · soft deadline reached after ${collected} documents; the rest waits for the next run`)
+          break
+        }
       }
-      buffer.push(doc)
-      if (buffer.length >= UPSERT_EVERY) await flush()
-      if (stop()) {
-        console.warn(`  · soft deadline reached after ${collected} documents; the rest waits for the next run`)
-        break
-      }
+    } finally {
+      await flush()
     }
-  } finally {
-    await flush()
+    // A query that found something is the day's query; an empty one moves on (a fixed --query is tried once).
+    if (collected > before || collected >= args.limit) break
   }
 
   if (args.dryRun) console.log(`Done (dry run). ${collected} documents would be written.`)
-  else console.log(`Done. ${collected} collected, ${written} written, ${skipped} skipped (url already held by another source row)${errors.length ? `, ${errors.length} errors` : ''}. ${stats.requests} requests, ${stats.ok} answered.`)
+  else console.log(`Done. ${collected} collected, ${written} written, ${skipped} skipped (url already held by another source row)${errors.length ? `, ${errors.length} errors` : ''}. ${stats.requests} requests, ${stats.ok} answered; ${tried.length === 1 ? 'one query' : `${tried.length} queries`} tried.`)
+  if (collected === 0 && !stats.throttled && stats.ok > 0) console.warn(`::warning title=Curious collect found nothing::${args.source}: ${tried.map((q) => `"${q}"`).join(', ')} returned no documents today. Check the query list if this repeats.`)
   if (stats.throttled) {
     // A throttle after at least one answer is a known external condition: a warning the run summary shows, not a red job.
     // A throttle before any answer means nothing got through at all: that stays red, so a real block is noticed.

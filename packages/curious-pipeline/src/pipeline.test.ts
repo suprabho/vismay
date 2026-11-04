@@ -282,6 +282,8 @@ pending.push(
   const u = new URL(europeanaUrl('K', 'zeppelin', '*'))
   assert.equal(u.searchParams.get('rows'), '100')
   assert.equal(u.searchParams.get('qf'), 'TYPE:TEXT')
+  assert.equal(u.searchParams.get('reusability'), null, 'metadata is CC0: discovery is not filtered to open items')
+  assert.equal(new URL(europeanaUrl('K', 'zeppelin', '*', { reusability: 'open' })).searchParams.get('reusability'), 'open')
   assert.ok(europeanaIsPublicDomain('http://creativecommons.org/publicdomain/mark/1.0/'))
   assert.ok(!europeanaIsPublicDomain('http://rightsstatements.org/vocab/InC/1.0/'))
   const fx = fixture<EuropeanaResponse>('europeana.json')
