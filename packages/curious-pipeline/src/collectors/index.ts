@@ -11,6 +11,8 @@ import type { CollectorId, CuriousEnv, DocumentUpsert } from '../types'
 import type { Clock } from '../http'
 import { collectGdelt } from './gdelt'
 import { collectLoc } from './loc'
+import { collectEuropeana } from './europeana'
+import { collectGallica } from './gallica'
 
 export interface CollectOptions {
   query: string
@@ -41,8 +43,8 @@ export interface Collector {
 export const COLLECTORS: Record<CollectorId, Collector | null> = {
   gdelt: { id: 'gdelt', collect: collectGdelt },
   loc: { id: 'loc', collect: collectLoc },
-  europeana: null,
-  gallica: null,
+  europeana: { id: 'europeana', collect: collectEuropeana },
+  gallica: { id: 'gallica', collect: collectGallica },
 }
 
 export function collectorFor(id: CollectorId): Collector {
@@ -53,3 +55,5 @@ export function collectorFor(id: CollectorId): Collector {
 
 export { collectGdelt, gdeltDocumentsFromArticles, gdeltWindows, gdeltUrl } from './gdelt'
 export { collectLoc, locDocumentsFromResults, locSearchUrl, locPartitions } from './loc'
+export { collectEuropeana, europeanaDocumentsFromItems, europeanaUrl, europeanaIsPublicDomain } from './europeana'
+export { collectGallica, parseGallicaSru, parseGallicaContentSearch, gallicaDocumentFromRecord, gallicaSruUrl, gallicaContentSearchUrl, gallicaSnippetText } from './gallica'

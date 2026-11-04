@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results countResults="2" ark="bpt6k5656490s" query="fait curieux">
+  <items>
+    <item>
+      <p_id>PAG_2</p_id>
+      <p_width>2500</p_width>
+      <p_height>3800</p_height>
+      <content>Un <mark>fait curieux</mark> s'est produit hier : pour la premi&#232;re fois, un dirigeable a survol&#233; la ville, et l'on dit que 50 000 personnes l'ont vu.</content>
+      <altoid>ALTO0002</altoid>
+    </item>
+    <item>
+      <p_id>PAG_5</p_id>
+      <content>Le seul survivant, &#226;g&#233; de 80 ans, se souvient encore du <mark>fait curieux</mark>.</content>
+    </item>
+  </items>
+</results>

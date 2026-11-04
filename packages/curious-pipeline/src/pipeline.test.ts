@@ -13,6 +13,15 @@ import { gdeltDocumentsFromArticles, gdeltUrl, gdeltWindows, parseGdeltBody, typ
 import { locDocumentsFromResults, locPartitions, locSearchUrl, type LocSearchResponse } from './collectors/loc'
 import { collectGdelt, collectLoc } from './collectors/index'
 import { curiousEnv } from './types'
+import { z } from 'zod'
+import { collectEuropeana, europeanaDocumentsFromItems, europeanaIsPublicDomain, europeanaUrl, type EuropeanaResponse } from './collectors/europeana'
+import { collectGallica, gallicaContentSearchUrl, gallicaDocumentFromRecord, gallicaSruUrl, parseGallicaContentSearch, parseGallicaSru } from './collectors/gallica'
+import { fetchArticleText, htmlToArticle, robotsAllows } from './fetchText'
+import { detectCandidates, rulesHit } from './detect'
+import { AtomicClaimsSchema, extractClaims, locateQuote, type AtomicClaim, type Generate } from './extract'
+import { claimHash, independenceGroup, lexicalClusters, provenanceDedupe } from './dedupe'
+import { contradicts, findContradictions } from './contradict'
+import { ERAS, eraOf, REGION_IDS, THEME_IDS, THEME_NAMES } from './taxonomy'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const fixture = <T>(name: string): T => JSON.parse(readFileSync(join(HERE, 'fixtures', name), 'utf8')) as T
@@ -238,6 +247,252 @@ pending.push(
     assert.equal(deepUrls.length, 1, 'a dated query that is too deep is split by format, not decade')
   })(),
 )
+
+// ── Phase 2 ──────────────────────────────────────────────────────────────────
+
+// 8. Europeana: URL, public-domain rule, mapping, the key requirement, cursor paging.
+{
+  const u = new URL(europeanaUrl('K', 'zeppelin', '*'))
+  assert.equal(u.searchParams.get('rows'), '100')
+  assert.equal(u.searchParams.get('qf'), 'TYPE:TEXT')
+  assert.ok(europeanaIsPublicDomain('http://creativecommons.org/publicdomain/mark/1.0/'))
+  assert.ok(!europeanaIsPublicDomain('http://rightsstatements.org/vocab/InC/1.0/'))
+  const fx = fixture<EuropeanaResponse>('europeana.json')
+  const docs = europeanaDocumentsFromItems(fx.items ?? [], { query: 'zeppelin', requestUrl: 'https://api.europeana.eu/x', retrievedAt: NOW.toISOString() })
+  assert.equal(docs.length, 3)
+  assert.equal(docs[0].source_id, 'europeana')
+  assert.equal(docs[0].canonical_url, 'https://europeana.eu/item/221/URN_NBN_SI_DOC_1NTFR15D', 'utm stripped')
+  assert.equal(docs[0].external_id, '/221/URN_NBN_SI_DOC_1NTFR15D')
+  assert.equal(docs[0].published_at, '1910-01-01T00:00:00Z')
+  assert.equal(docs[0].published_precision, 'year')
+  assert.equal(docs[0].language, null, '"mul" is not a language')
+  assert.equal(docs[0].meta.public_domain, true)
+  assert.equal(docs[0].meta.text_storage, 'full')
+  assert.ok(docs[0].text && docs[0].text.length > 20, 'CC0 descriptions are kept')
+  const inc = docs[2]
+  assert.equal(inc.meta.public_domain, false)
+  assert.equal(inc.meta.text_storage, 'snippet')
+  assert.equal(inc.language, 'de')
+  assert.equal(inc.lineage_hint, 'Deutsche Digitale Bibliothek')
+  assert.equal(inc.rights_uri, 'http://rightsstatements.org/vocab/InC/1.0/')
+  pending.push(
+    (async () => {
+      await assert.rejects(
+        (async () => {
+          for await (const _ of collectEuropeana({ query: 'x', limit: 1, env, now: NOW })) void _
+        })(),
+        /EUROPEANA_API_KEY/,
+      )
+      const clock = fakeClock(0)
+      const urls: string[] = []
+      const fake = (async (url: string) => {
+        urls.push(String(url))
+        const cursor = new URL(String(url)).searchParams.get('cursor')
+        const body: EuropeanaResponse = cursor === '*' ? { ...fx, nextCursor: 'NEXT' } : { success: true, itemsCount: 0, totalResults: fx.totalResults, items: [] }
+        return new Response(JSON.stringify(body), { status: 200 })
+      }) as typeof fetch
+      const got = []
+      for await (const d of collectEuropeana({ query: 'zeppelin', since: '1900-01-01', until: '1920-12-31', limit: 10, fetch: fake, env: { ...env, europeanaKey: 'K' }, now: NOW, clock })) got.push(d)
+      assert.equal(got.length, 3)
+      assert.equal(urls.length, 2, 'followed the cursor once, stopped on the empty page')
+      assert.ok(new URL(urls[0]).searchParams.get('query')?.includes('YEAR:[1900 TO 1920]'))
+      assert.ok(!got[0].raw_uri.includes('wskey=K'), 'the key is not kept in raw_uri')
+    })(),
+  )
+}
+
+// 9. Gallica: SRU and ContentSearch parsing, the document, the per-run request budget.
+{
+  const sru = parseGallicaSru(readFileSync(join(HERE, 'fixtures', 'gallica-sru.xml'), 'utf8'))
+  assert.equal(sru.total, 137)
+  assert.equal(sru.next, 3)
+  assert.equal(sru.records.length, 2)
+  assert.equal(sru.records[0].ark, 'bpt6k5656490s')
+  assert.equal(sru.records[0].publisher, 'Le Petit Parisien (Paris)')
+  assert.equal(sru.records[0].ocrQuality, 0.923)
+  assert.deepEqual(sru.records[0].types, ['text', 'publication en série imprimée'])
+  const hits = parseGallicaContentSearch(readFileSync(join(HERE, 'fixtures', 'gallica-contentsearch.xml'), 'utf8'))
+  assert.equal(hits.length, 2)
+  assert.equal(hits[0].page, 2)
+  assert.ok(hits[0].text.startsWith('Un fait curieux'), 'marks stripped, entities decoded')
+  const doc = gallicaDocumentFromRecord(sru.records[0], hits, { query: 'fait curieux', requestUrl: 'https://gallica.bnf.fr/SRU?x', retrievedAt: NOW.toISOString() })
+  assert.equal(doc.canonical_url, 'https://gallica.bnf.fr/ark:/12148/bpt6k5656490s')
+  assert.equal(doc.published_at, '1912-04-17T00:00:00Z')
+  assert.equal(doc.published_precision, 'day')
+  assert.equal(doc.extraction_method, 'iiif-ocr')
+  assert.ok(doc.text?.includes('[p.2]') && doc.text.includes('[p.5]'), 'page markers')
+  assert.equal(doc.ocr_confidence, 0.923)
+  assert.equal(doc.meta.public_domain, true)
+  assert.equal(new URL(gallicaSruUrl('fait curieux', 51, { docType: 'fascicule' })).searchParams.get('query'), '(gallica all "fait curieux") and (dc.type all "fascicule")')
+  assert.equal(gallicaContentSearchUrl('bpt6k1', 'a "b"'), 'https://gallica.bnf.fr/services/ContentSearch?ark=bpt6k1&query=a%20b')
+  pending.push(
+    (async () => {
+      const clock = fakeClock(0)
+      let calls = 0
+      const fake = (async (url: string) => {
+        calls++
+        const s = String(url)
+        return new Response(readFileSync(join(HERE, 'fixtures', s.includes('ContentSearch') ? 'gallica-contentsearch.xml' : 'gallica-sru.xml'), 'utf8'), { status: 200 })
+      }) as typeof fetch
+      const got = []
+      for await (const d of collectGallica({ query: 'fait curieux', limit: 3, fetch: fake, env, now: NOW, clock })) got.push(d)
+      assert.equal(got.length, 3, 'the SRU page repeats, so three records come from two pages')
+      assert.equal(calls, 5, 'two SRU pages plus one ContentSearch per record')
+      assert.ok(clock.t >= 4 * 12_000, 'twelve seconds between calls')
+    })(),
+  )
+}
+
+// 10. fetchText: HTML to article text, metadata, robots.txt.
+{
+  const html = readFileSync(join(HERE, 'fixtures', 'article.html'), 'utf8')
+  const a = htmlToArticle(html)
+  assert.equal(a.title, "How Mithun's Jimmy Jimmy became a Soviet spy test")
+  assert.equal(a.author, 'A Correspondent')
+  assert.equal(a.publishedAt, '2026-11-03T09:00:00.000Z')
+  assert.equal(a.canonical, 'https://rediff.com/movies/report/mithun-jimmy-jimmy-soviet-spies/20261103.htm')
+  assert.ok(a.text.startsWith('How Mithun’s Jimmy Jimmy'), a.text.slice(0, 60))
+  assert.ok(a.text.includes('60.9 million admissions'))
+  assert.ok(!a.text.includes('tracking') && !a.text.includes('Related stories') && !a.text.includes('Home'), 'script, aside and nav dropped')
+  assert.ok(a.text.includes('\n\n'), 'paragraph breaks kept')
+  const robots = 'User-agent: *\nDisallow: /private/\nDisallow: /search\nAllow: /private/ok\n\nUser-agent: badbot\nDisallow: /'
+  assert.equal(robotsAllows(robots, '/movies/x'), true)
+  assert.equal(robotsAllows(robots, '/private/x'), false)
+  assert.equal(robotsAllows(robots, '/private/ok/1'), true)
+  assert.equal(robotsAllows(robots, '/searching'), false)
+  assert.equal(robotsAllows('User-agent: *\nDisallow:', '/anything'), true)
+  assert.equal(robotsAllows('', '/anything'), true)
+  pending.push(
+    (async () => {
+      const clock = fakeClock(0)
+      const fake = (async (url: string) => {
+        const s = String(url)
+        if (s.endsWith('/robots.txt')) return new Response('User-agent: *\nDisallow: /blocked/', { status: 200, headers: { 'content-type': 'text/plain' } })
+        return new Response(html, { status: 200, headers: { 'content-type': 'text/html' } })
+      }) as typeof fetch
+      const ok = await fetchArticleText('https://rediff.com/movies/report/x.htm', { fetch: fake, clock, now: NOW })
+      assert.ok(ok && ok.text.includes('Aaja Aaja'))
+      const blocked = await fetchArticleText('https://rediff.com/blocked/x.htm', { fetch: fake, clock, now: NOW })
+      assert.equal(blocked, null)
+    })(),
+  )
+}
+
+// 11. The detector: rules, passages, ranking and the cap.
+{
+  const text = readFileSync(join(HERE, 'fixtures', 'article.html'), 'utf8')
+  const article = htmlToArticle(text).text
+  const cands = detectCandidates(article, { maxPassages: 3, window: 400 })
+  assert.ok(cands.length >= 1 && cands.length <= 3)
+  const all = cands.map((c) => c.rules).flat()
+  assert.ok(all.includes('hearsay'), all.join(','))
+  assert.ok(all.includes('number-unit') || all.includes('dated'))
+  for (const c of cands) {
+    assert.equal(article.slice(c.start, c.end), c.passage, 'offsets match the passage')
+    assert.ok(c.passage.length <= 400 || !c.passage.includes(". "), `passage ${c.passage.length}`)
+  }
+  assert.deepEqual(detectCandidates('The weather was mild. Tea was served.'), [], 'nothing fires on plain prose')
+  assert.deepEqual(detectCandidates(''), [])
+  const hits = rulesHit('For the first time in history, a woman reportedly swam the strait in 1926, forty years later than planned.')
+  assert.deepEqual(hits.map((h) => h.id).sort(), ['dated', 'first-last-only', 'hearsay', 'years-later'])
+  const many = detectCandidates(Array.from({ length: 30 }, (_, i) => `In ${1900 + i} the only man who ever did it reportedly returned. Then nothing happened for a while.`).join(' '), { maxPassages: 3 })
+  assert.equal(many.length, 3, 'capped')
+  assert.ok(many[0].start < many[1].start && many[1].start < many[2].start, 'document order')
+}
+
+// 12. The extractor with a fake generate: quotes are located or the claim is dropped; offsets are document offsets.
+pending.push(
+  (async () => {
+    const article = htmlToArticle(readFileSync(join(HERE, 'fixtures', 'article.html'), 'utf8')).text
+    const [cand] = detectCandidates(article, { maxPassages: 1, window: 2000 })
+    const seenPrompt: string[] = []
+    const fake: Generate = async (o) => {
+      seenPrompt.push(o.prompt)
+      const claims: AtomicClaim[] = [
+        { text: 'Disco Dancer drew about 60.9 million admissions in the Soviet Union.', kind: 'number', subject: 'Disco Dancer', theme: 'film-tv', region: 'europe', entities: [{ name: 'Disco Dancer', kind: 'work' }, { name: 'Soviet Union', kind: 'place' }], year_from: 1982, year_to: null, place: 'Soviet Union', country_code: 'ru', evidence_quote: 'drew about 60.9 million admissions in the Soviet Union', attribution: { speaker: 'Soviet distribution records', is_anonymous: false, is_hearsay: false }, is_quotation: false, sensitive: false, confidence: 0.9 },
+        { text: 'The Soviet government used the song Jimmy Jimmy to identify spies.', kind: 'anecdote', subject: 'Jimmy Jimmy', theme: 'film-tv', region: 'europe', entities: [{ name: 'Jimmy Jimmy', kind: 'work' }], year_from: null, year_to: null, place: null, country_code: null, evidence_quote: 'the former Soviet government could identify spies with the song', attribution: { speaker: null, is_anonymous: true, is_hearsay: true }, is_quotation: false, sensitive: false, confidence: 0.6 },
+        { text: 'Mithun Chakraborty invented the moonwalk.', kind: 'fact', subject: 'Mithun', theme: 'film-tv', region: 'south-asia', entities: [], year_from: 1983, year_to: null, place: null, country_code: 'IN', evidence_quote: 'invented the moonwalk', attribution: { speaker: null, is_anonymous: true, is_hearsay: false }, is_quotation: false, sensitive: false, confidence: 0.4 },
+        { text: 'The Soviet government used the song Jimmy Jimmy to identify spies.', kind: 'anecdote', subject: 'dup', theme: 'film-tv', region: 'europe', entities: [], year_from: null, year_to: null, place: null, country_code: null, evidence_quote: 'identify spies with the song', attribution: { speaker: null, is_anonymous: true, is_hearsay: true }, is_quotation: false, sensitive: false, confidence: 0.6 },
+      ]
+      return { result: { claims } as z.infer<typeof o.schema>, modelUsed: 'fake/haiku' }
+    }
+    const claims = await extractClaims(cand, { source_id: 'gdelt', title: 'T', publisher: 'rediff.com', published_at: '2026-11-03T09:00:00Z', language: 'english' }, { generate: fake })
+    assert.equal(claims.length, 2, 'the unlocatable quote and the duplicate drop out')
+    assert.ok(seenPrompt[0].includes('Publisher: rediff.com') && seenPrompt[0].includes('Passage:'))
+    const [pop, spy] = claims
+    assert.equal(article.slice(pop.evidence_start, pop.evidence_end), 'drew about 60.9 million admissions in the Soviet Union')
+    assert.equal(pop.era, 'late-20th')
+    assert.equal(pop.country_code, 'RU')
+    assert.equal(pop.claim_hash, sha256(normalizeText(pop.text)))
+    assert.equal(spy.era, null)
+    assert.equal(spy.attribution.is_hearsay, true)
+    assert.equal(spy.extractor_model, 'fake/haiku')
+    assert.deepEqual(locateQuote('He said “Jimmy  Jimmy” twice.', 'said "Jimmy Jimmy"')?.exact, 'said “Jimmy  Jimmy”', 'quote marks and spacing are forgiven')
+    assert.equal(locateQuote('abc', 'xyz'), null)
+    assert.equal(AtomicClaimsSchema.safeParse({ claims: [] }).success, true)
+  })(),
+)
+
+// 13. Dedupe: lexical clusters, independence groups, provenance dedupe.
+{
+  const clusters = lexicalClusters([
+    { id: 'a', text: 'Disco Dancer drew about 60.9 million admissions in the Soviet Union in 1984.', publishedAt: '2026-11-03' },
+    { id: 'b', text: 'In 1984 some 60,900,000 Soviet viewers bought tickets to Disco Dancer.', publishedAt: '2026-11-02' },
+    { id: 'c', text: 'The KGB used the song Jimmy Jimmy to identify foreign spies.', publishedAt: '2026-11-01' },
+    { id: 'd', text: 'The KGB reportedly tested foreign spies with the song Jimmy Jimmy.', publishedAt: '2026-11-04' },
+    { id: 'e', text: 'The Titanic carried only twenty lifeboats.', publishedAt: '1912-04-16' },
+  ], { threshold: 0.4 })
+  const of = (id: string) => clusters.find((c) => c.members.includes(id))!
+  assert.equal(of('a'), of('b'), 'the two admissions claims cluster')
+  assert.equal(of('a').representative, 'b', 'the earliest is the representative')
+  assert.equal(of('c'), of('d'), 'the two spy claims cluster')
+  assert.notEqual(of('a'), of('c'))
+  assert.equal(of('e').members.length, 1)
+
+  assert.equal(independenceGroup({ doi: 'https://doi.org/10.1080/19472498.2022.2101762', url: 'https://x.com' }), 'doi:10.1080/19472498.2022.2101762')
+  assert.equal(independenceGroup({ isbn: '978-0-19-953556-9' }), 'isbn:9780199535569')
+  assert.equal(independenceGroup({ sharedSentence: 'It is said that anyone who grew up in the Soviet Union would answer Aaja Aaja without thinking twice' }).slice(0, 6), 'quote:')
+  assert.equal(independenceGroup({ byline: 'By Reuters staff', url: 'https://news.example.com/x' }), 'wire:reuters')
+  assert.equal(independenceGroup({ text: 'MOSCOW (AP) — The song', url: 'https://news.example.com/x' }), 'wire:ap')
+  assert.equal(independenceGroup({ speaker: 'Mithun Chakraborty', year: 2026, url: 'https://rediff.com/x' }), 'attr:mithun-chakraborty:2026')
+  assert.equal(independenceGroup({ url: 'https://www.rediff.com/x' }), 'pub:rediff.com')
+  assert.equal(independenceGroup({ url: 'https://www.loc.gov/item/1/', publisher: 'New-York tribune' }), 'pub:new-york-tribune', 'a library item is grouped by its publisher, not the library')
+  assert.equal(independenceGroup({ sourceId: 'gallica' }), 'pub:gallica')
+  const pd = provenanceDedupe([
+    { relation: 'supports', independence_group: 'wire:ap' },
+    { relation: 'supports', independence_group: 'wire:ap' },
+    { relation: 'cites', independence_group: 'doi:10.1/x' },
+    { relation: 'derived_from', independence_group: 'wire:ap' },
+    { relation: 'contradicts', independence_group: 'pub:other' },
+  ])
+  assert.deepEqual(pd, { groups: ['wire:ap', 'doi:10.1/x'], nSources: 4, nDerived: 1 })
+  assert.equal(claimHash('Jimmy  Jimmy!'), claimHash('jimmy jimmy'))
+}
+
+// 14. Contradictions: figures, years, negation; agreement within tolerance is not a contradiction.
+{
+  const a = { id: 'a', text: 'Disco Dancer drew 60.9 million admissions in the Soviet Union.' }
+  const b = { id: 'b', text: 'Disco Dancer drew 120 million admissions in the Soviet Union.' }
+  const c = { id: 'c', text: 'Disco Dancer drew about 61 million admissions in the Soviet Union.' }
+  assert.equal(contradicts(a, b)?.reason, 'number')
+  assert.equal(contradicts(a, c), null, 'within 10 percent')
+  assert.equal(contradicts({ id: 'x', text: 'The film opened in the USSR in 1984.' }, { id: 'y', text: 'The film opened in the USSR in 1982.' })?.reason, 'year')
+  assert.equal(contradicts({ id: 'x', text: 'The KGB used the song to catch spies.' }, { id: 'y', text: 'The KGB never used the song to catch spies.' })?.reason, 'negation')
+  assert.equal(findContradictions([a, b, c]).length, 2)
+}
+
+// 15. The taxonomy.
+{
+  assert.equal(eraOf(1982), 'late-20th')
+  assert.equal(eraOf(-383), 'antiquity')
+  assert.equal(eraOf(1912), 'long-19th')
+  assert.equal(eraOf(2026), 'recent')
+  assert.equal(eraOf(null), null)
+  assert.equal(THEME_IDS.length, 12)
+  assert.equal(REGION_IDS.length, 9)
+  assert.equal(ERAS.length, 8)
+  for (const t of THEME_IDS) assert.ok(THEME_NAMES[t])
+}
 
 Promise.all(pending).then(
   () => console.log('curious-pipeline: ok'),

@@ -6,7 +6,7 @@
  */
 
 import { createServiceClient } from '@vismay/content-source/supabase'
-import type { ClaimRow, ClaimSourceUpsert, ClaimStatus, DocumentRow, DocumentStatus, DocumentUpsert, SourceId } from './types'
+import type { ClaimRow, ClaimSourceUpsert, ClaimStatus, DocumentRow, DocumentStatus, DocumentUpsert, EntityKind, SourceId } from './types'
 
 export type Sb = ReturnType<typeof createServiceClient>
 
@@ -201,4 +201,39 @@ export async function reviewClaim(
   const { data, error } = await sb.from('curious_claims').update(patch).eq('id', id).select('*').single()
   if (error) throw new Error(`curious_claims ${id}: ${error.message}`)
   return data as ClaimRow
+}
+
+/** Upsert entities by (kind, name_norm) and link them to a claim. */
+export async function linkClaimEntities(
+  claimId: string,
+  entities: Array<{ name: string; kind: EntityKind; role?: 'subject' | 'object' | 'place' | 'work' | 'mention' }>,
+  sb: Sb = createServiceClient(),
+): Promise<void> {
+  if (!entities.length) return
+  const { normalizeText } = await import('./text')
+  const rows = entities.map((e) => ({ name: e.name.slice(0, 200), name_norm: normalizeText(e.name).slice(0, 200), kind: e.kind }))
+  const { error } = await sb.from('curious_entities').upsert(rows, { onConflict: 'kind,name_norm', ignoreDuplicates: true })
+  if (error) throw new Error(`curious_entities: ${error.message}`)
+  const { data, error: readErr } = await sb.from('curious_entities').select('id, kind, name_norm').in('name_norm', rows.map((r) => r.name_norm))
+  if (readErr) throw new Error(`curious_entities: ${readErr.message}`)
+  const byKey = new Map((data ?? []).map((r: { id: number; kind: string; name_norm: string }) => [`${r.kind}|${r.name_norm}`, r.id]))
+  const links = entities
+    .map((e, i) => ({ claim_id: claimId, entity_id: byKey.get(`${e.kind}|${rows[i].name_norm}`), role: e.role ?? (e.kind === 'place' ? 'place' : e.kind === 'work' ? 'work' : 'mention') }))
+    .filter((l): l is { claim_id: string; entity_id: number; role: 'subject' | 'object' | 'place' | 'work' | 'mention' } => l.entity_id != null)
+  if (!links.length) return
+  const { error: linkErr } = await sb.from('curious_claim_entities').upsert(links, { onConflict: 'claim_id,entity_id,role', ignoreDuplicates: true })
+  if (linkErr) throw new Error(`curious_claim_entities: ${linkErr.message}`)
+}
+
+/** Claims from the last `days` that are still live (not rejected), for clustering new ones against. */
+export async function listRecentClaims(days: number, sb: Sb = createServiceClient()): Promise<ClaimRow[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString()
+  const out: ClaimRow[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from('curious_claims').select('*').neq('status', 'rejected').gte('created_at', since).order('created_at', { ascending: true }).range(from, from + 999)
+    if (error) throw new Error(`curious_claims: ${error.message}`)
+    out.push(...((data ?? []) as ClaimRow[]))
+    if (!data || data.length < 1000) break
+  }
+  return out
 }
