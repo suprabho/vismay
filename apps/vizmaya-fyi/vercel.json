@@ -37,6 +37,18 @@
     {
       "path": "/api/randomizer/cron/curious",
       "schedule": "10 6 * * *"
+    },
+    {
+      "path": "/api/curious/cron/collect-gdelt",
+      "schedule": "20 2 * * *"
+    },
+    {
+      "path": "/api/curious/cron/collect-loc",
+      "schedule": "40 2 * * *"
+    },
+    {
+      "path": "/api/curious/cron/detect",
+      "schedule": "50 3 * * *"
     }
   ]
 }

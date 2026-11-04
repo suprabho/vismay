@@ -172,9 +172,36 @@ picture-story format like the other desks.
     lineage rule, the ELI5 check), and `packages/curious-pipeline/src/pipeline.test.ts`
     for the pipeline itself.
 
-## 8. What comes next (P5)
+## 8. Nightly runs, the composer and the evaluation (done)
 
-The GitHub Actions `curious-collect.yml` and `curious-detect.yml`
-dispatched from Vercel cron, the composer's **Curious claims** library
-provider, and `curious:evaluate` (a stratified 100-claim sample for a
-reviewer, then approval rate per grade and claims per reviewer-hour).
+- `.github/workflows/curious-collect.yml` (one source per run; GDELT and the
+  Library of Congress nightly, Europeana and Gallica by hand) and
+  `curious-detect.yml` (detect → grade → verify as one job, each stage under
+  its cap and a 25-minute deadline), dispatched by Vercel cron through
+  `apps/vizmaya-fyi/app/api/curious/cron/[job]` at 02:20, 02:40 and 03:50
+  UTC, since GitHub's own scheduler drifts. Roughly 2,000 documents and 200
+  to 400 candidate claims a night, so the pilot's 10k to 50k documents and
+  1k to 5k claims land in two to four weeks plus a few manual dispatches.
+- The composer's **Curious claims** library (`curiousClaimsProvider` in
+  `apps/admin/lib/libraryProviders.ts`): approved claims as text sources
+  carrying the grade, the notes, the evidence quote, the document and the
+  lineage counts.
+- `pnpm curious:evaluate -- --sample 100` queues a stratified batch across
+  the grades and prints the review table; `-- --report latest` prints
+  approval rate per grade, the grade's agreement with the verdicts, and
+  claims (and verified claims) per reviewer-hour from the review timestamps.
+
+## 9. Open risks
+
+- Live reachability from a shared egress: GDELT throttles by IP (one request
+  every five seconds, and this session's proxy was already over it), Gallica
+  sits behind Cloudflare, the Library of Congress times out on its heavier
+  endpoints. The collectors back off and retry, and a failed run leaves the
+  rest for the next night; the GitHub runner's IP is its own.
+- `EUROPEANA_API_KEY` is not yet issued: the collector fails closed with the
+  message, and the registry row stays enabled for when it arrives.
+- The grade is only as good as the sources found: a claim graded D for want
+  of a primary source is the research's first job, and the brief says so.
+- The pipeline's tests run on fixtures and a fake fetch; the end-to-end path
+  against Supabase and the live APIs needs `.env.local` and a first
+  `curious:seed-fixture` run, which this session could not do.

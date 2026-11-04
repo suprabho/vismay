@@ -1,0 +1,98 @@
+name: Curious Desk detect, grade, verify
+
+# Stages 2 to 4 of the Curious Desk's claim pipeline, as sequential steps of
+# one job so the grader always runs on what the detector just wrote:
+#   detect  — regex rules over the fetched documents, then a schema-constrained
+#             model pass (Claude Haiku through the AI gateway) that returns
+#             atomic claims with a verbatim evidence quote; clustering and
+#             contradictions. Capped by --llm-cap passages per run.
+#   grade   — the A to E grade from explicit features; Wayback snapshots for
+#             the newest news documents.
+#   verify  — Crossref, Google Books and Wikidata for the graded claims that
+#             have never been verified, then a re-grade.
+# Each stage keeps to a 25-minute soft deadline; a stage that fails does not
+# stop the next (grading what exists is always useful).
+#
+# No `schedule:` here: Vercel Cron fires /api/curious/cron/detect at 03:50 UTC
+# (apps/vizmaya-fyi/vercel.json), after the collectors.
+#
+# Required repo secrets (in the `Production` environment):
+#   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AI_GATEWAY_API_KEY
+#   CROSSREF_MAILTO, GOOGLE_BOOKS_API_KEY (optional)
+
+on:
+  workflow_call:
+    inputs:
+      limit_docs:
+        type: string
+        required: false
+        default: '400'
+      llm_cap:
+        type: string
+        required: false
+        default: '300'
+      verify_limit:
+        type: string
+        required: false
+        default: '150'
+      queue:
+        type: string
+        required: false
+        default: '1'
+  workflow_dispatch:
+    inputs:
+      limit_docs:
+        description: 'Documents the detector reads this run'
+        required: false
+        default: '400'
+      llm_cap:
+        description: 'Passages sent to the model this run'
+        required: false
+        default: '300'
+      verify_limit:
+        description: 'Claims verified on Crossref, Google Books and Wikidata this run'
+        required: false
+        default: '150'
+      queue:
+        description: 'Set to 1 to put graded claims straight into the review queue'
+        required: false
+        default: '1'
+
+concurrency:
+  group: curious-detect
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      CROSSREF_MAILTO: ${{ secrets.CROSSREF_MAILTO }}
+      GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Detect and extract claims
+        run: pnpm curious:detect -- --limit ${{ inputs.limit_docs || '400' }} --llm-cap ${{ inputs.llm_cap || '300' }}
+
+      - name: Grade
+        if: ${{ !cancelled() }}
+        run: pnpm curious:grade -- --archive 100 ${{ (inputs.queue == '1' || inputs.queue == '') && '--queue' || '' }}
+
+      - name: Verify citations and re-grade
+        if: ${{ !cancelled() }}
+        run: pnpm curious:verify -- --limit ${{ inputs.verify_limit || '150' }}

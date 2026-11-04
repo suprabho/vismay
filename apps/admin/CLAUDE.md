@@ -265,18 +265,18 @@ league and team rows only).
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094, 096, 098 and 099;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094, 096, 098, 099 and 102;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
-Desk, Atlas, Epics, the OCW Desk, the Landmark Desk, The 100 Desk, the Evidence Desk and the Frontier Desk on `/vizmaya/randomizer`, the Football Desk on
+Desk, Atlas, Epics, the OCW Desk, the Landmark Desk, The 100 Desk, the Evidence Desk, the Frontier Desk and the Curious Desk on `/vizmaya/randomizer`, the Football Desk on
 `/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
-  eight tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  nine tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
   with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course /
-  Landmark follow-the-prize / The 100 walk-the-ranking / Evidence follow-the-debate / Frontier follow-the-thread toggle, the style die, the rules that fired, the spin log, the hero insight
+  Landmark follow-the-prize / The 100 walk-the-ranking / Evidence follow-the-debate / Frontier follow-the-thread / Curious pull-the-thread toggle, the style die, the rules that fired, the spin log, the hero insight
   gate (approve / send back with a note, paste research), the composed brief's
   assignment with Copy agent brief and Copy research stub (its toolbar also
   carries the attached style: swatches, Randomize/Shuffle and, on footshorts,
@@ -322,7 +322,16 @@ story links.
   authors, the gate's why and headline (benchmark, compute, scale), tags, the
   Doom v Boom editions that featured it, the arXiv and OpenAlex record, the
   pool papers beside it, and the sources' states with notes and errors. Not
-  gated; a cron spins it each morning at 09:20 UTC.
+  gated; a cron spins it each morning at 09:20 UTC. On the Curious Desk tab
+  (the claim pipeline's approved claims in `curious_claim_pool`, read live per
+  spin), the **Curious claim** panel: the claim with its grade badge, kind,
+  era, theme, region, year, place and score, chips for sources and lineages,
+  primary, derived and flags, the grade's meaning and the grader's notes, the
+  evidence quote with its document, date, source and archive link, the named
+  entities with Wikidata ids and dates, the cited work and book, the claims
+  beside it, a link to the Curious claims review queue, and the sources'
+  states (Crossref, Google Books, Wikidata, Wayback) with notes and errors.
+  Gated like The 100 Desk; a cron spins it each morning at 06:10 UTC.
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel
@@ -675,6 +684,16 @@ Desk draws from and the composer's "Curious claims" library reads.
   and `PATCH /api/vizmaya/curious/claims/[id]` (`{ action: 'approve'|'send_back'|'reject', note?, text? }`,
   same-origin), backed by `listClaimsForReview` / `reviewClaim` in
   `@vismay/curious-pipeline/store`; the reviewer's email lands in `reviewed_by`.
+- **Composer:** approved claims are a "Curious claims" library in Compose from
+  library (`curiousClaimsProvider` in [lib/libraryProviders.ts](lib/libraryProviders.ts)):
+  the claim, its grade and notes, the evidence quote with its document and
+  archive link, and the lineage counts, as a text source.
+- **Nightly:** Vercel cron on vizmaya-fyi dispatches `curious-collect.yml`
+  (GDELT 02:20, Library of Congress 02:40 UTC) and `curious-detect.yml`
+  (detect → grade → verify, 03:50 UTC) through `/api/curious/cron/[job]`.
+- **Evaluation:** `pnpm curious:evaluate -- --sample 100` queues a stratified
+  batch for review; `-- --report latest` prints approval rate per grade, grade
+  agreement and claims per reviewer-hour.
 - **Pipeline CLIs** (in `apps/vizmaya-fyi`): `pnpm curious:collect -- --source loc|gdelt|europeana|gallica --query …`,
   `pnpm curious:detect -- --limit 400 --llm-cap 300`, `pnpm curious:grade -- --queue`,
   `pnpm curious:verify -- --limit 150`, `pnpm curious:seed-fixture` (the Disco
