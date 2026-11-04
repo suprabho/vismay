@@ -10,6 +10,11 @@
  */
 
 import {
+  curiousClaimLabel,
+  curiousCreditLine,
+  curiousDocumentLabel,
+  curiousGradeNotes,
+  curiousLensMetrics,
   evidenceCreditLine,
   evidenceLensMetrics,
   evidenceStudyLabel,
@@ -37,10 +42,11 @@ import {
   researchStub,
   viznbaAngleMetrics,
 } from './stub'
-import { FRONTIER } from './datasets'
+import { curiousGradeLabel, FRONTIER } from './datasets'
 import {
   RANDOMIZER_META,
   type AtlasSubject,
+  type CuriousSubject,
   type DeskSubject,
   type EpicsSubject,
   type EvidenceSubject,
@@ -70,7 +76,7 @@ export const ELI5_LENS = "Explain like I'm 5"
  */
 export function isEli5Spin(spin: Pick<BriefSpin, 'subject'>): boolean {
   const s = spin.subject
-  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw' || s.randomizer === 'evidence' || s.randomizer === 'frontier') && s.lens.name === ELI5_LENS
+  return (s.randomizer === 'hundred' || s.randomizer === 'landmark' || s.randomizer === 'ocw' || s.randomizer === 'evidence' || s.randomizer === 'frontier' || s.randomizer === 'curious') && s.lens.name === ELI5_LENS
 }
 
 /** What the picture story is about, and what the grown-ups card credits, per randomizer. */
@@ -106,6 +112,13 @@ function eli5Subject(spin: BriefSpin): { who: string; real: string; credit: stri
   }
   if (s.randomizer === 'ocw') {
     return { who: `the idea in ${ocwCourseLabel(s.course)}`, real: 'the resource and its course page', credit: ocwCreditLine(s) }
+  }
+  if (s.randomizer === 'curious') {
+    return {
+      who: s.claim.subject ?? 'the people in the claim',
+      real: `the claim "${curiousClaimLabel(s.claim, 70)}", its ${curiousGradeLabel(s.claim).toLowerCase()} and the sources behind it`,
+      credit: curiousCreditLine(s),
+    }
   }
   return { who: 'the subject', real: 'the record', credit: '' }
 }
@@ -597,6 +610,61 @@ function frontierAssignment(s: FrontierSubject): string[] {
   return out
 }
 
+function curiousAssignment(s: CuriousSubject): string[] {
+  const c = s.claim
+  const r = s.record
+  const notes = curiousGradeNotes(c)
+  const archive = r?.archiveUrl ?? c.document.archiveUrl
+  const out = [
+    `- Claim: ${c.text}`,
+    `- Kind: ${c.kind}.${c.subject ? ` Subject: ${c.subject}.` : ''} Era: ${s.era.name}${c.yearFrom != null ? ` (${c.yearFrom}${c.yearTo != null && c.yearTo !== c.yearFrom ? ` to ${c.yearTo}` : ''})` : ' (no year on the claim)'}. Theme: ${s.theme.name}.${s.region ? ` Region: ${s.region.name}.` : ''}${c.place ? ` Place: ${c.place}.` : ''}`,
+    `- ${curiousGradeLabel(c)}: ${s.grade.label}. ${s.grade.rule} The grade is computed from explicit features of the sources found so far (${c.nSources} source${c.nSources === 1 ? '' : 's'} in ${c.nGroups} independent lineage${c.nGroups === 1 ? '' : 's'}${c.nPrimary ? `, ${c.nPrimary} primary` : ''}${c.nDerived ? `, ${c.nDerived} derived retelling${c.nDerived === 1 ? '' : 's'}` : ''}${c.score != null ? `; score ${Number(c.score).toFixed(2)}` : ''}). Print it on the page. If the research earns a different grade, print that and say why.`,
+  ]
+  if (notes.length) out.push(`- Why that grade (the grader's notes): ${notes.join('; ')}.`)
+  out.push(
+    `- Evidence (verbatim, the only quoted text from this document): "${c.evidenceQuote}"${c.evidencePage != null ? ` (p. ${c.evidencePage})` : ''}`,
+    `- From: ${curiousDocumentLabel(c)}. ${c.document.canonicalUrl}${archive ? ` Archived: ${archive}` : ' (no archive snapshot yet)'}. Source: ${c.document.sourceId}.${c.document.language ? ` Language: ${c.document.language}.` : ''}`,
+  )
+  if (c.isHearsay || c.isAnonymous || c.speaker) out.push(`- Attribution: ${[c.isHearsay ? 'the passage hedges the claim' : null, c.isAnonymous ? 'it names no source' : null, c.speaker ? `it attributes the claim to ${c.speaker}` : null].filter(Boolean).join('; ')}. Keep the hedge on the page.`)
+  if (c.flags.length) out.push(`- Flags: ${c.flags.join(', ')}.`)
+  if (c.entities.length) out.push(`- Named in the claim: ${c.entities.join(', ')}.`)
+  out.push(`- Lens: ${s.lens.name}. ${s.lens.description}`)
+  if (r) {
+    if (r.crossref) out.push(`- Cited work (Crossref, read ${r.asOf.slice(0, 10)}): "${r.crossref.title ?? r.crossref.doi}"${r.crossref.container ? `, ${r.crossref.container}` : ''}${r.crossref.year ? `, ${r.crossref.year}` : ''}${r.crossref.citedBy != null ? `, cited ${r.crossref.citedBy} times` : ''}. ${r.crossref.url}`)
+    if (r.book) out.push(`- Cited book (Google Books): "${r.book.title ?? r.book.isbn}"${r.book.publisher ? `, ${r.book.publisher}` : ''}${r.book.year ? `, ${r.book.year}` : ''}${r.book.url ? `. ${r.book.url}` : ''}`)
+    for (const w of r.wikidata) out.push(`- ${w.name} on Wikidata: ${w.qid}${w.description ? `, ${w.description}` : ''}${w.birthYear != null ? `, born ${w.birthYear}${w.deathYear != null ? `, died ${w.deathYear}` : ''}` : w.year != null ? `, dated ${w.year}` : ''}.`)
+  }
+  if (s.related.length) {
+    out.push('', 'Beside it in the pool (claims sharing a name; read the ones your lens needs):', '')
+    for (const x of s.related) out.push(`- ${curiousClaimLabel(x)} (${x.grade ? `grade ${x.grade}` : 'ungraded'}, ${x.nGroups} lineage${x.nGroups === 1 ? '' : 's'}; ${x.documentTitle ?? x.canonicalUrl})`)
+  }
+  out.push(
+    '',
+    `About the source: ${s.source.note}`,
+    '',
+    '### Do this first',
+    '',
+    `1. Read the evidence document itself at ${c.document.canonicalUrl}${archive ? ` (or its archive copy, ${archive})` : ''}: the quote in its context, the date, who wrote it and whom they cite. If you cannot reach it, say so in the research file and work from the archive copy or not at all.`,
+    '2. Find a primary source: a contemporaneous document, an archive record, the original text, a dataset. The claim\'s grade turns on whether one exists.',
+    '3. Count lineages, not articles. Every source you find goes in the Lineages table with the account it descends from; five articles from one wire story, book or interview are one source.',
+    `4. Split the claim into its supported core and its embellishment, each with its own grade and claims log rows. ${c.grade === 'D' || c.grade === 'E' ? 'This claim is graded ' + c.grade + ': expect the embellishment to be most of it, and the page to report that it is repeated, not that it happened.' : 'Even a well-graded claim often carries a detail nobody checked.'}`,
+    `5. Apply the ${s.lens.name} lens to this claim, not to ${s.theme.name.toLowerCase()} in general.`,
+    `6. State the grade you would give after the research. The page prints the desk's ${curiousGradeLabel(c).toLowerCase()} and yours, and says why they differ if they do.`,
+    `7. ${curiousCreditLine(s)}`,
+  )
+  let n = 8
+  if (s.from) out.push(`${n++}. This spin pulls the thread from the previous spin's claim. Link back to that story and say how the two claims relate.`)
+  if (c.flags.includes('contradiction')) out.push(`${n++}. Another approved claim contradicts this one. Both versions go on the page with their sources; the research says which the record favours, or that it cannot tell.`)
+  if (r && (r.sources.errors.length || r.sources.notes.length)) out.push('', `Record notes: ${[...r.sources.notes, ...r.sources.errors.map((e) => `${e}: look it up by hand.`)].join(' ')}`)
+  if (!r) out.push('', 'No live record on this spin: check Crossref, Google Books and Wikidata for the cited work and the entities yourself, and save an archive snapshot of the evidence document.')
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${curiousLensMetrics(s.lens.name).join(', ')}.`,
+    'Start from: the evidence document, the primary sources you find, the cited work or book, the national libraries (Library of Congress, Europeana, Gallica, Trove) for contemporaneous reporting, Crossref and Google Books for scholarship, and a public dataset for any number the lens needs.',
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -620,7 +688,9 @@ export function assignmentSection(spin: BriefSpin): string {
                     ? evidenceAssignment(s)
                     : s.randomizer === 'frontier'
                       ? frontierAssignment(s)
-                      : epicsAssignment(s)
+                      : s.randomizer === 'curious'
+                        ? curiousAssignment(s)
+                        : epicsAssignment(s)
   const ready = insightReady(spin)
   const eli5 = isEli5Spin(spin)
   const lead = ready
@@ -674,7 +744,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
                     ? '\n8. The paper is the primary source for what it found; cite it by page, table or figure. The collection\'s summary is a lead, never a source. A causal word ("causes", "leads to", "makes") is Verified only for a randomized or natural experiment, and then only for its sample and period. Every effect size goes on the page with its unit and its sample, against a benchmark. A preprint or working paper is labelled as such wherever its finding appears.'
                     : spin.randomizer === 'frontier'
                       ? '\n8. The paper is the primary source for what it claims; cite it by table or figure, and the version you read. AI Daily\'s gate fields (area, headline, compute, scale, release) are leads, never sources. An arXiv preprint is labelled "preprint" wherever its result appears, and its claims are reported as claims ("the authors report") until an independent replication or a peer-reviewed version confirms them. A benchmark number goes on the page with its baseline and setting.'
-                      : ''
+                      : spin.randomizer === 'curious'
+                        ? '\n8. Verify at the level of the claim, not the article. Split the anecdote into atomic claims and grade each. Two sources are independent only when neither descends from the other: a wire story and its reprints, a book and the articles that quote it, an interview and its retellings are one lineage and count once. The desk\'s grade is computed from the sources found so far; print it, and print your own if the research earns a different one, with the reason. A grade D or E claim is reported as repeated ("it is widely said that"), never as having happened. The evidence quote is the only verbatim text taken from a copyrighted source, and it stays under 300 characters.'
+                        : ''
   const eli5Items = isEli5Spin(spin)
     ? `\n9. Because the reader is a five-year-old, add two more sections after HERO INSIGHT. \`STORY INSIGHT\`: the one thing the child should walk away knowing, in the format's own words; write the sentence a child would repeat to a parent, and if you cannot, pick a different insight. \`STAND-IN TABLE\`: one row per part of the stand-in, with columns Stand-in, Real thing, Claim row (for example: fibbing about hunger | private information | 5). A part of the stand-in with no claims log row does not go in the story. HERO INSIGHT is the research finding, for the research file and the grown-ups card; STORY INSIGHT is what the pages say.`
     : ''
@@ -904,6 +976,28 @@ Built like the best page of a tech desk: one new paper, what it claims, how much
 12. **Sources and claims log summary.**`
 }
 
+function curiousFormat(s: CuriousSubject): string {
+  const c = s.claim
+  const other = s.related[0]
+  return `## Format: claim check with charts
+
+Built like the best page of a fact desk: one claim, where it came from, who says so, what the record actually supports, and a grade printed where the reader can see it. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the claim at its true strength: "it is said that" for a grade D claim, a plain statement for grade A) and **dek** (one line, why it matters or why it is curious).
+2. **The claim card:** the claim, its kind, era, theme and place, the desk's ${curiousGradeLabel(c).toLowerCase()} as a badge with the grade's meaning, and your grade beside it if it differs.
+3. **The evidence:** the verbatim quote (at most 300 characters, the only quoted text from the document), the document it comes from, dated and linked, with its archive copy.
+4. **Chart 1, the lineage:** the sources found, by year, each marked by the account it descends from (a tree where one copied another, never a flat count). The footer says how many sources and how many independent lineages.
+5. **Core and embellishment:** the part the record supports and the part that grew on it, each with its grade and its earliest source.
+6. **Chart 2, the lens chart:** ${curiousLensMetrics(s.lens.name)[0]}.
+7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+8. **Who says so:** the source types (archive, press, memoir, scholarship, web), what each could know, and where they differ.
+9. **Beside it:** ${other ? `the closest related claim in the pool (start from "${curiousClaimLabel(other, 60)}")` : 'the closest related claim or the version of the story the sources argue with'}, and how it bears on this one.
+10. **What would settle it:** the document, dataset or record that would move the grade, and where it might be.
+11. **Go further:** the evidence document and its archive copy, the primary sources, the cited work or book, all linked.
+12. **Credit:** ${curiousCreditLine(s).replace(/^Credit: /, '')}
+13. **Sources and claims log summary.**`
+}
+
 /** "## Format: …": the randomizer's output format, as required content. */
 export function formatSection(spin: BriefSpin): string {
   if (isEli5Spin(spin)) return eli5Format(spin)
@@ -915,6 +1009,7 @@ export function formatSection(spin: BriefSpin): string {
   if (s.randomizer === 'hundred') return hundredFormat(s)
   if (s.randomizer === 'evidence') return evidenceFormat(s)
   if (s.randomizer === 'frontier') return frontierFormat(s)
+  if (s.randomizer === 'curious') return curiousFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -965,6 +1060,12 @@ export function chartRules(spin: BriefSpin): string[] {
     return [
       'Evidence series rules: one message per chart, the title states the takeaway at the strength the design allows, effect sizes on a labelled scale (SD, r, odds or risk ratio, points), the sample size in the footer with the source, nothing decorative.',
       'Every estimate is drawn with its confidence interval where the paper reports one; studies of different designs are marked apart (shape or label), never averaged by eye. A number from a paper\'s table cites the table; the citation chart names OpenAlex and the read date.',
+    ]
+  }
+  if (spin.randomizer === 'curious') {
+    return [
+      'Claim series rules: one message per chart, the title states the takeaway at the strength the grade allows, the grade and the source count in the footer with the source, nothing decorative.',
+      'The lineage chart draws descent, never a flat count: sources that descend from one account hang off it. A number from a source cites it by page or table; a figure from a public dataset names the dataset and the read date.',
     ]
   }
   if (spin.randomizer === 'frontier') {
@@ -1024,7 +1125,7 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence' || spin.randomizer === 'frontier'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence' || spin.randomizer === 'frontier' || spin.randomizer === 'curious'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
@@ -1036,6 +1137,9 @@ export function checklistSection(spin: BriefSpin): string {
       : []),
     ...(spin.randomizer === 'frontier'
       ? ['Every number matches the paper (table or figure), not AI Daily\'s gate; the result is labelled a preprint and reported as a claim; its baseline and setting are stated; the related work is on the page; the credit links the arXiv page itself.']
+      : []),
+    ...(spin.randomizer === 'curious'
+      ? ['The grade printed on the page is the desk\'s, or yours with the reason it differs; every source is traced to its lineage and lineages are counted, not articles; the embellished part is labelled and never asserted; a grade D or E claim is reported as repeated, not as fact; the evidence document and its archive copy are linked.']
       : []),
     ...(spin.randomizer === 'hundred' ? ["Hart's rank and reasons are attributed to him and tested, not repeated; his text is paraphrased, not copied; tradition and record are labelled apart; the credit names the book and the data sources."] : []),
     'Contested claims are labelled and both sides stated fairly.',

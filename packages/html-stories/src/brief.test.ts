@@ -8,6 +8,7 @@ import { customStoryStyle, entityStoryStyle, parseEntityStyle, parseStoryStyleTo
 import { draw } from '@vismay/randomizer/draw'
 import { researchProtocolSection } from '@vismay/randomizer/spinBrief'
 import { frontierPoolFromRows } from '@vismay/randomizer/frontierPool'
+import { curiousPoolFromRows } from '@vismay/randomizer/curiousPool'
 import type { SpinRecord } from '@vismay/randomizer/types'
 
 // vizmaya: unchanged defaults.
@@ -323,9 +324,18 @@ const frontierPool = frontierPoolFromRows(
   [],
   { asOf: '2026-10-05T12:00:00Z', windowDays: 365 },
 )
-for (const randomizer of ['hundred', 'evidence', 'frontier'] as const) {
+// The Curious Desk draws from approved claims: a two-claim pool stands in for curious_claim_pool.
+const curiousPool = curiousPoolFromRows(
+  [
+    { id: '00000000-0000-4000-8000-00000000c001', text: 'Disco Dancer (1982) drew about 60.9 million admissions in its 1984 Soviet release.', kind: 'number', era: 'late-20th', theme: 'film-tv', region: 'europe', year_from: 1984, grade: 'A', score: 0.86, flags: [], evidence_quote: 'about 60.9 million Soviet viewers bought tickets to Disco Dancer in 1984', approved_at: '2026-11-04T00:00:00Z', document_id: 'd1', source_id: 'gdelt', document_title: 'Disco Dancer: the Indian film 60 million Soviets queued for', publisher: 'rbth.com', canonical_url: 'https://rbth.com/arts/2026/11/03/disco-dancer-ussr-60-million', published_at: '2026-11-03T14:15:00Z', n_sources: 3, n_groups: 3, n_primary: 1, n_derived: 1, n_contradicts: 0, entities: ['Disco Dancer', 'Soviet Union'] },
+    { id: '00000000-0000-4000-8000-00000000c002', text: 'The Soviet government used the song Jimmy Jimmy Aaja to identify foreign spies.', kind: 'anecdote', era: 'late-20th', theme: 'film-tv', region: 'europe', year_from: 1985, grade: 'D', score: 0.03, flags: ['anonymous-repetition', 'unverified-popular'], evidence_quote: 'the former Soviet government could identify spies with the song', is_anonymous: true, is_hearsay: true, approved_at: '2026-11-04T00:00:00Z', document_id: 'd2', source_id: 'gdelt', document_title: "How Mithun's Jimmy Jimmy became a Soviet spy test", publisher: 'rediff.com', canonical_url: 'https://rediff.com/movies/report/mithun-jimmy-jimmy-soviet-spies/20261103.htm', published_at: '2026-11-03T09:00:00Z', n_sources: 3, n_groups: 1, n_primary: 0, n_derived: 2, n_contradicts: 0, entities: ['Jimmy Jimmy Aaja', 'Soviet Union', 'KGB'] },
+  ],
+  new Map(),
+  { asOf: '2026-11-04T12:00:00Z' },
+)
+for (const randomizer of ['hundred', 'evidence', 'frontier', 'curious'] as const) {
   const now = new Date('2026-10-05T12:00:00Z')
-  const drawn = draw({ randomizer, seed: 5, now, frontierPool })
+  const drawn = draw({ randomizer, seed: 5, now, frontierPool, curiousPool })
   const spin = {
     ...drawn,
     subject: { ...drawn.subject, lens: { name: "Explain like I'm 5", description: 'For a five-year-old.' } },
@@ -339,7 +349,7 @@ for (const randomizer of ['hundred', 'evidence', 'frontier'] as const) {
   const b = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
   assert.ok(b.includes('## Format: picture story for a five-year-old'), `${randomizer}: eli5 format`)
   assert.ok(b.indexOf('**Reader: a five-year-old (required).**') < b.indexOf('## Your assignment'), `${randomizer}: banner first`)
-  assert.ok(!b.includes('## Format: influence profile') && !b.includes('## Format: landmark paper') && !b.includes('## Format: study note') && !b.includes('## Format: evidence explainer') && !b.includes('## Format: paper explainer'))
+  assert.ok(!b.includes('## Format: influence profile') && !b.includes('## Format: landmark paper') && !b.includes('## Format: study note') && !b.includes('## Format: evidence explainer') && !b.includes('## Format: paper explainer') && !b.includes('## Format: claim check'))
   assert.ok(!b.includes('End with a "Sources and claims log" section') && b.includes('"For grown-ups" card'))
   assert.ok(b.includes('Write the script for the same five-year-old'))
   assert.ok(b.includes('20 words or fewer each'))
@@ -356,6 +366,23 @@ for (const randomizer of ['hundred', 'evidence', 'frontier'] as const) {
   // Another lens keeps the usual format.
   const other = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin: { ...spin, subject: drawn.subject } })
   if ((drawn.subject as { lens: { name: string } }).lens.name !== "Explain like I'm 5") assert.ok(!other.includes('picture story'), `${randomizer}: other lens`)
+}
+
+// A Curious Desk spin's brief prints the grade, counts lineages and carries the claim rules; a grade D spin says "repeated".
+{
+  const now = new Date('2026-11-04T12:00:00Z')
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const drawn = draw({ randomizer: 'curious', seed, now, curiousPool })
+    const spin = { ...drawn, id: '00000000-0000-4000-8000-0000000000cd', seed: '00000001', status: 'spun', heroInsight: null, researchMd: null, createdAt: now.toISOString() } as Pick<SpinRecord, 'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'>
+    const b = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
+    const subject = drawn.subject as { claim: { grade: string | null; text: string }; lens: { name: string } }
+    assert.ok(b.includes(`Grade ${subject.claim.grade}`), 'the grade is in the brief')
+    assert.ok(b.includes('Count lineages, not articles'), 'the lineage rule')
+    assert.ok(b.includes("The desk's grade is computed"), 'the claim rules')
+    assert.ok(b.includes(subject.claim.text))
+    if (subject.lens.name !== "Explain like I'm 5") assert.ok(b.includes('## Format: claim check with charts'))
+    if (subject.claim.grade === 'D') assert.ok(b.includes('never as something that happened'))
+  }
 }
 
 // A spin brief suggests the paged format its kind of story suits, unless it already is one.

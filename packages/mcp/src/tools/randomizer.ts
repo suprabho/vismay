@@ -1,7 +1,7 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
  * `get_desk_heat`, `refresh_desk_heat`, `get_football_news`, `get_nba_news`,
- * `get_ocw_pool`, `get_landmark_pool`, `get_hundred_pool`, `get_evidence_pool` and `get_frontier_pool`.
+ * `get_ocw_pool`, `get_landmark_pool`, `get_hundred_pool`, `get_evidence_pool`, `get_frontier_pool` and `get_curious_pool`.
  *
  * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
  * editorial format), Atlas (countries and culture, geography format), Epics
@@ -16,7 +16,10 @@
  * an annotated collection of research on social media's effects: a theme, a
  * design, a study and a lens; evidence explainer with charts) and the
  * Frontier Desk (one arXiv paper from AI Daily's kept papers: an area, a
- * window, a paper and a lens; paper explainer with charts); for footshorts, the
+ * window, a paper and a lens; paper explainer with charts) and the Curious
+ * Desk (one approved claim from the provenance-first claim pipeline: an
+ * era, a theme, a claim graded A to E and a lens; claim check with charts;
+ * gated); for footshorts, the
  * Football Desk (a tournament, a team, an angle and a freshness, weighted by
  * the team's news on footshorts; football explainer with match context); for
  * viznba, the NBA Desk (a conference, a franchise, an angle and a freshness,
@@ -119,7 +122,12 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'data-center-scale or frontier bearing), drawn by area, then window (this week, this month, the back ' +
         'catalogue), then paper weighted by the gate\'s importance, plus a lens; paper explainer with charts that ' +
         'treats the gate\'s fields as leads and the preprint as a claim, with a live record from arXiv and OpenAlex; ' +
-        'sequence: true follows the thread to a paper sharing its tags or benchmark). The draw applies ' +
+        'sequence: true follows the thread to a paper sharing its tags or benchmark), the Curious Desk (curious: era ' +
+        'weighted by the square root of its approved-claim count, theme in it, a claim weighted by its A to E grade with a ' +
+        'bonus when two independent lineages agree, plus a lens; claim check with charts that prints the grade, counts ' +
+        'lineages not articles and splits the supported core from the embellishment, with a live record from Crossref, ' +
+        'Google Books, Wikidata and the Wayback Machine; gated, so the hero insight needs approval before publishing; ' +
+        'sequence: true pulls the thread to a claim sharing a name). The draw applies ' +
         'the playbook rules: 30 and 90 day repeat blocks, heat weighting, region, tradition and tournament ' +
         'balancing, the philosophical, hands-on and work-level quotas. To keep some reels, pass `from` ' +
         '(the spin on screen) and `locks`. To reject a spin and draw again, pass `from`, respin=true and a reason. ' +
@@ -127,7 +135,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'Desk spin), research, ' +
         'save_spin_research, then publish_html_story with spinId (same app).',
       inputSchema: {
-        randomizer: z.enum(['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'footshorts', 'viznba']),
+        randomizer: z.enum(['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba']),
         from: spinIdSchema.optional().describe('The spin the locks keep values from, or the one a re-spin rejects.'),
         locks: z
           .array(z.string())
@@ -135,7 +143,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
               'lens. epics: epic, episode, place, lens. ocw: field, topic, course, resource, lens. landmark: field, ' +
-              'prize, era, laureate, work, lens. hundred: domain, era, person, lens. evidence: theme, design, study, lens. frontier: area, window, paper, lens. footshorts: ' +
+              'prize, era, laureate, work, lens. hundred: domain, era, person, lens. evidence: theme, design, study, lens. frontier: area, window, paper, lens. curious: era, theme, claim, lens. footshorts: ' +
               'competition, team, angle, fresh. viznba: conference, team, angle, fresh. A child lock ' +
               'implies its parents.',
           ),
@@ -155,7 +163,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         sequence: z
           .boolean()
           .default(false)
-          .describe('epics: continue the previous spin\'s route to its next place. ocw: the next resource of the same kind in the previous spin\'s course. landmark: the same prize, the year before the previous spin\'s. hundred: the next rank after the previous spin\'s (100 wraps to 1). evidence: a study the collection links to the previous spin\'s (a rebuttal, replication or follow-up). frontier: a paper in the pool sharing tags or the benchmark with the previous spin\'s.'),
+          .describe('epics: continue the previous spin\'s route to its next place. ocw: the next resource of the same kind in the previous spin\'s course. landmark: the same prize, the year before the previous spin\'s. hundred: the next rank after the previous spin\'s (100 wraps to 1). evidence: a study the collection links to the previous spin\'s (a rebuttal, replication or follow-up). frontier: a paper in the pool sharing tags or the benchmark with the previous spin\'s. curious: an approved claim sharing a named entity with the previous spin\'s.'),
       },
     },
     async ({ randomizer, from, locks, respin, reason, pair, sequence }) => {
@@ -446,6 +454,29 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
     },
     async ({ paper }) => {
       const body = await call(config, `/api/randomizer/frontier${paper ? `?paper=${encodeURIComponent(paper)}` : ''}`, {}, 'vizmaya-fyi')
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+
+  server.registerTool(
+    'get_curious_pool',
+    {
+      title: 'Get the Curious Desk pool',
+      description:
+        'What the Curious Desk randomizer draws from: the claims the claim pipeline\'s reviewers approved ' +
+        '(curious_claim_pool), read live. With nothing: the eras, regions, themes, grades (A to E, with what each ' +
+        'lets the page say) and lenses, how many approved claims sit in each era and theme, the grade counts, and the 30 ' +
+        'newest approvals (claim, kind, era, theme, grade and score, flags, the evidence quote cut short, the document, ' +
+        'how many sources and independent lineages). With `claim` (a claim id): that claim in full and its live record as a ' +
+        'spin would read it (the cited work on Crossref, the cited book on Google Books, the entities on Wikidata, a ' +
+        'Wayback snapshot of the evidence document), with how each source fared. Use it to look before locking a claim ' +
+        'on spin_randomizer; it logs nothing. Needs the vizmaya publish token.',
+      inputSchema: {
+        claim: spinIdSchema.optional().describe('A claim id (uuid), for that claim and its live record.'),
+      },
+    },
+    async ({ claim }) => {
+      const body = await call(config, `/api/randomizer/curious${claim ? `?claim=${encodeURIComponent(claim)}` : ''}`, {}, 'vizmaya-fyi')
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )
