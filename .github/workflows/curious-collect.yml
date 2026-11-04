@@ -5,14 +5,20 @@ name: Curious Desk collect
 # their provenance. GDELT DOC 2.0 for current affairs, the Library of Congress
 # for historical material, Europeana and Gallica for Europe's libraries. The
 # source policy registry (curious_sources) is consulted before any fetch;
-# news text is never stored; a run keeps to a 25-minute soft deadline.
+# news text is never stored; a run keeps to a 25-minute soft deadline. GDELT
+# throttles by IP and the runner's IP is shared: a throttle after at least one
+# answered request is a warning annotation and exit 0 (what was collected is
+# kept); only a run where nothing got through fails.
 #
 # No `schedule:` here: Vercel Cron on vizmaya-fyi fires
 # /api/curious/cron/collect-gdelt and /collect-loc each night
 # (apps/vizmaya-fyi/vercel.json), which dispatch this file with the source,
-# because GitHub's own scheduler drifts. Europeana and Gallica are dispatched
-# by hand (Europeana needs EUROPEANA_API_KEY; Gallica allows five calls a
-# minute, so a run is small).
+# because GitHub's own scheduler drifts. Europeana is dispatched by hand
+# (it needs EUROPEANA_API_KEY). Gallica cannot run here at all: gallica.bnf.fr's
+# Cloudflare rule blocks datacenter IP ranges, GitHub's runners included, on
+# every path, so the source is disabled in the policy registry and a dispatch
+# with source=gallica exits with that message. Run it from a network BnF
+# allows (packages/curious-pipeline/src/policy.ts says how).
 #
 # Required repo secrets (in the `Production` environment):
 #   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -45,6 +51,10 @@ on:
         type: string
         required: false
         default: ''
+      days:
+        type: string
+        required: false
+        default: '2'
   workflow_dispatch:
     inputs:
       source:
@@ -71,6 +81,10 @@ on:
         description: 'LOC collection slug (e.g. chronicling-america), Europeana qf, Gallica dc.type'
         required: false
         default: ''
+      days:
+        description: 'Days back from today when since is empty (GDELT; one request per day per query)'
+        required: false
+        default: '2'
 
 concurrency:
   group: curious-collect-${{ inputs.source }}
@@ -112,4 +126,5 @@ jobs:
           ${{ inputs.since != '' && format('--since {0}', inputs.since) || '' }}
           ${{ inputs.until != '' && format('--until {0}', inputs.until) || '' }}
           ${{ inputs.collection != '' && format('--collection {0}', inputs.collection) || '' }}
+          ${{ inputs.days != '' && inputs.since == '' && format('--days {0}', inputs.days) || '' }}
           ${{ inputs.source == 'loc' && '--full-text' || '' }}

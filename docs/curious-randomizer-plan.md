@@ -175,7 +175,8 @@ picture-story format like the other desks.
 ## 8. Nightly runs, the composer and the evaluation (done)
 
 - `.github/workflows/curious-collect.yml` (one source per run; GDELT and the
-  Library of Congress nightly, Europeana and Gallica by hand) and
+  Library of Congress nightly, Europeana by hand, Gallica disabled until it
+  can run from a network BnF allows) and
   `curious-detect.yml` (detect → grade → verify as one job, each stage under
   its cap and a 25-minute deadline), dispatched by Vercel cron through
   `apps/vizmaya-fyi/app/api/curious/cron/[job]` at 02:20, 02:40 and 03:50
@@ -193,11 +194,24 @@ picture-story format like the other desks.
 
 ## 9. Open risks
 
-- Live reachability from a shared egress: GDELT throttles by IP (one request
-  every five seconds, and this session's proxy was already over it), Gallica
-  sits behind Cloudflare, the Library of Congress times out on its heavier
-  endpoints. The collectors back off and retry, and a failed run leaves the
-  rest for the next night; the GitHub runner's IP is its own.
+- Live reachability from a shared egress: GDELT throttles by IP, counted
+  from its last response, and the first nightly run on the GitHub runner
+  was refused on its second request. The limiter now measures the gap from
+  the response, keeps six seconds, backs off for up to ten minutes, reads
+  only the last two days by default, and treats a persistent throttle as a
+  warning rather than a failure when at least one request got through.
+  GitHub's runners share egress IPs with other tenants, so a throttled
+  night can still happen; if it happens nightly, the next step is a Google
+  News RSS discovery collector, the pattern `scrape-news.ts` already uses
+  from Actions. Gallica sits behind a Cloudflare rule that blocks datacenter IP ranges
+  outright, GitHub's runners included, so it is disabled in the policy
+  registry until it can be run from a network BnF allows (or BnF grants
+  API access); a bot wall is not something to spoof past. The Library of Congress serves a query
+  cold the first time, streaming slowly or answering a 503 page until its
+  cache warms, so its collector uses a 90-second timeout, waits of 15 to
+  120 seconds across five attempts and 50 results a page, and treats a
+  search that stays down like a throttle: keep what was collected, warn,
+  and leave the rest for the next night.
 - `EUROPEANA_API_KEY` is not yet issued: the collector fails closed with the
   message, and the registry row stays enabled for when it arrives.
 - The grade is only as good as the sources found: a claim graded D for want

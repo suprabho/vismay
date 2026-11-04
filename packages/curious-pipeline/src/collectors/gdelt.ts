@@ -3,19 +3,23 @@
  * cursor: a request returns at most 250 articles for a time window, so the
  * collector partitions the date range into one-day windows and splits a
  * window that fills up into six-hour ones. GDELT asks for one request every
- * five seconds; the limiter enforces the gap and the run-wide cooldown. Only
- * the article list is read here: the publisher page is fetched at detect
- * time under the web policy and never stored.
+ * five seconds, counted from its last response, and refuses the IP for a
+ * while once tripped; the limiter keeps a six-second gap from each response
+ * and backs off for minutes on a 429. GitHub-hosted runners share egress IPs
+ * with other tenants, so a throttle is sometimes nobody's fault here: the
+ * collector then keeps what it has, says so in `stats`, and stops, instead
+ * of failing the run. Only the article list is read here: the publisher
+ * page is fetched at detect time under the web policy and never stored.
  *
  *   https://api.gdeltproject.org/api/v2/doc/doc?query=...&mode=ArtList&format=json
  *     &maxrecords=250&sort=DateDesc&startdatetime=YYYYMMDDHHMMSS&enddatetime=...
  */
 
 import { assertAllowed } from '../policy'
-import { createLimiter, getText, HttpError } from '../http'
+import { createLimiter, getText, HttpError, ThrottledError } from '../http'
 import { canonicalUrl, domainOf, parseDate, sha1, sha256 } from '../text'
 import type { DocumentUpsert } from '../types'
-import type { CollectOptions } from './index'
+import { emptyStats, type CollectOptions } from './index'
 
 export const GDELT_RULES = {
   api: 'https://api.gdeltproject.org/api/v2/doc/doc',
@@ -24,9 +28,20 @@ export const GDELT_RULES = {
   splitAt: 250,
   windowHours: 24,
   splitHours: 6,
+  /** Days back from `until` when no `since` or `days` is given: the nightly job only needs the last day or two. */
+  defaultDays: 2,
+  /** Margin over the policy's five seconds, since GDELT counts from its last response. */
+  gapMarginMs: 1000,
+  /** Cooldown after a 429 with no Retry-After, and its cap: GDELT refuses for minutes once tripped. */
+  cooldownMs: 60_000,
+  maxCooldownMs: 10 * 60_000,
+  /** Attempts per request: waits of up to 1, 2, 4 and 8 minutes, inside the 25-minute soft deadline. */
+  attempts: 5,
+  /** Requests per run, like Gallica's budget. */
+  requestBudget: 60,
   /** The DOC API's archive starts here. */
   earliest: '2017-01-01',
-  version: 'curious-gdelt-v1-2026-11',
+  version: 'curious-gdelt-v2-2026-11',
 } as const
 
 export interface GdeltArticle {
@@ -121,22 +136,43 @@ export function parseGdeltBody(body: string): GdeltArticle[] {
 }
 
 export async function* collectGdelt(opts: CollectOptions): AsyncGenerator<DocumentUpsert> {
-  const policy = assertAllowed('gdelt', { method: 'api', now: opts.now })
-  const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 15_000, clock: opts.clock })
+  const policy = assertAllowed('gdelt', { method: 'api', now: opts.now , policies: opts.policies })
+  const limiter = createLimiter({ minGapMs: policy.crawlDelayMs + GDELT_RULES.gapMarginMs, baseCooldownMs: GDELT_RULES.cooldownMs, maxCooldownMs: GDELT_RULES.maxCooldownMs, clock: opts.clock })
   const now = opts.now ?? new Date()
   const until = opts.until ? new Date(`${opts.until}T00:00:00Z`) : now
-  const since = new Date(`${opts.since ?? new Date(until.getTime() - 7 * 86_400_000).toISOString().slice(0, 10)}T00:00:00Z`)
+  const days = opts.days && opts.days > 0 ? opts.days : GDELT_RULES.defaultDays
+  // From `days`, exactly that many 24-hour windows back from `until`; from `since`, that date's midnight.
+  const since = opts.since ? new Date(`${opts.since}T00:00:00Z`) : new Date(until.getTime() - days * 86_400_000)
   if (since < new Date(`${GDELT_RULES.earliest}T00:00:00Z`)) throw new Error(`GDELT's DOC archive starts on ${GDELT_RULES.earliest}.`)
   const log = opts.log ?? (() => {})
+  const stats = opts.stats ?? emptyStats()
   let yielded = 0
   const seen = new Set<string>()
 
   const run = async function* (windows: Array<[Date, Date]>, hours: number): AsyncGenerator<DocumentUpsert> {
     for (const [start, end] of windows) {
-      if (yielded >= opts.limit || opts.stop?.()) return
+      if (yielded >= opts.limit || opts.stop?.() || stats.throttled) return
+      if (stats.requests >= GDELT_RULES.requestBudget) {
+        stats.note = `request budget of ${GDELT_RULES.requestBudget} reached; the rest waits for the next run`
+        log(`  gdelt: ${stats.note}`)
+        return
+      }
       const url = gdeltUrl(opts.query, start, end)
       const retrievedAt = new Date(opts.clock ? opts.clock.now() : Date.now()).toISOString()
-      const { text } = await getText(url, { fetch: opts.fetch, limiter, label: 'GDELT', clock: opts.clock, timeoutMs: 30_000 })
+      let text: string
+      try {
+        stats.requests++
+        text = (await getText(url, { fetch: opts.fetch, limiter, label: 'GDELT', clock: opts.clock, timeoutMs: 30_000, attempts: GDELT_RULES.attempts })).text
+        stats.ok++
+      } catch (e) {
+        if (e instanceof ThrottledError) {
+          stats.throttled = true
+          stats.note = `GDELT throttled this IP (${e.message}); ${stats.ok} of ${stats.requests} requests got through. Keeping what was collected; the rest waits for the next run.`
+          log(`  gdelt: ${stats.note}`)
+          return
+        }
+        throw e
+      }
       const articles = parseGdeltBody(text)
       log(`  gdelt ${start.toISOString().slice(0, 13)}..${end.toISOString().slice(0, 13)}: ${articles.length} articles`)
       if (articles.length >= GDELT_RULES.splitAt && hours > GDELT_RULES.splitHours) {

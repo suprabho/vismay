@@ -11,10 +11,10 @@
  */
 
 import { assertAllowed } from '../policy'
-import { createLimiter, getText } from '../http'
+import { createLimiter, getText, HttpError } from '../http'
 import { normalizeText, parseDate, sha256 } from '../text'
 import type { DocumentUpsert } from '../types'
-import type { CollectOptions } from './index'
+import { emptyStats, type CollectOptions } from './index'
 
 export const GALLICA_RULES = {
   sru: 'https://gallica.bnf.fr/SRU',
@@ -167,9 +167,10 @@ export function gallicaDocumentFromRecord(
 }
 
 export async function* collectGallica(opts: CollectOptions): AsyncGenerator<DocumentUpsert> {
-  const policy = assertAllowed('gallica', { method: 'sru', now: opts.now })
+  const policy = assertAllowed('gallica', { method: 'sru', now: opts.now , policies: opts.policies })
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 60_000, clock: opts.clock })
   const log = opts.log ?? (() => {})
+  const stats = opts.stats ?? emptyStats()
   let requests = 0
   let start = 1
   let yielded = 0
@@ -178,7 +179,20 @@ export async function* collectGallica(opts: CollectOptions): AsyncGenerator<Docu
     if (yielded >= opts.limit || opts.stop?.() || requests >= GALLICA_RULES.requestBudget) return
     const sruUrl = gallicaSruUrl(opts.query, start, { docType })
     const retrievedAt = new Date(opts.clock ? opts.clock.now() : Date.now()).toISOString()
-    const { text: xml } = await getText(sruUrl, { fetch: opts.fetch, limiter, label: 'Gallica SRU', clock: opts.clock, timeoutMs: 40_000 })
+    let xml: string
+    try {
+      stats.requests++
+      xml = (await getText(sruUrl, { fetch: opts.fetch, limiter, label: 'Gallica SRU', clock: opts.clock, timeoutMs: 40_000 })).text
+      stats.ok++
+    } catch (e) {
+      if (e instanceof HttpError && (e.status === 403 || e.status === 401)) {
+        stats.unavailable = true
+        stats.note = `gallica.bnf.fr answered ${e.status} (its Cloudflare rule blocks this IP range); ${stats.ok} of ${stats.requests} requests answered. Run the Gallica collector from a network BnF allows.`
+        log(`  gallica: ${stats.note}`)
+        return
+      }
+      throw e
+    }
     requests++
     const page = parseGallicaSru(xml)
     log(`  gallica SRU from ${start}: ${page.records.length} of ${page.total}`)

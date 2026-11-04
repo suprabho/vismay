@@ -1,13 +1,15 @@
 /**
  * Europeana's Search API as a multilingual discovery layer over Europe's
  * libraries, archives and museums. Needs EUROPEANA_API_KEY. Pages by cursor
- * (rows up to 100) and keeps to text objects with open reuse. Europeana's
- * metadata is CC0, so titles and descriptions are always kept; an item's own
- * text would follow the item's rights statement (kept as meta for a later
- * full-text pass, not fetched in the pilot).
+ * (rows up to 100) and keeps to text objects. Europeana's metadata is CC0,
+ * so titles and descriptions are always kept; an item's own text would
+ * follow the item's rights statement (kept as meta for a later full-text
+ * pass, not fetched in the pilot). Queries are words and native-language
+ * phrases: the catalogue is mostly not in English, and an exact English
+ * phrase under TYPE:TEXT matches almost nothing.
  *
  *   https://api.europeana.eu/record/v2/search.json?wskey=KEY&query=...&rows=100
- *     &cursor=*&profile=rich&reusability=open&qf=TYPE:TEXT
+ *     &cursor=*&profile=rich&qf=TYPE:TEXT
  */
 
 import { assertAllowed } from '../policy'
@@ -54,6 +56,12 @@ export interface EuropeanaResponse {
   error?: string
 }
 
+/**
+ * The search URL. No `reusability` filter by default: Europeana's metadata
+ * (titles, descriptions) is CC0 whatever the item's rights, and the item's
+ * own rights URI decides full-text storage per document, so filtering
+ * discovery to open items only halves the hits for nothing.
+ */
 export function europeanaUrl(key: string, query: string, cursor: string, opts: { rows?: number; qf?: string; reusability?: string } = {}): string {
   const p = new URLSearchParams({
     wskey: key,
@@ -61,9 +69,9 @@ export function europeanaUrl(key: string, query: string, cursor: string, opts: {
     rows: String(opts.rows ?? EUROPEANA_RULES.rows),
     cursor,
     profile: 'rich',
-    reusability: opts.reusability ?? 'open',
     qf: opts.qf ?? 'TYPE:TEXT',
   })
+  if (opts.reusability) p.set('reusability', opts.reusability)
   return `${EUROPEANA_RULES.api}?${p.toString()}`
 }
 
@@ -121,7 +129,7 @@ export function europeanaDocumentsFromItems(items: EuropeanaItem[], ctx: { query
 }
 
 export async function* collectEuropeana(opts: CollectOptions): AsyncGenerator<DocumentUpsert> {
-  const policy = assertAllowed('europeana', { method: 'api', now: opts.now })
+  const policy = assertAllowed('europeana', { method: 'api', now: opts.now , policies: opts.policies })
   const key = opts.env.europeanaKey
   if (!key) throw new Error('Europeana needs EUROPEANA_API_KEY (a personal key from https://pro.europeana.eu/page/get-api). The source stays idle until it is set.')
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 10_000, clock: opts.clock })

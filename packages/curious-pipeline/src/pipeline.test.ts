@@ -7,11 +7,12 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { assertAllowed, PolicyError, SOURCE_POLICIES, textStorageFor } from './policy'
-import { createLimiter, fakeClock, fetchWithRetry, HttpError } from './http'
+import { createLimiter, fakeClock, fetchWithRetry, HttpError, ThrottledError, UnavailableError } from './http'
 import { canonicalUrl, cosine, buildIdf, domainOf, normalizeText, parseDate, sentenceSplit, sha256, sharedSentences, tokens, clip } from './text'
-import { gdeltDocumentsFromArticles, gdeltUrl, gdeltWindows, parseGdeltBody, type GdeltArticle } from './collectors/gdelt'
+import { GDELT_RULES, gdeltDocumentsFromArticles, gdeltUrl, gdeltWindows, parseGdeltBody, type GdeltArticle } from './collectors/gdelt'
 import { locDocumentsFromResults, locPartitions, locSearchUrl, type LocSearchResponse } from './collectors/loc'
-import { collectGdelt, collectLoc } from './collectors/index'
+import { collectGdelt, collectLoc, emptyStats } from './collectors/index'
+import { LOC_RULES } from './collectors/loc'
 import { curiousEnv } from './types'
 import { z } from 'zod'
 import { collectEuropeana, europeanaDocumentsFromItems, europeanaIsPublicDomain, europeanaUrl, type EuropeanaResponse } from './collectors/europeana'
@@ -61,7 +62,9 @@ const pending: Promise<void>[] = []
   assert.equal(assertAllowed('gdelt', { method: 'api', now: NOW }).crawlDelayMs, 5000)
   assert.throws(() => assertAllowed('gdelt', { method: 'html', now: NOW }), PolicyError)
   assert.throws(() => assertAllowed('web', { method: 'api', now: NOW }), /allows "html"/)
-  assert.doesNotThrow(() => assertAllowed('gallica', { method: 'iiif', now: NOW }), 'IIIF rides on the SRU policy')
+  assert.throws(() => assertAllowed('gallica', { method: 'sru', now: NOW }), /Cloudflare blocks datacenter IP ranges/, 'Gallica is disabled for the runner, with the reason')
+  const GALLICA_ON = { ...SOURCE_POLICIES, gallica: { ...SOURCE_POLICIES.gallica, enabled: true } }
+  assert.doesNotThrow(() => assertAllowed('gallica', { method: 'iiif', now: NOW, policies: GALLICA_ON }), 'IIIF rides on the SRU policy')
   const disabled = { ...SOURCE_POLICIES, loc: { ...SOURCE_POLICIES.loc, enabled: false } }
   assert.throws(() => assertAllowed('loc', { method: 'api', now: NOW, policies: disabled }), /disabled/)
   assert.throws(() => assertAllowed('loc', { method: 'api', now: new Date('2028-06-01T00:00:00Z') }), /over a year ago/)
@@ -196,7 +199,7 @@ pending.push(
   assert.equal(u.pathname, '/collections/chronicling-america/')
   assert.equal(u.searchParams.get('sp'), '2')
   assert.equal(u.searchParams.get('dates'), '1900/1925')
-  assert.equal(u.searchParams.get('c'), '100')
+  assert.equal(u.searchParams.get('c'), '50')
   assert.equal(new URL(locSearchUrl({ query: 'x' })).searchParams.get('sp'), null)
   assert.deepEqual(locPartitions(1895, 1912), ['1895/1899', '1900/1909', '1910/1912'])
 
@@ -282,6 +285,8 @@ pending.push(
   const u = new URL(europeanaUrl('K', 'zeppelin', '*'))
   assert.equal(u.searchParams.get('rows'), '100')
   assert.equal(u.searchParams.get('qf'), 'TYPE:TEXT')
+  assert.equal(u.searchParams.get('reusability'), null, 'metadata is CC0: discovery is not filtered to open items')
+  assert.equal(new URL(europeanaUrl('K', 'zeppelin', '*', { reusability: 'open' })).searchParams.get('reusability'), 'open')
   assert.ok(europeanaIsPublicDomain('http://creativecommons.org/publicdomain/mark/1.0/'))
   assert.ok(!europeanaIsPublicDomain('http://rightsstatements.org/vocab/InC/1.0/'))
   const fx = fixture<EuropeanaResponse>('europeana.json')
@@ -361,11 +366,26 @@ pending.push(
         const s = String(url)
         return new Response(readFileSync(join(HERE, 'fixtures', s.includes('ContentSearch') ? 'gallica-contentsearch.xml' : 'gallica-sru.xml'), 'utf8'), { status: 200 })
       }) as typeof fetch
+      const policies = { ...SOURCE_POLICIES, gallica: { ...SOURCE_POLICIES.gallica, enabled: true } }
       const got = []
-      for await (const d of collectGallica({ query: 'fait curieux', limit: 3, fetch: fake, env, now: NOW, clock })) got.push(d)
+      for await (const d of collectGallica({ query: 'fait curieux', limit: 3, fetch: fake, env, now: NOW, clock, policies })) got.push(d)
       assert.equal(got.length, 3, 'the SRU page repeats, so three records come from two pages')
       assert.equal(calls, 5, 'two SRU pages plus one ContentSearch per record')
       assert.ok(clock.t >= 4 * 12_000, 'twelve seconds between calls')
+      // Disabled by the registry: the generator refuses before any fetch.
+      await assert.rejects(
+        (async () => {
+          for await (const _ of collectGallica({ query: 'x', limit: 1, fetch: fake, env, now: NOW, clock })) void _
+        })(),
+        PolicyError,
+      )
+      // Blocked by Cloudflare while enabled: a graceful stop with the reason, nothing collected.
+      const stats = emptyStats()
+      const blocked = []
+      for await (const d of collectGallica({ query: 'x', limit: 3, fetch: (async () => new Response('<title>Attention Required! | Cloudflare</title>', { status: 403 })) as typeof fetch, env, now: NOW, clock, policies, stats })) blocked.push(d)
+      assert.equal(blocked.length, 0)
+      assert.deepEqual([stats.requests, stats.ok, stats.unavailable], [1, 0, true])
+      assert.ok(stats.note?.includes('Cloudflare'))
     })(),
   )
 }
@@ -643,6 +663,142 @@ pending.push(
     assert.ok(r2.errors.length >= 2)
     assert.equal(r2.sources.length, 0)
     assert.equal(await waybackSnapshot('https://example.org/x', { fetch: (async () => new Response(JSON.stringify({ archived_snapshots: { closest: { available: true, url: 'http://web.archive.org/web/2026/https://example.org/x' } } }))) as typeof fetch }), 'https://web.archive.org/web/2026/https://example.org/x')
+  })(),
+)
+
+// 18. The limiter counts the gap from the END of the previous request; a persistent 429 is a ThrottledError.
+pending.push(
+  (async () => {
+    const clock = fakeClock(1_000_000)
+    const lim = createLimiter({ minGapMs: 5000, baseCooldownMs: 60_000, maxCooldownMs: 600_000, clock })
+    // A request that takes 3 s: the next one may start 5 s after the response, 8 s after the start.
+    const slow = (async () => {
+      await clock.sleep(3000)
+      return new Response('ok', { status: 200 })
+    }) as typeof fetch
+    const t0 = clock.now()
+    await fetchWithRetry('https://example.org/a', { fetch: slow, clock, limiter: lim, jitterMs: 0 })
+    assert.equal(clock.now() - t0, 3000, 'the first request took 3 s')
+    await lim.gate()
+    assert.equal(clock.now() - t0, 8000, 'the second request waits 5 s after the first response, not after its start')
+
+    // Every attempt 429: cooldowns 60 s, 120 s, 240 s, 480 s (capped at 600 s), then ThrottledError, not a plain HttpError.
+    const clock2 = fakeClock(0)
+    const lim2 = createLimiter({ minGapMs: 6000, baseCooldownMs: 60_000, maxCooldownMs: 600_000, clock: clock2 })
+    let n = 0
+    const refused = (async () => {
+      n++
+      return new Response('Please limit requests to one every 5 seconds', { status: 429 })
+    }) as typeof fetch
+    await assert.rejects(fetchWithRetry('https://example.org/b', { fetch: refused, clock: clock2, limiter: lim2, attempts: 5, jitterMs: 0 }), (e: unknown) => e instanceof ThrottledError && e.status === 429 && e.attempts === 5 && e.waitedMs >= 60_000 + 120_000 + 240_000 + 480_000)
+    assert.equal(n, 5)
+    assert.equal(lim2.cooldownMs, 600_000, 'the cooldown doubled up to the cap')
+    // One 429 then a 200 is not a throttle.
+    let m = 0
+    const once = (async () => (++m === 1 ? new Response('x', { status: 429 }) : new Response('ok'))) as typeof fetch
+    const res = await fetchWithRetry('https://example.org/c', { fetch: once, clock: clock2, limiter: createLimiter({ clock: clock2 }), attempts: 3, jitterMs: 0 })
+    assert.equal(res.status, 200)
+  })(),
+)
+
+// 19. GDELT on a throttled IP: one good window then 429 forever keeps the first window and stops without throwing; 429 from the start yields nothing with ok = 0; the request budget holds.
+pending.push(
+  (async () => {
+    const gd = fixture<{ articles: GdeltArticle[] }>('gdelt.json')
+    const clock = fakeClock(0)
+    let calls = 0
+    const oneThenRefused = (async () => {
+      calls++
+      return calls === 1 ? new Response(JSON.stringify(gd), { status: 200 }) : new Response('Please limit requests to one every 5 seconds', { status: 429 })
+    }) as typeof fetch
+    const stats = emptyStats()
+    const out = []
+    for await (const d of collectGdelt({ query: '"disco dancer"', days: 3, limit: 50, fetch: oneThenRefused, env, now: NOW, clock, stats })) out.push(d)
+    assert.equal(out.length, 2, 'the first window\'s documents are kept')
+    assert.deepEqual([stats.requests, stats.ok, stats.throttled], [2, 1, true])
+    assert.ok(stats.note?.includes('throttled'))
+    assert.equal(calls, 1 + GDELT_RULES.attempts, 'the second window used every attempt, then the collector stopped')
+    assert.equal(stats.requests, 2, 'no third window was tried')
+
+    const clock2 = fakeClock(0)
+    const stats2 = emptyStats()
+    const none = []
+    for await (const d of collectGdelt({ query: 'x y', limit: 50, fetch: (async () => new Response('slow down', { status: 429 })) as typeof fetch, env, now: NOW, clock: clock2, stats: stats2 })) none.push(d)
+    assert.equal(none.length, 0)
+    assert.deepEqual([stats2.requests, stats2.ok, stats2.throttled], [1, 0, true])
+
+    // The default window is the last two days: two requests.
+    const clock3 = fakeClock(0)
+    const stats3 = emptyStats()
+    const seen: string[] = []
+    const fine = (async (url: string) => {
+      seen.push(String(url))
+      return new Response(JSON.stringify({ articles: [] }), { status: 200 })
+    }) as typeof fetch
+    for await (const _ of collectGdelt({ query: 'x y', limit: 50, fetch: fine, env, now: NOW, clock: clock3, stats: stats3 })) void _
+    assert.equal(seen.length, GDELT_RULES.defaultDays)
+    assert.deepEqual([stats3.requests, stats3.ok, stats3.throttled], [GDELT_RULES.defaultDays, GDELT_RULES.defaultDays, false])
+    assert.ok(clock3.t >= (GDELT_RULES.defaultDays - 1) * 6000, 'six seconds between requests')
+
+    // The request budget: full windows split into six-hour ones; a 30-day range would need more than the budget allows.
+    const clock4 = fakeClock(0)
+    const stats4 = emptyStats()
+    const full = { articles: Array.from({ length: 250 }, (_, i) => ({ url: `https://outlet.example/${i}`, title: `t${i}`, seendate: '20261103T120000Z', domain: 'outlet.example', language: 'English', sourcecountry: 'X' })) }
+    const always = (async () => new Response(JSON.stringify(full), { status: 200 })) as typeof fetch
+    let got = 0
+    for await (const _ of collectGdelt({ query: 'x y', days: 30, limit: 100_000, fetch: always, env, now: NOW, clock: clock4, stats: stats4 })) got++
+    assert.equal(stats4.requests, GDELT_RULES.requestBudget)
+    assert.ok(stats4.note?.includes('budget'))
+    assert.ok(got > 0)
+  })(),
+)
+
+// 20. A source that stays down: every attempt 5xx or timed out is an UnavailableError with the backoff honoured; LOC keeps what it got and stops.
+pending.push(
+  (async () => {
+    const clock = fakeClock(0)
+    let n = 0
+    const down = (async () => {
+      n++
+      return new Response('<title>Service-Unavailable -- 503</title>', { status: 503, headers: { 'retry-after': '20' } })
+    }) as typeof fetch
+    await assert.rejects(fetchWithRetry('https://www.loc.gov/search/?q=x', { fetch: down, clock, attempts: 3, backoffMs: 15_000, jitterMs: 0 }), (e: unknown) => e instanceof UnavailableError && e.status === 503 && e.attempts === 3 && e.waitedMs === 20_000 + 30_000)
+    assert.equal(n, 3)
+    // Timeouts count the same way (status 0).
+    const hang = (async () => {
+      throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })
+    }) as typeof fetch
+    await assert.rejects(fetchWithRetry('https://www.loc.gov/search/?q=y', { fetch: hang, clock, attempts: 2, backoffMs: 1000, jitterMs: 0 }), (e: unknown) => e instanceof UnavailableError && e.status === 0)
+    // Mixed failures that end in a success are not an outage.
+    let k = 0
+    const flaky = (async () => (++k < 3 ? new Response('x', { status: 503 }) : new Response(JSON.stringify({ results: [], pagination: { current: 1, next: null, of: 0, total: 0, perpage: 50 } })))) as typeof fetch
+    assert.equal((await fetchWithRetry('https://www.loc.gov/search/?q=z', { fetch: flaky, clock, attempts: 4, backoffMs: 1000, jitterMs: 0 })).status, 200)
+
+    // LOC: the first page answers, the second stays down: the first page's documents are kept, the collector stops, stats say so.
+    const lc = fixture<LocSearchResponse>('loc.json')
+    const clock2 = fakeClock(0)
+    let calls = 0
+    const oneThenDown = (async (url: string) => {
+      calls++
+      const page = Number(new URL(String(url)).searchParams.get('sp') ?? '1')
+      if (page > 1) return new Response('down', { status: 503 })
+      const body: LocSearchResponse = { results: lc.results, pagination: { current: 1, next: `${new URL(String(url)).origin}/search/?q=x&fo=json&sp=2`, of: 8, total: 8, perpage: 4 } }
+      return new Response(JSON.stringify(body), { status: 200 })
+    }) as typeof fetch
+    const stats = emptyStats()
+    const got = []
+    for await (const d of collectLoc({ query: 'x', limit: 50, fetch: oneThenDown, env, now: NOW, clock: clock2, stats })) got.push(d)
+    assert.equal(got.length, lc.results.length)
+    assert.deepEqual([stats.requests, stats.ok, stats.unavailable, stats.throttled], [2, 1, true, false])
+    assert.equal(calls, 1 + LOC_RULES.attempts)
+    assert.ok(stats.note?.includes('unavailable'))
+    // Down from the first request: nothing, ok = 0.
+    const stats2 = emptyStats()
+    const none = []
+    for await (const d of collectLoc({ query: 'x', limit: 50, fetch: (async () => new Response('down', { status: 503 })) as typeof fetch, env, now: NOW, clock: fakeClock(0), stats: stats2 })) none.push(d)
+    assert.equal(none.length, 0)
+    assert.deepEqual([stats2.requests, stats2.ok, stats2.unavailable], [1, 0, true])
+    assert.equal(new URL(locSearchUrl({ query: 'x' })).searchParams.get('c'), String(LOC_RULES.perPage))
   })(),
 )
 
