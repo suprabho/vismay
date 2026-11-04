@@ -8,6 +8,7 @@ import { DC_REGIONS, formatEditionDate, type DcRegionKey } from '@vismay/dc-edit
 import { LAND_MASK } from './landMask'
 import { editionHref } from './editionUtils'
 import { GEO_LAYERS, REGION_ANCHOR, type GeoLayer } from './GeoMap'
+import { countryDots, nearestDot, regionDots } from './landFill'
 
 export interface GeoDay {
   date: string
@@ -26,6 +27,10 @@ const PAD = 40
 const px = (lon: number) => PAD + ((lon + 180) / 360) * (W - PAD * 2)
 const py = (lat: number) => PAD + ((84 - lat) / 142) * (H - PAD * 2)
 const STEP_MS = 650
+const dotX = (i: number) => px(LAND_MASK[i * 2] / 10)
+const dotY = (i: number) => py(LAND_MASK[i * 2 + 1] / 10)
+/** Where a fill-layer point's strength tops out (see `radius`). */
+const FILL_MAX = 10
 
 /** One point of one layer on one morning: a locality, a country or a region. */
 interface GeoPoint {
@@ -50,8 +55,13 @@ interface Spot extends GeoPoint {
   today: boolean
   /** First appeared on the selected morning. */
   fresh: boolean
+  /** Places: disc radius in px. Countries and regions: fill strength, 0–FILL_MAX. */
   r: number
   alpha: number
+  /** Countries and regions: the land-mask dots this point fills. */
+  dots?: number[]
+  /** A country owning three dots or fewer also gets a ring, so Singapore can be found. */
+  small?: boolean
 }
 
 interface Drawn {
@@ -74,10 +84,28 @@ function pointsOf(day: GeoDay, layer: GeoLayer): GeoPoint[] {
   })
 }
 
-/** Radius for a point: localities by count, countries and regions by share of the lead. */
+const nearestCache = new Map<string, number>()
+
+/** The land dots a country or region fills; a country too small to own one borrows the nearest. */
+function fillDots(layer: GeoLayer, p: GeoPoint): { dots: number[]; small: boolean } | null {
+  if (layer === 'region') return { dots: regionDots(p.region), small: false }
+  if (layer !== 'country') return null
+  const own = countryDots(p.key)
+  if (own.length > 0) return { dots: own, small: own.length <= 3 }
+  let n = nearestCache.get(p.key)
+  if (n === undefined) {
+    n = nearestDot(p.lng, p.lat)
+    nearestCache.set(p.key, n)
+  }
+  return { dots: [n], small: true }
+}
+
+/**
+ * Size of a point: localities by count (a disc radius), countries and regions
+ * by share of the lead (the strength of the fill, 0–FILL_MAX).
+ */
 function radius(layer: GeoLayer, count: number, lead: number, mode: Mode): number {
-  if (layer === 'region') return 14 + 46 * Math.sqrt(count / lead)
-  if (layer === 'country') return 6 + 24 * Math.sqrt(count / lead)
+  if (layer !== 'place') return FILL_MAX * Math.sqrt(count / lead)
   return mode === 'day' ? 5 + Math.min(count, 12) * 2.2 : 4 + 20 * Math.sqrt(count / lead)
 }
 
@@ -98,6 +126,7 @@ function aggregate(days: GeoDay[], idx: number, mode: Mode, layer: GeoLayer): Sp
       fresh: false,
       r: radius(layer, p.count, lead, mode),
       alpha: 1,
+      ...fillDots(layer, p),
     }))
   }
   const acc = new Map<string, { p: GeoPoint; count: number; days: number; energyDays: number; first: string; last: string }>()
@@ -130,6 +159,7 @@ function aggregate(days: GeoDay[], idx: number, mode: Mode, layer: GeoLayer): Sp
     // Area ∝ running total, scaled to the most-reported point so far.
     r: radius(layer, a.count, lead, mode),
     alpha: today.has(a.p.key) ? 1 : 0.5,
+    ...fillDots(layer, a.p),
   }))
 }
 
@@ -170,6 +200,14 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
 
   const spots = useMemo(() => aggregate(days, idx, mode, layer).sort((a, b) => b.r - a.r), [days, idx, mode, layer])
   const byKey = useMemo(() => new Map(spots.map((s) => [s.key, s])), [spots])
+  // Which spot each filled dot belongs to (countries and regions), for hover and click.
+  const owners = useMemo(() => {
+    const m = new Map<number, Spot>()
+    if (layer === 'place') return m
+    for (const s of spots) if (!s.small) for (const i of s.dots ?? []) m.set(i, s)
+    for (const s of spots) if (s.small) for (const i of s.dots ?? []) if (!m.has(i)) m.set(i, s)
+    return m
+  }, [spots, layer])
 
   // A layer change is a different set of keys: drop the old spots instead of
   // tweening a locality disc into a country disc that happens to share a key.
@@ -229,62 +267,79 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
         .map(([key, d]) => ({ key, d, s: byKey.get(key) ?? lastSpot.current.get(key) }))
         .filter((e): e is { key: string; d: Drawn; s: Spot } => !!e.s)
         .sort((a, b) => b.d.r - a.d.r)
-      for (const { key, d, s } of all) {
-        const col = s.energy ? tok.en : tok.acc
-        const hot = hotKey === key
-        const a = hotKey && !hot ? d.alpha * 0.45 : d.alpha
-        if (layer === 'region') {
-          // Region bubble: a wash the size of its share, a dashed rim, a core dot.
-          c.globalAlpha = a * (hot ? 0.22 : 0.14)
-          c.fillStyle = col
+
+      if (layer !== 'place') {
+        // Countries and regions: light the land dots they own, stronger for more
+        // stories. A country's own dots win over one borrowed by a tiny neighbour.
+        const owners = new Map<number, { key: string; d: Drawn; s: Spot }>()
+        for (const e of all) if (!e.s.small) for (const i of e.s.dots ?? []) owners.set(i, e)
+        for (const e of all) if (e.s.small) for (const i of e.s.dots ?? []) if (!owners.has(i)) owners.set(i, e)
+        for (const [i, { key, d, s }] of owners) {
+          const hot = hotKey === key
+          const fresh = s.fresh && mode === 'cumulative' && byKey.has(key)
+          const a = hotKey && !hot ? d.alpha * 0.45 : d.alpha
+          const base = 0.4 + 0.6 * Math.min(1, d.r / FILL_MAX)
+          c.fillStyle = s.energy ? tok.en : tok.acc
+          if (hot || fresh) {
+            c.globalAlpha = a * 0.18
+            c.beginPath()
+            c.arc(dotX(i), dotY(i), 4.6, 0, Math.PI * 2)
+            c.fill()
+          }
+          c.globalAlpha = hot ? 1 : a * base
           c.beginPath()
-          c.arc(s.x, s.y, d.r, 0, Math.PI * 2)
-          c.fill()
-          c.globalAlpha = a * (hot ? 1 : 0.7)
-          c.strokeStyle = col
-          c.lineWidth = hot ? 2 : 1.4
-          c.setLineDash([4, 5])
-          c.beginPath()
-          c.arc(s.x, s.y, d.r, 0, Math.PI * 2)
-          c.stroke()
-          c.setLineDash([])
-          c.fillStyle = col
-          c.beginPath()
-          c.arc(s.x, s.y, 4, 0, Math.PI * 2)
-          c.fill()
-          c.globalAlpha = 1
-          continue
-        }
-        c.globalAlpha = a * 0.16
-        c.fillStyle = col
-        c.beginPath()
-        c.arc(s.x, s.y, d.r * (hot ? 2.2 : mode === 'cumulative' ? 1.5 : 2.1), 0, Math.PI * 2)
-        c.fill()
-        c.globalAlpha = a
-        c.beginPath()
-        c.arc(s.x, s.y, d.r, 0, Math.PI * 2)
-        c.fill()
-        if (d.r > 4) {
-          c.fillStyle = tok.ink
-          c.beginPath()
-          c.arc(s.x, s.y, Math.max(1.5, d.r - 3), 0, Math.PI * 2)
-          c.fill()
-          c.fillStyle = col
-          c.beginPath()
-          c.arc(s.x, s.y, Math.max(1, d.r - 5), 0, Math.PI * 2)
+          c.arc(dotX(i), dotY(i), hot ? 2.9 : 2.6, 0, Math.PI * 2)
           c.fill()
         }
-        if (s.fresh && mode === 'cumulative' && byKey.has(key)) {
-          c.globalAlpha = a * 0.9
-          c.strokeStyle = col
-          c.lineWidth = 1.2
-          c.setLineDash([3, 3])
+        for (const { key, d, s } of all) {
+          if (!s.small) continue
+          const i = s.dots?.[0]
+          if (i === undefined) continue
+          const hot = hotKey === key
+          c.globalAlpha = hot ? 1 : (hotKey ? d.alpha * 0.45 : d.alpha) * 0.75
+          c.strokeStyle = s.energy ? tok.en : tok.acc
+          c.lineWidth = hot ? 1.8 : 1.2
           c.beginPath()
-          c.arc(s.x, s.y, d.r + 7, 0, Math.PI * 2)
+          c.arc(dotX(i), dotY(i), hot ? 10 : 8, 0, Math.PI * 2)
           c.stroke()
-          c.setLineDash([])
         }
         c.globalAlpha = 1
+      } else {
+        for (const { key, d, s } of all) {
+          const col = s.energy ? tok.en : tok.acc
+          const hot = hotKey === key
+          const a = hotKey && !hot ? d.alpha * 0.45 : d.alpha
+          c.globalAlpha = a * 0.16
+          c.fillStyle = col
+          c.beginPath()
+          c.arc(s.x, s.y, d.r * (hot ? 2.2 : mode === 'cumulative' ? 1.5 : 2.1), 0, Math.PI * 2)
+          c.fill()
+          c.globalAlpha = a
+          c.beginPath()
+          c.arc(s.x, s.y, d.r, 0, Math.PI * 2)
+          c.fill()
+          if (d.r > 4) {
+            c.fillStyle = tok.ink
+            c.beginPath()
+            c.arc(s.x, s.y, Math.max(1.5, d.r - 3), 0, Math.PI * 2)
+            c.fill()
+            c.fillStyle = col
+            c.beginPath()
+            c.arc(s.x, s.y, Math.max(1, d.r - 5), 0, Math.PI * 2)
+            c.fill()
+          }
+          if (s.fresh && mode === 'cumulative' && byKey.has(key)) {
+            c.globalAlpha = a * 0.9
+            c.strokeStyle = col
+            c.lineWidth = 1.2
+            c.setLineDash([3, 3])
+            c.beginPath()
+            c.arc(s.x, s.y, d.r + 7, 0, Math.PI * 2)
+            c.stroke()
+            c.setLineDash([])
+          }
+          c.globalAlpha = 1
+        }
       }
 
       c.strokeStyle = tok.dim
@@ -398,6 +453,19 @@ export default function GeoTimeline({ days }: { days: GeoDay[] }) {
     const b = cv.getBoundingClientRect()
     const x = ((e.clientX - b.left) * W) / b.width
     const y = ((e.clientY - b.top) * H) / b.height
+    if (layer !== 'place') {
+      // Hit the filled dot under the cursor (within one grid step).
+      let hit: Spot | null = null
+      let hd = 9
+      for (const [i, s] of owners) {
+        const d = Math.hypot(dotX(i) - x, dotY(i) - y)
+        if (d < hd) {
+          hd = d
+          hit = s
+        }
+      }
+      return hit
+    }
     let best: Spot | null = null
     let bd = Infinity
     for (const s of spots) {
