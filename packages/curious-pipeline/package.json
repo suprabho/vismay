@@ -1,0 +1,28 @@
+{
+  "name": "@vismay/curious-pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Curious Desk's provenance-first claim pipeline: source policies, polite fetching, collectors (GDELT, Library of Congress, Europeana, Gallica), candidate detection, atomic-claim extraction, lineage-aware dedupe, explicit-feature grading and the Supabase store. Pure modules take an injected fetch so they test on fixtures; store.ts is server only. Its own package so pipeline changes only rebuild admin and the vizmaya-fyi scripts.",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./policy": "./src/policy.ts",
+    "./http": "./src/http.ts",
+    "./text": "./src/text.ts",
+    "./store": "./src/store.ts",
+    "./collectors": "./src/collectors/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/pipeline.test.ts"
+  },
+  "dependencies": {
+    "@vismay/ai-gateway": "workspace:*",
+    "@vismay/content-source": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.22.3",
+    "typescript": "^5"
+  }
+}

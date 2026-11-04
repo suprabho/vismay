@@ -1,0 +1,204 @@
+{
+  "pagination": {
+    "current": 1,
+    "next": "https://www.loc.gov/search/?c=3&fo=json&q=%22for+the+first+time%22+zeppelin&sp=2",
+    "of": 51603,
+    "total": 17201,
+    "perpage": 3
+  },
+  "results": [
+    {
+      "id": "http://www.loc.gov/item/2021688865/",
+      "url": "https://www.loc.gov/item/2021688865/",
+      "title": "Magnificent Distance: Hawk & Dove",
+      "date": "2012",
+      "dates": [
+        "2012"
+      ],
+      "contributor": [
+        "john w. kluge center (library of congress)",
+        "library of congress"
+      ],
+      "partof": [
+        "general collections",
+        "event videos",
+        "catalog",
+        "john w. kluge center"
+      ],
+      "language": [
+        "english"
+      ],
+      "original_format": [
+        "film, video"
+      ],
+      "online_format": [
+        "video",
+        "image",
+        "online text"
+      ],
+      "access_restricted": false,
+      "description": [
+        "In 2010 a Cooper's Hawk took up residency in the Main Reading Room at the Library of Congress, and for a few days the airwaves were full of witty references to the hawks and doves of Congress, and the idea of a bird's eye view of Washington DC. British artist Isabella Streffen was midway through a six-month Arts & Humanities Research Council Fellowship within the John W. Kluge Center, researching the history of ballooning through the Tissandier collection as part of her doctoral research into the use of military visioning technologies in fine art practice. This collision of real life and resea"
+      ],
+      "subject": [
+        "culture, performing arts",
+        "science, technology",
+        "performing arts, music"
+      ],
+      "number_lccn": [
+        "2021688865"
+      ],
+      "site": [
+        "catalog"
+      ],
+      "type": [
+        "moving image"
+      ],
+      "item": {
+        "date": "2012",
+        "created_published": [
+          "Washington, D.C. : Library of Congress, 2012-04-24."
+        ]
+      }
+    },
+    {
+      "id": "http://www.loc.gov/item/mss154040431/",
+      "url": "https://www.loc.gov/item/mss154040431/",
+      "title": "Carrie Chapman Catt Papers: Speech and Article File, 1892-1946; Speeches; Lecture notes",
+      "date": "1892",
+      "dates": [
+        "[1892 TO 1946]"
+      ],
+      "contributor": [
+        "catt, carrie chapman"
+      ],
+      "partof": [
+        "carrie chapman catt papers: speech and article file, 1892-1946",
+        "carrie chapman catt papers",
+        "manuscript division"
+      ],
+      "language": [
+        "english"
+      ],
+      "original_format": [
+        "manuscript/mixed material"
+      ],
+      "online_format": [
+        "online text",
+        "image"
+      ],
+      "access_restricted": false,
+      "subject": [
+        "reformers",
+        "pacifists",
+        "women\u2019s rights",
+        "suffragists",
+        "feminism",
+        "women"
+      ],
+      "location": [
+        "united states"
+      ],
+      "type": [
+        "mixed material"
+      ],
+      "item": {
+        "date": "18920000/19460000",
+        "created_published": [
+          "1892 - 1946"
+        ],
+        "rights": "No known restrictions on use or reproduction."
+      }
+    },
+    {
+      "id": "http://www.loc.gov/item/mss1288000016/",
+      "url": "https://www.loc.gov/item/mss1288000016/",
+      "title": "Blackwell Family Papers: Alice Stone Blackwell Papers, 1848-1957; Diaries, 1848-1937; Bound volumes; 1914",
+      "date": "1914",
+      "dates": [
+        "1914"
+      ],
+      "contributor": [
+        "blackwell family"
+      ],
+      "partof": [
+        "blackwell family papers",
+        "blackwell family papers: alice stone blackwell papers, 1848-1957",
+        "manuscript division"
+      ],
+      "language": [
+        "english"
+      ],
+      "original_format": [
+        "manuscript/mixed material"
+      ],
+      "online_format": [
+        "online text",
+        "image"
+      ],
+      "access_restricted": false,
+      "subject": [
+        "women",
+        "women physicians",
+        "blackwell, antoinette louisa brown,. antoinette louisa brown blackwell papers",
+        "blackwell, kitty barry,. kitty barry blackwell papers",
+        "physicians",
+        "blackwell, emily,. emily blackwell papers"
+      ],
+      "location": [
+        "united states"
+      ],
+      "type": [
+        "mixed material"
+      ],
+      "item": {
+        "date": "19140000",
+        "rights": "No known restrictions on use or reproduction."
+      }
+    },
+    {
+      "id": "https://www.loc.gov/resource/sn83030214/1912-04-16/ed-1/?sp=1",
+      "url": "https://www.loc.gov/resource/sn83030214/1912-04-16/ed-1/?sp=1",
+      "title": "New-York tribune. [volume] (New York [N.Y.]) 1866-1924, April 16, 1912, Image 1",
+      "date": "1912-04-16",
+      "dates": [
+        "1912-04-16"
+      ],
+      "contributor": [
+        "new-york tribune"
+      ],
+      "partof": [
+        "chronicling america",
+        "new-york tribune (new york, n.y.) 1866-1924"
+      ],
+      "language": [
+        "english"
+      ],
+      "original_format": [
+        "newspaper"
+      ],
+      "online_format": [
+        "image",
+        "pdf",
+        "online text"
+      ],
+      "access_restricted": false,
+      "description": [
+        "TITANIC SINKS; 1,500 DIE. The largest vessel afloat went down at 2:20 o'clock yesterday morning."
+      ],
+      "number_lccn": [
+        "sn83030214"
+      ],
+      "site": [
+        "chroniclingamerica"
+      ],
+      "type": [
+        "newspaper"
+      ],
+      "full_text": "TITANIC SINKS; 1,500 DIE. For the first time in the history of the sea a vessel of her size went down on her maiden voyage. Reportedly the band played until the last. The only lifeboats carried numbered twenty. Forty years later, survivors still recalled the night.",
+      "item": {
+        "date": "1912-04-16"
+      }
+    }
+  ]
+}
