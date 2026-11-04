@@ -36,8 +36,8 @@ import {
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
-import { frontierAbsUrl, frontierHeadline, hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
+import { curiousGradeNotes, frontierAbsUrl, frontierHeadline, hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { CURIOUS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
@@ -228,6 +228,10 @@ function liveReelValues(tab: RandomizerId, key: string, spin: SpinRecord, news: 
   }
   if (tab === 'frontier' && spin.subject.randomizer === 'frontier') {
     if (key === 'paper') return spin.subject.pool.titles.length ? spin.subject.pool.titles : [spin.subject.paper.title]
+    return undefined
+  }
+  if (tab === 'curious' && spin.subject.randomizer === 'curious') {
+    if (key === 'claim') return spin.subject.pool.texts.length ? spin.subject.pool.texts : [spin.subject.claim.text]
     return undefined
   }
   return news?.teams.map((t) => t.name)
@@ -447,14 +451,15 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, eight reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  One slot machine, nine reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
                   tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
                   MIT OpenCourseWare live for its course and resource reels; the Landmark Desk reads the prize lists (the Nobel Prize
                   API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; The
                   100 Desk draws a person from Michael Hart&rsquo;s ranking of the most influential persons in history and reads their
                   profile (Wikidata, Wikipedia, pageviews) live; the Evidence Desk draws a study from an annotated collection of research on
                   social media&rsquo;s effects and reads its citation record (OpenAlex) live; the Frontier Desk draws an arXiv paper from the ones
-                  AI Daily keeps each morning (read live from its papers table) and reads its arXiv and OpenAlex record; a cron spins each once a morning. The agent
+                  AI Daily keeps each morning (read live from its papers table) and reads its arXiv and OpenAlex record; the Curious Desk draws an approved claim
+                  from the claim pipeline&rsquo;s store (read live, graded A to E from its sources, gated) and reads its cited work, entities and archive copy; a cron spins each once a morning. The agent
                   brief then carries the spin.
                 </>
               )}
@@ -465,7 +470,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk)'} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk, 101_curious_claims.sql and 102_randomizer_curious.sql for the Curious Desk)'} been applied?
           </div>
         )}
 
@@ -773,6 +778,7 @@ export function RandomizerClient({
         {tab === 'hundred' && <HundredProfilePanel spin={current} />}
         {tab === 'evidence' && <EvidenceStudyPanel spin={current} />}
         {tab === 'frontier' && <FrontierPaperPanel spin={current} />}
+        {tab === 'curious' && <CuriousClaimPanel spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -1782,6 +1788,178 @@ function FrontierPaperPanel({ spin }: { spin: SpinRecord | null }) {
               ))}
             </div>,
           )}
+      </div>
+      {r && (r.sources.notes.length > 0 || r.sources.errors.length > 0) && (
+        <div className="px-4 py-3 text-xs text-neutral-500 flex flex-col gap-1">
+          {r.sources.notes.map((n, i) => (
+            <div key={`n${i}`} className="text-amber-300/90">{n}</div>
+          ))}
+          {r.sources.errors.map((e, i) => (
+            <div key={`e${i}`} className="text-red-300/90">{e}</div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const GRADE_TONE: Record<string, string> = {
+  A: 'text-emerald-300 border-emerald-400/50',
+  B: 'text-teal-300 border-teal-400/50',
+  C: 'text-amber-300 border-amber-400/50',
+  D: 'text-orange-300 border-orange-400/50',
+  E: 'text-red-300 border-red-400/50',
+}
+
+/** The Curious Desk's claim: the approved claim the spin drew, its grade and the features behind it, the evidence, the lineages, the entities and the live record. */
+function CuriousClaimPanel({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'curious' ? spin.subject : null
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-neutral-300 inline-flex items-center gap-1.5">
+          <ClipboardText size={15} className="text-fuchsia-400" />
+          Curious claim
+        </span>
+        <span>
+          The claims the claim pipeline&rsquo;s reviewers approved (<code>{CURIOUS.source.table}</code>, the{' '}
+          <a href={CURIOUS.source.admin} className="underline hover:text-neutral-300">Curious claims</a> tab), in {CURIOUS.eras.length} eras and {CURIOUS.themes.length} themes, graded A to E from their sources. A spin
+          reads the pool live, then the drawn claim&rsquo;s cited work (Crossref), book (Google Books), entities (Wikidata) and archive copy (Wayback), and keeps all of it on the spin.
+        </span>
+      </section>
+    )
+  }
+  const c = s.claim
+  const r = s.record
+  const notes = curiousGradeNotes(c)
+  const archive = r?.archiveUrl ?? c.document.archiveUrl
+  const row = (label: string, body: ReactNode) => (
+    <>
+      <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">{label}</span>
+      <div className="min-w-0 text-xs text-neutral-300">{body}</div>
+    </>
+  )
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <ClipboardText size={15} className="text-fuchsia-400" />
+          Curious claim
+        </h2>
+        <span className="text-xs text-neutral-500">
+          One of {s.pool.size.toLocaleString('en-US')} approved claims (pool read {new Date(s.pool.asOf).toLocaleString()})
+          {r ? `, record read ${new Date(r.asOf).toLocaleString()}` : ', no live record on this spin'}.{s.from ? ' Pulled the thread from the previous claim.' : ''}
+        </span>
+        {r && (
+          <span className="flex flex-wrap gap-1.5 sm:ml-auto">
+            {(['crossref', 'books', 'wikidata', 'wayback'] as const).map((k) => (
+              <span key={k} className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${SOURCE_TONE[r.sources[k]]}`}>
+                {k === 'crossref' ? 'Crossref' : k === 'books' ? 'Books' : k === 'wikidata' ? 'Wikidata' : 'Wayback'} · {r.sources[k]}
+              </span>
+            ))}
+          </span>
+        )}
+      </div>
+      <div className="px-4 py-3 border-b border-white/5 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Claim</span>
+        <div className="min-w-0">
+          <div className="flex items-start gap-2">
+            <span className={`shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg border text-sm font-semibold ${c.grade ? GRADE_TONE[c.grade] : 'text-neutral-400 border-white/15'}`} title={s.grade.label}>
+              {c.grade ?? '·'}
+            </span>
+            <p className="text-neutral-100">{c.text}</p>
+          </div>
+          <div className="text-xs text-neutral-500 mt-1">
+            {[c.kind, s.era.name, s.theme.name, s.region?.name, c.yearFrom != null ? `${c.yearFrom}${c.yearTo != null && c.yearTo !== c.yearFrom ? ` to ${c.yearTo}` : ''}` : null, c.place, c.score != null ? `score ${Number(c.score).toFixed(2)}` : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-full border text-neutral-300 border-white/15">{c.nSources} sources · {c.nGroups} lineages</span>
+            {c.nPrimary > 0 && <span className="px-2 py-0.5 rounded-full border text-emerald-300 border-emerald-400/40">primary</span>}
+            {c.nDerived > 0 && <span className="px-2 py-0.5 rounded-full border text-neutral-400 border-white/15">{c.nDerived} derived</span>}
+            {c.flags.map((f) => (
+              <span key={f} className={`px-2 py-0.5 rounded-full border ${f === 'contradiction' ? 'text-red-300 border-red-400/40' : 'text-amber-300 border-amber-400/40'}`}>{f}</span>
+            ))}
+          </div>
+        </div>
+        {row('Grade', <span><span className="text-neutral-200">{s.grade.label}.</span> {s.grade.rule}{notes.length ? <ul className="mt-1 list-disc pl-4 text-neutral-400">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul> : null}</span>)}
+        {row(
+          'Evidence',
+          <span>
+            <span className="text-neutral-200">&ldquo;{c.evidenceQuote}&rdquo;</span>
+            {c.evidencePage != null ? ` (p. ${c.evidencePage})` : ''}
+            <div className="text-neutral-500 mt-0.5">
+              <a href={c.document.canonicalUrl} target="_blank" rel="noreferrer" className="hover:underline inline-flex items-center gap-1">
+                {c.document.title ?? c.document.publisher ?? c.document.canonicalUrl}
+                <ArrowSquareOut size={12} className="shrink-0" />
+              </a>
+              {c.document.publisher && c.document.title ? ` · ${c.document.publisher}` : ''}
+              {c.document.publishedAt ? ` · ${c.document.publishedAt.slice(0, 10)}` : ''} · {c.document.sourceId}
+              {archive ? (
+                <>
+                  {' · '}
+                  <a href={archive} target="_blank" rel="noreferrer" className="hover:underline">archive</a>
+                </>
+              ) : (
+                ' · no archive snapshot'
+              )}
+              {c.speaker ? ` · attributed to ${c.speaker}` : ''}
+              {c.isHearsay ? ' · hearsay' : ''}
+              {c.isAnonymous ? ' · no named source' : ''}
+            </div>
+          </span>,
+        )}
+        {c.entities.length > 0 &&
+          row(
+            'Named',
+            <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+              {c.entities.map((e) => {
+                const w = r?.wikidata.find((x) => x.name === e)
+                return (
+                  <span key={e}>
+                    {e}
+                    {w ? <span className="text-neutral-500"> ({w.qid}{w.birthYear != null ? `, ${w.birthYear}${w.deathYear != null ? ` to ${w.deathYear}` : ''}` : w.year != null ? `, ${w.year}` : ''})</span> : null}
+                  </span>
+                )
+              })}
+            </span>,
+          )}
+        {r && (r.crossref || r.book) &&
+          row(
+            'Cited',
+            <span className="flex flex-col gap-0.5">
+              {r.crossref && (
+                <a href={r.crossref.url} target="_blank" rel="noreferrer" className="hover:underline">
+                  {r.crossref.title ?? r.crossref.doi}
+                  <span className="text-neutral-500">{[r.crossref.container, r.crossref.year, r.crossref.type, r.crossref.citedBy != null ? `${r.crossref.citedBy} citations` : null].filter(Boolean).map((x) => ` · ${x}`).join('')}</span>
+                </a>
+              )}
+              {r.book && (
+                <a href={r.book.url ?? '#'} target="_blank" rel="noreferrer" className="hover:underline">
+                  {r.book.title ?? r.book.isbn}
+                  <span className="text-neutral-500">{[r.book.publisher, r.book.year, `isbn ${r.book.isbn}`].filter(Boolean).map((x) => ` · ${x}`).join('')}</span>
+                </a>
+              )}
+            </span>,
+          )}
+        {s.related.length > 0 &&
+          row(
+            'Beside it',
+            <div className="flex flex-col gap-0.5">
+              {s.related.map((x) => (
+                <span key={x.id} className="text-neutral-400">
+                  <span className={`font-mono ${x.grade ? GRADE_TONE[x.grade].split(' ')[0] : 'text-neutral-500'}`}>{x.grade ?? '·'}</span> {x.text.length > 110 ? `${x.text.slice(0, 109)}…` : x.text}
+                </span>
+              ))}
+            </div>,
+          )}
+        {row(
+          'Review',
+          <a href={`${CURIOUS.source.admin}?claim=${c.id}`} className="hover:underline text-neutral-400">
+            Open this claim on the Curious claims tab
+          </a>,
+        )}
       </div>
       {r && (r.sources.notes.length > 0 || r.sources.errors.length > 0) && (
         <div className="px-4 py-3 text-xs text-neutral-500 flex flex-col gap-1">

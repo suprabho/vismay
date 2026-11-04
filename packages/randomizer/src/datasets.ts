@@ -22,10 +22,20 @@
  * are here (frontier.json); its papers are read live from AI Daily's
  * dc_papers table at spin time (spins.ts loadFrontierPool), and the drawn
  * paper's record from arXiv and OpenAlex after the draw (frontierPool.ts).
+ * The Curious Desk's eras, regions, themes, grades and lenses are here
+ * (curious.json; the era, region and theme ids match packages/curious-pipeline's
+ * taxonomy.ts); its claims are read live from the curious_claim_pool view at
+ * spin time (spins.ts loadCuriousPool), and the drawn claim's record from
+ * Crossref, Google Books, Wikidata and the Wayback Machine after the draw
+ * (curiousPool.ts).
  */
 
 import type {
   AtlasDataset,
+  CuriousClaim,
+  CuriousDataset,
+  CuriousEra,
+  CuriousTheme,
   DeskDataset,
   Epic,
   EpicPlace,
@@ -53,6 +63,7 @@ import landmarkJson from './data/landmark.json'
 import hundredJson from './data/hundred.json'
 import evidenceJson from './data/evidence.json'
 import frontierJson from './data/frontier.json'
+import curiousJson from './data/curious.json'
 import footshortsJson from './data/footshorts.json'
 import viznbaJson from './data/viznba.json'
 
@@ -64,6 +75,7 @@ export const LANDMARK = landmarkJson as unknown as LandmarkDataset
 export const HUNDRED = hundredJson as unknown as HundredDataset
 export const EVIDENCE = evidenceJson as unknown as EvidenceDataset
 export const FRONTIER = frontierJson as unknown as FrontierDataset
+export const CURIOUS = curiousJson as unknown as CuriousDataset
 export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
 export const VIZNBA = viznbaJson as unknown as ViznbaDataset
 
@@ -113,6 +125,26 @@ export function frontierAgeDays(paper: Pick<FrontierPaper, 'publishedAt'>, now: 
 export function frontierWindowOf(paper: Pick<FrontierPaper, 'publishedAt'>, now: number, data: FrontierDataset = FRONTIER): FrontierWindow {
   const age = frontierAgeDays(paper, now)
   return data.windows.find((w) => age >= w.min_days && (w.max_days === null || age < w.max_days)) ?? data.windows[data.windows.length - 1]!
+}
+
+/** The era a year falls in (astronomical years), or the undated era. */
+export function curiousEraOf(year: number | null | undefined, data: CuriousDataset = CURIOUS): CuriousEra {
+  const undated = data.eras.find((e) => e.id === 'undated') ?? data.eras[data.eras.length - 1]!
+  if (year == null || !Number.isFinite(year)) return undated
+  return data.eras.find((e) => e.id !== 'undated' && (e.from == null || year >= e.from) && (e.to == null || year <= e.to)) ?? undated
+}
+
+export function curiousEra(id: string, data: CuriousDataset = CURIOUS): CuriousEra | undefined {
+  return data.eras.find((e) => e.id === id)
+}
+
+export function curiousTheme(id: string | null, data: CuriousDataset = CURIOUS): CuriousTheme | undefined {
+  return id ? data.themes.find((t) => t.id === id) : undefined
+}
+
+/** "Grade B" or "ungraded", for reels and labels. */
+export function curiousGradeLabel(claim: Pick<CuriousClaim, 'grade'>): string {
+  return claim.grade ? `Grade ${claim.grade}` : 'ungraded'
 }
 
 /** Types that count toward the one-in-three quota (playbook 3.2). */
@@ -184,6 +216,12 @@ export function reelPool(randomizer: RandomizerId, key: string, live: readonly s
     if (key === 'window') return FRONTIER.windows.map((w) => w.name)
     if (key === 'paper') return [...live]
     if (key === 'lens') return FRONTIER.lenses.map((l) => l.name)
+  }
+  if (randomizer === 'curious') {
+    if (key === 'era') return CURIOUS.eras.map((e) => e.name)
+    if (key === 'theme') return CURIOUS.themes.map((t) => t.name)
+    if (key === 'claim') return [...live]
+    if (key === 'lens') return CURIOUS.lenses.map((l) => l.name)
   }
   if (randomizer === 'footshorts') {
     if (key === 'competition') return FOOTSHORTS.competitions.map((c) => c.name)

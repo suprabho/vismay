@@ -38,6 +38,11 @@
  *                                                     its domains, eras and lenses; with `rank` (1 to 100),
  *                                                     that person's live profile as a spin would read it
  *   GET  /api/randomizer/cron/hundred               The 100 Desk's daily spin (Vercel Cron, CRON_SECRET)
+ *   GET  /api/randomizer/curious?claim=             the Curious Desk's pool (vizmaya only): the eras, themes,
+ *                                                     grades and lenses, how many approved claims sit in each era
+ *                                                     and theme, and the 30 newest approvals; with `claim` (an id),
+ *                                                     that claim and its live record as a spin would read it
+ *   GET  /api/randomizer/cron/curious               the Curious Desk's daily spin (Vercel Cron, CRON_SECRET)
  *   GET  /api/randomizer/evidence?study=            the Evidence Desk's pool (vizmaya only): the annotated
  *                                                     collection with its themes, designs and lenses; with
  *                                                     `study` (1 to 83), that study and its live citation
@@ -57,10 +62,11 @@
  * Server only.
  */
 
-import { DESK, EVIDENCE, FRONTIER, HUNDRED, LANDMARK, OCW, evidenceByNumber, frontierWindowOf, hundredByRank } from '@vismay/randomizer/datasets'
+import { CURIOUS,DESK, EVIDENCE, FRONTIER, HUNDRED, LANDMARK, OCW, evidenceByNumber, frontierWindowOf, hundredByRank } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
 import { loadEvidenceRecord } from '@vismay/randomizer/evidencePool'
 import { loadFrontierRecord } from '@vismay/randomizer/frontierPool'
+import { loadCuriousRecord } from '@vismay/randomizer/curiousPool'
 import { loadHundredProfile } from '@vismay/randomizer/hundredPool'
 import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from '@vismay/randomizer/landmarkPool'
 import { loadOcwPool } from '@vismay/randomizer/ocwPool'
@@ -83,6 +89,7 @@ import {
   spunOn,
   type HeatFailure,
   type HeatRefresh,
+  loadCuriousPool,
 } from '@vismay/randomizer/spins'
 import { researchFileName, researchStub } from '@vismay/randomizer/stub'
 import { isRandomizerId, RANDOMIZER_META, RANDOMIZERS, RESPIN_REASONS, type RandomizerId, type SpinRecord } from '@vismay/randomizer/types'
@@ -502,7 +509,7 @@ export async function handleFrontierPoolRequest(req: Request): Promise<Response>
 
 /**
  * The daily spin of a randomizer with a cron (the OCW Desk, the Landmark
- * Desk, The 100 Desk, the Evidence Desk, the Frontier Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
+ * Desk, The 100 Desk, the Evidence Desk, the Frontier Desk, the Curious Desk). Vercel Cron calls the route (apps/vizmaya-fyi/vercel.json) with
  * `Authorization: Bearer $CRON_SECRET`; it fails closed without the secret.
  * One spin per UTC day: when a kept spin of that randomizer already exists
  * today (someone spun by hand), it answers with that one and spins nothing.
@@ -546,4 +553,50 @@ export async function handleEvidenceDailySpinRequest(req: Request, origin: strin
 /** GET /api/randomizer/cron/frontier on vizmaya: the Frontier Desk's daily spin. */
 export async function handleFrontierDailySpinRequest(req: Request, origin: string): Promise<Response> {
   return handleDailySpinRequest(req, origin, 'frontier')
+}
+
+/**
+ * GET /api/randomizer/curious on vizmaya: the Curious Desk's pool. Without a
+ * query it answers the eras, regions, themes, grades and lenses, how many
+ * approved claims sit in each era and theme today, and the 30 newest
+ * approvals (evidence quotes cut to 140 characters); with `claim` (a claim
+ * id) that claim as the pool holds it and its live record
+ * (packages/randomizer curiousPool.ts: Crossref, Google Books, Wikidata,
+ * Wayback), for an agent that wants to look before locking a claim.
+ * Read-only; a source that fails is recorded in the record, never an error.
+ */
+export async function handleCuriousPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  if (!hasRandomizerEnv()) return json({ error: 'the Curious Desk needs Supabase service credentials to read curious_claim_pool' }, 503)
+  const raw = new URL(req.url).searchParams.get('claim')?.trim()
+  if (raw !== undefined && raw !== '' && !isSpinId(raw)) return json({ error: 'claim must be a claim id (uuid)' }, 400)
+  try {
+    const pool = await loadCuriousPool()
+    if (raw) {
+      const claim = pool.claims.find((c) => c.id === raw)
+      if (!claim) return json({ error: `${raw} is not an approved claim` }, 404)
+      return json({ claim, record: await loadCuriousRecord(claim) })
+    }
+    const counts = CURIOUS.eras.map((e) => ({
+      era: e.id,
+      name: e.name,
+      themes: Object.fromEntries(CURIOUS.themes.map((t) => [t.id, pool.claims.filter((c) => c.era === e.id && c.theme === t.id).length])),
+    }))
+    const grades = Object.fromEntries((['A', 'B', 'C', 'D', 'E'] as const).map((g) => [g, pool.claims.filter((c) => c.grade === g).length]))
+    const newest = pool.claims.slice(0, 30).map(({ scoreFeatures: _f, ...c }) => ({ ...c, evidenceQuote: c.evidenceQuote.length > 140 ? `${c.evidenceQuote.slice(0, 139)}…` : c.evidenceQuote }))
+    return json({
+      ...CURIOUS,
+      pool: { asOf: pool.asOf, size: pool.claims.length, counts, grades, newest },
+      note: "Pass claim (a claim id) for that claim's live record (Crossref, Google Books, Wikidata, Wayback), as a spin would read it. Claims are approved on the admin Curious claims tab.",
+    })
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+/** GET /api/randomizer/cron/curious on vizmaya: the Curious Desk's daily spin. */
+export async function handleCuriousDailySpinRequest(req: Request, origin: string): Promise<Response> {
+  return handleDailySpinRequest(req, origin, 'curious')
 }

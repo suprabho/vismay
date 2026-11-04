@@ -1,7 +1,7 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, frontierWindowOf, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
+import { ATLAS, CURIOUS, curiousEraOf, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, frontierWindowOf, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planLandmark, planOcw } from './draw'
 import {
   awardsFromNobel,
@@ -23,14 +23,17 @@ import {
 } from './landmarkPool'
 import { loadEvidenceRecord, recordFromOpenAlex, titleOverlap } from './evidencePool'
 import { arxivEntryFromAtom, frontierPoolFromRows, loadFrontierRecord } from './frontierPool'
+import { curiousPoolFromRows, loadCuriousRecord, type CuriousPoolRow } from './curiousPool'
 import { commonsFilePage, completeMonths, formatWikidataTime, loadHundredProfile, pageviewWindow, pageviewsFromBody, parsePoint, profileFromSparql } from './hundredPool'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { CURIOUS_LENS_METRICS, curiousCreditLine, EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
   type AtlasPicks,
+  type CuriousPicks,
+  type CuriousSubject,
   type DeskPicks,
   type DrawResult,
   type EpicsPicks,
@@ -320,7 +323,7 @@ const NEWS: FootshortsNews = {
 NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
 
 assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
-assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious'])
 assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
 assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
@@ -1870,12 +1873,263 @@ const FR_POOL = frontierPoolFromRows(FR_ROWS, FR_EDITIONS, { asOf: NOW.toISOStri
   }
 }
 
+// The Curious Desk: the dataset, the pool mapping, the draw (pure, one pass over a pool of approved claims) and the record (no network).
+const CU_ERAS = ['antiquity', 'medieval', 'early-modern', 'long-19th', 'world-wars', 'postwar', 'late-20th', 'recent']
+const CU_THEMES = ['film-tv', 'science-invention', 'war-peace']
+const cuRow = (i: number, era: string, theme: string, grade: string, extra: Partial<CuriousPoolRow> = {}): CuriousPoolRow => ({
+  id: `00000000-0000-4000-8000-0000000${String(10000 + i).slice(-5)}`,
+  text: `Claim ${i}: in ${era} someone did a ${theme} thing for the first time, reportedly in ${1900 + (i % 100)}.`,
+  kind: i % 4 === 0 ? 'anecdote' : i % 4 === 1 ? 'number' : i % 4 === 2 ? 'quote' : 'fact',
+  subject: `Subject ${i}`,
+  era,
+  theme,
+  region: i % 2 ? 'europe' : 'south-asia',
+  year_from: 1900 + (i % 100),
+  grade,
+  score: { A: 0.8, B: 0.6, C: 0.45, D: 0.3, E: 0.1 }[grade] ?? 0.5,
+  score_features: { notes: [`note for ${i}`] },
+  flags: [],
+  evidence_quote: `did a ${theme} thing for the first time`,
+  approved_at: daysAgo(i % 30),
+  document_id: `d${i}`,
+  source_id: i % 3 === 0 ? 'loc' : 'gdelt',
+  document_title: `Document ${i}`,
+  publisher: i % 3 === 0 ? 'Chronicling America' : `outlet${i % 5}.example`,
+  canonical_url: `https://outlet${i % 5}.example/story/${i}`,
+  published_at: daysAgo(i % 30 + 1),
+  n_sources: 1 + (i % 4),
+  n_groups: 1 + (i % 3),
+  n_primary: i % 3 === 0 ? 1 : 0,
+  n_derived: i % 4 === 3 ? 4 : 0,
+  n_contradicts: 0,
+  entities: [`Entity ${i % 6}`, `Place ${i % 4}`],
+  ...extra,
+})
+const CU_ROWS: CuriousPoolRow[] = [
+  ...CU_ERAS.flatMap((e, k) => CU_THEMES.flatMap((t, j) => [cuRow(k * 10 + j * 3 + 1, e, t, 'A'), cuRow(k * 10 + j * 3 + 2, e, t, 'C')])),
+  // The late twentieth century is the busy era.
+  ...Array.from({ length: 12 }, (_, j) => cuRow(300 + j, 'late-20th', 'film-tv', j % 2 ? 'B' : 'D')),
+  // One contradicted claim, one widely repeated single-lineage claim, one undated, one with references.
+  cuRow(400, 'postwar', 'war-peace', 'E', { flags: ['contradiction'], n_contradicts: 1 }),
+  cuRow(401, 'postwar', 'war-peace', 'D', { n_sources: 5, n_groups: 1, n_derived: 4, is_anonymous: true, is_hearsay: true, flags: ['anonymous-repetition', 'unverified-popular'] }),
+  cuRow(402, 'undated', 'film-tv', 'C', { year_from: null, era: null }),
+  cuRow(403, 'late-20th', 'film-tv', 'A', { entities: ['Disco Dancer', 'Soviet Union'], archive_url: null }),
+  // Dropped: no text, no quote.
+  { id: 'x', text: '', kind: 'fact', evidence_quote: '', document_id: 'd', source_id: 'gdelt', canonical_url: 'https://x.example' } as CuriousPoolRow,
+]
+const CU_REFS = new Map([[cuRow(403, 'late-20th', 'film-tv', 'A').id, ['doi:10.1080/19472498.2022.2101762', 'isbn:9780253220998']]])
+const CU_POOL = curiousPoolFromRows(CU_ROWS, CU_REFS, { asOf: NOW.toISOString() })
+{
+  for (const id of CU_ERAS) assert.ok(CURIOUS.eras.some((e) => e.id === id), `era ${id} (matches curious-pipeline taxonomy.ts)`)
+  assert.ok(CURIOUS.eras.some((e) => e.id === 'undated'))
+  assert.equal(CURIOUS.themes.length, 12)
+  assert.equal(CURIOUS.regions.length, 9)
+  assert.equal(CURIOUS.lenses.length, 7)
+  assert.equal(CURIOUS.lenses.length, Object.keys(CURIOUS_LENS_METRICS).length)
+  for (const l of CURIOUS.lenses) assert.ok(CURIOUS_LENS_METRICS[l.name], `metrics for ${l.name}`)
+  for (const g of ['A', 'B', 'C', 'D', 'E'] as const) assert.ok(CURIOUS.grades[g].label && CURIOUS.grades[g].rule)
+  assert.equal(curiousEraOf(1984).id, 'late-20th')
+  assert.equal(curiousEraOf(-383).id, 'antiquity')
+  assert.equal(curiousEraOf(null).id, 'undated')
+  assert.equal(reelPool('curious', 'era').length, CURIOUS.eras.length)
+  assert.deepEqual(reelPool('curious', 'claim', ['A']), ['A'])
+  assert.deepEqual(normalizeLocks('curious', ['claim']), ['era', 'theme', 'claim'])
+  assert.ok(randomizersFor('vizmaya-fyi').includes('curious'))
+
+  // The pool: the empty row dropped, undated claims kept under 'undated', references attached, newest approval first.
+  assert.equal(CU_POOL.claims.length, CU_ROWS.length - 1)
+  assert.equal(CU_POOL.claims.find((c) => c.id.endsWith('10402'))!.era, 'undated')
+  assert.deepEqual(CU_POOL.claims.find((c) => c.id.endsWith('10403'))!.refs, ['doi:10.1080/19472498.2022.2101762', 'isbn:9780253220998'])
+  assert.ok(CU_POOL.claims.every((c, i, a) => i === 0 || (a[i - 1]!.approvedAt ?? '') >= (c.approvedAt ?? '')))
+
+  assert.throws(() => draw({ randomizer: 'curious', seed: 1, now: NOW }), /seed-fixture/)
+  assert.throws(() => draw({ randomizer: 'curious', seed: 1, now: NOW, curiousPool: { asOf: NOW.toISOString(), claims: [] } }), /none were found/)
+
+  const spinCu = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'curiousPool'>) => draw({ randomizer: 'curious', curiousPool: CU_POOL, ...input })
+
+  // Determinism; the claim sits in the drawn era and theme; the grade rule fires on every spin; no em dashes.
+  for (let seed = 0; seed < 60; seed++) {
+    const a = spinCu({ seed, now: NOW })
+    assert.deepEqual(a, spinCu({ seed, now: NOW }))
+    const s = a.subject as CuriousSubject
+    const p = a.picks as CuriousPicks
+    assert.equal(s.claim.era, p.era)
+    assert.equal(s.claim.theme ?? CURIOUS.themes[0]!.id, p.theme)
+    assert.equal(s.era.id, p.era)
+    assert.equal(s.theme.id, p.theme)
+    assert.equal(a.primary, s.claim.id)
+    assert.equal(a.combo, `${s.claim.id}|${s.lens.name}`)
+    assert.ok(a.rules.some((r) => r.tag === 'grade'), 'the grade rule fires on every spin')
+    assert.equal(a.reels.claim.sub?.startsWith(`Grade ${s.claim.grade}`), true)
+    assert.equal(a.meta.era, p.era)
+    assert.equal(a.meta.claim, s.claim.id)
+    assert.ok(s.pool.texts.length > 0 && s.pool.texts.length <= DRAW_RULES.maxCuriousTexts)
+    assert.ok(s.related.length <= DRAW_RULES.maxCuriousRelated)
+    assert.equal(s.grade.grade, s.claim.grade)
+    for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+    if (s.claim.flags.includes('contradiction')) assert.ok(a.rules.some((r) => r.tag === 'contradiction' && r.kind === 'block'))
+    if (s.claim.nGroups <= 1 && s.claim.nSources >= 3) assert.ok(a.rules.some((r) => r.tag === 'lineage'))
+    if (s.claim.nPrimary > 0) assert.ok(a.rules.some((r) => r.tag === 'primary' && r.kind === 'good'))
+  }
+
+  // Era weighting: the busy late twentieth century is drawn most, but every era comes up (square root, not proportional).
+  {
+    const counts = new Map<string, number>()
+    for (let seed = 1000; seed < 2200; seed++) {
+      const e = (spinCu({ seed, now: NOW }).picks as CuriousPicks).era
+      counts.set(e, (counts.get(e) ?? 0) + 1)
+    }
+    const late = counts.get('late-20th') ?? 0
+    for (const e of CU_ERAS) assert.ok((counts.get(e) ?? 0) > 20, `${e} drawn: ${counts.get(e)}`)
+    assert.ok(late > (counts.get('medieval') ?? 0), 'the busy era is drawn more')
+    assert.ok(late < 1200 * 0.4, `the busy era does not crowd out the rest: ${late}`)
+    assert.ok((counts.get('undated') ?? 0) > 0, 'undated claims are drawn too')
+  }
+
+  // Grade weighting inside a cell: A claims are drawn far more often than D ones.
+  {
+    const counts = { A: 0, B: 0, C: 0, D: 0, E: 0 } as Record<string, number>
+    for (let seed = 3000; seed < 4200; seed++) {
+      const r = spinCu({ seed, now: NOW, locks: ['theme'], prev: { picks: { era: 'late-20th', theme: 'film-tv', claim: 'x', lens: 'Trace the lineage' } } })
+      const s = r.subject as CuriousSubject
+      if (s.era.id === 'late-20th' && s.theme.id === 'film-tv' && s.claim.grade) counts[s.claim.grade]++
+    }
+    assert.ok(counts.A + counts.B > counts.D * 1.5, JSON.stringify(counts))
+  }
+
+  // Locks: the claim lock keeps the claim (and implies era and theme); a lens lock keeps the lens.
+  {
+    const first = spinCu({ seed: 7, now: NOW })
+    const locked = spinCu({ seed: 8, now: NOW, prev: first, locks: ['claim'] })
+    assert.equal((locked.picks as CuriousPicks).claim, (first.picks as CuriousPicks).claim)
+    assert.ok(locked.rules.some((r) => r.tag === 'lock' && /Claim locked/.test(r.text)))
+    const lensLocked = spinCu({ seed: 9, now: NOW, prev: first, locks: ['lens'] })
+    assert.equal((lensLocked.picks as CuriousPicks).lens, (first.picks as CuriousPicks).lens)
+    const gone = spinCu({ seed: 10, now: NOW, prev: { picks: { ...(first.picks as CuriousPicks), claim: '00000000-0000-4000-8000-000000099999' } }, locks: ['claim'] })
+    assert.ok(gone.rules.some((r) => r.tag === 'lock' && /no longer in the pool/.test(r.text)))
+  }
+
+  // The 90-day claim block: a claim spun in the history is left out of its cell; when the cell empties, the oldest comes back.
+  {
+    const cell = CU_POOL.claims.filter((c) => c.era === 'medieval' && c.theme === 'war-peace')
+    assert.equal(cell.length, 2)
+    const history = cell.map((c, i) => ({ status: 'spun' as const, primary: c.id, combo: `${c.id}|x`, meta: { era: 'medieval', claim: c.id }, picks: { era: 'medieval', theme: 'war-peace', claim: c.id, lens: 'x' }, createdAt: daysAgo(10 + i) }))
+    const r = spinCu({ seed: 11, now: NOW, history, prev: { picks: history[0]!.picks }, locks: ['theme'] })
+    assert.ok(r.rules.some((x) => x.tag === '90 days' && /lifted/.test(x.text)))
+    assert.equal((r.subject as CuriousSubject).claim.id, cell[1]!.id, 'the one spun longest ago')
+    const one = spinCu({ seed: 12, now: NOW, history: history.slice(0, 1), prev: { picks: history[0]!.picks }, locks: ['theme'] })
+    assert.equal((one.subject as CuriousSubject).claim.id, cell[1]!.id)
+    assert.ok(one.rules.some((x) => x.tag === '90 days' && x.kind === 'block'))
+  }
+
+  // The same era twice in a row is re-drawn once.
+  {
+    let redrawn = 0
+    for (let seed = 20; seed < 80; seed++) {
+      const a = spinCu({ seed, now: NOW })
+      const b = spinCu({ seed: seed + 1000, now: NOW, history: [entry(a, 1)] })
+      if (b.rules.some((r) => r.tag === 'balance' && /twice in a row/.test(r.text))) redrawn++
+    }
+    assert.ok(redrawn > 0, 'the era re-draw fires sometimes')
+  }
+
+  // Sequence mode pulls the thread to a claim sharing a name; without a previous spin it draws fresh.
+  {
+    const first = spinCu({ seed: 30, now: NOW })
+    const next = spinCu({ seed: 31, now: NOW, history: [entry(first, 1)], sequence: true })
+    const s1 = first.subject as CuriousSubject
+    const s2 = next.subject as CuriousSubject
+    assert.equal(s2.from, s1.claim.id)
+    assert.ok(s2.claim.entities.some((e) => s1.claim.entities.includes(e)), 'shares a name')
+    assert.ok(next.rules.some((r) => r.tag === 'sequence' && r.kind === 'good'))
+    const fresh = spinCu({ seed: 32, now: NOW, sequence: true })
+    assert.equal((fresh.subject as CuriousSubject).from, null)
+    assert.ok(fresh.rules.some((r) => r.tag === 'sequence' && /needs a previous spin/.test(r.text)))
+    const lockedSeq = spinCu({ seed: 33, now: NOW, history: [entry(first, 1)], prev: first, locks: ['era'], sequence: true })
+    assert.ok(lockedSeq.rules.some((r) => r.tag === 'sequence' && /locks win/.test(r.text)))
+  }
+
+  // The 90-day combo block re-draws the lens.
+  {
+    const first = spinCu({ seed: 40, now: NOW })
+    const again = spinCu({ seed: 40, now: NOW, history: [entry(first, 5)], prev: first, locks: ['claim'] })
+    assert.notEqual((again.picks as CuriousPicks).lens, (first.picks as CuriousPicks).lens)
+    assert.ok(again.rules.some((r) => r.tag === '90 days' && /lens was re-drawn/.test(r.text)))
+    const all = CURIOUS.lenses.map((l) => ({ ...entry(first, 5), combo: `${first.primary}|${l.name}` }))
+    const repeats = spinCu({ seed: 40, now: NOW, history: all, prev: first, locks: ['claim'] })
+    assert.ok(repeats.rules.some((r) => r.tag === '90 days' && /It repeats/.test(r.text)))
+  }
+
+  // The flag rules on the hand-made claims.
+  {
+    const contradicted = CU_POOL.claims.find((c) => c.flags.includes('contradiction'))!
+    const r = spinCu({ seed: 50, now: NOW, prev: { picks: { era: contradicted.era, theme: contradicted.theme!, claim: contradicted.id, lens: 'x' } }, locks: ['claim'] })
+    assert.ok(r.rules.some((x) => x.tag === 'contradiction' && x.kind === 'block'))
+    assert.ok(r.rules.some((x) => x.tag === 'grade' && /Grade E/.test(x.text) && x.kind === 'warn'))
+    const repeated = CU_POOL.claims.find((c) => c.nSources === 5 && c.nGroups === 1)!
+    const r2 = spinCu({ seed: 51, now: NOW, prev: { picks: { era: repeated.era, theme: repeated.theme!, claim: repeated.id, lens: 'x' } }, locks: ['claim'] })
+    assert.ok(r2.rules.some((x) => x.tag === 'lineage' && /collapse to one lineage/.test(x.text)))
+    assert.ok(r2.rules.some((x) => x.tag === 'attribution'))
+    assert.ok(r2.rules.some((x) => x.tag === 'grade' && /Widely repeated is not verified/.test(x.text)))
+  }
+
+  // The record on a fake fetch: Crossref by the DOI reference, Books by the ISBN, Wikidata for the entities, Wayback for the document; a 404 is skipped, a 503 fails, nothing throws.
+  {
+    const claim = CU_POOL.claims.find((c) => c.id.endsWith('10403'))!
+    const env = { crossrefMailto: 'x@example.org', googleBooksKey: null }
+    pending.push(
+      (async () => {
+        const seen: string[] = []
+        const fake = (async (url: string) => {
+          const u = String(url)
+          seen.push(u)
+          if (u.startsWith('https://api.crossref.org/works/')) return new Response(JSON.stringify({ message: { DOI: '10.1080/19472498.2022.2101762', title: ['Disco flamboyance'], 'container-title': ['South Asian History and Culture'], issued: { 'date-parts': [[2022, 7, 22]] }, type: 'journal-article', 'is-referenced-by-count': 4, URL: 'https://doi.org/10.1080/19472498.2022.2101762' } }), { status: 200 })
+          if (u.startsWith('https://www.googleapis.com/books')) return new Response(JSON.stringify({ items: [{ volumeInfo: { title: 'Indian Films in Soviet Cinemas', publisher: 'Indiana University Press', publishedDate: '2008-12-02', canonicalVolumeLink: 'https://books.google.com/books?id=abc' } }] }), { status: 200 })
+          if (u.includes('wbsearchentities')) return new Response(JSON.stringify({ search: [{ id: 'Q1226594', label: 'Disco Dancer', description: '1982 film' }] }), { status: 200 })
+          if (u.includes('wbgetentities')) return new Response(JSON.stringify({ entities: { Q1226594: { claims: { P577: [{ mainsnak: { datavalue: { value: { time: '+1982-12-10T00:00:00Z' } } } }] } } } }), { status: 200 })
+          if (u.startsWith('https://archive.org/wayback')) return new Response(JSON.stringify({ archived_snapshots: { closest: { available: true, url: 'http://web.archive.org/web/2026/https://outlet3.example/story/403' } } }), { status: 200 })
+          return new Response('x', { status: 404 })
+        }) as typeof fetch
+        const rec = await loadCuriousRecord(claim, { fetch: fake, env, now: NOW })
+        assert.equal(rec.crossref?.doi, '10.1080/19472498.2022.2101762')
+        assert.equal(rec.crossref?.citedBy, 4)
+        assert.equal(rec.book?.title, 'Indian Films in Soviet Cinemas')
+        assert.equal(rec.wikidata[0]?.qid, 'Q1226594')
+        assert.equal(rec.wikidata[0]?.year, 1982)
+        assert.equal(rec.archiveUrl, 'https://web.archive.org/web/2026/https://outlet3.example/story/403')
+        assert.deepEqual([rec.sources.crossref, rec.sources.books, rec.sources.wikidata, rec.sources.wayback], ['ok', 'ok', 'ok', 'ok'])
+        assert.ok(seen.some((u) => u.includes('mailto=x%40example.org')), 'the polite pool')
+
+        const missing = await loadCuriousRecord(claim, { fetch: (async () => new Response('{}', { status: 404 })) as typeof fetch, env, now: NOW })
+        assert.deepEqual([missing.sources.crossref, missing.sources.books, missing.sources.wayback], ['skipped', 'skipped', 'skipped'])
+        assert.ok(missing.sources.notes.length >= 3)
+
+        const broken = await loadCuriousRecord(claim, { fetch: (async () => new Response('x', { status: 503 })) as typeof fetch, env, now: NOW })
+        assert.deepEqual([broken.sources.crossref, broken.sources.books, broken.sources.wikidata, broken.sources.wayback], ['failed', 'failed', 'failed', 'failed'])
+        assert.equal(broken.sources.errors.length, 4)
+
+        // A claim with no references and no entities reads nothing but the archive.
+        const bare = await loadCuriousRecord({ ...claim, refs: [], entities: [], document: { ...claim.document, archiveUrl: 'https://web.archive.org/web/1/x' } }, { fetch: fake, env, now: NOW })
+        assert.deepEqual([bare.sources.crossref, bare.sources.books, bare.sources.wikidata, bare.sources.wayback], ['skipped', 'skipped', 'skipped', 'ok'])
+
+        const drawn = spinCu({ seed: 3, now: NOW, prev: { picks: { era: claim.era, theme: claim.theme!, claim: claim.id, lens: 'x' } }, locks: ['claim'] })
+        const sub = { ...(drawn.subject as CuriousSubject), record: rec }
+        assert.ok(curiousCreditLine(sub).includes('Crossref') && curiousCreditLine(sub).includes('archived:'))
+        assert.ok(!curiousCreditLine({ ...sub, record: null }).includes('Crossref'))
+        const brief = assignmentSection(asSpin({ ...drawn, subject: sub }))
+        assert.ok(brief.includes('Cited work (Crossref') && brief.includes('Grade A') && brief.includes('Count lineages, not articles'))
+        assert.ok(!hasEmDash(brief))
+      })(),
+    )
+  }
+}
+
 // Stub and brief sections.
 const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
 const LM_PLAN = planLandmark({ randomizer: 'landmark', seed: 21, now: NOW }, lmAwardsFor(planLandmark({ randomizer: 'landmark', seed: 21, now: NOW })))
 const LM_POOL = lmPoolFor(LM_PLAN, lmAwardsFor(LM_PLAN))
-for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'footshorts', 'viznba'] as const) {
-  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL, frontierPool: FR_POOL }))
+for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba'] as const) {
+  const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL, frontierPool: FR_POOL, curiousPool: CU_POOL }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))
   assert.ok(stub.includes('## HERO INSIGHT'))

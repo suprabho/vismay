@@ -68,6 +68,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../../packages/content-source
+      '@vismay/curious-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/curious-pipeline
       '@vismay/dc-editions':
         specifier: workspace:*
         version: link:../../packages/dc-editions
@@ -246,7 +249,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -609,7 +612,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -1117,6 +1120,9 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../../packages/content-source
+      '@vismay/curious-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/curious-pipeline
       '@vismay/dc-editions':
         specifier: workspace:*
         version: link:../../packages/dc-editions
@@ -1478,6 +1484,28 @@ importers:
       playwright:
         specifier: ^1.59.1
         version: 1.60.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/curious-pipeline:
+    dependencies:
+      '@vismay/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
+      '@vismay/content-source':
+        specifier: workspace:*
+        version: link:../content-source
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      tsx:
+        specifier: ^4.22.3
+        version: 4.22.4
       typescript:
         specifier: ^5
         version: 5.9.3

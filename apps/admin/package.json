@@ -21,6 +21,7 @@
     "@vismay/admin-core": "workspace:*",
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/curious-pipeline": "workspace:*",
     "@vismay/club-marks": "workspace:*",
     "@vismay/dc-editions": "workspace:*",
     "@vismay/html-stories": "workspace:*",

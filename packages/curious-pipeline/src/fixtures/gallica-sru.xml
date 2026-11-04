@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
+  <srw:version>1.2</srw:version>
+  <srw:numberOfRecords>137</srw:numberOfRecords>
+  <srw:records>
+    <srw:record>
+      <srw:recordSchema>dc</srw:recordSchema>
+      <srw:recordPacking>xml</srw:recordPacking>
+      <srw:recordData>
+        <oai_dc:dc>
+          <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k5656490s</dc:identifier>
+          <dc:title>Le Petit Parisien : journal quotidien du soir</dc:title>
+          <dc:publisher>Le Petit Parisien (Paris)</dc:publisher>
+          <dc:date>1912-04-17</dc:date>
+          <dc:language>fre</dc:language>
+          <dc:rights>domaine public</dc:rights>
+          <dc:type>text</dc:type>
+          <dc:type>publication en s&#233;rie imprim&#233;e</dc:type>
+          <dc:description>1912/04/17 (Num&#233;ro 12952).</dc:description>
+        </oai_dc:dc>
+      </srw:recordData>
+      <srw:recordPosition>1</srw:recordPosition>
+      <srw:extraRecordData>
+        <nqamoyen>92.3</nqamoyen>
+        <uri>12148/bpt6k5656490s</uri>
+      </srw:extraRecordData>
+    </srw:record>
+    <srw:record>
+      <srw:recordSchema>dc</srw:recordSchema>
+      <srw:recordData>
+        <oai_dc:dc>
+          <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k1234567z</dc:identifier>
+          <dc:title>La Presse</dc:title>
+          <dc:publisher>La Presse (Paris)</dc:publisher>
+          <dc:date>1884</dc:date>
+          <dc:language>fre</dc:language>
+          <dc:rights>domaine public</dc:rights>
+          <dc:type>text</dc:type>
+        </oai_dc:dc>
+      </srw:recordData>
+      <srw:recordPosition>2</srw:recordPosition>
+      <srw:extraRecordData>
+        <nqamoyen>71.0</nqamoyen>
+        <uri>12148/bpt6k1234567z</uri>
+      </srw:extraRecordData>
+    </srw:record>
+  </srw:records>
+  <srw:nextRecordPosition>3</srw:nextRecordPosition>
+</srw:searchRetrieveResponse>

@@ -1,0 +1,42 @@
+{
+  "articles": [
+    {
+      "url": "https://www.rediff.com/movies/report/mithun-jimmy-jimmy-soviet-spies/20261103.htm?utm_source=rss&utm_medium=feed",
+      "url_mobile": "https://m.rediff.com/movies/report/mithun-jimmy-jimmy-soviet-spies/20261103.htm",
+      "title": "How Mithun's Jimmy Jimmy became a Soviet spy test",
+      "seendate": "20261103T143000Z",
+      "socialimage": "",
+      "domain": "rediff.com",
+      "language": "English",
+      "sourcecountry": "India"
+    },
+    {
+      "url": "http://www.rediff.com/movies/report/mithun-jimmy-jimmy-soviet-spies/20261103.htm",
+      "url_mobile": "",
+      "title": "How Mithun's Jimmy Jimmy became a Soviet spy test",
+      "seendate": "20261103T143000Z",
+      "socialimage": "",
+      "domain": "rediff.com",
+      "language": "English",
+      "sourcecountry": "India"
+    },
+    {
+      "url": "https://www.rbth.com/arts/2026/11/03/disco-dancer-ussr-60-million",
+      "url_mobile": "",
+      "title": "Disco Dancer: the Indian film 60 million Soviets queued for",
+      "seendate": "20261103T091500Z",
+      "socialimage": "",
+      "domain": "rbth.com",
+      "language": "English",
+      "sourcecountry": "Russia"
+    },
+    {
+      "url": "not a url",
+      "title": "broken",
+      "seendate": "",
+      "domain": "",
+      "language": "",
+      "sourcecountry": ""
+    }
+  ]
+}

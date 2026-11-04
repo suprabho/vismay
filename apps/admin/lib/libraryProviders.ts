@@ -1474,6 +1474,96 @@ const dcStocksProvider: LibraryProvider = {
   },
 }
 
+// ── Curious claims (the Curious Desk's approved claims, migration 101) ──────
+
+/**
+ * The claim pipeline's approved claims as composer sources: the claim, its
+ * grade and the features behind it, the verbatim evidence quote with its
+ * document and archive link, and the lineage counts. Approved only, so a
+ * draft never builds on a candidate; the grade travels with the text so the
+ * draft states the claim at its true strength.
+ */
+const curiousClaimsProvider: LibraryProvider = {
+  key: 'curious-claims',
+  label: 'Curious claims',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error, count } = await sb
+      .from('curious_claim_pool')
+      .select('id, text, grade, theme, era, year_from, publisher, document_title', { count: 'exact' })
+      .or(`text.ilike.${pat},subject.ilike.${pat},document_title.ilike.${pat}`)
+      .order('approved_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{ id: string; text: string; grade: string | null; theme: string | null; era: string | null; year_from: number | null; publisher: string | null; document_title: string | null }>
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        title: r.text.length > 120 ? `${r.text.slice(0, 119)}…` : r.text,
+        subtitle: [r.grade ? `Grade ${r.grade}` : 'ungraded', r.year_from ?? r.era, r.theme, r.publisher ?? r.document_title].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb.from('curious_claim_pool').select('*').eq('id', id).maybeSingle()
+    const r = data as {
+      text: string
+      kind: string
+      subject: string | null
+      era: string | null
+      theme: string | null
+      year_from: number | null
+      year_to: number | null
+      place: string | null
+      grade: string | null
+      score: number | string | null
+      score_features: { notes?: string[] } | null
+      flags: string[] | null
+      evidence_quote: string
+      evidence_page: number | null
+      is_hearsay: boolean | null
+      is_anonymous: boolean | null
+      speaker: string | null
+      document_title: string | null
+      publisher: string | null
+      canonical_url: string
+      archive_url: string | null
+      published_at: string | null
+      source_id: string
+      n_sources: number | string | null
+      n_groups: number | string | null
+      n_primary: number | string | null
+      n_derived: number | string | null
+      entities: string[] | null
+    } | null
+    if (!r) return null
+    const notes = Array.isArray(r.score_features?.notes) ? r.score_features!.notes! : []
+    const lines = [
+      `Claim: ${r.text}`,
+      `Kind: ${r.kind}.${r.subject ? ` Subject: ${r.subject}.` : ''}${r.year_from != null ? ` Year: ${r.year_from}${r.year_to != null && r.year_to !== r.year_from ? ` to ${r.year_to}` : ''}.` : ''}${r.era ? ` Era: ${r.era}.` : ''}${r.theme ? ` Theme: ${r.theme}.` : ''}${r.place ? ` Place: ${r.place}.` : ''}`,
+      `Grade: ${r.grade ?? 'ungraded'}${r.score != null ? ` (score ${Number(r.score).toFixed(2)})` : ''}, computed from ${Number(r.n_sources ?? 0)} source(s) in ${Number(r.n_groups ?? 0)} independent lineage(s), ${Number(r.n_primary ?? 0)} primary, ${Number(r.n_derived ?? 0)} derived retelling(s).${r.flags?.length ? ` Flags: ${r.flags.join(', ')}.` : ''}`,
+      ...(notes.length ? [`Why: ${notes.join('; ')}.`] : []),
+      r.grade === 'D' || r.grade === 'E' ? 'Use: report that the claim is repeated and by whom, never that it happened.' : r.grade === 'C' ? 'Use: say who reports it and that no primary record was found.' : 'Use: may be stated as fact, naming the source.',
+      '',
+      `Evidence (verbatim, at most 300 characters): "${r.evidence_quote}"${r.evidence_page != null ? ` (p. ${r.evidence_page})` : ''}`,
+      `From: ${[r.document_title, r.publisher, r.published_at?.slice(0, 10)].filter(Boolean).join(', ')} (${r.source_id}). ${r.canonical_url}${r.archive_url ? ` Archived: ${r.archive_url}` : ''}`,
+      ...(r.is_hearsay || r.is_anonymous || r.speaker ? [`Attribution: ${[r.is_hearsay ? 'the passage hedges the claim' : null, r.is_anonymous ? 'it names no source' : null, r.speaker ? `attributed to ${r.speaker}` : null].filter(Boolean).join('; ')}.`] : []),
+      ...(r.entities?.length ? [`Named: ${r.entities.join(', ')}.`] : []),
+      '',
+      'Five articles from one wire story, book or interview are one lineage: count lineages, not articles, when weighing corroboration.',
+    ]
+    return {
+      title: r.text.length > 90 ? `${r.text.slice(0, 89)}…` : r.text,
+      byline: `Curious Desk · ${r.grade ? `Grade ${r.grade}` : 'ungraded'}${r.publisher ? ` · ${r.publisher}` : ''}`,
+      text: lines.join('\n'),
+    }
+  },
+}
+
 const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
@@ -1485,6 +1575,7 @@ const PROVIDERS: LibraryProvider[] = [
   energyProfileProvider,
   epsteinProvider,
   bookFactsProvider,
+  curiousClaimsProvider,
   cokeStudioProvider,
   foodDishesProvider,
   foodRecipesProvider,

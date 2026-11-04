@@ -1,0 +1,129 @@
+{
+  "success": true,
+  "itemsCount": 3,
+  "totalResults": 263,
+  "nextCursor": "AoREQ3nArdHL8QI8LzIyMS9VUk5fTkJOX1NJX0RPQ18zMVFYWUZOMw==",
+  "items": [
+    {
+      "id": "/221/URN_NBN_SI_DOC_1NTFR15D",
+      "guid": "https://www.europeana.eu/item/221/URN_NBN_SI_DOC_1NTFR15D?utm_source=api&utm_medium=api&utm_campaign=api2demo",
+      "title": [
+        "Ponesrečeni zrakoplov Zeppelin II"
+      ],
+      "dcDescription": [
+        "Je bil slovenski literarni mesečnik, ki je nastal kot zabavno-poučni list za katoliške bralce, pozneje pa se razvije v literarno revijo. Ustanovil ga je filozof in teolog Frančišek Lampe in ga urejal vse do svoje smrti (1900). Revija je bila sprva izrazito katoliška, a je predstavljala strpnejši, predvsem pa umetniško najbolj ustvarjalen del katoliške kulture. Urednikovanje Izidorja Cankarja (1914-1919) pomeni stopnjevanje umetniško-estetske usmeritve. Sodelovali so slovenski umetniki: Ivan Cankar, Plečnik, Vurnik… Leta 1937 pride do krize revije (1 leto ne izhaja), Kocbek je s svojim člankom sprožil ostro polemiko med katoličani, po tem času revija zgubi več pomembnih sodelavcev, ki so preš"
+      ],
+      "dataProvider": [
+        "National and University Library of Slovenia"
+      ],
+      "provider": [
+        "Slovenian National E-content Aggregator"
+      ],
+      "year": [
+        "1910"
+      ],
+      "language": [
+        "mul"
+      ],
+      "rights": [
+        "http://creativecommons.org/publicdomain/mark/1.0/"
+      ],
+      "edmIsShownAt": [
+        "http://www.dlib.si/details/URN:NBN:SI:DOC-1NTFR15D"
+      ],
+      "edmIsShownBy": [
+        "http://www.dlib.si/stream/URN:NBN:SI:DOC-1NTFR15D/c4c85279-f286-41ec-a1fb-6af9aa9cfd30/PDF"
+      ],
+      "country": [
+        "Slovenia"
+      ],
+      "type": "TEXT",
+      "edmPreview": [
+        "https://api.europeana.eu/thumbnail/v2/url.json?uri=http%3A%2F%2Fwww.dlib.si%2Fstreamdb%2FURN%3ANBN%3ASI%3ADOC-1NTFR15D%2Fmaxi%2Fedm&type=TEXT"
+      ],
+      "dcLanguage": [
+        "slv",
+        "sl"
+      ],
+      "timestamp_update": "2020-04-20T11:07:21.481Z"
+    },
+    {
+      "id": "/221/URN_NBN_SI_DOC_31QXYFN3",
+      "guid": "https://www.europeana.eu/item/221/URN_NBN_SI_DOC_31QXYFN3?utm_source=api&utm_medium=api&utm_campaign=api2demo",
+      "title": [
+        "Grof Ferdinand Zeppelin"
+      ],
+      "dcDescription": [
+        "Je bil slovenski literarni mesečnik, ki je nastal kot zabavno-poučni list za katoliške bralce, pozneje pa se razvije v literarno revijo. Ustanovil ga je filozof in teolog Frančišek Lampe in ga urejal vse do svoje smrti (1900). Revija je bila sprva izrazito katoliška, a je predstavljala strpnejši, predvsem pa umetniško najbolj ustvarjalen del katoliške kulture. Urednikovanje Izidorja Cankarja (1914-1919) pomeni stopnjevanje umetniško-estetske usmeritve. Sodelovali so slovenski umetniki: Ivan Cankar, Plečnik, Vurnik… Leta 1937 pride do krize revije (1 leto ne izhaja), Kocbek je s svojim člankom sprožil ostro polemiko med katoličani, po tem času revija zgubi več pomembnih sodelavcev, ki so preš"
+      ],
+      "dataProvider": [
+        "National and University Library of Slovenia"
+      ],
+      "provider": [
+        "Slovenian National E-content Aggregator"
+      ],
+      "year": [
+        "1908"
+      ],
+      "language": [
+        "mul"
+      ],
+      "rights": [
+        "http://creativecommons.org/publicdomain/mark/1.0/"
+      ],
+      "edmIsShownAt": [
+        "http://www.dlib.si/details/URN:NBN:SI:DOC-31QXYFN3"
+      ],
+      "edmIsShownBy": [
+        "http://www.dlib.si/stream/URN:NBN:SI:DOC-31QXYFN3/a777db5f-46ee-466d-9321-3328080005c9/PDF"
+      ],
+      "country": [
+        "Slovenia"
+      ],
+      "type": "TEXT",
+      "edmPreview": [
+        "https://api.europeana.eu/thumbnail/v2/url.json?uri=http%3A%2F%2Fwww.dlib.si%2Fstreamdb%2FURN%3ANBN%3ASI%3ADOC-31QXYFN3%2Fmaxi%2Fedm&type=TEXT"
+      ],
+      "dcLanguage": [
+        "slv",
+        "sl"
+      ],
+      "timestamp_update": "2020-04-20T11:07:21.481Z"
+    },
+    {
+      "id": "/9200579/abc123",
+      "guid": "https://www.europeana.eu/item/9200579/abc123?utm_source=api&utm_medium=api&utm_campaign=api2demo",
+      "title": [
+        "Zeppelin über Berlin"
+      ],
+      "dcDescription": [
+        "Bericht: Zum ersten Mal überflog ein Luftschiff die Stadt. Angeblich sahen 200,000 Menschen zu."
+      ],
+      "dcCreator": [
+        "Berliner Tageblatt"
+      ],
+      "dataProvider": [
+        "Staatsbibliothek zu Berlin"
+      ],
+      "provider": [
+        "Deutsche Digitale Bibliothek"
+      ],
+      "year": [
+        "1909"
+      ],
+      "language": [
+        "de"
+      ],
+      "rights": [
+        "http://rightsstatements.org/vocab/InC/1.0/"
+      ],
+      "edmIsShownAt": [
+        "https://example.org/item/abc123"
+      ],
+      "country": [
+        "Germany"
+      ],
+      "type": "TEXT"
+    }
+  ]
+}

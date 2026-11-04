@@ -16,7 +16,10 @@
  * pool is AI Daily's kept arXiv papers (loadFrontierPool: dc_papers and the
  * published dc_editions' paper_ids, in this same project), read before the
  * draw; the drawn paper's arXiv and OpenAlex record comes from
- * ./frontierPool after it.
+ * ./frontierPool after it. The Curious Desk's pool is the claim pipeline's
+ * approved claims (loadCuriousPool: the curious_claim_pool view, migration
+ * 101), read before the draw; the drawn claim's Crossref, Google Books,
+ * Wikidata and Wayback record comes from ./curiousPool after it.
  *
  * A spin is created only here, and only by an authenticated caller (admin's
  * session-gated routes, or the token-gated routes on vizmaya-fyi that the MCP
@@ -36,6 +39,7 @@ import { DESK, FOOTSHORTS, VIZNBA } from './datasets'
 import { DRAW_RULES, draw, planLandmark, planOcw } from './draw'
 import { loadEvidenceRecord } from './evidencePool'
 import { frontierPoolFromRows, loadFrontierRecord } from './frontierPool'
+import { curiousPoolFromRows, loadCuriousRecord, type CuriousPoolRow } from './curiousPool'
 import { loadHundredProfile } from './hundredPool'
 import { enrichLandmarkAward, loadLandmarkAwards, loadLandmarkWorks } from './landmarkPool'
 import { enrichOcwCourse, loadOcwPool } from './ocwPool'
@@ -50,6 +54,7 @@ import {
   type FootshortsHeadline,
   type FootshortsNews,
   type FootshortsTeamNews,
+  type CuriousPool,
   type FrontierPool,
   type LandmarkPool,
   type OcwPool,
@@ -87,7 +92,7 @@ function check(error: { code?: string; message: string } | null): void {
   if (error.code === '42P01' || error.code === 'PGRST205') throw new SpinError(MIGRATION_HINT, 503)
   if (error.code === '23514' && /randomizer_check/.test(error.message)) {
     throw new SpinError(
-      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk',
+      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk, 102_randomizer_curious.sql for the Curious Desk',
       503,
     )
   }
@@ -206,7 +211,7 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
   }
 
   let seed = input.seed ?? randomSeed()
-  const [past, heat, news, nbaNews, frontierPool] = await Promise.all([
+  const [past, heat, news, nbaNews, frontierPool, curiousPool] = await Promise.all([
     // The spin being re-spun is about to be rejected: it must not block its own replacement.
     history(input.randomizer, input.respin ? prev?.id : undefined),
     input.randomizer === 'desk' ? listDeskHeat() : Promise.resolve([] as DeskHeatRow[]),
@@ -215,6 +220,11 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
     input.randomizer === 'frontier'
       ? loadFrontierPool().catch((e) => {
           throw new SpinError(`AI Daily's papers could not be read: ${e instanceof Error ? e.message : String(e)}`, 503)
+        })
+      : Promise.resolve(null),
+    input.randomizer === 'curious'
+      ? loadCuriousPool().catch((e) => {
+          throw new SpinError(`The approved claims could not be read: ${e instanceof Error ? e.message : String(e)}`, 503)
         })
       : Promise.resolve(null),
   ])
@@ -288,9 +298,10 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
       ocwPool,
       landmarkPool,
       frontierPool,
+      curiousPool,
     })
   } catch (e) {
-    // The draw only throws when there is nothing to draw from (an empty footshorts, VizNBA, OCW, Landmark or Frontier pool).
+    // The draw only throws when there is nothing to draw from (an empty footshorts, VizNBA, OCW, Landmark, Frontier or Curious pool).
     throw new SpinError(e instanceof Error ? e.message : String(e), 503)
   }
   if (result.subject.randomizer === 'ocw') {
@@ -337,6 +348,21 @@ export async function createSpin(input: CreateSpinInput): Promise<SpinRecord> {
       })
     }
     if (record.journalRef) result.rules.push({ tag: 'published', kind: 'good', text: `Published since: ${record.journalRef}. Cite the published version for anything that changed.` })
+  }
+  if (result.subject.randomizer === 'curious') {
+    // The claim's cited work, book, entities and archive link, for the brief. Never blocks the spin.
+    const record = await loadCuriousRecord(result.subject.claim)
+    result.subject = { ...result.subject, record }
+    const failed = (['crossref', 'books', 'wikidata', 'wayback'] as const).filter((k) => record.sources[k] === 'failed')
+    if (failed.length) {
+      result.rules.push({
+        tag: 'record',
+        kind: 'warn',
+        text: `The live record could not read ${failed.join(', ')} (${record.sources.errors.join('; ')}). The brief says to look those up by hand.`,
+      })
+    }
+    if (record.crossref) result.rules.push({ tag: 'cited', kind: 'good', text: `Crossref has the cited work: "${record.crossref.title ?? record.crossref.doi}"${record.crossref.year ? ` (${record.crossref.year})` : ''}${record.crossref.citedBy != null ? `, cited ${record.crossref.citedBy} times` : ''}. Read it before the retellings.` })
+    if (!record.archiveUrl) result.rules.push({ tag: 'archive', kind: 'info', text: 'No archive snapshot of the evidence document yet: save one before the page links it, so the link survives the publisher.' })
   }
   if (input.respin && prev) {
     result.rules.unshift({
@@ -1080,4 +1106,37 @@ export async function loadFrontierPool(now: Date = new Date(), days: number = DR
   // The featured marks are a bonus: without dc_editions the pool still draws.
   const editions = edError ? [] : ((eds ?? []) as Array<{ edition_date: string; paper_ids: string[] | null }>)
   return frontierPoolFromRows(rows, editions, { asOf: now.toISOString(), windowDays: days })
+}
+
+/* ---------- The Curious Desk's pool ---------- */
+
+/**
+ * The claim pipeline's approved claims for the Curious Desk: every row of
+ * the curious_claim_pool view (migration 101), plus each claim's external
+ * references (doi:, isbn:, qid:, url:) from curious_claim_sources for the
+ * live record. Both live in this same Supabase project.
+ */
+export async function loadCuriousPool(now: Date = new Date()): Promise<CuriousPool> {
+  const db = createServiceClient()
+  const rows: CuriousPoolRow[] = []
+  // PostgREST caps a response (1,000 rows by default): page until a short page.
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from('curious_claim_pool').select('*').order('approved_at', { ascending: false }).order('id', { ascending: true }).range(from, from + 999)
+    if (error) throw new Error(`curious_claim_pool: ${error.message}`)
+    rows.push(...((data ?? []) as CuriousPoolRow[]))
+    if (!data || data.length < 1000) break
+  }
+  const refs = new Map<string, string[]>()
+  const ids = rows.map((r) => r.id)
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await db.from('curious_claim_sources').select('claim_id, external_ref').in('claim_id', ids.slice(i, i + 200)).not('external_ref', 'is', null)
+    // References are a bonus: without them the pool still draws.
+    if (error) break
+    for (const r of (data ?? []) as Array<{ claim_id: string; external_ref: string }>) {
+      const list = refs.get(r.claim_id) ?? []
+      list.push(r.external_ref)
+      refs.set(r.claim_id, list)
+    }
+  }
+  return curiousPoolFromRows(rows, refs, { asOf: now.toISOString() })
 }

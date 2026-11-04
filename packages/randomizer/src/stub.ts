@@ -18,15 +18,21 @@
  * credit line. Frontier Desk spins get a paper template: the paper, what
  * AI Daily's gate read (to check), what the paper says, how strong it is,
  * the papers beside it, the numbers, the lens read and the credit line.
+ * Curious Desk spins get a claim-check template: the claim and its grade
+ * with the features behind it, the evidence quote and its document, the
+ * lineages, the supported core against the embellishment, the numbers, the
+ * lens read and the credit line.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
 
-import { FOOTSHORTS, FRONTIER, VIZNBA } from './datasets'
+import { CURIOUS, curiousGradeLabel, FOOTSHORTS, FRONTIER, VIZNBA } from './datasets'
 import { slugify } from './text'
 import {
   RANDOMIZER_META,
   type AtlasSubject,
+  type CuriousClaim,
+  type CuriousSubject,
   type DeskSubject,
   type EpicsSubject,
   type FootshortsFixtureRef,
@@ -63,6 +69,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'hundred') return s.person.name
   if (s.randomizer === 'evidence') return s.study.label
   if (s.randomizer === 'frontier') return s.paper.arxivId
+  if (s.randomizer === 'curious') return s.claim.subject || s.claim.text.split(' ').slice(0, 6).join(' ')
   return s.epic.title
 }
 
@@ -855,6 +862,149 @@ function frontierTemplate(s: FrontierSubject): string[] {
   ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
 }
 
+/* ---------- The Curious Desk ---------- */
+
+/** The claim, trimmed for a label; no quotation marks, so it sits inside a quoted credit. */
+export function curiousClaimLabel(c: Pick<CuriousClaim, 'text'>, max = 90): string {
+  return c.text.length > max ? `${c.text.slice(0, max - 1).trimEnd()}…` : c.text
+}
+
+/** "Rediff, 3 Nov 2026" or "the document": where the evidence quote comes from. */
+export function curiousDocumentLabel(c: Pick<CuriousClaim, 'document'>): string {
+  const d = c.document
+  const when = d.publishedAt ? (d.publishedPrecision === 'year' ? d.publishedAt.slice(0, 4) : d.publishedAt.slice(0, 10)) : null
+  return [d.title ?? d.publisher ?? d.canonicalUrl, d.publisher && d.title ? d.publisher : null, when].filter(Boolean).join(', ')
+}
+
+/** The credit the page carries, written out. */
+export function curiousCreditLine(s: Pick<CuriousSubject, 'claim' | 'record' | 'source'>): string {
+  const c = s.claim
+  const r = s.record
+  const archive = r?.archiveUrl ?? c.document.archiveUrl
+  const graded = c.approvedAt ? c.approvedAt.slice(0, 10) : 'approval'
+  const data = [r?.crossref ? 'Crossref' : null, r?.book ? 'Google Books' : null, r?.wikidata.length ? 'Wikidata (CC0)' : null].filter(Boolean)
+  return `Credit: "Evidence: ${curiousDocumentLabel(c)}, ${c.document.canonicalUrl}${archive ? ` (archived: ${archive})` : ''}. ${curiousGradeLabel(c)} as computed by the Curious Desk on ${graded} from ${c.nSources} source${c.nSources === 1 ? '' : 's'} in ${c.nGroups} independent lineage${c.nGroups === 1 ? '' : 's'}.${data.length ? ` Citation data: ${data.join(', ')}.` : ''}" Link the evidence document itself and its archive copy, never a retelling of it.`
+}
+
+/** What to chart per Curious lens, when the data exists. */
+export const CURIOUS_LENS_METRICS: Record<string, string[]> = {
+  'Trace the lineage': [
+    'the retellings by year, each marked by its lineage, from the earliest source found to the newest',
+    'the family tree of the claim: who copied whom, as a tree, not a line',
+    'how the wording changed between tellings (the words added or dropped per step)',
+  ],
+  'Core vs embellishment': [
+    'the two claims side by side with their grades and the sources behind each',
+    'when the embellishment first appears against when the core is first recorded',
+    'the share of retellings that carry the embellishment, by year',
+  ],
+  'The number behind it': [
+    'the figure in the claim against every other count of the same thing found',
+    'the figure in context (per head, per year, against a benchmark the reader knows)',
+    'the figure as each source gives it, with the source type',
+  ],
+  'Where it happened': [
+    'the places the sources name, on a map, with the dates they attach',
+    'the distances and times the story needs against what was possible then',
+    'what else the record shows at that place in that year',
+  ],
+  'Then and now': [
+    'the thing counted, priced or measured in the claim, then and now, in constant terms',
+    'the series between then and now where one exists (8 or more points)',
+    'how the claim\'s audience, trade or population changed since',
+  ],
+  'Who says so': [
+    'the sources by type (archive, press, memoir, scholarship, web) and lineage',
+    'what each source could have known: its date against the event\'s',
+    'where the sources agree and where they differ, claim by claim',
+  ],
+  "Explain like I'm 5": ['the claim as a picture count (out of ten tries)', 'then and now, side by side', 'the one number that shows it'],
+}
+
+export function curiousLensMetrics(lens: string): string[] {
+  return CURIOUS_LENS_METRICS[lens] ?? ['the retellings by year and lineage', 'the figure in the claim against other counts', 'the sources by type']
+}
+
+/** The grader's notes, as stored in score_features, or none. */
+export function curiousGradeNotes(c: Pick<CuriousClaim, 'scoreFeatures'>): string[] {
+  const n = c.scoreFeatures?.notes
+  return Array.isArray(n) ? n.filter((x): x is string => typeof x === 'string') : []
+}
+
+function curiousTemplate(s: CuriousSubject): string[] {
+  const c = s.claim
+  const r = s.record
+  const notes = curiousGradeNotes(c)
+  return [
+    '## The claim',
+    '',
+    c.text,
+    `Kind: ${c.kind}. Subject: ${c.subject ?? 'n/a'}. Era: ${s.era.name}. Theme: ${s.theme.name}.${s.region ? ` Region: ${s.region.name}.` : ''}${c.yearFrom != null ? ` Year: ${c.yearFrom}${c.yearTo != null && c.yearTo !== c.yearFrom ? ` to ${c.yearTo}` : ''}.` : ' Year: not stated.'}${c.place ? ` Place: ${c.place}.` : ''}`,
+    '',
+    '## The grade and the features behind it',
+    '',
+    `${curiousGradeLabel(c)}: ${s.grade.label}. ${s.grade.rule}`,
+    `${c.nSources} source${c.nSources === 1 ? '' : 's'} in ${c.nGroups} independent lineage${c.nGroups === 1 ? '' : 's'}; ${c.nPrimary} primary; ${c.nDerived} derived retelling${c.nDerived === 1 ? '' : 's'}; ${c.nContradicts} contradicting.${c.flags.length ? ` Flags: ${c.flags.join(', ')}.` : ''}`,
+    ...(notes.length ? notes.map((n) => `- ${n}`) : ['- No grader notes on the claim.']),
+    '',
+    'The grade I would give after the research, and why it differs if it does:',
+    '',
+    '## The evidence',
+    '',
+    `"${c.evidenceQuote}"${c.evidencePage != null ? ` (p. ${c.evidencePage})` : ''}`,
+    `From: ${curiousDocumentLabel(c)}. ${c.document.canonicalUrl}${(r?.archiveUrl ?? c.document.archiveUrl) ? ` (archived: ${r?.archiveUrl ?? c.document.archiveUrl})` : ''}`,
+    `${c.isHearsay ? 'The passage hedges the claim. ' : ''}${c.isAnonymous ? 'The passage names no source for it. ' : ''}${c.speaker ? `Attributed to: ${c.speaker}.` : ''}`.trim() || 'The passage states the claim plainly.',
+    '',
+    '## Lineages',
+    '',
+    'One row per source found, grouped by lineage. Five articles from one wire story are one row of evidence, not five.',
+    '',
+    '| Lineage | Source | Date | Type | What it says | Independent of the others? |',
+    '|---------|--------|------|------|--------------|----------------------------|',
+    `| | ${curiousDocumentLabel(c)} | ${c.document.publishedAt?.slice(0, 10) ?? ''} | ${c.document.sourceId} | the evidence quote | |`,
+    ...(r?.crossref ? [`| doi:${r.crossref.doi} | ${r.crossref.title ?? r.crossref.doi} | ${r.crossref.year ?? ''} | ${r.crossref.type ?? 'work'} | | |`] : []),
+    ...(r?.book ? [`| isbn:${r.book.isbn} | ${r.book.title ?? r.book.isbn} | ${r.book.year ?? ''} | book | | |`] : []),
+    '',
+    '## Core and embellishment',
+    '',
+    'Split the claim: the part the record supports and the part that grew on it. Each gets its own grade and its own claims log rows.',
+    '',
+    '| Part | Statement | Grade | Earliest source | Claims log rows |',
+    '|------|-----------|-------|-----------------|-----------------|',
+    '| Core | | | | |',
+    '| Embellishment | | | | |',
+    '',
+    '## Entities',
+    '',
+    ...(c.entities.length
+      ? c.entities.map((e) => {
+          const w = r?.wikidata.find((x) => x.name === e)
+          return `- ${e}${w ? ` (${w.qid}${w.description ? `, ${w.description}` : ''}${w.birthYear != null ? `, ${w.birthYear}${w.deathYear != null ? ` to ${w.deathYear}` : ''}` : w.year != null ? `, ${w.year}` : ''})` : ''}`
+        })
+      : ['- No named entities on the claim.']),
+    '',
+    '## Numbers',
+    '',
+    'At least 8 data points per series where possible.',
+    '',
+    '| Metric | Case | Value | Unit | Source |',
+    '|--------|------|-------|------|--------|',
+    ...curiousLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `${s.lens.description} Applied to this claim, not to ${s.theme.name.toLowerCase()} in general.`,
+    '',
+    '## Beside it',
+    '',
+    ...(s.related.length ? s.related.map((x) => `- ${curiousClaimLabel(x)} (${x.grade ? `grade ${x.grade}` : 'ungraded'}; ${x.documentTitle ?? x.canonicalUrl}). Same story, a different one, or a contradiction?`) : ['- No other approved claim shares a name with this one.']),
+    '',
+    '## Credit',
+    '',
+    curiousCreditLine(s),
+  ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
+}
+
 /** The research MD a spin starts from. */
 /** An "Explain like I'm 5" spin: the stub gains the story insight and the stand-in table. */
 function isEli5Stub(s: StubSpin['subject']): boolean {
@@ -904,7 +1054,9 @@ export function researchStub(spin: StubSpin): string {
                     ? evidenceTemplate(s)
                     : s.randomizer === 'frontier'
                       ? frontierTemplate(s)
-                      : epicsTemplate(s)
+                      : s.randomizer === 'curious'
+                        ? curiousTemplate(s)
+                        : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -928,7 +1080,9 @@ export function researchStub(spin: StubSpin): string {
                 ? '> (the paper itself with its page, table or figure, its preregistration or data, a peer-reviewed replication). Mark each claim Verified, Contested or'
                 : s.randomizer === 'frontier'
                   ? '> (the paper itself with its table or figure, its released code or weights, an independent replication). Mark each claim Verified, Contested or'
-                  : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+                  : s.randomizer === 'curious'
+                    ? '> (a contemporaneous document, an archive record, the original text, a peer-reviewed paper). Two retellings of one account are one source. Mark each claim Verified, Contested or'
+                    : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

@@ -906,7 +906,16 @@ const FRONTIER_SPIN_RULES = [
   'Any figure about compute, energy, chips or money that the paper does not state names its public source and every assumption. Citation counts are OpenAlex data (CC0): credit them with the read date. Redraw a figure from the paper with a citation; never paste it.',
 ]
 
+/** A Curious Desk spin's brief carries one approved claim with its grade, evidence quote and lineages: how the page uses them. */
+const CURIOUS_SPIN_RULES = [
+  "The desk's grade is computed from the sources found so far: print it with its meaning, and print the research's own grade beside it with the reason when they differ. A grade D or E claim is reported as repeated (\"it is widely said that\"), never as something that happened.",
+  'Count lineages, not articles: sources that descend from one account (a wire story and its reprints, a book and the articles quoting it, an interview and its retellings) are one source on the page and in the lineage chart.',
+  'The evidence quote (at most 300 characters) is the only verbatim text taken from the evidence document, and the page links the document itself and its archive copy, never a retelling of it. Anything else from a copyrighted source is paraphrased and cited.',
+  'The supported core and the embellishment are told apart on the page, each with its grade and earliest source. A claim naming what may be a private living person sticks to the sourced record and may leave the name off. Citation and entity data are Crossref, Google Books and Wikidata (CC0): credit them as the assignment says.',
+]
+
 function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
+  if (spin.randomizer === 'curious') return CURIOUS_SPIN_RULES
   if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
   if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES
   if (spin.randomizer === 'hundred') return HUNDRED_SPIN_RULES

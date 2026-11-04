@@ -4,7 +4,8 @@
  * Desk on prize-winning research, The 100 Desk on Michael Hart's ranking
  * of the most influential persons in history, the Evidence Desk on an
  * annotated collection of research on social media's effects and the
- * Frontier Desk on the arXiv papers AI Daily ingests), the
+ * Frontier Desk on the arXiv papers AI Daily ingests, and the Curious Desk
+ * on the approved claims of the provenance-first claim pipeline), the
  * Footshorts one (teams, tournaments and their news) and the VizNBA one
  * (franchises, conferences and their news), their datasets (./data/*.json)
  * and the spins they produce.
@@ -12,9 +13,9 @@
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'frontier' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'frontier' | 'curious' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -48,14 +49,16 @@ export interface RandomizerMeta {
   hint: string
   format: string
   reels: ReelDef[]
-  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark, The 100, Evidence and Frontier sequence mode, Footshorts and NBA head-to-head. */
+  /** The per-randomizer toggle: Atlas pair spin, Epics, OCW, Landmark, The 100, Evidence, Frontier and Curious sequence mode, Footshorts and NBA head-to-head. */
   option: { key: 'pair' | 'sequence'; label: string } | null
   /**
    * Whether the hero insight waits for a human before anything public is
    * built from it (decision D4: gated for Atlas and Epics because of the
-   * sensitivity rules, and for The 100 Desk, whose list runs from the
-   * founders of religions to dictators; optional for the Desk, Footshorts and
-   * the NBA Desk).
+   * sensitivity rules, for The 100 Desk, whose list runs from the
+   * founders of religions to dictators, and for the Curious Desk, whose
+   * claims arrive with a computed grade a human has approved but whose page
+   * still asserts something about the world; optional for the Desk,
+   * Footshorts and the NBA Desk).
    */
   gated: boolean
 }
@@ -188,6 +191,21 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     ],
     option: { key: 'sequence', label: 'Follow the thread (a related paper)' },
     gated: false,
+  },
+  curious: {
+    id: 'curious',
+    app: 'vizmaya-fyi',
+    name: 'Curious Desk',
+    hint: 'Approved claims · graded A to E',
+    format: 'Claim check with charts',
+    reels: [
+      { key: 'era', label: 'Era' },
+      { key: 'theme', label: 'Theme', parents: ['era'] },
+      { key: 'claim', label: 'Claim', parents: ['theme', 'era'], live: true },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: { key: 'sequence', label: 'Pull the thread (a claim sharing a name)' },
+    gated: true,
   },
   footshorts: {
     id: 'footshorts',
@@ -1240,6 +1258,170 @@ export interface FrontierSubject {
   from: string | null
 }
 
+/* ---------- The Curious Desk ---------- */
+
+/** Where the claims come from: the claim pipeline and the view of approved claims it fills. */
+export interface CuriousSource {
+  name: string
+  /** The Supabase view the pool is read from. */
+  table: string
+  /** The CLIs that fill it. */
+  ingest: string
+  /** The admin review queue. */
+  admin: string
+  note: string
+}
+
+export interface CuriousEra {
+  id: string
+  name: string
+  from: number | null
+  to: number | null
+  description: string
+}
+
+export interface CuriousRegion {
+  id: string
+  name: string
+}
+
+export interface CuriousTheme {
+  id: string
+  name: string
+  description: string
+}
+
+export type CuriousGrade = 'A' | 'B' | 'C' | 'D' | 'E'
+
+/** What a grade means and what the page may say under it. */
+export interface CuriousGradeInfo {
+  label: string
+  rule: string
+}
+
+export interface CuriousDataset {
+  source: CuriousSource
+  eras: CuriousEra[]
+  regions: CuriousRegion[]
+  themes: CuriousTheme[]
+  grades: Record<CuriousGrade, CuriousGradeInfo>
+  lenses: NamedOption[]
+}
+
+/** The document a claim's evidence quote comes from, as the pool carries it. */
+export interface CuriousDocumentRef {
+  id: string
+  sourceId: string
+  title: string | null
+  publisher: string | null
+  author: string | null
+  canonicalUrl: string
+  archiveUrl: string | null
+  publishedAt: string | null
+  publishedPrecision: string | null
+  language: string | null
+}
+
+/** One approved claim from curious_claim_pool, as the pool holds it. */
+export interface CuriousClaim {
+  id: string
+  text: string
+  kind: 'fact' | 'anecdote' | 'number' | 'quote'
+  subject: string | null
+  /** CuriousEra.id ('undated' when the claim names no year). */
+  era: string
+  /** CuriousRegion.id */
+  region: string | null
+  /** CuriousTheme.id */
+  theme: string | null
+  yearFrom: number | null
+  yearTo: number | null
+  place: string | null
+  countryCode: string | null
+  grade: CuriousGrade | null
+  score: number | null
+  /** The grader's features and notes (packages/curious-pipeline grade.ts), as stored. */
+  scoreFeatures: Record<string, unknown> | null
+  flags: string[]
+  /** Verbatim, at most 300 characters. */
+  evidenceQuote: string
+  evidencePage: number | null
+  isQuotation: boolean
+  isAnonymous: boolean
+  isHearsay: boolean
+  speaker: string | null
+  document: CuriousDocumentRef
+  nSources: number
+  /** Distinct independence lineages among the supporting sources. */
+  nGroups: number
+  nPrimary: number
+  nDerived: number
+  nContradicts: number
+  entities: string[]
+  /** doi:, isbn:, qid: and url: references from the claim's sources. */
+  refs: string[]
+  approvedAt: string | null
+}
+
+/**
+ * What a spin reads from curious_claim_pool before the draw (spins.ts
+ * loadCuriousPool): every approved claim. Frozen into the spin as a sample.
+ */
+export interface CuriousPool {
+  asOf: string
+  claims: CuriousClaim[]
+}
+
+export type CuriousSourceState = 'ok' | 'failed' | 'skipped'
+
+/**
+ * What a spin reads live about the claim it drew (curiousPool.ts), after the
+ * draw: the cited work on Crossref, the cited book on Google Books, the
+ * entities on Wikidata, and a Wayback snapshot of the evidence document.
+ * Never blocks a spin.
+ */
+export interface CuriousRecord {
+  asOf: string
+  crossref: { doi: string; title: string | null; container: string | null; year: number | null; type: string | null; citedBy: number | null; url: string } | null
+  book: { isbn: string; title: string | null; publisher: string | null; year: number | null; url: string | null } | null
+  wikidata: Array<{ name: string; qid: string; label: string | null; description: string | null; birthYear: number | null; deathYear: number | null; year: number | null }>
+  archiveUrl: string | null
+  sources: { crossref: CuriousSourceState; books: CuriousSourceState; wikidata: CuriousSourceState; wayback: CuriousSourceState; errors: string[]; notes: string[] }
+}
+
+/** A claim the spin's claim sits beside (shared entities, the same theme and era), as the subject carries it. */
+export type CuriousRelated = Pick<CuriousClaim, 'id' | 'text' | 'grade' | 'theme' | 'era' | 'yearFrom' | 'entities' | 'nGroups'> & { documentTitle: string | null; canonicalUrl: string }
+
+export interface CuriousPicks {
+  /** CuriousEra.id */
+  era: string
+  /** CuriousTheme.id */
+  theme: string
+  /** CuriousClaim.id */
+  claim: string
+  lens: string
+}
+
+export interface CuriousSubject {
+  randomizer: 'curious'
+  source: CuriousSource
+  era: CuriousEra
+  theme: CuriousTheme
+  region: CuriousRegion | null
+  claim: CuriousClaim
+  /** The grade's meaning and the page rule under it. */
+  grade: CuriousGradeInfo & { grade: CuriousGrade | null }
+  lens: NamedOption
+  /** The pool's other claims it sits beside, best match first. */
+  related: CuriousRelated[]
+  /** When the pool was read, its size, and claim texts from the era for the claim reel. */
+  pool: { asOf: string; size: number; texts: string[] }
+  /** Read after the draw (spins.ts); null on a spin replayed without the network. */
+  record: CuriousRecord | null
+  /** Pulled the thread from the previous spin's claim (sequence mode): its id. */
+  from: string | null
+}
+
 /* ---------- Footshorts ---------- */
 
 export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
@@ -1601,8 +1783,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FrontierSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FrontierPicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FrontierSubject | CuriousSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FrontierPicks | CuriousPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -1632,6 +1814,9 @@ export interface SpinMeta {
   /** The Frontier Desk: the area, for the same-area-twice rule, and the paper's arXiv id, for following the thread. */
   area?: string
   arxiv?: string
+  /** The Curious Desk: the era, for the same-era-twice rule, and the claim id, for pulling the thread (theme and region reuse the fields above). */
+  era?: string
+  claim?: string
 }
 
 export interface DrawResult {

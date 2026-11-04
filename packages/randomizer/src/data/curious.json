@@ -1,0 +1,61 @@
+{
+  "source": {
+    "name": "Curious claims",
+    "table": "curious_claim_pool",
+    "ingest": "apps/vizmaya-fyi/scripts/curious/",
+    "admin": "/vizmaya/curious",
+    "note": "The claim pipeline (packages/curious-pipeline) discovers documents from GDELT news, the Library of Congress, Europeana and Gallica, splits passages into atomic claims each with a verbatim evidence quote of at most 300 characters, groups every supporting source into an independence lineage (one wire story retold twenty times is one lineage), grades each claim A to E from explicit features (a primary source, independent contemporaneous lineages, institutional quality, a quotation found in print, chronology and geography against the entities, scholarship cited; minus anonymous repetition, circular citation, a time gap, a translation, a contradiction), and a human approves it on the admin Curious claims tab. The desk draws only approved claims. The grade is a computed reading of the sources found so far: it goes on the page as the desk's grade, and the research may argue for another."
+  },
+  "eras": [
+    { "id": "antiquity", "name": "Antiquity", "from": null, "to": 499, "description": "To 500 CE." },
+    { "id": "medieval", "name": "Medieval", "from": 500, "to": 1449, "description": "500 to 1450." },
+    { "id": "early-modern", "name": "Early modern", "from": 1450, "to": 1789, "description": "1450 to the French Revolution." },
+    { "id": "long-19th", "name": "The long nineteenth century", "from": 1790, "to": 1913, "description": "1790 to the eve of the First World War." },
+    { "id": "world-wars", "name": "The world wars", "from": 1914, "to": 1945, "description": "1914 to 1945." },
+    { "id": "postwar", "name": "Postwar", "from": 1946, "to": 1979, "description": "1946 to 1979." },
+    { "id": "late-20th", "name": "Late twentieth century", "from": 1980, "to": 1999, "description": "1980 to 1999." },
+    { "id": "recent", "name": "Recent", "from": 2000, "to": null, "description": "2000 to now." },
+    { "id": "undated", "name": "Undated", "from": null, "to": null, "description": "The claim names no year: the research dates it or says why it cannot be dated." }
+  ],
+  "regions": [
+    { "id": "europe", "name": "Europe" },
+    { "id": "north-america", "name": "North America" },
+    { "id": "latin-america", "name": "Latin America and the Caribbean" },
+    { "id": "middle-east-north-africa", "name": "Middle East and North Africa" },
+    { "id": "sub-saharan-africa", "name": "Sub-Saharan Africa" },
+    { "id": "south-asia", "name": "South Asia" },
+    { "id": "east-asia", "name": "East Asia" },
+    { "id": "southeast-asia-oceania", "name": "Southeast Asia and Oceania" },
+    { "id": "world", "name": "The world" }
+  ],
+  "themes": [
+    { "id": "science-invention", "name": "Science and invention", "description": "Discoveries, machines, medicine, the people who made them and the accidents along the way." },
+    { "id": "arts-music", "name": "Arts and music", "description": "Painting, sculpture, theatre, songs, concerts and the stories around them." },
+    { "id": "film-tv", "name": "Film and television", "description": "Films, shows, stars, box offices and audiences in unexpected places." },
+    { "id": "food-drink", "name": "Food and drink", "description": "Dishes, ingredients, recipes, famines, feasts and the trade behind them." },
+    { "id": "sport-games", "name": "Sport and games", "description": "Matches, records, players, rules and the games people played." },
+    { "id": "words-language", "name": "Words and language", "description": "Etymologies, scripts, translations, slang and misprints that stuck." },
+    { "id": "money-trade", "name": "Money and trade", "description": "Prices, currencies, companies, bubbles and what things cost." },
+    { "id": "war-peace", "name": "War and peace", "description": "Battles, truces, spies, deserters and the odd detail the record kept." },
+    { "id": "law-crime", "name": "Law and crime", "description": "Trials, laws, heists, punishments and the rules people broke." },
+    { "id": "cities-buildings", "name": "Cities and buildings", "description": "Streets, bridges, towers, plans that failed and buildings that moved." },
+    { "id": "nature-animals", "name": "Nature and animals", "description": "Weather, creatures, plants, disasters and the animals in human stories." },
+    { "id": "travel-transport", "name": "Travel and transport", "description": "Ships, trains, balloons, roads, journeys and the first and last of each." }
+  ],
+  "grades": {
+    "A": { "label": "Direct primary evidence plus independent corroboration", "rule": "The page may state it as fact, with the primary source linked." },
+    "B": { "label": "Strong contemporaneous evidence or multiple independent reputable sources", "rule": "The page may state it as fact, naming the sources." },
+    "C": { "label": "Plausible and well-sourced secondary account; primary evidence not located", "rule": "The page says who reports it and that no primary record was found." },
+    "D": { "label": "Repeated anecdote whose evidentiary chain traces to an unsourced account", "rule": "The page may only say that it is widely repeated and by whom, never that it happened, until the research finds better." },
+    "E": { "label": "Contradicted, impossible, circular or unsupported", "rule": "The page states the contradiction or the gap; the claim itself is not asserted." }
+  },
+  "lenses": [
+    { "name": "Trace the lineage", "description": "Follow the story back: who told it first, who copied whom, where the wording changed, and what the earliest source actually says. The page is the family tree of a claim." },
+    { "name": "Core vs embellishment", "description": "Split the claim into the part the record supports and the part that grew on it: two claims, two grades, side by side, and how the second attached itself to the first." },
+    { "name": "The number behind it", "description": "Take the figure in the claim (the admissions, the years, the tonnes) back to its source, test it against other counts, and show what it would mean if true." },
+    { "name": "Where it happened", "description": "Put the claim on the map: the place as the sources name it and as it is now, what else was there at the time, and whether the geography makes the story possible." },
+    { "name": "Then and now", "description": "The claim's world against today's: what the thing cost, counted or weighed then and now, and what changed in between." },
+    { "name": "Who says so", "description": "The sources as characters: the archive, the memoirist, the wire reporter, the blogger. What each could know, what each wanted, and where they disagree." },
+    { "name": "Explain like I'm 5", "description": "The claim told to a five-year-old as a short picture story: one everyday stand-in, what really happened as far as anyone knows, and where the picture stops being true." }
+  ]
+}

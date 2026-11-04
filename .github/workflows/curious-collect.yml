@@ -1,0 +1,115 @@
+name: Curious Desk collect
+
+# Stage 1 of the Curious Desk's claim pipeline (packages/curious-pipeline):
+# discover candidate documents from one source into curious_documents with
+# their provenance. GDELT DOC 2.0 for current affairs, the Library of Congress
+# for historical material, Europeana and Gallica for Europe's libraries. The
+# source policy registry (curious_sources) is consulted before any fetch;
+# news text is never stored; a run keeps to a 25-minute soft deadline.
+#
+# No `schedule:` here: Vercel Cron on vizmaya-fyi fires
+# /api/curious/cron/collect-gdelt and /collect-loc each night
+# (apps/vizmaya-fyi/vercel.json), which dispatch this file with the source,
+# because GitHub's own scheduler drifts. Europeana and Gallica are dispatched
+# by hand (Europeana needs EUROPEANA_API_KEY; Gallica allows five calls a
+# minute, so a run is small).
+#
+# Required repo secrets (in the `Production` environment):
+#   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+#   EUROPEANA_API_KEY (europeana only), CROSSREF_MAILTO (optional)
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        type: string
+        required: false
+        default: 'gdelt'
+      query:
+        type: string
+        required: false
+        default: ''
+      since:
+        type: string
+        required: false
+        default: ''
+      until:
+        type: string
+        required: false
+        default: ''
+      limit:
+        type: string
+        required: false
+        default: '2000'
+      collection:
+        type: string
+        required: false
+        default: ''
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'gdelt | loc | europeana | gallica'
+        required: true
+        default: 'gdelt'
+      query:
+        description: 'Discovery query; empty rotates scripts/curious/queries.json by day of year'
+        required: false
+        default: ''
+      since:
+        description: 'YYYY-MM-DD lower bound on publication'
+        required: false
+        default: ''
+      until:
+        description: 'YYYY-MM-DD upper bound (exclusive)'
+        required: false
+        default: ''
+      limit:
+        description: 'Documents per run'
+        required: false
+        default: '2000'
+      collection:
+        description: 'LOC collection slug (e.g. chronicling-america), Europeana qf, Gallica dc.type'
+        required: false
+        default: ''
+
+concurrency:
+  group: curious-collect-${{ inputs.source }}
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 reads the root package.json's `packageManager`.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Collect candidate documents
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EUROPEANA_API_KEY: ${{ secrets.EUROPEANA_API_KEY }}
+          CROSSREF_MAILTO: ${{ secrets.CROSSREF_MAILTO }}
+        run: >
+          pnpm curious:collect --
+          --source ${{ inputs.source || 'gdelt' }}
+          --limit ${{ inputs.limit || '2000' }}
+          ${{ inputs.query != '' && format('--query "{0}"', inputs.query) || '' }}
+          ${{ inputs.since != '' && format('--since {0}', inputs.since) || '' }}
+          ${{ inputs.until != '' && format('--until {0}', inputs.until) || '' }}
+          ${{ inputs.collection != '' && format('--collection {0}', inputs.collection) || '' }}
+          ${{ inputs.source == 'loc' && '--full-text' || '' }}

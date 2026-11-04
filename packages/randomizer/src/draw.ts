@@ -104,7 +104,11 @@
  * is read after the draw and changes nothing in it.
  */
 
-import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, frontierAgeDays, frontierWindowOf, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked } from './datasets'
+import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, frontierAgeDays, frontierWindowOf, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked,
+  CURIOUS,
+  curiousEraOf,
+  curiousGradeLabel,
+} from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
 import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkLicenceNote, ocwCourseLabel } from './stub'
 import {
@@ -178,6 +182,13 @@ import {
   type ViznbaNews,
   type ViznbaPicks,
   type ViznbaTeamNews,
+  type CuriousClaim,
+  type CuriousDataset,
+  type CuriousEra,
+  type CuriousPicks,
+  type CuriousPool,
+  type CuriousRelated,
+  type CuriousTheme,
 } from './types'
 
 /** The tunable numbers behind the rules, in one place. */
@@ -223,6 +234,10 @@ export const DRAW_RULES = {
   frontierPoolDays: 365,
   maxFrontierRelated: 5,
   maxFrontierTitles: 40,
+  /** Curious Desk: how many neighbouring claims a spin keeps, texts kept for the claim reel, and the grade weights in the claim draw. */
+  maxCuriousRelated: 5,
+  maxCuriousTexts: 40,
+  curiousGradeWeight: { A: 5, B: 4, C: 3, D: 1, E: 1 } as Record<string, number>,
 } as const
 
 const DAY = 864e5
@@ -238,7 +253,7 @@ export interface DrawInput {
   locks?: string[]
   /** Atlas: draw a second country. Footshorts and the NBA Desk: draw a head-to-head opponent. */
   pair?: boolean
-  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. The Evidence Desk: a study linked to the previous one. The Frontier Desk: a paper beside the previous one. */
+  /** Epics: continue from the previous spin's place. The 100 Desk: the next rank. The Evidence Desk: a study linked to the previous one. The Frontier Desk: a paper beside the previous one. The Curious Desk: a claim sharing a name with the previous one. */
   sequence?: boolean
   /** Desk: live heat from desk_heat, overriding the dataset's seed values. */
   heat?: DeskHeatRow[]
@@ -252,8 +267,10 @@ export interface DrawInput {
   landmarkPool?: LandmarkPool | null
   /** Frontier Desk: AI Daily's kept papers (spins.ts loadFrontierPool). Required. */
   frontierPool?: FrontierPool | null
+  /** Curious Desk: the approved claims (spins.ts loadCuriousPool). Required. */
+  curiousPool?: CuriousPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; frontier?: FrontierDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; frontier?: FrontierDataset; curious?: CuriousDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -409,6 +426,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'frontier') {
     return drawFrontier(ctx, input.datasets?.frontier ?? FRONTIER, prev?.picks as FrontierPicks | undefined, input.frontierPool ?? null, !!input.sequence)
+  }
+  if (input.randomizer === 'curious') {
+    return drawCurious(ctx, input.datasets?.curious ?? CURIOUS, prev?.picks as CuriousPicks | undefined, input.curiousPool ?? null, !!input.sequence)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -2011,6 +2031,207 @@ function drawFrontier(ctx: Ctx, data: FrontierDataset, prev: FrontierPicks | und
     summary: `${paper.arxivId} ${paper.title.length > 50 ? `${paper.title.slice(0, 48).trimEnd()}…` : paper.title} · ${lens.name}`,
     rules: ctx.rules,
     meta: { area: area.id, arxiv: paper.arxivId },
+  }
+}
+
+/* ---------- The Curious Desk ---------- */
+
+const clipText = (t: string, n: number): string => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t)
+
+/** How closely two claims sit together: shared named entities, the same theme, the same era. */
+function curiousAffinity(a: CuriousClaim, b: CuriousClaim): number {
+  const names = new Set(a.entities.map((e) => e.toLowerCase()))
+  const shared = b.entities.filter((e) => names.has(e.toLowerCase())).length
+  const theme = a.theme && a.theme === b.theme ? 1 : 0
+  const era = a.era === b.era ? 1 : 0
+  return shared * 2 + (shared ? theme + era : 0)
+}
+
+/** A claim's weight in the claim draw: its grade, plus one when two independent lineages agree. */
+function curiousWeight(c: CuriousClaim): number {
+  return (c.grade ? DRAW_RULES.curiousGradeWeight[c.grade] ?? 2 : 2) + (c.nGroups >= 2 ? 1 : 0)
+}
+
+/** Claims spun in the history the draw sees are left out; when that empties the pool, the one spun longest ago comes back. */
+function curiousUnspun(ctx: Ctx, pool: CuriousClaim[], what: string): CuriousClaim[] {
+  const last = lastSpun(ctx)
+  const spun = pool.filter((c) => last.has(c.id))
+  const left = pool.filter((c) => !last.has(c.id))
+  if (spun.length && left.length) rule(ctx, '90 days', 'block', `Left out ${spun.length === 1 ? 'one claim' : `${spun.length} claims`} ${what} already spun in the last 90 days: a claim is drawn once.`)
+  if (left.length || !pool.length) return left
+  const oldest = [...spun].sort((a, b) => last.get(a.id)! - last.get(b.id)!)[0]!
+  rule(ctx, '90 days', 'warn', `Every claim ${what} was spun in the last 90 days. The block is lifted for the one spun longest ago.`)
+  return [oldest]
+}
+
+function curiousRules(ctx: Ctx, data: CuriousDataset, c: CuriousClaim): void {
+  const g = c.grade
+  const info = g ? data.grades[g] : null
+  const lineages = `${c.nSources} source${c.nSources === 1 ? '' : 's'} in ${c.nGroups} independent lineage${c.nGroups === 1 ? '' : 's'}${c.nPrimary ? `, ${c.nPrimary} primary` : ''}${c.nDerived ? `, ${c.nDerived} derived retelling${c.nDerived === 1 ? '' : 's'}` : ''}`
+  if (!g || !info) rule(ctx, 'grade', 'warn', `The claim has no grade yet (${lineages}). Run the grader before building from it, or grade it by hand in the research file.`)
+  else if (g === 'A' || g === 'B') rule(ctx, 'grade', 'good', `Grade ${g}: ${info.label.toLowerCase()} (${lineages}). ${info.rule} The grade is computed from the sources found so far; print it on the page and say if the research changes it.`)
+  else if (g === 'C') rule(ctx, 'grade', 'info', `Grade ${g}: ${info.label.toLowerCase()} (${lineages}). ${info.rule} Finding a primary source is the research's first job.`)
+  else rule(ctx, 'grade', 'warn', `Grade ${g}: ${info.label.toLowerCase()} (${lineages}). ${info.rule} Widely repeated is not verified: the page reports the repetition, never the event, until the research finds better.`)
+  if (c.nGroups <= 1 && (c.nDerived > 3 || c.nSources >= 3)) rule(ctx, 'lineage', 'warn', `${c.nSources} sources collapse to one lineage: they retell one account and count as one source. Trace it to the earliest telling before counting anything as corroboration.`)
+  if (c.nPrimary > 0) rule(ctx, 'primary', 'good', `${c.nPrimary === 1 ? 'A primary source supports' : `${c.nPrimary} primary sources support`} the claim: start there and quote it by page.`)
+  if (c.flags.includes('contradiction')) rule(ctx, 'contradiction', 'block', `Another claim in the store contradicts this one${c.nContradicts ? ` (${c.nContradicts} contradicting source${c.nContradicts === 1 ? '' : 's'})` : ''}. Re-spin unless the contradiction is the story; if it is, both versions go on the page with their sources.`)
+  if (c.flags.includes('personal-data')) rule(ctx, 'personal data', 'warn', 'The claim names what may be a private living person. Stick to the sourced record, no speculation, and consider leaving the name off the page.')
+  if (c.flags.includes('sensitive')) rule(ctx, 'sensitive', 'warn', 'The extractor marked the claim sensitive (crime, health, minors or a private person): the sensitivity rules in the protocol apply with extra care.')
+  if (c.isHearsay || c.isAnonymous) rule(ctx, 'attribution', 'info', `${c.isHearsay ? 'The evidence passage hedges the claim ("reportedly", "it is said")' : 'The evidence passage names no source for the claim'}${c.speaker ? `, attributing it to ${c.speaker}` : ''}. The page keeps the hedge and names who says so.`)
+  if (c.flags.includes('circular')) rule(ctx, 'circular', 'warn', 'Every cited work points back into the same cluster of claims: the citations go in a circle. Find a source outside it.')
+  if (c.flags.includes('time-gap')) rule(ctx, 'time gap', 'info', 'The earliest source found is decades after the event, with nothing primary. Say so, and look for a contemporaneous record.')
+}
+
+function drawCurious(ctx: Ctx, data: CuriousDataset, prev: CuriousPicks | undefined, pool: CuriousPool | null, sequence: boolean): DrawResult {
+  const { rng } = ctx
+  if (!pool?.claims.length) {
+    throw new Error('The Curious Desk draws from approved claims (curious_claim_pool), and none were found. Approve some on the admin Curious claims tab, or run pnpm curious:seed-fixture for the worked example.')
+  }
+  const claims = pool.claims.filter((c) => data.eras.some((e) => e.id === c.era) && (!c.theme || data.themes.some((t) => t.id === c.theme)))
+  if (!claims.length) throw new Error('None of the approved claims has an era the Curious Desk knows. Check curious_claims.era against curious.json.')
+  const byId = new Map(claims.map((c) => [c.id, c]))
+  const themeOf = (c: CuriousClaim): CuriousTheme => data.themes.find((t) => t.id === c.theme) ?? data.themes[0]!
+  const last = ctx.kept[ctx.kept.length - 1]
+  const lastPicks = last?.picks as CuriousPicks | undefined
+
+  let claim: CuriousClaim | undefined
+  let from: string | null = null
+
+  if (sequence) {
+    const origin = lastPicks ? byId.get(lastPicks.claim) : undefined
+    if (ctx.locked('era') || ctx.locked('theme') || ctx.locked('claim')) {
+      rule(ctx, 'sequence', 'info', 'Pulling the thread ignores the era, theme and claim reels, and they are locked here, so the locks win: drawing under them.')
+    } else if (origin) {
+      const near = claims.filter((c) => c.id !== origin.id && curiousAffinity(origin, c) > 0)
+      const cands = curiousUnspun(ctx, near, 'beside the previous claim')
+      if (cands.length) {
+        claim = weighted(cands, (c) => curiousAffinity(origin, c) + curiousWeight(c) / 2, rng)
+        from = origin.id
+        rule(ctx, 'sequence', 'good', `Pulling the thread from the previous claim: ${near.length === 1 ? 'one claim' : `${near.length} claims`} in the pool share a name with it, weighted by how much they share. The era balance pauses while the thread runs.`)
+      } else {
+        rule(ctx, 'sequence', 'info', 'No other claim in the pool shares a name with the previous one, so there is no thread to pull. Drawing fresh.')
+      }
+    } else if (lastPicks) {
+      rule(ctx, 'sequence', 'info', 'The previous spin\'s claim has left the pool, so there is no thread to pull. Drawing fresh.')
+    } else {
+      rule(ctx, 'sequence', 'info', 'Pulling the thread needs a previous spin to follow on from. Drawing fresh.')
+    }
+  }
+
+  if (!claim) {
+    const prevClaim = prev ? byId.get(prev.claim) : undefined
+    if (ctx.locked('claim') && prevClaim) {
+      claim = prevClaim
+      rule(ctx, 'lock', 'info', `Claim locked: ${clipText(claim.text, 60)}`)
+    } else {
+      if (ctx.locked('claim') && prev) rule(ctx, 'lock', 'warn', 'The previous spin\'s claim is no longer in the pool (unapproved or removed), so its lock is ignored.')
+      const stocked = data.eras.filter((e) => claims.some((c) => c.era === e.id))
+      const size = (e: CuriousEra) => Math.sqrt(claims.filter((c) => c.era === e.id).length)
+      let era: CuriousEra
+      const prevEra = prev ? stocked.find((e) => e.id === prev.era) : undefined
+      if (ctx.locked('era') && prevEra) {
+        era = prevEra
+        rule(ctx, 'lock', 'info', `Era locked to ${era.name}.`)
+      } else {
+        era = weighted(stocked, size, rng)
+        if (last?.meta.era === era.id && stocked.length > 1) {
+          const again = weighted(stocked, size, rng)
+          rule(
+            ctx,
+            'balance',
+            'warn',
+            again.id === era.id
+              ? `${era.name} came up twice in a row, so the era was re-drawn once and landed on it again. One re-draw is the rule, so it stands.`
+              : `${era.name} came up twice in a row, so the era was re-drawn once, now ${again.name}.`,
+          )
+          era = again
+        }
+        rule(ctx, 'balance', 'good', `Stratified draw: era first (${era.name}, weighted by the square root of its claim count, so a busy era does not crowd out a quiet one), then a theme it has claims in, then a claim weighted by its grade, with a bonus when two independent lineages agree.`)
+      }
+
+      const inEra = claims.filter((c) => c.era === era.id)
+      const themes = data.themes.filter((t) => inEra.some((c) => themeOf(c).id === t.id))
+      let theme: CuriousTheme
+      const prevTheme = prev ? themes.find((t) => t.id === prev.theme) : undefined
+      if (ctx.locked('theme') && prevTheme) {
+        theme = prevTheme
+        rule(ctx, 'lock', 'info', `Theme locked to ${theme.name}.`)
+      } else {
+        theme = weighted(themes, (t) => Math.sqrt(inEra.filter((c) => themeOf(c).id === t.id).length), rng)
+      }
+
+      const cell = inEra.filter((c) => themeOf(c).id === theme.id)
+      const cands = curiousUnspun(ctx, cell, `in ${era.name.toLowerCase()} (${theme.name.toLowerCase()})`)
+      claim = weighted(cands, curiousWeight, rng)
+      if (last?.meta.region && claim.region === last.meta.region && cands.some((c) => c.region !== last.meta.region)) {
+        const other = cands.filter((c) => c.region !== last.meta.region)
+        const again = weighted(other, curiousWeight, rng)
+        rule(ctx, 'balance', 'warn', `The claim landed in the same region as the previous spin, so it was re-drawn once among the ${other.length === 1 ? 'one claim' : `${other.length} claims`} elsewhere.`)
+        claim = again
+      }
+    }
+  }
+
+  const era = data.eras.find((e) => e.id === claim!.era)!
+  const theme = themeOf(claim)
+  const region = data.regions.find((r) => r.id === claim!.region) ?? null
+  let lens = (ctx.locked('lens') && prev && data.lenses.find((l) => l.name === prev.lens)) || pick(data.lenses, rng)
+
+  const combo = () => `${claim!.id}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    const fresh = data.lenses.filter((l) => !r90.has(`${claim!.id}|${l.name}`))
+    if (!ctx.locked('lens') && fresh.length) lens = pick(fresh, rng)
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `This claim with the ${lens.name} lens ran in the last 90 days${ctx.locked('lens') ? ', and the lens is locked' : ', and every lens has run'}. It repeats.`
+        : 'This claim with the first lens drawn ran in the last 90 days. The lens was re-drawn.',
+    )
+  }
+
+  curiousRules(ctx, data, claim)
+
+  const related: CuriousRelated[] = claims
+    .filter((c) => c.id !== claim!.id && curiousAffinity(claim!, c) > 0)
+    .sort((a, b) => curiousAffinity(claim!, b) - curiousAffinity(claim!, a) || (DRAW_RULES.curiousGradeWeight[b.grade ?? ''] ?? 0) - (DRAW_RULES.curiousGradeWeight[a.grade ?? ''] ?? 0) || a.id.localeCompare(b.id))
+    .slice(0, DRAW_RULES.maxCuriousRelated)
+    .map((c) => ({ id: c.id, text: c.text, grade: c.grade, theme: c.theme, era: c.era, yearFrom: c.yearFrom, entities: c.entities, nGroups: c.nGroups, documentTitle: c.document.title, canonicalUrl: c.document.canonicalUrl }))
+  const texts = claims.filter((c) => c.era === era.id).slice(0, DRAW_RULES.maxCuriousTexts).map((c) => clipText(c.text, 80))
+  const gradeInfo = claim.grade ? data.grades[claim.grade] : { label: 'Not graded yet', rule: 'Grade it in the research file before anything goes on the page.' }
+
+  const picks: CuriousPicks = { era: era.id, theme: theme.id, claim: claim.id, lens: lens.name }
+  const years = claim.yearFrom != null ? `${claim.yearFrom}${claim.yearTo != null && claim.yearTo !== claim.yearFrom ? ` to ${claim.yearTo}` : ''}` : curiousEraOf(null, data).name.toLowerCase()
+  return {
+    randomizer: 'curious',
+    picks,
+    subject: {
+      randomizer: 'curious',
+      source: data.source,
+      era,
+      theme,
+      region,
+      claim,
+      grade: { grade: claim.grade, ...gradeInfo },
+      lens,
+      related,
+      pool: { asOf: pool.asOf, size: claims.length, texts },
+      record: null,
+      from,
+    },
+    reels: {
+      era: { value: era.name, sub: years },
+      theme: { value: theme.name, sub: region?.name },
+      claim: { value: clipText(claim.text, 60), sub: `${curiousGradeLabel(claim)} · ${claim.nSources} source${claim.nSources === 1 ? '' : 's'}, ${claim.nGroups} lineage${claim.nGroups === 1 ? '' : 's'}` },
+      lens: { value: lens.name },
+    },
+    primary: claim.id,
+    combo: combo(),
+    summary: `${clipText(claim.text, 50)} · ${curiousGradeLabel(claim)} · ${lens.name}`,
+    rules: ctx.rules,
+    meta: { era: era.id, theme: theme.id, region: claim.region ?? undefined, claim: claim.id },
   }
 }
 
