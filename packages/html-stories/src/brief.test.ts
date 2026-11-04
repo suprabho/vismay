@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { HOUSE_PALETTES, htmlStoryBrief } from './brief'
 import { themeMetaContent } from './meta'
 import { parseHtmlStoryTone } from './tone'
-import { entityStoryStyle, parseEntityStyle, parseStoryStyleToken, storyStyleFromPool, stylePoolFromStories, styleToken } from './styles'
+import { customStoryStyle, entityStoryStyle, parseEntityStyle, parseStoryStyleToken, storyStyleFromPool, stylePoolFromStories, styleToken } from './styles'
 import { draw } from '@vismay/randomizer/draw'
 import { researchProtocolSection } from '@vismay/randomizer/spinBrief'
 import { frontierPoolFromRows } from '@vismay/randomizer/frontierPool'
@@ -418,6 +418,15 @@ console.log('brief: ok')
   assert.equal(styleToken(null), null)
   const team = entityStoryStyle({ kind: 'team', slug: 'lille-osc', name: 'Lille OSC', style: { palette: drawn.palette, fonts: drawn.fonts } })
   assert.equal(styleToken(team), 'team:lille-osc')
+
+  // An edited style: no token, and the brief carries its exact values.
+  const edited = customStoryStyle({ palette: { ...drawn.palette, accent: '#ABCDEF' }, fonts: { serif: 'Playfair Display', sans: 'Inter', mono: 'Space Mono' } }, 'the house style')
+  assert.equal(styleToken(edited), null)
+  const editedBrief = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', style: edited })
+  assert.ok(editedBrief.includes('set by the editor for this page'), 'custom: intro')
+  assert.ok(editedBrief.includes('Accent `#ABCDEF`'), 'custom: accent')
+  assert.ok(editedBrief.includes('Playfair Display for headlines'), 'custom: fonts')
+  assert.ok(!editedBrief.includes('picked at random'), 'custom: not a draw')
 }
 
 // The landmark work picker switches to a work the award documents cite.

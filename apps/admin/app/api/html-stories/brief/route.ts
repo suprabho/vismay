@@ -10,7 +10,7 @@ import {
 import { isGameId, MAX_GAME_CONTEXT, viznbaHtmlStoryBrief } from '@vismay/html-stories/viznbaBrief'
 import { travelHtmlStoryBrief } from '@vismay/html-stories/travelBrief'
 import { AUTHORABLE_HTML_STORY_FORMATS, isFormatForApp, isRetiredHtmlStoryFormat, parseHtmlStoryFormat } from '@vismay/html-stories/formats'
-import type { StoryStyle } from '@vismay/html-stories/styles'
+import { parseEntityStyle, type StoryStyle } from '@vismay/html-stories/styles'
 import { HTML_STORY_TONES, parseHtmlStoryTone } from '@vismay/html-stories/tone'
 import { getSpin, isSpinId } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META } from '@vismay/randomizer/types'
@@ -29,8 +29,9 @@ import { buildCupMatchContext } from '@/lib/espnCups'
  *
  * `format` is the story format (scroll, the default, or book, board, deck, collage, recap);
  * `tone` is the story's voice (straight, the default, or humorous);
- * `style` is the randomizer's pick (the client shows its swatches, so it must
- * be the one the brief uses); `fixtureIds` + `prompt` are footshorts-only
+ * `style` is the randomizer's pick, an Asset Studio style or the editor's own
+ * edit (`paletteFrom.kind: 'custom'`, validated like an Asset Studio style);
+ * the client shows its swatches, so it must be the one the brief uses; `fixtureIds` + `prompt` are footshorts-only
  * (numeric ids are ESPN event ids from the Cup fixtures import, whose context
  * is built here from those private tables);
  * `sessionKeys` + `drivers` (codes) + `prompt` are vizf1-only;
@@ -67,7 +68,13 @@ export async function POST(req: Request) {
   }
   const tone = parseHtmlStoryTone(b.tone)
   if (!tone) return NextResponse.json({ error: `tone must be one of ${HTML_STORY_TONES.join(', ')}` }, { status: 400 })
-  const style = isStyle(b.style) ? b.style : null
+  let style = isStyle(b.style) ? b.style : null
+  // An edited style was typed by hand: hold it to the Asset Studio's rules (hex colours, font names).
+  if (style?.paletteFrom?.kind === 'custom') {
+    const parsed = parseEntityStyle(style)
+    if ('error' in parsed) return NextResponse.json({ error: `style: ${parsed.error}` }, { status: 400 })
+    style = { ...style, ...parsed.style }
+  }
   const siteUrl = htmlStorySiteUrl(app)
 
   const fixtureIds = Array.isArray(b.fixtureIds)

@@ -18,7 +18,7 @@ import type { AssetEntity } from './AssetStudio'
 
 type Slot = keyof StylePalette
 
-const SLOT_LABELS: Record<Slot, string> = {
+export const SLOT_LABELS: Record<Slot, string> = {
   background: 'Background',
   surface: 'Surface',
   text: 'Text',
@@ -32,14 +32,14 @@ const SLOT_LABELS: Record<Slot, string> = {
   red: 'Negative',
 }
 
-const FONT_LABELS: Record<keyof StyleFonts, string> = {
+export const FONT_LABELS: Record<keyof StyleFonts, string> = {
   serif: 'Headlines · big numbers',
   sans: 'Body',
   mono: 'Labels · data',
 }
 
 /** Families the brief's agents already use well; any Google Font works. */
-const FONT_SUGGESTIONS = [
+export const FONT_SUGGESTIONS = [
   'Forum',
   'Fraunces',
   'Instrument Serif',
@@ -90,7 +90,7 @@ function seedFor(entity: AssetEntity): EntityStyle {
 }
 
 /** WCAG contrast ratio between two #RRGGBB colours. */
-function contrast(a: string, b: string): number | null {
+export function contrast(a: string, b: string): number | null {
   const lum = (hex: string) => {
     if (!HEX_RE.test(hex)) return null
     const [r, g, bl] = [1, 3, 5].map((i) => {

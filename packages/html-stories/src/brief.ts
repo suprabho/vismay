@@ -74,7 +74,10 @@ import { formatChecks, formatHeading, formatHintSection, formatTitle, storyForma
 import { MAPBOX_TOKEN_GLOBAL, storyMapboxToken } from './mapbox'
 import { FORMAT_META_NAME, HTML_STORY_FORMAT_META, type AuthorableHtmlStoryFormat } from './formats'
 import { MAX_HTML_BYTES, THEME_META_NAME, TRIP_META_NAME, themeMetaContent, type ThemeColors } from './meta'
+import { HOUSE_PALETTES } from './houseStyles'
 import { isLightPalette, type StoryStyle } from './styles'
+
+export { HOUSE_PALETTES }
 import { editorialHubPath } from './seo'
 import {
   applyToneToVoice,
@@ -136,85 +139,6 @@ export interface BriefOptions {
 /** Pinned with the repo's own mapbox-gl dependency. */
 const MAPBOX_GL_VERSION = '3.21.0'
 
-/** The vizmaya house palette: the story reader's defaults. */
-const VIZMAYA_PALETTE: ThemeColors = {
-  background: '#0a0e14',
-  surface: '#111820',
-  text: '#e0ddd5',
-  muted: '#5a6a70',
-  line: '#1a2830',
-  accent: '#D85A30',
-  accent2: '#534AB7',
-  teal: '#1D9E75',
-}
-
-/**
- * The footshorts house palette: the app's `classic` theme
- * (apps/footshorts/brand/src/themes/classic.ts). Brand orange-red is the
- * accent, the deeper brand red (the `terrace` theme's) the secondary, and the
- * app's green "live" pop the tertiary.
- */
-const FOOTSHORTS_PALETTE: ThemeColors = {
-  background: '#0B0B0F',
-  surface: '#16161D',
-  text: '#F4F4F5',
-  muted: '#8E8E99',
-  line: '#24242E',
-  accent: '#F26A3C',
-  accent2: '#C2410C',
-  teal: '#00D26A',
-}
-
-/**
- * The vizf1 house palette: the app's own (@vizf1/brand `F1_BRAND.colors`) as
- * the Paddock story theme carries it (packages/viz-engine themeDefaults). Coral
- * red is the accent; purple and teal follow the timing screens' own meaning.
- */
-const VIZF1_PALETTE: ThemeColors = {
-  background: '#0b0d12',
-  surface: '#13161d',
-  text: '#f5f5f5',
-  muted: '#8e8e99',
-  line: '#1f2330',
-  accent: '#ff4346',
-  accent2: '#A855F7',
-  teal: '#2DD4BF',
-}
-
-/**
- * The viznba house palette: the app's own (apps/viznba/web/app/globals.css).
- * The brand orange is the accent; the live red (the app's score bug) the
- * secondary, kept for what is happening now or went wrong; a court teal the
- * tertiary.
- */
-const VIZNBA_PALETTE: ThemeColors = {
-  background: '#0b0d12',
-  surface: '#13161d',
-  text: '#f5f5f5',
-  muted: '#8e8e99',
-  line: '#1f2330',
-  accent: '#ff8a3d',
-  accent2: '#ff4d4f',
-  teal: '#2DD4BF',
-}
-
-/**
- * The travel house palette: the scrapbook story's paper
- * (apps/travel/web/content/stories/*.md themes, the trip pages' header).
- * Terracotta is the accent, a postbox blue the secondary, a park green the
- * tertiary.
- */
-const TRAVEL_PALETTE: ThemeColors = {
-  background: '#f6f1e7',
-  surface: '#fffdf8',
-  text: '#2b2419',
-  muted: '#8a8172',
-  line: '#e2d9c8',
-  accent: '#c94f2c',
-  accent2: '#2c6bc9',
-  teal: '#2ca089',
-}
-
 /**
  * A picture story for a child sets its own palette: a light, bright page,
  * not the dark editorial one the house styles share. Used unless the style
@@ -237,13 +161,6 @@ const ELI5_STYLE = `Style for a picture story (the format sets the palette; it o
 - Type: Fraunces or any round, friendly serif for headlines and the story words, Inter for the grown-ups card. Story words 28px or larger on a phone, line-height 1.4.
 - Keep these colours for the same things in every picture, so the stand-in is recognisable from beat to beat.`
 
-export const HOUSE_PALETTES: Record<HtmlStoryApp, ThemeColors> = {
-  'vizmaya-fyi': VIZMAYA_PALETTE,
-  footshorts: FOOTSHORTS_PALETTE,
-  vizf1: VIZF1_PALETTE,
-  viznba: VIZNBA_PALETTE,
-  travel: TRAVEL_PALETTE,
-}
 
 const HOUSE_STYLE: Record<HtmlStoryApp, string> = {
   'vizmaya-fyi': `House style (use it unless the story clearly wants its own look):
@@ -321,7 +238,9 @@ function styleSection(app: HtmlStoryApp, style: StoryStyle | null | undefined, e
     style.paletteFrom.slug === style.fontsFrom.slug
       ? `the "${style.paletteFrom.title}" story`
       : `existing stories (colours from "${style.paletteFrom.title}", type from "${style.fontsFrom.title}")`
-  const intro = owner
+  const intro = kind === 'custom'
+    ? `Style for this story, set by the editor for this page. Use it instead of the house style:`
+    : owner
     ? `Style for this story: the ${style.paletteFrom.title} style, set for ${owner}
 so every story about it shares one look. Use it instead of the house style:`
     : `Style for this story. It was picked at random from ${from}

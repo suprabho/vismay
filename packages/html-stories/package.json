@@ -17,6 +17,7 @@
     "./serve": "./src/serve.ts",
     "./branding": "./src/branding.ts",
     "./styles": "./src/styles.ts",
+    "./houseStyles": "./src/houseStyles.ts",
     "./storyStyles": "./src/storyStyles.ts",
     "./randomizerApi": "./src/randomizerApi.ts",
     "./formats": "./src/formats.ts",
