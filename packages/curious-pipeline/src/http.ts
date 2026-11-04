@@ -192,7 +192,9 @@ export async function fetchWithRetry(url: string, opts: FetchOptions = {}): Prom
       if (attempt < attempts - 1) await clock.sleep(backoffMs * 2 ** attempt + Math.random() * jitterMs)
     }
   }
-  if (throttled === attempts) throw new ThrottledError(label, url, lastBody, attempts, clock.now() - started)
+  // Every attempt failed. Any 429 among them means the source is throttling this IP: a timeout or a 5xx
+  // between two 429s (GDELT and loc.gov both answer slowly while they refuse) is still a throttle, not a crash.
+  if (throttled > 0) throw new ThrottledError(label, url, lastBody, attempts, clock.now() - started)
   if (unavailable === attempts) throw new UnavailableError(label, url, lastErr instanceof HttpError ? lastErr.status : 0, lastErr?.message ?? 'no response', attempts, clock.now() - started)
   throw lastErr ?? new Error(`${label}: fetch failed`)
 }

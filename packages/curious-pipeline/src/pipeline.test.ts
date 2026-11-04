@@ -691,6 +691,13 @@ pending.push(
       return new Response('Please limit requests to one every 5 seconds', { status: 429 })
     }) as typeof fetch
     await assert.rejects(fetchWithRetry('https://example.org/b', { fetch: refused, clock: clock2, limiter: lim2, attempts: 5, jitterMs: 0 }), (e: unknown) => e instanceof ThrottledError && e.status === 429 && e.attempts === 5 && e.waitedMs >= 60_000 + 120_000 + 240_000 + 480_000)
+    // 429s with a timeout among them (the GDELT run of 2026-11-04) are still a throttle, not a plain HttpError.
+    let mixedCalls = 0
+    const mixed = (async () => {
+      if (++mixedCalls === 2) throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+      return new Response('Please limit requests to one every 5 seconds', { status: 429 })
+    }) as typeof fetch
+    await assert.rejects(fetchWithRetry('https://example.org/c', { fetch: mixed, clock: fakeClock(0), attempts: 5, backoffMs: 1000, jitterMs: 0 }), (e: unknown) => e instanceof ThrottledError && e.attempts === 5)
     assert.equal(n, 5)
     assert.equal(lim2.cooldownMs, 600_000, 'the cooldown doubled up to the cap')
     // One 429 then a 200 is not a throttle.
