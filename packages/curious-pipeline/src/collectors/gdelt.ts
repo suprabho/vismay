@@ -136,7 +136,7 @@ export function parseGdeltBody(body: string): GdeltArticle[] {
 }
 
 export async function* collectGdelt(opts: CollectOptions): AsyncGenerator<DocumentUpsert> {
-  const policy = assertAllowed('gdelt', { method: 'api', now: opts.now })
+  const policy = assertAllowed('gdelt', { method: 'api', now: opts.now , policies: opts.policies })
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs + GDELT_RULES.gapMarginMs, baseCooldownMs: GDELT_RULES.cooldownMs, maxCooldownMs: GDELT_RULES.maxCooldownMs, clock: opts.clock })
   const now = opts.now ?? new Date()
   const until = opts.until ? new Date(`${opts.until}T00:00:00Z`) : now

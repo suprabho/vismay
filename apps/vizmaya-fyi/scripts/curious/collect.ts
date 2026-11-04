@@ -25,6 +25,7 @@ import { collectorFor } from '@vismay/curious-pipeline/collectors'
 import { upsertDocuments } from '@vismay/curious-pipeline/store'
 import { COLLECTOR_IDS, curiousEnv, type CollectorId, type DocumentUpsert } from '@vismay/curious-pipeline/types'
 import { emptyStats } from '@vismay/curious-pipeline/collectors'
+import { PolicyError } from '@vismay/curious-pipeline/policy'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
@@ -172,6 +173,11 @@ async function main() {
 }
 
 main().catch((err) => {
+  if (err instanceof PolicyError) {
+    // The registry refused before any fetch: say why in one line, no stack.
+    console.error(`::error title=Curious collect refused by the source policy::${err.message}`)
+    process.exit(1)
+  }
   console.error(err)
   process.exit(1)
 })

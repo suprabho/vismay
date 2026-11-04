@@ -13,9 +13,12 @@ name: Curious Desk collect
 # No `schedule:` here: Vercel Cron on vizmaya-fyi fires
 # /api/curious/cron/collect-gdelt and /collect-loc each night
 # (apps/vizmaya-fyi/vercel.json), which dispatch this file with the source,
-# because GitHub's own scheduler drifts. Europeana and Gallica are dispatched
-# by hand (Europeana needs EUROPEANA_API_KEY; Gallica allows five calls a
-# minute, so a run is small).
+# because GitHub's own scheduler drifts. Europeana is dispatched by hand
+# (it needs EUROPEANA_API_KEY). Gallica cannot run here at all: gallica.bnf.fr's
+# Cloudflare rule blocks datacenter IP ranges, GitHub's runners included, on
+# every path, so the source is disabled in the policy registry and a dispatch
+# with source=gallica exits with that message. Run it from a network BnF
+# allows (packages/curious-pipeline/src/policy.ts says how).
 #
 # Required repo secrets (in the `Production` environment):
 #   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY

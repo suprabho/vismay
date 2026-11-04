@@ -7,7 +7,7 @@
  * external_id.
  */
 
-import type { CollectorId, CuriousEnv, DocumentUpsert } from '../types'
+import type { CollectorId, CuriousEnv, DocumentUpsert, SourceId, SourcePolicy } from '../types'
 import type { Clock } from '../http'
 import { collectGdelt } from './gdelt'
 import { collectLoc } from './loc'
@@ -24,6 +24,8 @@ export interface CollectOptions {
   days?: number
   /** Counters the collector fills and the CLI reads, to tell a throttled night from a broken one. */
   stats?: CollectStats
+  /** Override the source policy registry (tests; a local run of a source disabled for the runner). */
+  policies?: Record<SourceId, SourcePolicy>
   /** Stop after this many documents. */
   limit: number
   /** Source-specific sub-scope: LOC collection slug, Europeana qf, Gallica dc.type. */

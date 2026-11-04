@@ -182,7 +182,7 @@ export async function locPageText(pageUrl: string, opts: { fetch?: typeof fetch;
 }
 
 export async function* collectLoc(opts: CollectOptions): AsyncGenerator<DocumentUpsert> {
-  const policy = assertAllowed('loc', { method: 'api', now: opts.now })
+  const policy = assertAllowed('loc', { method: 'api', now: opts.now , policies: opts.policies })
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 20_000, clock: opts.clock })
   const log = opts.log ?? (() => {})
   const stats = opts.stats ?? emptyStats()

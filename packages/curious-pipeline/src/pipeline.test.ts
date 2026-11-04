@@ -62,7 +62,9 @@ const pending: Promise<void>[] = []
   assert.equal(assertAllowed('gdelt', { method: 'api', now: NOW }).crawlDelayMs, 5000)
   assert.throws(() => assertAllowed('gdelt', { method: 'html', now: NOW }), PolicyError)
   assert.throws(() => assertAllowed('web', { method: 'api', now: NOW }), /allows "html"/)
-  assert.doesNotThrow(() => assertAllowed('gallica', { method: 'iiif', now: NOW }), 'IIIF rides on the SRU policy')
+  assert.throws(() => assertAllowed('gallica', { method: 'sru', now: NOW }), /Cloudflare blocks datacenter IP ranges/, 'Gallica is disabled for the runner, with the reason')
+  const GALLICA_ON = { ...SOURCE_POLICIES, gallica: { ...SOURCE_POLICIES.gallica, enabled: true } }
+  assert.doesNotThrow(() => assertAllowed('gallica', { method: 'iiif', now: NOW, policies: GALLICA_ON }), 'IIIF rides on the SRU policy')
   const disabled = { ...SOURCE_POLICIES, loc: { ...SOURCE_POLICIES.loc, enabled: false } }
   assert.throws(() => assertAllowed('loc', { method: 'api', now: NOW, policies: disabled }), /disabled/)
   assert.throws(() => assertAllowed('loc', { method: 'api', now: new Date('2028-06-01T00:00:00Z') }), /over a year ago/)
@@ -364,11 +366,26 @@ pending.push(
         const s = String(url)
         return new Response(readFileSync(join(HERE, 'fixtures', s.includes('ContentSearch') ? 'gallica-contentsearch.xml' : 'gallica-sru.xml'), 'utf8'), { status: 200 })
       }) as typeof fetch
+      const policies = { ...SOURCE_POLICIES, gallica: { ...SOURCE_POLICIES.gallica, enabled: true } }
       const got = []
-      for await (const d of collectGallica({ query: 'fait curieux', limit: 3, fetch: fake, env, now: NOW, clock })) got.push(d)
+      for await (const d of collectGallica({ query: 'fait curieux', limit: 3, fetch: fake, env, now: NOW, clock, policies })) got.push(d)
       assert.equal(got.length, 3, 'the SRU page repeats, so three records come from two pages')
       assert.equal(calls, 5, 'two SRU pages plus one ContentSearch per record')
       assert.ok(clock.t >= 4 * 12_000, 'twelve seconds between calls')
+      // Disabled by the registry: the generator refuses before any fetch.
+      await assert.rejects(
+        (async () => {
+          for await (const _ of collectGallica({ query: 'x', limit: 1, fetch: fake, env, now: NOW, clock })) void _
+        })(),
+        PolicyError,
+      )
+      // Blocked by Cloudflare while enabled: a graceful stop with the reason, nothing collected.
+      const stats = emptyStats()
+      const blocked = []
+      for await (const d of collectGallica({ query: 'x', limit: 3, fetch: (async () => new Response('<title>Attention Required! | Cloudflare</title>', { status: 403 })) as typeof fetch, env, now: NOW, clock, policies, stats })) blocked.push(d)
+      assert.equal(blocked.length, 0)
+      assert.deepEqual([stats.requests, stats.ok, stats.unavailable], [1, 0, true])
+      assert.ok(stats.note?.includes('Cloudflare'))
     })(),
   )
 }

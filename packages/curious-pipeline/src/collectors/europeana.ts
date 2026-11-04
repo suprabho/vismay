@@ -129,7 +129,7 @@ export function europeanaDocumentsFromItems(items: EuropeanaItem[], ctx: { query
 }
 
 export async function* collectEuropeana(opts: CollectOptions): AsyncGenerator<DocumentUpsert> {
-  const policy = assertAllowed('europeana', { method: 'api', now: opts.now })
+  const policy = assertAllowed('europeana', { method: 'api', now: opts.now , policies: opts.policies })
   const key = opts.env.europeanaKey
   if (!key) throw new Error('Europeana needs EUROPEANA_API_KEY (a personal key from https://pro.europeana.eu/page/get-api). The source stays idle until it is set.')
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 10_000, clock: opts.clock })

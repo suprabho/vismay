@@ -202,7 +202,10 @@ picture-story format like the other desks.
   GitHub's runners share egress IPs with other tenants, so a throttled
   night can still happen; if it happens nightly, the next step is a Google
   News RSS discovery collector, the pattern `scrape-news.ts` already uses
-  from Actions. Gallica sits behind Cloudflare. The Library of Congress serves a query
+  from Actions. Gallica sits behind a Cloudflare rule that blocks datacenter IP ranges
+  outright, GitHub's runners included, so it is disabled in the policy
+  registry until it can be run from a network BnF allows (or BnF grants
+  API access); a bot wall is not something to spoof past. The Library of Congress serves a query
   cold the first time, streaming slowly or answering a 503 page until its
   cache warms, so its collector uses a 90-second timeout, waits of 15 to
   120 seconds across five attempts and 50 results a page, and treats a

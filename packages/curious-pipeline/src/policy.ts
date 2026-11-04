@@ -36,7 +36,12 @@ export const SOURCE_POLICIES: Record<SourceId, SourcePolicy> = {
     id: 'gallica', name: 'BnF Gallica', kind: 'library', baseUrl: 'https://gallica.bnf.fr',
     allowedMethod: 'sru', crawlDelayMs: 12_000, ratePerMin: 5, retentionDays: 3650, commercialReuse: true,
     fulltextStorage: 'full', personalDataPolicy: 'public-figures',
-    termsUrl: 'https://gallica.bnf.fr/html/und/conditions-dutilisation-des-contenus-de-gallica', termsLastChecked: TERMS_CHECKED, enabled: true,
+    termsUrl: 'https://gallica.bnf.fr/html/und/conditions-dutilisation-des-contenus-de-gallica', termsLastChecked: TERMS_CHECKED,
+    // gallica.bnf.fr sits behind a Cloudflare rule that blocks datacenter IP ranges outright ("Sorry, you have
+    // been blocked" on every path, including the home page): GitHub-hosted runners and cloud sessions never get
+    // through, and a bot wall is not something to spoof past. Flip this on when collecting from a network BnF
+    // allows (an office or home connection), or once BnF grants API access.
+    enabled: false,
     institutionalQuality: 1,
   },
   crossref: {
@@ -91,7 +96,14 @@ export function assertAllowed(
   opts: { method: AccessMethod; now?: Date; policies?: Record<SourceId, SourcePolicy> },
 ): SourcePolicy {
   const p = policyFor(id, opts.policies)
-  if (!p.enabled) throw new PolicyError(`${p.name} is disabled in the source policy registry (curious_sources.enabled = false).`, id)
+  if (!p.enabled) {
+    throw new PolicyError(
+      id === 'gallica'
+        ? `${p.name} is disabled: gallica.bnf.fr's Cloudflare blocks datacenter IP ranges (GitHub's runners included) on every path. Run the Gallica collector from a network BnF allows and enable it in packages/curious-pipeline/src/policy.ts.`
+        : `${p.name} is disabled in the source policy registry (policy.ts, mirrored by curious_sources.enabled).`,
+      id,
+    )
+  }
   if (p.allowedMethod === 'none') throw new PolicyError(`${p.name} allows no automated access.`, id)
   if (opts.method !== p.allowedMethod && !(p.allowedMethod === 'sru' && opts.method === 'iiif')) {
     throw new PolicyError(`${p.name} allows "${p.allowedMethod}" access, not "${opts.method}".`, id)
