@@ -16,7 +16,7 @@ import { assertAllowed } from '../policy'
 import { createLimiter, getJson } from '../http'
 import { canonicalUrl, normalizeText, parseDate, sha256 } from '../text'
 import type { DocumentUpsert } from '../types'
-import type { CollectOptions } from './index'
+import { emptyStats, type CollectOptions } from './index'
 
 export const EUROPEANA_RULES = {
   api: 'https://api.europeana.eu/record/v2/search.json',
@@ -134,6 +134,7 @@ export async function* collectEuropeana(opts: CollectOptions): AsyncGenerator<Do
   if (!key) throw new Error('Europeana needs EUROPEANA_API_KEY (a personal key from https://pro.europeana.eu/page/get-api). The source stays idle until it is set.')
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 10_000, clock: opts.clock })
   const log = opts.log ?? (() => {})
+  const stats = opts.stats ?? emptyStats()
   let cursor = '*'
   let yielded = 0
   const seen = new Set<string>()
@@ -142,7 +143,9 @@ export async function* collectEuropeana(opts: CollectOptions): AsyncGenerator<Do
     if (yielded >= opts.limit || opts.stop?.()) return
     const url = europeanaUrl(key, query, cursor, { qf: opts.collection })
     const retrievedAt = new Date(opts.clock ? opts.clock.now() : Date.now()).toISOString()
+    stats.requests++
     const res = await getJson<EuropeanaResponse>(url, { fetch: opts.fetch, limiter, label: 'Europeana', clock: opts.clock })
+    stats.ok++
     if (!res.success) throw new Error(`Europeana: ${res.error ?? 'request not successful'}`)
     log(`  europeana cursor ${cursor === '*' ? 'start' : cursor.slice(0, 8)}: ${res.itemsCount} of ${res.totalResults}`)
     for (const doc of europeanaDocumentsFromItems(res.items ?? [], { query: opts.query, requestUrl: url.replace(/wskey=[^&]+/, 'wskey=***'), retrievedAt })) {

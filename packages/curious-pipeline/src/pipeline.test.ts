@@ -798,6 +798,19 @@ pending.push(
     for await (const d of collectLoc({ query: 'x', limit: 50, fetch: (async () => new Response('down', { status: 503 })) as typeof fetch, env, now: NOW, clock: fakeClock(0), stats: stats2 })) none.push(d)
     assert.equal(none.length, 0)
     assert.deepEqual([stats2.requests, stats2.ok, stats2.unavailable], [1, 0, true])
+    // Rate-limited on the second page (Cloudflare 1015 on a shared runner IP): the first page is kept, stats say throttled, nothing throws.
+    const oneThenLimited = (async (url: string) => {
+      const page = Number(new URL(String(url)).searchParams.get('sp') ?? '1')
+      if (page > 1) return new Response('{"title":"Error 1015: You are being rate limited"}', { status: 429 })
+      const body: LocSearchResponse = { results: lc.results, pagination: { current: 1, next: `${new URL(String(url)).origin}/search/?q=x&fo=json&sp=2`, of: 8, total: 8, perpage: 4 } }
+      return new Response(JSON.stringify(body), { status: 200 })
+    }) as typeof fetch
+    const stats3 = emptyStats()
+    const kept = []
+    for await (const d of collectLoc({ query: 'x', limit: 50, fetch: oneThenLimited, env, now: NOW, clock: fakeClock(0), stats: stats3 })) kept.push(d)
+    assert.equal(kept.length, lc.results.length)
+    assert.deepEqual([stats3.requests, stats3.ok, stats3.unavailable, stats3.throttled], [2, 1, false, true])
+    assert.ok(stats3.note?.includes('rate-limited'))
     assert.equal(new URL(locSearchUrl({ query: 'x' })).searchParams.get('c'), String(LOC_RULES.perPage))
   })(),
 )

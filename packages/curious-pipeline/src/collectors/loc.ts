@@ -13,7 +13,10 @@
  * seconds later is fast from its cache. So requests here get a long
  * timeout and patient, widening retries, and a search that stays
  * unavailable past them stops the collector gracefully: it keeps what it
- * collected, says so in `stats`, and the CLI moves on.
+ * collected, says so in `stats`, and the CLI moves on. A 429 that outlasts
+ * the retries (loc.gov's Cloudflare rate limit, error 1015, which counts by
+ * IP and so includes everyone else on a shared GitHub runner address) is
+ * handled the same way, as a throttle.
  *
  *   https://www.loc.gov/search/?q=...&fo=json&c=100&sp=N&at=results,pagination
  *   https://www.loc.gov/collections/chronicling-america/?q=...&dates=1900/1925&fo=json
@@ -21,7 +24,7 @@
  */
 
 import { assertAllowed, textStorageFor } from '../policy'
-import { createLimiter, getJson, UnavailableError } from '../http'
+import { createLimiter, getJson, ThrottledError, UnavailableError } from '../http'
 import { clip, normalizeText, parseDate, sha256, yearOf } from '../text'
 import type { DocumentUpsert, ExtractionMethod } from '../types'
 import { emptyStats, type CollectOptions } from './index'
@@ -197,7 +200,7 @@ export async function* collectLoc(opts: CollectOptions): AsyncGenerator<Document
     let url: string | null = locSearchUrl(params)
     let pages = 0
     while (url) {
-      if (yielded >= opts.limit || opts.stop?.() || stats.unavailable) return
+      if (yielded >= opts.limit || opts.stop?.() || stats.unavailable || stats.throttled) return
       const retrievedAt = new Date(opts.clock ? opts.clock.now() : Date.now()).toISOString()
       let res: LocSearchResponse
       try {
@@ -208,6 +211,12 @@ export async function* collectLoc(opts: CollectOptions): AsyncGenerator<Document
         if (e instanceof UnavailableError) {
           stats.unavailable = true
           stats.note = `loc.gov stayed unavailable (${e.message}); ${stats.ok} of ${stats.requests} requests answered. Keeping what was collected; the rest waits for the next run.`
+          log(`  loc: ${stats.note}`)
+          return
+        }
+        if (e instanceof ThrottledError) {
+          stats.throttled = true
+          stats.note = `loc.gov rate-limited this IP (${e.message}); ${stats.ok} of ${stats.requests} requests answered. Keeping what was collected; the rest waits for the next run.`
           log(`  loc: ${stats.note}`)
           return
         }
@@ -232,7 +241,7 @@ export async function* collectLoc(opts: CollectOptions): AsyncGenerator<Document
       for (const doc of docs) {
         if (seen.has(doc.canonical_url)) continue
         seen.add(doc.canonical_url)
-        if (opts.fullText && doc.meta.is_page && doc.meta.text_storage === 'full' && doc.extraction_method !== 'ocr-alto') {
+        if (opts.fullText && !stats.throttled && doc.meta.is_page && doc.meta.text_storage === 'full' && doc.extraction_method !== 'ocr-alto') {
           try {
             const full = await locPageText(doc.canonical_url, { fetch: opts.fetch, limiter, clock: opts.clock })
             if (full) {
@@ -244,7 +253,12 @@ export async function* collectLoc(opts: CollectOptions): AsyncGenerator<Document
               doc.extraction_method = 'ocr-alto'
             }
           } catch (e) {
-            log(`  loc page text failed for ${doc.canonical_url}: ${e instanceof Error ? e.message : String(e)}`)
+            // A throttle on page text stops further page reads; the document is still kept with its description.
+            if (e instanceof ThrottledError) {
+              stats.throttled = true
+              stats.note = `loc.gov rate-limited this IP while reading page text (${e.message}); ${stats.ok} of ${stats.requests} searches answered. Keeping what was collected; the rest waits for the next run.`
+              log(`  loc: ${stats.note}`)
+            } else log(`  loc page text failed for ${doc.canonical_url}: ${e instanceof Error ? e.message : String(e)}`)
           }
         }
         yield doc
