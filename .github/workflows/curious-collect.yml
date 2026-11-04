@@ -5,7 +5,10 @@ name: Curious Desk collect
 # their provenance. GDELT DOC 2.0 for current affairs, the Library of Congress
 # for historical material, Europeana and Gallica for Europe's libraries. The
 # source policy registry (curious_sources) is consulted before any fetch;
-# news text is never stored; a run keeps to a 25-minute soft deadline.
+# news text is never stored; a run keeps to a 25-minute soft deadline. GDELT
+# throttles by IP and the runner's IP is shared: a throttle after at least one
+# answered request is a warning annotation and exit 0 (what was collected is
+# kept); only a run where nothing got through fails.
 #
 # No `schedule:` here: Vercel Cron on vizmaya-fyi fires
 # /api/curious/cron/collect-gdelt and /collect-loc each night
@@ -45,6 +48,10 @@ on:
         type: string
         required: false
         default: ''
+      days:
+        type: string
+        required: false
+        default: '2'
   workflow_dispatch:
     inputs:
       source:
@@ -71,6 +78,10 @@ on:
         description: 'LOC collection slug (e.g. chronicling-america), Europeana qf, Gallica dc.type'
         required: false
         default: ''
+      days:
+        description: 'Days back from today when since is empty (GDELT; one request per day per query)'
+        required: false
+        default: '2'
 
 concurrency:
   group: curious-collect-${{ inputs.source }}
@@ -112,4 +123,5 @@ jobs:
           ${{ inputs.since != '' && format('--since {0}', inputs.since) || '' }}
           ${{ inputs.until != '' && format('--until {0}', inputs.until) || '' }}
           ${{ inputs.collection != '' && format('--collection {0}', inputs.collection) || '' }}
+          ${{ inputs.days != '' && inputs.since == '' && format('--days {0}', inputs.days) || '' }}
           ${{ inputs.source == 'loc' && '--full-text' || '' }}

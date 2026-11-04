@@ -7,11 +7,11 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { assertAllowed, PolicyError, SOURCE_POLICIES, textStorageFor } from './policy'
-import { createLimiter, fakeClock, fetchWithRetry, HttpError } from './http'
+import { createLimiter, fakeClock, fetchWithRetry, HttpError, ThrottledError } from './http'
 import { canonicalUrl, cosine, buildIdf, domainOf, normalizeText, parseDate, sentenceSplit, sha256, sharedSentences, tokens, clip } from './text'
-import { gdeltDocumentsFromArticles, gdeltUrl, gdeltWindows, parseGdeltBody, type GdeltArticle } from './collectors/gdelt'
+import { GDELT_RULES, gdeltDocumentsFromArticles, gdeltUrl, gdeltWindows, parseGdeltBody, type GdeltArticle } from './collectors/gdelt'
 import { locDocumentsFromResults, locPartitions, locSearchUrl, type LocSearchResponse } from './collectors/loc'
-import { collectGdelt, collectLoc } from './collectors/index'
+import { collectGdelt, collectLoc, emptyStats } from './collectors/index'
 import { curiousEnv } from './types'
 import { z } from 'zod'
 import { collectEuropeana, europeanaDocumentsFromItems, europeanaIsPublicDomain, europeanaUrl, type EuropeanaResponse } from './collectors/europeana'
@@ -643,6 +643,93 @@ pending.push(
     assert.ok(r2.errors.length >= 2)
     assert.equal(r2.sources.length, 0)
     assert.equal(await waybackSnapshot('https://example.org/x', { fetch: (async () => new Response(JSON.stringify({ archived_snapshots: { closest: { available: true, url: 'http://web.archive.org/web/2026/https://example.org/x' } } }))) as typeof fetch }), 'https://web.archive.org/web/2026/https://example.org/x')
+  })(),
+)
+
+// 18. The limiter counts the gap from the END of the previous request; a persistent 429 is a ThrottledError.
+pending.push(
+  (async () => {
+    const clock = fakeClock(1_000_000)
+    const lim = createLimiter({ minGapMs: 5000, baseCooldownMs: 60_000, maxCooldownMs: 600_000, clock })
+    // A request that takes 3 s: the next one may start 5 s after the response, 8 s after the start.
+    const slow = (async () => {
+      await clock.sleep(3000)
+      return new Response('ok', { status: 200 })
+    }) as typeof fetch
+    const t0 = clock.now()
+    await fetchWithRetry('https://example.org/a', { fetch: slow, clock, limiter: lim, jitterMs: 0 })
+    assert.equal(clock.now() - t0, 3000, 'the first request took 3 s')
+    await lim.gate()
+    assert.equal(clock.now() - t0, 8000, 'the second request waits 5 s after the first response, not after its start')
+
+    // Every attempt 429: cooldowns 60 s, 120 s, 240 s, 480 s (capped at 600 s), then ThrottledError, not a plain HttpError.
+    const clock2 = fakeClock(0)
+    const lim2 = createLimiter({ minGapMs: 6000, baseCooldownMs: 60_000, maxCooldownMs: 600_000, clock: clock2 })
+    let n = 0
+    const refused = (async () => {
+      n++
+      return new Response('Please limit requests to one every 5 seconds', { status: 429 })
+    }) as typeof fetch
+    await assert.rejects(fetchWithRetry('https://example.org/b', { fetch: refused, clock: clock2, limiter: lim2, attempts: 5, jitterMs: 0 }), (e: unknown) => e instanceof ThrottledError && e.status === 429 && e.attempts === 5 && e.waitedMs >= 60_000 + 120_000 + 240_000 + 480_000)
+    assert.equal(n, 5)
+    assert.equal(lim2.cooldownMs, 600_000, 'the cooldown doubled up to the cap')
+    // One 429 then a 200 is not a throttle.
+    let m = 0
+    const once = (async () => (++m === 1 ? new Response('x', { status: 429 }) : new Response('ok'))) as typeof fetch
+    const res = await fetchWithRetry('https://example.org/c', { fetch: once, clock: clock2, limiter: createLimiter({ clock: clock2 }), attempts: 3, jitterMs: 0 })
+    assert.equal(res.status, 200)
+  })(),
+)
+
+// 19. GDELT on a throttled IP: one good window then 429 forever keeps the first window and stops without throwing; 429 from the start yields nothing with ok = 0; the request budget holds.
+pending.push(
+  (async () => {
+    const gd = fixture<{ articles: GdeltArticle[] }>('gdelt.json')
+    const clock = fakeClock(0)
+    let calls = 0
+    const oneThenRefused = (async () => {
+      calls++
+      return calls === 1 ? new Response(JSON.stringify(gd), { status: 200 }) : new Response('Please limit requests to one every 5 seconds', { status: 429 })
+    }) as typeof fetch
+    const stats = emptyStats()
+    const out = []
+    for await (const d of collectGdelt({ query: '"disco dancer"', days: 3, limit: 50, fetch: oneThenRefused, env, now: NOW, clock, stats })) out.push(d)
+    assert.equal(out.length, 2, 'the first window\'s documents are kept')
+    assert.deepEqual([stats.requests, stats.ok, stats.throttled], [2, 1, true])
+    assert.ok(stats.note?.includes('throttled'))
+    assert.equal(calls, 1 + GDELT_RULES.attempts, 'the second window used every attempt, then the collector stopped')
+    assert.equal(stats.requests, 2, 'no third window was tried')
+
+    const clock2 = fakeClock(0)
+    const stats2 = emptyStats()
+    const none = []
+    for await (const d of collectGdelt({ query: 'x y', limit: 50, fetch: (async () => new Response('slow down', { status: 429 })) as typeof fetch, env, now: NOW, clock: clock2, stats: stats2 })) none.push(d)
+    assert.equal(none.length, 0)
+    assert.deepEqual([stats2.requests, stats2.ok, stats2.throttled], [1, 0, true])
+
+    // The default window is the last two days: two requests.
+    const clock3 = fakeClock(0)
+    const stats3 = emptyStats()
+    const seen: string[] = []
+    const fine = (async (url: string) => {
+      seen.push(String(url))
+      return new Response(JSON.stringify({ articles: [] }), { status: 200 })
+    }) as typeof fetch
+    for await (const _ of collectGdelt({ query: 'x y', limit: 50, fetch: fine, env, now: NOW, clock: clock3, stats: stats3 })) void _
+    assert.equal(seen.length, GDELT_RULES.defaultDays)
+    assert.deepEqual([stats3.requests, stats3.ok, stats3.throttled], [GDELT_RULES.defaultDays, GDELT_RULES.defaultDays, false])
+    assert.ok(clock3.t >= (GDELT_RULES.defaultDays - 1) * 6000, 'six seconds between requests')
+
+    // The request budget: full windows split into six-hour ones; a 30-day range would need more than the budget allows.
+    const clock4 = fakeClock(0)
+    const stats4 = emptyStats()
+    const full = { articles: Array.from({ length: 250 }, (_, i) => ({ url: `https://outlet.example/${i}`, title: `t${i}`, seendate: '20261103T120000Z', domain: 'outlet.example', language: 'English', sourcecountry: 'X' })) }
+    const always = (async () => new Response(JSON.stringify(full), { status: 200 })) as typeof fetch
+    let got = 0
+    for await (const _ of collectGdelt({ query: 'x y', days: 30, limit: 100_000, fetch: always, env, now: NOW, clock: clock4, stats: stats4 })) got++
+    assert.equal(stats4.requests, GDELT_RULES.requestBudget)
+    assert.ok(stats4.note?.includes('budget'))
+    assert.ok(got > 0)
   })(),
 )
 

@@ -50,9 +50,17 @@ export interface Limiter {
   hit(retryAfterMs: number): void
   /** A request succeeded: reset the cooldown. */
   settle(): void
+  /** A response came back (any status): the gap is measured from here. */
+  done(): void
   readonly cooldownMs: number
 }
 
+/**
+ * The gap is measured from the END of the previous request (its response),
+ * not from its start: GDELT and its kind count from the last response they
+ * sent, so a slow request followed by the next one "five seconds later"
+ * would be refused if the clock started at the request.
+ */
 export function createLimiter(opts: LimiterOptions = {}): Limiter {
   const clock = opts.clock ?? realClock
   const minGapMs = opts.minGapMs ?? 0
@@ -69,15 +77,21 @@ export function createLimiter(opts: LimiterOptions = {}): Limiter {
       const next = Math.max(waitUntil, lastAt + minGapMs)
       const wait = next - clock.now()
       if (wait > 0) await clock.sleep(wait)
+      // Until done() runs, the gap counts from the request start (a request that never answers).
       lastAt = clock.now()
     },
     hit(retryAfterMs) {
+      lastAt = clock.now()
       cooldownMs = Math.min(Math.max(baseCooldownMs, cooldownMs * 2, retryAfterMs), maxCooldownMs)
-      waitUntil = Math.max(waitUntil, clock.now() + cooldownMs)
+      waitUntil = Math.max(waitUntil, lastAt + cooldownMs)
     },
     settle() {
+      lastAt = clock.now()
       cooldownMs = 0
       waitUntil = 0
+    },
+    done() {
+      lastAt = clock.now()
     },
   }
 }
@@ -95,6 +109,14 @@ export class HttpError extends Error {
   constructor(message: string, readonly status: number, readonly url: string, readonly bodySnippet: string) {
     super(message)
     this.name = 'HttpError'
+  }
+}
+
+/** Every attempt answered 429: the source is throttling this IP. Callers keep what they have and stop. */
+export class ThrottledError extends HttpError {
+  constructor(label: string, url: string, bodySnippet: string, readonly attempts: number, readonly waitedMs: number) {
+    super(`${label}: HTTP 429 Too Many Requests after ${attempts} attempts (${Math.round(waitedMs / 1000)} s of waiting)`, 429, url, bodySnippet)
+    this.name = 'ThrottledError'
   }
 }
 
@@ -126,19 +148,25 @@ export async function fetchWithRetry(url: string, opts: FetchOptions = {}): Prom
   const backoffMs = opts.backoffMs ?? 1500
   const jitterMs = opts.jitterMs ?? 500
   const headers = { 'user-agent': USER_AGENT, ...opts.headers }
+  const started = clock.now()
   let lastErr: Error | null = null
+  let throttled = 0
+  let lastBody = ''
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (opts.limiter) await opts.limiter.gate()
     try {
       const res = await fetchImpl(url, { headers, signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000) })
       if (res.status === 429) {
+        throttled++
+        lastBody = (await res.text()).slice(0, 200)
         const after = retryAfterMs(res)
         if (opts.limiter) opts.limiter.hit(after)
         else await clock.sleep(after || backoffMs * 2 ** attempt)
-        lastErr = new HttpError(`${label}: HTTP 429 Too Many Requests`, 429, url, (await res.text()).slice(0, 200))
+        lastErr = new HttpError(`${label}: HTTP 429 Too Many Requests`, 429, url, lastBody)
         continue
       }
       if (res.status >= 500) {
+        opts.limiter?.done()
         lastErr = new HttpError(`${label}: HTTP ${res.status} ${res.statusText}`, res.status, url, (await res.text()).slice(0, 200))
         if (attempt < attempts - 1) await clock.sleep(backoffMs * 2 ** attempt + Math.random() * jitterMs)
         continue
@@ -147,10 +175,12 @@ export async function fetchWithRetry(url: string, opts: FetchOptions = {}): Prom
       return res
     } catch (err) {
       if (err instanceof HttpError) throw err
+      opts.limiter?.done()
       lastErr = err instanceof Error ? err : new Error(String(err))
       if (attempt < attempts - 1) await clock.sleep(backoffMs * 2 ** attempt + Math.random() * jitterMs)
     }
   }
+  if (throttled === attempts) throw new ThrottledError(label, url, lastBody, attempts, clock.now() - started)
   throw lastErr ?? new Error(`${label}: fetch failed`)
 }
 

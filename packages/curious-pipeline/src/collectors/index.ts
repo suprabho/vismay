@@ -20,6 +20,10 @@ export interface CollectOptions {
   since?: string
   /** ISO date upper bound, exclusive. Defaults to now. */
   until?: string
+  /** Lower bound in days before `until` when `since` is absent (each collector has its default). */
+  days?: number
+  /** Counters the collector fills and the CLI reads, to tell a throttled night from a broken one. */
+  stats?: CollectStats
   /** Stop after this many documents. */
   limit: number
   /** Source-specific sub-scope: LOC collection slug, Europeana qf, Gallica dc.type. */
@@ -34,6 +38,19 @@ export interface CollectOptions {
   /** Stop early (the CLI's soft deadline). */
   stop?: () => boolean
 }
+
+export interface CollectStats {
+  /** Requests sent to the source. */
+  requests: number
+  /** Requests that got an answer other than 429. */
+  ok: number
+  /** The source refused the IP past the retries; the collector stopped and kept what it had. */
+  throttled: boolean
+  /** Why it stopped early, if it did. */
+  note?: string
+}
+
+export const emptyStats = (): CollectStats => ({ requests: 0, ok: 0, throttled: false })
 
 export interface Collector {
   id: CollectorId

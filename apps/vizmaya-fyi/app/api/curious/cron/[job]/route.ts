@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
 const JOBS: Record<string, { worker: WorkerDef; inputs: Record<string, string> }> = {
   'collect-gdelt': {
     worker: { id: 'curious-collect', workflowFile: 'curious-collect.yml', label: 'Curious Desk collect (GDELT)', description: 'discover candidate news documents', schedule: '02:20 UTC' },
-    inputs: { source: 'gdelt', limit: '2000' },
+    inputs: { source: 'gdelt', limit: '2000', days: '2' },
   },
   'collect-loc': {
     worker: { id: 'curious-collect', workflowFile: 'curious-collect.yml', label: 'Curious Desk collect (Library of Congress)', description: 'discover candidate historical documents', schedule: '02:40 UTC' },

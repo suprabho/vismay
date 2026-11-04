@@ -8,7 +8,11 @@
  *   pnpm curious:collect -- --source loc --limit 50 --dry-run         # rotates queries.json by day of year, prints 5 rows, writes nothing
  *
  * Flags: --source gdelt|loc|europeana|gallica (required), --query, --query-file (default scripts/curious/queries.json),
- *        --since YYYY-MM-DD, --until YYYY-MM-DD, --limit N (default 200), --collection, --full-text, --dry-run
+ *        --since YYYY-MM-DD, --until YYYY-MM-DD, --days N (lower bound when --since is absent; GDELT defaults to 2),
+ *        --limit N (default 200), --collection, --full-text, --dry-run
+ *
+ * Exit code: 0 when the run collected or was merely throttled after at least one answered request (a
+ * `::warning::` annotation says so); 1 when every request was refused, or on any other error.
  *
  * Env (apps/vizmaya-fyi/.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY; EUROPEANA_API_KEY for europeana.
  * Budget: a 25-minute soft deadline under the workflow's 30-minute kill; what is not collected is picked up next run.
@@ -20,6 +24,7 @@ import { config as loadEnv } from 'dotenv'
 import { collectorFor } from '@vismay/curious-pipeline/collectors'
 import { upsertDocuments } from '@vismay/curious-pipeline/store'
 import { COLLECTOR_IDS, curiousEnv, type CollectorId, type DocumentUpsert } from '@vismay/curious-pipeline/types'
+import { emptyStats } from '@vismay/curious-pipeline/collectors'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
@@ -33,6 +38,7 @@ interface Args {
   queryFile: string
   since?: string
   until?: string
+  days?: number
   limit: number
   collection?: string
   fullText: boolean
@@ -55,6 +61,7 @@ function parseArgs(argv: string[]): Args {
     else if (k === '--query-file') (a.queryFile = v), i++
     else if (k === '--since') (a.since = v), i++
     else if (k === '--until') (a.until = v), i++
+    else if (k === '--days') (a.days = Number(v)), i++
     else if (k === '--limit') (a.limit = Number(v)), i++
     else if (k === '--collection') (a.collection = v), i++
     else if (k === '--full-text') a.fullText = true
@@ -64,6 +71,7 @@ function parseArgs(argv: string[]): Args {
   if (!sourceSet) throw new Error('--source is required')
   for (const d of [a.since, a.until]) if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error(`Dates are YYYY-MM-DD, got ${d}`)
   if (!Number.isFinite(a.limit) || a.limit < 1) throw new Error('--limit must be a positive number')
+  if (a.days !== undefined && (!Number.isFinite(a.days) || a.days < 1)) throw new Error('--days must be a positive number')
   return a
 }
 
@@ -81,9 +89,10 @@ async function main() {
   const query = args.query ?? pickQuery(args.queryFile, args.source, now)
   const started = Date.now()
   const stop = () => Date.now() - started > DEADLINE_MS
-  console.log(`Curious collect: ${args.source} · ${query}${args.collection ? ` · ${args.collection}` : ''}${args.since ? ` · since ${args.since}` : ''}${args.until ? ` · until ${args.until}` : ''} · limit ${args.limit}${args.dryRun ? ' · DRY RUN' : ''}`)
+  console.log(`Curious collect: ${args.source} · ${query}${args.collection ? ` · ${args.collection}` : ''}${args.since ? ` · since ${args.since}` : args.days ? ` · last ${args.days} days` : ''}${args.until ? ` · until ${args.until}` : ''} · limit ${args.limit}${args.dryRun ? ' · DRY RUN' : ''}`)
 
   const collector = collectorFor(args.source)
+  const stats = emptyStats()
   const buffer: DocumentUpsert[] = []
   let collected = 0
   let written = 0
@@ -103,6 +112,8 @@ async function main() {
       query,
       since: args.since,
       until: args.until,
+      days: args.days,
+      stats,
       limit: args.limit,
       collection: args.collection,
       fullText: args.fullText,
@@ -128,7 +139,17 @@ async function main() {
   }
 
   if (args.dryRun) console.log(`Done (dry run). ${collected} documents would be written.`)
-  else console.log(`Done. ${collected} collected, ${written} written, ${skipped} skipped (url already held by another source row)${errors.length ? `, ${errors.length} errors` : ''}.`)
+  else console.log(`Done. ${collected} collected, ${written} written, ${skipped} skipped (url already held by another source row)${errors.length ? `, ${errors.length} errors` : ''}. ${stats.requests} requests, ${stats.ok} answered.`)
+  if (stats.throttled) {
+    // A throttle after at least one answer is a known external condition: a warning the run summary shows, not a red job.
+    // A throttle before any answer means nothing got through at all: that stays red, so a real block is noticed.
+    const line = `${args.source} throttled this IP: ${stats.note ?? 'rate limited'}`
+    if (stats.ok > 0) console.warn(`::warning title=Curious collect throttled::${line}`)
+    else {
+      console.error(`::error title=Curious collect blocked::${line}`)
+      process.exitCode = 1
+    }
+  } else if (stats.note) console.log(`  · ${stats.note}`)
   if (errors.length) {
     for (const e of errors.slice(0, 10)) console.error(`  ✗ ${e}`)
     process.exitCode = 1
