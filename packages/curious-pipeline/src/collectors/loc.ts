@@ -7,26 +7,40 @@
  * text is kept only for public-domain items (published before 1930), as
  * the loc policy row says.
  *
+ * loc.gov serves a query cold the first time: the response streams slowly
+ * (a hundred-result page can take the better part of a minute) and when the
+ * backend runs past its own budget it answers a 503 page; the same request
+ * seconds later is fast from its cache. So requests here get a long
+ * timeout and patient, widening retries, and a search that stays
+ * unavailable past them stops the collector gracefully: it keeps what it
+ * collected, says so in `stats`, and the CLI moves on.
+ *
  *   https://www.loc.gov/search/?q=...&fo=json&c=100&sp=N&at=results,pagination
  *   https://www.loc.gov/collections/chronicling-america/?q=...&dates=1900/1925&fo=json
  *   https://www.loc.gov/resource/<lccn>/<date>/ed-1/?sp=N&st=text&fo=json  (full_text)
  */
 
 import { assertAllowed, textStorageFor } from '../policy'
-import { createLimiter, getJson } from '../http'
+import { createLimiter, getJson, UnavailableError } from '../http'
 import { clip, normalizeText, parseDate, sha256, yearOf } from '../text'
 import type { DocumentUpsert, ExtractionMethod } from '../types'
-import type { CollectOptions } from './index'
+import { emptyStats, type CollectOptions } from './index'
 
 export const LOC_RULES = {
   api: 'https://www.loc.gov',
-  perPage: 100,
+  /** Half of loc.gov's maximum: a cold hundred-result page streams for most of a minute. */
+  perPage: 50,
+  /** A cold search streams slowly; the timeout must outlast it. */
+  timeoutMs: 90_000,
+  /** Attempts per request with waits of 15, 30, 60 and 120 s: a cold query warms into the cache meanwhile. */
+  attempts: 5,
+  backoffMs: 15_000,
   /** loc.gov refuses pages past this many results. */
   deepPagingCap: 100_000,
   /** Before this year an item is treated as public domain in the US. */
   publicDomainBefore: 1930,
   textCap: 40_000,
-  version: 'curious-loc-v1-2026-11',
+  version: 'curious-loc-v2-2026-11',
   formats: ['newspaper', 'book', 'manuscript/mixed material', 'periodical', 'photo, print, drawing', 'map', 'sound recording', 'film, video', 'web page'],
 } as const
 
@@ -163,7 +177,7 @@ export async function locPageText(pageUrl: string, opts: { fetch?: typeof fetch;
   const u = new URL(pageUrl)
   u.searchParams.set('st', 'text')
   u.searchParams.set('fo', 'json')
-  const body = await getJson<{ full_text?: string }>(u.toString(), { fetch: opts.fetch, limiter: opts.limiter, label: 'LOC page', clock: opts.clock })
+  const body = await getJson<{ full_text?: string }>(u.toString(), { fetch: opts.fetch, limiter: opts.limiter, label: 'LOC page', clock: opts.clock, timeoutMs: LOC_RULES.timeoutMs, attempts: 3, backoffMs: LOC_RULES.backoffMs })
   return typeof body.full_text === 'string' && body.full_text.trim() ? body.full_text.trim() : null
 }
 
@@ -171,6 +185,7 @@ export async function* collectLoc(opts: CollectOptions): AsyncGenerator<Document
   const policy = assertAllowed('loc', { method: 'api', now: opts.now })
   const limiter = createLimiter({ minGapMs: policy.crawlDelayMs, baseCooldownMs: 20_000, clock: opts.clock })
   const log = opts.log ?? (() => {})
+  const stats = opts.stats ?? emptyStats()
   const now = opts.now ?? new Date()
   const fromYear = opts.since ? Number(opts.since.slice(0, 4)) : opts.collection === 'chronicling-america' ? 1770 : 1500
   const toYear = opts.until ? Number(opts.until.slice(0, 4)) : now.getUTCFullYear()
@@ -182,9 +197,22 @@ export async function* collectLoc(opts: CollectOptions): AsyncGenerator<Document
     let url: string | null = locSearchUrl(params)
     let pages = 0
     while (url) {
-      if (yielded >= opts.limit || opts.stop?.()) return
+      if (yielded >= opts.limit || opts.stop?.() || stats.unavailable) return
       const retrievedAt = new Date(opts.clock ? opts.clock.now() : Date.now()).toISOString()
-      const res: LocSearchResponse = await getJson<LocSearchResponse>(url, { fetch: opts.fetch, limiter, label: 'LOC', clock: opts.clock })
+      let res: LocSearchResponse
+      try {
+        stats.requests++
+        res = await getJson<LocSearchResponse>(url, { fetch: opts.fetch, limiter, label: 'LOC', clock: opts.clock, timeoutMs: LOC_RULES.timeoutMs, attempts: LOC_RULES.attempts, backoffMs: LOC_RULES.backoffMs })
+        stats.ok++
+      } catch (e) {
+        if (e instanceof UnavailableError) {
+          stats.unavailable = true
+          stats.note = `loc.gov stayed unavailable (${e.message}); ${stats.ok} of ${stats.requests} requests answered. Keeping what was collected; the rest waits for the next run.`
+          log(`  loc: ${stats.note}`)
+          return
+        }
+        throw e
+      }
       pages++
       const of = res.pagination?.of ?? res.results?.length ?? 0
       log(`  loc ${params.dates ?? 'all dates'}${params.originalFormat ? ` ${params.originalFormat}` : ''} page ${res.pagination?.current ?? pages}: ${res.results?.length ?? 0} of ${of}`)

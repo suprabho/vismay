@@ -46,11 +46,13 @@ export interface CollectStats {
   ok: number
   /** The source refused the IP past the retries; the collector stopped and kept what it had. */
   throttled: boolean
+  /** The source answered 5xx or timed out past the retries; the collector stopped and kept what it had. */
+  unavailable: boolean
   /** Why it stopped early, if it did. */
   note?: string
 }
 
-export const emptyStats = (): CollectStats => ({ requests: 0, ok: 0, throttled: false })
+export const emptyStats = (): CollectStats => ({ requests: 0, ok: 0, throttled: false, unavailable: false })
 
 export interface Collector {
   id: CollectorId

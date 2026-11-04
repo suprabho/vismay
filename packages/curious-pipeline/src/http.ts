@@ -112,6 +112,14 @@ export class HttpError extends Error {
   }
 }
 
+/** Every attempt answered 5xx, timed out or failed to connect: the source is down or too slow right now. Callers keep what they have and stop. */
+export class UnavailableError extends HttpError {
+  constructor(label: string, url: string, lastStatus: number, lastMessage: string, readonly attempts: number, readonly waitedMs: number) {
+    super(`${label}: unavailable after ${attempts} attempts (${Math.round(waitedMs / 1000)} s): ${lastMessage}`, lastStatus, url, '')
+    this.name = 'UnavailableError'
+  }
+}
+
 /** Every attempt answered 429: the source is throttling this IP. Callers keep what they have and stop. */
 export class ThrottledError extends HttpError {
   constructor(label: string, url: string, bodySnippet: string, readonly attempts: number, readonly waitedMs: number) {
@@ -151,6 +159,7 @@ export async function fetchWithRetry(url: string, opts: FetchOptions = {}): Prom
   const started = clock.now()
   let lastErr: Error | null = null
   let throttled = 0
+  let unavailable = 0
   let lastBody = ''
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (opts.limiter) await opts.limiter.gate()
@@ -167,8 +176,10 @@ export async function fetchWithRetry(url: string, opts: FetchOptions = {}): Prom
       }
       if (res.status >= 500) {
         opts.limiter?.done()
+        unavailable++
         lastErr = new HttpError(`${label}: HTTP ${res.status} ${res.statusText}`, res.status, url, (await res.text()).slice(0, 200))
-        if (attempt < attempts - 1) await clock.sleep(backoffMs * 2 ** attempt + Math.random() * jitterMs)
+        // A 5xx may carry Retry-After (loc.gov does when warming): honour it over the backoff.
+        if (attempt < attempts - 1) await clock.sleep(Math.max(retryAfterMs(res), backoffMs * 2 ** attempt) + Math.random() * jitterMs)
         continue
       }
       opts.limiter?.settle()
@@ -176,11 +187,13 @@ export async function fetchWithRetry(url: string, opts: FetchOptions = {}): Prom
     } catch (err) {
       if (err instanceof HttpError) throw err
       opts.limiter?.done()
+      unavailable++
       lastErr = err instanceof Error ? err : new Error(String(err))
       if (attempt < attempts - 1) await clock.sleep(backoffMs * 2 ** attempt + Math.random() * jitterMs)
     }
   }
   if (throttled === attempts) throw new ThrottledError(label, url, lastBody, attempts, clock.now() - started)
+  if (unavailable === attempts) throw new UnavailableError(label, url, lastErr instanceof HttpError ? lastErr.status : 0, lastErr?.message ?? 'no response', attempts, clock.now() - started)
   throw lastErr ?? new Error(`${label}: fetch failed`)
 }
 

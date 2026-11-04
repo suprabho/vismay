@@ -11,8 +11,8 @@
  *        --since YYYY-MM-DD, --until YYYY-MM-DD, --days N (lower bound when --since is absent; GDELT defaults to 2),
  *        --limit N (default 200), --collection, --full-text, --dry-run
  *
- * Exit code: 0 when the run collected or was merely throttled after at least one answered request (a
- * `::warning::` annotation says so); 1 when every request was refused, or on any other error.
+ * Exit code: 0 when the run collected, or was throttled or lost the source after at least one answered request (a
+ * `::warning::` annotation says so); 1 when no request was answered at all, or on any other error.
  *
  * Env (apps/vizmaya-fyi/.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY; EUROPEANA_API_KEY for europeana.
  * Budget: a 25-minute soft deadline under the workflow's 30-minute kill; what is not collected is picked up next run.
@@ -112,7 +112,7 @@ async function main() {
   }
 
   for (const query of queries) {
-    if (stats.throttled || stop()) break
+    if (stats.throttled || stats.unavailable || stop()) break
     if (tried.length) console.log(`  · "${tried[tried.length - 1]}" found nothing today; trying the next query in the rotation`)
     tried.push(query)
     const before = collected
@@ -153,14 +153,15 @@ async function main() {
 
   if (args.dryRun) console.log(`Done (dry run). ${collected} documents would be written.`)
   else console.log(`Done. ${collected} collected, ${written} written, ${skipped} skipped (url already held by another source row)${errors.length ? `, ${errors.length} errors` : ''}. ${stats.requests} requests, ${stats.ok} answered; ${tried.length === 1 ? 'one query' : `${tried.length} queries`} tried.`)
-  if (collected === 0 && !stats.throttled && stats.ok > 0) console.warn(`::warning title=Curious collect found nothing::${args.source}: ${tried.map((q) => `"${q}"`).join(', ')} returned no documents today. Check the query list if this repeats.`)
-  if (stats.throttled) {
-    // A throttle after at least one answer is a known external condition: a warning the run summary shows, not a red job.
-    // A throttle before any answer means nothing got through at all: that stays red, so a real block is noticed.
-    const line = `${args.source} throttled this IP: ${stats.note ?? 'rate limited'}`
-    if (stats.ok > 0) console.warn(`::warning title=Curious collect throttled::${line}`)
+  if (collected === 0 && !stats.throttled && !stats.unavailable && stats.ok > 0) console.warn(`::warning title=Curious collect found nothing::${args.source}: ${tried.map((q) => `"${q}"`).join(', ')} returned no documents today. Check the query list if this repeats.`)
+  if (stats.throttled || stats.unavailable) {
+    // A throttle or an outage after at least one answer is a known external condition: a warning the run summary shows, not a red job.
+    // One before any answer means nothing got through at all: that stays red, so a real block or outage is noticed.
+    const what = stats.throttled ? 'throttled this IP' : 'was unavailable'
+    const line = `${args.source} ${what}: ${stats.note ?? 'no answer'}`
+    if (stats.ok > 0) console.warn(`::warning title=Curious collect ${stats.throttled ? 'throttled' : 'source unavailable'}::${line}`)
     else {
-      console.error(`::error title=Curious collect blocked::${line}`)
+      console.error(`::error title=Curious collect got no answer::${line}`)
       process.exitCode = 1
     }
   } else if (stats.note) console.log(`  · ${stats.note}`)

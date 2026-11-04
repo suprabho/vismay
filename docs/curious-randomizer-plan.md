@@ -202,9 +202,12 @@ picture-story format like the other desks.
   GitHub's runners share egress IPs with other tenants, so a throttled
   night can still happen; if it happens nightly, the next step is a Google
   News RSS discovery collector, the pattern `scrape-news.ts` already uses
-  from Actions. Gallica sits behind Cloudflare and the Library of Congress
-  times out on its heavier endpoints; both back off and leave the rest for
-  the next night.
+  from Actions. Gallica sits behind Cloudflare. The Library of Congress serves a query
+  cold the first time, streaming slowly or answering a 503 page until its
+  cache warms, so its collector uses a 90-second timeout, waits of 15 to
+  120 seconds across five attempts and 50 results a page, and treats a
+  search that stays down like a throttle: keep what was collected, warn,
+  and leave the rest for the next night.
 - `EUROPEANA_API_KEY` is not yet issued: the collector fails closed with the
   message, and the registry row stays enabled for when it arrives.
 - The grade is only as good as the sources found: a claim graded D for want
