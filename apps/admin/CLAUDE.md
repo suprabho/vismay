@@ -194,7 +194,13 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   format the spin's kind of story suits), the Humorous tone toggle
   ([ToneToggle.tsx](components/html-stories/ToneToggle.tsx), also on the
   Randomizer tab: a wry, sarcastic voice under the same accuracy rules), the
-  style randomizer (palettes/fonts from the app's own stories) and, for
+  style randomizer (palettes/fonts from the app's own stories), **Edit style**
+  ([StyleEditDialog.tsx](components/html-stories/StyleEditDialog.tsx): the
+  pencil on the style chip, or the button when the house style is in use;
+  every palette slot and the font trio, live sample and contrast, seeded from
+  the style in use or the house look in `@vismay/html-stories/houseStyles`;
+  the result is a `custom` style, validated by `parseEntityStyle` in the brief
+  route, that lives in the copied brief only — it has no `?style=` token) and, for
   footshorts, **Add matches** — the compose `MatchPicker` (badges + on-demand
   Opta scrape and a team search, reused with its own labels and a 40-match cap; **Fetch insights** in its Picked strip scrapes every ticked match still missing Opta insights in ONE worker run — `POST /api/footshorts/data/matches/scrape` with `{ matches: [...] }` dispatches the match-facts workflow with comma-list `fixture_id`/`competition`, since one dispatch per match would cancel each other in its concurrency group; in the team scope *Last 5 results* and *Next 3* tick a club's fixtures in one go) — whose picks make the brief carry
   the match context (`buildMatchContext` in

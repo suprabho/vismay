@@ -31,12 +31,14 @@ export interface StyleFonts {
 }
 
 /** Where a palette or font trio came from, for attribution in the UI and the
- *  brief: an existing story (the randomizer), or a competition's or team's
- *  style set in the footshorts Asset Studio. Absent `kind` means a story. */
+ *  brief: an existing story (the randomizer), a competition's or team's
+ *  style set in the footshorts Asset Studio, or an editor's own edit in the
+ *  brief generator (`custom`, whose title names what it was edited from).
+ *  Absent `kind` means a story. */
 export interface StyleSource {
   slug: string
   title: string
-  kind?: 'story' | EntityStyleKind
+  kind?: 'story' | EntityStyleKind | 'custom'
 }
 
 export interface PaletteOption {
@@ -221,6 +223,16 @@ export function entityStoryStyle(option: Pick<EntityStyleOption, 'kind' | 'slug'
   return { palette: option.style.palette, fonts: option.style.fonts, paletteFrom: from, fontsFrom: from }
 }
 
+/**
+ * An edited look: the palette and fonts an editor set by hand in the brief
+ * generator, starting from `basedOn` (the house style, a draw or an Asset
+ * Studio style). Run it through parseEntityStyle first.
+ */
+export function customStoryStyle(style: EntityStyle, basedOn: string): StoryStyle {
+  const from: StyleSource = { slug: 'custom', title: basedOn, kind: 'custom' }
+  return { palette: style.palette, fonts: style.fonts, paletteFrom: from, fontsFrom: from }
+}
+
 // ── style tokens: a picked style as one URL-safe value, so an agent reading the
 // brief by URL or MCP gets the same look the admin showed.
 
@@ -230,11 +242,13 @@ const STYLE_SLUG = /^[a-z0-9][a-z0-9_-]{0,119}$/
  * The brief's `style=` value for a picked style: `competition:<slug>` or
  * `team:<slug>` for an Asset Studio style, `story:<palette slug>,<fonts slug>`
  * (one slug when both halves come from the same story) for a randomizer draw.
- * Null for the house style.
+ * Null for the house style, and for an edited style, which has no token: it
+ * only travels in the copied brief.
  */
 export function styleToken(style: StoryStyle | null): string | null {
   if (!style) return null
   const kind = style.paletteFrom.kind
+  if (kind === 'custom') return null
   if (kind === 'competition' || kind === 'team') return `${kind}:${style.paletteFrom.slug}`
   const p = style.paletteFrom.slug
   const f = style.fontsFrom.slug

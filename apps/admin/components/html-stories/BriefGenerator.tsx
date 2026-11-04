@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Basketball, Check, Compass, Copy, FlagCheckered, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
+import { Basketball, Check, Compass, Copy, FlagCheckered, PencilSimple, Shuffle, SoccerBall, X } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { MAX_CONTEXT_MATCHES } from '@vismay/html-stories/footshortsBrief'
 import type { AuthorableHtmlStoryFormat } from '@vismay/html-stories/formats'
+import { houseStyle } from '@vismay/html-stories/houseStyles'
 import {
+  customStoryStyle,
   entityStoryStyle,
   pickRandomStyle,
   type EntityStyleOption,
@@ -21,6 +23,7 @@ import { ToneToggle } from './ToneToggle'
 import { GameContextPicker, type GameContextPick } from './GameContextPicker'
 import { RaceContextPicker, type RaceContextPick } from './RaceContextPicker'
 import { StoryStylePicker } from './StoryStylePicker'
+import { StyleEditDialog } from './StyleEditDialog'
 import { TripContextPicker, type TripContextPick } from './TripContextPicker'
 
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
@@ -38,6 +41,10 @@ interface MatchContextPick {
  * trio drawn from the app's stories' themes. The Humorous toggle asks for a
  * wry, sarcastic voice (@vismay/html-stories/tone) under the same accuracy
  * rules.
+ *
+ * Edit style (./StyleEditDialog) opens the style in use — the house look,
+ * a draw or an Asset Studio style — with every colour and font editable;
+ * the edit goes into this brief only (it has no ?style= token).
  *
  * For footshorts, Story style (./StoryStylePicker) swaps in a competition's
  * or team's own palette and fonts, set in the Asset Studio.
@@ -95,6 +102,7 @@ export function BriefGenerator({
   // button is "building" whenever the current request has no answer yet.
   const [built, setBuilt] = useState<{ request: string; brief: string | null; error: string | null } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [editing, setEditing] = useState(false)
   const canShuffle = !!pool?.palettes.length && !!pool.fonts.length
   const isFootshorts = app === 'footshorts'
   const isVizf1 = app === 'vizf1'
@@ -102,6 +110,15 @@ export function BriefGenerator({
   const isTravel = app === 'travel'
   // A competition's or team's Asset Studio style, rather than a random draw.
   const isEntityStyle = style?.paletteFrom.kind === 'competition' || style?.paletteFrom.kind === 'team'
+  const isCustomStyle = style?.paletteFrom.kind === 'custom'
+  // What an edit starts from, named for the dialog and the chip.
+  const styleName = !style
+    ? 'the house style'
+    : isCustomStyle
+      ? style.paletteFrom.title
+      : isEntityStyle
+        ? `the ${style.paletteFrom.title} style`
+        : `the "${style.paletteFrom.title}" palette`
 
   const request = useMemo(
     () =>
@@ -224,13 +241,16 @@ export function BriefGenerator({
         <div
           className={chip}
           title={
-            (isEntityStyle
-              ? `${style.paletteFrom.title} style (Asset Studio)`
-              : `Colours: ${style.paletteFrom.title}\nType: ${style.fontsFrom.title}`) +
-            `\nAgents: ?style=${styleToken(style)} on the brief URL, or storyStyle "${styleToken(style)}"`
+            isCustomStyle
+              ? `Edited, starting from ${style.paletteFrom.title}\nOnly in the copied brief: there is no ?style= token for an edit`
+              : (isEntityStyle
+                  ? `${style.paletteFrom.title} style (Asset Studio)`
+                  : `Colours: ${style.paletteFrom.title}\nType: ${style.fontsFrom.title}`) +
+                `\nAgents: ?style=${styleToken(style)} on the brief URL, or storyStyle "${styleToken(style)}"`
           }
         >
           {isEntityStyle && <span className="text-neutral-200">{style.paletteFrom.title}</span>}
+          {isCustomStyle && <span className="text-neutral-200">Edited</span>}
           <span className="flex">
             {SWATCHES.map((k) => (
               <span
@@ -243,6 +263,14 @@ export function BriefGenerator({
           <span className="truncate max-w-[16rem]">
             {style.fonts.serif} · {style.fonts.sans} · {style.fonts.mono}
           </span>
+          <button
+            onClick={() => setEditing(true)}
+            className="p-1 text-neutral-500 hover:text-white rounded"
+            aria-label="Edit colours and fonts"
+            title="Edit colours and fonts"
+          >
+            <PencilSimple size={12} />
+          </button>
           <button
             onClick={() => setStyle(null)}
             className="p-1 text-neutral-500 hover:text-white rounded"
@@ -370,8 +398,14 @@ export function BriefGenerator({
         className={btn}
       >
         <Shuffle size={14} />
-        {style && !isEntityStyle ? 'Shuffle' : 'Randomize style'}
+        {style && !isEntityStyle && !isCustomStyle ? 'Shuffle' : 'Randomize style'}
       </button>
+      {!style && (
+        <button onClick={() => setEditing(true)} className={btn} title="Edit the house colours and fonts for this brief">
+          <PencilSimple size={14} />
+          Edit style
+        </button>
+      )}
       <button
         onClick={async () => {
           if (!brief) return
@@ -387,6 +421,18 @@ export function BriefGenerator({
         {copied ? 'Copied' : building ? 'Building brief…' : 'Copy agent brief'}
       </button>
       {error && <span className="text-xs text-red-400 basis-full">{error}</span>}
+      {editing && (
+        <StyleEditDialog
+          initial={style ? { palette: style.palette, fonts: style.fonts } : houseStyle(app)}
+          house={houseStyle(app)}
+          basedOn={styleName}
+          onClose={() => setEditing(false)}
+          onApply={(edited) => {
+            setStyle(customStoryStyle(edited, styleName))
+            setEditing(false)
+          }}
+        />
+      )}
       {pickingRace && <RaceContextPicker initial={race} onClose={() => setPickingRace(false)} onPick={setRace} />}
       {pickingGames && <GameContextPicker initial={games} onClose={() => setPickingGames(false)} onPick={setGames} />}
       {pickingTrip && <TripContextPicker initial={trip} onClose={() => setPickingTrip(false)} onPick={setTrip} />}
