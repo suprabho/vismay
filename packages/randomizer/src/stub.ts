@@ -43,6 +43,7 @@ import {
   type HundredLifeEvent,
   type HundredPerson,
   type HundredSubject,
+  isLiterary,
   type LandmarkPrize,
   type LandmarkFocus,
   type LandmarkSubject,
@@ -431,13 +432,26 @@ export const LANDMARK_WORK_LEVEL_LABEL: Record<LandmarkWorkLevel, string> = {
   body: 'the citation names a body of work',
 }
 
+/**
+ * The committee's account of the work on nobelprize.org, as the brief names
+ * it: the scientific background document, or for Literature (which has none)
+ * the presentation speech. `short` is the link label.
+ */
+export function landmarkBackgroundLabel(prize: Pick<LandmarkPrize, 'source'>, short = false): string {
+  const speech = prize.source.kind === 'nobel' && prize.source.background === 'ceremony-speech'
+  return short ? (speech ? 'Presentation speech' : 'Scientific background') : speech ? 'presentation speech' : 'scientific background document'
+}
+
 /** "Nobel Prize in Physics 2020", "Gödel Prize 2019" */
 export function landmarkAwardLabel(prize: Pick<LandmarkPrize, 'name'>, year: number): string {
   return `${prize.name} ${year}`
 }
 
 /** The one-line licence reminder the draw fires. */
-export function landmarkLicenceNote(prize: Pick<LandmarkPrize, 'source' | 'awarder'>): string {
+export function landmarkLicenceNote(prize: Pick<LandmarkPrize, 'source' | 'awarder' | 'field'>): string {
+  if (isLiterary(prize)) {
+    return 'Prize data is CC0 from Nobel Prize Outreach: quote the motivation verbatim, never alter it, and link to nobelprize.org rather than rehosting the presentation speech or the lecture. Book metadata is from Wikidata (CC0) and Open Library. The book itself is in copyright unless its scan is public: quote a few lines at most, attributed to the edition and page, and never rehost it.'
+  }
   return prize.source.kind === 'nobel'
     ? 'Prize data is CC0 from Nobel Prize Outreach: quote the motivation verbatim, never alter it, and link to nobelprize.org rather than rehosting its documents. Work metadata is CC0 from OpenAlex and Wikidata. Link the paper; do not rehost it.'
     : `Prize data is CC0 from Wikidata; the citation is quoted from the ${prize.awarder} list, linked. Work metadata is CC0 from OpenAlex and Wikidata. Link the paper or book; do not rehost it.`
@@ -446,7 +460,13 @@ export function landmarkLicenceNote(prize: Pick<LandmarkPrize, 'source' | 'award
 /** The credit the page carries, written out. */
 export function landmarkCreditLine(s: Pick<LandmarkSubject, 'prize' | 'award' | 'work'>): string {
   const prizeData = s.prize.source.kind === 'nobel' ? 'Nobel Prize Outreach AB (api.nobelprize.org, CC0)' : `Wikidata (CC0) and the ${s.prize.awarder} list`
-  const workData = s.work ? (s.work.basis === 'book' ? 'Open Library' : 'OpenAlex (CC0) and Wikidata (CC0)') : null
+  const workData = s.work
+    ? s.work.basis === 'book'
+      ? 'Open Library'
+      : s.work.type === 'book' || isLiterary(s.prize)
+        ? 'Wikidata (CC0) and Open Library'
+        : 'OpenAlex (CC0) and Wikidata (CC0)'
+    : null
   const free = s.work?.oaUrl ? '; free-to-read link via Unpaywall and OpenAlex' : ''
   const links = [s.award.url, s.work?.url].filter(Boolean).join(' and ')
   return `Credit: "Prize data: ${prizeData}.${workData ? ` Work metadata: ${workData}${free}.` : ''} The ${s.prize.source.kind === 'nobel' ? 'motivation' : 'citation'} is quoted verbatim." with links to ${links}.`
@@ -461,6 +481,12 @@ export const LANDMARK_LENS_METRICS: Record<string, string[]> = {
   'Citation trail': ['citations by year, from OpenAlex (the counts in the brief)', 'the citing fields, as a share', 'the lag from publication to prize for the laureates of this prize'],
   'Missing names': ['the authors of the work and of the work it built on, on a timeline', 'the co-authors\' and rivals\' citations over the same years', 'the share of the award year\'s citations each name received'],
   "Explain like I'm 5": ['the quantity in everyday units (steps, spoons, minutes), as a picture chart', 'the everyday stand-in against the real thing, side by side', 'the one number that changes when the result is switched on and off'],
+  // Literature
+  "The Academy's words": ["the laureate's books by year, with the ones the presentation speech names marked", 'the years from the book to the prize, for the Literature laureates of the era', 'the languages the laureates of the era wrote in, as a count'],
+  'The work in numbers': ['books by year and form (novel, poetry, drama, essay), from the bibliography', 'editions by year before and after the prize, from Open Library', 'translations by language, with the source and read date'],
+  'Where to start': ["the book's shape (parts, chapters, pages), as a picture chart", 'the books in reading order against publication order', 'the translations of the book by year'],
+  'The world of the book': ['the places in the book, mapped (the record, not the fiction)', 'the history the book is set against, on a timeline', 'one measured fact about that place or time (population, a census count) from a public dataset'],
+  'The other nominees': ['the nominations per nominee in the prize year, from the Nobel nomination archive', 'the years each nominee was nominated before winning or never winning', 'the laureates by language or region, by decade'],
 }
 
 /**
@@ -468,15 +494,16 @@ export const LANDMARK_LENS_METRICS: Record<string, string[]> = {
  * names a publication; anything else (a body-of-work or result prize, a
  * representative title, no title at all) is a contribution spin.
  */
-export function landmarkFocus(s: Pick<LandmarkSubject, 'work'> & { focus?: LandmarkFocus }): LandmarkFocus {
+export function landmarkFocus(s: Pick<LandmarkSubject, 'work'> & { prize?: Pick<LandmarkSubject['prize'], 'field'>; focus?: LandmarkFocus }): LandmarkFocus {
   if (s.focus) return s.focus
+  if (s.prize && isLiterary(s.prize)) return 'book'
   const w = s.work
   return w && !w.representative && w.basis === 'citation' && w.type !== 'subject' ? 'work' : 'contribution'
 }
 
-/** "the work" or "the contribution": what a lens is applied to. */
+/** "the work", "the book" or "the contribution": what a lens is applied to. */
 export function landmarkFocusNoun(focus: LandmarkFocus): string {
-  return focus === 'work' ? 'the work' : 'the contribution the citation rewards'
+  return focus === 'work' ? 'the work' : focus === 'book' ? 'the book' : 'the contribution the citation rewards'
 }
 
 /**
@@ -506,13 +533,13 @@ export const LANDMARK_CONTRIBUTION_LENS_METRICS: Record<string, string[]> = {
 }
 
 export function landmarkLensMetrics(lens: string, focus: LandmarkFocus = 'work'): string[] {
-  const table = focus === 'work' ? LANDMARK_LENS_METRICS : LANDMARK_CONTRIBUTION_LENS_METRICS
-  return table[lens] ?? (focus === 'work' ? ['the quantity the work is about, over time', 'citations by year, from OpenAlex', 'the work\'s own numbers'] : ['the quantity the contribution is about, over time', 'citations by year of the key works, from OpenAlex', 'the key works on a timeline'])
+  const table = focus === 'contribution' ? LANDMARK_CONTRIBUTION_LENS_METRICS : LANDMARK_LENS_METRICS
+  return table[lens] ?? (focus !== 'contribution' ? ['the quantity the work is about, over time', 'citations by year, from OpenAlex', 'the work\'s own numbers'] : ['the quantity the contribution is about, over time', 'citations by year of the key works, from OpenAlex', 'the key works on a timeline'])
 }
 
 /** The lens as the brief states it: the dataset's wording on a work spin, the contribution wording otherwise. */
-export function landmarkLensDescription(s: Pick<LandmarkSubject, 'lens' | 'work'> & { focus?: LandmarkFocus }): string {
-  return landmarkFocus(s) === 'work' ? s.lens.description : (LANDMARK_CONTRIBUTION_LENS[s.lens.name] ?? s.lens.description)
+export function landmarkLensDescription(s: Pick<LandmarkSubject, 'lens' | 'work'> & { prize?: Pick<LandmarkSubject['prize'], 'field'>; focus?: LandmarkFocus }): string {
+  return landmarkFocus(s) !== 'contribution' ? s.lens.description : (LANDMARK_CONTRIBUTION_LENS[s.lens.name] ?? s.lens.description)
 }
 
 /** On a contribution spin: the drawn work first, then up to three more of the loader's candidates. */
@@ -521,13 +548,14 @@ export function landmarkReadings(s: Pick<LandmarkSubject, 'work' | 'related'>): 
 }
 
 /** "Named by the award record", "Representative work: the laureate's most-cited paper before the prize (OpenAlex)". */
-export function landmarkWorkBasisLabel(s: Pick<LandmarkSubject, 'work' | 'award'>): string {
+export function landmarkWorkBasisLabel(s: Pick<LandmarkSubject, 'work' | 'award'> & { prize?: Pick<LandmarkPrize, 'field'> }): string {
   const w = s.work
   if (!w) return 'No work resolved: reconstruct the prize-winning work from the award citation and the background document, and say so.'
   if (w.basis === 'citation' && w.type === 'subject') return 'Named by the award record (Wikidata "for work") as a subject, not a publication: find the paper or book that established it and read that.'
   if (w.basis === 'citation') return 'Named by the award record (Wikidata "for work"): the prize-winning work.'
   if (w.basis === 'notable') return `Representative work: listed as a notable work of ${s.award.name} on Wikidata, not named by the award. Label it so.`
   if (w.basis === 'top-cited') return `Representative work: ${s.award.name}'s most-cited work before the prize on OpenAlex, not named by the award. Label it so.`
+  if (s.prize && isLiterary(s.prize)) return `Representative work: one of ${s.award.name}'s most-reprinted books before the prize on Open Library. The prize rewards a body of work, so label it so and check it against the presentation speech.`
   return `Representative work: ${s.award.name}'s book from around the prize year on Open Library, not confirmed as the winning title. Check the prize's list.`
 }
 
@@ -538,7 +566,7 @@ function landmarkTemplate(s: LandmarkSubject): string[] {
   const links = [
     ['Laureate page', a.url],
     ['Prize summary', a.links.summary],
-    ['Scientific background', a.links.background],
+    [landmarkBackgroundLabel(s.prize, true), a.links.background],
     ['Prize lecture', a.links.lecture],
     ['Wikipedia', a.links.wikipedia],
   ].filter((l): l is [string, string] => !!l[1])
@@ -553,7 +581,34 @@ function landmarkTemplate(s: LandmarkSubject): string[] {
     '',
   ]
   const middle =
-    focus === 'work'
+    focus === 'book'
+      ? [
+          '## The work',
+          '',
+          w
+            ? `${w.title}${w.year ? ` (${w.year}${w.venue ? `, ${w.venue}` : ''})` : w.venue ? ` (${w.venue})` : ''}: ${w.url}${w.doi ? ` · DOI ${w.doi}` : ''}${w.oaUrl ? ` · free to read: ${w.oaUrl} (${w.oaStatus ?? 'open'})` : ' · no free copy on record'}.`
+            : 'None resolved. Candidates, from the motivation and the presentation speech:',
+          landmarkWorkBasisLabel(s),
+          s.related.length ? `Other works the loader found: ${s.related.map((r) => `${r.title}${r.year ? ` (${r.year})` : ''}`).join('; ')}.` : '',
+          '',
+          '## The book in two sentences',
+          '',
+          'What it is about and what it does, for a reader who has not read it. No spoilers past the first act unless the lens needs them.',
+          '',
+          '## What the book does',
+          '',
+          'Its own structure, part by part (or poem by poem), each cited to the edition and page you read, with the translator named.',
+          '',
+          '| Part | What happens or what it does | Edition and page |',
+          '|------|------------------------------|------------------|',
+          '| | | |',
+          '',
+          '## What the Academy rewarded',
+          '',
+          'The motivation against the writing: what in this book shows it, what the motivation leaves out, and whether the presentation speech dwells on another book instead.',
+          '',
+        ]
+      : focus === 'work'
       ? [
           '## The work',
           '',
@@ -610,7 +665,9 @@ function landmarkTemplate(s: LandmarkSubject): string[] {
     '',
     '## Data pull',
     '',
-    `At least 8 data points per series where possible: ${focus === 'work' ? 'the work\'s own numbers (cited to the page)' : 'the readings\' own numbers (cited to the page)'}, the citation record below, then a public dataset for anything about the world. A series that cannot reach 8 points is dropped, not padded.`,
+    focus === 'book'
+      ? 'At least 8 data points per series where possible: the bibliography and editions (Open Library, Wikidata, the laureate page), the nomination archive, then a public dataset for anything about the world.'
+      : `At least 8 data points per series where possible: ${focus === 'work' ? 'the work\'s own numbers (cited to the page)' : 'the readings\' own numbers (cited to the page)'}, the citation record below, then a public dataset for anything about the world. A series that cannot reach 8 points is dropped, not padded.`,
     '',
     '| Metric | Period or case | Value | Unit | Source |',
     '|--------|----------------|-------|------|--------|',
@@ -619,9 +676,11 @@ function landmarkTemplate(s: LandmarkSubject): string[] {
     w?.countsByYear.length ? `Citations by year of ${w.title} (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}.` : '',
     w?.citedBy !== null && w?.citedBy !== undefined ? `Cited ${w.citedBy.toLocaleString('en-US')} times in all${w.fwci !== null ? `; FWCI ${w.fwci}` : ''}${w.topOnePercent ? '; top 1% of its field and year' : ''} (OpenAlex).` : '',
     '',
-    '## Where it breaks, and what came after',
+    focus === 'book' ? '## How it was read, and what came after' : '## Where it breaks, and what came after',
     '',
-    `The assumption or claim${focus === 'work' ? '' : ' in the contribution'} that did not hold up, the revisions and replications since, any retraction nearby, and the result's limits.`,
+    focus === 'book'
+      ? 'How the book was received at publication and after the prize, the translations and the controversies, each attributed: a critic\'s view is a view, not a fact.'
+      : `The assumption or claim${focus === 'work' ? '' : ' in the contribution'} that did not hold up, the revisions and replications since, any retraction nearby, and the result's limits.`,
     '',
     '## Credit',
     '',

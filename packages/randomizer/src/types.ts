@@ -604,7 +604,25 @@ export interface LandmarkEra {
  * for the "for work" qualifiers), or Wikidata (the prize item, with P166 on
  * the laureates and P585 for the year).
  */
-export type LandmarkPrizeSource = { kind: 'nobel'; category: string; slug: string; item: string } | { kind: 'wikidata'; item: string }
+export type LandmarkPrizeSource =
+  | {
+      kind: 'nobel'
+      category: string
+      slug: string
+      item: string
+      /**
+       * The nobelprize.org page that is the committee's account of the work,
+       * per award year: the science and economics prizes publish a scientific
+       * background (`advanced-information`, the default); the Literature
+       * prize has none, and its presentation speech (`ceremony-speech`) is
+       * the account of the writing.
+       */
+      background?: LandmarkBackgroundPage
+    }
+  | { kind: 'wikidata'; item: string }
+
+/** The per-year nobelprize.org page that gives the committee's account of the work. */
+export type LandmarkBackgroundPage = 'advanced-information' | 'ceremony-speech'
 
 export interface LandmarkPrize {
   id: string
@@ -634,11 +652,27 @@ export interface LandmarkPrize {
   undated: number
 }
 
+/** The Landmark field whose works are novels, plays and poems rather than papers: its own lenses, loader path and brief. */
+export const LANDMARK_LITERATURE = 'literature'
+
+/** A Landmark prize (or field id) is a literature prize. */
+export function isLiterary(prize: Pick<LandmarkPrize, 'field'> | string): boolean {
+  return (typeof prize === 'string' ? prize : prize.field) === LANDMARK_LITERATURE
+}
+
+/** A Landmark lens, optionally scoped to some fields (datasets.ts landmarkLenses). */
+export interface LandmarkLens extends NamedOption {
+  /** Only these fields draw the lens (absent: every field)... */
+  fields?: string[]
+  /** ...and these fields never do. Literature skips the research lenses. */
+  skip?: string[]
+}
+
 export interface LandmarkDataset {
   fields: LandmarkField[]
   eras: LandmarkEra[]
   prizes: LandmarkPrize[]
-  lenses: NamedOption[]
+  lenses: LandmarkLens[]
 }
 
 /** A work the award's own record names (Wikidata P1686 "for work") or lists as notable (P800), before the work loader fills it in. */
@@ -673,7 +707,7 @@ export interface LandmarkAward {
   namedWorks: LandmarkNamedWork[]
   /** The laureate's page at the awarder (nobelprize.org) or on Wikidata. */
   url: string
-  /** The prize summary and scientific background pages for the year, the Nobel lecture, the Wikipedia article, as known. */
+  /** The prize summary and the committee's account for the year (the scientific background, or the presentation speech for Literature), the Nobel lecture, the Wikipedia article, as known. */
   links: { summary?: string; background?: string; lecture?: string; wikipedia?: string }
   orcid: string | null
   /** OpenAlex author id ("A..."), from Wikidata P10283. */
@@ -691,8 +725,10 @@ export type LandmarkWorkBasis = 'citation' | 'notable' | 'top-cited' | 'book'
  * found), so the page explains what the citation rewards, and the drawn
  * titles are lead readings, never "the winning book". Every lens has a
  * wording for both, so no lens and prize combination is incompatible.
+ * `book`: the Nobel Prize in Literature, which rewards a body of writing
+ * and has its own lenses, built around one representative book.
  */
-export type LandmarkFocus = 'work' | 'contribution'
+export type LandmarkFocus = 'work' | 'contribution' | 'book'
 
 /** A paper or book tied to an award, as the work loader resolved it. */
 export interface LandmarkWork {

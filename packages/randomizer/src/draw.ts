@@ -104,13 +104,13 @@
  * is read after the draw and changes nothing in it.
  */
 
-import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, frontierAgeDays, frontierWindowOf, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked,
+import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, frontierAgeDays, frontierWindowOf, hundredByRank, hundredEras, isHandsOn, isLiterary, isPhilosophical, isWorkLevel, landmarkLenses, landmarkStocked,
   CURIOUS,
   curiousEraOf,
   curiousGradeLabel,
 } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
-import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkFocus, landmarkFocusNoun, landmarkLicenceNote, ocwCourseLabel } from './stub'
+import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkBackgroundLabel, landmarkFocus, landmarkFocusNoun, landmarkLicenceNote, ocwCourseLabel } from './stub'
 import {
   GEO_STATUS_TEXT,
   RANDOMIZER_META,
@@ -1253,7 +1253,12 @@ function landmarkPlan(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
     rule(ctx, 'era', 'info', `${era.name}: ${prize.awards[era.id]} ${prize.name} ${prize.awards[era.id] === 1 ? 'award' : 'awards'} on record, 1 era in ${eras.length}.`)
   }
 
-  const lens = (ctx.locked('lens') && prev && lensByName(prev.lens)) || pick(data.lenses, rng)
+  // The field's lenses: Literature reads writing and has its own; the research lenses skip it.
+  const lenses = landmarkLenses(field.id, data)
+  if (!lenses.length) throw new Error(`No Landmark Desk lens fits ${field.name}. Check the lens scopes in landmark.json.`)
+  const lockedLens = ctx.locked('lens') && prev ? lensByName(prev.lens) : undefined
+  if (lockedLens && !lenses.includes(lockedLens)) rule(ctx, 'lock', 'warn', `The locked lens ${lockedLens.name} does not fit ${field.name}, so the lens is drawn from that field's lenses.`)
+  const lens = (lockedLens && lenses.includes(lockedLens) ? lockedLens : undefined) ?? pick(lenses, rng)
   const u = rng()
   const keepLaureate = ctx.locked('laureate') && prev ? prev.laureateId : null
   const keepWork = ctx.locked('work') && prev ? prev.workId : null
@@ -1343,9 +1348,9 @@ function sameLandmarkQuery(a: LandmarkQuery, b: LandmarkQuery): boolean {
   return a.prize === b.prize && a.era === b.era
 }
 
-/** Which of a laureate's works the draw picks from first, by what the prize names. */
+/** Which of a laureate's works the draw picks from first, by what the prize names. Literature, like the book prizes, prefers books to OpenAlex's papers. */
 function landmarkTiers(prize: LandmarkPrize): LandmarkWorkBasis[] {
-  return prize.works === 'book' ? ['citation', 'notable', 'book', 'top-cited'] : ['citation', 'notable', 'top-cited', 'book']
+  return prize.works === 'book' || isLiterary(prize) ? ['citation', 'notable', 'book', 'top-cited'] : ['citation', 'notable', 'top-cited', 'book']
 }
 
 function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | undefined, pool: LandmarkPool | null, sequence: boolean): DrawResult {
@@ -1365,6 +1370,8 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
   }
   const { field, prize, era } = plan
   let lens: NamedOption = plan.lens
+  const lenses = landmarkLenses(field.id, data)
+  const account = landmarkBackgroundLabel(prize)
   const { items, sources } = pool.works
   const continued = plan.beforeYear !== null && award.year < plan.beforeYear
 
@@ -1398,21 +1405,24 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
 
   const failed = (['wikidata', 'openalex', 'openlibrary', 'unpaywall'] as const).filter((s) => sources[s] === 'failed')
   // The focus: the work when the award's own record names it, otherwise the contribution the citation rewards.
-  const focus = landmarkFocus({ work })
+  const focus = landmarkFocus({ work, prize })
   const readingNote = 'It is a lead reading for the contribution, never called the winning work.'
   if (!work) {
     rule(
       ctx,
       'work',
       'warn',
-      `No work could be resolved for ${award.name}. This is a contribution spin: start from ${award.links.background ? 'the scientific background document' : 'the award citation'}${award.links.lecture ? ' and the prize lecture' : ''}, and take the lead readings from the works they cite.`,
+      isLiterary(prize)
+        ? `No book could be resolved for ${award.name}. Start from ${award.links.background ? `the ${account}` : 'the motivation'}${award.links.lecture ? ' and the Nobel lecture' : ''}, pick the book it dwells on most, and say on the page how it was chosen.`
+        : `No work could be resolved for ${award.name}. This is a contribution spin: start from ${award.links.background ? `the ${account}` : 'the award citation'}${award.links.lecture ? ' and the prize lecture' : ''}, and take the lead readings from the works they cite.`,
     )
   } else if (work.basis === 'citation' && work.type === 'subject') {
-    rule(ctx, 'work', 'warn', `${work.title}: the award record names it (Wikidata "for work"), but as a subject, not a publication. This is a contribution spin about ${work.title}; the papers that established it, from ${award.links.background ? 'the scientific background document' : 'the citation'}, are the lead readings.`)
+    rule(ctx, 'work', 'warn', `${work.title}: the award record names it (Wikidata "for work"), but as a subject, not a publication. This is a contribution spin about ${work.title}; the papers that established it, from ${award.links.background ? `the ${account}` : 'the citation'}, are the lead readings.`)
   } else if (work.basis === 'citation') {
     rule(ctx, 'work', 'good', `${work.title}: named by the award record itself (Wikidata "for work"). This is the prize-winning work, and the spin is about it.`)
   } else if (work.basis === 'notable') {
-    rule(ctx, 'work', 'warn', `${work.title} is listed as a notable work of ${award.name} on Wikidata; the award does not name it. ${readingNote}`)
+    if (isLiterary(prize)) rule(ctx, 'work', 'warn', `${work.title} is listed as a notable work of ${award.name} on Wikidata; the award does not name it. Label it a representative work and check it against the citation${award.links.background ? ` and the ${account}` : ''}.`)
+    else rule(ctx, 'work', 'warn', `${work.title} is listed as a notable work of ${award.name} on Wikidata; the award does not name it. ${readingNote}`)
   } else if (work.basis === 'top-cited') {
     rule(
       ctx,
@@ -1420,16 +1430,25 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
       'warn',
       `${work.title} is ${award.name}'s most-cited work before the prize on OpenAlex (${work.citedBy?.toLocaleString('en-US') ?? '?'} citations${work.fwci !== null ? `, FWCI ${work.fwci}` : ''}), not a work the award names. ${readingNote}`,
     )
+  } else if (isLiterary(prize)) {
+    rule(
+      ctx,
+      'work',
+      'warn',
+      `${work.title}${work.year ? ` (${work.year})` : ''} is one of ${award.name}'s most-reprinted books before the prize on Open Library. The ${prize.name} rewards a body of work, not one book: call it a representative work and check it against the ${account}.`,
+    )
   } else {
     rule(ctx, 'work', 'warn', `${work.title}${work.year ? ` (${work.year})` : ''} is ${award.name}'s book from around the prize year on Open Library, not a title the award names. ${readingNote}`)
   }
   rule(
     ctx,
     'focus',
-    focus === 'work' ? 'good' : 'info',
+    focus === 'contribution' ? 'info' : 'good',
     focus === 'work'
       ? `Work spin: the lens is applied to ${work!.title}.`
-      : `Contribution spin: the ${prize.name} ${prize.works === 'body' ? 'rewards a body of work' : prize.works === 'result' ? 'rewards a result' : 'record names no title for this award'}, so the lens is applied to what the citation rewards, with the lead readings as evidence. Every lens fits.`,
+      : focus === 'book'
+        ? `Book spin: the ${prize.name} rewards a body of writing, and the Literature lenses are applied to ${work ? work.title : 'the book the Academy dwells on most'} as a way into it.`
+        : `Contribution spin: the ${prize.name} ${prize.works === 'body' ? 'rewards a body of work' : prize.works === 'result' ? 'rewards a result' : 'record names no title for this award'}, so the lens is applied to what the citation rewards, with the lead readings as evidence. Every lens fits.`,
   )
   if (work) {
     rule(
@@ -1438,7 +1457,7 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
       work.oaUrl ? 'info' : 'warn',
       work.oaUrl
         ? `Free to read: ${work.oaUrl} (${work.oaStatus ?? 'open'}). Link it.`
-        : `No free copy on record (${work.oaStatus ?? 'unknown'}): link the ${work.doi ? 'DOI' : 'landing page'}, and the ${award.links.background ? 'background document' : 'award page'} for the account of the work.`,
+        : `No free copy on record (${work.oaStatus ?? 'unknown'}): link the ${work.doi ? 'DOI' : 'landing page'}, and the ${award.links.background ? account : 'award page'} for the account of the work.`,
     )
   }
   if (sources.openalex === 'no key') {
@@ -1453,7 +1472,7 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
     let tries = 0
     while (r90.has(combo()) && !ctx.locked('lens') && tries < 16) {
       tries++
-      lens = pick(data.lenses, rng)
+      lens = pick(lenses, rng)
     }
     rule(
       ctx,
@@ -1470,9 +1489,9 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
     ctx,
     'read first',
     'info',
-    focus === 'work'
-      ? `Mandatory next step: read ${work!.title} end to end${award.links.background ? ', then the scientific background document' : ''}, and apply the ${lens.name} lens to the work, not to ${award.name}'s career or to ${field.name.toLowerCase()} in general.`
-      : `Mandatory next step: read the citation and the awarder's account${award.links.background ? ' (the scientific background document)' : ''}, then the lead readings${work ? `, starting with ${work.title}` : ''}, and apply the ${lens.name} lens to ${landmarkFocusNoun(focus)}.`,
+    focus === 'contribution'
+      ? `Mandatory next step: read the citation and the awarder's account${award.links.background ? ` (the ${account})` : ''}, then the lead readings${work ? `, starting with ${work.title}` : ''}, and apply the ${lens.name} lens to ${landmarkFocusNoun(focus)}.`
+      : `Mandatory next step: read ${work ? work.title : 'the award citation'} end to end${award.links.background ? `, then the ${account}` : ''}, and apply the ${lens.name} lens to the work, not to ${award.name}'s career or to ${field.name.toLowerCase()} in general.`,
   )
   rule(ctx, 'licence', 'info', landmarkLicenceNote(prize))
 
@@ -1509,6 +1528,10 @@ function drawLandmark(ctx: Ctx, data: LandmarkDataset, prev: LandmarkPicks | und
         sub:
           focus === 'work'
             ? [work!.year ? String(work!.year) : null, work!.venue, work!.oaUrl ? `free to read (${work!.oaStatus ?? 'open'})` : 'no free copy on record', 'named by the award'].filter(Boolean).join(' · ')
+            : focus === 'book'
+              ? work
+                ? [work.year ? String(work.year) : null, work.venue, work.oaUrl ? `free to read (${work.oaStatus ?? 'open'})` : 'no free copy on record', work.representative ? 'representative' : 'named by the award'].filter(Boolean).join(' · ')
+                : 'pick it from the Academy\'s account'
             : work
               ? work.type === 'subject'
                 ? 'contribution · named by the award as a subject'

@@ -39,6 +39,10 @@
     {
       "id": "cross",
       "name": "Science & technology, cross-field"
+    },
+    {
+      "id": "literature",
+      "name": "Literature"
     }
   ],
   "eras": [
@@ -414,7 +418,7 @@
         "recent": 76
       },
       "named_works": 0,
-      "undated": 7
+      "undated": 8
     },
     {
       "id": "nobel-economics",
@@ -964,11 +968,11 @@
         "founding": 0,
         "postwar": 0,
         "late-century": 1,
-        "turn": 8,
-        "recent": 10
+        "turn": 7,
+        "recent": 11
       },
       "named_works": 0,
-      "undated": 5
+      "undated": 4
     },
     {
       "id": "japan-prize",
@@ -1013,10 +1017,10 @@
         "postwar": 0,
         "late-century": 23,
         "turn": 39,
-        "recent": 22
+        "recent": 23
       },
       "named_works": 0,
-      "undated": 1
+      "undated": 0
     },
     {
       "id": "kyoto-basic-sciences",
@@ -1089,36 +1093,116 @@
       },
       "named_works": 0,
       "undated": 0
+    },
+    {
+      "id": "nobel-literature",
+      "field": "literature",
+      "name": "Nobel Prize in Literature",
+      "awarder": "Nobel Prize Outreach AB",
+      "source": {
+        "kind": "nobel",
+        "category": "lit",
+        "slug": "literature",
+        "item": "Q37922",
+        "background": "ceremony-speech"
+      },
+      "url": "https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-literature/",
+      "since": 1901,
+      "works": "body",
+      "work_level": false,
+      "note": "The motivation names a writer's body of work, rarely a single book; the presentation speech on nobelprize.org names the books the Academy read.",
+      "awards": {
+        "founding": 40,
+        "postwar": 25,
+        "late-century": 21,
+        "turn": 20,
+        "recent": 17
+      },
+      "named_works": 0,
+      "undated": 0
     }
   ],
   "lenses": [
     {
       "name": "Why it won",
-      "description": "Put the official motivation beside the work itself: what exactly the committee rewarded, where in the paper or book that result is, and what the motivation leaves out. The motivation is quoted verbatim, never paraphrased."
+      "description": "Put the official motivation beside the work itself: what exactly the committee rewarded, where in the paper or book that result is, and what the motivation leaves out. The motivation is quoted verbatim, never paraphrased.",
+      "skip": [
+        "literature"
+      ]
     },
     {
       "name": "One figure",
-      "description": "Find the central figure, table, theorem or passage of the work and rebuild it as one chart from its own numbers (or the numbers it argues from), with the page or section cited."
+      "description": "Find the central figure, table, theorem or passage of the work and rebuild it as one chart from its own numbers (or the numbers it argues from), with the page or section cited.",
+      "skip": [
+        "literature"
+      ]
     },
     {
       "name": "What it replaced",
-      "description": "What the field believed before this work, the evidence that turned it over, and who held the old view, from the record. State the old view fairly."
+      "description": "What the field believed before this work, the evidence that turned it over, and who held the old view, from the record. State the old view fairly.",
+      "skip": [
+        "literature"
+      ]
     },
     {
       "name": "Read it today",
-      "description": "A reader's guide to the work itself: its structure, the one passage or equation to read first, what a reader needs to know going in, and where to read it free of charge."
+      "description": "A reader's guide to the work itself: its structure, the one passage or equation to read first, what a reader needs to know going in, and where to read it free of charge.",
+      "skip": [
+        "literature"
+      ]
     },
     {
       "name": "Citation trail",
-      "description": "How the work travelled: citations by year, the lag from publication to prize, who built on it and in which fields, from OpenAlex and the work's own references."
+      "description": "How the work travelled: citations by year, the lag from publication to prize, who built on it and in which fields, from OpenAlex and the work's own references.",
+      "skip": [
+        "literature"
+      ]
     },
     {
       "name": "Missing names",
-      "description": "Who else did the work: the co-authors, the rivals and the predecessors the citation does not name, stated from the record and labelled where it is contested."
+      "description": "Who else did the work: the co-authors, the rivals and the predecessors the citation does not name, stated from the record and labelled where it is contested.",
+      "skip": [
+        "literature"
+      ]
     },
     {
       "name": "Explain like I'm 5",
-      "description": "Explain the result to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the work as the source for the real thing."
+      "description": "Explain the result (for a book, the story) to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the work as the source for the real thing."
+    },
+    {
+      "name": "The Academy's words",
+      "description": "Put the motivation beside the writing itself: which books show what the Swedish Academy named, the passage where it is clearest, and what the motivation leaves out. The motivation is quoted verbatim, never paraphrased.",
+      "fields": [
+        "literature"
+      ]
+    },
+    {
+      "name": "The work in numbers",
+      "description": "The laureate's writing as data: books by year and form (novel, poetry, drama, essay), the editions and translations before and after the prize, and the book this story centres on placed in that body of work. Every count names its source and read date.",
+      "fields": [
+        "literature"
+      ]
+    },
+    {
+      "name": "Where to start",
+      "description": "A reader's guide to the book: what it is about without spoiling it, the first passage to read, what a reader needs to know going in (place, period, form), which translation to read, and where to read it free when it is in the public domain.",
+      "fields": [
+        "literature"
+      ]
+    },
+    {
+      "name": "The world of the book",
+      "description": "The places and the history the book is set in or written from, mapped or put on a timeline from the record, with what is invented kept apart from what happened.",
+      "fields": [
+        "literature"
+      ]
+    },
+    {
+      "name": "The other nominees",
+      "description": "Who else the Academy weighed that year and in the years around it, from the Nobel nomination archive (open after 50 years), and the debate over the choice, attributed and labelled where it is contested. For recent years, say the nominations are still sealed.",
+      "fields": [
+        "literature"
+      ]
     }
   ]
 }

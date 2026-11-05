@@ -14,7 +14,9 @@
  *     DOI, free, and for the laureate's most-cited works before the prize
  *     (a list call, which needs OPENALEX_API_KEY since February 2026); Open
  *     Library for the book prizes (the laureate's books from around the
- *     prize year); Unpaywall for the best free-to-read copy (needs the
+ *     prize year) and for Literature (the laureate's most-reprinted books
+ *     before the prize; OpenAlex's scholarly papers are not read for a
+ *     writer); Unpaywall for the best free-to-read copy (needs the
  *     UNPAYWALL_EMAIL contact it asks for).
  *
  * Pure apart from fetch (no Supabase), so spins.ts, the pool API and a
@@ -24,6 +26,7 @@
  * LandmarkSources and the draw says what was missing.
  */
 
+import { isLiterary } from './types'
 import type {
   LandmarkAward,
   LandmarkEra,
@@ -53,6 +56,8 @@ export const LANDMARK_RULES = {
   topCited: 6,
   /** Books kept from Open Library. */
   maxBooks: 4,
+  /** An Open Library first-publication year further than this before the prize is a data error, not the laureate's book. */
+  maxBookAge: 80,
   /** Unpaywall calls per spin. */
   maxUnpaywall: 4,
   userAgent: 'vismay-randomizer/0.1 (landmark desk; https://vizmaya.fyi)',
@@ -135,7 +140,8 @@ export interface NobelLaureateRecord {
 function nobelLinks(prize: LandmarkPrize, year: number): LandmarkAward['links'] {
   if (prize.source.kind !== 'nobel') return {}
   const base = `${LANDMARK_RULES.nobelSite}/prizes/${prize.source.slug}/${year}`
-  return { summary: `${base}/summary/`, background: `${base}/advanced-information/` }
+  // Literature has no scientific background page; its presentation speech is the Academy's account of the writing.
+  return { summary: `${base}/summary/`, background: `${base}/${prize.source.background ?? 'advanced-information'}/` }
 }
 
 /** The awards of a Nobel category in an era, one row per laureate, from the prizes the API lists. Oldest first. */
@@ -275,8 +281,15 @@ export interface WikidataLaureate {
   named: LandmarkNamedWork[]
 }
 
-/** Publication-like items a notable work (P800) may be: scholarly article, book, literary work, written work, thesis, article, doctoral thesis, monograph, publication. */
-const PUBLICATION_TYPES = ['Q13442814', 'Q571', 'Q7725634', 'Q47461344', 'Q1266946', 'Q191067', 'Q187685', 'Q193934', 'Q732577']
+/**
+ * Publication-like items a notable work (P800) may be: scholarly article, book, literary work, written work, thesis, article,
+ * doctoral thesis, monograph, publication; and for writers novel, poem, poetry collection, play, short story, short story
+ * collection, essay, novella.
+ */
+const PUBLICATION_TYPES = [
+  'Q13442814', 'Q571', 'Q7725634', 'Q47461344', 'Q1266946', 'Q191067', 'Q187685', 'Q193934', 'Q732577',
+  'Q8261', 'Q5185279', 'Q12106333', 'Q25379', 'Q49084', 'Q1279564', 'Q35760', 'Q149537',
+]
 
 function laureateQuery(person: string, prizeItem: string): string {
   return `SELECT ?orcid ?openalex ?ol ?forWork ?forWorkLabel ?forDoi ?forIsbn ?forPub ?notable ?notableLabel ?notableDoi ?notableIsbn ?notablePub WHERE {
@@ -395,7 +408,8 @@ export function workFromOpenAlex(o: OpenAlexWork, basis: LandmarkWorkBasis): Lan
  * with type `subject` so the draw asks for the paper that established it.
  */
 export function workFromNamed(n: LandmarkNamedWork): LandmarkWork {
-  const subject = !n.doi && !n.isbn && n.year === null
+  // Only a "for work" qualifier can name a subject (a theory); a notable work passed the publication-type filter.
+  const subject = n.basis === 'citation' && !n.doi && !n.isbn && n.year === null
   return {
     id: n.id,
     title: n.title,
@@ -460,7 +474,9 @@ export interface OpenLibraryDoc {
  * likely a namesake's (Open Library files J.D. van der Waals Jr.'s 1909
  * address under his father's author record). A book whose title matches a
  * work the award names keeps that basis; a public scan on the Internet
- * Archive is the free copy.
+ * Archive is the free copy. A first-publication year more than
+ * LANDMARK_RULES.maxBookAge years before the prize is an Open Library error
+ * (it dates Song of Solomon, 1977, to 1634): the book is kept, its year is not.
  */
 export function booksFromOpenLibrary(
   docs: OpenLibraryDoc[],
@@ -494,7 +510,7 @@ export function booksFromOpenLibrary(
     return {
       id: `ol:${key}`,
       title: title.slice(0, 300),
-      year: d.first_publish_year ?? null,
+      year: d.first_publish_year != null && d.first_publish_year >= award.year - LANDMARK_RULES.maxBookAge ? d.first_publish_year : null,
       doi: null,
       url: `${LANDMARK_RULES.openLibraryApi}/works/${key}`,
       oaUrl: scan,
@@ -648,7 +664,10 @@ export async function loadLandmarkWorks(
       }
     }
     if (looked) sources.openalex = 'ok'
-    if (env.openalexKey) {
+    if (isLiterary(prize)) {
+      // A writer's most-cited scholarly works are not what the prize rewarded (and name searches find namesakes): the books come from Wikidata and Open Library.
+      if (!looked) sources.openalex = 'skipped'
+    } else if (env.openalexKey) {
       let authorId = openalexId
       if (!authorId && orcid) {
         const a = await getJsonOrNull<OpenAlexAuthor>(oa(`/authors/orcid:${encodeURIComponent(orcid)}?select=id,display_name,cited_by_count,works_count`), fetchImpl)
@@ -681,18 +700,28 @@ export async function loadLandmarkWorks(
     fail('openalex', e)
   }
 
-  // 3. Open Library: the book prizes, or a laureate nothing else found a work for.
-  if (prize.works === 'book' || !works.length) {
+  // 3. Open Library: the book prizes and Literature, or a laureate nothing else found a work for.
+  const literary = isLiterary(prize)
+  if (prize.works === 'book' || literary || !works.length) {
     try {
       const found = await getJson<{ docs?: OpenLibraryDoc[] }>(
         `${LANDMARK_RULES.openLibraryApi}/search.json?${q({ author: award.name, fields: 'key,title,first_publish_year,author_name,author_key,publisher,isbn,edition_count,ebook_access,ia', limit: 40 })}`,
         fetchImpl,
       )
       const books = booksFromOpenLibrary(found.docs ?? [], { ...award, openLibraryId }, prize.works)
-      works.push(...books)
+      // A book that is already in the list (a notable work on Wikidata) fills in that entry: the Open Library page, the publisher, a public scan.
+      for (const b of books) {
+        const same = works.find((w) => !w.doi && fold(w.title) === fold(b.title))
+        if (same) Object.assign(same, { url: b.url, oaUrl: same.oaUrl ?? b.oaUrl, oaStatus: same.oaStatus ?? b.oaStatus, venue: same.venue ?? b.venue, year: same.year ?? b.year, authors: same.authors.length ? same.authors : b.authors, type: 'book' })
+        else works.push(b)
+      }
       sources.openlibrary = 'ok'
       if (books.length && prize.works === 'book') sources.notes.push('The books come from Open Library by author and year, not from the prize\'s own list: check the title against it.')
-      if (books.length && prize.works !== 'book')
+      if (books.length && literary)
+        sources.notes.push(
+          'The books come from Open Library by author, most-reprinted first, and from the notable works on Wikidata: titles may be in translation, and an author record can merge namesakes, so confirm the title page names the laureate.',
+        )
+      if (books.length && prize.works !== 'book' && !literary)
         sources.notes.push(
           'The works come from Open Library, the fallback: its author records can merge namesakes (a father and a son), so confirm the title page names the laureate before tying the work to the prize.',
         )

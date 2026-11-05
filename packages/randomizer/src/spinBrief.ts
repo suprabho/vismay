@@ -32,6 +32,7 @@ import {
   hundredRankLabel,
   LANDMARK_WORK_LEVEL_LABEL,
   landmarkAwardLabel,
+  landmarkBackgroundLabel,
   landmarkCreditLine,
   landmarkFocus,
   landmarkFocusNoun,
@@ -46,7 +47,7 @@ import {
   researchStub,
   viznbaAngleMetrics,
 } from './stub'
-import { curiousGradeLabel, FRONTIER } from './datasets'
+import { isLiterary, curiousGradeLabel, FRONTIER } from './datasets'
 import {
   RANDOMIZER_META,
   type AtlasSubject,
@@ -410,8 +411,9 @@ function landmarkAssignment(s: LandmarkSubject): string[] {
   const a = s.award
   const w = s.work
   const focus = landmarkFocus(s)
+  if (focus === 'book') return landmarkBookAssignment(s)
   const account = a.links.background
-    ? `the scientific background document (${a.links.background})${a.links.lecture ? ` and the prize lecture (${a.links.lecture})` : ''}`
+    ? `the ${landmarkBackgroundLabel(s.prize)} (${a.links.background})${a.links.lecture ? ` and the prize lecture (${a.links.lecture})` : ''}`
     : `the citation on the ${s.prize.awarder} list (${s.prize.url}) and the awarder's announcement for ${a.year}`
   const workLine = (r: NonNullable<typeof w>) =>
     `${r.title}${r.year ? ` (${r.year}${r.venue ? `, ${r.venue}` : ''})` : r.venue ? ` (${r.venue})` : ''}. ${r.url}${r.doi ? ` (DOI ${r.doi})` : ''}. ${r.oaUrl ? `Free to read: ${r.oaUrl} (${r.oaStatus ?? 'open'}).` : 'No free copy on record.'}`
@@ -437,7 +439,7 @@ function landmarkAssignment(s: LandmarkSubject): string[] {
   out.push(`- Lens: ${s.lens.name}. ${landmarkLensDescription(s)}`)
   const links = [
     a.links.summary ? `prize summary ${a.links.summary}` : null,
-    a.links.background ? `scientific background ${a.links.background}` : null,
+    a.links.background ? `${landmarkBackgroundLabel(s.prize, true).toLowerCase()} ${a.links.background}` : null,
     a.links.lecture ? `prize lecture ${a.links.lecture}` : null,
     a.links.wikipedia ? `Wikipedia ${a.links.wikipedia}` : null,
   ].filter(Boolean)
@@ -473,6 +475,78 @@ function landmarkAssignment(s: LandmarkSubject): string[] {
     '',
     `Chart these if the data exists (8 or more points; drop a chart rather than pad it): ${landmarkLensMetrics(s.lens.name, focus).join(', ')}.`,
     `Start from: ${focus === 'work' ? 'the work' : 'the citation and the lead readings'}, the award's own account (the background document, the lecture or the citation), OpenAlex for the citation record, and a public dataset for anything about the world.`,
+  )
+  return out
+}
+
+/** A Literature spin (the book focus): the Academy's account and one representative book. */
+function landmarkBookAssignment(s: LandmarkSubject): string[] {
+  const a = s.award
+  const w = s.work
+  const lit = isLiterary(s.prize)
+  const account = a.links.background
+    ? `the ${landmarkBackgroundLabel(s.prize)} (${a.links.background})${a.links.lecture ? ` and the ${lit ? 'Nobel' : 'prize'} lecture (${a.links.lecture})` : ''}`
+    : `the citation on the ${s.prize.awarder} list (${s.prize.url})`
+  const citeBy = lit ? 'cite it by edition and page, with the translator named' : 'cite it by page, figure, theorem or chapter'
+  const out = [
+    `- Field: ${s.field.name} › Prize: ${s.prize.name} (${s.prize.awarder}; ${LANDMARK_WORK_LEVEL_LABEL[s.prize.works]}). ${s.prize.note}`,
+    `- Award: ${a.name}, ${landmarkAwardLabel(s.prize, a.year)}${a.share ? `, share ${a.share}` : ''}${a.coLaureates.length ? `, with ${a.coLaureates.join(', ')}` : ''}. ${a.url}`,
+    a.motivation ? `- Motivation, verbatim: "${a.motivation}"` : `- Motivation: none on record here. Quote the citation from the official list verbatim: ${s.prize.url}`,
+  ]
+  if (w) {
+    out.push(
+      `- Work: ${w.title}${w.year ? ` (${w.year}${w.venue ? `, ${w.venue}` : ''})` : w.venue ? ` (${w.venue})` : ''}. ${w.url}${w.doi ? ` (DOI ${w.doi})` : ''}. ${w.oaUrl ? `Free to read: ${w.oaUrl} (${w.oaStatus ?? 'open'}).` : 'No free copy on record.'}`,
+      `- ${landmarkWorkBasisLabel(s)}`,
+    )
+  } else {
+    out.push(`- Work: ${landmarkWorkBasisLabel(s)}`)
+  }
+  out.push(`- Lens: ${s.lens.name}. ${s.lens.description}`)
+  const links = [
+    a.links.summary ? `prize summary ${a.links.summary}` : null,
+    a.links.background ? `${landmarkBackgroundLabel(s.prize, true).toLowerCase()} ${a.links.background}` : null,
+    a.links.lecture ? `prize lecture ${a.links.lecture}` : null,
+    a.links.wikipedia ? `Wikipedia ${a.links.wikipedia}` : null,
+  ].filter(Boolean)
+  if (links.length) out.push(`- Links: ${links.join('; ')}.`)
+  out.push(
+    '',
+    '### Do this first',
+    '',
+    w
+      ? `1. Read the ${lit ? 'book' : 'work'} end to end (the free copy linked above, ${lit ? 'or a library edition' : 'or the DOI'}). It is the only source for what the page says the ${lit ? 'book' : 'work'} says: ${citeBy}.`
+      : lit
+        ? `1. Pick the book from ${account}: the one it dwells on most, with its ISBN or first edition. Say on the page how it was chosen. Then read it end to end and ${citeBy}.`
+        : `1. Reconstruct the prize-winning work from ${account}: the paper or book the award rewarded, with its DOI or ISBN. Say on the page that it was reconstructed. Then read it end to end and ${citeBy}.`,
+    lit
+      ? `2. Read the Academy's own account, ${account}: what it rewarded, in its words, and the books it names.`
+      : `2. Read the award's own account, ${account}: what the committee rewarded, in its words, and the references it cites.`,
+  )
+  let n = 3
+  if (w?.representative) {
+    out.push(
+      `${n++}. Confirm the work against the award's own documents (${lit ? 'for the Literature prize: the books the presentation speech and the prize announcement name' : "for a Nobel Prize: the committee's reading list or the references of the scientific background"}). ${LANDMARK_SWITCH_RULE} If the documents cite no works, the page keeps the label "representative work".`,
+    )
+  }
+  out.push(`${n++}. Apply the ${s.lens.name} lens to the work itself, not to ${a.name}'s career or to ${s.field.name.toLowerCase()} in general.`)
+  out.push(`${n++}. ${landmarkCreditLine(s)} The motivation is quoted verbatim and never altered.`)
+  if (s.sequence) out.push(`${n++}. This spin follows the previous one: the same prize, the year before. Link back to that story and do not re-explain the prize.`)
+  if (s.related.length) {
+    out.push('', 'Other works the loader found (context, and the candidates for the switch above):')
+    for (const r of s.related.slice(0, 8)) out.push(`- [${r.title}](${r.url})${r.year ? ` (${r.year})` : ''}, ${r.basis === 'citation' ? 'named by the award' : r.basis === 'notable' ? 'a notable work' : r.basis === 'book' ? 'a book from around the prize year' : 'top-cited'}${r.oaUrl ? ', free to read' : ''}`)
+  }
+  const others = s.pool.laureates.filter((name) => name !== a.name).slice(0, 12)
+  if (others.length) out.push('', `Other ${s.prize.name} laureates of ${s.era.name} (context, not to cover): ${others.join(', ')}${s.pool.laureates.length > 13 ? ` and ${s.pool.laureates.length - 13} more` : ''}.`)
+  if (w?.countsByYear.length) {
+    out.push('', `Citations by year (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}. Cited ${w.citedBy?.toLocaleString('en-US') ?? '?'} times in all${w.fwci !== null ? `, FWCI ${w.fwci}` : ''}${w.topOnePercent ? ', top 1% of its field and year' : ''}.`)
+  }
+  if (s.pool.sources.notes.length) out.push('', `Loader notes: ${s.pool.sources.notes.join(' ')}`)
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points): ${landmarkLensMetrics(s.lens.name).join(', ')}.`,
+    lit
+      ? "Start from: the book, the Academy's own account (the presentation speech, the Nobel lecture, the motivation), Open Library and Wikidata for the bibliography and editions, the Nobel nomination archive for years over 50 years old, and a public dataset for anything about the world."
+      : 'Start from: the work, the award\'s own account (the background document, the lecture or the citation), OpenAlex for the citation record, and a public dataset for anything about the world.',
   )
   return out
 }
@@ -874,6 +948,7 @@ Built like the best page of a study guide: one idea, explained so a reader who h
 
 function landmarkFormat(s: LandmarkSubject): string {
   const a = s.award
+  if (isLiterary(s.prize)) return landmarkLiteratureFormat(s)
   const focus = landmarkFocus(s)
   const awardPart = `2. **The award:** ${landmarkAwardLabel(s.prize, a.year)}, ${a.name}${a.coLaureates.length ? ` with ${a.coLaureates.join(', ')}` : ''}, and the ${a.motivation ? 'motivation' : 'citation'} quoted verbatim, linked to the laureate page.`
   if (focus === 'work') {
@@ -908,6 +983,27 @@ ${awardPart}
 9. **Go further:** the award's own account and the lead readings, linked.
 10. **Credit:** ${landmarkCreditLine(s)}
 11. **Sources and claims log summary.**`
+}
+
+/** The Literature field's page: a book, not a result, so a book club's best page rather than a journal club's. */
+function landmarkLiteratureFormat(s: LandmarkSubject): string {
+  const a = s.award
+  return `## Format: landmark book explainer with charts
+
+Built like the best page of a book club: one book, introduced so a reader who has never opened it wants to, with the numbers that place it in the writer's work and the Academy's own words beside it. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, what the book does in plain words) and **dek** (one line, why a reader today should pick it up).
+2. **The award:** ${landmarkAwardLabel(s.prize, a.year)}, ${a.name}, and the motivation quoted verbatim, linked to the laureate page.
+3. **The book:** ${s.work ? `${s.work.title}${s.work.year ? ` (${s.work.year})` : ''}, linked (the free scan where there is one)` : 'the book you picked from the presentation speech, linked'}, with the label it carries: ${s.work && !s.work.representative ? 'named by the award' : 'representative work: the prize rewards a body of writing'}. Name the original language and the translation read.
+4. **The book in brief:** 150 words at most, what it is about and what it does, without spoiling the ending.
+5. **A passage:** a few lines at most, quoted with the edition and page (the book is in copyright unless its scan is public), and what to notice in them.
+6. **Chart 1, the work:** the writer's books by year and form, with this book marked, from the bibliography (8 or more points).
+7. **Chart 2, the reach or the world:** editions or translations over time, or the place and period the book is set in, from a named dataset.
+8. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+9. **How it was read:** the reception and the controversies, before and after the prize, each attributed.
+10. **Go further:** the Academy's own account (${a.links.background ? 'the presentation speech and the Nobel lecture' : 'the motivation'}), the other books to read next, linked.
+11. **Credit:** ${landmarkCreditLine(s)}
+12. **Sources and claims log summary.**`
 }
 
 function hundredFormat(s: HundredSubject): string {

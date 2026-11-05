@@ -49,12 +49,14 @@ import type {
   HundredDataset,
   HundredPerson,
   LandmarkDataset,
+  LandmarkLens,
   LandmarkPrize,
   OcwDataset,
   OcwKind,
   RandomizerId,
   ViznbaDataset,
 } from './types'
+export { LANDMARK_LITERATURE, isLiterary } from './types'
 import deskJson from './data/desk.json'
 import atlasJson from './data/atlas.json'
 import epicsJson from './data/epics.json'
@@ -89,6 +91,11 @@ export function isHandsOn(kind: Pick<OcwKind, 'hands_on'> | string | undefined, 
 export function isWorkLevel(prize: Pick<LandmarkPrize, 'work_level'> | string | undefined, data: LandmarkDataset = LANDMARK): boolean {
   const p = typeof prize === 'string' ? data.prizes.find((x) => x.id === prize) : prize
   return !!p?.work_level
+}
+
+/** The lenses a Landmark field draws from: every lens not scoped away from it (LandmarkLens fields and skip). */
+export function landmarkLenses(field: string, data: LandmarkDataset = LANDMARK): LandmarkLens[] {
+  return data.lenses.filter((l) => (!l.fields || l.fields.includes(field)) && !l.skip?.includes(field))
 }
 
 /** A prize has awards in an era (at the last taxonomy refresh): the plan only draws stocked pairs. */
