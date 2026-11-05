@@ -16,6 +16,30 @@ in vizmaya-fyi's `vercel.json`; `CRON_SECRET` is already set). Optional env:
 `CROSSREF_MAILTO` (the polite pool), `GOOGLE_BOOKS_API_KEY`,
 `EUROPEANA_API_KEY` (the Europeana collector stays idle without it).
 
+## 0. The LLM path (2026-11-05)
+
+The collector pipeline below proved too complex to run (rate limits, cold
+caches, blocked sources, many moving parts), so its nightly workers were
+wound down and claims now come from an on-demand LLM run
+(`packages/curious-pipeline/src/llm.ts`), started from the admin Curious
+claims tab or `pnpm curious:generate`:
+
+1. **Research:** a model with the AI Gateway's web search looks for the
+   brief's candidates and, for each, corroboration and debunks. Every result
+   URL it saw is kept.
+2. **Propose:** a schema pass writes atomic claims citing results by number;
+   a citation outside the list is dropped, so a source cannot be invented.
+3. **Check:** each cited page is read once under robots.txt (text never
+   stored), and a second model judges the claim on those excerpts only:
+   verdict, grade, primary, lineages, core vs embellishment, and a verbatim
+   quote per page, which code then locates in the page. Code caps the grade
+   (one lineage is never A, snippet-only support is C at most, contradicted
+   is E). Unsupported or unquotable claims are dropped.
+
+Survivors land in the same review queue as `in_review`; approval, the pool
+view, the desk's draw and the brief are unchanged. The sections below
+describe the collector pipeline, which stays in the repo for manual runs.
+
 ## 1. Why a pipeline, not a scrape
 
 The design this desk comes from says the most entertaining anecdotes are

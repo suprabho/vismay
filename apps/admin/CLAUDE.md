@@ -684,6 +684,28 @@ Desk draws from and the composer's "Curious claims" library reads.
   and `PATCH /api/vizmaya/curious/claims/[id]` (`{ action: 'approve'|'send_back'|'reject', note?, text? }`,
   same-origin), backed by `listClaimsForReview` / `reviewClaim` in
   `@vismay/curious-pipeline/store`; the reviewer's email lands in `reviewed_by`.
+- **Generate with LLM** (the on-demand path that replaced the nightly
+  collectors): the panel under the filters takes a brief (era, theme, region,
+  an optional angle, 1 to 8 claims) and `POST /api/vizmaya/curious/generate`
+  (same-origin, `maxDuration` 300) runs `runLlmDesk` from
+  `@vismay/curious-pipeline/llm`: Claude Sonnet researches with the AI
+  Gateway's Perplexity web search (`researchWithWebSearch` in
+  `@vismay/ai-gateway/search`; every result URL it saw is kept), a schema pass
+  proposes atomic claims citing those results by number (a citation outside
+  the list is dropped), each cited page is read once under robots.txt (the
+  snippet stands in when it cannot be), and a checker judges each claim on
+  the excerpts only: verdict, grade, primary, which page retells which, the
+  supported core and the embellishment (a partly-supported claim takes the
+  checker's rewrite), and a quote per page that must be found word for word.
+  Code caps the grade: one lineage is never A, snippet-only support is C at
+  most, contradicted is E (kept, flagged). Unsupported claims, and claims with
+  no located quote, are dropped with a reason the panel lists. Survivors are
+  written by `writeCheckedClaims` (`@vismay/curious-pipeline/llmStore`) as
+  `in_review`, documents with source `web-search`, sources verified by
+  `llm-check`, the checker's verdict and notes in `score_features`
+  (`method: 'llm-check'`; the row's "Show the check" panel reads it). Needs
+  migration `103_curious_llm_desk.sql`. CLI: `pnpm curious:generate` in
+  apps/vizmaya-fyi.
 - **Composer:** approved claims are a "Curious claims" library in Compose from
   library (`curiousClaimsProvider` in [lib/libraryProviders.ts](lib/libraryProviders.ts)):
   the claim, its grade and notes, the evidence quote with its document and

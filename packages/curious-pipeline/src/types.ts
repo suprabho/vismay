@@ -4,8 +4,8 @@
  * the in-memory types are what the pure modules pass around.
  */
 
-export type SourceId = 'gdelt' | 'loc' | 'europeana' | 'gallica' | 'crossref' | 'google-books' | 'wikidata' | 'web'
-export const SOURCE_IDS: readonly SourceId[] = ['gdelt', 'loc', 'europeana', 'gallica', 'crossref', 'google-books', 'wikidata', 'web']
+export type SourceId = 'gdelt' | 'loc' | 'europeana' | 'gallica' | 'crossref' | 'google-books' | 'wikidata' | 'web' | 'web-search'
+export const SOURCE_IDS: readonly SourceId[] = ['gdelt', 'loc', 'europeana', 'gallica', 'crossref', 'google-books', 'wikidata', 'web', 'web-search']
 /** The discovery sources `collect.ts` accepts. */
 export type CollectorId = 'gdelt' | 'loc' | 'europeana' | 'gallica'
 export const COLLECTOR_IDS: readonly CollectorId[] = ['gdelt', 'loc', 'europeana', 'gallica']
@@ -88,7 +88,7 @@ export type ClaimFlag =
   | 'sent-back'
 
 export type SourceRelation = 'supports' | 'contradicts' | 'cites' | 'derived_from' | 'mentions'
-export type VerifiedBy = 'detector' | 'verify-crossref' | 'verify-books' | 'verify-wikidata' | 'human'
+export type VerifiedBy = 'detector' | 'verify-crossref' | 'verify-books' | 'verify-wikidata' | 'human' | 'llm-check'
 export type EntityKind = 'person' | 'org' | 'place' | 'work' | 'event' | 'other'
 
 /** A curious_claim_sources row minus the generated columns. */

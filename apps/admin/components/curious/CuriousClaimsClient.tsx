@@ -3,9 +3,151 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReviewClaim, ReviewCounts } from '@vismay/curious-pipeline/store'
 import { GRADE_LABELS } from '@vismay/curious-pipeline/grade'
-import { THEME_IDS, THEME_NAMES } from '@vismay/curious-pipeline/taxonomy'
+import { ERAS, REGION_IDS, THEME_IDS, THEME_NAMES } from '@vismay/curious-pipeline/taxonomy'
+import { MagnifyingGlass, Sparkle, SpinnerGap, X } from '@phosphor-icons/react'
 
 const API = '/api/vizmaya/curious/claims'
+const GENERATE_API = '/api/vizmaya/curious/generate'
+const VERDICT_TONE: Record<string, string> = { supported: 'text-emerald-300', partly: 'text-amber-300', contradicted: 'text-rose-300', unsupported: 'text-rose-300' }
+
+interface GenerateResult {
+  written: Array<{ id: string; text: string; grade: string }>
+  dropped: Array<{ text: string; reason: string }>
+  queries: string[]
+  results: number
+  proposed: number
+  errors: string[]
+}
+
+/** The on-demand LLM run: a brief in, checked claims into the queue. */
+function GeneratePanel({ onDone }: { onDone: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [era, setEra] = useState('')
+  const [theme, setTheme] = useState('')
+  const [region, setRegion] = useState('')
+  const [hint, setHint] = useState('')
+  const [count, setCount] = useState(5)
+  const [running, setRunning] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [result, setResult] = useState<GenerateResult | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!running) return
+    const started = Date.now()
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000)
+    return () => clearInterval(t)
+  }, [running])
+
+  async function run() {
+    setRunning(true)
+    setElapsed(0)
+    setError('')
+    setResult(null)
+    try {
+      const response = await fetch(GENERATE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ era, theme, region, hint, count }) })
+      const data = await response.json().catch(() => ({ error: `The run failed (${response.status})` }))
+      if (!response.ok) throw new Error(data.error ?? 'The run failed')
+      setResult(data)
+      if (data.written?.length) onDone()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The run failed')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/50 bg-violet-500/10 px-3 py-2 text-sm font-medium text-violet-200 hover:border-violet-300">
+        <Sparkle size={16} weight="fill" /> Generate with LLM
+      </button>
+    )
+  return (
+    <div className="w-full rounded-xl border border-violet-400/30 bg-violet-500/5 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-sm font-medium text-violet-200">
+          <Sparkle size={16} weight="fill" /> Generate claims with an LLM
+        </div>
+        <button type="button" onClick={() => setOpen(false)} className="text-neutral-400 hover:text-neutral-200" aria-label="Close">
+          <X size={16} />
+        </button>
+      </div>
+      <p className="mb-3 text-xs text-neutral-400">
+        A model searches the web for the brief and proposes claims citing the pages it found. Each page is read, and a second model checks every claim against them, grades it and picks a quote that must appear word for word. What survives lands here as in review. A run of five takes one to three minutes.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select className={SELECT} value={era} onChange={(e) => setEra(e.target.value)} disabled={running} aria-label="Era">
+          <option value="">Any era</option>
+          {ERAS.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
+          ))}
+        </select>
+        <select className={SELECT} value={theme} onChange={(e) => setTheme(e.target.value)} disabled={running} aria-label="Theme">
+          <option value="">Any theme</option>
+          {THEME_IDS.map((t) => (
+            <option key={t} value={t}>
+              {THEME_NAMES[t]}
+            </option>
+          ))}
+        </select>
+        <select className={SELECT} value={region} onChange={(e) => setRegion(e.target.value)} disabled={running} aria-label="Region">
+          <option value="">Any region</option>
+          {REGION_IDS.filter((r) => r !== 'world').map((r) => (
+            <option key={r} value={r}>
+              {r.replace(/-/g, ' ')}
+            </option>
+          ))}
+        </select>
+        <input className={`${SELECT} min-w-64 flex-1`} placeholder="Angle (optional): a person, a place, a subject" value={hint} maxLength={300} onChange={(e) => setHint(e.target.value)} disabled={running} aria-label="Angle" />
+        <select className={SELECT} value={count} onChange={(e) => setCount(Number(e.target.value))} disabled={running} aria-label="How many">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <option key={n} value={n}>
+              {n} claim{n === 1 ? '' : 's'}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={run} disabled={running} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/70 bg-violet-500/20 px-3 py-2 text-sm font-medium text-violet-100 hover:bg-violet-500/30 disabled:opacity-60">
+          {running ? <SpinnerGap size={16} className="animate-spin" /> : <MagnifyingGlass size={16} />}
+          {running ? `Researching… ${elapsed}s` : 'Run'}
+        </button>
+      </div>
+      {error && <div className="mt-3 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error}</div>}
+      {result && (
+        <div className="mt-3 space-y-2 text-xs text-neutral-300">
+          <div className="font-mono tabular-nums text-neutral-400">
+            {result.queries.length} searches · {result.results} pages found · {result.proposed} proposed · <span className="text-emerald-300">{result.written.length} queued</span> · {result.dropped.length} dropped
+          </div>
+          {result.written.length > 0 && (
+            <ul className="space-y-1">
+              {result.written.map((w) => (
+                <li key={w.id}>
+                  <span className={`mr-2 inline-block w-5 rounded border text-center ${GRADE_TONE[w.grade] ?? ''}`}>{w.grade}</span>
+                  {w.text}
+                </li>
+              ))}
+            </ul>
+          )}
+          {result.dropped.length > 0 && (
+            <details>
+              <summary className="cursor-pointer text-neutral-400">Dropped, and why</summary>
+              <ul className="mt-1 space-y-1 pl-4 text-neutral-500">
+                {result.dropped.map((d, i) => (
+                  <li key={i}>
+                    {d.text} — <span className="text-neutral-400">{d.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {result.errors.length > 0 && <div className="text-rose-300">{result.errors.join(' · ')}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
 const SELECT = 'rounded-lg border border-white/15 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 disabled:opacity-50'
 type Show = 'in_review' | 'todo' | 'graded' | 'candidate' | 'approved' | 'sent_back' | 'rejected' | 'all'
 type Action = 'approve' | 'send_back' | 'reject'
@@ -63,6 +205,7 @@ export function CuriousClaimsClient() {
   const [source, setSource] = useState('')
   const [q, setQ] = useState('')
   const [query, setQuery] = useState('')
+  const [reload, setReload] = useState(0)
   const [current, setCurrent] = useState<string | null>(null)
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [notes, setNotes] = useState<Record<string, string>>({})
@@ -76,13 +219,13 @@ export function CuriousClaimsClient() {
   }, [q])
 
   const params = useMemo(() => {
-    const p = new URLSearchParams({ status: show, limit: '100' })
+    const p = new URLSearchParams({ status: show, limit: '100', r: String(reload) })
     if (grade) p.set('grade', grade)
     if (theme) p.set('theme', theme)
     if (source) p.set('source', source)
     if (query) p.set('q', query)
     return p.toString()
-  }, [show, grade, theme, source, query])
+  }, [show, grade, theme, source, query, reload])
   const loading = loadedKey !== params
 
   useEffect(() => {
@@ -196,7 +339,7 @@ export function CuriousClaimsClient() {
             <div className="mb-2 text-xs font-medium uppercase tracking-wider text-amber-300">Private admin data · Curious Desk</div>
             <h1 className="text-2xl font-semibold text-white">Curious claims</h1>
             <p className="mt-1 max-w-3xl text-sm text-neutral-400">
-              Candidate facts and anecdotes from the collectors, each with the quote it came from, its sources grouped by lineage and the features behind its grade. Approve what the desk may draw; send back what needs re-extracting with a note; reject what is wrong. Five articles from one wire story are one lineage.
+              Candidate facts and anecdotes, generated with an LLM and web search (or from the old collectors), each with the quote it came from, its sources grouped by lineage and the features behind its grade. Approve what the desk may draw; send back what needs re-extracting with a note; reject what is wrong. Five articles from one wire story are one lineage.
             </p>
           </div>
           <div className="text-right font-mono text-xs tabular-nums text-neutral-400">
@@ -245,19 +388,26 @@ export function CuriousClaimsClient() {
             <option value="loc">Library of Congress</option>
             <option value="europeana">Europeana</option>
             <option value="gallica">Gallica</option>
+            <option value="web-search">Web search (LLM)</option>
           </select>
           <input className={`${SELECT} w-64`} placeholder="Search the claim text" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
           <span className="ml-auto text-xs text-neutral-500">
             {loading ? 'Loading…' : `${visible.length} of ${total}`} · keys: j/k move · a approve · s send back · r reject · e note · o open source · g features
           </span>
         </div>
+        <GeneratePanel
+          onDone={() => {
+            setShow('in_review')
+            setReload((n) => n + 1)
+          }}
+        />
         {(error || saveError) && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error || saveError}</div>}
       </div>
 
       <ol className="mt-4 space-y-3">
-        {!loading && !visible.length && <li className="rounded-xl border border-white/10 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">Nothing here. Run <code className="text-neutral-200">pnpm curious:grade -- --queue</code> to queue graded claims, or <code className="text-neutral-200">pnpm curious:seed-fixture -- --status in_review</code> for the worked example.</li>}
+        {!loading && !visible.length && <li className="rounded-xl border border-white/10 bg-neutral-900/60 px-4 py-8 text-center text-sm text-neutral-400">Nothing here. Use <span className="text-violet-200">Generate with LLM</span> above to research a batch, or run <code className="text-neutral-200">pnpm curious:generate</code> in apps/vizmaya-fyi.</li>}
         {visible.map((c) => {
-          const f = (c.score_features ?? {}) as Record<string, number | string[] | undefined>
+          const f = (c.score_features ?? {}) as Record<string, unknown>
           const isCurrent = current === c.id
           const lineageGroups = new Map<string, typeof c.sources>()
           for (const s of c.sources) {
@@ -393,13 +543,32 @@ export function CuriousClaimsClient() {
 
               <div className="mt-3 flex flex-wrap items-start gap-3">
                 <button type="button" className="text-xs text-neutral-400 hover:text-neutral-200" onClick={(e) => { e.stopPropagation(); setOpen((o) => ({ ...o, [c.id]: !o[c.id] })) }}>
-                  {open[c.id] ? 'Hide' : 'Show'} the grade’s features
+                  {open[c.id] ? 'Hide' : 'Show'} {f.method === 'llm-check' ? 'the check' : 'the grade’s features'}
                 </button>
                 <button type="button" className="text-xs text-neutral-400 hover:text-neutral-200" onClick={(e) => { e.stopPropagation(); setEdits((x) => (x[c.id] === undefined ? { ...x, [c.id]: c.text } : Object.fromEntries(Object.entries(x).filter(([k]) => k !== c.id)))) }}>
                   {edits[c.id] === undefined ? 'Fix the wording' : 'Cancel the edit'}
                 </button>
               </div>
-              {open[c.id] && (
+              {open[c.id] && f.method === 'llm-check' && (
+                <div className="mt-2 space-y-1.5 rounded-lg border border-violet-400/20 bg-neutral-950/60 p-3 text-xs text-neutral-300">
+                  <div>
+                    <span className="text-neutral-500">LLM check: </span>
+                    <span className={VERDICT_TONE[String(f.verdict)] ?? ''}>{String(f.verdict)}</span>
+                    <span className="text-neutral-500"> · {String(f.lineages ?? 0)} lineage{Number(f.lineages) === 1 ? '' : 's'}{f.primary ? ' · primary source found' : ''}</span>
+                  </div>
+                  {typeof f.core === 'string' && <div><span className="text-neutral-500">Supported core: </span>{f.core}</div>}
+                  {typeof f.embellishment === 'string' && <div><span className="text-neutral-500">Not supported: </span><span className="text-amber-200">{f.embellishment}</span></div>}
+                  {typeof f.why_curious === 'string' && <div><span className="text-neutral-500">Why it is curious: </span>{f.why_curious}</div>}
+                  {Array.isArray(f.notes) && f.notes.length > 0 && (
+                    <ul className="list-disc pl-4 text-neutral-400">
+                      {(f.notes as string[]).slice(1).map((n, i) => (
+                        <li key={i}>{n}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              {open[c.id] && f.method !== 'llm-check' && (
                 <div className="mt-2 grid gap-x-6 gap-y-1 rounded-lg border border-white/10 bg-neutral-950/60 p-3 text-xs sm:grid-cols-2">
                   {FEATURES.map((ft) => {
                     const v = typeof f[ft.key] === 'number' ? (f[ft.key] as number) : 0

@@ -2,7 +2,7 @@
   "name": "@vismay/curious-pipeline",
   "version": "0.0.0",
   "private": true,
-  "description": "The Curious Desk's provenance-first claim pipeline: source policies, polite fetching, collectors (GDELT, Library of Congress, Europeana, Gallica), candidate detection, atomic-claim extraction, lineage-aware dedupe, explicit-feature grading and the Supabase store. Pure modules take an injected fetch so they test on fixtures; store.ts is server only. Its own package so pipeline changes only rebuild admin and the vizmaya-fyi scripts.",
+  "description": "The Curious Desk's provenance-first claim pipeline: the LLM path (llm.ts: web-search research, proposal, page-checked grading; llmStore.ts writes the review queue), and the older source policies, polite fetching, collectors (GDELT, Library of Congress, Europeana, Gallica), candidate detection, atomic-claim extraction, lineage-aware dedupe, explicit-feature grading and the Supabase store. Pure modules take an injected fetch so they test on fixtures; store.ts is server only. Its own package so pipeline changes only rebuild admin and the vizmaya-fyi scripts.",
   "exports": {
     "./types": "./src/types.ts",
     "./taxonomy": "./src/taxonomy.ts",
@@ -19,11 +19,13 @@
     "./grade": "./src/grade.ts",
     "./gradeRun": "./src/gradeRun.ts",
     "./verify": "./src/verify/index.ts",
-    "./archive": "./src/archive.ts"
+    "./archive": "./src/archive.ts",
+    "./llm": "./src/llm.ts",
+    "./llmStore": "./src/llmStore.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/pipeline.test.ts"
+    "test": "tsx src/pipeline.test.ts && tsx src/llm.test.ts"
   },
   "dependencies": {
     "@vismay/ai-gateway": "workspace:*",
