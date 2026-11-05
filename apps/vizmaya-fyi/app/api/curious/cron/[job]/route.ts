@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic'
  * best-effort, Vercel Cron is exact to the minute. The workflows keep
  * `workflow_dispatch` only, so the two schedulers never double-run.
  *
+ * Paused (2026-11-05): the three cron entries are out of vercel.json, so
+ * nothing calls this route on a schedule. Re-add them to resume.
+ *
  * Auth: Vercel sends `Authorization: Bearer $CRON_SECRET`; fails closed.
  *
  * Jobs (the last path segment):

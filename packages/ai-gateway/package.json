@@ -14,7 +14,8 @@
     "./speech": "./src/speech.ts",
     "./elevenlabs": "./src/elevenlabs.ts",
     "./prompt": "./src/prompt.ts",
-    "./cache": "./src/cache.ts"
+    "./cache": "./src/cache.ts",
+    "./search": "./src/search.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

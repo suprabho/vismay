@@ -684,13 +684,38 @@ Desk draws from and the composer's "Curious claims" library reads.
   and `PATCH /api/vizmaya/curious/claims/[id]` (`{ action: 'approve'|'send_back'|'reject', note?, text? }`,
   same-origin), backed by `listClaimsForReview` / `reviewClaim` in
   `@vismay/curious-pipeline/store`; the reviewer's email lands in `reviewed_by`.
+- **Generate with LLM** (the on-demand path that replaced the nightly
+  collectors): the panel under the filters takes a brief (era, theme, region,
+  an optional angle, 1 to 8 claims) and `POST /api/vizmaya/curious/generate`
+  (same-origin, `maxDuration` 300) runs `runLlmDesk` from
+  `@vismay/curious-pipeline/llm`: Claude Sonnet researches with the AI
+  Gateway's Perplexity web search (`researchWithWebSearch` in
+  `@vismay/ai-gateway/search`; every result URL it saw is kept), a schema pass
+  proposes atomic claims citing those results by number (a citation outside
+  the list is dropped), each cited page is read once under robots.txt (the
+  snippet stands in when it cannot be), and a checker judges each claim on
+  the excerpts only: verdict, grade, primary, which page retells which, the
+  supported core and the embellishment (a partly-supported claim takes the
+  checker's rewrite), and a quote per page that must be found word for word.
+  Code caps the grade: one lineage is never A, snippet-only support is C at
+  most, contradicted is E (kept, flagged). Unsupported claims, and claims with
+  no located quote, are dropped with a reason the panel lists. Survivors are
+  written by `writeCheckedClaims` (`@vismay/curious-pipeline/llmStore`) as
+  `in_review`, documents with source `web-search`, sources verified by
+  `llm-check`, the checker's verdict and notes in `score_features`
+  (`method: 'llm-check'`; the row's "Show the check" panel reads it). Needs
+  migration `103_curious_llm_desk.sql`. CLI: `pnpm curious:generate` in
+  apps/vizmaya-fyi.
 - **Composer:** approved claims are a "Curious claims" library in Compose from
   library (`curiousClaimsProvider` in [lib/libraryProviders.ts](lib/libraryProviders.ts)):
   the claim, its grade and notes, the evidence quote with its document and
   archive link, and the lineage counts, as a text source.
-- **Nightly:** Vercel cron on vizmaya-fyi dispatches `curious-collect.yml`
+- **Nightly (paused):** the Vercel cron that dispatched `curious-collect.yml`
   (GDELT 02:20, Library of Congress 02:40 UTC) and `curious-detect.yml`
-  (detect → grade → verify, 03:50 UTC) through `/api/curious/cron/[job]`.
+  (detect → grade → verify, 03:50 UTC) through `/api/curious/cron/[job]` was
+  wound down on 2026-11-05: the cron entries are out of `apps/vizmaya-fyi/vercel.json`. The
+  workflows and the bridge route remain, so a run can still be dispatched by
+  hand; re-add the three entries to resume.
 - **Evaluation:** `pnpm curious:evaluate -- --sample 100` queues a stratified
   batch for review; `-- --report latest` prints approval rate per grade, grade
   agreement and claims per reviewer-hour.

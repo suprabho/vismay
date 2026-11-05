@@ -72,6 +72,16 @@ export const SOURCE_POLICIES: Record<SourceId, SourcePolicy> = {
     termsUrl: null, termsLastChecked: TERMS_CHECKED, enabled: true,
     institutionalQuality: 0.3,
   },
+  // The LLM desk (llm.ts): pages a model found through the AI Gateway's web search. Each cited page is read
+  // once under robots.txt to check the quote, and only the evidence quote (at most 300 characters) is kept.
+  // The checker scores each page's quality itself; 0.5 is the floor the grader starts from.
+  'web-search': {
+    id: 'web-search', name: 'Web search (LLM desk)', kind: 'web', baseUrl: null,
+    allowedMethod: 'api', crawlDelayMs: 2000, ratePerMin: 20, retentionDays: 0, commercialReuse: false,
+    fulltextStorage: 'none', personalDataPolicy: 'public-figures',
+    termsUrl: 'https://vercel.com/docs/ai-gateway', termsLastChecked: '2026-11-05', enabled: true,
+    institutionalQuality: 0.5,
+  },
 }
 
 export class PolicyError extends Error {

@@ -35,6 +35,7 @@
     "ai-data-centers:retilt-editions": "npx tsx scripts/ai-data-centers/retilt-editions.ts",
     "ai-data-centers:fix-edition-geo": "npx tsx scripts/ai-data-centers/fix-edition-geo.ts",
     "ai-data-centers:check-compat": "npx tsx scripts/ai-data-centers/check-edition-compat.ts",
+    "curious:generate": "npx tsx scripts/curious/generate.ts",
     "curious:collect": "npx tsx scripts/curious/collect.ts",
     "curious:detect": "npx tsx scripts/curious/detect.ts",
     "curious:grade": "npx tsx scripts/curious/grade.ts",

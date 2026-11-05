@@ -10,7 +10,9 @@ name: Curious Desk collect
 # answered request is a warning annotation and exit 0 (what was collected is
 # kept); only a run where nothing got through fails.
 #
-# No `schedule:` here: Vercel Cron on vizmaya-fyi fires
+# Nightly runs are paused (2026-11-05): the Vercel cron entries were removed
+# from apps/vizmaya-fyi/vercel.json, so this runs only when dispatched by hand.
+# When live: no `schedule:` here; Vercel Cron on vizmaya-fyi fires
 # /api/curious/cron/collect-gdelt and /collect-loc each night
 # (apps/vizmaya-fyi/vercel.json), which dispatch this file with the source,
 # because GitHub's own scheduler drifts. Europeana is dispatched by hand
