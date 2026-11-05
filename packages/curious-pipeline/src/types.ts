@@ -4,8 +4,8 @@
  * the in-memory types are what the pure modules pass around.
  */
 
-export type SourceId = 'gdelt' | 'loc' | 'europeana' | 'gallica' | 'crossref' | 'google-books' | 'wikidata' | 'web' | 'web-search'
-export const SOURCE_IDS: readonly SourceId[] = ['gdelt', 'loc', 'europeana', 'gallica', 'crossref', 'google-books', 'wikidata', 'web', 'web-search']
+export type SourceId = 'gdelt' | 'loc' | 'europeana' | 'gallica' | 'crossref' | 'google-books' | 'wikidata' | 'web' | 'web-search' | 'book'
+export const SOURCE_IDS: readonly SourceId[] = ['gdelt', 'loc', 'europeana', 'gallica', 'crossref', 'google-books', 'wikidata', 'web', 'web-search', 'book']
 /** The discovery sources `collect.ts` accepts. */
 export type CollectorId = 'gdelt' | 'loc' | 'europeana' | 'gallica'
 export const COLLECTOR_IDS: readonly CollectorId[] = ['gdelt', 'loc', 'europeana', 'gallica']

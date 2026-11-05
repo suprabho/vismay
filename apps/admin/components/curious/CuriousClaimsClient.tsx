@@ -406,6 +406,7 @@ export function CuriousClaimsClient() {
                 <option value="europeana">Europeana</option>
                 <option value="gallica">Gallica</option>
                 <option value="web-search">Web search (LLM)</option>
+                <option value="book">Source books</option>
               </select>
               <input className={`${SELECT} w-64`} placeholder="Search the claim text" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
               <span className="ml-auto text-xs text-neutral-500">

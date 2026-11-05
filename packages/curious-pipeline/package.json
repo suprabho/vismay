@@ -21,11 +21,12 @@
     "./verify": "./src/verify/index.ts",
     "./archive": "./src/archive.ts",
     "./llm": "./src/llm.ts",
-    "./llmStore": "./src/llmStore.ts"
+    "./llmStore": "./src/llmStore.ts",
+    "./book": "./src/book.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/pipeline.test.ts && tsx src/llm.test.ts"
+    "test": "tsx src/pipeline.test.ts && tsx src/llm.test.ts && tsx src/book.test.ts"
   },
   "dependencies": {
     "@vismay/ai-gateway": "workspace:*",
