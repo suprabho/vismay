@@ -34,7 +34,11 @@ import {
   landmarkAwardLabel,
   landmarkBackgroundLabel,
   landmarkCreditLine,
+  landmarkFocus,
+  landmarkFocusNoun,
+  landmarkLensDescription,
   landmarkLensMetrics,
+  landmarkReadings,
   landmarkWorkBasisLabel,
   ocwCourseLabel,
   ocwCreditLine,
@@ -93,7 +97,7 @@ function eli5Subject(spin: BriefSpin): { who: string; real: string; credit: stri
   if (s.randomizer === 'landmark') {
     return {
       who: s.award.name,
-      real: `the ${landmarkAwardLabel(s.prize, s.award.year)} and the work it rewarded`,
+      real: `the ${landmarkAwardLabel(s.prize, s.award.year)} and ${landmarkFocus(s) === 'work' ? 'the work it rewarded' : 'what it rewarded'}`,
       credit: landmarkCreditLine(s),
     }
   }
@@ -404,6 +408,79 @@ export const LANDMARK_SWITCH_RULE =
   'If the award documents cite works and the selected title is not among them, switch to the cited work they emphasise most, and record why in the research file. Do not spend research effort proving a fallback title that none of them mention.'
 
 function landmarkAssignment(s: LandmarkSubject): string[] {
+  const a = s.award
+  const w = s.work
+  const focus = landmarkFocus(s)
+  if (focus === 'book') return landmarkBookAssignment(s)
+  const account = a.links.background
+    ? `the ${landmarkBackgroundLabel(s.prize)} (${a.links.background})${a.links.lecture ? ` and the prize lecture (${a.links.lecture})` : ''}`
+    : `the citation on the ${s.prize.awarder} list (${s.prize.url}) and the awarder's announcement for ${a.year}`
+  const workLine = (r: NonNullable<typeof w>) =>
+    `${r.title}${r.year ? ` (${r.year}${r.venue ? `, ${r.venue}` : ''})` : r.venue ? ` (${r.venue})` : ''}. ${r.url}${r.doi ? ` (DOI ${r.doi})` : ''}. ${r.oaUrl ? `Free to read: ${r.oaUrl} (${r.oaStatus ?? 'open'}).` : 'No free copy on record.'}`
+  const out = [
+    `- Field: ${s.field.name} › Prize: ${s.prize.name} (${s.prize.awarder}; ${LANDMARK_WORK_LEVEL_LABEL[s.prize.works]}). ${s.prize.note}`,
+    `- Award: ${a.name}, ${landmarkAwardLabel(s.prize, a.year)}${a.share ? `, share ${a.share}` : ''}${a.coLaureates.length ? `, with ${a.coLaureates.join(', ')}` : ''}. ${a.url}`,
+    a.motivation ? `- Motivation, verbatim: "${a.motivation}"` : `- Motivation: none on record here. Quote the citation from the official list verbatim (${s.prize.url}), or the awarder's announcement where the list carries none.`,
+  ]
+  if (focus === 'work') {
+    out.push(`- Focus: the work. The award's own record names it, so the page explains this work.`, `- Work: ${workLine(w!)}`, `- ${landmarkWorkBasisLabel(s)}`)
+  } else {
+    out.push(
+      `- Focus: the contribution. ${s.prize.works === 'body' ? `The ${s.prize.name} rewards a body of work` : s.prize.works === 'result' ? `The ${s.prize.name} rewards a result` : `This award's record names no title`}, so the page explains what the citation rewards. The titles below are lead readings: evidence for the contribution, never "the winning work", and none needs to be shown to have won.`,
+    )
+    const readings = landmarkReadings(s)
+    if (readings.length) {
+      out.push('- Lead readings (swap any for a work the awarder\'s own documents cite):')
+      for (const r of readings) out.push(`  - ${workLine(r)}`)
+    } else {
+      out.push(`- Lead readings: none resolved. Take them from ${account}.`)
+    }
+  }
+  out.push(`- Lens: ${s.lens.name}. ${landmarkLensDescription(s)}`)
+  const links = [
+    a.links.summary ? `prize summary ${a.links.summary}` : null,
+    a.links.background ? `${landmarkBackgroundLabel(s.prize, true).toLowerCase()} ${a.links.background}` : null,
+    a.links.lecture ? `prize lecture ${a.links.lecture}` : null,
+    a.links.wikipedia ? `Wikipedia ${a.links.wikipedia}` : null,
+  ].filter(Boolean)
+  if (links.length) out.push(`- Links: ${links.join('; ')}.`)
+  out.push('', '### Do this first', '')
+  if (focus === 'work') {
+    out.push(
+      '1. Read the work end to end (the free copy linked above, or the DOI). It is the only source for what the page says the work says: cite it by page, figure, theorem or chapter.',
+      `2. Read the award's own account, ${account}: what the committee rewarded, in its words, and the references it cites.`,
+    )
+  } else {
+    out.push(
+      `1. Read the award's own account, ${account}: what it says it rewards, in its words, and any works it names or cites. That is the subject of the page.`,
+      `2. Read the lead readings for the parts that show the contribution, and cite them by page, figure, theorem or chapter. ${LANDMARK_SWITCH_RULE} A reading's place is earned by showing the contribution, not by having won.`,
+    )
+  }
+  let n = 3
+  out.push(`${n++}. Apply the ${s.lens.name} lens to ${landmarkFocusNoun(focus)}, not to ${a.name}'s life in general or to ${s.field.name.toLowerCase()} as a whole.`)
+  out.push(`${n++}. ${landmarkCreditLine(s)} Never alter the quoted words.`)
+  if (s.sequence) out.push(`${n++}. This spin follows the previous one: the same prize, the year before. Link back to that story and do not re-explain the prize.`)
+  const rest = focus === 'work' ? s.related : s.related.filter((r) => !landmarkReadings(s).includes(r))
+  if (rest.length) {
+    out.push('', focus === 'work' ? 'Other works the loader found (context, and the candidates for a switch):' : 'More of the laureate\'s works the loader found (context):')
+    for (const r of rest.slice(0, 8)) out.push(`- [${r.title}](${r.url})${r.year ? ` (${r.year})` : ''}, ${r.basis === 'citation' ? 'named by the award' : r.basis === 'notable' ? 'a notable work' : r.basis === 'book' ? 'a book from around the prize year' : 'top-cited'}${r.oaUrl ? ', free to read' : ''}`)
+  }
+  const others = s.pool.laureates.filter((name) => name !== a.name).slice(0, 12)
+  if (others.length) out.push('', `Other ${s.prize.name} laureates of ${s.era.name} the pool read (context, not to cover, and not a complete roster): ${others.join(', ')}${s.pool.laureates.length > 13 ? ` and ${s.pool.laureates.length - 13} more` : ''}.`)
+  if (w?.countsByYear.length) {
+    out.push('', `Citations by year of ${w.title} (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}. Cited ${w.citedBy?.toLocaleString('en-US') ?? '?'} times in all${w.fwci !== null ? `, FWCI ${w.fwci}` : ''}${w.topOnePercent ? ', top 1% of its field and year' : ''}.`)
+  }
+  if (s.pool.sources.notes.length) out.push('', `Loader notes: ${s.pool.sources.notes.join(' ')}`)
+  out.push(
+    '',
+    `Chart these if the data exists (8 or more points; drop a chart rather than pad it): ${landmarkLensMetrics(s.lens.name, focus).join(', ')}.`,
+    `Start from: ${focus === 'work' ? 'the work' : 'the citation and the lead readings'}, the award's own account (the background document, the lecture or the citation), OpenAlex for the citation record, and a public dataset for anything about the world.`,
+  )
+  return out
+}
+
+/** A Literature spin (the book focus): the Academy's account and one representative book. */
+function landmarkBookAssignment(s: LandmarkSubject): string[] {
   const a = s.award
   const w = s.work
   const lit = isLiterary(s.prize)
@@ -748,7 +825,7 @@ export function researchProtocolSection(spin: BriefSpin): string {
             : spin.randomizer === 'ocw'
               ? '\n8. The resource is the primary source for what it says; quote it with its page or slide number. Anything about the world outside the resource (a number, a date, a history) follows the two-source rule like any other claim.'
               : spin.randomizer === 'landmark'
-                ? '\n8. The work is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it; otherwise the page says "representative work". ' + LANDMARK_SWITCH_RULE
+                ? '\n8. The work, or on a contribution spin each lead reading, is the primary source for what it says; cite it by page, figure, theorem or chapter. The official motivation or citation is quoted verbatim, never paraphrased inside quotation marks. Which paper or book the award rewarded is a claim like any other: Verified only when the citation, the background document or the awarder\'s list names it. On a contribution spin no title needs to have won: the page is about what the citation rewards, and a reading that the record does not tie to the award is called a lead reading, not logged as a failed claim. ' + LANDMARK_SWITCH_RULE
                 : spin.randomizer === 'hundred'
                   ? '\n8. Hart\'s rank and his reasons are his opinion, not a fact: attribute them ("Hart argues"), and test them. Separate what contemporary sources document from what later tradition, legend or hagiography added, and label each. A religious claim is stated as what a tradition holds, never as fact or as falsehood.'
                   : spin.randomizer === 'evidence'
@@ -872,19 +949,38 @@ Built like the best page of a study guide: one idea, explained so a reader who h
 function landmarkFormat(s: LandmarkSubject): string {
   const a = s.award
   if (isLiterary(s.prize)) return landmarkLiteratureFormat(s)
-  return `## Format: landmark paper explainer with charts
+  const focus = landmarkFocus(s)
+  const awardPart = `2. **The award:** ${landmarkAwardLabel(s.prize, a.year)}, ${a.name}${a.coLaureates.length ? ` with ${a.coLaureates.join(', ')}` : ''}, and the ${a.motivation ? 'motivation' : 'citation'} quoted verbatim, linked to the laureate page.`
+  if (focus === 'work') {
+    return `## Format: landmark paper explainer with charts
 
 Built like the best page of a journal club: one result, explained so a reader outside ${s.field.name.toLowerCase()} gets it, with the numbers that make it concrete and the award's own words beside it. These parts are required content, not a page order; the layout is yours.
 
 1. **Headline** (one line, the result in plain words) and **dek** (one line, why a reader outside the field should care).
-2. **The award:** ${landmarkAwardLabel(s.prize, a.year)}, ${a.name}${a.coLaureates.length ? ` with ${a.coLaureates.join(', ')}` : ''}, and the motivation quoted verbatim, linked to the laureate page.
-3. **The work:** ${s.work ? `${s.work.title}${s.work.year ? ` (${s.work.year})` : ''}, linked (the free copy where there is one)` : 'the paper or book you reconstructed, linked'}, with the label it carries: ${s.work && !s.work.representative ? 'named by the award' : 'representative work, unless the award\'s account confirms it'}.
+${awardPart}
+3. **The work:** ${s.work!.title}${s.work!.year ? ` (${s.work!.year})` : ''}, linked (the free copy where there is one), labelled "named by the award".
 4. **The one result:** 150 words at most, from the work, cited to its page, figure, theorem or chapter.
 5. **Chart 1, the result:** the work's central figure or number, rebuilt from its own data (8 or more points), or the quantity it is about from a public dataset.
 6. **Chart 2, the trail or the comparison:** citations by year from OpenAlex, or the result against what came before it.
 7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
 8. **Where it breaks:** the assumption, limit or revision since, stated from the record.
 9. **Go further:** the award's own account (${a.links.background ? 'the scientific background document and the lecture' : 'the citation'}) and the work's references, linked.
+10. **Credit:** ${landmarkCreditLine(s)}
+11. **Sources and claims log summary.**`
+  }
+  return `## Format: landmark contribution explainer with charts
+
+Built like the best page of a journal club about a laureate's idea: what the prize rewarded, explained so a reader outside ${s.field.name.toLowerCase()} gets it, shown through the works that carry it, with the award's own words beside it. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the contribution in plain words) and **dek** (one line, why a reader outside the field should care).
+${awardPart}
+3. **The contribution:** 150 words at most: the idea or finding the citation rewards, in plain words, each claim cited to a lead reading's page, figure, theorem or chapter, or to the awarder's account.
+4. **Lead readings:** two to four of the laureate's works that show it, linked (free copies where there are), each with one line on what it shows. Labelled "lead reading", never "the winning work", unless the awarder names it.
+5. **Chart 1, the contribution:** the central number, figure or comparison the readings rest on (8 or more points), or the quantity they are about from a public dataset.
+6. **Chart 2, the trail or the timeline:** citations by year of the key works from OpenAlex, or the key works on a timeline against the prize year.
+7. **Lens read:** 150 words at most, applying the ${s.lens.name} lens to the contribution.
+8. **Where it breaks:** the assumption, limit or revision since, stated from the record.
+9. **Go further:** the award's own account and the lead readings, linked.
 10. **Credit:** ${landmarkCreditLine(s)}
 11. **Sources and claims log summary.**`
 }
@@ -1164,7 +1260,7 @@ export function checklistSection(spin: BriefSpin): string {
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'viznba' ? ['Every score and stat line matches the box scores; no rumour is stated as fact.'] : []),
     ...(spin.randomizer === 'ocw' ? ['The resource and the course page are linked, the CC BY-NC-SA credit names the course, the instructors and the term, and nothing on the page is sponsored.'] : []),
-    ...(spin.randomizer === 'landmark' ? ['The work and the laureate page are linked, the motivation is quoted verbatim, a representative work is labelled as such, and the credit names the data sources.'] : []),
+    ...(spin.randomizer === 'landmark' ? ['The work (or the lead readings) and the laureate page are linked, the motivation or citation is quoted verbatim, no title is called the winning work unless the award names it, and the credit names the data sources.'] : []),
     ...(spin.randomizer === 'evidence'
       ? ['Every number matches the paper (page or table), not the collection\'s summary; the causal language matches the design; a preprint is labelled; the opposing study is on the page; the credit links the paper itself.']
       : []),

@@ -875,11 +875,11 @@ const OCW_SPIN_RULES = [
   'OCW is CC BY-NC-SA 4.0: the credit line in the assignment goes on the page as written, and nothing on the page is sponsored or sold.',
 ]
 
-/** A Landmark Desk spin's brief carries an award and a work to read: how the page uses them. */
+/** A Landmark Desk spin's brief carries an award and either the work it names or the contribution it rewards: how the page uses them. */
 const LANDMARK_SPIN_RULES = [
-  'The work in the assignment is the primary source for what the page says it shows: read it end to end, cite it by page, figure, theorem or chapter, and link it (the free-to-read copy where there is one) and the laureate page from the page.',
-  'The official motivation goes on the page verbatim, in quotation marks, attributed to the awarder; never paraphrase it inside quotation marks or alter it.',
-  'A work the assignment labels representative is called a representative work on the page, never "the prize-winning paper", unless the award\'s own account confirms it.',
+  'The assignment sets the focus. A work spin explains the work the award names: read it end to end, cite it by page, figure, theorem or chapter. A contribution spin explains what the citation rewards (a body of work or a result): the lead readings are its evidence, cited the same way. A Literature (book) spin reads one representative book as the way into a body of writing. Link the work or readings (free-to-read copies where there are) and the laureate page from the page.',
+  'The official motivation or citation goes on the page verbatim, in quotation marks, attributed to the awarder; never paraphrase it inside quotation marks or alter it.',
+  'Only a title the award\'s own record names is called the prize-winning work. A lead reading is called a lead reading; the page never argues that it won, and never treats its not having won as a finding.',
   'Prize and work metadata are CC0 (Nobel Prize Outreach, Wikidata, OpenAlex): credit them as the assignment says, link to nobelprize.org and the publisher, and never rehost a paper, a book or a Nobel document.',
   'A novel, poem or play still in copyright is quoted a few lines at most, attributed to the edition, page and translator; a reading of it (a theme, what a passage means) is the page\'s argument and is said as one, with the critics it draws on named.',
 ]

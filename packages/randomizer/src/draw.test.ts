@@ -27,7 +27,7 @@ import { curiousPoolFromRows, loadCuriousRecord, type CuriousPoolRow } from './c
 import { commonsFilePage, completeMonths, formatWikidataTime, loadHundredProfile, pageviewWindow, pageviewsFromBody, parsePoint, profileFromSparql } from './hundredPool'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { CURIOUS_LENS_METRICS, curiousCreditLine, EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkBackgroundLabel, landmarkCreditLine, landmarkLicenceNote, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { CURIOUS_LENS_METRICS, curiousCreditLine, EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_CONTRIBUTION_LENS, LANDMARK_CONTRIBUTION_LENS_METRICS, LANDMARK_LENS_METRICS, landmarkFocus, landmarkLensDescription, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkBackgroundLabel, landmarkCreditLine, landmarkLicenceNote, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -908,7 +908,8 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   // No work at all: the spin stands, with a warning and a null work.
   const bare = draw({ randomizer: 'landmark', seed: 7, now: NOW, landmarkPool: lmPoolFor(planned, awards, []) })
   assert.ok(bare.subject.randomizer === 'landmark' && bare.subject.work === null && (bare.picks as LandmarkPicks).workId === null)
-  assert.ok(bare.rules.some((r) => r.tag === 'work' && r.kind === 'warn' && /reconstruct/.test(r.text)))
+  assert.ok(bare.rules.some((r) => r.tag === 'work' && r.kind === 'warn' && /contribution spin/.test(r.text)))
+  assert.ok(bare.subject.randomizer === 'landmark' && bare.subject.focus === 'contribution')
   assert.equal(landmarkAwardLabel(plan.prize, 2001), `${plan.prize.name} 2001`)
   assert.ok(landmarkCreditLine(a.subject as LandmarkSubject).includes('CC0'))
 }
@@ -922,6 +923,32 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   assert.equal((named.picks as LandmarkPicks).workId, 'c')
   assert.ok(named.rules.some((r) => r.tag === 'work' && r.kind === 'good'))
   assert.ok(named.subject.randomizer === 'landmark' && !named.subject.work!.representative)
+  // The focus: a work spin only when the award names a publication; otherwise a contribution spin, and every lens is worded for it.
+  assert.ok(named.subject.randomizer === 'landmark' && named.subject.focus === 'work' && landmarkFocus(named.subject) === 'work')
+  assert.ok(named.rules.some((r) => r.tag === 'focus' && r.kind === 'good'))
+  const rep = spin([lmWork('t', 'top-cited')])
+  assert.ok(rep.subject.randomizer === 'landmark' && rep.subject.focus === 'contribution')
+  assert.ok(rep.rules.some((r) => r.tag === 'focus' && /Contribution spin/.test(r.text)))
+  assert.ok(/lead reading/.test(rep.reels.work!.sub ?? ''))
+  // An old spin without the field derives the same focus.
+  assert.equal(landmarkFocus({ ...(rep.subject as LandmarkSubject), focus: undefined }), 'contribution')
+  for (const l of LANDMARK.lenses.filter((l) => !(l.fields && l.fields.every((f) => isLiterary(f))))) {
+    assert.ok(LANDMARK_CONTRIBUTION_LENS[l.name], `${l.name}: no contribution wording`)
+    assert.ok(LANDMARK_CONTRIBUTION_LENS_METRICS[l.name]?.length === 3, `${l.name}: no contribution chart metrics`)
+    assert.ok(!/winning work|the work itself/.test(LANDMARK_CONTRIBUTION_LENS[l.name]!.replace('No single title is called the winner', '')), `${l.name}: contribution wording assumes a winning work`)
+    assert.equal(landmarkLensDescription({ ...(rep.subject as LandmarkSubject), lens: l }), LANDMARK_CONTRIBUTION_LENS[l.name])
+    assert.equal(landmarkLensDescription({ ...(named.subject as LandmarkSubject), lens: l }), l.description)
+  }
+  // The brief follows the focus.
+  {
+    const repBrief = assignmentSection(asSpin(rep))
+    assert.ok(repBrief.includes('Focus: the contribution') && repBrief.includes('Lead readings') && !repBrief.includes('Focus: the work'))
+    assert.ok(formatSection(asSpin(rep)).includes('landmark contribution explainer'))
+    assert.ok(researchStub(asSpin(rep)).includes('## Lead readings') && !researchStub(asSpin(rep)).includes('## The work\n'))
+    const namedBrief = assignmentSection(asSpin(named))
+    assert.ok(namedBrief.includes('Focus: the work') && formatSection(asSpin(named)).includes('landmark paper explainer'))
+    for (const t of [repBrief, namedBrief, formatSection(asSpin(rep)), researchStub(asSpin(rep))]) assert.ok(!hasEmDash(t))
+  }
   const notable = spin([lmWork('t', 'top-cited'), lmWork('n', 'notable')])
   assert.equal((notable.picks as LandmarkPicks).workId, 'n')
   const subject = spin([lmWork('s', 'citation', { type: 'subject', doi: null, year: null }), lmWork('t', 'top-cited')])

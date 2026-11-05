@@ -135,7 +135,7 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
     app: 'vizmaya-fyi',
     name: 'Landmark Desk',
     hint: 'Prizes · laureates · papers',
-    format: 'Landmark paper explainer with charts',
+    format: 'Landmark explainer with charts (the work the award names, or the contribution it rewards)',
     reels: [
       { key: 'field', label: 'Field' },
       { key: 'prize', label: 'Prize', parents: ['field'] },
@@ -718,6 +718,18 @@ export interface LandmarkAward {
 
 export type LandmarkWorkBasis = 'citation' | 'notable' | 'top-cited' | 'book'
 
+/**
+ * What a Landmark spin is about. `work`: the award's own record names the
+ * paper or book, so the page explains that work. `contribution`: it names
+ * none (a body-of-work or result prize, or only a representative title was
+ * found), so the page explains what the citation rewards, and the drawn
+ * titles are lead readings, never "the winning book". Every lens has a
+ * wording for both, so no lens and prize combination is incompatible.
+ * `book`: the Nobel Prize in Literature, which rewards a body of writing
+ * and has its own lenses, built around one representative book.
+ */
+export type LandmarkFocus = 'work' | 'contribution' | 'book'
+
 /** A paper or book tied to an award, as the work loader resolved it. */
 export interface LandmarkWork {
   /** "openalex:W…", "wd:Q…", "doi:…" or "ol:OL…W". */
@@ -837,6 +849,8 @@ export interface LandmarkSubject {
   pool: { asOf: string; query: LandmarkQuery; count: number; laureates: string[]; sources: LandmarkSources }
   /** Continued from the previous spin's prize, the year before (sequence mode). */
   sequence: boolean
+  /** The work or the contribution (see LandmarkFocus). Absent on spins drawn before it existed: landmarkFocus() derives it. */
+  focus?: LandmarkFocus
 }
 
 /* ---------- The 100 Desk ---------- */
