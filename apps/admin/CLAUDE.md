@@ -685,8 +685,10 @@ Desk draws from and the composer's "Curious claims" library reads.
   same-origin), backed by `listClaimsForReview` / `reviewClaim` in
   `@vismay/curious-pipeline/store`; the reviewer's email lands in `reviewed_by`.
 - **Generate with LLM** (the on-demand path that replaced the nightly
-  collectors): the panel under the filters takes a brief (era, theme, region,
-  an optional angle, 1 to 8 claims) and `POST /api/vizmaya/curious/generate`
+  collectors): the panel in the left column (the claims list is on the
+  right; each column scrolls on its own on wide screens) takes a brief (era,
+  theme, region, an optional angle, 1 to 8 claims; **Shuffle** draws a random
+  era, theme and region) and `POST /api/vizmaya/curious/generate`
   (same-origin, `maxDuration` 300) runs `runLlmDesk` from
   `@vismay/curious-pipeline/llm`: Claude Sonnet researches with the AI
   Gateway's Perplexity web search (`researchWithWebSearch` in
