@@ -475,7 +475,7 @@ export function RandomizerClient({
         )}
 
         <section className="rounded-xl border border-white/10 bg-neutral-900/60 overflow-hidden">
-          <div role="tablist" className="flex overflow-x-auto border-b border-white/10">
+          <div role="tablist" className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] border-b border-white/10">
             {tabs.map((r) => (
               <button
                 key={r}
@@ -487,7 +487,7 @@ export function RandomizerClient({
                   setAnim(null)
                   setRespinOpen(false)
                 }}
-                className={`flex-1 min-w-[150px] text-left px-4 py-3 border-r border-white/5 last:border-r-0 ${
+                className={`min-w-0 text-left px-4 py-3 border-r border-b border-white/5 ${
                   tab === r ? 'bg-white/[0.04] shadow-[inset_0_-2px_0] shadow-orange-500' : 'hover:bg-white/[0.02]'
                 }`}
               >
