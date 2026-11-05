@@ -41,6 +41,7 @@
     "curious:grade": "npx tsx scripts/curious/grade.ts",
     "curious:verify": "npx tsx scripts/curious/verify.ts",
     "curious:seed-fixture": "npx tsx scripts/curious/seed-fixture.ts",
+    "curious:seed-book": "npx tsx scripts/curious/seed-book.ts",
     "curious:evaluate": "npx tsx scripts/curious/evaluate.ts",
     "flags:upload": "npx tsx scripts/upload-flags.ts",
     "fifa-wc26:import": "npx tsx scripts/fifa-wc26/import.ts",

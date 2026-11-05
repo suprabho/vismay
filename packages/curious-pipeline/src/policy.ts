@@ -82,6 +82,16 @@ export const SOURCE_POLICIES: Record<SourceId, SourcePolicy> = {
     termsUrl: 'https://vercel.com/docs/ai-gateway', termsLastChecked: '2026-11-05', enabled: true,
     institutionalQuality: 0.5,
   },
+  // Editorial source books held in vizmaya-data/<book>/ (the first is Seriously Curious, The Economist, 2018),
+  // seeded by scripts/curious/seed-book.ts. Nothing is fetched; a claim keeps one quoted sentence of at most
+  // 300 characters as its evidence and the book's ISBN as its lineage. A copyrighted book: no commercial reuse.
+  book: {
+    id: 'book', name: 'Source books', kind: 'library', baseUrl: null,
+    allowedMethod: 'none', crawlDelayMs: 0, ratePerMin: null, retentionDays: 3650, commercialReuse: false,
+    fulltextStorage: 'snippet', personalDataPolicy: 'public-figures',
+    termsUrl: null, termsLastChecked: '2026-11-05', enabled: true,
+    institutionalQuality: 0.8,
+  },
 }
 
 export class PolicyError extends Error {

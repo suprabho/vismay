@@ -2085,7 +2085,7 @@ function curiousRules(ctx: Ctx, data: CuriousDataset, c: CuriousClaim): void {
 function drawCurious(ctx: Ctx, data: CuriousDataset, prev: CuriousPicks | undefined, pool: CuriousPool | null, sequence: boolean): DrawResult {
   const { rng } = ctx
   if (!pool?.claims.length) {
-    throw new Error('The Curious Desk draws from approved claims (curious_claim_pool), and none were found. Approve some on the admin Curious claims tab, or run pnpm curious:seed-fixture for the worked example.')
+    throw new Error('The Curious Desk draws from approved claims (curious_claim_pool), and none were found. Approve some on the admin Curious claims tab, or run pnpm curious:seed-book (the Seriously Curious facts) or pnpm curious:seed-fixture (the worked example).')
   }
   const claims = pool.claims.filter((c) => data.eras.some((e) => e.id === c.era) && (!c.theme || data.themes.some((t) => t.id === c.theme)))
   if (!claims.length) throw new Error('None of the approved claims has an era the Curious Desk knows. Check curious_claims.era against curious.json.')

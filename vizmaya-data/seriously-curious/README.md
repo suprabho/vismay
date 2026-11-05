@@ -23,6 +23,7 @@ of storage is **one row per article**, tied to the `seriously-curious`
 |------|-----------|
 | `Seriously Curious ... .pdf` | The source PDF (274pp), at the `vizmaya-data/` root. |
 | `articles.json` | 109 rows, one per article — the importer's input. `{ epic_slug, book_name, slug, section, section_index, article_index, title, page_start, page_end, char_count, entities[], keywords[], facts[], body }`. |
+| `curious-desk.json` | The Curious Desk's theme, region and country for each article (read by `pnpm curious:seed-book`). |
 | `sections.json` | The 10 thematic sections + per-section article counts (reference only). |
 | `INGEST_NOTES.md` | How the PDF was scraped/tagged, per-field provenance, and the gotchas. |
 
@@ -39,6 +40,13 @@ of storage is **one row per article**, tied to the `seriously-curious`
   "From library" picker **and** the AI research/enrich agent. Attaching an
   article snapshots its text as a `story_sources` row that grounds every
   downstream compose pass.
+
+- **Curious Desk** — `pnpm curious:seed-book` (apps/vizmaya-fyi, needs
+  migration `104_curious_book_source.sql`) turns each standalone sentence in
+  `facts[]` into an approved claim of the Curious Desk randomizer, tagged by
+  `curious-desk.json` (theme, region, country per article — hand-assigned;
+  keep it in step when articles are added). Only the fact sentence (≤ 300
+  chars) is stored as evidence; bodies stay in `book_articles`.
 
 ## Refreshing / re-scraping
 

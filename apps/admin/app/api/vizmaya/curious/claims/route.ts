@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store' }
 const STATUSES: ClaimStatus[] = ['candidate', 'graded', 'in_review', 'approved', 'rejected', 'sent_back']
-const SOURCES: SourceId[] = ['gdelt', 'loc', 'europeana', 'gallica', 'crossref', 'google-books', 'wikidata', 'web', 'web-search']
+const SOURCES: SourceId[] = ['gdelt', 'loc', 'europeana', 'gallica', 'crossref', 'google-books', 'wikidata', 'web', 'web-search', 'book']
 
 export async function GET(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: PRIVATE_HEADERS })
