@@ -62,6 +62,9 @@ import { FormatPicker } from '@/components/html-stories/FormatPicker'
 import { ToneToggle } from '@/components/html-stories/ToneToggle'
 import { StoryStylePicker } from '@/components/html-stories/StoryStylePicker'
 
+/** Spin-log rows shown per page, and the most the log will page to (listSpins caps a read at 200). */
+const LOG_PAGE = 25
+const LOG_MAX = 200
 const ITEM_H = 80
 const SWATCHES = ['background', 'surface', 'text', 'muted', 'accent', 'accent2', 'teal'] as const
 
@@ -294,10 +297,39 @@ export function RandomizerClient({
   const [reviewNote, setReviewNote] = useState('')
   const [pasting, setPasting] = useState(false)
   const [pasted, setPasted] = useState('')
+  const [logLimit, setLogLimit] = useState<Record<RandomizerId, number>>(() => perRandomizer(() => LOG_PAGE))
+  const [logDone, setLogDone] = useState<Record<RandomizerId, boolean>>(() => perRandomizer(() => false))
+  const [logLoading, setLogLoading] = useState(false)
 
   const meta = RANDOMIZER_META[tab]
   const current = spins.find((s) => s.id === selected[tab]) ?? null
-  const log = spins.filter((s) => s.randomizer === tab).slice(0, 12)
+  const tabSpins = spins.filter((s) => s.randomizer === tab)
+  const log = tabSpins.slice(0, logLimit[tab])
+  // More to show: either held locally already, or possibly on the server (until a fetch comes back short).
+  const canShowMore = tabSpins.length > logLimit[tab] || (!logDone[tab] && tabSpins.length >= logLimit[tab] && logLimit[tab] < LOG_MAX)
+
+  async function showMoreLog() {
+    const next = Math.min(logLimit[tab] + LOG_PAGE, LOG_MAX)
+    if (tabSpins.length < next && !logDone[tab]) {
+      setLogLoading(true)
+      try {
+        const res = await fetch(`/api/randomizer/spins?randomizer=${tab}&limit=${next}`)
+        const j = (await res.json()) as { spins?: SpinRecord[]; error?: string }
+        if (!res.ok || !j.spins) throw new Error(j.error ?? `HTTP ${res.status}`)
+        const fetched = j.spins
+        setSpins((prev) => {
+          const have = new Set(prev.map((s) => s.id))
+          return [...prev, ...fetched.filter((s) => !have.has(s.id))].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        })
+        if (fetched.length < next || next >= LOG_MAX) setLogDone((prev) => ({ ...prev, [tab]: true }))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e))
+      } finally {
+        setLogLoading(false)
+      }
+    }
+    setLogLimit((prev) => ({ ...prev, [tab]: next }))
+  }
   const reels = meta.reels.filter((r) => !r.option || (r.option === 'pair' && !!current?.reels.pair))
   const canShuffle = !!pool?.palettes.length && !!pool.fonts.length
   const isEntityStyle = style?.paletteFrom.kind === 'competition' || style?.paletteFrom.kind === 'team'
@@ -654,6 +686,16 @@ export function RandomizerClient({
                 ))}
                 {!log.length && <li className="text-sm text-neutral-500">Nothing logged yet.</li>}
               </ol>
+              {canShowMore && (
+                <button
+                  type="button"
+                  onClick={showMoreLog}
+                  disabled={logLoading}
+                  className="self-start text-[11px] uppercase tracking-[0.12em] font-mono text-neutral-500 hover:text-neutral-200 disabled:opacity-50"
+                >
+                  {logLoading ? 'Loading…' : 'Show more'}
+                </button>
+              )}
             </div>
           </div>
         </section>
