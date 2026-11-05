@@ -273,8 +273,7 @@ export function RandomizerClient({
   /** Where this site's HTML stories are managed in admin, for the spin's story link. */
   storiesBasePath?: string
 }) {
-  // The Curious Desk is hidden from the UI for now (engine, API and cron are untouched).
-  const tabs = randomizersFor(app).filter((r) => r !== 'curious')
+  const tabs = randomizersFor(app)
   const [tab, setTab] = useState<RandomizerId>(tabs[0]!)
   const [spins, setSpins] = useState<SpinRecord[]>(initialSpins)
   const [selected, setSelected] = useState<Record<RandomizerId, string | null>>(() =>
