@@ -17,6 +17,12 @@ export const DEDUPE_RULES = {
   clusterThreshold: 0.62,
   /** A sentence this long shared verbatim between two documents is copy lineage. */
   sharedSentenceWords: 12,
+  /** Cosine at or above which two proposed claims tell the same story (looser: different angles on one anecdote). */
+  storyThreshold: 0.45,
+  /** Or: this many shared words (numbers aside)… */
+  storySharedWords: 5,
+  /** …making up at least this share of the shorter claim's words. */
+  storySharedShare: 0.4,
 } as const
 
 export const claimHash = (text: string): string => sha256(normalizeText(text))
@@ -109,4 +115,53 @@ export function provenanceDedupe(sources: Array<Pick<ClaimSourceUpsert, 'relatio
     }
   }
   return { groups: [...groups], nSources, nDerived }
+}
+
+export interface StoryInput {
+  text: string
+  subject?: string | null
+  entities?: Array<{ name: string; kind: string }>
+}
+
+/** Entity kinds that name the story itself; orgs and places are shared by unrelated stories. */
+const STORY_ENTITY_KINDS = new Set(['person', 'work', 'event'])
+
+const storyKeys = (s: StoryInput): Set<string> => {
+  const keys = new Set<string>()
+  const subject = normalizeText(s.subject ?? '')
+  if (subject) keys.add(subject)
+  for (const e of s.entities ?? []) if (STORY_ENTITY_KINDS.has(e.kind) && normalizeText(e.name)) keys.add(normalizeText(e.name))
+  return keys
+}
+
+/**
+ * Greedy story dedupe, in order (earlier wins): a claim is dropped when it
+ * shares a subject or a person/work/event with a claim already kept, or when
+ * its words are near enough to a kept claim or to one already on the desk.
+ * Three angles on one anecdote are one story, whatever their wording.
+ */
+export function storyDedupe<T extends StoryInput>(items: T[], opts: { existing?: string[]; threshold?: number } = {}): { kept: T[]; dupes: Array<{ item: T; of: string }> } {
+  const threshold = opts.threshold ?? DEDUPE_RULES.storyThreshold
+  const words = (t: Set<string>) => [...t].filter((x) => !x.includes(':'))
+  const existing = (opts.existing ?? []).map((t) => ({ text: t, toks: tokens(t) }))
+  const toks = items.map((i) => tokens(i.text))
+  const idf = buildIdf([...toks, ...existing.map((e) => e.toks)])
+  const near = (a: Set<string>, b: Set<string>): boolean => {
+    if (cosine(a, b, idf) >= threshold) return true
+    const wa = words(a)
+    const wb = words(b)
+    const shared = wa.filter((x) => b.has(x)).length
+    return shared >= DEDUPE_RULES.storySharedWords && shared >= DEDUPE_RULES.storySharedShare * Math.min(wa.length, wb.length)
+  }
+  const kept: Array<{ item: T; toks: Set<string>; keys: Set<string> }> = []
+  const dupes: Array<{ item: T; of: string }> = []
+  items.forEach((item, i) => {
+    const keys = storyKeys(item)
+    const sameAs =
+      kept.find((k) => [...keys].some((x) => k.keys.has(x)) || near(toks[i], k.toks))?.item.text ??
+      existing.find((e) => near(toks[i], e.toks))?.text
+    if (sameAs) dupes.push({ item, of: sameAs })
+    else kept.push({ item, toks: toks[i], keys })
+  })
+  return { kept: kept.map((k) => k.item), dupes }
 }
