@@ -28,7 +28,7 @@
 
 import { z } from 'zod'
 import { locateQuote } from './extract'
-import { independenceGroup } from './dedupe'
+import { independenceGroup, storyDedupe } from './dedupe'
 import { GRADE_LABELS } from './grade'
 import { ERAS, eraOf, REGION_IDS, THEME_IDS, THEME_NAMES, type ThemeId } from './taxonomy'
 import { canonicalUrl, clip, domainOf, normalizeText, parseDate, sha1, sha256, tokens } from './text'
@@ -84,6 +84,7 @@ How to research:
 - Search broadly first for candidates, then, for each candidate you keep, search again for corroboration from an independent source and for a debunk ("myth", "hoax", "fact check", "apocryphal", "actually").
 - Prefer primary and institutional sources: archives, museums, libraries, universities, peer-reviewed work, government records, newspapers of record, the original publication. Treat listicles, content farms, Quora, Reddit, Pinterest and AI-written pages as leads only.
 - When many pages say the same thing, find out whether they all trace back to one account; that is one lineage, not many confirmations.
+- Every candidate must be a different story: a different person, event, object or word. Two angles on one anecdote are one candidate.
 - Keep going until you have more candidates than asked for, so weak ones can be dropped.
 
 When you are done, write plain notes, one block per candidate: the claim in one sentence, the URLs that support it (and which one is closest to a primary source), any URL that contradicts or hedges it, and what part is embellishment.`
@@ -127,7 +128,8 @@ export type ProposedClaim = z.infer<typeof ProposedClaimSchema>
 export const ProposalSchema = z.object({ claims: z.array(ProposedClaimSchema).max(12) })
 
 export const PROPOSE_SYSTEM = `You turn a researcher's notes into atomic claims for a fact-checking desk.
-- One claim per distinct checkable proposition; split compound ones. Each claim is self-contained.
+- One claim per story. Each claim is a single checkable proposition and self-contained; when a story has several facts, pick its most surprising one rather than returning several claims about it.
+- Never return two claims about the same person, event, object or work, even worded differently.
 - Cite sources ONLY by the numbers of the search results listed. Never cite a URL that is not in the list. A claim with no listed source that supports it is left out.
 - Keep the hedges: if the sources say "reportedly" or "legend has it", say so in the claim.
 - Keep the specific and surprising; drop the generic, the opinion, the well known, and anything about a private living person.
@@ -506,8 +508,11 @@ export async function runLlmDesk(brief: LlmBrief, deps: RunDeps): Promise<LlmRun
     }
     return true
   })
-  const resolved = resolveCitations(fresh, research.results)
-  for (const c of fresh) if (!resolved.some((r) => r.claim === c)) dropped.push({ text: c.text, reason: 'cited no search result that supports it' })
+  // The model returns the strongest first, so the first claim of each story is the one checked.
+  const stories = storyDedupe(fresh, { existing: deps.avoid })
+  for (const d of stories.dupes) dropped.push({ text: d.item.text, reason: `same story as "${clip(d.of, 80)}"` })
+  const resolved = resolveCitations(stories.kept, research.results)
+  for (const c of stories.kept) if (!resolved.some((r) => r.claim === c)) dropped.push({ text: c.text, reason: 'cited no search result that supports it' })
   const toCheck = resolved.slice(0, count)
   log(`propose: ${proposal.claims.length} claims, ${toCheck.length} to check`)
 

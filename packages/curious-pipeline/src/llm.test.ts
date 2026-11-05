@@ -153,16 +153,45 @@ pending.push(
   (async () => {
     // A claim the desk already has is skipped before the check; count caps how many are checked.
     const known = new Set([sha256(normalizeText(claim().text))])
-    const r = await runLlmDesk({ count: 1 }, deps([claim(), claim({ text: 'Another claim about the 1897 bicycle ban in the square.' }), claim({ text: 'A third claim.' })], () => check(), { knownHashes: known }))
+    const r = await runLlmDesk({ count: 1 }, deps([claim(), claim({ text: 'In 1902 a ferry captain in Lisbon refused to sail on Fridays.', subject: 'the ferry captain' }), claim({ text: 'A third claim about a lighthouse keeper.', subject: 'the lighthouse keeper' })], () => check(), { knownHashes: known }))
     assert.equal(r.kept.length, 1)
     assert.ok(r.dropped.some((d) => d.reason === 'already on the desk'))
     // A check that throws drops that claim only.
-    const r2 = await runLlmDesk({ count: 2 }, deps([claim(), claim({ text: 'Second claim about the 1897 ban.' })], (p) => {
+    const r2 = await runLlmDesk({ count: 2 }, deps([claim(), claim({ text: 'Second claim, about a ferry captain in 1902.', subject: 'the ferry captain' })], (p) => {
       if (p.includes('Second claim')) throw new Error('boom')
       return check()
     }))
     assert.equal(r2.kept.length, 1)
     assert.ok(r2.dropped.some((d) => d.reason.includes('boom')))
+  })(),
+)
+
+pending.push(
+  (async () => {
+    // Several angles on one story are one story: the first (strongest) is checked, the rest dropped before the check.
+    const kniess = (text: string) => claim({ text, subject: 'Terry Kniess', entities: [{ name: 'Terry Kniess', kind: 'person' }, { name: 'The Price Is Right', kind: 'work' }] })
+    const colbert = (text: string) => claim({ text, subject: 'COLBERT treadmill', entities: [{ name: 'Stephen Colbert', kind: 'person' }, { name: 'NASA', kind: 'org' }] })
+    const r = await runLlmDesk(
+      { count: 5 },
+      deps(
+        [
+          colbert("In 2009 NASA named a treadmill for the International Space Station COLBERT, after viewers of Stephen Colbert's show swamped NASA's online contest."),
+          claim({ text: "Stephen Colbert's write-in campaign drew 230,539 votes in NASA's 2009 contest to name the ISS's Node 3 module, but NASA named a treadmill instead.", subject: 'ISS Node 3 naming contest', entities: [] }),
+          kniess('On 22 September 2008 Terry Kniess bid $23,743 in the Showcase Showdown on The Price Is Right, exactly the retail price.'),
+          kniess('Before his exact Showcase bid, Terry Kniess also bid exactly $1,175 on a Big Green Egg grill.'),
+          kniess('In 2008 host Drew Carey reportedly suspected that Terry Kniess had cheated with his exact Showcase bid.'),
+          claim({ text: 'In 1897 the city council banned bicycles from the cathedral square.' }),
+        ],
+        () => check(),
+      ),
+    )
+    assert.equal(r.proposed, 6)
+    assert.equal(r.dropped.filter((d) => d.reason.startsWith('same story')).length, 3, JSON.stringify(r.dropped))
+    assert.equal(r.kept.length, 3)
+    // A claim near one already on the desk is the same story too.
+    const r2 = await runLlmDesk({ count: 3 }, deps([claim()], () => check(), { avoid: ['In 1897 the council banned bicycles from the cathedral square, citing noise.'] }))
+    assert.equal(r2.kept.length, 0)
+    assert.match(r2.dropped[0].reason, /same story/)
   })(),
 )
 
