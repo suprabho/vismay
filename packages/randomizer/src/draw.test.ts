@@ -1,7 +1,7 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
-import { ATLAS, CURIOUS, curiousEraOf, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, frontierWindowOf, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isPhilosophical, isWorkLevel, landmarkStocked, reelPool } from './datasets'
+import { ATLAS, CURIOUS, curiousEraOf, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, frontierWindowOf, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isLiterary, isPhilosophical, isWorkLevel, landmarkLenses, landmarkStocked, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planLandmark, planOcw } from './draw'
 import {
   awardsFromNobel,
@@ -27,7 +27,7 @@ import { curiousPoolFromRows, loadCuriousRecord, type CuriousPoolRow } from './c
 import { commonsFilePage, completeMonths, formatWikidataTime, loadHundredProfile, pageviewWindow, pageviewsFromBody, parsePoint, profileFromSparql } from './hundredPool'
 import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type OcwHit } from './ocwPool'
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
-import { CURIOUS_LENS_METRICS, curiousCreditLine, EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkCreditLine, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
+import { CURIOUS_LENS_METRICS, curiousCreditLine, EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_LENS_METRICS, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkBackgroundLabel, landmarkCreditLine, landmarkLicenceNote, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
 import {
   randomizersFor,
@@ -778,7 +778,7 @@ const spinOcw = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'ocwPool
 }
 
 // Landmark Desk: the committed taxonomy, then synthetic awards and works (no network).
-assert.equal(LANDMARK.fields.length, 10)
+assert.equal(LANDMARK.fields.length, 11)
 assert.equal(LANDMARK.eras.length, 5)
 assert.ok(LANDMARK.prizes.length >= 40)
 assert.equal(new Set(LANDMARK.prizes.map((p) => p.id)).size, LANDMARK.prizes.length)
@@ -786,17 +786,29 @@ for (const p of LANDMARK.prizes) {
   assert.ok(LANDMARK.fields.some((f) => f.id === p.field), p.id)
   assert.ok(landmarkStocked(p), `${p.id}: no awards in any era`)
   for (const e of LANDMARK.eras) assert.equal(typeof p.awards[e.id], 'number', `${p.id}: no count for ${e.id}`)
-  if (p.source.kind === 'nobel') assert.ok(p.work_level && /^Q\d+$/.test(p.source.item), p.id)
+  // The Nobels are work-level through their scientific background documents; Literature rewards a body of writing and is not.
+  if (p.source.kind === 'nobel') assert.ok(p.work_level === !isLiterary(p) && /^Q\d+$/.test(p.source.item), p.id)
   else assert.ok(/^Q\d+$/.test(p.source.item), p.id)
 }
 for (const f of LANDMARK.fields) assert.ok(LANDMARK.prizes.some((p) => p.field === f.id), `${f.name}: no prizes`)
 assert.ok(LANDMARK.prizes.filter((p) => p.work_level).length >= 5, 'the work-level prizes: the Nobels, the Gödel Prize, the book prizes')
 assert.ok(isWorkLevel('godel') && isWorkLevel('nobel-physics') && !isWorkLevel('abel') && !isWorkLevel(undefined))
-assert.equal(LANDMARK.lenses.length, 7)
+assert.equal(LANDMARK.lenses.length, 12)
 for (const l of LANDMARK.lenses) assert.ok(LANDMARK_LENS_METRICS[l.name]?.length === 3, `${l.name}: no chart metrics`)
+// Literature: the Nobel Prize in Literature, its presentation speech as the account, its own lenses plus the shared ELI5 one.
+const literature = LANDMARK.prizes.find((p) => p.id === 'nobel-literature')!
+assert.ok(literature && literature.field === 'literature' && isLiterary(literature) && !isWorkLevel(literature) && literature.works === 'body')
+assert.ok(literature.source.kind === 'nobel' && literature.source.category === 'lit' && literature.source.background === 'ceremony-speech')
+assert.ok(literature.awards.founding! > 30 && literature.awards.recent! > 10, 'the Literature laureates are counted per era')
+assert.deepEqual(landmarkLenses('literature').map((l) => l.name), ["Explain like I'm 5", "The Academy's words", 'The work in numbers', 'Where to start', 'The world of the book', 'The other nominees'])
+assert.deepEqual(landmarkLenses('physics').map((l) => l.name), ['Why it won', 'One figure', 'What it replaced', 'Read it today', 'Citation trail', 'Missing names', "Explain like I'm 5"])
+for (const f of LANDMARK.fields) assert.ok(landmarkLenses(f.id).length >= 5, `${f.name}: too few lenses`)
+assert.equal(landmarkBackgroundLabel(literature), 'presentation speech')
+assert.equal(landmarkBackgroundLabel(LANDMARK.prizes.find((p) => p.id === 'nobel-physics')!), 'scientific background document')
+assert.ok(landmarkLicenceNote(literature).includes('in copyright'))
 assert.deepEqual(normalizeLocks('landmark', ['work']), ['field', 'prize', 'era', 'laureate', 'work'])
 assert.deepEqual(normalizeLocks('landmark', ['era', 'lens']), ['field', 'prize', 'era', 'lens'])
-assert.equal(reelPool('landmark', 'field').length, 10)
+assert.equal(reelPool('landmark', 'field').length, 11)
 assert.deepEqual(reelPool('landmark', 'laureate', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'landmark', seed: 1, now: NOW }), /pool/)
 
@@ -941,6 +953,37 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
     sawBook = true
   }
   assert.ok(sawBook)
+  // Literature: the field draws its own lenses, prefers a book to a paper, says the prize rewards a body of work, and briefs a book page.
+  const litLenses = new Set(landmarkLenses('literature').map((l) => l.name))
+  let litSpins = 0
+  for (let seed = 0; seed < 400 && litSpins < 8; seed++) {
+    const p0 = planLandmark({ randomizer: 'landmark', seed, now: NOW })
+    if (!isLiterary(p0.prize)) {
+      assert.ok(!litLenses.has(p0.lens.name) || p0.lens.name === "Explain like I'm 5", `${p0.field.name} drew the Literature lens ${p0.lens.name}`)
+      continue
+    }
+    litSpins++
+    assert.ok(litLenses.has(p0.lens.name), `Literature drew ${p0.lens.name}`)
+    const aw = lmAwardsFor(p0).map((a) => ({ ...a, links: { background: `https://www.nobelprize.org/prizes/literature/${a.year}/ceremony-speech/` } }))
+    const p1 = planLandmark({ randomizer: 'landmark', seed, now: NOW }, aw)
+    const r = draw({ randomizer: 'landmark', seed, now: NOW, landmarkPool: lmPoolFor(p1, aw, [lmWork('t', 'top-cited'), lmWork('b', 'book', { doi: null, type: 'book', title: 'A Novel' })]) })
+    assert.equal((r.picks as LandmarkPicks).workId, 'b', 'a book before a top-cited paper')
+    assert.ok(r.rules.some((x) => x.tag === 'work' && /body of work/.test(x.text) && /presentation speech/.test(x.text)))
+    assert.ok(r.rules.some((x) => x.tag === 'read first' && /presentation speech/.test(x.text)))
+    assert.ok(!r.rules.some((x) => /scientific background/.test(x.text)), 'no scientific background for Literature')
+    for (const x of r.rules) assert.ok(!hasEmDash(x.text), x.text)
+    if (r.subject.randomizer !== 'landmark' || r.subject.lens.name === "Explain like I'm 5") continue
+    const spin = asSpin(r)
+    const brief = assignmentSection(spin)
+    assert.ok(brief.includes('presentation speech') && brief.includes('edition and page') && !brief.includes('scientific background'), 'the Literature assignment')
+    const format = formatSection(spin)
+    assert.ok(format.includes('## Format: landmark book explainer') && !format.includes('landmark paper explainer'))
+    const stub = researchStub(spin)
+    assert.ok(stub.includes('## What the Academy rewarded') && stub.includes('Presentation speech:') && !stub.includes('## The one result'))
+    assert.ok(landmarkCreditLine(r.subject).includes('Open Library'))
+    for (const text of [brief, format, stub]) assert.ok(!hasEmDash(text))
+  }
+  assert.ok(litSpins >= 3, `only ${litSpins} Literature plans in 400 seeds`)
 }
 {
   // Locks: field, prize, era, lens keep their values; a laureate lock keeps the laureate; a work lock keeps the work.
@@ -1085,6 +1128,10 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   assert.deepEqual(mayor.coLaureates, ['James Peebles', 'Didier Queloz'])
   assert.equal(mayor.share, '1/4')
   assert.equal(mayor.links.background, 'https://www.nobelprize.org/prizes/physics/2019/advanced-information/')
+  const literature = LANDMARK.prizes.find((p) => p.id === 'nobel-literature')!
+  const litAwards = awardsFromNobel([{ awardYear: '2017', laureates: [{ id: '947', knownName: { en: 'Kazuo Ishiguro' }, portion: '1', motivation: { en: 'who, in novels of great emotional force, has uncovered the abyss beneath our illusory sense of connection with the world' } }] }], literature, era)
+  assert.equal(litAwards[0]!.links.background, 'https://www.nobelprize.org/prizes/literature/2017/ceremony-speech/', 'Literature links the presentation speech')
+  assert.equal(litAwards[0]!.links.summary, 'https://www.nobelprize.org/prizes/literature/2017/summary/')
   assert.equal(mayor.url, 'https://www.nobelprize.org/laureate/974')
   const penrose = enrichedNobelAward(awards[3]!, physics, { id: '988', fileName: 'penrose', wikidata: { id: 'Q193803' }, wikipedia: { english: 'https://en.wikipedia.org/wiki/Roger_Penrose' } })
   assert.equal(penrose.wikidata, 'Q193803')
@@ -1152,6 +1199,7 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   assert.equal(named.url, 'https://doi.org/10.1/x')
   assert.ok(!named.representative && named.type === null)
   assert.equal(workFromNamed({ id: 'wd:Q11351276', title: 'Weinberg-Salam theory', doi: null, isbn: null, year: null, basis: 'citation' }).type, 'subject')
+  assert.equal(workFromNamed({ id: 'wd:Q5', title: 'An Undated Novel', doi: null, isbn: null, year: null, basis: 'notable' }).type, null, 'a notable work is a publication, never a subject')
   assert.deepEqual(pickOpenAlexAuthor([{ id: 'https://openalex.org/A1', display_name: 'R. Penrose', cited_by_count: 9 }, { id: 'https://openalex.org/A2', display_name: 'Roger Penrose', cited_by_count: 5 }], 'Roger Penrose'), { id: 'A2', exact: true })
   assert.deepEqual(pickOpenAlexAuthor([{ id: 'https://openalex.org/A1', display_name: 'R. Penrose', cited_by_count: 9 }, { id: 'https://openalex.org/A2', display_name: 'Penrose R', cited_by_count: 5 }], 'Roger Penrose'), { id: 'A1', exact: false })
   assert.equal(pickOpenAlexAuthor([], 'x'), null)
@@ -1188,6 +1236,8 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
   const scanned = booksFromOpenLibrary(vdw, { name: 'Johannes Diderik van der Waals', year: 1901, openLibraryId: 'OL119335A', namedWorks: [] })
   assert.equal(scanned[0]!.oaUrl, 'https://archive.org/details/statistischebeha00waal', 'a public Internet Archive scan is the free copy')
   assert.equal(scanned[0]!.oaStatus, 'public scan')
+  const misdated = booksFromOpenLibrary([{ key: '/works/OL50564W', title: 'Song of Solomon', first_publish_year: 1634, author_key: ['OL1A'], edition_count: 90 }], { name: 'Toni Morrison', year: 1993, openLibraryId: 'OL1A', namedWorks: [] }, 'body')
+  assert.deepEqual(misdated.map((b) => [b.title, b.year]), [['Song of Solomon', null]], 'an impossible Open Library year is dropped, the book kept')
   const up = withUnpaywall(w, { is_oa: true, oa_status: 'green', best_oa_location: { url: 'https://arxiv.org/abs/1602.03837', url_for_pdf: 'https://arxiv.org/pdf/1602.03837' } })
   assert.equal(up.oaUrl, 'https://arxiv.org/pdf/1602.03837')
   assert.equal(up.oaStatus, 'green')
@@ -1208,6 +1258,7 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
       if (query.includes('p:P166 ?st . ?st ps:P166 wd:Q1417143')) return json({ results: { bindings: sparqlRows } })
       if (query.includes('VALUES ?person { wd:Q193803 }')) return json({ results: { bindings: [{ orcid: { value: '0000-0001-0000-0000' } }] } })
       if (query.includes('VALUES ?person { wd:Q55439598 }')) return json({ results: { bindings: [] } })
+      if (query.includes('VALUES ?person { wd:Q77001 }')) return json({ results: { bindings: [{ notable: { value: 'http://www.wikidata.org/entity/Q5' }, notableLabel: { value: 'Witch craze' }, notablePub: { value: '2004-01-01T00:00:00Z' } }] } })
       return json({ results: { bindings: [] } })
     }
     if (host === 'api.openalex.org') {
@@ -1272,6 +1323,20 @@ const spinLandmark = (input: Omit<Parameters<typeof draw>[0], 'randomizer' | 'la
       assert.equal(books.sources.openlibrary, 'ok')
       assert.deepEqual(books.items.map((w) => [w.id, w.basis]), [['ol:OL1W', 'book']])
       assert.ok(books.sources.notes.some((n) => /Open Library/.test(n)))
+      // Literature: no OpenAlex list call even with a key; Open Library is read, and a book that is also a notable work fills that entry in.
+      calls.length = 0
+      const literature = LANDMARK.prizes.find((p) => p.id === 'nobel-literature')!
+      const writer = lmAward('nobel-literature', 2014, 1, { name: 'Lyndal Roper', wikidata: 'Q77001', openLibraryId: 'OL1A' })
+      const lit = await loadLandmarkWorks(writer, literature, { fetch: fakeFetch, env: withKey })
+      assert.ok(!calls.some((c) => c.includes('api.openalex.org')), 'no OpenAlex call for a writer')
+      assert.equal(lit.sources.openalex, 'skipped')
+      assert.equal(lit.sources.openlibrary, 'ok')
+      assert.ok(calls.some((c) => decodeURIComponent(c).includes('wd:Q8261')), 'novels count as notable works')
+      const craze = lit.items.find((w) => w.title === 'Witch craze')!
+      assert.deepEqual([craze.id, craze.basis, craze.type, craze.url, craze.venue], ['wd:Q5', 'notable', 'book', 'https://openlibrary.org/works/OL3907270W', 'Yale University Press'])
+      assert.equal(lit.items.filter((w) => w.title === 'Witch craze').length, 1)
+      assert.ok(lit.items.some((w) => w.basis === 'book'), 'the other most-reprinted books are kept')
+      assert.ok(lit.sources.notes.some((n) => /translation/.test(n)))
       // A failed awards read throws (spins.ts answers 503).
       await assert.rejects(loadLandmarkAwards({ prize: physics, era, query: { prize: 'nobel-physics', era: 'recent' } }, { fetch: (async () => new Response('down', { status: 503 })) as typeof fetch }), /HTTP 503/)
       // A failed source in the works read is recorded, never thrown.

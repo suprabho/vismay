@@ -4,9 +4,10 @@
  * made in every era, counted from the two award sources the desk reads live.
  *
  * The randomizer's prize list is hand-picked here (docs/landmark-randomizer-plan.md
- * section 2): the four Nobel science prizes and the prizes that stand in for
- * a Nobel in mathematics, computer science, the humanities, history, the
- * social sciences and the cross-field science prizes. Each prize names its
+ * section 2): the four Nobel science prizes, the Nobel Prize in Literature,
+ * and the prizes that stand in for a Nobel in mathematics, computer science,
+ * the humanities, history, the social sciences and the cross-field science
+ * prizes. Each prize names its
  * award source: the Nobel Prize API (api.nobelprize.org, CC0, no key) for
  * the Nobels, Wikidata (P166 "award received" on the laureate, with P585
  * for the year) for the rest. Each run re-counts the awards per era (one
@@ -54,7 +55,7 @@ interface LandmarkPrize {
   /** The body that awards it, for the credit line. */
   awarder: string
   /** Where the award list comes from: the Nobel Prize API (with its category code) or Wikidata (with the prize item). */
-  source: { kind: 'nobel'; category: string; slug: string; item: string } | { kind: 'wikidata'; item: string }
+  source: { kind: 'nobel'; category: string; slug: string; item: string; background?: 'advanced-information' | 'ceremony-speech' } | { kind: 'wikidata'; item: string }
   /** The official list of laureates, to link. */
   url: string
   /** First year awarded. */
@@ -80,6 +81,10 @@ interface LandmarkPrize {
 interface NamedOption {
   name: string
   description: string
+  /** Scopes the lens: only these fields draw it (absent: every field)... */
+  fields?: string[]
+  /** ...and these fields never do. Literature skips the research lenses and has its own. */
+  skip?: string[]
 }
 
 interface LandmarkDataset {
@@ -100,6 +105,7 @@ const FIELDS: LandmarkField[] = [
   { id: 'history', name: 'History' },
   { id: 'social', name: 'Social sciences' },
   { id: 'cross', name: 'Science & technology, cross-field' },
+  { id: 'literature', name: 'Literature' },
 ]
 
 const ERAS: LandmarkEra[] = [
@@ -112,16 +118,28 @@ const ERAS: LandmarkEra[] = [
 
 type PrizeSeed = Omit<LandmarkPrize, 'awards' | 'named_works' | 'undated'>
 
-const nobel = (id: string, field: string, name: string, category: string, slug: string, item: string, since: number, note: string): PrizeSeed => ({
+const nobel = (
+  id: string,
+  field: string,
+  name: string,
+  category: string,
+  slug: string,
+  item: string,
+  since: number,
+  note: string,
+  literary = false,
+): PrizeSeed => ({
   id,
   field,
   name,
   awarder: 'Nobel Prize Outreach AB',
-  source: { kind: 'nobel', category, slug, item },
+  // Literature has no scientific background page; its presentation speech is the committee's account of the writing.
+  source: literary ? { kind: 'nobel', category, slug, item, background: 'ceremony-speech' } : { kind: 'nobel', category, slug, item },
   url: `https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-${slug}/`,
   since,
-  works: 'result',
-  work_level: true,
+  // The Literature motivation names a writer's body of work, not a book, so it does not count toward the work-level quota.
+  works: literary ? 'body' : 'result',
+  work_level: !literary,
   note,
 })
 
@@ -192,6 +210,18 @@ const PRIZES: PrizeSeed[] = [
   wd('kyoto-basic-sciences', 'cross', 'Kyoto Prize in Basic Sciences', 'Q18344281', 'Inamori Foundation', 'https://www.kyotoprize.org/en/laureates/', 1985, 'body', 'A one-line summary per laureate.'),
   wd('kyoto-advanced-technology', 'cross', 'Kyoto Prize in Advanced Technology', 'Q6452191', 'Inamori Foundation', 'https://www.kyotoprize.org/en/laureates/', 1985, 'body', 'A one-line summary per laureate.'),
   wd('kavli-nanoscience', 'cross', 'Kavli Prize in Nanoscience', 'Q18889779', 'Norwegian Academy of Science and Letters', 'https://www.kavliprize.org/prizes', 2008, 'result', 'A discovery.'),
+
+  nobel(
+    'nobel-literature',
+    'literature',
+    'Nobel Prize in Literature',
+    'lit',
+    'literature',
+    'Q37922',
+    1901,
+    'The motivation names a writer\'s body of work, rarely a single book; the presentation speech on nobelprize.org names the books the Academy read.',
+    true,
+  ),
 ]
 
 /** What the story does with the work (playbook lenses, landmark variant). */
@@ -200,36 +230,73 @@ const SEED_LENSES: NamedOption[] = [
     name: 'Why it won',
     description:
       'Put the official motivation beside the work itself: what exactly the committee rewarded, where in the paper or book that result is, and what the motivation leaves out. The motivation is quoted verbatim, never paraphrased.',
+    skip: ['literature'],
   },
   {
     name: 'One figure',
     description:
       'Find the central figure, table, theorem or passage of the work and rebuild it as one chart from its own numbers (or the numbers it argues from), with the page or section cited.',
+    skip: ['literature'],
   },
   {
     name: 'What it replaced',
     description:
       'What the field believed before this work, the evidence that turned it over, and who held the old view, from the record. State the old view fairly.',
+    skip: ['literature'],
   },
   {
     name: 'Read it today',
     description:
       'A reader\'s guide to the work itself: its structure, the one passage or equation to read first, what a reader needs to know going in, and where to read it free of charge.',
+    skip: ['literature'],
   },
   {
     name: 'Citation trail',
     description:
       'How the work travelled: citations by year, the lag from publication to prize, who built on it and in which fields, from OpenAlex and the work\'s own references.',
+    skip: ['literature'],
   },
   {
     name: 'Missing names',
     description:
       'Who else did the work: the co-authors, the rivals and the predecessors the citation does not name, stated from the record and labelled where it is contested.',
+    skip: ['literature'],
   },
   {
     name: "Explain like I'm 5",
     description:
-      'Explain the result to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the work as the source for the real thing.',
+      'Explain the result (for a book, the story) to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the work as the source for the real thing.',
+  },
+  // Literature: the work is a novel, a play or a book of poems, so the lenses read writing, not results.
+  {
+    name: "The Academy's words",
+    description:
+      'Put the motivation beside the writing itself: which books show what the Swedish Academy named, the passage where it is clearest, and what the motivation leaves out. The motivation is quoted verbatim, never paraphrased.',
+    fields: ['literature'],
+  },
+  {
+    name: 'The work in numbers',
+    description:
+      "The laureate's writing as data: books by year and form (novel, poetry, drama, essay), the editions and translations before and after the prize, and the book this story centres on placed in that body of work. Every count names its source and read date.",
+    fields: ['literature'],
+  },
+  {
+    name: 'Where to start',
+    description:
+      "A reader's guide to the book: what it is about without spoiling it, the first passage to read, what a reader needs to know going in (place, period, form), which translation to read, and where to read it free when it is in the public domain.",
+    fields: ['literature'],
+  },
+  {
+    name: 'The world of the book',
+    description:
+      'The places and the history the book is set in or written from, mapped or put on a timeline from the record, with what is invented kept apart from what happened.',
+    fields: ['literature'],
+  },
+  {
+    name: 'The other nominees',
+    description:
+      'Who else the Academy weighed that year and in the years around it, from the Nobel nomination archive (open after 50 years), and the debate over the choice, attributed and labelled where it is contested. For recent years, say the nominations are still sealed.',
+    fields: ['literature'],
   },
 ]
 
@@ -324,12 +391,27 @@ async function main(): Promise<void> {
     return { ...p, awards: c.awards, named_works: c.named, undated: c.undated }
   })
 
-  const lenses = existing?.lenses ?? SEED_LENSES
+  // The committed lens text wins (it may have been edited by hand), but the scopes (fields, skip) are the seed's;
+  // seed lenses missing from the file are added.
+  const kept = (existing?.lenses ?? []).map((k) => {
+    const seed = SEED_LENSES.find((l) => l.name === k.name)
+    if (!seed) return k
+    const { fields: _f, skip: _s, ...text } = k
+    return { ...text, ...(seed.fields ? { fields: seed.fields } : {}), ...(seed.skip ? { skip: seed.skip } : {}) }
+  })
+  const lenses = [...kept, ...SEED_LENSES.filter((l) => !kept.some((k) => k.name === l.name))]
+  for (const l of lenses) for (const f of [...(l.fields ?? []), ...(l.skip ?? [])]) if (!FIELDS.some((x) => x.id === f)) throw new Error(`lens ${l.name}: unknown field ${f}`)
+  for (const f of FIELDS) if (!lenses.some((l) => (!l.fields || l.fields.includes(f.id)) && !l.skip?.includes(f.id))) throw new Error(`field without lenses: ${f.name}`)
   const next: LandmarkDataset = { fields: FIELDS, eras: ERAS, prizes, lenses }
   const text = `${JSON.stringify(next, null, 2)}\n`
   const prizeList = (list: LandmarkPrize[] | PrizeSeed[]) => JSON.stringify(list.map((p) => [p.id, p.field, p.name, p.source, p.works, p.work_level]))
   // Counts drift as prizes are awarded and are not what --check is for; the prize list is.
-  const stale = !existing || JSON.stringify(existing.fields) !== JSON.stringify(FIELDS) || JSON.stringify(existing.eras) !== JSON.stringify(ERAS) || prizeList(existing.prizes) !== prizeList(PRIZES)
+  const stale =
+    !existing ||
+    JSON.stringify(existing.fields) !== JSON.stringify(FIELDS) ||
+    JSON.stringify(existing.eras) !== JSON.stringify(ERAS) ||
+    prizeList(existing.prizes) !== prizeList(PRIZES) ||
+    JSON.stringify(existing.lenses.map((l) => [l.name, l.fields, l.skip])) !== JSON.stringify(lenses.map((l) => [l.name, l.fields, l.skip]))
   const total = prizes.reduce((n, p) => n + Object.values(p.awards).reduce((a, b) => a + b, 0), 0)
   const empty = prizes.flatMap((p) => ERAS.filter((e) => !p.awards[e.id]).map((e) => `${p.id}/${e.id}`))
 

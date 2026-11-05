@@ -365,14 +365,14 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'What the Landmark Desk randomizer draws from, read live. With `prize` (a prize id from the taxonomy) and `era` ' +
         '(an era id): every award of that prize in that era (year, laureate, the official motivation for the Nobels, the ' +
         'share and co-laureates, the works the award record names, links to the laureate page, the prize summary and the ' +
-        'scientific background document), from the Nobel Prize API or Wikidata. With `laureate` too (a laureateId from ' +
+        'scientific background document, or the presentation speech for Literature), from the Nobel Prize API or Wikidata. With `laureate` too (a laureateId from ' +
         'those awards): that laureate\'s works as a spin would see them (named by the award, notable, top-cited before the ' +
-        'prize from OpenAlex when the server has a key, books from Open Library for the book prizes, free-to-read links), ' +
-        'with how each source fared. With nothing: the taxonomy (10 fields, 42 prizes with their award counts per era, 5 ' +
+        'prize from OpenAlex when the server has a key, books from Open Library for the book prizes and Literature, free-to-read ' +
+        'links), with how each source fared. With nothing: the taxonomy (11 fields, 43 prizes with their award counts per era, 5 ' +
         'eras, the lenses). Use it to look before locking a prize, an era or a laureate on spin_randomizer; it logs ' +
         'nothing. Needs the vizmaya publish token.',
       inputSchema: {
-        prize: z.string().optional().describe('A prize id from the taxonomy, e.g. "nobel-physics", "godel", "wolfson".'),
+        prize: z.string().optional().describe('A prize id from the taxonomy, e.g. "nobel-physics", "nobel-literature", "godel", "wolfson".'),
         era: z.string().optional().describe('An era id: founding (1901 to 1945), postwar (1946 to 1969), late-century (1970 to 1989), turn (1990 to 2009), recent (2010 onward).'),
         laureate: z.string().optional().describe('A laureateId from the awards ("nobel:988", "wd:Q193803"), for that laureate\'s works.'),
       },

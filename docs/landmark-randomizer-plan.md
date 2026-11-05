@@ -83,12 +83,12 @@ cover).
 
 | Key | Label | Pool | Lockable | Parents |
 |---|---|---|---|---|
-| `field` | Field | 10 fields (dataset) | yes | |
-| `prize` | Prize | 42 prizes (dataset), those in the field with awards | yes | `field` |
+| `field` | Field | 11 fields (dataset) | yes | |
+| `prize` | Prize | 43 prizes (dataset), those in the field with awards | yes | `field` |
 | `era` | Era | 5 bands (dataset), those the prize has awards in | yes | `prize`, `field` |
 | `laureate` | Laureate | live: the prize's awards in the era (Nobel API or Wikidata) | yes | `era`, `prize`, `field` |
 | `work` | Work | live: the laureate's works (Wikidata, OpenAlex, Open Library, Unpaywall) | yes | `laureate`, … |
-| `lens` | Lens | 7 lenses (dataset) | yes | |
+| `lens` | Lens | 12 lenses (dataset), those scoped to the field | yes | |
 
 Option toggle: `{ key: 'sequence', label: 'Follow the prize (the year before)' }`.
 With it on, the draw keeps the previous spin's prize and walks to its
@@ -117,7 +117,24 @@ list URL, and its awards per era at the last refresh (3,069 dated awards;
 92 of 210 prize-and-era pairs are empty, so the plan never asks for one).
 The Stockholm Prize in Criminology is left out: Wikidata dates one of its
 nine awards. Pritzker (buildings), Dan David (early-career since 2022) and
-the Peace and Literature Nobels (not research) are out by design.
+the Peace Nobel (not research) are out by design.
+
+**Literature** (added 2026-11-05) is the one field that is not research:
+the Nobel Prize in Literature (`nobel-literature`, Nobel Prize API category
+`lit`, 123 laureates). Its motivation names a writer's body of work, so it
+is `works: body` and not work-level (it does not count toward the quota).
+nobelprize.org publishes no scientific background for it (the
+`advanced-information` page is a 404), so the prize's source carries
+`background: ceremony-speech` and the award links the presentation speech,
+which exists for every year, as the Academy's account of the writing. The
+works come from Wikidata's notable works (P800, with novel, poem, poetry
+collection, play, short story, collection, essay and novella added to the
+publication types) and Open Library (the laureate's most-reprinted books
+before the prize; a book that is also a notable work fills that entry in).
+OpenAlex's top-cited list is never read for a writer: a writer's most-cited
+scholarly items are not what the prize rewarded, and name searches find
+namesakes. Book prizes for fiction (Booker, Pulitzer Fiction, Goncourt) can
+join the field later as Wikidata prizes.
 
 Eras: 1901 to 1945, 1946 to 1969, 1970 to 1989, 1990 to 2009, 2010 onward.
 
@@ -131,7 +148,26 @@ Lenses (what the story does with the work):
 | Read it today | A reader's guide to the work itself, and where to read it free of charge. |
 | Citation trail | Citations by year, the lag from publication to prize, who built on it (OpenAlex). |
 | Missing names | The co-authors, rivals and predecessors the citation does not name, from the record. |
-| Explain like I'm 5 | The result for a five-year-old: one everyday stand-in, then where it stops being true. |
+| Explain like I'm 5 | The result (for a book, the story) for a five-year-old: one everyday stand-in, then where it stops being true. Every field. |
+
+Lenses are scoped (`fields`: only these fields; `skip`: never these).
+The six above, apart from Explain like I'm 5, skip Literature, which has
+its own:
+
+| Lens (Literature) | The story |
+|---|---|
+| The Academy's words | The motivation beside the writing: which books show it, the passage where it is clearest, what it leaves out. |
+| The work in numbers | The writer's books by year and form, editions and translations before and after the prize. |
+| Where to start | A reader's guide to the book: what to know going in, the first passage, which translation, a free copy if public domain. |
+| The world of the book | The places and history the book is set in, mapped or on a timeline, invention kept apart from record. |
+| The other nominees | Who else the Academy weighed, from the nomination archive (open after 50 years), and the debate over the choice. |
+
+A Literature spin briefs a book page instead of a paper page ("landmark
+book explainer with charts"): the book cited by edition and page with the
+translator named, a quoted passage of a few lines at most (the book is in
+copyright unless its scan is public), the writer's books by year as the
+first chart, and how the book was read in place of where the result
+broke.
 
 ### The draw (`drawLandmark` in `draw.ts`)
 

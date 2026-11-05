@@ -36,7 +36,7 @@ import {
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
-import { curiousGradeNotes, frontierAbsUrl, frontierHeadline, hundredLife, researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { curiousGradeNotes, frontierAbsUrl, frontierHeadline, hundredLife, landmarkBackgroundLabel, researchFileName, researchStub } from '@vismay/randomizer/stub'
 import { CURIOUS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
@@ -1271,7 +1271,7 @@ function LandmarkPool({ spin }: { spin: SpinRecord | null }) {
   const sources = (['wikidata', 'openalex', 'openlibrary', 'unpaywall'] as const).map((k) => [k, s.pool.sources[k]] as const)
   const links = [
     ['prize summary', a.links.summary],
-    ['scientific background', a.links.background],
+    [landmarkBackgroundLabel(s.prize, true).toLowerCase(), a.links.background],
     ['lecture', a.links.lecture],
     ['Wikipedia', a.links.wikipedia],
   ].filter((l): l is [string, string] => !!l[1])
