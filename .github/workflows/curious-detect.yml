@@ -13,7 +13,9 @@ name: Curious Desk detect, grade, verify
 # Each stage keeps to a 25-minute soft deadline; a stage that fails does not
 # stop the next (grading what exists is always useful).
 #
-# No `schedule:` here: Vercel Cron fires /api/curious/cron/detect at 03:50 UTC
+# Nightly runs are paused (2026-11-05): the Vercel cron entries were removed
+# from apps/vizmaya-fyi/vercel.json, so this runs only when dispatched by hand.
+# When live: no `schedule:` here; Vercel Cron fires /api/curious/cron/detect at 03:50 UTC
 # (apps/vizmaya-fyi/vercel.json), after the collectors.
 #
 # Required repo secrets (in the `Production` environment):

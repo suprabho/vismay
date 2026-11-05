@@ -172,7 +172,10 @@ picture-story format like the other desks.
     lineage rule, the ELI5 check), and `packages/curious-pipeline/src/pipeline.test.ts`
     for the pipeline itself.
 
-## 8. Nightly runs, the composer and the evaluation (done)
+## 8. Nightly runs, the composer and the evaluation (done; nightly runs paused)
+
+> The nightly runs were wound down on 2026-11-05: the cron entries are out of `apps/vizmaya-fyi/vercel.json` (the desk did not turn out as
+> expected). The workflows and the bridge route remain for manual dispatches.
 
 - `.github/workflows/curious-collect.yml` (one source per run; GDELT and the
   Library of Congress nightly, Europeana by hand, Gallica disabled until it

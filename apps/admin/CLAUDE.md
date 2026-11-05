@@ -688,9 +688,12 @@ Desk draws from and the composer's "Curious claims" library reads.
   library (`curiousClaimsProvider` in [lib/libraryProviders.ts](lib/libraryProviders.ts)):
   the claim, its grade and notes, the evidence quote with its document and
   archive link, and the lineage counts, as a text source.
-- **Nightly:** Vercel cron on vizmaya-fyi dispatches `curious-collect.yml`
+- **Nightly (paused):** the Vercel cron that dispatched `curious-collect.yml`
   (GDELT 02:20, Library of Congress 02:40 UTC) and `curious-detect.yml`
-  (detect → grade → verify, 03:50 UTC) through `/api/curious/cron/[job]`.
+  (detect → grade → verify, 03:50 UTC) through `/api/curious/cron/[job]` was
+  wound down on 2026-11-05: the cron entries are out of `apps/vizmaya-fyi/vercel.json`. The
+  workflows and the bridge route remain, so a run can still be dispatched by
+  hand; re-add the three entries to resume.
 - **Evaluation:** `pnpm curious:evaluate -- --sample 100` queues a stratified
   batch for review; `-- --report latest` prints approval rate per grade, grade
   agreement and claims per reviewer-hour.
