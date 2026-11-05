@@ -44,6 +44,7 @@ import {
   type HundredPerson,
   type HundredSubject,
   type LandmarkPrize,
+  type LandmarkFocus,
   type LandmarkSubject,
   type LandmarkWorkLevel,
   type OcwSubject,
@@ -448,7 +449,7 @@ export function landmarkCreditLine(s: Pick<LandmarkSubject, 'prize' | 'award' | 
   const workData = s.work ? (s.work.basis === 'book' ? 'Open Library' : 'OpenAlex (CC0) and Wikidata (CC0)') : null
   const free = s.work?.oaUrl ? '; free-to-read link via Unpaywall and OpenAlex' : ''
   const links = [s.award.url, s.work?.url].filter(Boolean).join(' and ')
-  return `Credit: "Prize data: ${prizeData}.${workData ? ` Work metadata: ${workData}${free}.` : ''} The motivation is quoted verbatim." with links to ${links}.`
+  return `Credit: "Prize data: ${prizeData}.${workData ? ` Work metadata: ${workData}${free}.` : ''} The ${s.prize.source.kind === 'nobel' ? 'motivation' : 'citation'} is quoted verbatim." with links to ${links}.`
 }
 
 /** What to chart per Landmark lens, when the data exists. */
@@ -462,8 +463,61 @@ export const LANDMARK_LENS_METRICS: Record<string, string[]> = {
   "Explain like I'm 5": ['the quantity in everyday units (steps, spoons, minutes), as a picture chart', 'the everyday stand-in against the real thing, side by side', 'the one number that changes when the result is switched on and off'],
 }
 
-export function landmarkLensMetrics(lens: string): string[] {
-  return LANDMARK_LENS_METRICS[lens] ?? ['the quantity the work is about, over time', 'citations by year, from OpenAlex', 'the work\'s own numbers']
+/**
+ * The work or the contribution: a work spin only when the award's own record
+ * names a publication; anything else (a body-of-work or result prize, a
+ * representative title, no title at all) is a contribution spin.
+ */
+export function landmarkFocus(s: Pick<LandmarkSubject, 'work'> & { focus?: LandmarkFocus }): LandmarkFocus {
+  if (s.focus) return s.focus
+  const w = s.work
+  return w && !w.representative && w.basis === 'citation' && w.type !== 'subject' ? 'work' : 'contribution'
+}
+
+/** "the work" or "the contribution": what a lens is applied to. */
+export function landmarkFocusNoun(focus: LandmarkFocus): string {
+  return focus === 'work' ? 'the work' : 'the contribution the citation rewards'
+}
+
+/**
+ * Each lens, worded for a contribution spin: the citation's subject is the
+ * thing explained, and the lead readings are its evidence. The dataset's
+ * descriptions (landmark.json) are the work wordings.
+ */
+export const LANDMARK_CONTRIBUTION_LENS: Record<string, string> = {
+  'Why it won': 'Put the official citation beside the record of the contribution it names: what exactly the awarder said it rewarded, which papers or books show that (the ones the awarder\'s own documents cite first, then the lead readings), and what the citation leaves out. The citation is quoted verbatim, never paraphrased. No single title is called the winner unless the awarder names it.',
+  'One figure': 'Find the one figure, table, number or passage that best shows the contribution the citation names, in one of the lead readings or the awarder\'s own account, and rebuild it as one chart from its own numbers, cited to the page or section.',
+  'What it replaced': 'What the field believed before this contribution, the work that turned it over (cited to the papers or books that did it), and who held the old view, from the record. State the old view fairly.',
+  'Read it today': 'A reader\'s route into the contribution: which of the laureate\'s works to read first and why, the one passage to start with, what a reader needs to know going in, and where each can be read free of charge.',
+  'Citation trail': 'How the contribution travelled: citations by year of its key works (OpenAlex), the lag from the first of them to the prize, who built on it and in which fields.',
+  'Missing names': 'Who else did this work: the collaborators, co-editors, rivals and predecessors the citation does not name, stated from the record and labelled where it is contested.',
+  "Explain like I'm 5": 'Explain the idea the citation rewards to a five-year-old: one everyday object or scene stands in for it, no symbol or term a child would not know, and then say where the picture stops being true, with the lead readings as the source for the real thing.',
+}
+
+/** What to chart per Landmark lens on a contribution spin, when the data exists. */
+export const LANDMARK_CONTRIBUTION_LENS_METRICS: Record<string, string[]> = {
+  'Why it won': ['the quantity the citation names, as the laureate\'s work measured it', 'the laureate\'s key works on a timeline, against the prize year', 'years from the first key work to the prize, for this prize\'s laureates of the era'],
+  'One figure': ['the central figure or table of the lead reading, rebuilt from its own numbers', 'the key quantity across the cases the work reports', 'the result against the expectation it overturned'],
+  'What it replaced': ['the measured value before and after the contribution, by year', 'how often the old and the new idea appear in the literature by decade', 'the evidence each side had, as a count of studies'],
+  'Read it today': ['the laureate\'s key works on a timeline, sized by citations', 'the one quantity the starting passage turns on, in everyday units', 'citations by year of the lead reading, from OpenAlex'],
+  'Citation trail': ['citations by year of the key works, from OpenAlex', 'the citing fields, as a share', 'the lag from the first key work to the prize for the laureates of this prize'],
+  'Missing names': ['the laureate, collaborators and predecessors on a timeline', 'their citations over the same years', 'the share of the key works each name co-authored'],
+  "Explain like I'm 5": ['the quantity in everyday units (steps, spoons, minutes), as a picture chart', 'the everyday stand-in against the real thing, side by side', 'the one number that changes when the idea is switched on and off'],
+}
+
+export function landmarkLensMetrics(lens: string, focus: LandmarkFocus = 'work'): string[] {
+  const table = focus === 'work' ? LANDMARK_LENS_METRICS : LANDMARK_CONTRIBUTION_LENS_METRICS
+  return table[lens] ?? (focus === 'work' ? ['the quantity the work is about, over time', 'citations by year, from OpenAlex', 'the work\'s own numbers'] : ['the quantity the contribution is about, over time', 'citations by year of the key works, from OpenAlex', 'the key works on a timeline'])
+}
+
+/** The lens as the brief states it: the dataset's wording on a work spin, the contribution wording otherwise. */
+export function landmarkLensDescription(s: Pick<LandmarkSubject, 'lens' | 'work'> & { focus?: LandmarkFocus }): string {
+  return landmarkFocus(s) === 'work' ? s.lens.description : (LANDMARK_CONTRIBUTION_LENS[s.lens.name] ?? s.lens.description)
+}
+
+/** On a contribution spin: the drawn work first, then up to three more of the loader's candidates. */
+export function landmarkReadings(s: Pick<LandmarkSubject, 'work' | 'related'>): LandmarkSubject['related'] {
+  return [...(s.work ? [s.work] : []), ...s.related.filter((r) => r.type !== 'subject')].slice(0, 4)
 }
 
 /** "Named by the award record", "Representative work: the laureate's most-cited paper before the prize (OpenAlex)". */
@@ -480,6 +534,7 @@ export function landmarkWorkBasisLabel(s: Pick<LandmarkSubject, 'work' | 'award'
 function landmarkTemplate(s: LandmarkSubject): string[] {
   const a = s.award
   const w = s.work
+  const focus = landmarkFocus(s)
   const links = [
     ['Laureate page', a.url],
     ['Prize summary', a.links.summary],
@@ -487,55 +542,86 @@ function landmarkTemplate(s: LandmarkSubject): string[] {
     ['Prize lecture', a.links.lecture],
     ['Wikipedia', a.links.wikipedia],
   ].filter((l): l is [string, string] => !!l[1])
-  return [
+  const workLine = (r: NonNullable<typeof w>) =>
+    `${r.title}${r.year ? ` (${r.year}${r.venue ? `, ${r.venue}` : ''})` : r.venue ? ` (${r.venue})` : ''}: ${r.url}${r.doi ? ` · DOI ${r.doi}` : ''}${r.oaUrl ? ` · free to read: ${r.oaUrl} (${r.oaStatus ?? 'open'})` : ' · no free copy on record'}.`
+  const award = [
     '## The award',
     '',
     `${landmarkAwardLabel(s.prize, a.year)}, ${s.prize.awarder}. Laureate: ${a.name}${a.share ? ` (share ${a.share})` : ''}${a.coLaureates.length ? `, with ${a.coLaureates.join(', ')}` : ''}.`,
-    a.motivation ? `Motivation, verbatim: "${a.motivation}"` : `No motivation on record here: quote the citation from the official list (${s.prize.url}) verbatim.`,
+    a.motivation ? `Motivation, verbatim: "${a.motivation}"` : `No motivation on record here: quote the citation from the official list (${s.prize.url}) verbatim, or the awarder's announcement where the list carries none.`,
     links.length ? `Links: ${links.map(([k, v]) => `${k}: ${v}`).join('; ')}.` : '',
     '',
-    '## The work',
-    '',
-    w
-      ? `${w.title}${w.year ? ` (${w.year}${w.venue ? `, ${w.venue}` : ''})` : w.venue ? ` (${w.venue})` : ''}: ${w.url}${w.doi ? ` · DOI ${w.doi}` : ''}${w.oaUrl ? ` · free to read: ${w.oaUrl} (${w.oaStatus ?? 'open'})` : ' · no free copy on record'}.`
-      : 'None resolved. Candidates, from the citation and the background document:',
-    landmarkWorkBasisLabel(s),
-    s.related.length ? `Other works the loader found: ${s.related.map((r) => `${r.title}${r.year ? ` (${r.year})` : ''}`).join('; ')}.` : '',
-    '',
-    '## The one result',
-    '',
-    'Two sentences: what the work shows, for a reader outside the field.',
-    '',
-    '## What the work says',
-    '',
-    'Its own structure, section by section (or chapter by chapter), each cited to a page, figure, theorem or section.',
-    '',
-    '| Part | Says | Page, figure or section |',
-    '|------|------|-------------------------|',
-    '| | | |',
-    '',
-    '## What the award rewarded',
-    '',
-    'The motivation against the work: which result, where in the work it is, what the motivation leaves out, and (for a representative work) whether the citation or the background document names another paper or book instead.',
-    '',
+  ]
+  const middle =
+    focus === 'work'
+      ? [
+          '## The work',
+          '',
+          w ? workLine(w) : 'None resolved. Candidates, from the citation and the background document:',
+          landmarkWorkBasisLabel(s),
+          s.related.length ? `Other works the loader found: ${s.related.map((r) => `${r.title}${r.year ? ` (${r.year})` : ''}`).join('; ')}.` : '',
+          '',
+          '## The one result',
+          '',
+          'Two sentences: what the work shows, for a reader outside the field.',
+          '',
+          '## What the work says',
+          '',
+          'Its own structure, section by section (or chapter by chapter), each cited to a page, figure, theorem or section.',
+          '',
+          '| Part | Says | Page, figure or section |',
+          '|------|------|-------------------------|',
+          '| | | |',
+          '',
+          '## What the award rewarded',
+          '',
+          'The motivation against the work: which result, where in the work it is, and what the motivation leaves out.',
+          '',
+        ]
+      : [
+          '## The contribution',
+          '',
+          `What the citation says ${a.name} is honoured for, in one or two plain sentences, built from the citation's own words and the awarder's account. ${s.prize.works === 'body' ? 'This prize rewards a body of work: the story is that body of work, not one title.' : 'The citation names a result, not a publication: the story is the result, and the papers that established it are its evidence.'}`,
+          '',
+          '## Lead readings',
+          '',
+          'Where to read the contribution. None of these is "the winning work" unless the awarder names it; replace any the awarder\'s own documents do not support with the works they cite.',
+          ...(landmarkReadings(s).length ? landmarkReadings(s).map((r) => `- ${workLine(r)} (${r.basis === 'citation' ? 'named by the award record' : r.basis === 'notable' ? 'a notable work on Wikidata' : r.basis === 'book' ? 'a book from around the prize year' : 'top-cited before the prize'})`) : ['- None resolved: take them from the citation, the announcement and the laureate page.']),
+          '',
+          '| Reading | What it shows of the contribution | Page, figure or section |',
+          '|---------|-----------------------------------|-------------------------|',
+          '| | | |',
+          '',
+          '## The one result',
+          '',
+          'Two sentences: the idea or finding the citation rewards, for a reader outside the field.',
+          '',
+          '## What the award rewarded',
+          '',
+          'The citation against the record: what it names, which readings show it, and what it leaves out.',
+          '',
+        ]
+  return [
+    ...award,
+    ...middle,
     `## Lens read: ${s.lens.name}`,
     '',
-    `${s.lens.description} Applied to the work, not to ${a.name}'s career or to ${s.field.name.toLowerCase()} in general.`,
+    `${landmarkLensDescription(s)} Applied to ${landmarkFocusNoun(focus)}, not to ${a.name}'s life in general or to ${s.field.name.toLowerCase()} as a whole.`,
     '',
     '## Data pull',
     '',
-    'At least 8 data points per series where possible: the work\'s own numbers (cited to the page), the citation record below, then a public dataset for anything about the world.',
+    `At least 8 data points per series where possible: ${focus === 'work' ? 'the work\'s own numbers (cited to the page)' : 'the readings\' own numbers (cited to the page)'}, the citation record below, then a public dataset for anything about the world. A series that cannot reach 8 points is dropped, not padded.`,
     '',
     '| Metric | Period or case | Value | Unit | Source |',
     '|--------|----------------|-------|------|--------|',
-    ...landmarkLensMetrics(s.lens.name).map((m) => `| ${m} | | | | |`),
+    ...landmarkLensMetrics(s.lens.name, focus).map((m) => `| ${m} | | | | |`),
     w?.countsByYear.length ? '' : '',
-    w?.countsByYear.length ? `Citations by year (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}.` : '',
+    w?.countsByYear.length ? `Citations by year of ${w.title} (OpenAlex, read ${s.pool.asOf.slice(0, 10)}): ${w.countsByYear.map((c) => `${c.year}: ${c.citations}`).join(', ')}.` : '',
     w?.citedBy !== null && w?.citedBy !== undefined ? `Cited ${w.citedBy.toLocaleString('en-US')} times in all${w.fwci !== null ? `; FWCI ${w.fwci}` : ''}${w.topOnePercent ? '; top 1% of its field and year' : ''} (OpenAlex).` : '',
     '',
     '## Where it breaks, and what came after',
     '',
-    'The assumption or claim that did not hold up, the revisions and replications since, any retraction nearby, and the result\'s limits.',
+    `The assumption or claim${focus === 'work' ? '' : ' in the contribution'} that did not hold up, the revisions and replications since, any retraction nearby, and the result's limits.`,
     '',
     '## Credit',
     '',

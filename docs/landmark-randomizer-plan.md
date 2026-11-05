@@ -309,3 +309,12 @@ for a Nobel, a Wikidata, a book and a result-level prize.
 - **Licensing**: metadata from Nobel Prize Outreach, Wikidata and OpenAlex is
   CC0; papers, books, the background documents and the lectures are not.
   The brief links; it never rehosts.
+
+## Spin focus: the work or the contribution
+
+A spin used to be "one work, one lens" for every prize. That made spins like Berggruen (body of work) + "Why it won" + a representative book incompatible: the brief asked why a book won when no book won. Every spin now carries a focus (`LandmarkSubject.focus`, derived by `landmarkFocus()` for older spins):
+
+- **work**: the award's own record names the publication (Wikidata "for work"). The page explains that work, as before.
+- **contribution**: anything else (a body-of-work or result prize, a representative title, no title). The page explains what the citation rewards; the drawn title and up to three more become *lead readings*, evidence for the contribution, never "the winning work".
+
+Every lens has a contribution wording and chart metrics (`LANDMARK_CONTRIBUTION_LENS`, `LANDMARK_CONTRIBUTION_LENS_METRICS` in `stub.ts`), so any prize, era, laureate and lens combination produces a coherent brief. The format becomes a "landmark contribution explainer", and the research template swaps "The work" / "What the work says" for "The contribution" / "Lead readings".
