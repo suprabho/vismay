@@ -881,6 +881,7 @@ const LANDMARK_SPIN_RULES = [
   'The official motivation goes on the page verbatim, in quotation marks, attributed to the awarder; never paraphrase it inside quotation marks or alter it.',
   'A work the assignment labels representative is called a representative work on the page, never "the prize-winning paper", unless the award\'s own account confirms it.',
   'Prize and work metadata are CC0 (Nobel Prize Outreach, Wikidata, OpenAlex): credit them as the assignment says, link to nobelprize.org and the publisher, and never rehost a paper, a book or a Nobel document.',
+  'A novel, poem or play still in copyright is quoted a few lines at most, attributed to the edition, page and translator; a reading of it (a theme, what a passage means) is the page\'s argument and is said as one, with the critics it draws on named.',
 ]
 
 /** A 100 Desk spin's brief carries a ranked person and their live profile: how the page uses them. */
