@@ -221,7 +221,8 @@ fixtures, and successfully scraped full match-centre stats for one.
    `west-brom`, `nottm-forest`, `paris-sg`). Live theanalyst spellings per
    league are listed in the entityResolver comments' verification note; the
    backfill then reached 100% of finished fixtures in every tracked
-   competition (PL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, Championship).
+   competition (PL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, Championship —
+   the Championship has since been dropped from tracking, see Coverage).
 
 ### Coverage
 
@@ -230,7 +231,9 @@ theanalyst's football nav (2026-09-09): Premier League, Championship
 Ligue 1, UCL, UEL, UECL, Scottish Premiership, MLS, Saudi Pro League, WSL.
 Of the leagues football-data feeds us, **Eredivisie, Primeira Liga and the
 Brasileirão are not covered** (all 404) — those fixtures will never get
-Opta facts from this source.
+Opta facts from this source. The **Championship** is covered by theanalyst
+but no longer tracked (removed 2026-11 after its fixtures-page discovery
+started timing out and failing the cron).
 
 ## Verification checklist — before trusting the crons
 
