@@ -68,7 +68,16 @@ export function theanalystMatchUrl(competitionId: string, seasonId: string, matc
   return `https://theanalyst.com/opta-football-match-centre?${params}`;
 }
 
-const CALENDAR_HEADER_SELECTOR = '.DatePickerHeader-module_datepicker-header-date-month-year__DQNgv';
+// The header is a CSS-module class, `DatePickerHeader-module_<name>__<hash>`.
+// The hash is a build artefact that changes whenever theanalyst redeploys —
+// pinning it (`…__DQNgv`) broke discovery for EVERY league at once on
+// 2026-11-08, which first looked like a Championship-only fault (#654). Match
+// on the stable `<name>` part only, with the module name as a fallback.
+// Tried in order (most specific first) — see calendarHeader().
+const CALENDAR_HEADER_SELECTORS = [
+  '[class*="datepicker-header-date-month-year"]',
+  '[class*="DatePickerHeader"] button',
+];
 const CALENDAR_GRID_SELECTOR = 'table[role="grid"]';
 const PREV_MONTH_SELECTOR = '[aria-label="Previous month"]';
 const NEXT_MONTH_SELECTOR = '[aria-label="Next month"]';
@@ -78,6 +87,21 @@ const NEXT_MONTH_SELECTOR = '[aria-label="Next month"]';
 const MAX_MONTHS_BACK = 4;
 const MAX_MATCHDAYS_PER_RUN = 40;
 
+/** The first header candidate present on the page, in CALENDAR_HEADER_SELECTORS
+ *  order (a comma-joined selector would pick by DOM order instead). */
+async function calendarHeader(page: import('playwright').Page): Promise<import('playwright').Locator> {
+  for (const sel of CALENDAR_HEADER_SELECTORS) {
+    const loc = page.locator(sel).first();
+    if ((await loc.count()) > 0) return loc;
+  }
+  return page.locator(CALENDAR_HEADER_SELECTORS[0]!).first();
+}
+
+/** Waits up to `timeoutMs` for any header candidate to be visible. */
+async function waitForCalendarHeader(page: import('playwright').Page, timeoutMs: number): Promise<void> {
+  await page.locator(CALENDAR_HEADER_SELECTORS.join(', ')).first().waitFor({ state: 'visible', timeout: timeoutMs });
+}
+
 function fixturesUrl(theanalystSlug: string): string {
   return `https://theanalyst.com/competition/${theanalystSlug}/fixtures`;
 }
@@ -86,7 +110,7 @@ function fixturesUrl(theanalystSlug: string): string {
 async function ensureCalendarOpen(page: import('playwright').Page): Promise<void> {
   const open = await page.locator(CALENDAR_GRID_SELECTOR).isVisible().catch(() => false);
   if (open) return;
-  await page.click(CALENDAR_HEADER_SELECTOR);
+  await (await calendarHeader(page)).click();
   await page.waitForTimeout(500);
 }
 
@@ -235,6 +259,37 @@ async function readMatchesForVisibleDay(
   }, kickoffDate);
 }
 
+/**
+ * One line on what the fixtures page actually rendered when the date picker
+ * didn't show, so the Action log says WHICH kind of break this is instead of
+ * a bare selector timeout: a bot challenge (Cloudflare's "Just a moment..."),
+ * a redirect/404, or a markup change (the date/calendar class names it does
+ * carry now — copy its stable part into CALENDAR_HEADER_SELECTORS).
+ */
+async function describePage(page: import('playwright').Page): Promise<string> {
+  try {
+    const info = await page.evaluate(() => {
+      const classes = new Set<string>();
+      for (const el of Array.from(document.querySelectorAll('[class]'))) {
+        for (const c of Array.from(el.classList)) if (/date|picker|calendar/i.test(c)) classes.add(c);
+        if (classes.size >= 12) break;
+      }
+      return {
+        title: document.title,
+        url: location.href,
+        classes: [...classes],
+        matchLinks: document.querySelectorAll('a[href*="matchId="]').length,
+      };
+    });
+    const challenge = /just a moment|attention required|verify you are human/i.test(info.title)
+      ? ' — looks like a bot challenge, not a markup change'
+      : '';
+    return `title "${info.title}"${challenge}, url ${info.url}, ${info.matchLinks} match link(s), date/picker classes: ${info.classes.join(' ') || 'none'}`;
+  } catch (e: any) {
+    return `page not inspectable (${e?.message?.split('\n')[0] ?? e})`;
+  }
+}
+
 export async function discoverMatchesForCompetition(
   theanalystSlug: string,
   lookbackDays: number
@@ -242,7 +297,11 @@ export async function discoverMatchesForCompetition(
   const { page, close } = await newRenderedPage();
   try {
     await page.goto(fixturesUrl(theanalystSlug), { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await page.waitForSelector(CALENDAR_HEADER_SELECTOR, { timeout: 15_000 });
+    try {
+      await waitForCalendarHeader(page, 15_000);
+    } catch {
+      throw new Error(`date-picker header never appeared on ${fixturesUrl(theanalystSlug)} — ${await describePage(page)}`);
+    }
 
     const todayDate = new Date().toISOString().slice(0, 10);
     const cutoffDate = new Date(Date.now() - lookbackDays * 86_400_000).toISOString().slice(0, 10);

@@ -864,6 +864,13 @@ async function run() {
       await discoverForCompetition(comp, dry, fixtureIds);
     } catch (e: any) {
       console.error(`[match-facts] ${comp.competitionSlug}: discovery failed — ${e?.message ?? e}`);
+      if (fixtureIds.length > 0) {
+        // A named fixture that discovery hasn't linked yet can't be scraped
+        // this run. Its theanalyst link bypasses discovery entirely.
+        console.error(
+          `[match-facts] ${comp.competitionSlug}: unlinked fixtures in this run can still be scraped from their theanalyst.com match link — paste it in the admin Match facts tab, or dispatch with match_url=<link> fixture_id=<uuid>`
+        );
+      }
       failed.push(`${comp.competitionSlug} (discovery)`);
     }
     try {
