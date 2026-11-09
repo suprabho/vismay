@@ -48,6 +48,7 @@
     "jev:gate:test": "tsx src/jevEntityGate.test.ts",
     "national-teams:test": "tsx --test src/nationalTeams.test.ts",
     "espn-leagues:test": "tsx --test src/espnLeagues.test.ts",
+    "theanalyst-fetch:test": "tsx --test src/theanalystFetch.test.ts",
     "entity-tags:test": "tsx --test src/entityResolver.test.ts src/competitionTeams.test.ts src/nationalTeams.test.ts src/entityKeys.test.ts"
   },
   "dependencies": {

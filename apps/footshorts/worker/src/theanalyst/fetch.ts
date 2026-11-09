@@ -35,11 +35,103 @@ const CRAWL_DELAY_MS = 1000;
 
 let lastFetchAt = 0;
 
+// ── Bot challenges: fail fast, per host ─────────────────────────────────────
+//
+// theanalyst.com has served a Cloudflare managed challenge ("Just a moment...",
+// HTTP 403, `cf-mitigated: challenge`) to this scraper since 2026-11-08. That is
+// the site turning automated access away: it is detected and reported, never
+// worked around. The first challenge on a host marks the host blocked for the
+// rest of the process, and every later request to it throws the same
+// BotChallengeError at once, without a request: no 15s selector timeout per
+// league, no match-centre render per fixture. Hosts are tracked separately:
+// the match-centre widget (dataviz.theanalyst.com) is served from S3, not
+// Cloudflare, and was still answering when theanalyst.com was challenged.
+
+const CHALLENGE_TITLE = /just a moment|attention required|verify you are human/i;
+/** How long a challenge page gets to clear by itself (a passed
+ *  non-interactive check redirects to the real page). Never interacted with. */
+const CHALLENGE_GRACE_MS = 3000;
+
+export class BotChallengeError extends Error {
+  constructor(
+    readonly host: string,
+    readonly url: string,
+    readonly evidence: string
+  ) {
+    super(`${host} is serving a bot challenge (${evidence}) — ${url}`);
+    this.name = 'BotChallengeError';
+  }
+}
+
+const blockedHosts = new Map<string, BotChallengeError>();
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+/** The challenge that blocked this URL's host earlier in the run, if any. */
+export function blockedBy(url: string): BotChallengeError | null {
+  return blockedHosts.get(hostOf(url)) ?? null;
+}
+
+/** Every host blocked so far in this run. */
+export function blockedHostErrors(): BotChallengeError[] {
+  return [...blockedHosts.values()];
+}
+
+function block(url: string, evidence: string): BotChallengeError {
+  const host = hostOf(url);
+  const err = blockedHosts.get(host) ?? new BotChallengeError(host, url, evidence);
+  blockedHosts.set(host, err);
+  return err;
+}
+
+function throwIfBlocked(url: string): void {
+  const err = blockedBy(url);
+  if (err) throw err;
+}
+
+export function isChallengeTitle(title: string): boolean {
+  return CHALLENGE_TITLE.test(title);
+}
+
+async function safeTitle(page: Page): Promise<string> {
+  return page.title().catch(() => '');
+}
+
+/**
+ * Throws (and marks the host blocked) when the page is a bot challenge. A
+ * challenge gets CHALLENGE_GRACE_MS to clear on its own first.
+ */
+export async function assertNotChallenged(page: Page, url: string, evidencePrefix = ''): Promise<void> {
+  if (!isChallengeTitle(await safeTitle(page))) return;
+  await page
+    .waitForFunction((src) => !new RegExp(src, 'i').test(document.title), CHALLENGE_TITLE.source, { timeout: CHALLENGE_GRACE_MS })
+    .catch(() => {});
+  const title = await safeTitle(page);
+  if (isChallengeTitle(title)) throw block(url, `${evidencePrefix}page title "${title}"`);
+}
+
+/** Navigate `page` to `url` for theanalyst scraping: throws BotChallengeError
+ *  without a request when the host is already blocked, and after the load when
+ *  this page is a challenge. */
+export async function gotoChecked(page: Page, url: string, timeoutMs = 30_000): Promise<void> {
+  throwIfBlocked(url);
+  const res = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+  const cf = res && res.headers()['cf-mitigated'] === 'challenge' ? `HTTP ${res.status()}, cf-mitigated: challenge, ` : '';
+  await assertNotChallenged(page, url, cf);
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function fetchHtml(url: string): Promise<string> {
+  throwIfBlocked(url);
   const wait = lastFetchAt + CRAWL_DELAY_MS - Date.now();
   if (wait > 0) await sleep(wait);
   lastFetchAt = Date.now();
@@ -48,6 +140,7 @@ export async function fetchHtml(url: string): Promise<string> {
     headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
   });
   if (!res.ok) {
+    if (res.headers.get('cf-mitigated') === 'challenge') throw block(url, `HTTP ${res.status}, cf-mitigated: challenge`);
     throw new Error(`theanalyst fetch ${res.status}: ${res.statusText} (${url})`);
   }
 
@@ -107,6 +200,7 @@ export async function fetchRenderedHtml(
     settleTimeoutMs?: number;
   }
 ): Promise<string> {
+  throwIfBlocked(url);
   const wait = lastFetchAt + CRAWL_DELAY_MS - Date.now();
   if (wait > 0) await sleep(wait);
   lastFetchAt = Date.now();
@@ -115,7 +209,7 @@ export async function fetchRenderedHtml(
   const context = await browser.newContext({ userAgent: USER_AGENT });
   try {
     const page = await context.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await gotoChecked(page, url);
     if (opts?.waitForSelector) {
       await page.waitForSelector(opts.waitForSelector, { timeout: opts.timeoutMs ?? 15_000 }).catch(() => {});
     } else {
