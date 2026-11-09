@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ESPN_CUP_TABLE, normalizeCupStatus, type CupFixture, type CupStatus, type EspnCup } from './espnCups';
 
+/** Any ESPN soccer competition the summary endpoint can be asked about: a cup
+ * (ESPN_CUPS) or a league (ESPN_LEAGUES in ./espnLeagues). `code` is ESPN's
+ * league slug (`esp.1`, `eng.fa`); `all` works for an unknown competition. */
+export interface EspnCompetitionRef {
+  slug: string;
+  code: string;
+}
+
 // ESPN match detail (the data behind espn.com/soccer/match, matchstats,
 // lineups and commentary pages) for one imported cup fixture. Stored in its
 // own private admin table next to the cup fixtures. Never written to
@@ -520,7 +528,7 @@ export function shootoutFromCommentary(commentary: EspnCommentaryEntry[], home: 
 /** Normalize one ESPN soccer summary payload. Throws when the payload is not
  * the requested event or has no two sides; degrades (nulls, empty lists) when
  * optional sections are missing, which is common for lower-round cup ties. */
-export function normalizeEspnMatch(summary: unknown, ctx: { eventId: string; cup: EspnCup; fetchedAt: string }): EspnMatchDetail {
+export function normalizeEspnMatch(summary: unknown, ctx: { eventId: string; cup: EspnCompetitionRef; fetchedAt: string }): EspnMatchDetail {
   const s = object(summary);
   const header = object(s.header);
   const headerId = text(header.id);
@@ -660,11 +668,11 @@ export function slimEspnSummary(summary: unknown): unknown {
   };
 }
 
-export function espnSummaryUrl(cup: EspnCup, eventId: string): string {
+export function espnSummaryUrl(cup: EspnCompetitionRef, eventId: string): string {
   return `https://site.web.api.espn.com/apis/site/v2/sports/soccer/${cup.code}/summary?event=${encodeURIComponent(eventId)}`;
 }
 
-export async function fetchEspnMatchSummary(cup: EspnCup, eventId: string, fetcher: typeof fetch = fetch): Promise<unknown> {
+export async function fetchEspnMatchSummary(cup: EspnCompetitionRef, eventId: string, fetcher: typeof fetch = fetch): Promise<unknown> {
   if (!/^\d+$/.test(eventId)) throw new Error('Invalid ESPN event id');
   const response = await fetcher(espnSummaryUrl(cup, eventId), { cache: 'no-store', signal: AbortSignal.timeout(20000) });
   if (!response.ok) throw new Error(`ESPN match ${eventId}: HTTP ${response.status}`);
@@ -673,7 +681,7 @@ export async function fetchEspnMatchSummary(cup: EspnCup, eventId: string, fetch
   return payload;
 }
 
-export async function fetchEspnMatch(cup: EspnCup, eventId: string, fetcher: typeof fetch = fetch): Promise<{ detail: EspnMatchDetail; raw: unknown }> {
+export async function fetchEspnMatch(cup: EspnCompetitionRef, eventId: string, fetcher: typeof fetch = fetch): Promise<{ detail: EspnMatchDetail; raw: unknown }> {
   const summary = await fetchEspnMatchSummary(cup, eventId, fetcher);
   const detail = normalizeEspnMatch(summary, { eventId, cup, fetchedAt: new Date().toISOString() });
   return { detail, raw: slimEspnSummary(summary) };

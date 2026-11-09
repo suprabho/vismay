@@ -151,3 +151,51 @@ Parser and fetch checks, from the repository root:
 ```sh
 pnpm exec tsx --test apps/footshorts/worker/src/espnCups.test.ts apps/footshorts/worker/src/espnMatch.test.ts
 ```
+
+## ESPN league fallback (league fixtures missing Opta facts)
+
+theanalyst.com has served the Opta scraper a Cloudflare challenge since
+2026-11-08 (`docs/theanalyst-scraping.md`). The match-facts workflow's last
+step, `worker/src/espnMatchFacts.ts`, fills the gap from ESPN for finished
+league fixtures (last 30 days) that have **no** `opta_match_facts` rows:
+
+1. One ESPN scoreboard request per league per month (`dates=YYYYMM`; ESPN
+   rejects day ranges), only for leagues with such fixtures. Leagues and their
+   ESPN codes: `ESPN_LEAGUES` in `shared/src/espnLeagues.ts`.
+2. Fixtures are matched by team names + kickoff ±1 day with theanalyst
+   discovery's matcher (`matchFixtures` / `teamKeyVariants`); a fixture with
+   zero or several candidates is logged and skipped, never guessed.
+3. Each hit's match summary is normalized (`normalizeEspnMatch`, the same
+   detail the cup import stores) and upserted into
+   `admin_espn_league_matches` on `fixture_id` (migration
+   `20261109000000_admin_espn_league_matches.sql`). Up to 40 per cron run.
+
+Same private boundary as the cup tables: the row references the fixture and
+never writes to `fixtures`, `fixture_events`, `opta_match_facts`,
+`opta_match_stories`, share cards or consumer feeds. Readers: the admin
+**Match facts** tab (an ESPN badge and stats panel where Opta is missing; a sky
+status dot) and the admin HTML-stories brief, which appends an "ESPN match
+detail" section for picked fixtures without Opta facts
+(`buildLeagueEspnContext` in `apps/admin/lib/espnLeagueFallback.ts`, passed as
+`espnFallbackContext`; the public brief never passes it).
+
+**Switch.** The Match facts tab's **ESPN fallback on/off** toggle writes
+`admin_espn_fallback_settings`. Off, or the migration not applied: the step
+makes no ESPN requests. The migration seeds it **on**.
+
+**Pasted links.** The tab's URL forms and the workflow's `match_url` input take
+an ESPN match link from any edition
+(`https://www.espn.in/football/match/_/gameId/401882816/barcelona-atletico-madrid`)
+as well as a theanalyst one. An ESPN link skips the theanalyst step, runs
+whatever the switch says (it is an explicit request) and is matched to an
+existing fixture by teams + date (or pinned with `fixture_id`). It never
+creates a fixtures row; if nothing matches, pick the fixture in the tab.
+
+```sh
+pnpm espn-facts -- --dry                                  # every league, no writes
+pnpm espn-facts -- --competition=primera-division
+pnpm espn-facts -- --url='https://www.espn.in/football/match/_/gameId/401882816/barcelona-atletico-madrid'
+pnpm --filter @footshorts/worker espn-leagues:test
+pnpm --filter admin exec tsx lib/espnLeagueFallback.test.ts
+```
+

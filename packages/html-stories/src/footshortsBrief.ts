@@ -96,6 +96,12 @@ export interface FootshortsBriefOptions {
    * admin's private Cup fixtures import). Without it, such ids are refused.
    */
   cupContext?: ((eventIds: string[], opts: { prompt?: string }) => Promise<string>) | null
+  /**
+   * ESPN match detail for league fixtures whose Opta facts are missing (the
+   * admin's private ESPN fallback), appended after the match context. Admin
+   * only: the public brief never passes it, so ESPN data never reaches it.
+   */
+  espnFallbackContext?: ((fixtureIds: string[], opts: { prompt?: string }) => Promise<string | null>) | null
   /** A Football Desk spin; its fixtures are the match context when neither `fixtureIds` nor `club` is set. */
   spin?: BriefSpin | null
 }
@@ -114,6 +120,7 @@ export async function footshortsHtmlStoryBrief({
   tone,
   club,
   cupContext,
+  espnFallbackContext,
   spin,
 }: FootshortsBriefOptions): Promise<string> {
   const fromClub = club ? await clubFixtureIds(club) : []
@@ -126,6 +133,13 @@ export async function footshortsHtmlStoryBrief({
   const parts = await Promise.all([
     matchIds.length ? buildMatchContext(matchIds, { prompt: angle, siteUrl }) : null,
     cupIds.length && cupContext ? cupContext(cupIds, { prompt: matchIds.length ? undefined : angle }) : null,
+    // Never fatal: the Opta-free brief is still a brief.
+    matchIds.length && espnFallbackContext
+      ? espnFallbackContext(matchIds, {}).catch((e) => {
+          console.warn('[footshortsBrief] ESPN fallback context failed:', e instanceof Error ? e.message : e)
+          return null
+        })
+      : null,
   ])
   const context = parts.filter(Boolean).join('\n\n') || null
   return htmlStoryBrief({ app: 'footshorts', siteUrl, style, context, format, spin, tone })

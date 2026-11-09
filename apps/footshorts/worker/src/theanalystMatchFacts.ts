@@ -81,7 +81,13 @@ import {
   type MatchHeader,
   type MatchStory,
 } from './theanalyst/matchCentre';
-import { closeBrowser } from './theanalyst/fetch';
+import { BotChallengeError, blockedBy, blockedHostErrors, closeBrowser } from './theanalyst/fetch';
+
+// The two hosts a run talks to: discovery reads theanalyst.com's fixtures
+// pages (behind Cloudflare), the scrape renders the match-centre widget on
+// dataviz.theanalyst.com (S3). A bot challenge blocks one host for the run.
+const DISCOVERY_HOST_URL = 'https://theanalyst.com/';
+const MATCH_CENTRE_HOST_URL = 'https://dataviz.theanalyst.com/';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -368,6 +374,8 @@ async function scrapeForCompetition(
         { dumpEvents }
       );
     } catch (e: any) {
+      // A challenge means every later fixture fails the same way: stop here.
+      if (e instanceof BotChallengeError) throw e;
       console.error(`[match-facts] scrape failed for fixture ${fixture.id}: ${e.message ?? e}`);
       continue;
     }
@@ -859,19 +867,41 @@ async function run() {
   // die at the first throw, so a broken UCL discovery silently starved every
   // competition after it in the loop. Process them all, then exit non-zero.
   const failed: string[] = [];
+  const discoverySkipped: string[] = [];
+  const scrapeSkipped: string[] = [];
   for (const comp of comps) {
-    try {
-      await discoverForCompetition(comp, dry, fixtureIds);
-    } catch (e: any) {
-      console.error(`[match-facts] ${comp.competitionSlug}: discovery failed — ${e?.message ?? e}`);
-      if (fixtureIds.length > 0) {
-        // A named fixture that discovery hasn't linked yet can't be scraped
-        // this run. Its theanalyst link bypasses discovery entirely.
-        console.error(
-          `[match-facts] ${comp.competitionSlug}: unlinked fixtures in this run can still be scraped from their theanalyst.com match link — paste it in the admin Match facts tab, or dispatch with match_url=<link> fixture_id=<uuid>`
-        );
+    // Fail fast: once a host has served a bot challenge, nothing else is asked
+    // of it this run (fetch.ts) — skip the phase outright instead of erroring
+    // once per competition.
+    if (blockedBy(DISCOVERY_HOST_URL)) {
+      discoverySkipped.push(comp.competitionSlug);
+    } else {
+      try {
+        await discoverForCompetition(comp, dry, fixtureIds);
+      } catch (e: any) {
+        if (e instanceof BotChallengeError) {
+          console.error(
+            `[match-facts] ${comp.competitionSlug}: discovery stopped — ${e.message}. No more ${e.host} requests this run; already-linked fixtures are still scraped.`
+          );
+          discoverySkipped.push(comp.competitionSlug);
+        } else {
+          console.error(`[match-facts] ${comp.competitionSlug}: discovery failed — ${e?.message ?? e}`);
+          failed.push(`${comp.competitionSlug} (discovery)`);
+        }
+        if (fixtureIds.length > 0) {
+          // A named fixture that discovery hasn't linked yet can't be scraped
+          // this run. Its theanalyst link bypasses discovery entirely (the
+          // scrape reads the dataviz widget, not theanalyst.com), and its ESPN
+          // link feeds the private ESPN fallback.
+          console.error(
+            `[match-facts] ${comp.competitionSlug}: unlinked fixtures in this run can still be scraped from their theanalyst.com match link — paste it in the admin Match facts tab, or dispatch with match_url=<link> fixture_id=<uuid> (an ESPN match link works too)`
+          );
+        }
       }
-      failed.push(`${comp.competitionSlug} (discovery)`);
+    }
+    if (blockedBy(MATCH_CENTRE_HOST_URL)) {
+      scrapeSkipped.push(comp.competitionSlug);
+      continue;
     }
     try {
       await scrapeForCompetition(comp, budget, {
@@ -882,17 +912,49 @@ async function run() {
         fixtureIds,
       });
     } catch (e: any) {
-      console.error(`[match-facts] ${comp.competitionSlug}: scrape failed — ${e?.message ?? e}`);
-      failed.push(`${comp.competitionSlug} (scrape)`);
+      if (e instanceof BotChallengeError) {
+        console.error(`[match-facts] ${comp.competitionSlug}: scrape stopped — ${e.message}. No more ${e.host} requests this run.`);
+        scrapeSkipped.push(comp.competitionSlug);
+      } else {
+        console.error(`[match-facts] ${comp.competitionSlug}: scrape failed — ${e?.message ?? e}`);
+        failed.push(`${comp.competitionSlug} (scrape)`);
+      }
     }
   }
+
+  const challenges = blockedHostErrors();
+  if (challenges.length > 0) {
+    for (const c of challenges) annotateChallenge(c);
+    const skipped = [
+      discoverySkipped.length ? `discovery skipped for ${discoverySkipped.join(', ')}` : '',
+      scrapeSkipped.length ? `scrape skipped for ${scrapeSkipped.join(', ')}` : '',
+      failed.length ? `other failures: ${failed.join(', ')}` : '',
+    ].filter(Boolean);
+    throw new Error(
+      `match-facts: bot challenge on ${challenges.map((c) => c.host).join(' + ')} — ${skipped.join('; ')}. ` +
+        'The ESPN fallback step still fills fixtures missing Opta facts.'
+    );
+  }
   if (failed.length > 0) throw new Error(`match-facts: ${failed.length} phase(s) failed: ${failed.join(', ')}`);
+}
+
+/** A GitHub Actions error annotation, so the run summary names the cause
+ *  instead of a stack trace. Harmless outside Actions. */
+function annotateChallenge(c: BotChallengeError): void {
+  const clean = (v: string) => v.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  console.log(
+    `::error title=${clean(`${c.host} bot challenge`)}::${clean(
+      `${c.host} is serving a Cloudflare challenge to the scraper (${c.evidence}). It is not worked around: wait for it to lift or ask the site for access. ${c.url}`
+    )}`
+  );
 }
 
 run()
   .then(() => closeBrowser())
   .then(() => process.exit(0))
   .catch((e) => {
-    console.error('fatal:', e);
+    // --url mode throws a challenge straight out of fetchMatchFacts.
+    if (e instanceof BotChallengeError) annotateChallenge(e);
+    console.error('fatal:', e instanceof BotChallengeError || e?.message?.startsWith('match-facts:') ? e.message : e);
     closeBrowser().finally(() => process.exit(1));
   });

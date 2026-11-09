@@ -38,6 +38,8 @@
     "power-rankings:ci": "tsx src/theanalystPowerRankings.ts",
     "match-facts": "tsx --env-file=.env src/theanalystMatchFacts.ts",
     "match-facts:ci": "tsx src/theanalystMatchFacts.ts",
+    "espn-facts": "tsx --env-file=.env src/espnMatchFacts.ts",
+    "espn-facts:ci": "tsx src/espnMatchFacts.ts",
     "backfill:images": "tsx --env-file=.env src/backfillImages.ts",
     "backfill:colors": "tsx --env-file=.env src/backfillColors.ts",
     "backfill:entity-tags": "tsx --env-file=.env src/backfillEntityTags.ts",
@@ -45,6 +47,8 @@
     "typecheck": "tsc --noEmit",
     "jev:gate:test": "tsx src/jevEntityGate.test.ts",
     "national-teams:test": "tsx --test src/nationalTeams.test.ts",
+    "espn-leagues:test": "tsx --test src/espnLeagues.test.ts",
+    "theanalyst-fetch:test": "tsx --test src/theanalystFetch.test.ts",
     "entity-tags:test": "tsx --test src/entityResolver.test.ts src/competitionTeams.test.ts src/nationalTeams.test.ts src/entityKeys.test.ts"
   },
   "dependencies": {

@@ -31,7 +31,7 @@
  * fixtures where theanalyst_match_id is still null.
  */
 
-import { newRenderedPage } from './fetch';
+import { gotoChecked, newRenderedPage } from './fetch';
 import { teamKeyVariants } from '../entityResolver';
 
 export type DiscoveredMatch = {
@@ -296,7 +296,9 @@ export async function discoverMatchesForCompetition(
 ): Promise<DiscoveredMatch[]> {
   const { page, close } = await newRenderedPage();
   try {
-    await page.goto(fixturesUrl(theanalystSlug), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    // Throws BotChallengeError on a challenge page (and at once, without a
+    // request, once theanalyst.com is known to be challenging this run).
+    await gotoChecked(page, fixturesUrl(theanalystSlug));
     try {
       await waitForCalendarHeader(page, 15_000);
     } catch {

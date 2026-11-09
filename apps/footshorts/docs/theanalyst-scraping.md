@@ -123,6 +123,33 @@ fetch is ever blocked outright (datacenter IPs flagged, CAPTCHA), the next
 fallback is an Apify actor like the yahoo-stock one
 (`apify/dc-yahoo-stock-scraper`).
 
+**Blocked 2026-11-08.** theanalyst.com serves the scraper a Cloudflare
+managed challenge ("Just a moment...", HTTP 403, `cf-mitigated: challenge`):
+on GitHub's runners the headless browser never gets past it (still the
+challenge after 15s), and plain HTTP clients get it from other networks too.
+That is the site turning automated access away, so the scraper is not
+disguised to get past it (no browser-UA spoofing, stealth or proxy routing;
+the Apify route above would be the same thing).
+
+The match-centre widget host, `dataviz.theanalyst.com`, is served from S3,
+not Cloudflare, and still answered then. So discovery (theanalyst.com
+fixtures pages) is what breaks; scraping fixtures that are already linked, and
+`--url` with a pasted theanalyst link, go to the widget and can still work.
+
+**Fail fast** (`theanalyst/fetch.ts`): the first challenge on a host marks it
+blocked for the rest of the run, and every later request to that host throws
+the same `BotChallengeError` at once, without a request. A challenge page gets
+3s to clear by itself and is never interacted with. `theanalystMatchFacts.ts`
+then skips the blocked phase for the remaining competitions (discovery for
+theanalyst.com, the scrape for dataviz), still runs the other, and ends with
+one `::error` annotation naming the host and the evidence, plus a summary of
+what it skipped. The job stays red while blocked, by design. Match facts for
+those matches come from the private ESPN fallback instead
+(`worker/src/espnMatchFacts.ts`, the last step of the match-facts workflow;
+see `docs/espn-cups-admin.md` § ESPN league fallback). If theanalyst lifts the
+challenge, the Opta step picks up again by itself: ESPN only fills fixtures
+that still have no `opta_match_facts` rows.
+
 ## Scraping one match from a pasted link (`--url`)
 
 `theanalystMatchFacts.ts --url='https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…'`
