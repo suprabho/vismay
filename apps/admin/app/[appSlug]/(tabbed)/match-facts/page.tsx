@@ -3,6 +3,11 @@ import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServerSupabase } from '@/lib/supabaseServer'
 import { linkFixtureToTheanalystMatch, parseTheanalystMatchUrl } from '@vismay/content-source/footshortsData'
+import { parseEspnMatchUrl } from '@footshorts/shared/espnLeagues'
+import type { EspnSideFacts } from '@footshorts/shared/espnMatch'
+import { ToggleLeft, ToggleRight } from '@phosphor-icons/react/dist/ssr'
+import { adminEmail } from '@/lib/adminIdentity'
+import { espnFallbackSetting, listEspnLeagueMatches, setEspnFallbackEnabled, type EspnLeagueMatchRow } from '@/lib/espnLeagueFallback'
 import {
   THEANALYST_MATCH_FACTS_WORKER,
   dispatchWorker,
@@ -48,6 +53,8 @@ type MatchEntry = {
   fixture: FixtureRow
   home: FactsRow | null
   away: FactsRow | null
+  /** The private ESPN fallback's detail, when Opta facts are missing (admin_espn_league_matches). */
+  espn: EspnLeagueMatchRow | null
   homeName: string
   awayName: string
 }
@@ -102,10 +109,164 @@ function dateLabel(key: string): string {
   })
 }
 
-/** Status dot: green = scraped, amber = matched but not scraped, neutral = not yet discovered. */
+/** Status dot: green = Opta scraped, sky = ESPN fallback only, amber = matched but not scraped, neutral = not yet discovered. */
 function StatusDot({ entry }: { entry: MatchEntry }) {
-  const color = entry.home || entry.away ? 'bg-emerald-500' : entry.fixture.theanalyst_match_id ? 'bg-amber-500' : 'bg-neutral-600'
+  const color =
+    entry.home || entry.away
+      ? 'bg-emerald-500'
+      : entry.espn
+        ? 'bg-sky-500'
+        : entry.fixture.theanalyst_match_id
+          ? 'bg-amber-500'
+          : 'bg-neutral-600'
   return <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${color}`} />
+}
+
+const ESPN_STAT_ROWS: Array<{ key: keyof Omit<EspnSideFacts, 'raw_stats'>; label: string; suffix?: string }> = [
+  { key: 'possession', label: 'Possession', suffix: '%' },
+  { key: 'shots', label: 'Shots' },
+  { key: 'shots_on_target', label: 'Shots on target' },
+  { key: 'passes', label: 'Passes' },
+  { key: 'pass_accuracy', label: 'Pass accuracy', suffix: '%' },
+  { key: 'corners', label: 'Corners' },
+  { key: 'fouls', label: 'Fouls' },
+  { key: 'offsides', label: 'Offsides' },
+  { key: 'saves', label: 'Saves' },
+  { key: 'yellow_cards', label: 'Yellow cards' },
+  { key: 'red_cards', label: 'Red cards' },
+]
+
+/** ESPN's team statistics (or, when ESPN sent none, the timeline's counts) + its goals. */
+function EspnFacts({ row, homeName, awayName }: { row: EspnLeagueMatchRow; homeName: string; awayName: string }) {
+  const d = row.detail
+  const goals = d.events.filter((e) => e.type === 'goal')
+  return (
+    <div className="border-b border-white/10">
+      <div className="px-3 py-2 text-xs text-neutral-400 flex items-center justify-between gap-3 bg-sky-500/[0.06]">
+        <span>
+          <span className="rounded bg-sky-500/15 text-sky-300 px-1.5 py-0.5 mr-2 text-[10px] uppercase tracking-wide">ESPN</span>
+          {d.home.name} {d.home.score ?? '?'}–{d.away.score ?? '?'} {d.away.name} · Opta facts missing, private admin data
+        </span>
+        <a href={d.source_url} target="_blank" rel="noreferrer" className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline whitespace-nowrap">
+          Open on ESPN ↗
+        </a>
+      </div>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-neutral-500">
+            <th className="text-right font-normal py-1.5 px-3 w-1/3">{homeName}</th>
+            <th className="text-center font-normal py-1.5 px-3 w-1/3"></th>
+            <th className="text-left font-normal py-1.5 px-3 w-1/3">{awayName}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {d.facts
+            ? ESPN_STAT_ROWS.map((stat) => (
+                <tr key={stat.key} className="border-t border-white/5">
+                  <td className="text-right py-1.5 px-3 text-neutral-200 tabular-nums">{fmt(d.facts!.home[stat.key], stat.suffix)}</td>
+                  <td className="text-center py-1.5 px-3 text-xs text-neutral-500">{stat.label}</td>
+                  <td className="text-left py-1.5 px-3 text-neutral-200 tabular-nums">{fmt(d.facts!.away[stat.key], stat.suffix)}</td>
+                </tr>
+              ))
+            : (
+                [
+                  ['yellow_cards', 'Yellow cards'],
+                  ['red_cards', 'Red cards'],
+                  ['substitutions', 'Substitutions'],
+                ] as const
+              ).map(([key, label]) => (
+                <tr key={key} className="border-t border-white/5">
+                  <td className="text-right py-1.5 px-3 text-neutral-200 tabular-nums">{d.derived.home[key]}</td>
+                  <td className="text-center py-1.5 px-3 text-xs text-neutral-500">{label} (timeline)</td>
+                  <td className="text-left py-1.5 px-3 text-neutral-200 tabular-nums">{d.derived.away[key]}</td>
+                </tr>
+              ))}
+        </tbody>
+      </table>
+      <div className="px-3 py-1.5 border-t border-white/5 text-[11px] text-neutral-600 space-y-0.5">
+        {goals.length > 0 && (
+          <p className="text-neutral-400">
+            Goals:{' '}
+            {goals
+              .map((g) => `${g.minute ?? '?'}${g.extra_minute ? `+${g.extra_minute}` : ''}' ${g.player_name ?? 'unknown'}${g.detail && g.detail !== 'Normal Goal' ? ` (${g.detail})` : ''}`)
+              .join(' · ')}
+          </p>
+        )}
+        <p>
+          {d.events.length} timeline event(s) · {d.lineups ? 'line-ups' : 'no line-ups'} · {d.commentary.length} commentary line(s) · fetched{' '}
+          {new Date(row.fetched_at).toLocaleString()} · used by the admin HTML-stories brief only
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The ESPN fallback switch (admin_espn_fallback_settings). On: every
+ * match-facts run looks finished fixtures still missing Opta facts up on ESPN
+ * and keeps the detail privately. Off: the worker makes no ESPN requests (a
+ * pasted ESPN link still runs — that is an explicit request).
+ */
+async function toggleEspnFallbackAction(formData: FormData) {
+  'use server'
+  const appSlug = String(formData.get('appSlug') ?? '')
+  const enabled = String(formData.get('enabled') ?? '') === 'true'
+  const backTo = String(formData.get('backTo') ?? '') || `/${appSlug}/match-facts`
+  if (!appSlug || !(await isAuthed())) return
+  const sep = backTo.includes('?') ? '&' : '?'
+  try {
+    await setEspnFallbackEnabled(enabled, await adminEmail())
+  } catch (e) {
+    redirect(`${backTo}${sep}scrapeError=${encodeURIComponent(e instanceof Error ? e.message : 'could not save the ESPN switch')}`)
+  }
+  revalidatePath(`/${appSlug}/match-facts`)
+  redirect(backTo)
+}
+
+function EspnFallbackToggle({
+  appSlug,
+  backTo,
+  enabled,
+  available,
+  error,
+}: {
+  appSlug: string
+  backTo: string
+  enabled: boolean
+  available: boolean
+  error?: string
+}) {
+  if (!available) {
+    return (
+      <p className="text-xs text-amber-400">
+        ESPN fallback unavailable — apply <code>20261109000000_admin_espn_league_matches.sql</code> to the Footshorts database
+        {error ? ` (${error})` : ''}.
+      </p>
+    )
+  }
+  const Icon = enabled ? ToggleRight : ToggleLeft
+  return (
+    <form action={toggleEspnFallbackAction} className="flex items-center gap-2 text-xs">
+      <input type="hidden" name="appSlug" value={appSlug} />
+      <input type="hidden" name="backTo" value={backTo} />
+      <input type="hidden" name="enabled" value={enabled ? 'false' : 'true'} />
+      <button
+        type="submit"
+        aria-pressed={enabled}
+        className={`flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors ${
+          enabled ? 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25' : 'bg-white/5 text-neutral-400 hover:bg-white/10'
+        }`}
+      >
+        <Icon size={18} weight="fill" />
+        ESPN fallback {enabled ? 'on' : 'off'}
+      </button>
+      <span className="text-neutral-500">
+        {enabled
+          ? 'Each run looks finished matches still missing Opta facts up on ESPN (kept private: this tab + the admin brief).'
+          : 'No automatic ESPN lookups. A pasted ESPN link still runs.'}
+      </span>
+    </form>
+  )
 }
 
 function StatsTable({ home, away, homeName, awayName }: { home: FactsRow | null; away: FactsRow | null; homeName: string; awayName: string }) {
@@ -169,7 +330,9 @@ async function linkTheanalystUrlAction(formData: FormData) {
   const backTo = `/${appSlug}/match-facts?competition=${encodeURIComponent(competition)}&fixture=${fixtureId}`
   let outcome: string
   try {
-    await linkFixtureToTheanalystMatch(fixtureId, theanalystUrl)
+    // An ESPN link links nothing on fixtures (private boundary): the worker
+    // stores the ESPN detail against this fixture id in its own table.
+    if (!parseEspnMatchUrl(theanalystUrl)) await linkFixtureToTheanalystMatch(fixtureId, theanalystUrl)
     outcome = await dispatchUrlScrape(theanalystUrl, fixtureId)
   } catch (e) {
     const message = e instanceof Error ? e.message : 'failed to link'
@@ -200,9 +363,9 @@ async function scrapeTheanalystUrlAction(formData: FormData) {
     (competition ? `?competition=${encodeURIComponent(competition)}` : '') +
     (fixtureId ? `${competition ? '&' : '?'}fixture=${fixtureId}` : '')
   const sep = backTo.includes('?') ? '&' : '?'
-  if (!parseTheanalystMatchUrl(theanalystUrl)) {
+  if (!parseTheanalystMatchUrl(theanalystUrl) && !parseEspnMatchUrl(theanalystUrl)) {
     redirect(
-      `${backTo}${sep}scrapeError=${encodeURIComponent('Not a theanalyst.com match URL — expected matchId/competitionId/seasonId query params')}`,
+      `${backTo}${sep}scrapeError=${encodeURIComponent('Not a theanalyst.com match URL (matchId/competitionId/seasonId query params) or an ESPN match link (…/gameId/<id>)')}`,
     )
   }
   let outcome: string
@@ -282,7 +445,7 @@ function TheanalystLink({ url }: { url: string | null }) {
 
 /** Column 3: full detail for the active fixture — stats, pending state, or the manual-link form. */
 function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; appSlug: string; linkError?: string }) {
-  const { fixture, home, away, homeName, awayName } = entry
+  const { fixture, home, away, espn, homeName, awayName } = entry
   const hasFacts = home || away
   // What "Scrape now" hands the worker: the stored wrapper URL, else one
   // rebuilt from the id columns (rows discovery linked before the URL column existed).
@@ -316,7 +479,9 @@ function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; app
             <TheanalystLink url={fixture.theanalyst_match_url} />
           </div>
         </>
-      ) : fixture.theanalyst_match_id ? (
+      ) : null}
+      {!hasFacts && espn && <EspnFacts row={espn} homeName={homeName} awayName={awayName} />}
+      {hasFacts ? null : fixture.theanalyst_match_id ? (
         <div className="px-3 py-3 text-xs text-neutral-500 flex items-center justify-between gap-3">
           <span>Matched on theanalyst.com — not scraped yet (waits on the per-run scrape budget).</span>
           <div className="flex items-center gap-3 shrink-0">
@@ -339,7 +504,10 @@ function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; app
         </div>
       ) : (
         <div className="px-3 py-3">
-          <p className="text-xs text-neutral-500 mb-2">Not yet discovered on theanalyst.com.</p>
+          <p className="text-xs text-neutral-500 mb-2">
+            Not yet discovered on theanalyst.com.{' '}
+            {espn ? 'ESPN detail above.' : 'Paste its theanalyst.com match link, or its ESPN match link for the private ESPN fallback.'}
+          </p>
           {linkError && <p className="text-xs text-amber-400 mb-2">{linkError}</p>}
           <form action={linkTheanalystUrlAction} className="flex items-center gap-2">
             <input type="hidden" name="appSlug" value={appSlug} />
@@ -348,7 +516,7 @@ function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; app
             <input
               type="url"
               name="theanalystUrl"
-              placeholder="https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…"
+              placeholder="theanalyst.com match-centre link, or ESPN match link (…/gameId/…)"
               required
               className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600"
             />
@@ -436,18 +604,30 @@ export default async function MatchFactsPage({
     }
   }
 
+  // Private ESPN fallback rows + the switch (service role; best-effort so the
+  // Opta view never breaks over it).
+  let espnByFixture = new Map<string, EspnLeagueMatchRow>()
+  let espnSetting: Awaited<ReturnType<typeof espnFallbackSetting>> = { enabled: false, available: false, updated_at: null, updated_by: null }
+  try {
+    ;[espnByFixture, espnSetting] = await Promise.all([listEspnLeagueMatches(fixtures.map((f) => f.id)), espnFallbackSetting()])
+  } catch (e) {
+    espnSetting = { ...espnSetting, error: e instanceof Error ? e.message : String(e) }
+  }
+
   const entries: MatchEntry[] = fixtures.map((fixture) => {
     const facts = factsByFixture.get(fixture.id) ?? { home: null, away: null }
     return {
       fixture,
       home: facts.home,
       away: facts.away,
+      espn: espnByFixture.get(fixture.id) ?? null,
       homeName: (fixture.home_team_id && teamNames.get(fixture.home_team_id)) ?? fixture.home_team_name ?? 'Home',
       awayName: (fixture.away_team_id && teamNames.get(fixture.away_team_id)) ?? fixture.away_team_name ?? 'Away',
     }
   })
 
   const scrapedCount = entries.filter((e) => e.home || e.away).length
+  const espnCount = entries.filter((e) => !(e.home || e.away) && e.espn).length
 
   // Competition → date (YYYY-MM-DD) → entries, both pre-sorted since `entries`
   // is already kickoff_at-desc from the query.
@@ -495,9 +675,18 @@ export default async function MatchFactsPage({
           <h1 className="text-lg font-semibold">Match facts</h1>
           <p className="text-sm text-neutral-400 mt-0.5">
             Opta match-centre stats scraped from theanalyst.com · {scrapedCount} of {entries.length} finished matches
-            (last {LOOKBACK_DAYS}d) scraped
+            (last {LOOKBACK_DAYS}d) scraped{espnCount > 0 ? ` · ${espnCount} more from ESPN (private)` : ''}
           </p>
         </div>
+        <EspnFallbackToggle
+          appSlug={appSlug}
+          backTo={`/${appSlug}/match-facts${activeCompetition ? `?competition=${encodeURIComponent(activeCompetition)}` : ''}${
+            activeEntry ? `${activeCompetition ? '&' : '?'}fixture=${activeEntry.fixture.id}` : ''
+          }`}
+          enabled={espnSetting.enabled}
+          available={espnSetting.available}
+          error={espnSetting.error}
+        />
         {/* Any theanalyst.com match-centre link → worker --url mode (see scrapeTheanalystUrlAction). */}
         <form action={scrapeTheanalystUrlAction} className="flex items-center gap-2">
           <input type="hidden" name="appSlug" value={appSlug} />
@@ -505,7 +694,7 @@ export default async function MatchFactsPage({
           <input
             type="url"
             name="theanalystUrl"
-            placeholder="Scrape from URL — paste a theanalyst.com match-centre link (…?competitionId=…&seasonId=…&matchId=…)"
+            placeholder="Scrape from URL — a theanalyst.com match-centre link, or an ESPN match link (…/gameId/…)"
             required
             className="flex-1 max-w-2xl bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-neutral-200 placeholder:text-neutral-600"
           />
@@ -532,7 +721,7 @@ export default async function MatchFactsPage({
                     .map((entry) => (
                       <option key={entry.fixture.id} value={entry.fixture.id}>
                         {new Date(entry.fixture.kickoff_at).toLocaleDateString()} — {entry.homeName} vs {entry.awayName}
-                        {entry.home || entry.away ? '' : ' (not scraped)'}
+                        {entry.home || entry.away ? '' : entry.espn ? ' (ESPN)' : ' (not scraped)'}
                       </option>
                     ))}
                 </optgroup>
@@ -562,6 +751,7 @@ export default async function MatchFactsPage({
               const active = comp === activeCompetition
               const compEntries = [...byCompetition.get(comp)!.values()].flat()
               const compScraped = compEntries.filter((e) => e.home || e.away).length
+              const compEspn = compEntries.filter((e) => !(e.home || e.away) && e.espn).length
               return (
                 <a
                   key={comp}
@@ -574,7 +764,7 @@ export default async function MatchFactsPage({
                 >
                   <div className="truncate">{competitionLabel(comp)}</div>
                   <div className="text-[11px] text-neutral-600">
-                    {compScraped}/{compEntries.length} scraped
+                    {compScraped}/{compEntries.length} scraped{compEspn > 0 ? ` · ${compEspn} ESPN` : ''}
                   </div>
                 </a>
               )

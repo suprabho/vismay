@@ -17,6 +17,7 @@ import { RANDOMIZER_META } from '@vismay/randomizer/types'
 import { isAuthed } from '@/lib/adminAuth'
 import { htmlStorySiteUrl } from '@/lib/htmlStoryApps'
 import { buildCupMatchContext } from '@/lib/espnCups'
+import { buildLeagueEspnContext } from '@/lib/espnLeagueFallback'
 
 /**
  * The agent brief for the admin "Copy agent brief" button, built server-side
@@ -134,6 +135,7 @@ export async function POST(req: Request) {
             spin,
             tone,
             cupContext: (ids, { prompt }) => buildCupMatchContext(ids, { prompt, siteUrl }),
+            espnFallbackContext: (ids, { prompt }) => buildLeagueEspnContext(ids, { prompt, siteUrl }),
           })
         : app === 'vizf1'
           ? await vizf1HtmlStoryBrief({ siteUrl, style, sessionKeys, drivers, prompt, format, tone })

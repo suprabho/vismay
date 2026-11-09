@@ -180,8 +180,18 @@ function commentaryLines(d: EspnMatchDetail): string[] {
     .map((c) => `- ${c.clock_label}: ${c.text}`)
 }
 
-export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { prompt?: string } = {}): string {
-  if (!matches.length) throw new Error('no cup matches')
+/** `cup` (default): the private Cup fixtures import, matches with no
+ * footshorts page. `league`: the ESPN fallback for league fixtures whose Opta
+ * facts are missing — the same matches already carry their footshorts context
+ * (and match pages) above, so this section only supplements it. */
+export type EspnContextVariant = 'cup' | 'league'
+
+export function formatCupMatchContext(
+  matches: CupContextMatch[],
+  { prompt, variant = 'cup' }: { prompt?: string; variant?: EspnContextVariant } = {},
+): string {
+  if (!matches.length) throw new Error(variant === 'cup' ? 'no cup matches' : 'no ESPN matches')
+  const heading = variant === 'cup' ? 'Cup match context' : 'ESPN match detail'
   const ordered = matches
     .map((m) => ({ ...m, fixture: reconcileCupFixture(m.fixture, m.detail) }))
     .sort((a, b) => (a.fixture.kickoff_at ?? '').localeCompare(b.fixture.kickoff_at ?? ''))
@@ -189,8 +199,8 @@ export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { 
   const lines: string[] = []
   lines.push(
     ordered.length === 1
-      ? `# Cup match context — ${cupScoreline(ordered[0]!.fixture)} (${cups[0]})`
-      : `# Cup match context — ${ordered.length} matches (${cups.join(', ')})`,
+      ? `# ${heading} — ${cupScoreline(ordered[0]!.fixture)} (${cups[0]})`
+      : `# ${heading} — ${ordered.length} matches (${cups.join(', ')})`,
   )
   lines.push('')
   if (prompt?.trim()) {
@@ -198,11 +208,18 @@ export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { 
     lines.push('')
   }
   lines.push(
-    'These domestic cup matches come from ESPN (its scoreboard and match summary), imported into ' +
-      'footshorts’ private admin tables. Use the scores, minutes and names verbatim. Times are UTC. ' +
-      'There is no footshorts match page for them: do not link one. Where a section is missing, ESPN ' +
-      'did not send it or the match detail has not been extracted — write around the gap rather than ' +
-      'filling it.',
+    variant === 'cup'
+      ? 'These domestic cup matches come from ESPN (its scoreboard and match summary), imported into ' +
+          'footshorts’ private admin tables. Use the scores, minutes and names verbatim. Times are UTC. ' +
+          'There is no footshorts match page for them: do not link one. Where a section is missing, ESPN ' +
+          'did not send it or the match detail has not been extracted — write around the gap rather than ' +
+          'filling it.'
+      : 'Opta’s match facts (theanalyst.com) are missing for these matches, so this is ESPN’s match ' +
+          'detail (its match summary), kept in footshorts’ private admin tables. Use it where the match ' +
+          'context above has no Opta facts, insights or commentary; keep that context’s match pages and ' +
+          'team links. Use the scores, minutes and names verbatim. Times are UTC. ESPN has no xG or big ' +
+          'chances: do not supply them. Where a section is missing, ESPN did not send it — write around ' +
+          'the gap rather than filling it.',
   )
   lines.push('')
 
@@ -259,7 +276,7 @@ export function formatCupMatchContext(matches: CupContextMatch[], { prompt }: { 
       lines.push(d.facts ? '### Match facts (ESPN team statistics)' : '### Match counts (from the timeline)')
       lines.push('')
       if (!d.facts) {
-        lines.push('_ESPN sent no team statistics for this match (usual for cup ties): these counts are read off the timeline._')
+        lines.push(`_ESPN sent no team statistics for this match${variant === 'cup' ? ' (usual for cup ties)' : ''}: these counts are read off the timeline._`)
         lines.push('')
       }
       lines.push(...facts)

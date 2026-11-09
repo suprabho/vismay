@@ -22,6 +22,16 @@ name: Footshorts - theanalyst match facts
 # hand-curated. Still untested: the actual Supabase write path — run via
 # workflow_dispatch --dry, then for real, before trusting the schedule.
 #
+# ESPN FALLBACK (worker/src/espnMatchFacts.ts, the last step): theanalyst.com
+# has served the scraper a Cloudflare challenge since 2026-11-08, so every run
+# then looks finished league fixtures that still have NO Opta facts up on
+# ESPN's public API and stores ESPN's detail in the PRIVATE
+# admin_espn_league_matches table (admin Match facts tab + admin HTML-stories
+# brief only; never fixtures / fixture_events / opta_match_facts). It runs even
+# when the theanalyst step fails, and only while the admin toggle (Match facts
+# tab) is on. `match_url` takes an ESPN match link too: that runs the ESPN
+# step alone, toggle or not.
+#
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
@@ -45,7 +55,7 @@ on:
         type: string
         default: ''
       match_url:
-        description: 'One theanalyst.com match-centre link (…?competitionId=…&seasonId=…&matchId=…) to scrape directly — no discovery; the fixture is matched by team names + date, or created if none exists. Ignores competition.'
+        description: 'One theanalyst.com match-centre link (…?competitionId=…&seasonId=…&matchId=…) to scrape directly — no discovery; the fixture is matched by team names + date, or created if none exists. Or an ESPN match link (…/gameId/<id>) for the private ESPN fallback (matched to an existing fixture, never created). Ignores competition.'
         required: false
         type: string
         default: ''
@@ -104,10 +114,13 @@ jobs:
 
       # Match discovery + the match-centre stats widget are client-rendered —
       # both go through headless Chromium, not plain fetch.
+      # An ESPN match_url skips theanalyst entirely (and its browser).
       - name: Install Playwright Chromium
+        if: ${{ !contains(inputs.match_url, 'espn') }}
         run: pnpm exec playwright install chromium --with-deps
 
       - name: Scrape match facts
+        if: ${{ !contains(inputs.match_url, 'espn') }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -129,3 +142,27 @@ jobs:
           [ "$INPUT_EVENTS_BACKFILL" = "true" ] && ARGS+=("--events-backfill")
           [ "$INPUT_STORIES_BACKFILL" = "true" ] && ARGS+=("--stories-backfill")
           pnpm match-facts:ci -- "${ARGS[@]}"
+
+      # Private ESPN fallback for fixtures still missing Opta facts. Runs even
+      # when theanalyst failed (that is the point); skipped for a theanalyst
+      # match_url. Gated by the admin toggle inside the script.
+      - name: ESPN fallback (private admin store)
+        if: ${{ !cancelled() }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          INPUT_COMPETITION: ${{ inputs.competition }}
+          INPUT_FIXTURE_ID: ${{ inputs.fixture_id }}
+          INPUT_MATCH_URL: ${{ inputs.match_url }}
+          INPUT_DRY: ${{ inputs.dry }}
+        run: |
+          ARGS=()
+          case "$INPUT_MATCH_URL" in
+            "") ;;
+            *espn*) ARGS+=("--url=$INPUT_MATCH_URL") ;;
+            *) echo "match_url is a theanalyst link — nothing for the ESPN fallback"; exit 0 ;;
+          esac
+          [ -n "$INPUT_COMPETITION" ] && [ -z "$INPUT_MATCH_URL" ] && ARGS+=("--competition=$INPUT_COMPETITION")
+          [ -n "$INPUT_FIXTURE_ID" ] && ARGS+=("--fixture-id=$INPUT_FIXTURE_ID")
+          [ "$INPUT_DRY" = "true" ] && ARGS+=("--dry")
+          pnpm espn-facts:ci -- "${ARGS[@]}"

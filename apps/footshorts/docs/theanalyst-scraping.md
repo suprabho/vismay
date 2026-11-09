@@ -123,6 +123,17 @@ fetch is ever blocked outright (datacenter IPs flagged, CAPTCHA), the next
 fallback is an Apify actor like the yahoo-stock one
 (`apify/dc-yahoo-stock-scraper`).
 
+**Blocked 2026-11-08.** theanalyst.com now serves a Cloudflare managed
+challenge ("Just a moment...", HTTP 403) site-wide, `robots.txt` included,
+from GitHub runners and other networks alike. That is the site turning
+automated access away, so the scraper is not disguised to get past it (no
+browser-UA spoofing, stealth or proxy routing; the Apify route above would be
+the same thing). Match facts for those matches come from the private ESPN
+fallback instead (`worker/src/espnMatchFacts.ts`, the last step of the
+match-facts workflow; see `docs/espn-cups-admin.md` § ESPN league fallback).
+If theanalyst lifts the challenge, the Opta step picks up again by itself:
+ESPN only fills fixtures that still have no `opta_match_facts` rows.
+
 ## Scraping one match from a pasted link (`--url`)
 
 `theanalystMatchFacts.ts --url='https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…'`

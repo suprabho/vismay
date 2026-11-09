@@ -13,6 +13,7 @@
     "./media": "./src/media.ts",
     "./espnCups": "./src/espnCups.ts",
     "./espnMatch": "./src/espnMatch.ts",
+    "./espnLeagues": "./src/espnLeagues.ts",
     "./historicalEvents": "./src/historicalEvents.ts",
     "./historicalCrests": "./src/historicalCrests.ts",
     "./entityKeys": "./src/entityKeys.ts",
