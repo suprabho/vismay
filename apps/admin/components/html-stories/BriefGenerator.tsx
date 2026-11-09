@@ -174,7 +174,8 @@ export function BriefGenerator({
   }
   async function loadMatches(competition: string, season: string): Promise<MatchOption[]> {
     try {
-      const qs = `competition=${encodeURIComponent(competition)}&season=${encodeURIComponent(season)}`
+      // include=espn: league rows say when the private ESPN fallback detail is stored.
+      const qs = `competition=${encodeURIComponent(competition)}&season=${encodeURIComponent(season)}&include=espn`
       const res = await fetch(`/api/footshorts/data/matches?${qs}`, { cache: 'no-store' })
       if (!res.ok) return []
       return ((await res.json()) as { rows?: MatchOption[] }).rows ?? []

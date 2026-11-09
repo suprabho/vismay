@@ -235,9 +235,10 @@ export function MatchPicker({
 
   // Ticked matches with no Opta insights yet and no scrape queued — what the
   // Picked strip's "Fetch insights" would scrape. ESPN cup rows have no Opta
-  // page: their per-row "fetch" extracts the ESPN detail instead.
+  // page: their per-row "fetch" extracts the ESPN detail instead. League rows
+  // already covered by the ESPN fallback need no fetch either.
   const unfetched = useMemo(
-    () => picked.filter((m) => m.source !== 'espn' && m.insights === 0 && !queued.has(m.id)),
+    () => picked.filter((m) => m.source !== 'espn' && !m.espnFallback && m.insights === 0 && !queued.has(m.id)),
     [picked, queued],
   )
   const [fetchingMany, setFetchingMany] = useState(false)
@@ -656,7 +657,15 @@ export function MatchPicker({
                                 {m.insights} ins
                               </Chip>
                             )}
-                            {(m.source === 'espn' ? !m.facts : m.insights === 0) &&
+                            {m.espnFallback && m.insights === 0 && (
+                              <Chip
+                                tone="teal"
+                                title="Opta is missing; ESPN's stats, timeline, line-ups and commentary are stored for this match (private) and go into the brief"
+                              >
+                                espn
+                              </Chip>
+                            )}
+                            {(m.source === 'espn' ? !m.facts : m.insights === 0 && !m.espnFallback) &&
                               (queued.has(m.id) ? (
                                 <Chip tone="amber" title="Scrape dispatched — hit Refresh shortly">
                                   queued
@@ -762,6 +771,10 @@ export function MatchPicker({
                           {m.insights > 0 ? (
                             <Chip tone="violet" title={`${m.insights} Opta insight(s)`}>
                               {m.insights} ins
+                            </Chip>
+                          ) : m.espnFallback ? (
+                            <Chip tone="teal" title="ESPN fallback detail stored (Opta missing)">
+                              espn
                             </Chip>
                           ) : queued.has(m.id) ? (
                             <Chip tone="amber" title="Scrape dispatched — hit Refresh shortly">
