@@ -212,7 +212,12 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   [lib/espnCups.ts](lib/espnCups.ts), formatted by
   [lib/espnCupContext.ts](lib/espnCupContext.ts); test:
   `pnpm --filter admin exec tsx lib/espnCupContext.test.ts`). Cup matches are
-  admin-only: the public brief refuses ESPN event ids; for vizf1, **Add races**
+  admin-only: the public brief refuses ESPN event ids. League matches with the
+  private ESPN fallback stored (Opta missing; `admin_espn_league_matches`, see
+  [lib/espnLeagueFallback.ts](lib/espnLeagueFallback.ts)) are badged `espn` in
+  teal instead of offering *fetch*, and Fetch insights skips them: the matches
+  route adds `espnFallback` with `include=espn`, which only this picker sends,
+  and the brief route appends their ESPN detail (`espnFallbackContext`); for vizf1, **Add races**
   ([RaceContextPicker.tsx](components/html-stories/RaceContextPicker.tsx)): any
   ingested sessions by season and weekend (races, sprints, qualifying, practice;
   up to 24, "Pick the whole season" ticks them all), the drivers to follow by

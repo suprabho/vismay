@@ -83,6 +83,11 @@ export interface MatchOption {
   /** Opta INSIGHTS cards — the season-context lines, the strongest reason to
    *  pick one match over another. */
   insights: number
+  /** A league fixture with private ESPN fallback detail stored (stats,
+   *  timeline, line-ups, commentary; admin_espn_league_matches). Only the
+   *  HTML-stories brief asks for it (`include=espn`): it is the only brief
+   *  that carries that detail. */
+  espnFallback?: boolean
 }
 
 /** A team as the picker's team search lists it. */

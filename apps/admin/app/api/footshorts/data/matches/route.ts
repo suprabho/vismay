@@ -10,6 +10,7 @@ import {
 } from '@vismay/content-source/footshortsData'
 import type { FixtureRowInput } from '@vismay/content-source/footshortsBlocks'
 import { listEspnCupMatchOptions, listEspnCupMatchOptionsForTeam, parseEspnSeasonLabel } from '@/lib/espnCups'
+import { listEspnLeagueMatches } from '@/lib/espnLeagueFallback'
 
 /**
  * Fixtures ANNOTATED with what a match brief could actually carry for each one —
@@ -29,6 +30,12 @@ import { listEspnCupMatchOptions, listEspnCupMatchOptionsForTeam, parseEspnSeaso
  * `&include=espn` the team scope adds the club's cup ties. Only the HTML-stories
  * brief asks for them: the compose brief cannot read those tables.
  *
+ * ESPN league fallback: with `&include=espn`, league rows also carry
+ * `espnFallback` when the private ESPN detail is stored for the fixture (the
+ * match-facts workflow's ESPN step, while theanalyst.com is blocked), so the
+ * picker shows it instead of offering an Opta fetch. Same HTML-stories-only
+ * rule: the compose brief never receives that detail.
+ *
  * Feeds the match picker (compose Sources stage and the HTML-stories brief
  * generator), which badges every match so an editor doesn't brief a fixture
  * with no data behind it. The sibling `/fixtures` route stays the plain list
@@ -38,9 +45,15 @@ import { listEspnCupMatchOptions, listEspnCupMatchOptionsForTeam, parseEspnSeaso
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-async function rows(fixtures: FixtureRowInput[], coverage: MatchBriefCoverage[]) {
+async function rows(fixtures: FixtureRowInput[], coverage: MatchBriefCoverage[], withEspn = false) {
   const by = new Map(coverage.map((c) => [c.fixtureId, c]))
-  const names = await fetchCompetitionNames(fixtures.map((f) => f.competition_slug))
+  const [names, espn] = await Promise.all([
+    fetchCompetitionNames(fixtures.map((f) => f.competition_slug)),
+    // Best-effort (a missing table reads as none); only finished matches can have it.
+    withEspn
+      ? listEspnLeagueMatches(fixtures.filter((f) => f.status === 'finished').map((f) => f.id)).catch(() => new Map())
+      : new Map(),
+  ])
   return fixtures.map((f) => {
     const c = by.get(f.id)
     return {
@@ -59,6 +72,7 @@ async function rows(fixtures: FixtureRowInput[], coverage: MatchBriefCoverage[])
       facts: c?.facts ?? false,
       events: c?.events ?? 0,
       insights: c?.insights ?? 0,
+      ...(espn.has(f.id) ? { espnFallback: true } : {}),
     }
   })
 }
@@ -77,7 +91,7 @@ export async function GET(req: Request) {
         withCups ? listEspnCupMatchOptionsForTeam(team) : [],
       ])
       const coverage = await fetchMatchBriefCoverageForIds(fixtures.map((f) => f.id))
-      return NextResponse.json({ ok: true, rows: [...(await rows(fixtures, coverage)), ...cupRows] })
+      return NextResponse.json({ ok: true, rows: [...(await rows(fixtures, coverage, withCups)), ...cupRows] })
     }
     if (competition && season && parseEspnSeasonLabel(season) != null) {
       return NextResponse.json({ ok: true, rows: await listEspnCupMatchOptions(competition, season) })
@@ -89,7 +103,7 @@ export async function GET(req: Request) {
       fetchFixtures({ competitionSlug: competition, season }),
       fetchMatchBriefCoverage(competition, season),
     ])
-    return NextResponse.json({ ok: true, rows: await rows(fixtures, coverage) })
+    return NextResponse.json({ ok: true, rows: await rows(fixtures, coverage, withCups) })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'failed to fetch matches' },
