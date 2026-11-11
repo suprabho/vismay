@@ -32,6 +32,13 @@ name: Footshorts - theanalyst match facts
 # tab) is on. `match_url` takes an ESPN match link too: that runs the ESPN
 # step alone, toggle or not.
 #
+# RUN STATUS: both steps write a job summary (the run's Summary page) — a
+# per-competition table for theanalyst, counts + the fixtures still needing an
+# ESPN link for the fallback. A bot challenge alone ends the scheduled run
+# GREEN with a warning annotation ("blocked, not broken"); the run goes red
+# only for failures someone can act on, or when a run that named fixtures /
+# a match_url could not fetch them.
+#
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY

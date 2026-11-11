@@ -49,6 +49,7 @@ import {
 } from '@footshorts/shared/espnLeagues';
 import { fetchEspnMatch, fetchEspnMatchSummary, normalizeEspnMatch, slimEspnSummary, type EspnCompetitionRef } from '@footshorts/shared/espnMatch';
 import { matchFixtures, type DiscoveredMatch, type UnmappedFixture } from './theanalyst/matchDiscovery';
+import { markdownTable, writeStepSummary } from './stepSummary';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false },
@@ -160,6 +161,15 @@ async function fetchAndStore(
   return 'stored';
 }
 
+/** What the automatic lookup did, for the job summary. */
+const report = {
+  note: '',
+  counts: null as { finished: number; opta: number; espn: number; todo: number } | null,
+  stored: 0,
+  notFinished: 0,
+  unmatched: [] as string[][],
+};
+
 /** Automatic mode: every league (or the named ones), fixtures lacking Opta facts. */
 async function runLookup(opts: { competitions: string[]; fixtureIds: string[]; dry: boolean }): Promise<string[]> {
   const { competitions, fixtureIds, dry } = opts;
@@ -182,6 +192,7 @@ async function runLookup(opts: { competitions: string[]; fixtureIds: string[]; d
   const fixtures = (data ?? []) as FixtureRow[];
   if (fixtures.length === 0) {
     console.log('[espn-facts] no finished fixtures to look up');
+    report.note = 'No finished fixtures to look up.';
     return [];
   }
 
@@ -193,6 +204,7 @@ async function runLookup(opts: { competitions: string[]; fixtureIds: string[]; d
   console.log(
     `[espn-facts] ${fixtures.length} finished fixture(s): ${withOpta.size} have Opta facts, ${withEspn.size} have ESPN detail, ${todo.length} to look up`
   );
+  report.counts = { finished: fixtures.length, opta: withOpta.size, espn: withEspn.size, todo: todo.length };
   if (todo.length === 0) return [];
 
   const names = await teamNames(todo);
@@ -203,6 +215,7 @@ async function runLookup(opts: { competitions: string[]; fixtureIds: string[]; d
     if (leagueFixtures.length === 0) continue;
     if (budget <= 0) {
       console.log('[espn-facts] per-run fetch budget exhausted — remaining fixtures wait for the next run');
+      report.note = 'Per-run fetch budget exhausted — the remaining fixtures wait for the next run.';
       break;
     }
     try {
@@ -221,6 +234,7 @@ async function runLookup(opts: { competitions: string[]; fixtureIds: string[]; d
       for (const f of unmatched) {
         const home = (f.home_team_id && names.get(f.home_team_id)) || f.home_team_name;
         const away = (f.away_team_id && names.get(f.away_team_id)) || f.away_team_name;
+        report.unmatched.push([league.slug, `${home} v ${away}`, f.kickoff_at.slice(0, 10), f.id]);
         console.log(
           `[espn-facts]   no single ESPN match for ${home} v ${away} (${f.kickoff_at.slice(0, 10)}, fixture ${f.id}) — paste its ESPN link in the admin Match facts tab`
         );
@@ -229,7 +243,9 @@ async function runLookup(opts: { competitions: string[]; fixtureIds: string[]; d
         if (budget <= 0) break;
         budget--;
         try {
-          await fetchAndStore(fixtureId, league, hit.matchId, dry);
+          const result = await fetchAndStore(fixtureId, league, hit.matchId, dry);
+          if (result === 'stored') report.stored++;
+          else report.notFinished++;
         } catch (e) {
           console.error(`[espn-facts] fixture ${fixtureId}: ${e instanceof Error ? e.message : e}`);
           failed.push(`${league.slug} fixture ${fixtureId}`);
@@ -335,6 +351,34 @@ async function runUrl(rawUrl: string, opts: { fixtureId: string | null; dry: boo
   );
 }
 
+const SUMMARY_HEADING = '## ESPN fallback (private admin store)';
+
+function writeLookupSummary(failed: string[], dry: boolean): void {
+  const c = report.counts;
+  const parts = [`${SUMMARY_HEADING}${dry ? ' — dry run' : ''}`];
+  parts.push(
+    failed.length > 0
+      ? `**❌ Failed** — ${failed.length} failure(s): ${failed.join(', ')}`
+      : report.unmatched.length > 0
+        ? `**⚠️ OK, ${report.unmatched.length} fixture(s) need an ESPN link** — no single ESPN match was found for them.`
+        : '**✅ OK**'
+  );
+  if (c) {
+    parts.push(
+      `${c.finished} finished fixture(s) in the window: ${c.opta} have Opta facts, ${c.espn} have ESPN detail, ${c.todo} looked up this run → ` +
+        `${report.stored} stored${report.notFinished ? `, ${report.notFinished} not finished on ESPN` : ''}, ${report.unmatched.length} unmatched.`
+    );
+  }
+  if (report.note) parts.push(report.note);
+  if (report.unmatched.length > 0) {
+    parts.push(
+      'Paste the ESPN link for these in the admin Match facts tab:\n\n' +
+        markdownTable(['Competition', 'Match', 'Date', 'Fixture id'], report.unmatched)
+    );
+  }
+  writeStepSummary(parts.join('\n\n'));
+}
+
 async function main() {
   const { competitions, fixtureIds, url, dry } = parseArgs(process.argv.slice(2));
   if (url) {
@@ -350,19 +394,25 @@ async function main() {
     console.log(
       `[espn-facts] ESPN fallback unavailable — apply the admin_espn_league_matches migration first (${setting.error ?? 'settings table missing'})`
     );
+    writeStepSummary(`${SUMMARY_HEADING}\n\n**⏸ Unavailable** — the admin_espn_league_matches migration is not applied.`);
     return;
   }
   if (!setting.enabled) {
     console.log('[espn-facts] ESPN fallback is switched off (admin Match facts tab) — no ESPN requests made');
+    writeStepSummary(`${SUMMARY_HEADING}\n\n**⏸ Switched off** (admin Match facts tab) — no ESPN requests made.`);
     return;
   }
   const failed = await runLookup({ competitions, fixtureIds, dry });
+  writeLookupSummary(failed, dry);
   if (failed.length > 0) throw new Error(`espn-facts: ${failed.length} failure(s): ${failed.join(', ')}`);
 }
 
 main()
   .then(() => process.exit(0))
   .catch((e) => {
-    console.error('fatal:', e instanceof Error ? e.message : e);
+    const message = e instanceof Error ? e.message : String(e);
+    // runLookup's own failures are already in the summary.
+    if (!message.startsWith('espn-facts:')) writeStepSummary(`${SUMMARY_HEADING}\n\n**❌ Failed** — ${message.split('\n')[0]}`);
+    console.error('fatal:', message);
     process.exit(1);
   });
