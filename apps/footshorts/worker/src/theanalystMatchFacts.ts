@@ -82,6 +82,7 @@ import {
   type MatchStory,
 } from './theanalyst/matchCentre';
 import { BotChallengeError, blockedBy, blockedHostErrors, closeBrowser } from './theanalyst/fetch';
+import { annotate, markdownTable, writeStepSummary } from './stepSummary';
 
 // The two hosts a run talks to: discovery reads theanalyst.com's fixtures
 // pages (behind Cloudflare), the scrape renders the match-centre widget on
@@ -869,24 +870,32 @@ async function run() {
   const failed: string[] = [];
   const discoverySkipped: string[] = [];
   const scrapeSkipped: string[] = [];
+  // Per-competition outcome, for the job summary.
+  const outcomes: { slug: string; discovery: string; scrape: string }[] = [];
   for (const comp of comps) {
+    const outcome = { slug: comp.competitionSlug, discovery: '', scrape: '' };
+    outcomes.push(outcome);
     // Fail fast: once a host has served a bot challenge, nothing else is asked
     // of it this run (fetch.ts) — skip the phase outright instead of erroring
     // once per competition.
     if (blockedBy(DISCOVERY_HOST_URL)) {
       discoverySkipped.push(comp.competitionSlug);
+      outcome.discovery = '🚧 blocked (skipped)';
     } else {
       try {
-        await discoverForCompetition(comp, dry, fixtureIds);
+        const linked = await discoverForCompetition(comp, dry, fixtureIds);
+        outcome.discovery = `✅ ${linked} newly linked`;
       } catch (e: any) {
         if (e instanceof BotChallengeError) {
           console.error(
             `[match-facts] ${comp.competitionSlug}: discovery stopped — ${e.message}. No more ${e.host} requests this run; already-linked fixtures are still scraped.`
           );
           discoverySkipped.push(comp.competitionSlug);
+          outcome.discovery = '🚧 blocked';
         } else {
           console.error(`[match-facts] ${comp.competitionSlug}: discovery failed — ${e?.message ?? e}`);
           failed.push(`${comp.competitionSlug} (discovery)`);
+          outcome.discovery = `❌ ${firstLine(e?.message ?? e)}`;
         }
         if (fixtureIds.length > 0) {
           // A named fixture that discovery hasn't linked yet can't be scraped
@@ -901,51 +910,94 @@ async function run() {
     }
     if (blockedBy(MATCH_CENTRE_HOST_URL)) {
       scrapeSkipped.push(comp.competitionSlug);
+      outcome.scrape = '🚧 blocked (skipped)';
       continue;
     }
     try {
-      await scrapeForCompetition(comp, budget, {
+      const scraped = await scrapeForCompetition(comp, budget, {
         dry,
         dumpEvents,
         eventsBackfill,
         storiesBackfill,
         fixtureIds,
       });
+      outcome.scrape = `✅ ${scraped} scraped`;
     } catch (e: any) {
       if (e instanceof BotChallengeError) {
         console.error(`[match-facts] ${comp.competitionSlug}: scrape stopped — ${e.message}. No more ${e.host} requests this run.`);
         scrapeSkipped.push(comp.competitionSlug);
+        outcome.scrape = '🚧 blocked';
       } else {
         console.error(`[match-facts] ${comp.competitionSlug}: scrape failed — ${e?.message ?? e}`);
         failed.push(`${comp.competitionSlug} (scrape)`);
+        outcome.scrape = `❌ ${firstLine(e?.message ?? e)}`;
       }
     }
   }
 
   const challenges = blockedHostErrors();
+  const table = markdownTable(
+    ['Competition', 'Discovery (theanalyst.com)', 'Scrape (match centre)'],
+    outcomes.map((o) => [o.slug, o.discovery, o.scrape])
+  );
+  const heading = `## Opta match facts (theanalyst.com)${dry ? ' — dry run' : ''}`;
+
   if (challenges.length > 0) {
-    for (const c of challenges) annotateChallenge(c);
+    // A bot challenge is the site turning the scraper away, not a fault in
+    // this code, and nothing here can fix it. On the cron it is a known,
+    // standing condition, so it ends as a WARNING (green run, annotated) —
+    // red is kept for failures somebody can act on. A run that names fixtures
+    // asked for something specific and didn't get it, so that one still fails.
+    const hosts = challenges.map((c) => c.host).join(' + ');
     const skipped = [
       discoverySkipped.length ? `discovery skipped for ${discoverySkipped.join(', ')}` : '',
       scrapeSkipped.length ? `scrape skipped for ${scrapeSkipped.join(', ')}` : '',
       failed.length ? `other failures: ${failed.join(', ')}` : '',
     ].filter(Boolean);
-    throw new Error(
-      `match-facts: bot challenge on ${challenges.map((c) => c.host).join(' + ')} — ${skipped.join('; ')}. ` +
-        'The ESPN fallback step still fills fixtures missing Opta facts.'
+    const fatal = failed.length > 0 || fixtureIds.length > 0;
+    for (const c of challenges) annotateChallenge(c, fatal ? 'error' : 'warning');
+    writeStepSummary(
+      [
+        heading,
+        `**${fatal ? '❌ Failed' : '🚧 Blocked, not broken'}** — ${hosts} is serving the scraper a Cloudflare challenge (${challenges.map((c) => c.evidence).join('; ')}). ` +
+          'It is not worked around; the ESPN fallback step below fills fixtures missing Opta facts.',
+        failed.length ? `**Other failures (these need a look):** ${failed.join(', ')}` : '',
+        !failed.length && fatal ? 'This run named specific fixtures, so the block counts as a failure: they could not all be fetched.' : '',
+        table,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
     );
+    const message =
+      `match-facts: bot challenge on ${hosts} — ${skipped.join('; ')}. ` +
+      'The ESPN fallback step still fills fixtures missing Opta facts.';
+    if (fatal) throw new Error(message);
+    console.warn(`[match-facts] ${message} Ending without an error: the block is external and already annotated.`);
+    return;
   }
+
+  writeStepSummary(
+    [
+      heading,
+      failed.length ? `**❌ Failed** — ${failed.length} phase(s): ${failed.join(', ')}` : '**✅ OK** — theanalyst.com answered normally.',
+      table,
+    ].join('\n\n')
+  );
   if (failed.length > 0) throw new Error(`match-facts: ${failed.length} phase(s) failed: ${failed.join(', ')}`);
 }
 
-/** A GitHub Actions error annotation, so the run summary names the cause
- *  instead of a stack trace. Harmless outside Actions. */
-function annotateChallenge(c: BotChallengeError): void {
-  const clean = (v: string) => v.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
-  console.log(
-    `::error title=${clean(`${c.host} bot challenge`)}::${clean(
-      `${c.host} is serving a Cloudflare challenge to the scraper (${c.evidence}). It is not worked around: wait for it to lift or ask the site for access. ${c.url}`
-    )}`
+function firstLine(v: unknown): string {
+  const line = String(v).split('\n')[0] ?? '';
+  return line.length > 160 ? `${line.slice(0, 157)}…` : line;
+}
+
+/** A GitHub Actions annotation, so the run page names the cause instead of a
+ *  stack trace. Harmless outside Actions. */
+function annotateChallenge(c: BotChallengeError, level: 'error' | 'warning'): void {
+  annotate(
+    level,
+    `${c.host} bot challenge`,
+    `${c.host} is serving a Cloudflare challenge to the scraper (${c.evidence}). It is not worked around: wait for it to lift or ask the site for access. ${c.url}`
   );
 }
 
@@ -953,8 +1005,11 @@ run()
   .then(() => closeBrowser())
   .then(() => process.exit(0))
   .catch((e) => {
-    // --url mode throws a challenge straight out of fetchMatchFacts.
-    if (e instanceof BotChallengeError) annotateChallenge(e);
-    console.error('fatal:', e instanceof BotChallengeError || e?.message?.startsWith('match-facts:') ? e.message : e);
+    // --url mode throws a challenge straight out of fetchMatchFacts, before any
+    // summary is written: the link was the whole job, so that stays an error.
+    const fromRun = typeof e?.message === 'string' && e.message.startsWith('match-facts:');
+    if (e instanceof BotChallengeError) annotateChallenge(e, 'error');
+    if (!fromRun) writeStepSummary(`## Opta match facts (theanalyst.com)\n\n**❌ Failed** — ${firstLine(e?.message ?? e)}`);
+    console.error('fatal:', e instanceof BotChallengeError || fromRun ? e.message : e);
     closeBrowser().finally(() => process.exit(1));
   });

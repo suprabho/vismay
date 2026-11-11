@@ -142,8 +142,17 @@ the same `BotChallengeError` at once, without a request. A challenge page gets
 3s to clear by itself and is never interacted with. `theanalystMatchFacts.ts`
 then skips the blocked phase for the remaining competitions (discovery for
 theanalyst.com, the scrape for dataviz), still runs the other, and ends with
-one `::error` annotation naming the host and the evidence, plus a summary of
-what it skipped. The job stays red while blocked, by design. Match facts for
+one annotation naming the host and the evidence, plus a job summary (a
+per-competition table of what was linked, scraped, blocked or failed).
+
+**Blocked is a warning, not a failure.** A challenge is the site turning the
+scraper away, not something a code change fixes, so a cron or
+competition-wide run that hit only the challenge ends **green with a
+`::warning`**: red is kept for failures someone can act on (a selector
+timeout, a Supabase error), which still fail the run even while blocked. Two
+cases stay red on a challenge because they asked for something specific and
+did not get it: a run that names fixtures (`fixture_id`) and a `match_url`
+run. Read the run's Summary page for the state at a glance. Match facts for
 those matches come from the private ESPN fallback instead
 (`worker/src/espnMatchFacts.ts`, the last step of the match-facts workflow;
 see `docs/espn-cups-admin.md` § ESPN league fallback). If theanalyst lifts the
