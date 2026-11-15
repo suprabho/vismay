@@ -2,7 +2,28 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, CaretLeft, CaretRight } from '@phosphor-icons/react'
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Atom,
+  CaretLeft,
+  CaretRight,
+  ChartLineUp,
+  Columns,
+  Cpu,
+  Scales,
+  UsersThree,
+  type Icon,
+} from '@phosphor-icons/react'
+
+const CATEGORY_ICONS: Record<string, Icon> = {
+  economy: ChartLineUp,
+  'ai-tech': Cpu,
+  science: Atom,
+  politics: Scales,
+  history: Columns,
+  society: UsersThree,
+}
 import { categoryArchiveHref, headlineFigure, type HomeSectionDef } from '@/lib/home/sections'
 import { storyMetaBits, storyPalette, storyPreviewUrl, type HomeStory } from '@/lib/home/homeShape'
 import { REVEAL } from './bits'
@@ -292,18 +313,21 @@ export default function CategorySections({ sections }: { sections: SectionWithSt
           By <em className="text-(--signal)">subject</em>
         </h2>
         <nav aria-label="Subjects" className="flex flex-wrap gap-2">
-          {sections.map(({ def, total }) => (
+          {sections.map(({ def, total }) => {
+            const CategoryIcon = CATEGORY_ICONS[def.category] ?? ChartLineUp
+            return (
             <a
               key={def.category}
               href={`#section-${def.category}`}
               style={{ '--ba': `var(--${def.accent})` } as CSSProperties}
-              className="group/chip inline-flex items-center gap-2 rounded-full border border-(--line2) py-1.5 pl-3 pr-3.5 text-[13px] text-(--muted) transition-colors hover:border-(--ba) hover:text-(--text)"
+              className="group/chip inline-flex items-center gap-2 rounded-full border border-(--line2) py-1.5 pl-2.5 pr-3.5 text-[13px] text-(--muted) transition-colors hover:border-(--ba) hover:text-(--text)"
             >
-              <span aria-hidden className="size-1.5 rounded-full bg-(--ba)" />
+              <CategoryIcon aria-hidden weight="duotone" className="size-4 flex-none text-(--ba)" />
               {def.label}
               <span className="font-(family-name:--mono) text-[11px] tabular-nums text-(--dim)">{total}</span>
             </a>
-          ))}
+            )
+          })}
         </nav>
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-20 md:gap-28">
