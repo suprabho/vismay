@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { HtmlStorySlugTakenError, listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
 import { parseStoryCategory } from '@vismay/html-stories/categories'
-import { HTML_STORY_STATUSES, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import { HTML_STORY_STATUSES, expiringUrlReason, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
 /**
@@ -53,6 +53,8 @@ export async function POST(req: Request) {
 
   const lint = lintHtml(b.html, { app, slug: b.slug })
   if (lint.errors.length) return NextResponse.json({ error: lint.errors.join(' '), ...lint }, { status: 400 })
+  const ogExpiry = typeof b.ogImageUrl === 'string' && b.ogImageUrl.trim() ? expiringUrlReason(b.ogImageUrl.trim()) : null
+  if (ogExpiry) return NextResponse.json({ error: `ogImageUrl is ${ogExpiry} and will stop working: host it on story-assets first.` }, { status: 400 })
 
   const str = (v: unknown) => (typeof v === 'string' ? v : undefined)
   try {

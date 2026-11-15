@@ -437,6 +437,10 @@ A data story is not only charts. When it has real ${subjects}, show them.
     you will post the story under. If you can't call either, link the
     original file URL directly (Commons \`upload.wikimedia.org\` URLs are fine
     to link).
+  - An image you made in another tool (Magnific/Freepik, Midjourney, DALL-E,
+    Replicate) comes back on a signed link that expires within hours or days:
+    always copy it in with \`fromUrl\` (or \`save_story_image\`) first. Publishing
+    refuses a page that links a signed or expiring URL.
 - **Markup.** \`<figure><img src="https://…" alt="…" width="1600" height="900"
   loading="lazy" decoding="async"><figcaption>…</figcaption></figure>\`. The
   hero is not lazy. Alt text says what the image shows, not "image of".

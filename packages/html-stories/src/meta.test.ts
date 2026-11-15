@@ -5,7 +5,9 @@ import {
   extractFormatMeta,
   extractHtmlMeta,
   extractThemeMeta,
+  expiringUrlReason,
   extractTripMeta,
+  findExpiringUrls,
   isSafeSlug,
   isTripStorySlug,
   lintHtml,
@@ -137,3 +139,44 @@ assert.ok(lintHtml(trip, { app: 'travel', slug: 'paris-day-1' }).errors[0]?.incl
 assert.deepEqual(lintHtml(good, { app: 'footshorts', slug: 'x' }).errors, [])
 
 console.log('meta: ok')
+
+// Expiring links: signed, time-limited URLs break the page days later.
+{
+  const withImg = (src: string) => good.replace('https://upload.wikimedia.org/a.jpg', src)
+  const pikaso =
+    'https://pikaso.cdnpk.net/private/production/5950756048/render.png?token=exp=1794182400~hmac=4e8d750775cb&amp;w=1024&amp;preview=1'
+  const r = lintHtml(withImg(pikaso))
+  assert.equal(r.errors.length, 1)
+  assert.match(r.errors[0] ?? '', /private Freepik\/Magnific render link/)
+  assert.match(r.errors[0] ?? '', /assets endpoint/)
+
+  const expiring = [
+    'https://bucket.s3.amazonaws.com/a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=abc',
+    'https://storage.googleapis.com/b/a.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=600&X-Goog-Signature=abc',
+    'https://oaidalleapiprodscus.blob.core.windows.net/private/img.png?st=2026&se=2026-11-01&sig=abc',
+    'https://acct.blob.core.windows.net/c/a.png?sv=2022&se=2026-11-01T00:00Z&sig=abc',
+    'https://d111.cloudfront.net/a.png?Expires=1794182400&Signature=abc&Key-Pair-Id=K1',
+    'https://replicate.delivery/pbxt/abc/out.png',
+    'https://cdn.discordapp.com/attachments/1/2/a.png?ex=67&is=66&hm=abc',
+    'https://xyz.supabase.co/storage/v1/object/sign/story-assets/a.png?token=eyJ',
+    'https://cdn.example.com/a.png?exp=1794182400&sig=abc',
+  ]
+  for (const url of expiring) assert.ok(expiringUrlReason(url), url)
+  // Lasting links pass, including the story-assets bucket and look-alike params.
+  const lasting = [
+    'https://upload.wikimedia.org/wikipedia/commons/5/56/Milton_Friedman_1976_by_Eddie_Adams.jpg',
+    'https://xyz.supabase.co/storage/v1/object/public/story-assets/html-stories/s/abc.png',
+    'https://img.freepik.com/free-photo/a.jpg?w=740',
+    'https://example.com/search?q=signature&page=2',
+    'https://example.com/a?expires=soon',
+  ]
+  for (const url of lasting) assert.equal(expiringUrlReason(url), null, url)
+
+  // Found in scripts too, and counted once each.
+  const scripted = withImg('https://upload.wikimedia.org/a.jpg').replace(
+    '</body>',
+    `<script>img.src = "${expiring[0]}"; other.src = "${expiring[0]}"</script></body>`,
+  )
+  assert.equal(findExpiringUrls(scripted).length, 1)
+  assert.equal(lintHtml(scripted).errors.length, 1)
+}
