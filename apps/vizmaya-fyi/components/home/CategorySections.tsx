@@ -13,10 +13,11 @@ import StoryTile, { COVER_LINK, StoryLink } from './StoryTile'
  * The category sections under the wall (lib/home/sections.ts): one section
  * per story category, each in a layout of its own so the page changes pace.
  * Money leads with the number in each headline, technology is a strip to
- * page through, science a numbered list on paper, politics a mosaic, history
- * a row of framed plates and society a set of newspaper columns. The ledger
- * and the columns are type only, which also keeps the page's preview count
- * down.
+ * page through, science a list on paper, politics a mosaic, history
+ * a row of framed plates and society a set of newspaper columns. Every
+ * layout shows the stories themselves: the ledger as a small plate beside
+ * each line, the columns as a picture over each one. Previews share one
+ * budget (LivePreview), so only those on screen run.
  */
 
 export interface SectionWithStories {
@@ -84,6 +85,30 @@ function Headline({ story, dek = 2, size = 'text-[clamp(22px,2vw,28px)]' }: { st
         <p className={`mt-1.5 text-[14px] leading-[1.5] text-(--bm) ${dek === 4 ? 'line-clamp-4' : 'line-clamp-2'}`}>{story.subtitle}</p>
       )}
       <MetaLine story={story} className="mt-auto pt-2.5" />
+    </div>
+  )
+}
+
+/**
+ * A story's live preview in a box of the given shape, on its own colours
+ * (with their glow) until the page itself has loaded.
+ */
+function Thumb({ story, index, className = '' }: { story: HomeStory; index: number; className?: string }) {
+  const p = storyPalette(story, index)
+  return (
+    <div
+      style={{ '--sb': p.bg, '--sa': p.accent } as CSSProperties}
+      className={`relative overflow-hidden bg-(--sb) ${className}`}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,color-mix(in_srgb,var(--sa)_32%,transparent),transparent_62%)]"
+      />
+      <LivePreview src={storyPreviewUrl(story)} title={story.title} className="transition-transform duration-700 ease-out group-hover:scale-[1.03]" />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[inherit] border border-(--bl) transition-colors duration-300 group-hover:border-(--ba)"
+      />
     </div>
   )
 }
@@ -184,18 +209,16 @@ function Strip({ def, stories, total }: SectionWithStories) {
   )
 }
 
-/** Science: a numbered list in two columns, type only, on paper. */
+/** Science: a list in two columns on paper, each line with a small plate of its story. */
 function Ledger({ def, stories, total }: SectionWithStories) {
   return (
     <div className="rounded-[18px] bg-(--paper) p-6 text-(--paper-ink) [--ba:var(--ink-signal)] [--bl2:var(--paper-line)] [--bl:var(--paper-line)] [--bm:var(--paper-muted)] md:p-10">
       <SectionHead def={def} total={total} className="mb-9" />
       <ol className="grid gap-x-12 md:grid-cols-2">
         {stories.map((s, i) => (
-          <li key={s.slug} data-reveal className={`group relative flex gap-5 border-t border-(--bl) py-5 ${REVEAL}`}>
-            <span aria-hidden className="w-[2.1ch] flex-none font-(family-name:--serif) text-[clamp(40px,4vw,56px)] italic leading-[.9] tabular-nums text-(--ba)">
-              {two(i + 1)}
-            </span>
+          <li key={s.slug} data-reveal className={`group relative flex gap-4 border-t border-(--bl) py-5 sm:gap-5 ${REVEAL}`}>
             <Headline story={s} />
+            <Thumb story={s} index={i} className="aspect-[4/5] w-[76px] flex-none self-start rounded-[8px] sm:w-[112px]" />
           </li>
         ))}
       </ol>
@@ -259,7 +282,7 @@ function Plates({ def, stories, total }: SectionWithStories) {
   )
 }
 
-/** Society: newspaper columns between rules, type only; the first story is set larger. */
+/** Society: newspaper columns between rules, a picture over each story; the first story is set larger. */
 function Columns({ def, stories, total }: SectionWithStories) {
   return (
     <div className="border-y border-(--bl2) py-9 md:py-12">
@@ -269,8 +292,9 @@ function Columns({ def, stories, total }: SectionWithStories) {
           <li
             key={s.slug}
             data-reveal
-            className={`group relative flex border-t border-(--bl) py-5 md:border-l md:px-7 md:[&:nth-child(3n+1)]:border-l-0 md:[&:nth-child(3n+1)]:pl-1 md:[&:nth-child(3n)]:pr-1 ${REVEAL}`}
+            className={`group relative flex flex-col gap-4 border-t border-(--bl) py-5 md:border-l md:px-7 md:[&:nth-child(3n+1)]:border-l-0 md:[&:nth-child(3n+1)]:pl-1 md:[&:nth-child(3n)]:pr-1 ${REVEAL}`}
           >
+            <Thumb story={s} index={i} className="aspect-[3/2] w-full rounded-[10px]" />
             <Headline story={s} dek={4} size={i === 0 ? 'text-[clamp(26px,2.6vw,36px)]' : 'text-[clamp(21px,1.8vw,25px)]'} />
           </li>
         ))}
