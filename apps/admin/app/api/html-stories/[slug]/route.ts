@@ -6,6 +6,7 @@ import {
   listHtmlStoryVersions,
   updateHtmlStoryMeta,
 } from '@vismay/html-stories/htmlStories'
+import { parseStoryCategory } from '@vismay/html-stories/categories'
 import { HTML_STORY_STATUSES, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
@@ -49,6 +50,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
       return NextResponse.json({ error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }, { status: 400 })
     }
     patch.aura = aura
+  }
+  if (b.category !== undefined) {
+    const raw = typeof b.category === 'string' ? b.category.trim() : ''
+    const category = raw ? parseStoryCategory(raw) : null
+    if (raw && !category) return NextResponse.json({ error: 'unknown category' }, { status: 400 })
+    patch.category = category
   }
 
   try {

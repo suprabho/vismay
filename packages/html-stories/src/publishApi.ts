@@ -9,12 +9,16 @@
  * Two body shapes:
  *   - `Content-Type: text/html` — the document itself; options in the query
  *     string (`slug`, `publish=1` or `status`, `title`, `description`, `aura`,
- *     `source`).
+ *     `category`, `source`).
  *   - `Content-Type: application/json` — `{ slug, html, status?, publish?,
- *     title?, description?, ogImageUrl?, aura?, source? }`.
+ *     title?, description?, ogImageUrl?, aura?, category?, source? }`.
  *
  * `aura` is an aura.promad.design scene slug (or scene URL) laid behind the
  * page and on its listing card. Omitted, a re-post keeps the story's aura.
+ *
+ * `category` files the story under one subject area (./categories), which is
+ * how the vizmaya.fyi home page groups stories. Omitted, a re-post keeps the
+ * story's category; a vizmaya story left without one gets a warning.
  *
  * `spin` (query) or `spinId` (JSON) ties the page to a randomizer spin
  * (@vismay/randomizer): the spin records the story's slug, and moves to
@@ -37,6 +41,7 @@
  */
 
 import { timingSafeEqual } from 'node:crypto'
+import { STORY_CATEGORY_IDS, parseStoryCategory, type StoryCategoryId } from './categories'
 import { getSpin, isSpinId, linkSpinStory, spinAllowsPublish } from '@vismay/randomizer/spins'
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import type { HtmlStoryApp } from './apps'
@@ -79,6 +84,7 @@ interface PublishRequest {
   description?: string
   ogImageUrl?: string
   aura?: string
+  category?: StoryCategoryId
   source?: string
   spinId?: string
 }
@@ -112,9 +118,14 @@ async function readBody(req: Request): Promise<PublishRequest | { error: string 
   const aura = auraRaw ? parseAuraSlug(auraRaw) : undefined
   if (auraRaw && !aura) return { error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }
 
+  const categoryRaw = pick('category')
+  const category = categoryRaw ? parseStoryCategory(categoryRaw) : undefined
+  if (categoryRaw && !category) return { error: `category must be one of ${STORY_CATEGORY_IDS.join(', ')}` }
+
   return {
     html,
     aura: aura ?? undefined,
+    category: category ?? undefined,
     slug: pick('slug'),
     status: statusRaw as HtmlStoryStatus | undefined,
     title: pick('title'),
@@ -180,9 +191,15 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
       description: parsed.description,
       ogImageUrl: parsed.ogImageUrl,
       aura: parsed.aura,
+      category: parsed.category,
       source: parsed.source ? `api:${parsed.source.slice(0, 40)}` : 'api',
     })
     const url = `${new URL(req.url).origin}/s/${story.slug}`
+    if (app === 'vizmaya-fyi' && !story.category) {
+      warnings.push(
+        `No category: the home page files stories by category, so this one appears on the wall only. Re-post with category set to one of ${STORY_CATEGORY_IDS.join(', ')}.`,
+      )
+    }
     let spinOut: { id: string; status: string } | undefined
     if (spin) {
       try {
@@ -193,7 +210,7 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
       }
     }
     return json(
-      { ok: true, created, slug: story.slug, status: story.status, title: story.title, url, warnings, ...(spinOut ? { spin: spinOut } : {}) },
+      { ok: true, created, slug: story.slug, status: story.status, title: story.title, category: story.category, url, warnings, ...(spinOut ? { spin: spinOut } : {}) },
       created ? 201 : 200,
     )
   } catch (e) {

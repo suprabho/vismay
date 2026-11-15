@@ -21,6 +21,7 @@
     "./storyStyles": "./src/storyStyles.ts",
     "./randomizerApi": "./src/randomizerApi.ts",
     "./formats": "./src/formats.ts",
+    "./categories": "./src/categories.ts",
     "./formatsApi": "./src/formatsApi.ts",
     "./assetsApi": "./src/assetsApi.ts",
     "./audio": "./src/audio.ts",

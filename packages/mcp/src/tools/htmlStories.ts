@@ -360,10 +360,19 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
             'aura.promad.design scene slug (or scene URL) to lay behind the page and use as its listing card ' +
               'background. Only when the user names one; omitted, a re-post keeps the current aura.',
           ),
+        category: z
+          .enum(['economy', 'ai-tech', 'politics', 'science', 'history', 'society'])
+          .optional()
+          .describe(
+            'vizmaya-fyi only: the one subject area the story is filed under, which is how the home page groups ' +
+              'stories (economy = Economy & Business, ai-tech = AI & Technology, politics = Politics & World, science, ' +
+              'history = History & Culture, society = Society & Health). Always pass it for a new vizmaya story; ' +
+              'omitted, a re-post keeps the current one.',
+          ),
         spinId: z.string().uuid().optional().describe('The randomizer spin this page answers (vizmaya-fyi, footshorts or viznba, matching the spin).'),
       },
     },
-    async ({ app, slug, html, filePath, publish, title, description, aura, spinId }) => {
+    async ({ app, slug, html, filePath, publish, title, description, aura, category, spinId }) => {
       const { token } = requireHtmlStoriesEnv(app)
       if (!html && !filePath) throw new Error('Pass either html or filePath.')
       const doc = html ?? (await readFile(filePath!, 'utf8'))
@@ -378,6 +387,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
           title,
           description,
           aura,
+          category,
           spinId,
           source: 'mcp',
         }),

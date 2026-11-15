@@ -51,6 +51,7 @@
  * point of this pipeline is that the agent designs the page itself.
  */
 
+import { STORY_CATEGORIES } from './categories'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import {
   assignmentSection,
@@ -1164,7 +1165,7 @@ Slugs are lowercase words joined by hyphens, e.g. \`${slugExample}\`.${
     app === 'travel' ? ' A trip story\'s slug starts with its trip\'s slug (`<trip>-day-3`, `<trip>-highlights`).' : ''
   }
 Posting to an existing slug replaces it; older versions stay restorable.
-${spin ? `\n${postingLines(spin)}\n` : ''}${
+${app === 'vizmaya-fyi' ? `\n${categorySection()}\n` : ''}${spin ? `\n${postingLines(spin)}\n` : ''}${
   hasContext
     ? `
 ---
@@ -1186,4 +1187,18 @@ ${researchAppendix(spin)}
 `
     : ''
 }`
+}
+
+/**
+ * How a vizmaya story is filed: one category, passed when posting (never a
+ * tag in the page), which is how the home page groups stories.
+ */
+function categorySection(): string {
+  return `### Category
+
+File the story under exactly one category when you post it: \`category\` on
+\`publish_html_story\`, or \`&category=<id>\` on the HTTP request. The home page
+groups stories by it, and a story without one is left out of those sections.
+Pick by what the story is mainly about, not by its source:
+${STORY_CATEGORIES.map((c) => `- \`${c.id}\` (${c.label}): ${c.covers}`).join('\n')}`
 }

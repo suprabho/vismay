@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { HtmlStorySlugTakenError, listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
+import { parseStoryCategory } from '@vismay/html-stories/categories'
 import { HTML_STORY_STATUSES, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
@@ -44,6 +45,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'aura must be an aura scene slug or an aura.promad.design scene URL' }, { status: 400 })
   }
 
+  // A category id sets it ('' clears it); omitted keeps the current one.
+  const category = typeof b.category === 'string' ? (b.category.trim() ? parseStoryCategory(b.category) : null) : undefined
+  if (category === null && typeof b.category === 'string' && b.category.trim()) {
+    return NextResponse.json({ error: 'unknown category' }, { status: 400 })
+  }
+
   const lint = lintHtml(b.html, { app, slug: b.slug })
   if (lint.errors.length) return NextResponse.json({ error: lint.errors.join(' '), ...lint }, { status: 400 })
 
@@ -58,6 +65,7 @@ export async function POST(req: Request) {
       description: str(b.description),
       ogImageUrl: str(b.ogImageUrl),
       aura,
+      category,
       source: str(b.source) === 'admin:restore' ? 'admin:restore' : 'admin',
     })
     // Section audio is not made here: the editor's Section audio panel starts it.

@@ -17,6 +17,7 @@
 
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { DEFAULT_HTML_STORY_APP, type HtmlStoryApp } from './apps'
+import { isStoryCategory, type StoryCategoryId } from './categories'
 import { DEFAULT_HTML_STORY_FORMAT, isHtmlStoryFormat, type HtmlStoryFormat } from './formats'
 import {
   extractFormatMeta,
@@ -44,6 +45,8 @@ export interface HtmlStorySummary {
   aura: string | null
   /** The page's declared format (<meta name="vizmaya:format">; migration 089). */
   format: HtmlStoryFormat
+  /** The subject area the story is filed under (./categories; migration 105). */
+  category: StoryCategoryId | null
 }
 
 export interface HtmlStory extends HtmlStorySummary {
@@ -79,18 +82,22 @@ export interface HtmlStoryInput {
   source: string
   /** Aura scene slug; null clears it. Omitted: an existing story keeps its aura. */
   aura?: string | null
+  /** The story's category; null clears it. Omitted: an existing story keeps its category. */
+  category?: StoryCategoryId | null
 }
 
 const BASE_COLUMNS =
   'slug, app_slug, title, description, og_image_url, status, source, published_at, updated_at, created_at'
-const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura, format`
+const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura, format, category`
+const CATEGORY_MIGRATION_HINT = 'Setting a category needs migration 105_html_stories_category.sql applied'
 const AURA_MIGRATION_HINT = 'Setting an aura needs migration 087_html_stories_aura.sql applied'
 /**
  * Columns later migrations added, newest first: a database that predates one
- * is read and written without it (format: 089, aura: 087, theme_meta: 086),
+ * is read and written without it (category: 105, format: 089, aura: 087,
+ * theme_meta: 086),
  * so the code can ship before the migrations do.
  */
-const LATER_COLUMNS = ['format', 'aura', 'theme_meta'] as const
+const LATER_COLUMNS = ['category', 'format', 'aura', 'theme_meta'] as const
 
 export function hasServiceEnv(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -110,6 +117,7 @@ function mapSummary(r: any): HtmlStorySummary {
     createdAt: r.created_at,
     aura: r.aura ?? null,
     format: isHtmlStoryFormat(r.format) ? r.format : DEFAULT_HTML_STORY_FORMAT,
+    category: isStoryCategory(r.category) ? r.category : null,
   }
 }
 
@@ -279,6 +287,7 @@ export async function saveHtmlStory(
     source: input.source,
     // Omitted from the upsert when not given, so a re-post keeps the aura.
     ...(input.aura !== undefined ? { aura: input.aura } : {}),
+    ...(input.category !== undefined ? { category: input.category } : {}),
     published_at: existing?.published_at ?? (status === 'published' ? now : null),
     updated_at: now,
   }
@@ -288,10 +297,11 @@ export async function saveHtmlStory(
   let write: Record<string, unknown> = row
   let cols = SUMMARY_COLUMNS
   let { data, error } = await upsert(write, cols)
-  // Before migration 089 (format; its backfill picks it up), 087 (aura) or
+  // Before migration 105 (category), 089 (format; its backfill picks it up), 087 (aura) or
   // 086 (palette; likewise): drop the newest column and try again.
   for (const column of LATER_COLUMNS) {
     if (!isMissingColumn(error)) break
+    if (column === 'category' && input.category != null) throw new Error(`${CATEGORY_MIGRATION_HINT} (${input.slug})`)
     if (column === 'aura' && input.aura != null) throw new Error(`${AURA_MIGRATION_HINT} (${input.slug})`)
     const { [column]: _dropped, ...rest } = write
     write = rest
@@ -319,6 +329,7 @@ export async function updateHtmlStoryMeta(
     ogImageUrl?: string | null
     status?: HtmlStoryStatus
     aura?: string | null
+    category?: StoryCategoryId | null
   },
   app: HtmlStoryApp = DEFAULT_HTML_STORY_APP,
 ): Promise<HtmlStorySummary | null> {
@@ -340,10 +351,17 @@ export async function updateHtmlStoryMeta(
     }
   }
   if (patch.aura !== undefined) update.aura = patch.aura
+  if (patch.category !== undefined) update.category = patch.category
   const run = (cols: string) =>
     sb.from('html_stories').update(update).eq('slug', slug).eq('app_slug', app).select(cols).maybeSingle()
   let { data, error } = await run(SUMMARY_COLUMNS)
-  if (isMissingColumn(error)) ({ data, error } = await run(withoutColumn(SUMMARY_COLUMNS, 'format')))
+  if (isMissingColumn(error)) {
+    if (patch.category !== undefined) throw new Error(`${CATEGORY_MIGRATION_HINT} (${slug})`)
+    ;({ data, error } = await run(withoutColumn(SUMMARY_COLUMNS, 'category')))
+  }
+  if (isMissingColumn(error)) {
+    ;({ data, error } = await run(withoutColumn(withoutColumn(SUMMARY_COLUMNS, 'category'), 'format')))
+  }
   if (isMissingColumn(error)) {
     if (patch.aura !== undefined) throw new Error(`${AURA_MIGRATION_HINT} (${slug})`)
     ;({ data, error } = await run(BASE_COLUMNS))

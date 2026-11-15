@@ -18,8 +18,8 @@ import {
   type HomeEpic,
 } from '@/lib/home/homeShape'
 import { schemeVars } from '@/lib/home/logoPalette'
-import { BEATS } from '@/lib/home/beats'
-import BeatSections from './BeatSections'
+import { HOME_SECTIONS } from '@/lib/home/sections'
+import CategorySections from './CategorySections'
 import { PenroseMark, REVEAL, useReveal } from './bits'
 import LivePreview from './LivePreview'
 import StoryTile, { COVER_LINK } from './StoryTile'
@@ -28,8 +28,8 @@ import StoryTile, { COVER_LINK } from './StoryTile'
  * The vizmaya.fyi home page: a wall of what we publish and nothing else. The
  * newest stories as tiles, each showing the story itself, live (LivePreview),
  * over a caption in the story's own colours; today's Doom v Boom score beside
- * the lead; the beats, one section per kind of story, each laid out its own
- * way (BeatSections); and the epics as bands, each previewing its landing
+ * the lead; a section per story category, each laid out its own way
+ * (CategorySections); and the epics as bands, each previewing its landing
  * page. Every link is in the server-rendered HTML; the previews arrive with JS.
  */
 
@@ -52,7 +52,7 @@ const LOGO_PALETTE = {
 
 // ── the bar ───────────────────────────────────────────────────────────────
 
-function Bar({ daily, beats, epics }: { daily: boolean; beats: boolean; epics: boolean }) {
+function Bar({ daily, sections, epics }: { daily: boolean; sections: boolean; epics: boolean }) {
   const nav = useRef<HTMLElement>(null)
   useEffect(() => {
     const update = () => nav.current?.toggleAttribute('data-scrolled', window.scrollY > 8)
@@ -63,7 +63,7 @@ function Bar({ daily, beats, epics }: { daily: boolean; beats: boolean; epics: b
   const links = [
     { href: '#stories', label: 'Stories', on: true },
     { href: '#daily', label: 'Doom v Boom', on: daily },
-    { href: '#beats', label: 'Beats', on: beats },
+    { href: '#sections', label: 'Subjects', on: sections },
     { href: '#epics', label: 'Epics', on: epics },
   ].filter((l) => l.on)
   return (
@@ -263,9 +263,9 @@ export default function HomeWall({ data, fontVars = '' }: { data: HomeData; font
   const root = useRef<HTMLDivElement>(null)
   useReveal(root)
   const { stories, epics, dailyEditions, dailyVars, fontUrls } = data
-  const beats = data.beats.flatMap((b) => {
-    const beat = BEATS.find((x) => x.id === b.id)
-    return beat ? [{ beat, stories: b.stories }] : []
+  const sections = data.sections.flatMap((x) => {
+    const def = HOME_SECTIONS.find((d) => d.category === x.category)
+    return def ? [{ def, stories: x.stories }] : []
   })
   const shown = stories.slice(0, FRONT_PAGE_LIMIT)
   const daily = dailyEditions.length > 0
@@ -278,10 +278,10 @@ export default function HomeWall({ data, fontVars = '' }: { data: HomeData; font
     >
       {/* each epic band renders in its own typefaces */}
       <StoryGridFonts fontUrls={fontUrls} />
-      <Bar daily={daily} beats={beats.length > 0} epics={epics.length > 0} />
+      <Bar daily={daily} sections={sections.length > 0} epics={epics.length > 0} />
 
       <main className="px-3 pb-16 pt-16 sm:px-4">
-        <h1 className="sr-only">vizmaya: visual stories, Doom v Boom, the beats and the epics</h1>
+        <h1 className="sr-only">vizmaya: visual stories, Doom v Boom, stories by subject and the epics</h1>
 
         <section id="stories" aria-labelledby="stories-h" className="scroll-mt-16">
           <h2 id="stories-h" className="sr-only">
@@ -290,7 +290,7 @@ export default function HomeWall({ data, fontVars = '' }: { data: HomeData; font
           <div className="grid grid-flow-dense grid-cols-1 gap-3 sm:auto-rows-[clamp(260px,38vw,380px)] sm:grid-cols-6 lg:auto-rows-[clamp(264px,25vw,380px)] lg:grid-cols-12">
             {shown.map((s, i) => (
               <FragmentWithDaily key={s.slug} after={i === 0 && daily ? <DailyTile editions={dailyEditions} vars={dailyVars} /> : null}>
-                <StoryTile story={s} index={i} lead={i === 0} className={i === 0 && !daily ? `${SPANS[0]} lg:col-span-12` : SPANS[i % SPANS.length]} />
+                <StoryTile story={s} index={i} lead={i === 0} showCategory className={i === 0 && !daily ? `${SPANS[0]} lg:col-span-12` : SPANS[i % SPANS.length]} />
               </FragmentWithDaily>
             ))}
             {shown.length === 0 && daily && <DailyTile editions={dailyEditions} vars={dailyVars} />}
@@ -298,7 +298,7 @@ export default function HomeWall({ data, fontVars = '' }: { data: HomeData; font
           </div>
         </section>
 
-        <BeatSections beats={beats} />
+        <CategorySections sections={sections} />
 
         {epics.length > 0 && (
           <section id="epics" aria-labelledby="epics-h" className="mt-20 scroll-mt-20 md:mt-28">

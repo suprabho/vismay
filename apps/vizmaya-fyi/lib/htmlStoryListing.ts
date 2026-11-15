@@ -1,5 +1,6 @@
 import type { Theme } from '@vismay/viz-engine'
 import type { StoryCardData } from '@vismay/ui'
+import type { StoryCategoryId } from '@vismay/html-stories/categories'
 import { HTML_STORY_FORMAT_META } from '@vismay/html-stories/formats'
 import { listPublishedHtmlStories } from '@vismay/html-stories/htmlStories'
 
@@ -10,7 +11,7 @@ import { listPublishedHtmlStories } from '@vismay/html-stories/htmlStories'
  * Best-effort: a listing failure (no service env, migration 086 not applied
  * yet) leaves the pages with their viz-engine stories rather than a 500.
  */
-export async function getHtmlStoryCards(): Promise<StoryCardData[]> {
+export async function getHtmlStoryCards(): Promise<(StoryCardData & { category?: StoryCategoryId })[]> {
   const stories = await listPublishedHtmlStories('vizmaya-fyi').catch((err) => {
     console.error('[html-stories] listing failed:', err)
     return []
@@ -47,6 +48,7 @@ export async function getHtmlStoryCards(): Promise<StoryCardData[]> {
       aura: s.aura ?? undefined,
       thumbnail: s.ogImageUrl ?? undefined,
       // A book, board or deck says so on its card; a scrolling page needs no badge.
+      category: s.category ?? undefined,
       format: s.format !== 'scroll' ? HTML_STORY_FORMAT_META[s.format].label : undefined,
     }
   })

@@ -7,7 +7,7 @@ import { storyHref, storyMetaBits, storyPalette, storyPreviewUrl, type HomeStory
 import { REVEAL } from './bits'
 import LivePreview from './LivePreview'
 
-/** A story as the home page shows it: the link, and the live tile the wall and the beats share. */
+/** A story as the home page shows it: the link, and the live tile the wall and the category sections share. */
 
 /** A link over its whole tile, with the focus ring drawn around the tile. */
 export const COVER_LINK =
@@ -30,9 +30,22 @@ export function StoryLink({ story, className, children }: { story: HomeStory; cl
   )
 }
 
-export default function StoryTile({ story, index, lead, className = '' }: { story: HomeStory; index: number; lead?: boolean; className?: string }) {
+export default function StoryTile({
+  story,
+  index,
+  lead,
+  showCategory,
+  className = '',
+}: {
+  story: HomeStory
+  index: number
+  lead?: boolean
+  /** Name the story's category in its meta line (the wall does; a section already says it). */
+  showCategory?: boolean
+  className?: string
+}) {
   const p = storyPalette(story, index)
-  const meta = storyMetaBits(story)
+  const meta = storyMetaBits(story, { category: showCategory })
   return (
     <article
       data-reveal
