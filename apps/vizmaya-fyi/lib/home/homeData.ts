@@ -6,15 +6,18 @@ import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { getHtmlStoryCards } from '@/lib/htmlStoryListing'
 import { boomScore, editionHref } from '@/app/ai-daily/doom-v-boom/components/editionUtils'
 import { EDITION_CSS_VARS, resolveAiDataCentersTheme, type AiDataCentersTheme } from '@/app/ai-data-centers/theme'
-import type { HomeData, HomeDailyEdition, HomeEpic, HomeStory } from './homeShape'
+import { BEATS, BEAT_LIMIT, BEAT_MIN, beatForDesk, spinLabels } from './beats'
+import { FRONT_PAGE_LIMIT, type HomeBeat, type HomeData, type HomeDailyEdition, type HomeEpic, type HomeStory } from './homeShape'
+import { loadStorySpins } from './storyBeats'
 
 type FontSet = { serif?: string; sans?: string; mono?: string }
 
-/** Everything the home page shows: the stories, the epics and the last three Doom v Boom editions. */
+/** Everything the home page shows: the stories, their beats, the epics and the last three Doom v Boom editions. */
 export async function loadHomeData(): Promise<HomeData> {
-  const [stories, htmlStories, epics, editions, dcEpic] = await Promise.all([
+  const [stories, htmlStories, spins, epics, editions, dcEpic] = await Promise.all([
     getAllStories('vizmaya-fyi'),
     getHtmlStoryCards(),
+    loadStorySpins(),
     // Best-effort, like the editions: the home page must not 500 because the epics or editions tables are unavailable.
     listEpicsForHome('vizmaya-fyi').catch((err) => {
       console.error('[home] epics listing failed:', err)
@@ -26,8 +29,18 @@ export async function loadHomeData(): Promise<HomeData> {
 
   // Agent-authored HTML stories (/s/<slug>) lead, newest first, ahead of the
   // curated viz-engine order.
+  const beatOf = new Map<string, string>()
   const homeStories: HomeStory[] = [
-    ...htmlStories,
+    // A story picked by a randomizer desk says what it is about (the country,
+    // the prize, the field) in its meta line, and belongs to that desk's beat.
+    ...htmlStories.map((s) => {
+      const spin = spins.get(s.slug)
+      if (!spin) return s
+      const beat = beatForDesk(spin.desk)
+      if (beat) beatOf.set(s.slug, beat.id)
+      const { topic, mark } = spinLabels(spin.desk, spin.reels)
+      return { ...s, topic: s.topic ?? topic, mark }
+    }),
     ...stories.map((s) => ({
       slug: s.slug,
       title: s.title,
@@ -41,6 +54,13 @@ export async function loadHomeData(): Promise<HomeData> {
       thumbnailTextColor: s.thumbnailTextColor,
     })),
   ]
+
+  // A beat shows its newest stories that the wall doesn't already show.
+  const below = homeStories.slice(FRONT_PAGE_LIMIT)
+  const beats: HomeBeat[] = BEATS.map((b) => ({
+    id: b.id,
+    stories: below.filter((s) => beatOf.get(s.slug) === b.id).slice(0, BEAT_LIMIT[b.layout]),
+  })).filter((b) => b.stories.length >= BEAT_MIN)
 
   const homeEpics: HomeEpic[] = epics.map((e) => ({
     slug: e.slug,
@@ -81,5 +101,5 @@ export async function loadHomeData(): Promise<HomeData> {
     new Set(fontSets.map((f) => getFontImportUrl(f)).filter((u): u is string => Boolean(u)))
   )
 
-  return { stories: homeStories, epics: homeEpics, dailyEditions, dailyVars, fontUrls }
+  return { stories: homeStories, epics: homeEpics, beats, dailyEditions, dailyVars, fontUrls }
 }

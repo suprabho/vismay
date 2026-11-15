@@ -7,7 +7,17 @@ import { LOGO, logoScheme, type Scheme } from './logoPalette'
  */
 
 /** A story as the home page lists it (the shared story-card shape). */
-export type HomeStory = StoryCardData
+export type HomeStory = StoryCardData & {
+  /** A rank or grade its desk gave it, shown as the numeral in a ledger beat. */
+  mark?: string
+}
+
+/** One beat's section under the wall (./beats): its newest stories not already on the wall. */
+export interface HomeBeat {
+  /** A Beat's id. */
+  id: string
+  stories: HomeStory[]
+}
 
 export interface HomeEpic {
   slug: string
@@ -38,6 +48,8 @@ export interface HomeDailyEdition {
 export interface HomeData {
   stories: HomeStory[]
   epics: HomeEpic[]
+  /** The beats with enough stories to show, in page order. */
+  beats: HomeBeat[]
   dailyEditions: HomeDailyEdition[]
   /** The Doom v Boom palette as CSS variables (--boom, --surface, …). */
   dailyVars: Record<string, string>
