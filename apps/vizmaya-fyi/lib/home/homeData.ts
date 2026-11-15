@@ -6,11 +6,13 @@ import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { getHtmlStoryCards } from '@/lib/htmlStoryListing'
 import { boomScore, editionHref } from '@/app/ai-daily/doom-v-boom/components/editionUtils'
 import { EDITION_CSS_VARS, resolveAiDataCentersTheme, type AiDataCentersTheme } from '@/app/ai-data-centers/theme'
-import type { HomeData, HomeDailyEdition, HomeEpic, HomeStory } from './homeShape'
+import { FRONT_PAGE_LIMIT, type HomeData, type HomeDailyEdition, type HomeEpic, type HomeSection, type HomeStory } from './homeShape'
+import { HOME_SECTIONS, SECTION_LIMIT, SECTION_MIN } from './sections'
+import { VIZ_STORY_CATEGORIES } from './vizStoryCategories'
 
 type FontSet = { serif?: string; sans?: string; mono?: string }
 
-/** Everything the home page shows: the stories, the epics and the last three Doom v Boom editions. */
+/** Everything the home page shows: the stories, their category sections, the epics and the last three Doom v Boom editions. */
 export async function loadHomeData(): Promise<HomeData> {
   const [stories, htmlStories, epics, editions, dcEpic] = await Promise.all([
     getAllStories('vizmaya-fyi'),
@@ -37,10 +39,19 @@ export async function loadHomeData(): Promise<HomeData> {
       aura: s.aura,
       theme: s.theme,
       topic: s.topic,
+      category: VIZ_STORY_CATEGORIES[s.slug],
       thumbnail: s.thumbnail,
       thumbnailTextColor: s.thumbnailTextColor,
     })),
   ]
+
+  // A section shows its category's newest stories that the wall doesn't already show.
+  const below = homeStories.slice(FRONT_PAGE_LIMIT)
+  const sections: HomeSection[] = HOME_SECTIONS.map((d) => ({
+    category: d.category,
+    stories: below.filter((s) => s.category === d.category).slice(0, SECTION_LIMIT[d.layout]),
+    total: homeStories.filter((s) => s.category === d.category).length,
+  })).filter((x) => x.stories.length >= SECTION_MIN)
 
   const homeEpics: HomeEpic[] = epics.map((e) => ({
     slug: e.slug,
@@ -81,5 +92,5 @@ export async function loadHomeData(): Promise<HomeData> {
     new Set(fontSets.map((f) => getFontImportUrl(f)).filter((u): u is string => Boolean(u)))
   )
 
-  return { stories: homeStories, epics: homeEpics, dailyEditions, dailyVars, fontUrls }
+  return { stories: homeStories, epics: homeEpics, sections, dailyEditions, dailyVars, fontUrls }
 }

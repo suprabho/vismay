@@ -7,6 +7,7 @@ import { ArrowSquareOut, Desktop, DeviceMobile, UploadSimple } from '@phosphor-i
 import { auraCaptureUrl } from '@vismay/viz-engine'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import { brandHtmlStory } from '@vismay/html-stories/branding'
+import { STORY_CATEGORIES } from '@vismay/html-stories/categories'
 import {
   extractHtmlMeta,
   isSafeSlug,
@@ -62,6 +63,9 @@ export default function HtmlStoryEditorClient({
   // Aura scene behind the served page and on its home-page card; picked after the HTML is in.
   const [aura, setAura] = useState('')
   const [savedAura, setSavedAura] = useState('')
+  // The subject area the vizmaya home page files the story under.
+  const [category, setCategory] = useState('')
+  const [savedCategory, setSavedCategory] = useState('')
   const [versions, setVersions] = useState<Version[]>([])
   const [versionPreview, setVersionPreview] = useState<{ id: number; html: string } | null>(null)
   const [viewport, setViewport] = useState<Viewport>('phone')
@@ -79,12 +83,14 @@ export default function HtmlStoryEditorClient({
   }
 
   function applyStory(body: {
-    story: { title: string | null; description: string | null; status: HtmlStoryStatus; html: string; aura: string | null }
+    story: { title: string | null; description: string | null; status: HtmlStoryStatus; html: string; aura: string | null; category?: string | null }
     versions?: Version[]
   }) {
     setTitle(body.story.title ?? '')
     setAura(body.story.aura ?? '')
     setSavedAura(body.story.aura ?? '')
+    setCategory(body.story.category ?? '')
+    setSavedCategory(body.story.category ?? '')
     setDescription(body.story.description ?? '')
     setStatus(body.story.status)
     setHtml(body.story.html)
@@ -157,7 +163,8 @@ export default function HtmlStoryEditorClient({
   const auraSlug = aura.trim() ? parseAuraSlug(aura) : null
   const auraInvalid = aura.trim() !== '' && !auraSlug
   const auraChanged = (auraSlug ?? '') !== savedAura
-  const dirty = create || html !== savedHtml || titleTouched || descriptionTouched || auraChanged
+  const categoryChanged = category !== savedCategory
+  const dirty = create || html !== savedHtml || titleTouched || descriptionTouched || auraChanged || categoryChanged
 
   async function readFile(file: File) {
     setHtml(await file.text())
@@ -189,6 +196,7 @@ export default function HtmlStoryEditorClient({
           title: titleTouched ? title : undefined,
           description: descriptionTouched ? description : undefined,
           aura: create || auraChanged ? (auraSlug ?? '') : undefined,
+          category: categoryChanged ? category : undefined,
         }),
       })
       const body = await res.json()
@@ -404,6 +412,23 @@ export default function HtmlStoryEditorClient({
                 }}
               />
             </div>
+            {app === 'vizmaya-fyi' && (
+              <div>
+                <label className={label}>Category</label>
+                <select className={field} value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="">None</option>
+                  {STORY_CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs mt-1 text-neutral-600">
+                  {STORY_CATEGORIES.find((c) => c.id === category)?.covers ??
+                    'The home page groups stories by category; without one the story appears on the wall only.'}
+                </p>
+              </div>
+            )}
             <div>
               <label className={label}>Aura background</label>
               <div className="flex gap-3 items-start">

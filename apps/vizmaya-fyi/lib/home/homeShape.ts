@@ -1,3 +1,5 @@
+import type { StoryCategoryId } from '@vismay/html-stories/categories'
+import { storyCategoryLabel } from '@vismay/html-stories/categories'
 import type { StoryCardData } from '@vismay/ui'
 import { LOGO, logoScheme, type Scheme } from './logoPalette'
 
@@ -7,7 +9,18 @@ import { LOGO, logoScheme, type Scheme } from './logoPalette'
  */
 
 /** A story as the home page lists it (the shared story-card shape). */
-export type HomeStory = StoryCardData
+export type HomeStory = StoryCardData & {
+  /** The subject area the story is filed under (@vismay/html-stories/categories). */
+  category?: StoryCategoryId
+}
+
+/** One category's section under the wall (./sections): its newest stories not already on the wall. */
+export interface HomeSection {
+  category: StoryCategoryId
+  stories: HomeStory[]
+  /** How many stories the category has in all, the wall's included. */
+  total: number
+}
 
 export interface HomeEpic {
   slug: string
@@ -38,6 +51,8 @@ export interface HomeDailyEdition {
 export interface HomeData {
   stories: HomeStory[]
   epics: HomeEpic[]
+  /** The categories with enough stories to show, in page order. */
+  sections: HomeSection[]
   dailyEditions: HomeDailyEdition[]
   /** The Doom v Boom palette as CSS variables (--boom, --surface, …). */
   dailyVars: Record<string, string>
@@ -103,9 +118,14 @@ export function formatStoryDate(date: string | undefined | null): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
 }
 
-/** What a story's meta line says: its date, topic and format. */
-export function storyMetaBits(s: HomeStory): string[] {
-  return [formatStoryDate(s.date), s.topic, s.format].filter((x): x is string => Boolean(x))
+/**
+ * What a story's meta line says: its date, topic and format, and, on the
+ * wall, its category (a section already says which one it is).
+ */
+export function storyMetaBits(s: HomeStory, { category = false }: { category?: boolean } = {}): string[] {
+  return [formatStoryDate(s.date), category ? storyCategoryLabel(s.category) : undefined, s.topic, s.format].filter((x): x is string =>
+    Boolean(x)
+  )
 }
 
 /**

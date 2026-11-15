@@ -172,7 +172,7 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   the editor pages under `vizmaya/html-stories/[slug]|new` and
   `[appSlug]/html-stories/[slug]|new` render
   [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
-  (paste/upload, lint, preview in that site's chrome, publish, history, and
+  (paste/upload, lint, preview in that site's chrome, publish, history, on vizmaya the **Category** picker that files the story under one of the home page's subjects (`html_stories.category`, migration 105), and
   for a published story the **Section audio** panel,
   [HtmlStoryAudioPanel.tsx](components/html-stories/HtmlStoryAudioPanel.tsx):
   whether the live page offers the Listen player, each section's clip,
