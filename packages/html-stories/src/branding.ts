@@ -102,6 +102,12 @@ export interface BrandingOptions {
    */
   chrome?: boolean
   /**
+   * Serve the page as a picture of itself (`?preview=1`, the vizmaya.fyi home
+   * wall's tiles): a paged format's own controls are hidden too, so a board
+   * is just the board. Default false.
+   */
+  preview?: boolean
+  /**
    * The public Mapbox token to inject as `window.MAPBOX_ACCESS_TOKEN` (./mapbox)
    * when the page uses Mapbox. Omit for the configured one; null for none.
    */
@@ -496,6 +502,14 @@ function chromeHeightStyle(app: HtmlStoryApp): string {
   return `<style>:root{--vizmaya-chrome-h:${h.wide}px}@media (max-width:480px){:root{--vizmaya-chrome-h:${h.narrow}px}}</style>`
 }
 
+/**
+ * A preview hides what a format's runtime adds for the reader to press: every
+ * control is marked `.vz-only`, in `.vz-tools` or `.vz-controls`, and
+ * `.vz-hint` is the board's gesture hint. With its tour panel hidden the
+ * board's camera uses the whole frame, so the board sits centred.
+ */
+const PREVIEW_STYLE = '<style>.vz-only,.vz-tools,.vz-controls,.vz-hint{display:none!important}</style>'
+
 /** Served chrome-less (embed), there's no header to leave room for. */
 const NO_CHROME_HEIGHT_STYLE = '<style>:root{--vizmaya-chrome-h:0px}</style>'
 
@@ -536,7 +550,7 @@ function escapeAttr(s: string): string {
  */
 export function brandHtmlStory(
   html: string,
-  { siteUrl, aura, app = DEFAULT_HTML_STORY_APP, chrome = true, mapboxToken }: BrandingOptions,
+  { siteUrl, aura, app = DEFAULT_HTML_STORY_APP, chrome = true, preview = false, mapboxToken }: BrandingOptions,
 ): string {
   const site = siteUrl.replace(/\/$/, '')
   const theme = extractThemeMeta(html)
@@ -569,6 +583,8 @@ export function brandHtmlStory(
     header = chromeHeightStyle(app) + (aura ? auraHtml(aura, theme) : '') + headerHtml(site, look)
     footer = footerHtml(site, look) + riveScript(site, look)
   }
+
+  if (preview) header = PREVIEW_STYLE + header
 
   let out = html
   const bodyOpen = /<body\b[^>]*>/i.exec(out)

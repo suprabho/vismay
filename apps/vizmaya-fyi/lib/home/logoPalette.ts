@@ -6,9 +6,8 @@
  * colour lifted just enough to read on the dark ground.
  *
  * One scheme leads with each dot (teal, pink, blue), and a fourth, Penrose,
- * keeps the pink lead on the blue's ground. The home page gives each binding
- * its own: Book teal, Board pink, Deck blue, Scroll Penrose
- * (HOME_SCHEMES in ./homeShape). Pure, so the client can import it.
+ * keeps the pink lead on the blue's ground. The home page wears Penrose
+ * (HOME_SCHEME in ./homeShape). Pure, so the client can import it.
  */
 
 /** The logo's own colours (the Penrose mark), exactly as drawn. */

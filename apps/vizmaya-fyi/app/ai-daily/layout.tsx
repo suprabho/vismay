@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
-import { Prata, Public_Sans, Space_Mono } from 'next/font/google'
+import { Prata, Space_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './doom-v-boom/edition.css'
 
 // The edition's type: Prata for display, Public Sans for body, Space Mono
@@ -14,9 +15,13 @@ const prata = Prata({
   display: 'swap',
 })
 
-const publicSans = Public_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+// Public Sans is served from a file in the repo (the latin variable font,
+// SIL OFL, from @fontsource-variable/public-sans 5.3.0), not fetched from
+// Google at build time: that fetch failed a Vercel build.
+const publicSans = localFont({
+  src: './fonts/PublicSans-latin-variable.woff2',
+  weight: '100 900',
+  style: 'normal',
   variable: '--font-public-sans',
   display: 'swap',
 })

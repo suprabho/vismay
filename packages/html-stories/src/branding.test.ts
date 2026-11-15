@@ -144,6 +144,13 @@ assert.ok(out.includes(CHROME_H) && !out.includes(NO_CHROME_H))
 assert.ok(fsOut.includes('--vizmaya-chrome-h:61px') && !fsOut.includes(NO_CHROME_H))
 console.log('branding (embed): ok')
 
+// A preview (/s/<slug>?preview=1) is an embed that also hides the format's own controls.
+const PREVIEW_STYLE = '<style>.vz-only,.vz-tools,.vz-controls,.vz-hint{display:none!important}</style>'
+const previewed = brandHtmlStory(doc, { siteUrl: site, chrome: false, preview: true })
+assert.equal(previewed, doc.replace('<BODY class="x">', `<BODY class="x">${PREVIEW_STYLE}${NO_CHROME_H}`))
+assert.ok(!embedded.includes('.vz-only') && !out.includes('.vz-only'))
+console.log('branding (preview): ok')
+
 // Mapbox: a page that uses it gets the public token first in <head>, before its own scripts.
 const pk = 'pk.eyJ1IjoidGVzdCJ9.test'
 const mapDoc = `<!doctype html><html><head><script src="https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js"></script></head><body><p>map</p></body></html>`
