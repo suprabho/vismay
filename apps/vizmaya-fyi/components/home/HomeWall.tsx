@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight } from '@phosphor-icons/react'
+import { ArrowRight, List, X } from '@phosphor-icons/react'
 import { StoryGridFonts, epicCardTheme } from '@vismay/ui'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import { LiveRing, StaticRing } from '@/app/ai-daily/doom-v-boom/components/ScoreRing'
@@ -54,6 +54,13 @@ const LOGO_PALETTE = {
 
 function Bar({ daily, sections, epics }: { daily: boolean; sections: boolean; epics: boolean }) {
   const nav = useRef<HTMLElement>(null)
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
   useEffect(() => {
     const update = () => nav.current?.toggleAttribute('data-scrolled', window.scrollY > 8)
     update()
@@ -70,7 +77,8 @@ function Bar({ daily, sections, epics }: { daily: boolean; sections: boolean; ep
     <nav
       ref={nav}
       aria-label="vizmaya"
-      className="fixed inset-x-0 top-0 z-50 h-14 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-(--line) data-[scrolled]:bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] data-[scrolled]:backdrop-blur-md"
+      data-open={open || undefined}
+      className="fixed inset-x-0 top-0 z-50 h-14 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-(--line) data-[scrolled]:bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] data-[scrolled]:backdrop-blur-md data-[open]:border-(--line) data-[open]:bg-(--bg)"
     >
       <div className="flex h-full items-center justify-between gap-3 px-3 sm:px-4">
         <button
@@ -81,14 +89,41 @@ function Bar({ daily, sections, epics }: { daily: boolean; sections: boolean; ep
         >
           <VizmayaLogo className="h-[32px] w-[112px] sm:h-[38px] sm:w-[150px]" palette={LOGO_PALETTE} />
         </button>
-        <div className="flex items-center gap-4 text-[13px] text-(--muted) sm:gap-7 sm:text-[14px]">
+        <div className="hidden items-center gap-7 text-[14px] text-(--muted) sm:flex">
           {links.map((l) => (
             <a key={l.href} href={l.href} className="whitespace-nowrap transition-colors hover:text-(--text)">
               {l.label}
             </a>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+          aria-controls="home-menu"
+          className="-mr-1 flex h-10 w-10 items-center justify-center rounded-full text-(--text) sm:hidden"
+        >
+          {open ? <X size={22} aria-hidden /> : <List size={22} aria-hidden />}
+        </button>
       </div>
+      {open && (
+        <div id="home-menu" className="border-b border-(--line) bg-(--bg) px-3 pb-4 pt-1 sm:hidden">
+          <ul className="grid">
+            {links.map((l) => (
+              <li key={l.href} className="border-b border-(--line) last:border-0">
+                <a
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="block py-3.5 font-(family-name:--serif) text-[26px] leading-none text-(--text)"
+                >
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </nav>
   )
 }
