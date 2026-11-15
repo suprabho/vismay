@@ -389,9 +389,14 @@ export default function HomeWall({ data, fontVars = '' }: { data: HomeData; font
           <PenroseMark size={18} />
           vizmaya
         </span>
-        <Link href="/stories" className="transition-colors hover:text-(--text)">
-          All stories
-        </Link>
+        <span className="flex items-center gap-5">
+          <Link href="/stories" className="transition-colors hover:text-(--text)">
+            All stories
+          </Link>
+          <Link href="/about" className="transition-colors hover:text-(--text)">
+            About
+          </Link>
+        </span>
       </footer>
     </div>
   )

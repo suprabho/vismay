@@ -124,8 +124,8 @@ export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] 
           />
         </Link>
         <div className="nav-r">
-          <Link className="nav-link" href="/#work">Work</Link>
-          <Link className="nav-link" href="/#about">About</Link>
+          <Link className="nav-link" href="/">Work</Link>
+          <Link className="nav-link" href="/about">About</Link>
           <a className="nav-cta" href="https://theasymmetryletter.substack.com" target="_blank" rel="noreferrer">Subscribe</a>
         </div>
       </nav>
