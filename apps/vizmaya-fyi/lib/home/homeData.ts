@@ -10,16 +10,12 @@ import type { HomeData, HomeDailyEdition, HomeEpic, HomeStory } from './homeShap
 
 type FontSet = { serif?: string; sans?: string; mono?: string }
 
-/**
- * Everything the home page shows, read once for the page and once for each
- * stage document it frames (/home-stage/<format>), so the two always agree.
- */
+/** Everything the home page shows: the stories, the epics and the last three Doom v Boom editions. */
 export async function loadHomeData(): Promise<HomeData> {
   const [stories, htmlStories, epics, editions, dcEpic] = await Promise.all([
     getAllStories('vizmaya-fyi'),
     getHtmlStoryCards(),
-    // Best-effort, like the editions: the home page (and each stage it frames)
-    // must not 500 because the epics or editions tables are unavailable.
+    // Best-effort, like the editions: the home page must not 500 because the epics or editions tables are unavailable.
     listEpicsForHome('vizmaya-fyi').catch((err) => {
       console.error('[home] epics listing failed:', err)
       return []
