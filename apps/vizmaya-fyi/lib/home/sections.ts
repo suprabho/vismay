@@ -10,12 +10,14 @@ import type { StoryCategoryId } from '@vismay/html-stories/categories'
 
 /**
  * How a section is laid out:
- * - `feature`: one large live tile beside a list of headlines.
- * - `strip`: a row of tall tiles that scrolls sideways.
- * - `trio`: three live tiles on a raised band.
- * - `ledger`: a numbered list with no previews, on paper or on the dark surface.
+ * - `figures`: one large live tile beside headlines led by the number in each title.
+ * - `strip`: a row of tall live tiles that scrolls sideways, with arrows, on a dotted ground.
+ * - `ledger`: a numbered list, type only, on paper.
+ * - `mosaic`: one large live tile with two smaller ones stacked beside it.
+ * - `plates`: framed live previews in a row, captioned underneath like plates in a book.
+ * - `columns`: newspaper columns, type only, between rules.
  */
-export type SectionLayout = 'feature' | 'strip' | 'trio' | 'ledger'
+export type SectionLayout = 'figures' | 'strip' | 'ledger' | 'mosaic' | 'plates' | 'columns'
 
 export interface HomeSectionDef {
   category: StoryCategoryId
@@ -26,8 +28,6 @@ export interface HomeSectionDef {
   /** The short name in the section index. */
   label: string
   layout: SectionLayout
-  /** The lead tile on the right (feature) or the dark surface instead of paper (ledger). */
-  alt?: boolean
   /** One of the scheme's three logo colours. */
   accent: 'signal' | 'second' | 'third'
 }
@@ -38,7 +38,7 @@ export const HOME_SECTIONS: HomeSectionDef[] = [
     title: ['Money &', 'markets'],
     line: 'Companies, filings, trade and commodities: who makes the money, and how.',
     label: 'Economy',
-    layout: 'feature',
+    layout: 'figures',
     accent: 'signal',
   },
   {
@@ -62,7 +62,7 @@ export const HOME_SECTIONS: HomeSectionDef[] = [
     title: ['Politics & the', 'world'],
     line: 'Elections, governments, wars and the deals between them.',
     label: 'Politics',
-    layout: 'trio',
+    layout: 'mosaic',
     accent: 'third',
   },
   {
@@ -70,8 +70,7 @@ export const HOME_SECTIONS: HomeSectionDef[] = [
     title: ['History &', 'culture'],
     line: 'The past, its people and places, and the record behind the legend.',
     label: 'History',
-    layout: 'feature',
-    alt: true,
+    layout: 'plates',
     accent: 'second',
   },
   {
@@ -79,8 +78,7 @@ export const HOME_SECTIONS: HomeSectionDef[] = [
     title: ['Society &', 'health'],
     line: 'How people live, learn, work and stay well, in the studies that measured it.',
     label: 'Society',
-    layout: 'ledger',
-    alt: true,
+    layout: 'columns',
     accent: 'third',
   },
 ]
@@ -89,4 +87,20 @@ export const HOME_SECTIONS: HomeSectionDef[] = [
 export const SECTION_MIN = 3
 
 /** How many stories each layout shows. */
-export const SECTION_LIMIT: Record<SectionLayout, number> = { feature: 5, strip: 8, trio: 3, ledger: 8 }
+export const SECTION_LIMIT: Record<SectionLayout, number> = { figures: 5, strip: 8, ledger: 6, mosaic: 3, plates: 4, columns: 6 }
+
+const FIGURE = /(?:[$₹£€]\s?\d[\d,.]*\d?(?:\s?(?:bn|tn|trillion|billion|million|[BMKk]\b))?|\d[\d,.]*\d?(?:%|x\b|\s?(?:bn|tn|trillion|billion|million|GW|MW)\b|[BM]\b))/
+
+/**
+ * The number a headline is built on ("$490B", "18%", "0.36x"), for the
+ * `figures` layout: an amount of money, a share, a multiple or a quantity
+ * with its unit. A bare number (a year, a count) is not one.
+ */
+export function headlineFigure(title: string): string | undefined {
+  return FIGURE.exec(title)?.[0].replace(/\s+/g, ' ')
+}
+
+/** The archive filtered to one category. */
+export function categoryArchiveHref(category: StoryCategoryId): string {
+  return `/stories?category=${category}`
+}

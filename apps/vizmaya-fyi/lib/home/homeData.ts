@@ -50,6 +50,7 @@ export async function loadHomeData(): Promise<HomeData> {
   const sections: HomeSection[] = HOME_SECTIONS.map((d) => ({
     category: d.category,
     stories: below.filter((s) => s.category === d.category).slice(0, SECTION_LIMIT[d.layout]),
+    total: homeStories.filter((s) => s.category === d.category).length,
   })).filter((x) => x.stories.length >= SECTION_MIN)
 
   const homeEpics: HomeEpic[] = epics.map((e) => ({

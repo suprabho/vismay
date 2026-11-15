@@ -18,6 +18,8 @@ export type HomeStory = StoryCardData & {
 export interface HomeSection {
   category: StoryCategoryId
   stories: HomeStory[]
+  /** How many stories the category has in all, the wall's included. */
+  total: number
 }
 
 export interface HomeEpic {

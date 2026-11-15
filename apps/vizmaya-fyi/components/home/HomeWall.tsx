@@ -265,7 +265,7 @@ export default function HomeWall({ data, fontVars = '' }: { data: HomeData; font
   const { stories, epics, dailyEditions, dailyVars, fontUrls } = data
   const sections = data.sections.flatMap((x) => {
     const def = HOME_SECTIONS.find((d) => d.category === x.category)
-    return def ? [{ def, stories: x.stories }] : []
+    return def ? [{ def, stories: x.stories, total: x.total }] : []
   })
   const shown = stories.slice(0, FRONT_PAGE_LIMIT)
   const daily = dailyEditions.length > 0

@@ -14,6 +14,14 @@ export interface ArchiveStory {
   href?: string
   /** An HTML story's format when it isn't a scrolling page ("Book", "Board", "Deck"). */
   format?: string
+  /** The story's category id (@vismay/html-stories/categories), for the filter. */
+  category?: string
+}
+
+export interface ArchiveCategory {
+  id: string
+  label: string
+  count: number
 }
 
 const css = `
@@ -52,6 +60,14 @@ const css = `
 .vz .head-deck{font-family:var(--ff-m);font-size:13.5px;line-height:1.85;color:var(--muted);max-width:58ch}
 .vz .head-meta{margin-top:36px;font-family:var(--ff-m);font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);opacity:.7}
 
+
+.vz .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+.vz .filter{font-family:var(--ff-m);font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 14px;display:inline-flex;gap:8px;align-items:center}
+.vz .filter:hover{opacity:1;border-color:var(--teal)}
+.vz .filter .n{color:var(--muted);opacity:.7}
+.vz .filter.on{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.vz .filter.on .n{color:var(--cream)}
+
 .vz .list{padding:32px clamp(24px,5vw,56px) 120px}
 .vz .list-inner{max-width:1180px;margin:0 auto}
 .vz .row{display:grid;grid-template-columns:140px 1fr 120px;gap:clamp(20px,4vw,56px);align-items:baseline;padding:32px 0;border-bottom:1px solid var(--line);color:var(--ink)}
@@ -77,7 +93,20 @@ const css = `
 }
 `
 
-export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] }) {
+export default function AllStoriesClient({
+  stories,
+  total = stories.length,
+  categories = [],
+  category = null,
+}: {
+  stories: ArchiveStory[]
+  /** How many stories the whole archive has (stories may be one category of it). */
+  total?: number
+  categories?: ArchiveCategory[]
+  /** The category shown, or null for all. */
+  category?: string | null
+}) {
+  const shown = categories.find((c) => c.id === category)
   useEffect(() => {
     const nav = document.getElementById('nav')
     const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 60)
@@ -141,7 +170,25 @@ export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] 
           </p>
           <div className="rv head-meta" data-d="2">
             {stories.length} {stories.length === 1 ? 'story' : 'stories'}
+            {shown ? ` in ${shown.label}` : ''}
           </div>
+          {categories.length > 0 && (
+            <nav className="rv filters" data-d="2" aria-label="Filter by category">
+              <Link className={`filter${shown ? '' : ' on'}`} href="/stories" aria-current={shown ? undefined : 'page'}>
+                All <span className="n">{total}</span>
+              </Link>
+              {categories.map((c) => (
+                <Link
+                  key={c.id}
+                  className={`filter${c.id === category ? ' on' : ''}`}
+                  href={`/stories?category=${c.id}`}
+                  aria-current={c.id === category ? 'page' : undefined}
+                >
+                  {c.label} <span className="n">{c.count}</span>
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
       </section>
 
