@@ -108,7 +108,10 @@ export function htmlStoryResponse(
   { private: isPrivate = false, audio }: HtmlStoryResponseOptions = {},
 ): Response {
   const url = new URL(req.url)
-  const embed = url.searchParams.get('embed') === '1'
+  // A preview (the home wall's tiles) is an embed with the format's own
+  // controls and the Listen player left out as well.
+  const preview = url.searchParams.get('preview') === '1'
+  const embed = preview || url.searchParams.get('embed') === '1'
   // Canonical, robots, missing OG/article tags and NewsArticle JSON-LD (./seo),
   // read from the author's own <head> before the chrome goes in.
   const doc = isPrivate ? story.html : injectHtmlStorySeo(story.html, story as HtmlStory, { embed })
@@ -117,8 +120,9 @@ export function htmlStoryResponse(
     aura: story.aura,
     app,
     chrome: !embed,
+    preview,
   })
-  const html = audio && !isPrivate ? withAudioPlayer(branded, audio, app) : branded
+  const html = audio && !isPrivate && !preview ? withAudioPlayer(branded, audio, app) : branded
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',

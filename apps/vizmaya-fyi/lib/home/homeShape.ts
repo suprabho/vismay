@@ -110,10 +110,12 @@ export function storyMetaBits(s: HomeStory): string[] {
 
 /**
  * A story as a tile shows it: the story itself, chrome-less (`?embed=1` drops
- * the site header and keeps the visit out of analytics).
+ * the site header and keeps the visit out of analytics). An HTML story is
+ * also asked for its preview, which leaves out its format's controls (a
+ * board's tour panel, minimap and buttons) and the Listen player.
  */
 export function storyPreviewUrl(s: HomeStory): string {
-  return `${storyHref(s)}?embed=1`
+  return `${storyHref(s)}?embed=1${s.href ? '&preview=1' : ''}`
 }
 
 /** An epic's landing page, and the same page as its band previews it. */
