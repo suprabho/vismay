@@ -7,7 +7,7 @@ import {
   updateHtmlStoryMeta,
 } from '@vismay/html-stories/htmlStories'
 import { parseStoryCategory } from '@vismay/html-stories/categories'
-import { HTML_STORY_STATUSES, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import { HTML_STORY_STATUSES, expiringUrlReason, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
 import { isAuthed } from '@/lib/adminAuth'
 
 type Ctx = { params: Promise<{ slug: string }> }
@@ -43,6 +43,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (typeof b.title === 'string' && b.title.trim()) patch.title = b.title.trim()
   if (b.description !== undefined) patch.description = typeof b.description === 'string' && b.description.trim() ? b.description.trim() : null
   if (b.ogImageUrl !== undefined) patch.ogImageUrl = typeof b.ogImageUrl === 'string' && b.ogImageUrl.trim() ? b.ogImageUrl.trim() : null
+  const ogExpiry = patch.ogImageUrl ? expiringUrlReason(patch.ogImageUrl) : null
+  if (ogExpiry) return NextResponse.json({ error: `ogImageUrl is ${ogExpiry} and will stop working: host it on story-assets first.` }, { status: 400 })
   if (b.aura !== undefined) {
     const raw = typeof b.aura === 'string' ? b.aura.trim() : ''
     const aura = raw ? parseAuraSlug(raw) : null

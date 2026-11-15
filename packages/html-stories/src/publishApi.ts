@@ -48,6 +48,7 @@ import type { HtmlStoryApp } from './apps'
 import { HtmlStorySlugTakenError, saveHtmlStory } from './htmlStories'
 import {
   HTML_STORY_STATUSES,
+  expiringUrlReason,
   extractHtmlMeta,
   isSafeSlug,
   lintHtml,
@@ -154,6 +155,10 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
   // Travel checks the page's trip tag against the slug (the page's gate).
   const lint = lintHtml(parsed.html, { app, slug })
   if (lint.errors.length) return json({ error: lint.errors.join(' '), ...lint }, 400)
+  const ogExpiry = parsed.ogImageUrl ? expiringUrlReason(parsed.ogImageUrl) : null
+  if (ogExpiry) {
+    return json({ error: `ogImageUrl is ${ogExpiry} and will stop working: host it through the assets endpoint and pass the URL it returns.` }, 400)
+  }
 
   const warnings = [...lint.warnings]
   let spin: SpinRecord | null = null

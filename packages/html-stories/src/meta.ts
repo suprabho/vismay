@@ -306,6 +306,76 @@ function lintMedia(html: string, warnings: string[]): void {
 }
 
 /**
+ * Links that stop working after a while: signed, time-limited URLs (S3, GCS,
+ * Azure SAS, CloudFront, Akamai tokens, Supabase signed objects) and the
+ * private render CDNs of image generators. A story that links one works on the
+ * day it's published and breaks days later (the Milton Friedman story's
+ * Freepik renders, `pikaso.cdnpk.net/private/…?token=exp=…`, did). Each is
+ * paired with why it expires.
+ */
+const EXPIRING_URL_RULES: { test: (u: URL) => boolean; why: string }[] = [
+  { test: (u) => /(^|\.)cdnpk\.net$/i.test(u.hostname) && u.pathname.startsWith('/private/'), why: 'a private Freepik/Magnific render link' },
+  { test: (u) => /(^|\.)replicate\.delivery$/i.test(u.hostname), why: 'a Replicate output link (deleted after an hour)' },
+  { test: (u) => /^oaidalleapi/i.test(u.hostname), why: 'an OpenAI image link' },
+  { test: (u) => /(?:^|[?&~])(?:token=)?exp=\d{9,}/i.test(u.search), why: 'an expiring token (exp=)' },
+  { test: (u) => has(u, 'x-amz-signature', 'x-amz-expires', 'x-amz-credential'), why: 'a presigned S3 link' },
+  { test: (u) => has(u, 'x-goog-signature', 'x-goog-expires', 'x-goog-credential'), why: 'a signed Google Cloud Storage link' },
+  { test: (u) => has(u, 'sig') && has(u, 'se'), why: 'an Azure SAS link' },
+  { test: (u) => has(u, 'signature') && has(u, 'expires', 'key-pair-id', 'googleaccessid'), why: 'a signed link' },
+  { test: (u) => has(u, 'ex') && has(u, 'hm'), why: 'an expiring Discord attachment link' },
+  { test: (u) => u.pathname.includes('/storage/v1/object/sign/'), why: 'a signed Supabase Storage link' },
+]
+
+/** True when the URL's query has any of these parameters (case-insensitive). */
+function has(u: URL, ...names: string[]): boolean {
+  for (const key of u.searchParams.keys()) if (names.includes(key.toLowerCase())) return true
+  return false
+}
+
+/** Why this URL will stop working, or null when it's a lasting link. */
+export function expiringUrlReason(raw: string): string | null {
+  let u: URL
+  try {
+    u = new URL(raw.replace(/&amp;/gi, '&').replace(/&#0*38;/g, '&'))
+  } catch {
+    return null
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
+  return EXPIRING_URL_RULES.find((r) => r.test(u))?.why ?? null
+}
+
+/**
+ * Every expiring URL in the document, scripts and CSS included (a page that
+ * sets an <img> src from JS breaks the same way), with why it expires.
+ */
+export function findExpiringUrls(html: string): { url: string; why: string }[] {
+  const out = new Map<string, string>()
+  for (const m of html.matchAll(/https?:\/\/[^\s"'<>()\\`]+/gi)) {
+    const url = m[0].replace(/[.,;]+$/, '')
+    if (out.has(url)) continue
+    const why = expiringUrlReason(url)
+    if (why) out.set(url, why)
+  }
+  return [...out].map(([url, why]) => ({ url, why }))
+}
+
+/** Expiring links are an error: the story would break on its own a few days later. */
+function lintExpiringUrls(html: string, errors: string[]): void {
+  const found = findExpiringUrls(html)
+  if (!found.length) return
+  const shown = found
+    .slice(0, 3)
+    .map(({ url, why }) => `${url.length > 100 ? `${url.slice(0, 100)}…` : url} (${why})`)
+    .join('; ')
+  errors.push(
+    `${found.length} link${found.length === 1 ? ' expires' : 's expire'} and will break the page within days: ${shown}` +
+      `${found.length > 3 ? `; …and ${found.length - 3} more` : ''}. ` +
+      'Host each file on the story-assets bucket through the assets endpoint (POST /api/html-stories/assets?slug=<slug>, ' +
+      'with { fromUrl } for a file you already have or { generate } for a new AI illustration) and link the URL it returns.',
+  )
+}
+
+/**
  * Aura scenes (aura.promad.design) are chosen per story after the HTML is
  * written, not by the agent: the slug lives in html_stories.aura and is laid
  * behind the page when it's served (./branding) and on its listing card.
@@ -419,6 +489,7 @@ export function lintHtml(html: string, { app, slug }: LintOptions = {}): HtmlLin
   if (relative.size > 5) warnings.push(`…and ${relative.size - 5} more relative paths.`)
 
   lintMedia(html, warnings)
+  lintExpiringUrls(html, errors)
   if (app === 'travel') lintTrip(html, slug, errors)
 
   // Coarse on purpose: any try/catch in the document is taken as the guard.
