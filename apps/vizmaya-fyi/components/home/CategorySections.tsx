@@ -13,7 +13,7 @@ import StoryTile, { COVER_LINK, StoryLink } from './StoryTile'
  * The category sections under the wall (lib/home/sections.ts): one section
  * per story category, each in a layout of its own so the page changes pace.
  * Money leads with the number in each headline, technology is a strip to
- * page through, science a numbered list on paper, politics a mosaic, history
+ * page through, science a list on paper, politics a mosaic, history
  * a row of framed plates and society a set of newspaper columns. Every
  * layout shows the stories themselves: the ledger as a small plate beside
  * each line, the columns as a picture over each one. Previews share one
@@ -209,7 +209,7 @@ function Strip({ def, stories, total }: SectionWithStories) {
   )
 }
 
-/** Science: a numbered list in two columns on paper, each line with a small plate of its story. */
+/** Science: a list in two columns on paper, each line with a small plate of its story. */
 function Ledger({ def, stories, total }: SectionWithStories) {
   return (
     <div className="rounded-[18px] bg-(--paper) p-6 text-(--paper-ink) [--ba:var(--ink-signal)] [--bl2:var(--paper-line)] [--bl:var(--paper-line)] [--bm:var(--paper-muted)] md:p-10">
@@ -217,9 +217,6 @@ function Ledger({ def, stories, total }: SectionWithStories) {
       <ol className="grid gap-x-12 md:grid-cols-2">
         {stories.map((s, i) => (
           <li key={s.slug} data-reveal className={`group relative flex gap-4 border-t border-(--bl) py-5 sm:gap-5 ${REVEAL}`}>
-            <span aria-hidden className="w-[2.1ch] flex-none font-(family-name:--serif) text-[clamp(40px,4vw,56px)] italic leading-[.9] tabular-nums text-(--ba)">
-              {two(i + 1)}
-            </span>
             <Headline story={s} />
             <Thumb story={s} index={i} className="aspect-[4/5] w-[76px] flex-none self-start rounded-[8px] sm:w-[112px]" />
           </li>
