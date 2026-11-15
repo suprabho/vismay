@@ -9,7 +9,7 @@ import {
   CaretLeft,
   CaretRight,
   ChartLineUp,
-  Columns,
+  Columns as ColumnsIcon,
   Cpu,
   Scales,
   UsersThree,
@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<string, Icon> = {
   'ai-tech': Cpu,
   science: Atom,
   politics: Scales,
-  history: Columns,
+  history: ColumnsIcon,
   society: UsersThree,
 }
 import { categoryArchiveHref, headlineFigure, type HomeSectionDef } from '@/lib/home/sections'
