@@ -8,9 +8,12 @@ export interface StorySpin {
 }
 
 /**
- * Each published HTML story's spin, by story slug (`randomizer_spins`,
- * migration 088: a spin is `published` with its `story_slug` once its story
- * is). Read here and not through @vismay/randomizer/spins, which loads every
+ * Each HTML story's spin, by story slug (`randomizer_spins`, migration 088:
+ * posting a story with its spin's id writes the `story_slug`). The spin's own
+ * status is not asked for: it only turns `published` when the post itself
+ * publishes, so a story posted as a draft and published from admin keeps a
+ * spin that is still `researching` or `approved`. Whether the story is public
+ * is the story listing's call. Read here and not through @vismay/randomizer/spins, which loads every
  * desk's dataset. A story with more than one spin keeps the newest.
  *
  * Best-effort: without the service env or the table, no story has a beat and
@@ -23,7 +26,7 @@ export async function loadStorySpins(): Promise<Map<string, StorySpin>> {
     const { data, error } = await createServiceClient()
       .from('randomizer_spins')
       .select('story_slug, randomizer, reels')
-      .eq('status', 'published')
+      .neq('status', 'rejected')
       .not('story_slug', 'is', null)
       .order('updated_at', { ascending: false })
       .limit(1000)
