@@ -8,20 +8,20 @@ import {
   Atom,
   CaretLeft,
   CaretRight,
-  ChartLineUp,
-  Columns as ColumnsIcon,
+  Bank,
+  CastleTurret,
+  Crown,
   Cpu,
-  Scales,
   UsersThree,
   type Icon,
 } from '@phosphor-icons/react'
 
 const CATEGORY_ICONS: Record<string, Icon> = {
-  economy: ChartLineUp,
+  economy: Bank,
   'ai-tech': Cpu,
   science: Atom,
-  politics: Scales,
-  history: ColumnsIcon,
+  politics: Crown,
+  history: CastleTurret,
   society: UsersThree,
 }
 import { categoryArchiveHref, headlineFigure, type HomeSectionDef } from '@/lib/home/sections'
@@ -314,7 +314,7 @@ export default function CategorySections({ sections }: { sections: SectionWithSt
         </h2>
         <nav aria-label="Subjects" className="flex flex-wrap gap-2">
           {sections.map(({ def, total }) => {
-            const CategoryIcon = CATEGORY_ICONS[def.category] ?? ChartLineUp
+            const CategoryIcon = CATEGORY_ICONS[def.category] ?? Bank
             return (
             <a
               key={def.category}
