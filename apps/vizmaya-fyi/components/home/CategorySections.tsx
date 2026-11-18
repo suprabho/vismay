@@ -211,7 +211,7 @@ function Strip({ def, stories, total }: SectionWithStories) {
         ref={list}
         tabIndex={0}
         aria-label={`${def.label} stories`}
-        className="-mx-3 flex snap-x snap-mandatory scroll-px-3 gap-3 overflow-x-auto px-3 outline-none [scrollbar-width:none] focus-visible:outline-1 focus-visible:outline-(--line2) sm:-mx-4 sm:scroll-px-4 sm:px-4 [&::-webkit-scrollbar]:hidden"
+        className="-mx-3 flex snap-x snap-mandatory scroll-px-3 gap-3 overflow-x-auto overflow-y-hidden overscroll-y-none px-3 outline-none [scrollbar-width:none] focus-visible:outline-1 focus-visible:outline-(--line2) sm:-mx-4 sm:scroll-px-4 sm:px-4 [&::-webkit-scrollbar]:hidden"
       >
         {stories.map((s, i) => (
           <li key={s.slug} className="w-[74vw] max-w-[320px] flex-none snap-start sm:w-[300px]">
