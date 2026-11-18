@@ -48,7 +48,6 @@ export interface SectionWithStories {
 }
 
 const two = (n: number) => String(n).padStart(2, '0')
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 
 /**
  * A section's heading: the name with its last word in the accent, what it
@@ -289,10 +288,7 @@ function Plates({ def, stories, total }: SectionWithStories) {
                   <LivePreview src={storyPreviewUrl(s)} title={s.title} className="transition-transform duration-700 ease-out group-hover:scale-[1.03]" />
                 </div>
               </div>
-              <p aria-hidden className="mt-4 font-(family-name:--serif) text-[20px] italic leading-none text-(--ba)">
-                {ROMAN[i]}
-              </p>
-              <div className="mt-2 flex flex-1 flex-col">
+              <div className="mt-4 flex flex-1 flex-col">
                 <Headline story={s} size="text-[clamp(19px,1.7vw,24px)]" />
               </div>
             </li>
