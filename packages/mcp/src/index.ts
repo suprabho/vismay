@@ -1,3 +1,3 @@
-export { createServer } from './server.js'
-export { loadConfig } from './config.js'
-export type { VismayMcpConfig } from './config.js'
+export { createServer } from './server'
+export { loadConfig } from './config'
+export type { VismayMcpConfig } from './config'

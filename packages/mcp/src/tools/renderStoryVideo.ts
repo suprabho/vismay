@@ -17,8 +17,8 @@
 import { spawn } from 'node:child_process'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { VismayMcpConfig } from '../config.js'
-import { requireSupabaseEnv } from '../config.js'
+import type { VismayMcpConfig } from '../config'
+import { requireSupabaseEnv } from '../config'
 
 interface RunResult {
   stdout: string
@@ -106,7 +106,10 @@ export function registerRenderStoryVideoTool(
       if (narration === false) args.push('--no-narration')
 
       const env = { ...process.env, BASE_URL: config.vizmayaBaseUrl }
-      const result = await run('pnpm', args, { cwd: config.repoRoot, env })
+      // Derived here, not in config.ts: the hosted build bundles config.ts, and a bundler reads
+      // new URL(<path>, import.meta.url) as an asset reference. src/tools → up three dirs → repo root.
+      const cwd = config.repoRoot ?? new URL('../../../../', import.meta.url).pathname.replace(/\/$/, '')
+      const result = await run('pnpm', args, { cwd, env })
 
       if (result.code !== 0) {
         const tail = result.stderr.trim() || result.stdout.trim()

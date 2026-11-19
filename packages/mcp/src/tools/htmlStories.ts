@@ -54,19 +54,19 @@
  * same publish token, so the page links to files on our own storage.
  */
 
-import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { htmlStoryBrief } from '@vismay/html-stories/brief'
 import { AUTHORABLE_HTML_STORY_FORMATS } from '@vismay/html-stories/formats'
 import { HTML_STORY_TONES } from '@vismay/html-stories/tone'
 import {
-  htmlStoriesToken,
   htmlStoriesUrlFor,
-  requireHtmlStoriesEnv,
+  requireHtmlStoriesToken,
+  tokenSource,
   type HtmlStoryApp,
   type VismayMcpConfig,
-} from '../config.js'
+} from '../config'
+import { localFileShape, readLocalBytes, readLocalText } from '../localFiles'
 
 const appSchema = z
   .enum(['vizmaya-fyi', 'footshorts', 'vizf1', 'viznba', 'travel'])
@@ -77,6 +77,12 @@ const appSchema = z
   )
 
 export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfig): void {
+  registerHtmlStoryBriefTool(server, config)
+  registerHtmlStoryPublishTools(server, config)
+}
+
+/** `get_html_story_brief`: public, except the context briefs (match, race, game, trip), which need the token. */
+export function registerHtmlStoryBriefTool(server: McpServer, config: VismayMcpConfig): void {
   server.registerTool(
     'get_html_story_brief',
     {
@@ -275,30 +281,10 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         if (day != null) url.searchParams.set('day', String(day))
         if (prompt?.trim()) url.searchParams.set('prompt', prompt.trim())
       }
-      const token = htmlStoriesToken(app)
-      if (matchContext && !token) {
-        throw new Error(
-          'The match context needs the footshorts publish token in the MCP server env ' +
-            '(FOOTSHORTS_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
-        )
-      }
-      if (keys.length && !token) {
-        throw new Error(
-          'The race context needs the vizf1 publish token in the MCP server env ' +
-            '(VIZF1_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
-        )
-      }
-      if (games.length && !token) {
-        throw new Error(
-          'The game context needs the viznba publish token in the MCP server env ' +
-            '(VIZNBA_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
-        )
-      }
-      if (trip && !token) {
-        throw new Error(
-          'The trip context needs the travel publish token in the MCP server env ' +
-            '(TRAVEL_HTML_STORIES_TOKEN, or HTML_STORIES_TOKEN).',
-        )
+      const token = config.tokenFor(app)
+      if (!token) {
+        const context = matchContext ? 'match' : keys.length ? 'race' : games.length ? 'game' : trip ? 'trip' : null
+        if (context) throw new Error(`The ${context} context needs ${tokenSource(config, app)}.`)
       }
       try {
         const res = await fetch(url, token ? { headers: { authorization: `Bearer ${token}` } } : undefined)
@@ -323,7 +309,10 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       }
     },
   )
+}
 
+/** `publish_html_story`, `save_story_image` and `generate_story_image`: all need the site's publish token. */
+export function registerHtmlStoryPublishTools(server: McpServer, config: VismayMcpConfig): void {
   server.registerTool(
     'publish_html_story',
     {
@@ -332,15 +321,16 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         'Publish one complete, self-contained HTML document to vizmaya.fyi/s/<slug>, (app: ' +
         '"footshorts") footshorts.com/s/<slug>, (app: "vizf1") vizf1.com/s/<slug>, (app: "viznba") the VizNBA ' +
         'site\'s /s/<slug> or (app: "travel") the trips site\'s /s/<slug>, private to the trip the page names in ' +
-        '<meta name="travel:trip"> (its slug must start with the trip\'s). Pass the document as `html` or as a local ' +
-        '`filePath`. Without publish=true it saves as a draft (re-posting an already published ' +
+        '<meta name="travel:trip"> (its slug must start with the trip\'s). Pass the document as `html`' +
+        (config.hosted ? '' : ' or as a local `filePath`') +
+        '. Without publish=true it saves as a draft (re-posting an already published ' +
         'slug keeps it live). Posting to an existing slug replaces it; earlier versions stay ' +
         'restorable in admin. Returns the URL and lint warnings: fix them and post again to the ' +
         'same slug. Pass spinId when the page answers a randomizer spin, so the spin log records ' +
         'what shipped (an Atlas or Epics spin whose hero insight is not approved yet saves as a draft). A spin ' +
         'publishes to its own app: vizmaya-fyi for desk, atlas and epics, footshorts for the Football Desk, viznba for ' +
         'the NBA Desk.',
-      inputSchema: {
+      inputSchema: localFileShape(config, {
         app: appSchema,
         slug: z
           .string()
@@ -370,12 +360,12 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
               'omitted, a re-post keeps the current one.',
           ),
         spinId: z.string().uuid().optional().describe('The randomizer spin this page answers (vizmaya-fyi, footshorts or viznba, matching the spin).'),
-      },
+      }),
     },
     async ({ app, slug, html, filePath, publish, title, description, aura, category, spinId }) => {
-      const { token } = requireHtmlStoriesEnv(app)
-      if (!html && !filePath) throw new Error('Pass either html or filePath.')
-      const doc = html ?? (await readFile(filePath!, 'utf8'))
+      const { token } = requireHtmlStoriesToken(config, app)
+      if (!html && !filePath) throw new Error(config.hosted ? 'Pass html.' : 'Pass either html or filePath.')
+      const doc = html ?? (await readLocalText(config, filePath!))
 
       const res = await fetch(`${htmlStoriesUrlFor(config, app)}/api/html-stories`, {
         method: 'POST',
@@ -407,7 +397,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
 
   /** POST to the site's assets endpoint (packages/html-stories/src/assetsApi.ts). */
   async function postAsset(app: HtmlStoryApp, query: Record<string, string | undefined>, init: RequestInit) {
-    const { token } = requireHtmlStoriesEnv(app)
+    const { token } = requireHtmlStoriesToken(config, app)
     const url = new URL(`${htmlStoriesUrlFor(config, app)}/api/html-stories/assets`)
     for (const [k, v] of Object.entries(query)) if (v) url.searchParams.set(k, v)
     const res = await fetch(url, { ...init, method: 'POST', headers: { authorization: `Bearer ${token}`, ...init.headers } })
@@ -425,10 +415,11 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       description:
         'Host an openly licensed photo or short mp4 for an HTML story on the site\'s own storage, so the page ' +
         'never depends on the source keeping it. Pass `fromUrl` (the direct https file URL, e.g. a Wikimedia ' +
-        'Commons upload.wikimedia.org thumbnail or an Openverse result\'s url) or a local `filePath`, plus its ' +
-        '`credit` and `license` (CC0, PDM, CC BY or CC BY-SA only). Returns a permanent https `url` to use in ' +
+        'Commons upload.wikimedia.org thumbnail or an Openverse result\'s url)' +
+        (config.hosted ? '' : ' or a local `filePath`') +
+        ', plus its `credit` and `license` (CC0, PDM, CC BY or CC BY-SA only). Returns a permanent https `url` to use in ' +
         'the page; the same file saved twice returns the same url. Credit it in the figure\'s figcaption too.',
-      inputSchema: {
+      inputSchema: localFileShape(config, {
         app: appSchema,
         slug: slugSchema,
         fromUrl: z.string().url().optional().describe('Direct https URL of the image or mp4 file (not its web page).'),
@@ -437,10 +428,10 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
         license: z.string().max(100).optional().describe('e.g. "CC BY-SA 4.0", "CC0", "Public domain".'),
         sourcePage: z.string().url().optional().describe('The file\'s page (Commons file page, Flickr page) for the credit link.'),
         filename: z.string().max(80).optional().describe('A readable name; a content hash is appended.'),
-      },
+      }),
     },
     async ({ app, slug, fromUrl, filePath, credit, license, sourcePage, filename }) => {
-      if (!fromUrl === !filePath) throw new Error('Pass exactly one of fromUrl or filePath.')
+      if (!fromUrl === !filePath) throw new Error(config.hosted ? 'Pass fromUrl.' : 'Pass exactly one of fromUrl or filePath.')
       if (fromUrl) {
         return postAsset(app, { slug }, {
           headers: { 'content-type': 'application/json' },
@@ -452,7 +443,7 @@ export function registerHtmlStoryTools(server: McpServer, config: VismayMcpConfi
       return postAsset(
         app,
         { slug, credit, license, sourcePage, filename: filename ?? filePath!.split('/').pop() },
-        { headers: { 'content-type': type }, body: await readFile(filePath!) },
+        { headers: { 'content-type': type }, body: await readLocalBytes(config, filePath!) },
       )
     },
   )

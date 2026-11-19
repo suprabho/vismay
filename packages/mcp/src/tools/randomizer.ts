@@ -35,11 +35,11 @@
  * everything else on vizmaya.fyi).
  */
 
-import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { RANDOMIZER_META, type RandomizerApp, type RuleFired, type SpinRecord } from '@vismay/randomizer/types'
-import { htmlStoriesToken, htmlStoriesUrlFor, requireHtmlStoriesEnv, type VismayMcpConfig } from '../config.js'
+import { htmlStoriesUrlFor, requireHtmlStoriesToken, type VismayMcpConfig } from '../config'
+import { localFileShape, readLocalText } from '../localFiles'
 
 const spinIdSchema = z.string().uuid().describe('A spin id, as spin_randomizer returned it.')
 
@@ -47,15 +47,15 @@ const spinIdSchema = z.string().uuid().describe('A spin id, as spin_randomizer r
  * Every site serves every spin from the one log, so a call by spin id goes to
  * whichever site this server holds a token for (vizmaya first).
  */
-function anySite(): RandomizerApp {
-  if (htmlStoriesToken('vizmaya-fyi')) return 'vizmaya-fyi'
-  if (htmlStoriesToken('footshorts')) return 'footshorts'
-  if (htmlStoriesToken('viznba')) return 'viznba'
+function anySite(config: VismayMcpConfig): RandomizerApp {
+  if (config.tokenFor('vizmaya-fyi')) return 'vizmaya-fyi'
+  if (config.tokenFor('footshorts')) return 'footshorts'
+  if (config.tokenFor('viznba')) return 'viznba'
   return 'vizmaya-fyi'
 }
 
-async function call(config: VismayMcpConfig, path: string, init: RequestInit = {}, app: RandomizerApp = anySite()): Promise<any> {
-  const { token } = requireHtmlStoriesEnv(app)
+async function call(config: VismayMcpConfig, path: string, init: RequestInit = {}, app: RandomizerApp = anySite(config)): Promise<any> {
+  const { token } = requireHtmlStoriesToken(config, app)
   const res = await fetch(`${htmlStoriesUrlFor(config, app)}${path}`, {
     ...init,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
@@ -211,19 +211,20 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
     {
       title: 'Save a spin\'s research file',
       description:
-        'Save the research MD for a spin (claims log, gaps, HERO INSIGHT). Pass `markdown` or a local `filePath`. ' +
+        'Save the research MD for a spin (claims log, gaps, HERO INSIGHT). Pass `markdown`' +
+        (config.hosted ? '. ' : ' or a local `filePath`. ') +
         'The spin\'s status follows the HERO INSIGHT section: without one it stays researching; with one, Atlas, Epics and ' +
         '100 Desk spins wait for a human to approve the insight in admin before the page can go public, and Desk ' +
         'spins are ready to build. Save again to update it.',
-      inputSchema: {
+      inputSchema: localFileShape(config, {
         spinId: spinIdSchema,
         markdown: z.string().optional().describe('The research file.'),
         filePath: z.string().optional().describe('Absolute path to a local .md file (instead of markdown).'),
-      },
+      }),
     },
     async ({ spinId, markdown, filePath }) => {
-      if (!markdown && !filePath) throw new Error('Pass either markdown or filePath.')
-      const research = markdown ?? (await readFile(filePath!, 'utf8'))
+      if (!markdown && !filePath) throw new Error(config.hosted ? 'Pass markdown.' : 'Pass either markdown or filePath.')
+      const research = markdown ?? (await readLocalText(config, filePath!))
       const body = await call(config, `/api/randomizer/spins/${spinId}`, { method: 'PUT', body: JSON.stringify({ research }) })
       return { content: [{ type: 'text', text: `${describeSpin(body.spin as SpinRecord)}\n\n${body.next}` }] }
     },
@@ -303,7 +304,7 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
       inputSchema: {},
     },
     async () => {
-      const body = await call(config, '/api/randomizer/news', {}, htmlStoriesToken('footshorts') ? 'footshorts' : anySite())
+      const body = await call(config, '/api/randomizer/news', {}, config.tokenFor('footshorts') ? 'footshorts' : anySite(config))
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )
