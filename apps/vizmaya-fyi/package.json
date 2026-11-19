@@ -68,6 +68,7 @@
     "@vismay/curious-pipeline": "workspace:*",
     "@vismay/dc-editions": "workspace:*",
     "@vismay/html-stories": "workspace:*",
+    "@vismay/mcp": "workspace:*",
     "@vismay/render-surface": "workspace:*",
     "@vismay/ui": "workspace:*",
     "@vismay/story-pipeline": "workspace:*",

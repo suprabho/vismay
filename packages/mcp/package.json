@@ -7,13 +7,15 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./hosted": "./src/hosted.ts"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
     "inspect": "npx @modelcontextprotocol/inspector tsx src/cli.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/hosted.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

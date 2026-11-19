@@ -9,9 +9,9 @@
 
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { VismayMcpConfig } from '../config.js'
-import { buildEmbedUrl, type VizSlot } from '../catalogUrl.js'
-import { findModule } from '../catalogClient.js'
+import type { VismayMcpConfig } from '../config'
+import { buildEmbedUrl, type VizSlot } from '../catalogUrl'
+import { findModule } from '../catalogClient'
 
 /** Resolve the module and a sensible default slot. Shared with render_module_image. */
 export async function resolveSlot(
@@ -29,8 +29,8 @@ export function registerEmbedUrlTool(server: McpServer, config: VismayMcpConfig)
       title: 'Live embed URL for a Vismay module',
       description:
         'Build a live, iframe-able URL that renders one Vismay viz module from the given ' +
-        'config (served by the running @vismay/catalog dev server). Use render_module_image ' +
-        'if you need a PNG instead of a URL.',
+        'config (served by the @vismay/catalog app).' +
+        (config.hosted ? '' : ' Use render_module_image if you need a PNG instead of a URL.'),
       inputSchema: {
         type: z.string().describe("Registered module type, e.g. 'fs:match-card'."),
         config: z
