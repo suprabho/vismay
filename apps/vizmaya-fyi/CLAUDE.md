@@ -367,11 +367,8 @@ Hai via their US OTC lines (`ATEYY`, `SFTBY`, `HNHPF`; migration 083 retired
 `6857.T`, `9984.T` and `2317.TW`). That leaves four home-exchange listings —
 Samsung, SK hynix, SMIC and Tokyo Electron — which have **no working
 automatic feed** (the Apify path returns no bars) and are outside the Doom v
-Boom market term. SpaceX (`SPCX`, Nasdaq since its 2026-06 IPO) is a normal
-US row; Anthropic is private, so its row (`ANTHROPIC`, migration 106) has
-`market = 'PRIVATE'`: tagged in the news, skipped by the price importer and
-the upload panel, outside the market term. A private company is added the same
-way. Before moving another company to a US symbol, check that
+Boom market term. SpaceX (`SPCX`, Nasdaq IPO 2026-06-12) and Anthropic
+(`ANT`, Nasdaq IPO 2026-11-19) are plain US rows (migration 106). Before moving another company to a US symbol, check that
 massive.com serves it: `pnpm ai-data-centers:import-stocks -- --probe SYMBOL`
 (or the workflow's `probe` input) — reads only, nothing is written.
 

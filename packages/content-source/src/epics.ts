@@ -1260,7 +1260,6 @@ export async function listDcStockUploadTargets(): Promise<DcStockUploadTarget[]>
     .select('ticker, name, market')
     .eq('is_active', true)
     .neq('market', 'US')
-    .neq('market', 'PRIVATE')
     .order('market')
     .order('ticker')
   if (error) throw new Error(`listDcStockUploadTargets stocks: ${error.message}`)
