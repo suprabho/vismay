@@ -510,11 +510,13 @@ async function main() {
   if (args.ticker) query = query.eq('ticker', args.ticker)
   const { data: stockRows, error: stocksErr } = await query
   if (stocksErr) throw new Error(`dc_stocks read failed: ${stocksErr.message}`)
-  const stocks = (stockRows ?? []) as Stock[]
+  // Private companies (market='PRIVATE', e.g. Anthropic) are tracked for news
+  // tagging only: there is no listing to fetch.
+  const stocks = ((stockRows ?? []) as Stock[]).filter((s) => s.market !== 'PRIVATE')
   if (stocks.length === 0) {
     throw new Error(
       args.ticker
-        ? `No active dc_stocks row for ${args.ticker}`
+        ? `No active listed dc_stocks row for ${args.ticker}`
         : 'dc_stocks is empty — apply migration 065 before importing'
     )
   }
