@@ -15,12 +15,24 @@ import { isAuthed } from '@/lib/adminAuth'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/**
+ * Same-origin only. The Origin header is the first test; a form POST whose
+ * Origin a referrer policy or privacy setting blanked to "null" also passes
+ * when the browser says Sec-Fetch-Site: same-origin, a header page scripts
+ * can't set and referrer policies don't strip.
+ */
+function isSameOrigin(req: Request): boolean {
+  const origin = req.headers.get('origin')
+  if (origin === new URL(req.url).origin) return true
+  return (origin === null || origin === 'null') && req.headers.get('sec-fetch-site') === 'same-origin'
+}
+
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status, headers: { 'cache-control': 'no-store' } })
 }
 
 export async function POST(req: Request) {
-  if (req.headers.get('origin') !== new URL(req.url).origin) return fail('Invalid request origin', 403)
+  if (!isSameOrigin(req)) return fail('Invalid request origin', 403)
   if (!(await isAuthed())) return fail('unauthorized', 401)
 
   const form = await req.formData().catch(() => null)
