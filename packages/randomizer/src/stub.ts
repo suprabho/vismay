@@ -21,7 +21,12 @@
  * Curious Desk spins get a claim-check template: the claim and its grade
  * with the features behind it, the evidence quote and its document, the
  * lineages, the supported core against the embellishment, the numbers, the
- * lens read and the credit line.
+ * lens read and the credit line. Ledger spins get an autopsy template: the
+ * seed fields and leads to verify, why now and echo, then the nine steps
+ * (timeline, mechanism, money trail, missed signals, loophole, impact,
+ * aftermath, detection logic, counter-narrative), the lens read, the three
+ * readers' executive read, the pattern file, the curiosity list and the
+ * legal note.
  *
  * Pure, so admin can offer "Copy research stub" without a round trip.
  */
@@ -48,6 +53,9 @@ import {
   type LandmarkFocus,
   type LandmarkSubject,
   type LandmarkWorkLevel,
+  type LedgerCase,
+  type LedgerLegalStatus,
+  type LedgerSubject,
   type OcwSubject,
   type SpinRecord,
   type ViznbaGameRef,
@@ -71,6 +79,7 @@ function primaryName(spin: Pick<SpinRecord, 'subject'>): string {
   if (s.randomizer === 'hundred') return s.person.name
   if (s.randomizer === 'evidence') return s.study.label
   if (s.randomizer === 'frontier') return s.paper.arxivId
+  if (s.randomizer === 'ledger') return s.case.name
   if (s.randomizer === 'curious') return s.claim.subject || s.claim.text.split(' ').slice(0, 6).join(' ')
   return s.epic.title
 }
@@ -1150,6 +1159,137 @@ function curiousTemplate(s: CuriousSubject): string[] {
   ].filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
 }
 
+/* ---------- Ledger ---------- */
+
+/** When a case happened, as the catalogue has it: the dated latest development of a live case, otherwise the year. */
+export function ledgerWhen(c: Pick<LedgerCase, 'year' | 'date_label'>): string {
+  return c.date_label ?? String(c.year)
+}
+
+/** What each legal status means, for the admin panel and the page's badge. */
+export const LEDGER_LEGAL_MEANING: Record<LedgerLegalStatus, string> = {
+  Proven: 'Conviction, court judgment or regulator order.',
+  Settled: 'Resolved by settlement or deferred agreement.',
+  Alleged: 'Charged or under investigation. No final finding.',
+  Unresolved: 'The event is documented, with no final finding on who is responsible.',
+  Leaked: 'Comes from leaked documents.',
+  'Not proven': 'Acquitted, or the case was dismissed.',
+}
+
+/** How the write-up handles a case of each legal status. */
+export function ledgerLegalNote(status: LedgerLegalStatus): string {
+  if (status === 'Proven') return 'Court or regulator finding. Cite the judgment or order, and check it was not overturned on appeal.'
+  if (status === 'Settled') return 'Resolved by settlement. Name the terms, and say whether there was an admission.'
+  if (status === 'Leaked') return 'Comes from leaked documents. Verify against primary records; being named in a leak is not a finding of wrongdoing.'
+  if (status === 'Not proven') return 'Acquitted or dismissed. Say so up front, and imply no guilt anywhere on the page.'
+  return 'No final finding. Use the word alleged. Name individuals only after a conviction or settlement.'
+}
+
+function ledgerTemplate(s: LedgerSubject): string[] {
+  const c = s.case
+  return [
+    '## Seed fields (provisional, verify each in the claims log)',
+    '',
+    `- ${c.date ? 'Latest development on file' : 'Year'}: ${ledgerWhen(c)}`,
+    `- Country: ${c.country}`,
+    `- Region: ${s.region.name}`,
+    `- Typology: ${s.typology.name} (${s.family.name})`,
+    `- Scale band: ${s.band}`,
+    `- Outcome: ${s.outcome}`,
+    `- How it was caught: ${s.caught}`,
+    `- Legal status: ${s.legalStatus}`,
+    `- Heat: ${c.heat} (a seed, never refreshed)`,
+    ...(c.note ? ['', '## Seed note (unverified)', '', c.note] : []),
+    ...(c.sources?.length ? ['', '## Seed leads (search results, not yet verified)', '', ...c.sources.map((l) => `- ${l.title}: ${l.url}`)] : []),
+    '',
+    '## Why now and echo',
+    '',
+    '- Newest official document (judgment, order, settlement, indictment or filing), dated, and whether the legal status above still holds:',
+    '- Latest development (dated, sourced):',
+    '- Echo: where the same pattern shows up in the last 12 months (two cases, each dated and sourced):',
+    '',
+    '## 1. Timeline',
+    '',
+    'Start, first warning, detection, collapse, charges, outcome. All dated. Time undetected is a key number.',
+    '',
+    '| Date | Event | Document or source | Status |',
+    '|------|-------|--------------------|--------|',
+    '| | | | |',
+    '',
+    '## 2. Mechanism',
+    '',
+    'How it worked, in plain words, from first principles. Red-flag level only.',
+    '',
+    '## 3. Money trail',
+    '',
+    '| Order | Place or entity | Country | When | What happened | Source | Status |',
+    '|-------|-----------------|---------|------|---------------|--------|--------|',
+    '| 1 | | | | | | |',
+    '',
+    '## 4. Missed signals ledger',
+    '',
+    '| Signal | Who saw it | When | What happened next | Source | Status (Documented, Contested, Inferred) |',
+    '|--------|------------|------|--------------------|--------|-------------------------------------------|',
+    '| | | | | | |',
+    '',
+    '## 5. The loophole',
+    '',
+    'The legal or structural gap, and who owned it: the firm, a regulator, a statute or the market structure.',
+    '',
+    '## 6. Impact',
+    '',
+    'Losses, victims, fines, sentences, recovery. Write each as a comparison (loss $X vs fine $Y), with the currency, the date and the exchange rate. Keep amount defrauded, net loss, laundered flow, fines, forfeiture and market value destroyed in separate rows.',
+    '',
+    '| Number | What it measures | Value | Currency and date | Source |',
+    '|--------|------------------|-------|-------------------|--------|',
+    ...s.family.charts.map((m) => `| ${m} | | | | |`),
+    '',
+    '## 7. Aftermath',
+    '',
+    'Laws and controls that changed, with dates, and whether each change lasted.',
+    '',
+    '## 8. Detection logic',
+    '',
+    'The data pattern and the rule that would have caught it: in plain English, then as pseudo-SQL (pattern, threshold, time window, fields). The likely false positives, and what an analyst checks next.',
+    '',
+    '## 9. Counter-narrative',
+    '',
+    "The accused party's account and the disputed claims, stated fairly.",
+    '',
+    `## Lens read: ${s.lens.name}`,
+    '',
+    `Question: ${s.lens.description} ${s.lens.focus}`,
+    '',
+    '## Executive read',
+    '',
+    'Three lines each, for this case.',
+    '',
+    '- CEO and board (could this cost us what it cost them?):',
+    '- Head of financial crime (which control failed, and is ours the same?):',
+    '- Lead analyst (what would I have seen in the data, and when?):',
+    '',
+    '## Pattern file',
+    '',
+    '- The pattern in one sentence:',
+    '- Evidence for it:',
+    '- Cases checked, and how many fit (at least 3 others):',
+    '- First moment it was visible:',
+    '- The counter-example that does not fit:',
+    '',
+    '## Curiosity list',
+    '',
+    'The three oddest facts or open questions, each with what you found.',
+    '',
+    '1.',
+    '2.',
+    '3.',
+    '',
+    '## Legal note',
+    '',
+    ledgerLegalNote(s.legalStatus),
+  ]
+}
+
 /** The research MD a spin starts from. */
 /** An "Explain like I'm 5" spin: the stub gains the story insight and the stand-in table. */
 function isEli5Stub(s: StubSpin['subject']): boolean {
@@ -1201,7 +1341,9 @@ export function researchStub(spin: StubSpin): string {
                       ? frontierTemplate(s)
                       : s.randomizer === 'curious'
                         ? curiousTemplate(s)
-                        : epicsTemplate(s)
+                        : s.randomizer === 'ledger'
+                          ? ledgerTemplate(s)
+                          : epicsTemplate(s)
   return [
     `# ${primaryName(spin)}: ${meta.name} research`,
     '',
@@ -1227,7 +1369,9 @@ export function researchStub(spin: StubSpin): string {
                   ? '> (the paper itself with its table or figure, its released code or weights, an independent replication). Mark each claim Verified, Contested or'
                   : s.randomizer === 'curious'
                     ? '> (a contemporaneous document, an archive record, the original text, a peer-reviewed paper). Two retellings of one account are one source. Mark each claim Verified, Contested or'
-                    : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
+                    : s.randomizer === 'ledger'
+                      ? '> (a judgment, a regulator order, a settlement, an indictment or court filing, a company filing). An indictment is an allegation, not a finding. Mark each claim Verified, Contested or'
+                      : '> (government statistic, filing, peer-reviewed paper, original text). Mark each claim Verified, Contested or',
     '> Unverified. Unverified claims never reach the page or the script.',
     '',
     ...template,

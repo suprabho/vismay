@@ -333,6 +333,25 @@ const curiousPool = curiousPoolFromRows(
   new Map(),
   { asOf: '2026-11-04T12:00:00Z' },
 )
+// A Ledger spin's brief: the autopsy format, the legal-status ladder in the protocol and the page rules, the stub at the end.
+{
+  const now = new Date('2026-10-05T12:00:00Z')
+  const drawn = draw({ randomizer: 'ledger', seed: 5, now })
+  const spin = { ...drawn, id: '00000000-0000-4000-8000-0000000000ad', seed: '00000005', status: 'spun', heroInsight: null, researchMd: null, createdAt: now.toISOString() } as Pick<
+    SpinRecord,
+    'id' | 'seed' | 'randomizer' | 'subject' | 'createdAt' | 'reels' | 'status' | 'heroInsight' | 'researchMd'
+  >
+  const b = htmlStoryBrief({ siteUrl: 'https://vizmaya.fyi', spin })
+  assert.ok(b.includes('## Format: autopsy brief with charts'))
+  assert.ok(b.includes('Randomizer: Ledger. Format: Autopsy brief with charts.'))
+  assert.ok(b.includes('8. Use the legal-status ladder in every claim about wrongdoing'))
+  assert.ok(b.includes('Name a living person as a wrongdoer only where a conviction'))
+  assert.ok(b.includes('Autopsy series rules:'))
+  assert.ok(b.includes('A human approves the hero insight for Ledger spins'), 'Ledger is gated')
+  assert.ok(b.includes('## 4. Missed signals ledger') && b.includes('## Legal note'), 'the research stub is appended')
+  assert.ok(!b.includes('\u2014'), 'no em dash')
+}
+
 for (const randomizer of ['hundred', 'evidence', 'frontier', 'curious'] as const) {
   const now = new Date('2026-10-05T12:00:00Z')
   const drawn = draw({ randomizer, seed: 5, now, frontierPool, curiousPool })

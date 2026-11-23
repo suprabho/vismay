@@ -102,12 +102,29 @@
  * Sequence mode follows the thread: a pool paper sharing tags or the
  * benchmark with the previous spin's. The paper's arXiv and OpenAlex record
  * is read after the draw and changes nothing in it.
+ *
+ * Ledger draws from a catalogue of past financial crimes held whole, so it
+ * is pure in one pass: the era, sector and typology reels are the drawn
+ * case's own, so a lock on one narrows the cases and a lock on the case
+ * carries all three. Cases spun in the last 30 days are left out; 30% of
+ * spins are forced into the live window (Breaking or Developing) when a case
+ * sits there; 60% weight a case by its heat (a seed, never refreshed) and
+ * the rest ignore it. Either way a region is drawn first, each with the same
+ * chance, and a case inside it is weighted against how common its typology
+ * family is there, so neither the largest region nor the largest family
+ * dominates; the same region twice in a row is re-drawn once. Then a lens;
+ * (case, lens) is blocked for 90 days. A case's era is worked out from the
+ * spin's date, so a live case ages into its year's era by itself.
  */
 
 import { ATLAS, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA, epicRoute, evidenceByNumber, evidenceDesigns, frontierAgeDays, frontierWindowOf, hundredByRank, hundredEras, isHandsOn, isLiterary, isPhilosophical, isWorkLevel, landmarkLenses, landmarkStocked,
   CURIOUS,
+  LEDGER,
   curiousEraOf,
   curiousGradeLabel,
+  ledgerBand,
+  ledgerEraOf,
+  ledgerLegalStatus,
 } from './datasets'
 import { mulberry32, pick, uniq, weighted, type Rng } from './rng'
 import { LANDMARK_WORK_LEVEL_LABEL, gameSummary, hundredLife, landmarkAwardLabel, landmarkBackgroundLabel, landmarkFocus, landmarkFocusNoun, landmarkLicenceNote, ocwCourseLabel } from './stub'
@@ -161,6 +178,9 @@ import {
   type LandmarkPrize,
   type LandmarkQuery,
   type LandmarkWork,
+  type LedgerCase,
+  type LedgerDataset,
+  type LedgerPicks,
   type LandmarkWorkBasis,
   type NamedOption,
   type OcwCourse,
@@ -238,6 +258,9 @@ export const DRAW_RULES = {
   maxCuriousRelated: 5,
   maxCuriousTexts: 40,
   curiousGradeWeight: { A: 5, B: 4, C: 3, D: 1, E: 1 } as Record<string, number>,
+  /** Ledger: the share of spins forced into the live window (Breaking or Developing), and the least a case's heat counts for in the heat-weighted branch. */
+  ledgerLiveShare: 0.3,
+  ledgerHeatFloor: 5,
 } as const
 
 const DAY = 864e5
@@ -270,7 +293,7 @@ export interface DrawInput {
   /** Curious Desk: the approved claims (spins.ts loadCuriousPool). Required. */
   curiousPool?: CuriousPool | null
   /** For tests: swap a dataset. */
-  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; frontier?: FrontierDataset; curious?: CuriousDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
+  datasets?: { desk?: DeskDataset; atlas?: AtlasDataset; epics?: EpicsDataset; ocw?: OcwDataset; landmark?: LandmarkDataset; hundred?: HundredDataset; evidence?: EvidenceDataset; frontier?: FrontierDataset; curious?: CuriousDataset; ledger?: LedgerDataset; footshorts?: FootshortsDataset; viznba?: ViznbaDataset }
 }
 
 /**
@@ -429,6 +452,9 @@ export function draw(input: DrawInput): DrawResult {
   }
   if (input.randomizer === 'curious') {
     return drawCurious(ctx, input.datasets?.curious ?? CURIOUS, prev?.picks as CuriousPicks | undefined, input.curiousPool ?? null, !!input.sequence)
+  }
+  if (input.randomizer === 'ledger') {
+    return drawLedger(ctx, input.datasets?.ledger ?? LEDGER, prev?.picks as LedgerPicks | undefined)
   }
   return drawEpics(ctx, input.datasets?.epics ?? EPICS, prev?.picks as EpicsPicks | undefined, !!input.sequence)
 }
@@ -2270,6 +2296,184 @@ function drawCurious(ctx: Ctx, data: CuriousDataset, prev: CuriousPicks | undefi
     summary: `${clipText(claim.text, 50)} · ${curiousGradeLabel(claim)} · ${lens.name}`,
     rules: ctx.rules,
     meta: { era: era.id, theme: theme.id, region: claim.region ?? undefined, claim: claim.id },
+  }
+}
+
+/* ---------- Ledger ---------- */
+
+/** What the case's legal status lets the page say, as a rule on every spin. */
+function ledgerLegalRule(ctx: Ctx, status: ReturnType<typeof ledgerLegalStatus>, outcome: string): void {
+  const head = `Legal status in the catalogue: ${status} (outcome: ${outcome.toLowerCase()}).`
+  if (status === 'Proven') {
+    rule(ctx, 'legal', 'info', `${head} A conviction, court judgment or regulator order stands behind it: find it, cite it, and check it was not overturned on appeal.`)
+  } else if (status === 'Settled') {
+    rule(ctx, 'legal', 'info', `${head} Resolved by settlement or a deferred agreement: name the terms and say whether the party admitted anything.`)
+  } else if (status === 'Leaked') {
+    rule(ctx, 'legal', 'warn', `${head} It comes from leaked documents: verify against primary records, and being named in a leak is not a finding of wrongdoing.`)
+  } else if (status === 'Not proven') {
+    rule(ctx, 'legal', 'warn', `${head} The charges did not stand: the page says so up front and nothing on it implies guilt.`)
+  } else if (status === 'Alleged') {
+    rule(ctx, 'legal', 'warn', `${head} No final finding: write "alleged", attribute every claim of wrongdoing to the filing that makes it, and name individuals only after a conviction or settlement.`)
+  } else {
+    rule(ctx, 'legal', 'warn', `${head} The event is documented but no final finding says who is responsible: describe roles, attribute every claim, and name no one as the wrongdoer.`)
+  }
+}
+
+function drawLedger(ctx: Ctx, data: LedgerDataset, prev: LedgerPicks | undefined): DrawResult {
+  const { rng } = ctx
+  const eraOf = (c: LedgerCase) => ledgerEraOf(c, ctx.now, data)
+  const typologyOf = (c: LedgerCase) => data.typologies.find((t) => t.id === c.typology)!
+  const isLive = (c: LedgerCase) => eraOf(c).max_days !== undefined
+  const last = ctx.kept[ctx.kept.length - 1]
+  const prevCase = prev ? data.cases.find((c) => c.id === prev.case) : undefined
+
+  let c: LedgerCase
+  if (ctx.locked('case') && prevCase) {
+    c = prevCase
+    rule(ctx, 'lock', 'info', `Case locked to ${c.name}. The era, sector and typology reels follow it.`)
+  } else {
+    if (ctx.locked('case') && prev) rule(ctx, 'lock', 'warn', `The locked case (${prev.case}) is no longer in the catalogue, so its lock is ignored.`)
+    let pool: readonly LedgerCase[] = data.cases
+    const narrow = (key: 'era' | 'sector' | 'typology', name: string | undefined, keep: (x: LedgerCase) => boolean, gone: string) => {
+      if (!ctx.locked(key) || !prev) return
+      const inside = pool.filter(keep)
+      if (inside.length) {
+        pool = inside
+        rule(ctx, 'lock', 'info', `${key === 'era' ? 'Era' : key === 'sector' ? 'Sector' : 'Typology'} locked to ${name ?? prev[key]}. ${inside.length === 1 ? 'One case matches' : `${inside.length} cases match`}.`)
+      } else {
+        rule(ctx, 'lock', 'warn', gone)
+      }
+    }
+    const eraName = data.eras.find((e) => e.id === prev?.era)?.name
+    narrow('era', eraName, (x) => eraOf(x).id === prev!.era, `No matching case sits in ${eraName ?? 'the locked era'} today (a live case ages out of Breaking and Developing), so the era lock is ignored.`)
+    const sectorName = data.sectors.find((x) => x.id === prev?.sector)?.name
+    narrow('sector', sectorName, (x) => x.sector === prev!.sector, `No case matches ${sectorName ?? 'the locked sector'} with the other locks, so the sector lock is ignored.`)
+    const typologyName = data.typologies.find((t) => t.id === prev?.typology)?.name
+    narrow('typology', typologyName, (x) => x.typology === prev!.typology, `No case matches ${typologyName ?? 'the locked typology'} with the other locks, so the typology lock is ignored.`)
+
+    let cands = eligible(ctx, pool, {
+      id: (x) => x.id,
+      name: (x) => x.name,
+      heat: () => 0,
+      heatLabel: '',
+      everyText: 'Every matching case was spun in the last 30 days.',
+    })
+
+    if (!ctx.locked('era') && rng() < DRAW_RULES.ledgerLiveShare) {
+      const live = cands.filter(isLive)
+      if (live.length) {
+        cands = live
+        rule(ctx, 'live', 'good', `Live window forced (30% of spins): only the ${live.length === 1 ? 'one case' : `${live.length} cases`} in Breaking or Developing ${live.length === 1 ? 'is' : 'are'} in the draw.`)
+      } else {
+        rule(ctx, 'live', 'info', 'The live window came up (30% of spins), but no eligible case is in Breaking or Developing, so the whole catalogue is in the draw.')
+      }
+    }
+
+    const heatMode = rng() < DRAW_RULES.heatShare
+    const regions = uniq(cands.map((x) => x.region))
+    const once = (): LedgerCase => {
+      const region = pick(regions, rng)
+      const inRegion = cands.filter((x) => x.region === region)
+      const families = new Map<string, number>()
+      for (const x of inRegion) families.set(typologyOf(x).family, (families.get(typologyOf(x).family) ?? 0) + 1)
+      return weighted(inRegion, (x) => (heatMode ? Math.max(DRAW_RULES.ledgerHeatFloor, x.heat) : 1) / families.get(typologyOf(x).family)!, rng)
+    }
+    const regionName = (id: string) => data.regions.find((r) => r.id === id)?.name ?? id
+    c = once()
+    if (last?.meta.region === c.region && regions.length > 1) {
+      const again = once()
+      rule(
+        ctx,
+        'balance',
+        'warn',
+        again.region === c.region
+          ? `${regionName(c.region)} came up twice in a row, so the case was re-drawn once and landed there again. One re-draw is the rule, so it stands.`
+          : `${regionName(c.region)} came up twice in a row, so the case was re-drawn once, now in ${regionName(again.region)}.`,
+      )
+      c = again
+    }
+    rule(
+      ctx,
+      'weight',
+      'good',
+      heatMode
+        ? `Heat-weighted draw (the 60% branch): a region first, each with the same chance (${regionName(c.region)} of ${regions.length}), then a case in it weighted by its heat and against how common its typology family is there. ${c.name} has heat ${c.heat}.`
+        : `Pure random draw (the 40% branch): a region first, each with the same chance (${regionName(c.region)} of ${regions.length}), then a case in it weighted only against how common its typology family is there. Heat was ignored.`,
+    )
+  }
+
+  const era = eraOf(c)
+  const sector = data.sectors.find((x) => x.id === c.sector)!
+  const typology = typologyOf(c)
+  const family = data.families.find((f) => f.id === typology.family)!
+  const region = data.regions.find((r) => r.id === c.region)!
+  const outcome = data.outcomes.find((o) => o.id === c.outcome)?.name ?? c.outcome
+  const caught = data.routes.find((r) => r.id === c.caught)?.name ?? c.caught
+  const legalStatus = ledgerLegalStatus(c, data)
+  const live = era.max_days !== undefined
+  const lastDevelopmentDays = c.date ? Math.max(0, Math.floor((ctx.now - Date.parse(c.date)) / DAY)) : null
+
+  let lens = (ctx.locked('lens') && prev && data.lenses.find((l) => l.name === prev.lens)) || pick(data.lenses, rng)
+  const combo = () => `${c.id}|${lens.name}`
+  const r90 = recent(ctx, DRAW_RULES.comboBlockDays, 'combo')
+  if (r90.has(combo())) {
+    const fresh = data.lenses.filter((l) => !r90.has(`${c.id}|${l.name}`))
+    if (!ctx.locked('lens') && fresh.length) lens = pick(fresh, rng)
+    rule(
+      ctx,
+      '90 days',
+      r90.has(combo()) ? 'warn' : 'block',
+      r90.has(combo())
+        ? `${c.name} with the ${lens.name} lens ran in the last 90 days${ctx.locked('lens') ? ', and the lens is locked' : ', and every lens has run'}. It repeats.`
+        : `${c.name} with the first lens drawn ran in the last 90 days. The lens was re-drawn.`,
+    )
+  }
+
+  ledgerLegalRule(ctx, legalStatus, outcome)
+  rule(ctx, 'seed', 'info', `The year, country, scale band, outcome and detection route are seed values from public record: confirm each in the claims log before it goes on the page. Heat ${c.heat} is a seed and has never been refreshed; the Why Now search is the refresh.`)
+  if (live) {
+    rule(ctx, 'live', 'warn', `Live case (${era.name}): the latest development on file is ${c.date_label ?? c.date}, ${lastDevelopmentDays === 0 ? 'today' : lastDevelopmentDays === 1 ? 'a day ago' : `${lastDevelopmentDays} days ago`}. Its note and links came from a search: leads, not verified sources, and the story may have moved since.`)
+  } else if (c.date) {
+    rule(ctx, 'live', 'info', `The latest development on file (${c.date_label ?? c.date}) is ${lastDevelopmentDays} days old, outside the live window, so the case is drawn as ${era.name}. Its note and links are still search leads, not verified sources.`)
+  }
+  if (family.id === 'cyber-and-web3' || family.id === 'sanctions-and-proliferation') {
+    rule(ctx, 'attribution', 'info', 'An attribution to a state or a named group (a hack linked to a government, a sanctioned network) is the claim of the agency that made it: report it as theirs, never as a court finding.')
+  }
+  if (c.caught === 'UNK') rule(ctx, 'detection', 'info', 'How this case was caught is not yet researched: find who caught it and record it in the research file.')
+  rule(ctx, 'red flags', 'info', `Describe ${typology.name.toLowerCase()} at red-flag level: what it looked like in the data and who could have seen it, never a step-by-step method that would help someone evade controls.`)
+
+  const picks: LedgerPicks = { era: era.id, sector: sector.id, typology: typology.id, case: c.id, lens: lens.name }
+  return {
+    randomizer: 'ledger',
+    picks,
+    subject: {
+      randomizer: 'ledger',
+      era,
+      sector,
+      typology,
+      family,
+      case: c,
+      region,
+      lens,
+      outcome,
+      caught,
+      band: ledgerBand(c, data),
+      legalStatus,
+      live,
+      lastDevelopmentDays,
+    },
+    reels: {
+      era: { value: era.name, sub: era.sub },
+      sector: { value: sector.name },
+      typology: { value: typology.name, sub: family.name },
+      case: { value: c.name, sub: `${c.date_label ?? c.year} · ${c.country} · ${legalStatus}` },
+      lens: { value: lens.name, sub: lens.short },
+    },
+    primary: c.id,
+    combo: combo(),
+    summary: `${c.name} · ${lens.name}`,
+    rules: ctx.rules,
+    meta: { region: c.region, family: family.id, era: era.id, heat: c.heat },
   }
 }
 

@@ -12,13 +12,13 @@ export const dynamic = 'force-dynamic'
 
 /**
  * The Vizmaya story randomizers (packages/randomizer, migrations 088, 093,
- * 094, 096, 098, 099 and 102): one slot machine with nine reel sets (Desk,
- * Atlas, Epics, OCW Desk, Landmark Desk, The 100 Desk, Evidence Desk,
+ * 094, 096, 098, 099, 102 and 106): one slot machine with ten reel sets (Desk,
+ * Atlas, Epics, Ledger, OCW Desk, Landmark Desk, The 100 Desk, Evidence Desk,
  * Frontier Desk, Curious Desk). Spin draws a topic under the playbook's rules and logs it; the
  * composed agent brief carries the spin; the hero insight gate, the Desk
  * heat table, the OCW pool panel, the Landmark pool panel, The 100 profile
- * panel, the Evidence study panel, the Frontier paper panel and the Curious
- * claim panel live here too. The OCW, Landmark, 100, Evidence, Frontier and
+ * panel, the Evidence study panel, the Frontier paper panel, the Curious
+ * claim panel and the Ledger case file live here too. The OCW, Landmark, 100, Evidence, Frontier and
  * Curious Desks need nothing loaded up front: their pools, profiles and
  * records are read per spin and kept on the spin (the Frontier Desk's pool
  * from AI Daily's dc_papers, the Curious Desk's from curious_claim_pool).

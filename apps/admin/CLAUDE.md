@@ -270,16 +270,16 @@ league and team rows only).
 ## Randomizer tabs (/vizmaya/randomizer, /footshorts/randomizer, /viznba/randomizer)
 
 The slot machine for the story randomizers
-([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094, 096, 098, 099 and 102;
+([packages/randomizer](../../packages/randomizer), migrations 088, 090, 092, 093, 094, 096, 098, 099, 102 and 106;
 the pipeline is documented in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)):
-Desk, Atlas, Epics, the OCW Desk, the Landmark Desk, The 100 Desk, the Evidence Desk, the Frontier Desk and the Curious Desk on `/vizmaya/randomizer`, the Football Desk on
+Desk, Atlas, Epics, Ledger, the OCW Desk, the Landmark Desk, The 100 Desk, the Evidence Desk, the Frontier Desk and the Curious Desk on `/vizmaya/randomizer`, the Football Desk on
 `/footshorts/randomizer`, the NBA Desk on `/viznba/randomizer`. One client, `RandomizerClient`, takes the `app`
 and shows that site's randomizers (`randomizersFor(app)`), its brief and its
 story links.
 
 - **Page:** [app/vizmaya/(tabbed)/randomizer/](<app/vizmaya/(tabbed)/randomizer/>)
   → [components/randomizer/RandomizerClient.tsx](components/randomizer/RandomizerClient.tsx):
-  nine tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
+  ten tabs, reels with locks (a child lock takes its parents), Spin, Re-spin
   with a one-tap reason, the Atlas pair / Epics sequence / OCW continue-the-course /
   Landmark follow-the-prize / The 100 walk-the-ranking / Evidence follow-the-debate / Frontier follow-the-thread / Curious pull-the-thread toggle, the style die, the rules that fired, the spin log, the hero insight
   gate (approve / send back with a note, paste research), the composed brief's
@@ -337,6 +337,14 @@ story links.
   beside it, a link to the Curious claims review queue, and the sources'
   states (Crossref, Google Books, Wikidata, Wayback) with notes and errors.
   Gated like The 100 Desk; a cron spins it each morning at 06:10 UTC.
+  On the Ledger tab (a catalogue of 240 past financial crimes, committed in
+  `data/ledger.json`; reels Era, Sector, Typology, Case, Lens, a Case lock
+  carrying the other three), the **Case file** panel: the case with its legal
+  status badge (Proven, Settled, Alleged, Unresolved, Leaked, Not proven),
+  live date and scale band, its seed fields, the family's first checks and
+  sources, the unverified seed note and search leads of a live case, and a
+  collapsible catalogue coverage (by era, region and typology family). Gated
+  like Atlas and Epics; nothing is read live and it has no cron.
 - **Football Desk page:** [app/[appSlug]/(tabbed)/randomizer/](<app/[appSlug]/(tabbed)/randomizer/>)
   (footshorts and viznba, other apps 404): the same client with `app="footshorts"`,
   one reel set (Tournament, Team, Angle, Freshness, plus the Opponent reel

@@ -27,7 +27,10 @@
  * taxonomy.ts); its claims are read live from the curious_claim_pool view at
  * spin time (spins.ts loadCuriousPool), and the drawn claim's record from
  * Crossref, Google Books, Wikidata and the Wayback Machine after the draw
- * (curiousPool.ts).
+ * (curiousPool.ts). Ledger's whole catalogue of past financial crimes is
+ * here (ledger.json: eras, sectors, typologies in families, lenses and the
+ * cases, the live ones with the search leads they were found in); nothing is
+ * read live, and a case's era is worked out from the spin's date.
  */
 
 import type {
@@ -51,6 +54,10 @@ import type {
   LandmarkDataset,
   LandmarkLens,
   LandmarkPrize,
+  LedgerCase,
+  LedgerDataset,
+  LedgerEra,
+  LedgerLegalStatus,
   OcwDataset,
   OcwKind,
   RandomizerId,
@@ -66,6 +73,7 @@ import hundredJson from './data/hundred.json'
 import evidenceJson from './data/evidence.json'
 import frontierJson from './data/frontier.json'
 import curiousJson from './data/curious.json'
+import ledgerJson from './data/ledger.json'
 import footshortsJson from './data/footshorts.json'
 import viznbaJson from './data/viznba.json'
 
@@ -78,6 +86,7 @@ export const HUNDRED = hundredJson as unknown as HundredDataset
 export const EVIDENCE = evidenceJson as unknown as EvidenceDataset
 export const FRONTIER = frontierJson as unknown as FrontierDataset
 export const CURIOUS = curiousJson as unknown as CuriousDataset
+export const LEDGER = ledgerJson as unknown as LedgerDataset
 export const FOOTSHORTS = footshortsJson as unknown as FootshortsDataset
 export const VIZNBA = viznbaJson as unknown as ViznbaDataset
 
@@ -139,6 +148,32 @@ export function curiousEraOf(year: number | null | undefined, data: CuriousDatas
   const undated = data.eras.find((e) => e.id === 'undated') ?? data.eras[data.eras.length - 1]!
   if (year == null || !Number.isFinite(year)) return undated
   return data.eras.find((e) => e.id !== 'undated' && (e.from == null || year >= e.from) && (e.to == null || year <= e.to)) ?? undated
+}
+
+/**
+ * The era a Ledger case sits in at `now`: Breaking or Developing while its
+ * dated latest development is inside that window, otherwise its year's era.
+ */
+export function ledgerEraOf(c: Pick<LedgerCase, 'year' | 'date'>, now: number, data: LedgerDataset = LEDGER): LedgerEra {
+  if (c.date) {
+    const days = (now - Date.parse(c.date)) / 864e5
+    const live = data.eras.filter((e) => e.max_days !== undefined).sort((a, b) => a.max_days! - b.max_days!)
+    const hit = live.find((e) => days <= e.max_days!)
+    if (hit) return hit
+  }
+  const historic = data.eras.filter((e) => e.max_days === undefined).sort((a, b) => (b.from_year ?? -Infinity) - (a.from_year ?? -Infinity))
+  return historic.find((e) => e.from_year == null || c.year >= e.from_year) ?? historic[historic.length - 1]!
+}
+
+/** What a page may say about wrongdoing in a Ledger case: a leak is Leaked whatever its outcome, otherwise the outcome decides. */
+export function ledgerLegalStatus(c: Pick<LedgerCase, 'outcome' | 'caught'>, data: LedgerDataset = LEDGER): LedgerLegalStatus {
+  if (c.caught === 'LEAK') return 'Leaked'
+  return data.outcomes.find((o) => o.id === c.outcome)?.legal ?? 'Unresolved'
+}
+
+/** A Ledger case's scale band, written out. */
+export function ledgerBand(c: Pick<LedgerCase, 'band'>, data: LedgerDataset = LEDGER): string {
+  return data.bands[c.band] ?? 'Not yet sized'
 }
 
 export function curiousEra(id: string, data: CuriousDataset = CURIOUS): CuriousEra | undefined {
@@ -229,6 +264,13 @@ export function reelPool(randomizer: RandomizerId, key: string, live: readonly s
     if (key === 'theme') return CURIOUS.themes.map((t) => t.name)
     if (key === 'claim') return [...live]
     if (key === 'lens') return CURIOUS.lenses.map((l) => l.name)
+  }
+  if (randomizer === 'ledger') {
+    if (key === 'era') return LEDGER.eras.map((e) => e.name)
+    if (key === 'sector') return LEDGER.sectors.map((x) => x.name)
+    if (key === 'typology') return LEDGER.typologies.map((t) => t.name)
+    if (key === 'case') return LEDGER.cases.map((c) => c.name)
+    if (key === 'lens') return LEDGER.lenses.map((l) => l.name)
   }
   if (randomizer === 'footshorts') {
     if (key === 'competition') return FOOTSHORTS.competitions.map((c) => c.name)

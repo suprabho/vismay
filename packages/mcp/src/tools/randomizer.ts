@@ -1,11 +1,13 @@
 /**
  * Tools: `spin_randomizer`, `get_randomizer_spin`, `save_spin_research`,
  * `get_desk_heat`, `refresh_desk_heat`, `get_football_news`, `get_nba_news`,
- * `get_ocw_pool`, `get_landmark_pool`, `get_hundred_pool`, `get_evidence_pool`, `get_frontier_pool` and `get_curious_pool`.
+ * `get_ocw_pool`, `get_landmark_pool`, `get_hundred_pool`, `get_evidence_pool`, `get_frontier_pool`, `get_curious_pool` and `get_ledger_pool`.
  *
  * The story randomizers (packages/randomizer): for vizmaya, Desk (industry,
  * editorial format), Atlas (countries and culture, geography format), Epics
- * (epics place by place, geography format), the OCW Desk (one MIT
+ * (epics place by place, geography format), Ledger (one past financial
+ * crime researched as an autopsy: an era, a sector, a typology, a case and a
+ * lens; autopsy brief with charts; gated), the OCW Desk (one MIT
  * OpenCourseWare resource: a field, a topic, a resource kind, a course, a
  * resource and a lens; study note with charts), the Landmark Desk (one
  * piece of prize-winning research: a field, a prize, an era, a laureate, the
@@ -97,8 +99,13 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
       description:
         'Draw a story topic and log the spin. For vizmaya.fyi, randomizer: "desk" (industry, sub-industry, lens and ' +
         'news freshness, heat weighted; editorial brief with charts), "atlas" (a country, a cultural thread, a time ' +
-        'depth, a geography frame and a lens; route table), or "epics" (an epic, an episode, a place and a lens; ' +
-        'route table with geography status). For footshorts.com, "footshorts" (the Football Desk: a tournament, a ' +
+        'depth, a geography frame and a lens; route table), "epics" (an epic, an episode, a place and a lens; ' +
+        'route table with geography status), or "ledger" (Ledger: one past financial crime from a catalogue of 240, ' +
+        'drawn with its era, sector and typology, plus a lens; researched as an autopsy (timeline, mechanism, money ' +
+        'trail, missed signals, loophole, impact, aftermath, detection rule, counter-narrative) and told as an autopsy ' +
+        'brief with charts; 30% of spins are forced into cases that broke in the last 12 months; the spin carries the ' +
+        'case\'s legal status (proven, settled, alleged, unresolved, leaked), which decides what the page may say; gated). ' +
+        'For footshorts.com, "footshorts" (the Football Desk: a tournament, a ' +
         'team in it, an angle and a news freshness, weighted by how much footshorts news each has; football ' +
         'explainer whose brief carries the match context of the team\'s recent and next fixtures). For viznba, ' +
         '"viznba" (the NBA Desk: a conference, a franchise in it, an angle and a news freshness, weighted by how much ' +
@@ -135,14 +142,14 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
         'Desk spin), research, ' +
         'save_spin_research, then publish_html_story with spinId (same app).',
       inputSchema: {
-        randomizer: z.enum(['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba']),
+        randomizer: z.enum(['desk', 'atlas', 'epics', 'ledger', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba']),
         from: spinIdSchema.optional().describe('The spin the locks keep values from, or the one a re-spin rejects.'),
         locks: z
           .array(z.string())
           .optional()
           .describe(
             'Reel keys to keep from `from`. desk: industry, sub, lens, fresh. atlas: country, thread, time, frame, ' +
-              'lens. epics: epic, episode, place, lens. ocw: field, topic, course, resource, lens. landmark: field, ' +
+              'lens. epics: epic, episode, place, lens. ledger: era, sector, typology, case, lens (a case lock carries the other three). ocw: field, topic, course, resource, lens. landmark: field, ' +
               'prize, era, laureate, work, lens. hundred: domain, era, person, lens. evidence: theme, design, study, lens. frontier: area, window, paper, lens. curious: era, theme, claim, lens. footshorts: ' +
               'competition, team, angle, fresh. viznba: conference, team, angle, fresh. A child lock ' +
               'implies its parents.',
@@ -477,6 +484,29 @@ export function registerRandomizerTools(server: McpServer, config: VismayMcpConf
     },
     async ({ claim }) => {
       const body = await call(config, `/api/randomizer/curious${claim ? `?claim=${encodeURIComponent(claim)}` : ''}`, {}, 'vizmaya-fyi')
+      return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
+    },
+  )
+
+  server.registerTool(
+    'get_ledger_pool',
+    {
+      title: 'Get the Ledger pool',
+      description:
+        'What the Ledger randomizer draws from: a committed catalogue of past financial crimes. With nothing: the ' +
+        'eras (Breaking, Developing and four historic ones), sectors, typology families (each with the analyst to work ' +
+        'as, the checks to run first, the charts and the sources), typologies, lenses, regions with their regulators, ' +
+        'outcomes, detection routes, scale bands, and every case (name, year, country, region, typology, sector, scale ' +
+        'band, outcome, how it was caught, heat, the era it sits in today and its legal status; live cases also carry a ' +
+        'dated latest development, a note and the search results they were found in). With `case` (a case id): that one ' +
+        'case. Every field is a seed value and every note and link a lead, not a verified source. Use it to look ' +
+        'before locking a case on spin_randomizer; it logs nothing. Needs the vizmaya publish token.',
+      inputSchema: {
+        case: z.string().min(1).max(160).optional().describe('A case id (the slug of its name), for that one case.'),
+      },
+    },
+    async ({ case: id }) => {
+      const body = await call(config, `/api/randomizer/ledger${id ? `?case=${encodeURIComponent(id)}` : ''}`, {}, 'vizmaya-fyi')
       return { content: [{ type: 'text', text: JSON.stringify(body, null, 2) }] }
     },
   )

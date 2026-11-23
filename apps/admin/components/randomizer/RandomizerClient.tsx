@@ -13,6 +13,7 @@ import {
   Fire,
   Flask,
   GraduationCap,
+  Detective,
   LockSimple,
   Medal,
   Newspaper,
@@ -36,8 +37,8 @@ import {
 import type { HtmlStoryTone } from '@vismay/html-stories/tone'
 import { reelPool } from '@vismay/randomizer/datasets'
 import { normalizeLocks } from '@vismay/randomizer/draw'
-import { curiousGradeNotes, frontierAbsUrl, frontierHeadline, hundredLife, landmarkBackgroundLabel, researchFileName, researchStub } from '@vismay/randomizer/stub'
-import { CURIOUS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, OCW, VIZNBA } from '@vismay/randomizer/datasets'
+import { LEDGER_LEGAL_MEANING, curiousGradeNotes, frontierAbsUrl, frontierHeadline, hundredLife, landmarkBackgroundLabel, ledgerWhen, researchFileName, researchStub } from '@vismay/randomizer/stub'
+import { CURIOUS, EVIDENCE, FOOTSHORTS, FRONTIER, HUNDRED, LANDMARK, LEDGER, OCW, VIZNBA, ledgerEraOf } from '@vismay/randomizer/datasets'
 import {
   RANDOMIZER_META,
   RANDOMIZERS,
@@ -47,6 +48,7 @@ import {
   type FootshortsNews,
   type HundredFlag,
   type LandmarkSources,
+  type LedgerLegalStatus,
   type LandmarkWork,
   type OcwFile,
   type ViznbaGameRef,
@@ -483,7 +485,7 @@ export function RandomizerClient({
                 </>
               ) : (
                 <>
-                  One slot machine, nine reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
+                  One slot machine, ten reel sets. Spin draws a topic under the playbook&rsquo;s rules (heat weighting, region and
                   tradition balancing, the philosophical quota, 30 and 90 day repeat blocks) and logs it. The OCW Desk reads a page of
                   MIT OpenCourseWare live for its course and resource reels; the Landmark Desk reads the prize lists (the Nobel Prize
                   API, Wikidata) and the scholarly record (OpenAlex, Open Library, Unpaywall) live for its laureate and work reels; The
@@ -491,8 +493,8 @@ export function RandomizerClient({
                   profile (Wikidata, Wikipedia, pageviews) live; the Evidence Desk draws a study from an annotated collection of research on
                   social media&rsquo;s effects and reads its citation record (OpenAlex) live; the Frontier Desk draws an arXiv paper from the ones
                   AI Daily keeps each morning (read live from its papers table) and reads its arXiv and OpenAlex record; the Curious Desk draws an approved claim
-                  from the claim pipeline&rsquo;s store (read live, graded A to E from its sources, gated) and reads its cited work, entities and archive copy; a cron spins each once a morning. The agent
-                  brief then carries the spin.
+                  from the claim pipeline&rsquo;s store (read live, graded A to E from its sources, gated) and reads its cited work, entities and archive copy; a cron spins each once a morning. Ledger draws a past financial
+                  crime from a committed catalogue, to be researched as an autopsy (gated; it has no cron). The agent brief then carries the spin.
                 </>
               )}
             </p>
@@ -502,7 +504,7 @@ export function RandomizerClient({
         {loadError && (
           <div className="text-sm text-red-400 border border-red-500/30 bg-red-500/5 rounded-lg px-3 py-2">
             {loadError}. Has migration 088_randomizer.sql
-            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk, 101_curious_claims.sql and 102_randomizer_curious.sql for the Curious Desk)'} been applied?
+            {app === 'footshorts' ? ' (and 090_randomizer_footshorts.sql)' : app === 'viznba' ? ' (and 092_viznba.sql)' : ' (and 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk, 101_curious_claims.sql and 102_randomizer_curious.sql for the Curious Desk, 106_randomizer_ledger.sql for Ledger)'} been applied?
           </div>
         )}
 
@@ -821,6 +823,7 @@ export function RandomizerClient({
         {tab === 'evidence' && <EvidenceStudyPanel spin={current} />}
         {tab === 'frontier' && <FrontierPaperPanel spin={current} />}
         {tab === 'curious' && <CuriousClaimPanel spin={current} />}
+        {tab === 'ledger' && <LedgerCasePanel spin={current} />}
 
         {tab === 'desk' && (
           <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
@@ -2013,6 +2016,133 @@ function CuriousClaimPanel({ spin }: { spin: SpinRecord | null }) {
           ))}
         </div>
       )}
+    </section>
+  )
+}
+
+const LEDGER_LEGAL_TONE: Record<LedgerLegalStatus, string> = {
+  Proven: 'text-emerald-300 border-emerald-400/40',
+  Settled: 'text-sky-300 border-sky-400/40',
+  Alleged: 'text-amber-300 border-amber-400/40',
+  Unresolved: 'text-neutral-300 border-white/20',
+  Leaked: 'text-violet-300 border-violet-300/40',
+  'Not proven': 'text-neutral-300 border-white/20',
+}
+
+/** Ledger's case file: the case the spin drew with its legal status, seed fields and search leads, and the catalogue's coverage by era, region and typology family. */
+function LedgerCasePanel({ spin }: { spin: SpinRecord | null }) {
+  const s = spin && spin.subject.randomizer === 'ledger' ? spin.subject : null
+  const [now] = useState(() => Date.now())
+  const coverage = useMemo(() => {
+    const count = <T,>(items: readonly T[], key: (c: (typeof LEDGER.cases)[number]) => string, id: (x: T) => string, name: (x: T) => string) =>
+      items.map((x) => ({ name: name(x), n: LEDGER.cases.filter((c) => key(c) === id(x)).length }))
+    const family = new Map(LEDGER.typologies.map((t) => [t.id, t.family]))
+    return {
+      live: LEDGER.cases.filter((c) => ledgerEraOf(c, now).max_days !== undefined).length,
+      groups: [
+        { title: 'By era', rows: count(LEDGER.eras, (c) => ledgerEraOf(c, now).id, (e) => e.id, (e) => e.name) },
+        { title: 'By region', rows: count(LEDGER.regions, (c) => c.region, (r) => r.id, (r) => r.name) },
+        { title: 'By typology family', rows: count(LEDGER.families, (c) => family.get(c.typology) ?? '', (f) => f.id, (f) => f.name) },
+      ],
+    }
+  }, [now])
+  const catalogue = (
+    <details className="border-t border-white/5">
+      <summary className="px-4 py-2.5 text-xs text-neutral-400 cursor-pointer select-none hover:text-neutral-200">
+        Catalogue: {LEDGER.cases.length} cases, {coverage.live} live, {LEDGER.typologies.length} typologies in {LEDGER.families.length} families, {LEDGER.sectors.length} sectors
+      </summary>
+      <div className="px-4 pb-4 grid gap-6 md:grid-cols-3">
+        {coverage.groups.map((g) => {
+          const max = Math.max(1, ...g.rows.map((r) => r.n))
+          return (
+            <div key={g.title}>
+              <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono mb-1.5">{g.title}</div>
+              <div className="flex flex-col gap-1">
+                {g.rows.map((r) => (
+                  <div key={r.name} className="grid grid-cols-[minmax(0,1fr)_72px_28px] items-center gap-2 text-xs">
+                    <span className="truncate text-neutral-400" title={r.name}>{r.name}</span>
+                    <span className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <span className="block h-full rounded-full bg-orange-400/70" style={{ width: `${Math.round((r.n / max) * 100)}%` }} />
+                    </span>
+                    <span className="text-right font-mono text-neutral-500">{r.n}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+        <p className="md:col-span-3 text-xs text-neutral-500">{LEDGER.catalogue.note} Live cases were last seeded on {LEDGER.catalogue.seeded}.</p>
+      </div>
+    </details>
+  )
+  if (!s) {
+    return (
+      <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+        <div className="px-4 py-3 text-sm text-neutral-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-neutral-300 inline-flex items-center gap-1.5">
+            <Detective size={15} className="text-orange-400" />
+            Case file
+          </span>
+          <span>
+            Spin a past financial crime and research it as an autopsy: how it worked, the signals that were missed, the loophole, the cost. The catalogue is
+            committed; nothing is read live.
+          </span>
+        </div>
+        {catalogue}
+      </section>
+    )
+  }
+  const c = s.case
+  const row = (label: string, body: ReactNode) => (
+    <>
+      <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">{label}</span>
+      <div className="min-w-0 text-xs text-neutral-300">{body}</div>
+    </>
+  )
+  return (
+    <section className="rounded-xl border border-white/10 bg-neutral-900/40 overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex flex-wrap items-center gap-3">
+        <h2 className="text-sm font-medium flex items-center gap-1.5">
+          <Detective size={15} className="text-orange-400" />
+          Case file
+        </h2>
+        <span className="text-xs text-neutral-500">Seed fields are provisional: the claims log confirms each before it goes on a page.</span>
+        <span className="flex flex-wrap gap-1.5 sm:ml-auto text-[10px] uppercase tracking-wider">
+          <span className={`px-2 py-0.5 rounded-full border ${LEDGER_LEGAL_TONE[s.legalStatus]}`} title={LEDGER_LEGAL_MEANING[s.legalStatus]}>
+            {s.legalStatus}
+          </span>
+          {s.live && <span className="px-2 py-0.5 rounded-full border text-orange-300 border-orange-400/40">Live · {c.date_label}</span>}
+          <span className="px-2 py-0.5 rounded-full border text-neutral-300 border-white/15">{s.band}</span>
+        </span>
+      </div>
+      <div className="px-4 py-3 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr] text-sm">
+        <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono self-start pt-0.5">Case</span>
+        <div className="min-w-0">
+          <span className="text-neutral-100">{c.name}</span>
+          <div className="text-xs text-neutral-500">{[ledgerWhen(c), c.country, s.region.name, `heat ${c.heat} (seed)`].join(' · ')}</div>
+        </div>
+        {row('Typology', `${s.typology.name} (${s.family.name}) · ${s.sector.name}`)}
+        {row('Outcome', `${s.outcome} · caught by: ${s.caught}`)}
+        {row('Legal status', <span className="text-neutral-400">{s.legalStatus}. {LEDGER_LEGAL_MEANING[s.legalStatus]}</span>)}
+        {row('Lens', <span className="text-neutral-400">{s.lens.name}: {s.lens.description}</span>)}
+        {row('Check first', <span className="text-neutral-400">{s.family.checks}</span>)}
+        {row('Start from', <span className="text-neutral-400">{s.region.sources}. Also: {s.family.sources}.</span>)}
+        {c.note && row('Seed note', <span className="text-amber-300/90">{c.note} (unverified)</span>)}
+        {c.sources && c.sources.length > 0 &&
+          row(
+            'Seed leads',
+            <div className="flex flex-col gap-0.5">
+              {c.sources.map((l) => (
+                <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-neutral-200 hover:underline inline-flex items-center gap-1">
+                  <span className="truncate">{l.title}</span>
+                  <ArrowSquareOut size={12} className="text-neutral-600 shrink-0" />
+                </a>
+              ))}
+              <span className="text-neutral-600">Search results the case was found in, not verified sources.</span>
+            </div>,
+          )}
+      </div>
+      {catalogue}
     </section>
   )
 }

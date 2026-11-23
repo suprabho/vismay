@@ -19,7 +19,8 @@
  * ./frontierPool after it. The Curious Desk's pool is the claim pipeline's
  * approved claims (loadCuriousPool: the curious_claim_pool view, migration
  * 101), read before the draw; the drawn claim's Crossref, Google Books,
- * Wikidata and Wayback record comes from ./curiousPool after it.
+ * Wikidata and Wayback record comes from ./curiousPool after it. Ledger
+ * draws from its committed catalogue alone and reads nothing live.
  *
  * A spin is created only here, and only by an authenticated caller (admin's
  * session-gated routes, or the token-gated routes on vizmaya-fyi that the MCP
@@ -92,7 +93,7 @@ function check(error: { code?: string; message: string } | null): void {
   if (error.code === '42P01' || error.code === 'PGRST205') throw new SpinError(MIGRATION_HINT, 503)
   if (error.code === '23514' && /randomizer_check/.test(error.message)) {
     throw new SpinError(
-      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk, 102_randomizer_curious.sql for the Curious Desk',
+      'This randomizer needs its migration applied: 090_randomizer_footshorts.sql for the Football Desk, 092_viznba.sql for the NBA Desk, 093_randomizer_ocw.sql for the OCW Desk, 094_randomizer_landmark.sql for the Landmark Desk, 096_randomizer_hundred.sql for The 100 Desk, 098_randomizer_evidence.sql for the Evidence Desk, 099_randomizer_frontier.sql for the Frontier Desk, 102_randomizer_curious.sql for the Curious Desk, 106_randomizer_ledger.sql for Ledger',
       503,
     )
   }
