@@ -104,28 +104,50 @@ function layerSeries(section: EditionChartSection, market: DcStockSeries[] | und
     .sort((a, b) => Math.abs(b.changePct as number) - Math.abs(a.changePct as number))
 }
 
+/** Most lines one indexed chart carries; the hyperscaler layer (seven names since SpaceX and Anthropic listed) fits whole. */
+const INDEXED_MAX_SERIES = 7
+
 /**
- * Indexed closes over the last trading days for the layer's five biggest
- * movers — the same window as the tape, but as the path each company took
- * rather than the endpoint. Every series starts at 100 on the first day so
- * home-currency prices share one axis.
+ * Indexed closes over the last trading days for the layer's biggest movers —
+ * the same window as the tape, but as the path each company took rather than
+ * the endpoint. Every series starts at 100 on its first session in the window
+ * so home-currency prices share one axis.
+ *
+ * Movers are ranked over the sessions drawn, not the reader's longer window,
+ * and a company needs only two closes in it: a recent listing (Anthropic
+ * from 2026-11-19) joins from its first session instead of being dropped.
  */
 export function indexedCloses(section: EditionChartSection, market: DcStockSeries[] | undefined, days = 10): ValidatedChartPlan | null {
-  const series = layerSeries(section, market, 4).slice(0, 5)
+  const category = LAYER_CATEGORY[section]
+  if (!category || !market) return null
+  const sessions = [...new Set(market.filter((s) => s.category === category).flatMap((s) => s.points.map((p) => p[0])))].sort().slice(-days)
+  if (sessions.length < 2) return null
+  const from = sessions[0]
+  const windowed = market
+    .filter((s) => s.category === category)
+    .map((s) => ({ s, pts: s.points.filter((p) => p[0] >= from) }))
+    .filter(({ pts }) => pts.length >= 2 && pts[0][1] > 0)
+    .map(({ s, pts }) => ({ s, pts, move: Math.abs(pts[pts.length - 1][1] / pts[0][1] - 1) }))
+    .sort((a, b) => b.move - a.move || a.s.name.localeCompare(b.s.name))
+  const total = windowed.length
+  const series = windowed.slice(0, INDEXED_MAX_SERIES)
   if (series.length < MIN_CHART_ROWS) return null
-  const rows: Array<[string, string, number]> = []
-  for (const s of series) {
-    const pts = s.points.slice(-days)
-    const base = pts[0]?.[1]
-    if (!base) continue
-    for (const [date, close] of pts) rows.push([sessionLabel(date), shortTitle(s.name, 18), r2((close / base) * 100)])
+  const late = series.filter(({ pts }) => pts[0][0] > from).map(({ s }) => shortTitle(s.name, 18))
+  const dated: Array<[string, string, number]> = []
+  for (const { s, pts } of series) {
+    const base = pts[0][1]
+    for (const [date, close] of pts) dated.push([date, shortTitle(s.name, 18), r2((close / base) * 100)])
   }
-  if (new Set(rows.map((r) => r[1])).size < MIN_CHART_ROWS) return null
-  const span = series[0].points.slice(-days)
+  // Category axis order follows first appearance, so rows go out in date
+  // order: a series that starts late must not put its sessions first.
+  dated.sort((a, b) => a[0].localeCompare(b[0]))
+  const rows = dated.map(([date, name, v]) => [sessionLabel(date), name, v] as [string, string, number])
+  const which = series.length === total ? `all ${total} tracked ${LAYER_WORD[section]}` : `the ${series.length} ${LAYER_WORD[section]} that moved most over the window`
+  const lateNote = late.length ? `; ${joinNames(late)} ${late.length === 1 ? 'is' : 'are'} indexed from ${late.length === 1 ? 'its' : 'their'} first session` : ''
   return {
     section,
-    title: `${capitalise(LAYER_WORD[section] ?? 'stocks')}, indexed over the last ${span.length} sessions`,
-    caption: `Closing prices on each company's home exchange, indexed to 100 at the first session shown, for the ${series.length} ${LAYER_WORD[section]} that moved most over the window.`,
+    title: `${capitalise(LAYER_WORD[section] ?? 'stocks')}, indexed over the last ${sessions.length} sessions`,
+    caption: `Closing prices on each company's home exchange, indexed to 100 at the first session shown, for ${which}${lateNote}.`,
     spec: {
       chartType: 'Line Chart',
       // Sessions are a category axis on purpose: flint's Date axis expects
@@ -374,6 +396,7 @@ function gainValue(p: DcPaper): number | null {
 }
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const joinNames = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`)
 
 /**
  * The ladder's last rung for a section: the first builder that draws. Order
