@@ -62,11 +62,13 @@ import { HTML_STORY_TONES } from '@vismay/html-stories/tone'
 import {
   htmlStoriesUrlFor,
   requireHtmlStoriesToken,
+  SITE_URL_ENV,
   tokenSource,
   type HtmlStoryApp,
   type VismayMcpConfig,
 } from '../config'
 import { localFileShape, readLocalBytes, readLocalText } from '../localFiles'
+import { siteFetch } from '../siteFetch'
 
 const appSchema = z
   .enum(['vizmaya-fyi', 'footshorts', 'vizf1', 'viznba', 'travel'])
@@ -287,7 +289,7 @@ export function registerHtmlStoryBriefTool(server: McpServer, config: VismayMcpC
         if (context) throw new Error(`The ${context} context needs ${tokenSource(config, app)}.`)
       }
       try {
-        const res = await fetch(url, token ? { headers: { authorization: `Bearer ${token}` } } : undefined)
+        const res = await siteFetch(url, token ? { headers: { authorization: `Bearer ${token}` } } : {}, SITE_URL_ENV[app])
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
         return { content: [{ type: 'text', text: await res.text() }] }
       } catch (e) {
@@ -367,7 +369,7 @@ export function registerHtmlStoryPublishTools(server: McpServer, config: VismayM
       if (!html && !filePath) throw new Error(config.hosted ? 'Pass html.' : 'Pass either html or filePath.')
       const doc = html ?? (await readLocalText(config, filePath!))
 
-      const res = await fetch(`${htmlStoriesUrlFor(config, app)}/api/html-stories`, {
+      const res = await siteFetch(`${htmlStoriesUrlFor(config, app)}/api/html-stories`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -381,7 +383,7 @@ export function registerHtmlStoryPublishTools(server: McpServer, config: VismayM
           spinId,
           source: 'mcp',
         }),
-      })
+      }, SITE_URL_ENV[app])
       const body = await res.text()
       return {
         isError: !res.ok,
@@ -400,7 +402,11 @@ export function registerHtmlStoryPublishTools(server: McpServer, config: VismayM
     const { token } = requireHtmlStoriesToken(config, app)
     const url = new URL(`${htmlStoriesUrlFor(config, app)}/api/html-stories/assets`)
     for (const [k, v] of Object.entries(query)) if (v) url.searchParams.set(k, v)
-    const res = await fetch(url, { ...init, method: 'POST', headers: { authorization: `Bearer ${token}`, ...init.headers } })
+    const res = await siteFetch(
+      url,
+      { ...init, method: 'POST', headers: { authorization: `Bearer ${token}`, ...init.headers } },
+      SITE_URL_ENV[app],
+    )
     const body = await res.text()
     return {
       isError: !res.ok,

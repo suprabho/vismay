@@ -32,7 +32,7 @@ which wraps the Vercel AI Gateway. Do not import `@google/genai`, `@anthropic-ai
 ## MCP sign-in consent (/mcp/authorize)
 
 Where people allow an MCP client (Claude, Claude Code, Cursor) to use the hosted
-Vismay MCP at vizmaya.fyi/api/mcp. vizmaya.fyi runs the OAuth server
+Vismay MCP at www.vizmaya.fyi/api/mcp. vizmaya.fyi runs the OAuth server
 ([packages/mcp/src/oauth.ts](../../packages/mcp/src/oauth.ts)) and sends the
 browser here with a signed request in the path; admin only says yes or no. The
 handoff is Scope B in [docs/auth.md](../../docs/auth.md)

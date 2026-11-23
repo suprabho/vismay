@@ -1,5 +1,5 @@
 /**
- * The Vismay MCP sign-in endpoint, https://vizmaya.fyi/api/mcp (Streamable
+ * The Vismay MCP sign-in endpoint, https://www.vizmaya.fyi/api/mcp (Streamable
  * HTTP, stateless). An MCP client that connects with no credentials gets a 401
  * that starts the OAuth sign-in (packages/mcp/src/oauth.ts; people allow it on
  * admin's /mcp/authorize page); signed in, it has every hosted tool. A caller

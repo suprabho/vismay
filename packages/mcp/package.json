@@ -16,7 +16,7 @@
     "start": "tsx src/cli.ts",
     "inspect": "npx @modelcontextprotocol/inspector tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/oauth.test.ts && tsx src/hosted.test.ts"
+    "test": "tsx src/siteFetch.test.ts && tsx src/oauth.test.ts && tsx src/hosted.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

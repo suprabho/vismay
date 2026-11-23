@@ -107,9 +107,9 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `SUPABASE_SERVICE_ROLE_KEY` | render_story_video | — (required) |
 | `SCREENSHOT_DIR` | render_module_image (`returnAs:'path'`) | `/tmp/vismay-mcp-screenshots` |
 | `VISMAY_REPO_ROOT` | render_story_video | auto-derived |
-| `HTML_STORIES_URL` | publish_html_story, get_html_story_brief, save_story_image, generate_story_image | `https://vizmaya.fyi` |
+| `HTML_STORIES_URL` | publish_html_story, get_html_story_brief, save_story_image, generate_story_image | `https://www.vizmaya.fyi` |
 | `HTML_STORIES_TOKEN` | publish_html_story, save_story_image, generate_story_image, the randomizer tools | — (required; same value as on the vizmaya-fyi deployment) |
-| `FOOTSHORTS_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "footshorts"`) | `https://footshorts.com` |
+| `FOOTSHORTS_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "footshorts"`) | `https://www.footshorts.com` |
 | `FOOTSHORTS_HTML_STORIES_TOKEN` | publish_html_story, the image tools and the match-context brief for footshorts | falls back to `HTML_STORIES_TOKEN` (same value as on the footshorts web deployment) |
 | `VIZF1_HTML_STORIES_URL` | publish_html_story, get_html_story_brief (`app: "vizf1"`) | `https://www.vizf1.com` |
 | `VIZF1_HTML_STORIES_TOKEN` | publish_html_story, the image tools and the race-context brief for vizf1 | falls back to `HTML_STORIES_TOKEN` (same value as on the vizf1 web deployment) |
@@ -120,6 +120,11 @@ the viz itself*. They're complementary and use the same agent-as-bus flow.
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | get_html_story_brief, only when the site can't be reached (the brief is then built locally) | — (without it that brief has no Mapbox maps section) |
 
 The metadata tools (`list_verticals` / `list_modules`) need none of these.
+
+Point the `*_URL` vars at each site's canonical host. The tools never follow a redirect to
+another host with a publish token ([`src/siteFetch.ts`](src/siteFetch.ts)), since fetch drops
+the `Authorization` header on one and the site would answer "unauthorized"; they fail with
+an error naming the host to set instead.
 
 ## Prerequisites for the rendering tools
 
@@ -182,8 +187,12 @@ vizmaya-fyi serves the same server over **Streamable HTTP** at two URLs
 
 | URL | For |
 |-----|-----|
-| `https://vizmaya.fyi/api/mcp` | **Sign in.** An MCP client that connects with no credentials gets a 401 that opens the sign-in ([`src/oauth.ts`](src/oauth.ts)). Signed in, it has every hosted tool. |
-| `https://vizmaya.fyi/api/mcp/public` | **No sign-in.** The open tools for anyone. |
+| `https://www.vizmaya.fyi/api/mcp` | **Sign in.** An MCP client that connects with no credentials gets a 401 that opens the sign-in ([`src/oauth.ts`](src/oauth.ts)). Signed in, it has every hosted tool. |
+| `https://www.vizmaya.fyi/api/mcp/public` | **No sign-in.** The open tools for anyone. |
+
+Use the `www` host: `vizmaya.fyi` redirects to it, and MCP clients drop the sign-in
+token on a redirect to another host, so a connector saved with the bare domain signs in
+and then fails every call.
 
 Both are stateless: every POST builds a fresh server and answers with JSON, so they
 run on Vercel functions with no session store. GET and DELETE answer 405.
@@ -197,14 +206,14 @@ run on Vercel functions with no session store. GET and DELETE answer 405.
 ### Connect
 
 **Claude app:** Settings → Connectors → Add custom connector, paste
-`https://vizmaya.fyi/api/mcp`, click **Connect**. A vismay.xyz page asks you to sign
+`https://www.vizmaya.fyi/api/mcp`, click **Connect**. A vismay.xyz page asks you to sign
 in to admin (or just to click **Allow** if you're signed in), and you're back in
 Claude with every tool.
 
 **Claude Code:**
 
 ```
-claude mcp add --transport http vismay https://vizmaya.fyi/api/mcp
+claude mcp add --transport http vismay https://www.vizmaya.fyi/api/mcp
 ```
 
 then run `/mcp` and pick `vismay` to sign in in the browser. Cursor works the same

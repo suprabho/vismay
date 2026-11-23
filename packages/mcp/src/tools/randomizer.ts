@@ -40,8 +40,9 @@
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { RANDOMIZER_META, type RandomizerApp, type RuleFired, type SpinRecord } from '@vismay/randomizer/types'
-import { htmlStoriesUrlFor, requireHtmlStoriesToken, type VismayMcpConfig } from '../config'
+import { htmlStoriesUrlFor, requireHtmlStoriesToken, SITE_URL_ENV, type VismayMcpConfig } from '../config'
 import { localFileShape, readLocalText } from '../localFiles'
+import { siteFetch } from '../siteFetch'
 
 const spinIdSchema = z.string().uuid().describe('A spin id, as spin_randomizer returned it.')
 
@@ -58,10 +59,10 @@ function anySite(config: VismayMcpConfig): RandomizerApp {
 
 async function call(config: VismayMcpConfig, path: string, init: RequestInit = {}, app: RandomizerApp = anySite(config)): Promise<any> {
   const { token } = requireHtmlStoriesToken(config, app)
-  const res = await fetch(`${htmlStoriesUrlFor(config, app)}${path}`, {
+  const res = await siteFetch(`${htmlStoriesUrlFor(config, app)}${path}`, {
     ...init,
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
-  })
+  }, SITE_URL_ENV[app])
   const text = await res.text()
   let body: any = null
   try {
