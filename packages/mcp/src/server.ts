@@ -10,14 +10,14 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { loadConfig } from './config.js'
-import { registerListTools } from './tools/listVerticals.js'
-import { registerEmbedUrlTool } from './tools/embedUrl.js'
-import { registerRenderModuleImageTool } from './tools/renderModuleImage.js'
-import { registerRenderStoryVideoTool } from './tools/renderStoryVideo.js'
-import { registerHeygenTools } from './tools/heygenVideo.js'
-import { registerHtmlStoryTools } from './tools/htmlStories.js'
-import { registerRandomizerTools } from './tools/randomizer.js'
+import { loadConfig } from './config'
+import { registerListTools } from './tools/listVerticals'
+import { registerEmbedUrlTool } from './tools/embedUrl'
+import { registerRenderModuleImageTool } from './tools/renderModuleImage'
+import { registerRenderStoryVideoTool } from './tools/renderStoryVideo'
+import { registerHeygenTools } from './tools/heygenVideo'
+import { registerHtmlStoryTools } from './tools/htmlStories'
+import { registerRandomizerTools } from './tools/randomizer'
 
 export function createServer(): McpServer {
   const config = loadConfig()

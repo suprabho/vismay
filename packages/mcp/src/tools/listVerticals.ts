@@ -9,8 +9,8 @@
 
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { VismayMcpConfig } from '../config.js'
-import { fetchModules, type SerializedModule } from '../catalogClient.js'
+import type { VismayMcpConfig } from '../config'
+import { fetchModules, type SerializedModule } from '../catalogClient'
 
 const VERTICAL_LABELS: Record<string, string> = {
   core: 'Core engine',
@@ -34,7 +34,7 @@ export function registerListTools(server: McpServer, config: VismayMcpConfig): v
       description:
         'List the Vismay viz verticals (domain-specific module collections) plus the core ' +
         'engine, with how many modules each contributes. Use list_modules for details. ' +
-        '(Reads from the running @vismay/catalog dev server.)',
+        '(Reads from the @vismay/catalog app.)',
       inputSchema: {},
     },
     async () => {
@@ -56,7 +56,8 @@ export function registerListTools(server: McpServer, config: VismayMcpConfig): v
       description:
         'List registered Vismay viz modules with their slots, admin-form fields, and config ' +
         'JSON Schema. The configSchema tells you exactly what `config` to pass to ' +
-        'render_module_image / embed_url. Optionally filter to one vertical.',
+        (config.hosted ? 'embed_url' : 'render_module_image / embed_url') +
+        '. Optionally filter to one vertical.',
       inputSchema: {
         vertical: z
           .enum(VERTICAL_FILTER)

@@ -173,8 +173,41 @@ Register as a custom connector in an MCP client:
 }
 ```
 
-Transport is **stdio**. A Streamable HTTP transport (for remote/multi-client use,
-mirroring HeyGen's hosted MCP) is a planned follow-up.
+Transport is **stdio**. For remote use there is also the hosted endpoint below.
+
+## Hosted endpoint
+
+vizmaya-fyi serves the same server over **Streamable HTTP** at
+`https://vizmaya.fyi/api/mcp` ([route](../../apps/vizmaya-fyi/app/api/mcp/route.ts) →
+[`src/hosted.ts`](src/hosted.ts)). It is stateless: every POST builds a fresh server
+and answers with JSON, so it runs on Vercel functions with no session store. GET and
+DELETE answer 405.
+
+| Caller | Tools |
+|--------|-------|
+| Anyone | `get_html_story_brief` (the plain brief, styles, formats; the match, race, game and trip contexts still need the token). With `CATALOG_BASE_URL` set on the vizmaya-fyi deployment, also `list_verticals`, `list_modules` and `embed_url`. |
+| With a publish token | Also `publish_html_story`, `save_story_image`, `generate_story_image` and every randomizer, pool and news tool. |
+| Nobody (local server only) | `render_module_image`, `render_story_video`, the HeyGen tools, and every `filePath` argument. |
+
+**Tokens are the caller's own.** Send the vizmaya-fyi publish token as
+`Authorization: Bearer <token>`. For the other sites send `x-footshorts-token`,
+`x-vizf1-token`, `x-viznba-token` or `x-travel-token`; each falls back to the bearer,
+like the env vars do locally. The endpoint forwards the token to the site, and the
+site checks it. It never uses the `HTML_STORIES_TOKEN` in its own env, so a wrong
+or missing token gets the site's 401, the same as calling the site's API directly.
+The gated tools only appear in `tools/list` when a token is sent.
+
+Connect from Claude Code:
+
+```
+claude mcp add --transport http vismay https://vizmaya.fyi/api/mcp --header "Authorization: Bearer <token>"
+```
+
+From the Claude app: Settings → Connectors → Add custom connector, with the URL.
+Custom connectors there sign in with OAuth or not at all, so they get the open tools
+only until the endpoint offers an OAuth sign-in.
+
+Checks: `pnpm --filter @vismay/mcp test` ([src/hosted.test.ts](src/hosted.test.ts)).
 
 ## Notes
 

@@ -23,8 +23,8 @@ import {
   HeygenTimeoutError,
   type HeygenVariable,
 } from '@vismay/content-source/heygenTemplate'
-import type { VismayMcpConfig } from '../config.js'
-import { requireHeygenEnv } from '../config.js'
+import type { VismayMcpConfig } from '../config'
+import { requireHeygenEnv } from '../config'
 
 /** zod shape for a single filled template variable. */
 const variableSchema = z.object({

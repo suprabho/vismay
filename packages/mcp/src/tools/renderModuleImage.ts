@@ -15,10 +15,10 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { VismayMcpConfig } from '../config.js'
-import { buildEmbedUrl } from '../catalogUrl.js'
-import { screenshotModule } from '../browser.js'
-import { resolveSlot } from './embedUrl.js'
+import type { VismayMcpConfig } from '../config'
+import { buildEmbedUrl } from '../catalogUrl'
+import { screenshotModule } from '../browser'
+import { resolveSlot } from './embedUrl'
 
 export function registerRenderModuleImageTool(
   server: McpServer,
