@@ -7,7 +7,10 @@ import {
   Text,
   View,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useCallback } from 'react'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { LinearGradient } from 'expo-linear-gradient'
+import { storyUrl } from '@vismay/story-embed/url'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { EditorialEpicSummary, EditorialStorySummary } from '@footshorts/shared'
 import {
@@ -15,11 +18,8 @@ import {
   useEditorialStories,
 } from '@/lib/useEditorialStories'
 import { useHtmlStories, type HtmlStoryCard } from '@/lib/useHtmlStories'
-import { AuraBackground } from '@/components/AuraBackground'
-
-// Each aura is a live embed; cap how many mount so a long magazine doesn't
-// spin up an embed per card. Hero + the first few grid cards get one.
-const AURA_CAP = 6
+import { htmlStoryPreviewUrl } from '@/lib/links'
+import { LivePreview, checkPreviewVisibility, setPreviewsActive } from '@/components/LivePreview'
 
 // Hash slug → HSL hue so each story/epic gets a deterministic accent colour.
 // Mirrors the web magazine's approach. Cover images live in story frontmatter
@@ -53,7 +53,12 @@ interface MagazineCard {
   title: string
   /** Sort key and the card's date: published_at, else created/updated. */
   date: string
-  aura: string | null
+  /**
+   * The story itself, chrome-less, as the card previews it live (LivePreview):
+   * the render service's embed for an editorial story, the HTML story's own
+   * `?preview=1` (no site chrome, no format controls, no Listen player).
+   */
+  previewUri: string
   /** The page's declared background when it has one; else the slug colour. */
   backgroundColor: string
 }
@@ -64,7 +69,7 @@ function editorialCard(story: EditorialStorySummary): MagazineCard {
     href: `/editorial/${story.slug}`,
     title: story.title,
     date: story.publishedAt ?? story.createdAt,
-    aura: story.aura,
+    previewUri: storyUrl(story.slug),
     backgroundColor: colorFor(story.slug),
   }
 }
@@ -88,7 +93,7 @@ function htmlStoryCard(story: HtmlStoryCard): MagazineCard {
     href: `/editorial/html/${story.slug}`,
     title: story.title,
     date: story.publishedAt ?? story.updatedAt,
-    aura: story.aura,
+    previewUri: htmlStoryPreviewUrl(story.slug),
     backgroundColor: isDark(bg) ? bg : colorFor(story.slug),
   }
 }
@@ -97,56 +102,64 @@ function htmlStoryCard(story: HtmlStoryCard): MagazineCard {
 // as the web app's `font-serif` cards without bundling a custom font.
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' })
 
+/**
+ * The card's picture: the story itself, running live (only while on screen;
+ * see LivePreview), above the caption and fading into the card's colour, as
+ * the vizmaya.fyi home wall shows its stories. Until it loads the colour shows.
+ */
+function CardPreview({ card }: { card: MagazineCard }) {
+  return (
+    <View className="flex-1 overflow-hidden">
+      <LivePreview uri={card.previewUri} />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['transparent', card.backgroundColor]}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 32 }}
+      />
+    </View>
+  )
+}
+
 function HeroCard({ card, onPress }: { card: MagazineCard; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={{ backgroundColor: card.backgroundColor, aspectRatio: 5 / 4 }}
+      style={{ backgroundColor: card.backgroundColor, aspectRatio: 4 / 5 }}
       className="rounded-2xl overflow-hidden border border-border"
     >
-      {card.aura ? <AuraBackground slug={card.aura} /> : null}
-      <View className="flex-1 p-5 justify-between">
-        <Text className="text-white/80 text-[10px] tracking-[2px] uppercase">
+      <CardPreview card={card} />
+      <View className="px-5 pb-5 pt-2">
+        <Text className="text-white/80 text-[10px] tracking-[2px] uppercase" numberOfLines={1}>
           Editorial · {formatDate(card.date)}
         </Text>
-        <View>
-          <Text
-            className="text-white text-2xl"
-            numberOfLines={3}
-            style={{ lineHeight: 30, fontFamily: SERIF }}
-          >
-            {card.title}
-          </Text>
-          <Text className="text-white/80 text-sm mt-2">Read story →</Text>
-        </View>
+        <Text
+          className="text-white text-2xl mt-2"
+          numberOfLines={3}
+          style={{ lineHeight: 30, fontFamily: SERIF }}
+        >
+          {card.title}
+        </Text>
+        <Text className="text-white/80 text-sm mt-2">Read story →</Text>
       </View>
     </Pressable>
   )
 }
 
-function GridCard({
-  card,
-  onPress,
-  showAura,
-}: {
-  card: MagazineCard
-  onPress: () => void
-  showAura: boolean
-}) {
+function GridCard({ card, onPress }: { card: MagazineCard; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={{ backgroundColor: card.backgroundColor, aspectRatio: 4 / 5 }}
+      style={{ backgroundColor: card.backgroundColor, aspectRatio: 3 / 4 }}
       className="rounded-xl overflow-hidden border border-border flex-1"
     >
-      {showAura && card.aura ? <AuraBackground slug={card.aura} /> : null}
-      <View className="flex-1 p-3 justify-between">
-        <Text className="text-white/70 text-[9px] tracking-[2px] uppercase">
+      <CardPreview card={card} />
+      <View className="px-3 pb-3 pt-1">
+        <Text className="text-white/70 text-[9px] tracking-[2px] uppercase" numberOfLines={1}>
           {formatDate(card.date)}
         </Text>
         <Text
-          className="text-white text-sm"
-          numberOfLines={4}
+          className="text-white text-sm mt-1"
+          numberOfLines={3}
           style={{ fontFamily: SERIF }}
         >
           {card.title}
@@ -216,6 +229,15 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
   // a slow or failed read never blocks the rest.
   const { data: htmlStories } = useHtmlStories()
 
+  // Live previews run only while the magazine is the screen in front: a story
+  // reader pushed over it pauses them, coming back resumes the ones on screen.
+  useFocusEffect(
+    useCallback(() => {
+      setPreviewsActive(true)
+      return () => setPreviewsActive(false)
+    }, [])
+  )
+
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
@@ -264,6 +286,9 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
         paddingHorizontal: 16,
       }}
       showsVerticalScrollIndicator={false}
+      onScroll={checkPreviewVisibility}
+      scrollEventThrottle={200}
+      onMomentumScrollEnd={checkPreviewVisibility}
     >
       {safeEpics.length > 0 ? (
         <View className="mb-4">
@@ -297,13 +322,11 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
       ) : null}
       {rest.length > 0 && (
         <View className="mt-3 flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
-          {rest.map((c, i) => (
+          {rest.map((c) => (
             <View key={c.key} className="w-1/2 p-1">
               <GridCard
                 card={c}
                 onPress={() => router.push(c.href)}
-                // +1 for the hero card, which always gets an aura.
-                showAura={i + 1 < AURA_CAP}
               />
             </View>
           ))}
