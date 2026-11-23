@@ -261,6 +261,31 @@ verified sign-in.
 | `MCP_TOKEN_GENERATION` | signing every app out | `1` |
 | the publish tokens above | what a signed-in app can publish to | — |
 
+### Debugging a connection
+
+Every sign-in step and MCP request writes one line to the vizmaya-fyi logs
+([`src/log.ts`](src/log.ts)): Vercel → vizmaya-fyi → **Logs**, search `[mcp]`.
+
+```
+[mcp] {"event":"oauth.token","outcome":"refused","reason":"pkce_verifier_mismatch","from":"anthropic",...}
+```
+
+A healthy first connect reads, in order:
+1. `mcp.request` refused with `no_credentials`: the 401 that starts the sign-in.
+2. `oauth.register` ok, `oauth.authorize` ok, `oauth.callback` ok, `oauth.token` ok.
+3. `mcp.request` ok for `initialize`, `notifications/initialized` and `tools/list`.
+
+The last line before it stops is where it broke, and `reason` names the check that
+failed (`hint` adds the likely fix where there is one). Other fields: `from`
+(`anthropic` when the request came from Claude's servers, 160.79.104.0/21), `client`,
+`redirect` (host only), `rpc` and `tool` (JSON-RPC methods and the tool called),
+`clientInfo` and `requestedProtocol` on `initialize`, `caller` (`signed-in`, `tokens`,
+`anonymous`), `status`, `ms`, and the transport's `error` when it rejects a request.
+If the trail stops after `oauth.callback`, Claude's servers never reached the token
+endpoint; if there are no `[mcp]` lines at all, requests aren't reaching the app (check
+the connector URL and the Vercel Firewall). Tokens, codes, client ids, secrets,
+publish tokens, tool arguments and IP addresses are never logged; the tests check it.
+
 Checks: `pnpm --filter @vismay/mcp test` ([src/oauth.test.ts](src/oauth.test.ts),
 [src/hosted.test.ts](src/hosted.test.ts)) and
 `pnpm exec tsx packages/admin-core/src/mcpConsent.smoke.ts`.

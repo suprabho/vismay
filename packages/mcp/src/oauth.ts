@@ -33,6 +33,7 @@ import {
   signMcpConsentRequest,
   verifyMcpConsentApproval,
 } from '@vismay/admin-core/mcpConsent'
+import { hostOf, mcpLog, requestFields, type LogFields } from './log'
 
 export const MCP_SCOPE = 'mcp'
 const CODE_TTL = 5 * 60
@@ -272,36 +273,51 @@ function clientSecretFor(clientId: string): string {
 /** RFC 7591. Nothing is stored: the client id is the signed registration. */
 export async function registerClient(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: OAUTH_CORS_HEADERS })
-  if (req.method !== 'POST') return oauthError('invalid_request', 'Register with POST.', 405)
-  if (!key('client')) return oauthError('temporarily_unavailable', 'Sign-in is not configured on this deployment.', 503)
+  const ctx = requestFields(req)
+  const refuse = (reason: string, res: Response, extra: LogFields = {}) => {
+    mcpLog('oauth.register', 'refused', { ...ctx, reason, status: res.status, ...extra })
+    return res
+  }
+  if (req.method !== 'POST') return refuse('method_not_post', oauthError('invalid_request', 'Register with POST.', 405), { method: req.method })
+  if (!key('client')) return refuse('secret_not_configured', oauthError('temporarily_unavailable', 'Sign-in is not configured on this deployment.', 503))
   const raw = await req.text()
-  if (raw.length > 16_000) return oauthError('invalid_client_metadata', 'Registration too large.')
+  if (raw.length > 16_000) return refuse('too_large', oauthError('invalid_client_metadata', 'Registration too large.'))
   let meta: Record<string, unknown>
   try {
     meta = JSON.parse(raw) as Record<string, unknown>
   } catch {
-    return oauthError('invalid_client_metadata', 'Send the client metadata as JSON.')
+    return refuse('not_json', oauthError('invalid_client_metadata', 'Send the client metadata as JSON.'), {
+      contentType: req.headers.get('content-type'),
+    })
   }
 
   const uris = meta.redirect_uris
   if (!Array.isArray(uris) || uris.length === 0 || uris.length > 10 || !uris.every((u) => typeof u === 'string')) {
-    return oauthError('invalid_redirect_uri', 'redirect_uris must list 1 to 10 URIs.')
+    return refuse('redirect_uris_missing', oauthError('invalid_redirect_uri', 'redirect_uris must list 1 to 10 URIs.'))
   }
   const bad = (uris as string[]).find((u) => !isAllowedRedirectUri(u))
-  if (bad) return oauthError('invalid_redirect_uri', `Not an allowed redirect URI: ${bad.slice(0, 200)}`)
+  if (bad) {
+    return refuse('redirect_uri_not_allowed', oauthError('invalid_redirect_uri', `Not an allowed redirect URI: ${bad.slice(0, 200)}`), {
+      redirect: hostOf(bad),
+    })
+  }
 
   // RFC 7591's default is client_secret_basic.
   const requested = meta.token_endpoint_auth_method ?? 'client_secret_basic'
   if (requested !== 'none' && requested !== 'client_secret_post' && requested !== 'client_secret_basic') {
-    return oauthError('invalid_client_metadata', `Unsupported token_endpoint_auth_method: ${String(requested)}.`)
+    return refuse('auth_method_unsupported', oauthError('invalid_client_metadata', `Unsupported token_endpoint_auth_method: ${String(requested)}.`), {
+      requestedAuth: String(requested),
+    })
   }
   const grantTypes = meta.grant_types
   if (Array.isArray(grantTypes) && !grantTypes.includes('authorization_code')) {
-    return oauthError('invalid_client_metadata', 'Only the authorization_code grant (with refresh_token) is supported.')
+    return refuse('grant_types_unsupported', oauthError('invalid_client_metadata', 'Only the authorization_code grant (with refresh_token) is supported.'), {
+      grantTypes: grantTypes.map(String),
+    })
   }
   const responseTypes = meta.response_types
   if (Array.isArray(responseTypes) && !responseTypes.includes('code')) {
-    return oauthError('invalid_client_metadata', 'Only response_type code is supported.')
+    return refuse('response_types_unsupported', oauthError('invalid_client_metadata', 'Only response_type code is supported.'))
   }
 
   const record: ClientRecord = {
@@ -312,6 +328,13 @@ export async function registerClient(req: Request): Promise<Response> {
     j: crypto.randomBytes(12).toString('base64url'),
   }
   const clientId = seal('client', record)
+  mcpLog('oauth.register', 'ok', {
+    ...ctx,
+    client: record.n,
+    auth: record.a,
+    requestedAuth: meta.token_endpoint_auth_method === undefined ? 'omitted' : String(meta.token_endpoint_auth_method),
+    redirects: record.r.map((r) => hostOf(r) ?? '?'),
+  })
   return json(
     {
       client_id: clientId,
@@ -346,28 +369,53 @@ interface Grant extends Record<string, string> {
 
 /** Validate the app's request, then send the person to admin to allow it. */
 export function authorize(req: Request): Response {
-  if (!key('client')) return errorPage(503, 'Sign-in is not configured on this deployment (ADMIN_SESSION_SECRET is not set).')
+  const ctx = requestFields(req)
+  const refuse = (reason: string, res: Response, extra: LogFields = {}) => {
+    mcpLog('oauth.authorize', 'refused', { ...ctx, reason, status: res.status, ...extra })
+    return res
+  }
+  if (!key('client')) return refuse('secret_not_configured', errorPage(503, 'Sign-in is not configured on this deployment (ADMIN_SESSION_SECRET is not set).'))
   const u = oauthUrls(req)
   const p = new URL(req.url).searchParams
   const clientId = p.get('client_id')
   const client = open<ClientRecord>('client', clientId)
-  if (!client || !clientId) return errorPage(400, 'The app sent an unknown client id. Start connecting again from the app.')
+  if (!client || !clientId) {
+    return refuse(clientId ? 'client_id_unknown' : 'client_id_missing', errorPage(400, 'The app sent an unknown client id. Start connecting again from the app.'))
+  }
   const redirectUri = p.get('redirect_uri') ?? (client.r.length === 1 ? client.r[0]! : null)
   if (!redirectUri || !client.r.includes(redirectUri)) {
-    return errorPage(400, 'The app’s redirect URI doesn’t match what it registered. Start connecting again from the app.')
+    return refuse(
+      'redirect_uri_not_registered',
+      errorPage(400, 'The app’s redirect URI doesn’t match what it registered. Start connecting again from the app.'),
+      { client: client.n, redirect: hostOf(redirectUri), registered: client.r.map((r) => hostOf(r) ?? '?') },
+    )
   }
 
   // The redirect URI is the app's own from here on, so errors go back to it.
+  const base = { client: client.n, redirect: hostOf(redirectUri) }
   const state = p.get('state') ?? undefined
-  if (p.get('response_type') !== 'code') return redirectWithError(redirectUri, state, 'unsupported_response_type', 'Only response_type=code is supported.')
-  if (state && state.length > 1000) return redirectWithError(redirectUri, undefined, 'invalid_request', 'state is too long.')
+  if (p.get('response_type') !== 'code') {
+    return refuse('response_type_unsupported', redirectWithError(redirectUri, state, 'unsupported_response_type', 'Only response_type=code is supported.'), {
+      ...base,
+      responseType: p.get('response_type'),
+    })
+  }
+  if (state && state.length > 1000) return refuse('state_too_long', redirectWithError(redirectUri, undefined, 'invalid_request', 'state is too long.'), base)
   const challenge = p.get('code_challenge')
   if (p.get('code_challenge_method') !== 'S256' || !challenge || !/^[A-Za-z0-9_-]{43}$/.test(challenge)) {
-    return redirectWithError(redirectUri, state, 'invalid_request', 'PKCE is required, with code_challenge_method=S256.')
+    return refuse('pkce_missing_or_not_s256', redirectWithError(redirectUri, state, 'invalid_request', 'PKCE is required, with code_challenge_method=S256.'), {
+      ...base,
+      challengeMethod: p.get('code_challenge_method'),
+    })
   }
   const resource = p.get('resource')
   if (resource && !sameResource(resource, u.resource)) {
-    return redirectWithError(redirectUri, state, 'invalid_target', `This server only issues tokens for ${u.resource}.`)
+    return refuse('resource_mismatch', redirectWithError(redirectUri, state, 'invalid_target', `This server only issues tokens for ${u.resource}.`), {
+      ...base,
+      requestedResource: resource.slice(0, 200),
+      resource: u.resource,
+      hint: `The connector URL must be exactly ${u.resource}`,
+    })
   }
 
   const grant: Grant = { cid: sha(clientId), ru: redirectUri, cc: challenge, st: state ?? '', rs: u.resource }
@@ -378,23 +426,40 @@ export function authorize(req: Request): Response {
     scope: MCP_SCOPE,
     grant,
   })
+  mcpLog('oauth.authorize', 'ok', { ...ctx, ...base, resource: resource ? 'sent' : 'omitted', next: 'admin consent page' })
   return redirect(`${adminUrl()}/mcp/authorize/${request}`)
 }
 
 /** Admin's decision comes back here; an approved request becomes an authorization code. */
 export function callback(req: Request): Response {
+  const ctx = requestFields(req)
+  const refuse = (reason: string, res: Response, extra: LogFields = {}) => {
+    mcpLog('oauth.callback', 'refused', { ...ctx, reason, status: res.status, ...extra })
+    return res
+  }
   const p = new URL(req.url).searchParams
   const token = p.get('request')
   const request = readMcpConsentRequest(token)
-  if (!request || !token) return errorPage(400, 'This sign-in link has expired. Start connecting again from the app.')
+  if (!request || !token) {
+    return refuse('request_expired_or_forged', errorPage(400, 'This sign-in link has expired. Start connecting again from the app.'), {
+      hint: 'Expired after 15 minutes, or ADMIN_SESSION_SECRET differs between admin and vizmaya-fyi',
+    })
+  }
   const g = request.grant as Partial<Grant>
   if (!g.cid || !g.ru || !g.cc || !g.rs || g.ru !== request.redirectUri) {
-    return errorPage(400, 'This sign-in link is not valid. Start connecting again from the app.')
+    return refuse('request_incomplete', errorPage(400, 'This sign-in link is not valid. Start connecting again from the app.'))
   }
-  if (p.get('denied') === '1') return redirectWithError(g.ru, g.st || undefined, 'access_denied', 'The sign-in was cancelled.')
+  const base = { client: request.clientName, redirect: hostOf(g.ru) }
+  if (p.get('denied') === '1') {
+    return refuse('cancelled_on_admin', redirectWithError(g.ru, g.st || undefined, 'access_denied', 'The sign-in was cancelled.'), base)
+  }
   if (!verifyMcpConsentApproval(token, p.get('approval'))) {
-    return errorPage(403, 'This sign-in was not approved. Start connecting again from the app.')
+    return refuse('approval_invalid', errorPage(403, 'This sign-in was not approved. Start connecting again from the app.'), {
+      ...base,
+      hint: 'ADMIN_SESSION_SECRET must be the same on admin and vizmaya-fyi',
+    })
   }
+  mcpLog('oauth.callback', 'ok', { ...ctx, ...base, next: 'code sent to the app' })
   const code = seal('code', { cid: g.cid, ru: g.ru, cc: g.cc, rs: g.rs, exp: now() + CODE_TTL, g: generation() })
   const url = new URL(g.ru)
   url.searchParams.set('code', code)
@@ -473,65 +538,121 @@ function issueTokens(cid: string, rs: string, t0: number): Response {
 /** The token endpoint: authorization_code (with PKCE) and refresh_token. */
 export async function token(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: OAUTH_CORS_HEADERS })
-  if (req.method !== 'POST') return oauthError('invalid_request', 'Use POST.', 405)
-  if (!key('client')) return oauthError('temporarily_unavailable', 'Sign-in is not configured on this deployment.', 503)
+  const started = Date.now()
+  const ctx: LogFields = { ...requestFields(req), contentType: req.headers.get('content-type')?.slice(0, 60) }
+  const refuse = (reason: string, res: Response, extra: LogFields = {}) => {
+    mcpLog('oauth.token', 'refused', { ...ctx, reason, status: res.status, ms: Date.now() - started, ...extra })
+    return res
+  }
+  if (req.method !== 'POST') return refuse('method_not_post', oauthError('invalid_request', 'Use POST.', 405), { method: req.method })
+  if (!key('client')) return refuse('secret_not_configured', oauthError('temporarily_unavailable', 'Sign-in is not configured on this deployment.', 503))
   const u = oauthUrls(req)
   const p = await readParams(req)
+  ctx.grant = p.get('grant_type') ?? 'missing'
 
   // Client authentication: Basic header, or client_id (+ client_secret) in the body.
   let clientId = p.get('client_id')
   let secret = p.get('client_secret')
   const basic = /^Basic\s+(.+)$/i.exec(req.headers.get('authorization') ?? '')?.[1]
+  ctx.clientAuth = basic ? 'basic' : secret ? 'post' : 'none'
   if (basic) {
     const decoded = Buffer.from(basic, 'base64').toString('utf8')
     const i = decoded.indexOf(':')
-    if (i < 0) return oauthError('invalid_client', 'Malformed Basic credentials.', 401, { 'www-authenticate': 'Basic' })
+    if (i < 0) return refuse('basic_malformed', oauthError('invalid_client', 'Malformed Basic credentials.', 401, { 'www-authenticate': 'Basic' }))
     clientId = formDecode(decoded.slice(0, i))
     secret = formDecode(decoded.slice(i + 1))
   }
   const client = open<ClientRecord>('client', clientId)
-  const clientFail = () =>
-    oauthError('invalid_client', 'Unknown client or wrong secret. Register again.', basic ? 401 : 400, basic ? { 'www-authenticate': 'Basic' } : {})
-  if (!client || !clientId) return clientFail()
-  if (client.a !== 'none' && (!secret || !safeEqual(secret, clientSecretFor(clientId)))) return clientFail()
+  const clientFail = (reason: string, extra: LogFields = {}) =>
+    refuse(
+      reason,
+      oauthError('invalid_client', 'Unknown client or wrong secret. Register again.', basic ? 401 : 400, basic ? { 'www-authenticate': 'Basic' } : {}),
+      extra,
+    )
+  if (!client || !clientId) return clientFail(clientId ? 'client_id_unknown' : 'client_id_missing')
+  ctx.client = client.n
+  ctx.registeredAuth = client.a
+  if (client.a !== 'none' && !secret) return clientFail('client_secret_missing', { hint: 'Registered with a secret; the token request sent none' })
+  if (client.a !== 'none' && !safeEqual(secret!, clientSecretFor(clientId))) return clientFail('client_secret_wrong')
   const cid = sha(clientId)
   const resource = p.get('resource')
   const t = now()
 
   const grantType = p.get('grant_type')
+  const issued = (rs: string, t0: number) => {
+    mcpLog('oauth.token', 'ok', { ...ctx, resource: resource ? 'sent' : 'omitted', ms: Date.now() - started, next: 'the app calls the MCP endpoint' })
+    return issueTokens(cid, rs, t0)
+  }
   if (grantType === 'authorization_code') {
     const code = open<CodeRecord>('code', p.get('code'))
-    if (!code || code.exp < t || code.g !== generation() || code.cid !== cid) {
-      return oauthError('invalid_grant', 'The authorization code is invalid or expired.')
-    }
+    const badCode = (reason: string) => refuse(reason, oauthError('invalid_grant', 'The authorization code is invalid or expired.'))
+    if (!code) return badCode(p.get('code') ? 'code_forged_or_malformed' : 'code_missing')
+    if (code.exp < t) return badCode('code_expired')
+    if (code.g !== generation()) return badCode('code_revoked')
+    if (code.cid !== cid) return badCode('code_for_another_client')
     const redirectUri = p.get('redirect_uri')
-    if (redirectUri && redirectUri !== code.ru) return oauthError('invalid_grant', 'redirect_uri does not match the authorization request.')
+    if (redirectUri && redirectUri !== code.ru) {
+      return refuse('redirect_uri_mismatch', oauthError('invalid_grant', 'redirect_uri does not match the authorization request.'), {
+        redirect: hostOf(redirectUri),
+        expected: hostOf(code.ru),
+      })
+    }
     const verifier = p.get('code_verifier')
     if (!verifier || !/^[A-Za-z0-9._~-]{43,128}$/.test(verifier) || sha(verifier) !== code.cc) {
-      return oauthError('invalid_grant', 'The PKCE code_verifier does not match.')
+      return refuse(verifier ? 'pkce_verifier_mismatch' : 'pkce_verifier_missing', oauthError('invalid_grant', 'The PKCE code_verifier does not match.'))
     }
-    if (resource && !sameResource(resource, code.rs)) return oauthError('invalid_target', `Tokens are only issued for ${code.rs}.`)
-    return issueTokens(cid, code.rs, t)
+    if (resource && !sameResource(resource, code.rs)) {
+      return refuse('resource_mismatch', oauthError('invalid_target', `Tokens are only issued for ${code.rs}.`), {
+        requestedResource: resource.slice(0, 200),
+        resource: code.rs,
+      })
+    }
+    return issued(code.rs, t)
   }
 
   if (grantType === 'refresh_token') {
     const refresh = open<RefreshRecord>('refresh', p.get('refresh_token'))
-    if (!refresh || refresh.exp < t || refresh.g !== generation() || refresh.cid !== cid || t > refresh.t0 + GRANT_MAX_AGE) {
-      return oauthError('invalid_grant', 'The refresh token is invalid or expired. Sign in again.')
+    const badRefresh = (reason: string) =>
+      refuse(reason, oauthError('invalid_grant', 'The refresh token is invalid or expired. Sign in again.'))
+    if (!refresh) return badRefresh(p.get('refresh_token') ? 'refresh_forged_or_malformed' : 'refresh_missing')
+    if (refresh.exp < t) return badRefresh('refresh_expired')
+    if (refresh.g !== generation()) return badRefresh('refresh_revoked')
+    if (refresh.cid !== cid) return badRefresh('refresh_for_another_client')
+    if (t > refresh.t0 + GRANT_MAX_AGE) return badRefresh('sign_in_older_than_90_days')
+    if (resource && !sameResource(resource, refresh.rs)) {
+      return refuse('resource_mismatch', oauthError('invalid_target', `Tokens are only issued for ${refresh.rs}.`), {
+        requestedResource: resource.slice(0, 200),
+        resource: refresh.rs,
+      })
     }
-    if (resource && !sameResource(resource, refresh.rs)) return oauthError('invalid_target', `Tokens are only issued for ${refresh.rs}.`)
-    if (refresh.rs !== u.resource) return oauthError('invalid_grant', 'This refresh token belongs to another deployment.')
-    return issueTokens(cid, refresh.rs, refresh.t0)
+    if (refresh.rs !== u.resource) {
+      return refuse('refresh_for_another_deployment', oauthError('invalid_grant', 'This refresh token belongs to another deployment.'), {
+        resource: refresh.rs,
+        here: u.resource,
+      })
+    }
+    return issued(refresh.rs, refresh.t0)
   }
 
-  return oauthError('unsupported_grant_type', 'Use authorization_code or refresh_token.')
+  return refuse('grant_type_unsupported', oauthError('unsupported_grant_type', 'Use authorization_code or refresh_token.'))
+}
+
+/** Check an access token for this resource, saying why when it fails (for the logs). */
+export function checkAccessToken(
+  value: string,
+  resource: string,
+): { ok: true; record: AccessRecord } | { ok: false; reason: string; detail?: LogFields } {
+  const record = open<AccessRecord>('access', value)
+  if (!record) return { ok: false, reason: 'token_forged_or_malformed', detail: { hint: 'Or ADMIN_SESSION_SECRET changed since it was issued' } }
+  if (record.exp < now()) return { ok: false, reason: 'token_expired' }
+  if (record.g !== generation()) return { ok: false, reason: 'token_revoked' }
+  if (record.aud !== resource) return { ok: false, reason: 'token_for_another_resource', detail: { tokenResource: record.aud, resource } }
+  if (record.sc !== MCP_SCOPE) return { ok: false, reason: 'token_scope' }
+  return { ok: true, record }
 }
 
 /** Verify an access token for this resource. Null when forged, expired, revoked or meant for another resource. */
 export function verifyAccessToken(value: string, resource: string): AccessRecord | null {
-  const record = open<AccessRecord>('access', value)
-  if (!record || record.exp < now() || record.g !== generation() || record.aud !== resource || record.sc !== MCP_SCOPE) {
-    return null
-  }
-  return record
+  const result = checkAccessToken(value, resource)
+  return result.ok ? result.record : null
 }

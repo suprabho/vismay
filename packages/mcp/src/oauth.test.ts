@@ -23,6 +23,15 @@ import {
   approve,
 } from './testOAuth'
 
+// Collect the [mcp] log lines the run writes, to check them at the end (and keep the output quiet).
+const logged: string[] = []
+const realLog = console.log
+const realWarn = console.warn
+console.log = (...args: unknown[]) => (String(args[0]).startsWith('[mcp] ') ? logged.push(args.map(String).join(' ')) : realLog(...args)) && undefined
+console.warn = (...args: unknown[]) => (String(args[0]).startsWith('[mcp] ') ? logged.push(args.map(String).join(' ')) : realWarn(...args)) && undefined
+const events = () => logged.map((l) => JSON.parse(l.slice('[mcp] '.length)) as Record<string, any>)
+const SECRET_SHAPES = [/mcp[ckar]_[A-Za-z0-9_-]{8,}/, /v1\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/]
+
 process.env.ADMIN_SESSION_SECRET = 'oauth-test-secret'
 process.env.NEXT_PUBLIC_ADMIN_URL = 'https://vismay.xyz'
 delete process.env.MCP_TOKEN_GENERATION
@@ -256,4 +265,51 @@ for (const bad of ['javascript:alert(1)', 'data:text/html,hi', 'http://evil.exam
   assert.equal(verifyAccessToken(forged, RESOURCE), null)
 }
 
+// The logs: every refusal names its check, every step that worked says so, nothing secret is written.
+{
+  const seen = events()
+  const reasons = new Set(seen.filter((e) => e.outcome === 'refused').map((e) => `${e.event}:${e.reason}`))
+  for (const r of [
+    'oauth.register:redirect_uris_missing',
+    'oauth.register:redirect_uri_not_allowed',
+    'oauth.register:auth_method_unsupported',
+    'oauth.register:grant_types_unsupported',
+    'oauth.register:secret_not_configured',
+    'oauth.authorize:client_id_unknown',
+    'oauth.authorize:redirect_uri_not_registered',
+    'oauth.authorize:pkce_missing_or_not_s256',
+    'oauth.authorize:resource_mismatch',
+    'oauth.callback:approval_invalid',
+    'oauth.callback:cancelled_on_admin',
+    'oauth.callback:request_expired_or_forged',
+    'oauth.token:pkce_verifier_mismatch',
+    'oauth.token:code_for_another_client',
+    'oauth.token:redirect_uri_mismatch',
+    'oauth.token:resource_mismatch',
+    'oauth.token:code_forged_or_malformed',
+    'oauth.token:client_id_unknown',
+    'oauth.token:client_secret_missing',
+    'oauth.token:client_secret_wrong',
+    'oauth.token:code_expired',
+    'oauth.token:refresh_for_another_client',
+    'oauth.token:refresh_expired',
+    'oauth.token:refresh_revoked',
+    'oauth.token:grant_type_unsupported',
+  ]) {
+    assert.ok(reasons.has(r), `logged ${r}`)
+  }
+  for (const step of ['oauth.register', 'oauth.authorize', 'oauth.callback', 'oauth.token']) {
+    assert.ok(seen.some((e) => e.event === step && e.outcome === 'ok'), `${step} logs success`)
+  }
+  const mismatch = seen.find((e) => e.event === 'oauth.authorize' && e.reason === 'resource_mismatch')!
+  assert.equal(mismatch.requestedResource, 'https://other.example/api/mcp')
+  assert.equal(mismatch.resource, RESOURCE)
+  const okToken = seen.find((e) => e.event === 'oauth.token' && e.outcome === 'ok')!
+  assert.ok(typeof okToken.ms === 'number' && okToken.client === 'Claude' && okToken.grant === 'authorization_code')
+  for (const line of logged) for (const shape of SECRET_SHAPES) assert.ok(!shape.test(line), `no secret in: ${line.slice(0, 120)}`)
+  for (const secret of [process.env.ADMIN_SESSION_SECRET!, 'oauth-test-secret']) assert.ok(!logged.some((l) => l.includes(secret)))
+}
+
+console.log = realLog
+console.warn = realWarn
 console.log('oauth checks passed')

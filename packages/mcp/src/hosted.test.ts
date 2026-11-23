@@ -9,6 +9,15 @@ import { signIn } from './testOAuth'
 
 // The site's own token sits in the server env on the deployment: the hosted
 // server must never use it on a caller's behalf.
+// Collect the [mcp] log lines the run writes, to check them at the end (and keep the output quiet).
+const logged: string[] = []
+const realLog = console.log
+const realWarn = console.warn
+console.log = (...args: unknown[]) => (String(args[0]).startsWith('[mcp] ') ? logged.push(args.map(String).join(' ')) : realLog(...args)) && undefined
+console.warn = (...args: unknown[]) => (String(args[0]).startsWith('[mcp] ') ? logged.push(args.map(String).join(' ')) : realWarn(...args)) && undefined
+const events = () => logged.map((l) => JSON.parse(l.slice('[mcp] '.length)) as Record<string, any>)
+const SECRET_SHAPES = [/mcp[ckar]_[A-Za-z0-9_-]{8,}/, /v1\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/]
+
 process.env.HTML_STORIES_TOKEN = 'server-env-token'
 process.env.ADMIN_SESSION_SECRET = 'hosted-test-secret'
 delete process.env.CATALOG_BASE_URL
@@ -262,5 +271,53 @@ assert.deepEqual(await toolNames(), ['get_html_story_brief'])
   await server.close()
 }
 
+// The request log: where a call came from, what it asked for, who was calling, and why a refusal happened.
+{
+  const res = await handleHostedMcpRequest(
+    new Request('https://vizmaya.fyi/api/mcp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json', 'x-forwarded-for': '160.79.105.20, 10.0.0.1' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'Anthropic', version: '1.0.0' } } }),
+    }),
+  )
+  assert.equal(res.status, 401)
+  const last = events().at(-1)!
+  assert.equal(last.from, 'anthropic', '160.79.104.0/21 is flagged as Anthropic')
+  assert.equal(last.reason, 'no_credentials')
+  assert.equal(last.clientInfo, 'Anthropic/1.0.0')
+  assert.deepEqual(last.rpc, ['initialize'])
+
+  const { access } = await signIn()
+  const bad = await handleHostedMcpRequest(
+    new Request('https://vizmaya.fyi/api/mcp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${access}`, 'x-forwarded-for': '1.2.3.4' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
+    }),
+  )
+  assert.equal(bad.status, 406, 'Accept without text/event-stream is refused by the transport')
+  const rejected = events().at(-1)!
+  assert.equal(rejected.from, 'other')
+  assert.equal(rejected.reason, 'transport_rejected')
+  assert.equal(rejected.caller, 'signed-in')
+  assert.match(rejected.error, /Not Acceptable/)
+
+  const seen = events()
+  const reasons = new Set(seen.filter((e) => e.outcome === 'refused').map((e) => e.reason))
+  for (const r of ['no_credentials', 'token_forged_or_malformed', 'token_revoked', 'method_not_allowed']) assert.ok(reasons.has(r), `logged ${r}`)
+  assert.ok(
+    seen.some((e) => e.outcome === 'ok' && e.caller === 'signed-in' && e.tool === 'publish_html_story' && typeof e.ms === 'number'),
+    'a signed-in tool call is logged with the tool name',
+  )
+  for (const line of logged) {
+    for (const shape of SECRET_SHAPES) assert.ok(!shape.test(line), `no token in: ${line.slice(0, 120)}`)
+    for (const secret of ['server-env-token', 'caller-token', 'footshorts-token', 'footshorts-env-token', 'nba-only', 'hosted-test-secret', '<html']) {
+      assert.ok(!line.includes(secret), `no "${secret}" in: ${line.slice(0, 120)}`)
+    }
+  }
+}
+
+console.log = realLog
+console.warn = realWarn
 globalThis.fetch = realFetch
 console.log('hosted MCP checks passed')
