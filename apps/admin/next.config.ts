@@ -60,13 +60,15 @@ const nextConfig: NextConfig = {
     return [
       {
         // The MCP sign-in consent page (app/mcp/authorize): never framed, so an
-        // Allow click can't be hijacked, and no referrer, since its URL carries
-        // the signed request.
+        // Allow click can't be hijacked, and no referrer to other sites, since
+        // its URL carries the signed request. Not `no-referrer`: under it the
+        // browser sends `Origin: null` with the Allow / Cancel form POST, and
+        // /api/mcp/authorize refuses it as cross-origin.
         source: '/mcp/authorize/:path*',
         headers: [
           { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Referrer-Policy', value: 'same-origin' },
         ],
       },
     ]

@@ -44,9 +44,12 @@ handoff is Scope B in [docs/auth.md](../../docs/auth.md)
   `next`; shows the app's self-declared name, what it will be able to do, and
   the redirect's origin (the part a lookalike can't fake); Allow / Cancel. An
   expired or forged request shows "start again". Framing is refused and no
-  referrer is sent (`headers()` in next.config.ts).
+  referrer goes to other sites (`headers()` in next.config.ts:
+  `Referrer-Policy: same-origin`; `no-referrer` made browsers send
+  `Origin: null` with the form POST, which the route refused).
 - **API:** `POST /api/mcp/authorize` (form `request`, `decision=allow|deny`;
-  `isAuthed()`-gated, same-origin only): Allow signs an approval for exactly
+  `isAuthed()`-gated, same-origin only: its own `Origin`, or `Origin: null`
+  with `Sec-Fetch-Site: same-origin`): Allow signs an approval for exactly
   that request, both 303 to the vizmaya.fyi callback the request names.
 - **Env:** `ADMIN_SESSION_SECRET` must match vizmaya-fyi's (it already does,
   for signed URLs). Nothing is stored.
