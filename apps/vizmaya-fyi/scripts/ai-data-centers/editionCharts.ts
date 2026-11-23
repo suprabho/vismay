@@ -536,7 +536,31 @@ function tuneForEdition(option: Opt, spec: EditionChartSpec, size: { width: numb
   if (multiLine) delete option.legend
   // A slope's category axis is two named points; "Point" as an axis title says nothing.
   if (isSlope && x) x.name = undefined
-  option.grid = { left: 8, right: multiLine ? 104 : 20, top: option.legend && !isScatter ? 34 : 20, bottom: 8, containLabel: true }
+  // containLabel covers tick labels but not a centred axis name, which
+  // otherwise hangs below the card into the caption.
+  const xNameBelow = !barLike && !!x?.name && x?.nameLocation === 'middle'
+  const yNameBeside = !barLike && !!y?.name && y?.nameLocation === 'middle'
+  option.grid = { left: yNameBeside ? 28 : 8,right: multiLine ? 104 : 20, top: option.legend && !isScatter ? 34 : 20, bottom: xNameBelow ? 30 : 8, containLabel: true }
+
+  // Scatter labels sit right of their point; for points in the right part of
+  // the x range that runs off the card, so those label to the left instead.
+  let scatterFlipAt = Infinity
+  if (isScatter && !isLollipop) {
+    const xs: number[] = []
+    for (const s of series) {
+      const sr = obj(s)
+      if (sr?.type !== 'scatter' || !Array.isArray(sr.data)) continue
+      for (const d of sr.data) {
+        const v = Array.isArray(d) ? d[0] : Array.isArray(obj(d)?.value) ? (obj(d)!.value as unknown[])[0] : undefined
+        if (typeof v === 'number' && Number.isFinite(v)) xs.push(v)
+      }
+    }
+    if (xs.length) {
+      const lo = Math.min(...xs)
+      const hi = Math.max(...xs)
+      if (hi > lo) scatterFlipAt = lo + (hi - lo) * 0.6
+    }
+  }
 
   // Bars: a slimmer, rounded mark with the value at its end so the reader
   // never has to trace a gridline.
@@ -591,6 +615,15 @@ function tuneForEdition(option: Opt, spec: EditionChartSpec, size: { width: numb
       sr.symbolSize = 11
       sr.label = { show: true, position: 'right', fontSize: 10, color: T.muted, fontFamily: CHART_FONT_SENTINEL, formatter: '{a}' }
       sr.labelLayout = { hideOverlap: true }
+      if (Array.isArray(sr.data) && scatterFlipAt !== Infinity) {
+        sr.data = sr.data.map((d) => {
+          const v = Array.isArray(d) ? d : obj(d)?.value
+          const px = Array.isArray(v) ? v[0] : undefined
+          if (typeof px !== 'number' || px < scatterFlipAt) return d
+          const base = Array.isArray(d) ? { value: d } : (obj(d) as Opt)
+          return { ...base, label: { ...(obj(base.label) ?? {}), position: 'left' } }
+        })
+      }
     }
   }
 }
