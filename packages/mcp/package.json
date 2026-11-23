@@ -8,17 +8,19 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
-    "./hosted": "./src/hosted.ts"
+    "./hosted": "./src/hosted.ts",
+    "./oauth": "./src/oauth.ts"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
     "inspect": "npx @modelcontextprotocol/inspector tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/hosted.test.ts"
+    "test": "tsx src/oauth.test.ts && tsx src/hosted.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@vismay/admin-core": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/html-stories": "workspace:*",
     "@vismay/randomizer": "workspace:*",

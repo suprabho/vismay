@@ -29,6 +29,28 @@ which wraps the Vercel AI Gateway. Do not import `@google/genai`, `@anthropic-ai
 - Resolver step that turns YAML `prompt:` fields into cached generations at
   build time.
 
+## MCP sign-in consent (/mcp/authorize)
+
+Where people allow an MCP client (Claude, Claude Code, Cursor) to use the hosted
+Vismay MCP at vizmaya.fyi/api/mcp. vizmaya.fyi runs the OAuth server
+([packages/mcp/src/oauth.ts](../../packages/mcp/src/oauth.ts)) and sends the
+browser here with a signed request in the path; admin only says yes or no. The
+handoff is Scope B in [docs/auth.md](../../docs/auth.md)
+(`@vismay/admin-core/mcpConsent`).
+
+- **Page:** [app/mcp/authorize/[request]/page.tsx](<app/mcp/authorize/[request]/page.tsx>):
+  checks `isAuthed()` (the middleware only checks for a session; the allowlist
+  is checked here) and sends signed-out visitors to `/login` with the path as
+  `next`; shows the app's self-declared name, what it will be able to do, and
+  the redirect's origin (the part a lookalike can't fake); Allow / Cancel. An
+  expired or forged request shows "start again". Framing is refused and no
+  referrer is sent (`headers()` in next.config.ts).
+- **API:** `POST /api/mcp/authorize` (form `request`, `decision=allow|deny`;
+  `isAuthed()`-gated, same-origin only): Allow signs an approval for exactly
+  that request, both 303 to the vizmaya.fyi callback the request names.
+- **Env:** `ADMIN_SESSION_SECRET` must match vizmaya-fyi's (it already does,
+  for signed URLs). Nothing is stored.
+
 ## Pipeline tab (/vizmaya/pipeline)
 
 Generalized monitoring dashboard for every epic with a live content pipeline,

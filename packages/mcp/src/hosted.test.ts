@@ -1,15 +1,18 @@
-/** Checks for the hosted MCP endpoint: which tools each caller gets, where tokens go, no local files.
+/** Checks for the hosted MCP endpoints: which tools each caller gets, where tokens go, sign-in, no local files.
  *  (run: pnpm --filter @vismay/mcp test) */
 import assert from 'node:assert/strict'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { handleHostedMcpRequest } from './hosted'
+import { handleHostedMcpRequest, handlePublicMcpRequest } from './hosted'
 import { createServer } from './server'
+import { signIn } from './testOAuth'
 
 // The site's own token sits in the server env on the deployment: the hosted
 // server must never use it on a caller's behalf.
 process.env.HTML_STORIES_TOKEN = 'server-env-token'
+process.env.ADMIN_SESSION_SECRET = 'hosted-test-secret'
 delete process.env.CATALOG_BASE_URL
+delete process.env.MCP_TOKEN_GENERATION
 
 type Sent = { url: string; auth: string | null; body: string | null }
 const sent: Sent[] = []
@@ -25,37 +28,43 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 }) as typeof fetch
 
 let nextId = 1
-async function rpc(method: string, params: unknown, headers: Record<string, string> = {}) {
-  const res = await handleHostedMcpRequest(
-    new Request('https://vizmaya.fyi/api/mcp', {
+type Endpoint = 'public' | 'signin'
+function post(method: string, params: unknown, headers: Record<string, string>, endpoint: Endpoint) {
+  const handler = endpoint === 'public' ? handlePublicMcpRequest : handleHostedMcpRequest
+  return handler(
+    new Request(`https://vizmaya.fyi/api/mcp${endpoint === 'public' ? '/public' : ''}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...headers },
       body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }),
     }),
   )
+}
+async function rpc(method: string, params: unknown, headers: Record<string, string> = {}, endpoint: Endpoint = 'public') {
+  const res = await post(method, params, headers, endpoint)
   assert.equal(res.status, 200, `${method} → HTTP ${res.status}`)
   assert.equal(res.headers.get('access-control-allow-origin'), '*')
   return (await res.json()) as { result?: any; error?: { message: string } }
 }
-const toolNames = async (headers?: Record<string, string>) =>
-  ((await rpc('tools/list', {}, headers)).result.tools as Array<{ name: string }>).map((t) => t.name).sort()
-const callTool = (name: string, args: Record<string, unknown>, headers?: Record<string, string>) =>
-  rpc('tools/call', { name, arguments: args }, headers)
+const toolNames = async (headers?: Record<string, string>, endpoint: Endpoint = 'public') =>
+  ((await rpc('tools/list', {}, headers, endpoint)).result.tools as Array<{ name: string }>).map((t) => t.name).sort()
+const callTool = (name: string, args: Record<string, unknown>, headers?: Record<string, string>, endpoint: Endpoint = 'public') =>
+  rpc('tools/call', { name, arguments: args }, headers, endpoint)
 const bearer = (t: string) => ({ authorization: `Bearer ${t}` })
 
-// Preflight and the methods a stateless server refuses.
-{
-  const pre = await handleHostedMcpRequest(new Request('https://vizmaya.fyi/api/mcp', { method: 'OPTIONS' }))
+// Preflight and the methods a stateless server refuses, on both endpoints.
+for (const handler of [handleHostedMcpRequest, handlePublicMcpRequest]) {
+  const pre = await handler(new Request('https://vizmaya.fyi/api/mcp', { method: 'OPTIONS' }))
   assert.equal(pre.status, 204)
   const allowed = pre.headers.get('access-control-allow-headers') ?? ''
   for (const h of ['authorization', 'mcp-protocol-version', 'x-footshorts-token']) assert.ok(allowed.includes(h), h)
   for (const method of ['GET', 'DELETE']) {
-    const res = await handleHostedMcpRequest(new Request('https://vizmaya.fyi/api/mcp', { method }))
+    const res = await handler(new Request('https://vizmaya.fyi/api/mcp', { method }))
     assert.equal(res.status, 405, method)
     assert.equal(res.headers.get('allow'), 'POST, OPTIONS')
   }
 }
 
+// The public endpoint (/api/mcp/public) is #667's behaviour: anonymous gets the open tools.
 // Anonymous: initialize works and says how to get the rest.
 {
   const init = await rpc('initialize', {
@@ -162,6 +171,79 @@ assert.deepEqual(await toolNames(), ['get_html_story_brief'])
   const r = await callTool('publish_html_story', { html: '<html></html>' }, { 'x-viznba-token': 'nba-only' })
   assert.equal(r.result.isError, true)
   assert.match(r.result.content[0].text, /Authorization: Bearer/)
+}
+
+// The sign-in endpoint (/api/mcp): no credentials → the 401 that starts an MCP client's sign-in.
+{
+  const res = await post('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '0' } }, {}, 'signin')
+  assert.equal(res.status, 401)
+  const challenge = res.headers.get('www-authenticate') ?? ''
+  assert.match(challenge, /^Bearer /)
+  assert.match(challenge, /resource_metadata="https:\/\/vizmaya\.fyi\/\.well-known\/oauth-protected-resource\/api\/mcp"/)
+  assert.ok(!challenge.includes('invalid_token'), 'a first visit is not an error')
+  assert.match(res.headers.get('access-control-expose-headers') ?? '', /www-authenticate/)
+  const body = (await res.json()) as { error: { message: string } }
+  assert.match(body.error.message, /\/api\/mcp\/public/, 'points at the open endpoint')
+}
+
+// A caller's own publish token still works on /api/mcp, exactly as on /public.
+{
+  sent.length = 0
+  assert.ok((await toolNames(bearer('caller-token'), 'signin')).includes('publish_html_story'))
+  await callTool('publish_html_story', { html: '<html></html>', slug: 'x' }, bearer('caller-token'), 'signin')
+  assert.equal(sent[0]!.auth, 'Bearer caller-token')
+}
+
+// Signed in: every hosted tool, acting with the deployment's own tokens.
+{
+  const { access } = await signIn()
+  const names = await toolNames(bearer(access), 'signin')
+  for (const n of ['get_html_story_brief', 'publish_html_story', 'save_story_image', 'spin_randomizer', 'get_ocw_pool']) assert.ok(names.includes(n), n)
+  for (const n of ['render_module_image', 'render_story_video', 'generate_heygen_video']) assert.ok(!names.includes(n), `${n} is local only`)
+  const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } }, bearer(access), 'signin')
+  assert.match(init.result.instructions, /signed in/)
+
+  sent.length = 0
+  const r = await callTool('publish_html_story', { html: '<html><title>x</title></html>', slug: 'x' }, bearer(access), 'signin')
+  assert.ok(!r.result.isError, r.result.content?.[0]?.text)
+  assert.equal(sent[0]!.auth, 'Bearer server-env-token', "a signed-in call uses the deployment's token")
+  assert.ok(!sent.some((s) => s.auth?.includes('mcpa_')), 'the access token never leaves the endpoint')
+
+  // Other sites fall back to HTML_STORIES_TOKEN unless their own env var is set, as locally.
+  process.env.FOOTSHORTS_HTML_STORIES_TOKEN = 'footshorts-env-token'
+  sent.length = 0
+  await callTool('publish_html_story', { app: 'footshorts', html: '<html></html>', slug: 'y' }, bearer(access), 'signin')
+  await callTool('publish_html_story', { app: 'vizf1', html: '<html></html>', slug: 'z' }, bearer(access), 'signin')
+  assert.deepEqual(sent.map((s) => s.auth), ['Bearer footshorts-env-token', 'Bearer server-env-token'])
+  delete process.env.FOOTSHORTS_HTML_STORIES_TOKEN
+
+  // filePath stays out for a signed-in caller too.
+  const tools = (await rpc('tools/list', {}, bearer(access), 'signin')).result.tools as Array<{ inputSchema: { properties?: object } }>
+  assert.ok(tools.every((t) => !('filePath' in (t.inputSchema.properties ?? {}))))
+}
+
+// A forged, expired or revoked access token gets 401 invalid_token, so the client refreshes or signs in again.
+{
+  const { access } = await signIn()
+  const forged = `${access.slice(0, -4)}AAAA`
+  for (const bad of [forged]) {
+    const res = await post('tools/list', {}, bearer(bad), 'signin')
+    assert.equal(res.status, 401)
+    assert.match(res.headers.get('www-authenticate') ?? '', /error="invalid_token"/)
+  }
+  process.env.MCP_TOKEN_GENERATION = '2'
+  const revoked = await post('tools/list', {}, bearer(access), 'signin')
+  assert.equal(revoked.status, 401, 'MCP_TOKEN_GENERATION signs it out')
+  delete process.env.MCP_TOKEN_GENERATION
+}
+
+// On /public an access token is ignored: anonymous tools, and it is never forwarded.
+{
+  const { access } = await signIn()
+  assert.deepEqual(await toolNames(bearer(access)), ['get_html_story_brief'])
+  sent.length = 0
+  await callTool('get_html_story_brief', {}, bearer(access))
+  assert.equal(sent[0]!.auth, null)
 }
 
 // The local stdio server is unchanged: every tool, filePath included.
