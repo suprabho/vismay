@@ -40,6 +40,8 @@ import {
   landmarkLensMetrics,
   landmarkReadings,
   landmarkWorkBasisLabel,
+  ledgerLegalNote,
+  ledgerWhen,
   ocwCourseLabel,
   ocwCreditLine,
   ocwLensMetrics,
@@ -60,6 +62,7 @@ import {
   type FrontierSubject,
   type HundredSubject,
   type LandmarkSubject,
+  type LedgerSubject,
   type OcwSubject,
   type SpinRecord,
   type ViznbaGameRef,
@@ -753,6 +756,102 @@ function curiousAssignment(s: CuriousSubject): string[] {
   return out
 }
 
+function ledgerAssignment(s: LedgerSubject): string[] {
+  const c = s.case
+  const window = s.era.max_days === undefined ? null : `the ${s.era.sub}`
+  const out = [
+    `- Era: ${s.era.name} (${s.era.sub})`,
+    `- Sector: ${s.sector.name}`,
+    `- Typology: ${s.typology.name} (${s.family.name})`,
+    `- Case: ${c.name} (heat ${c.heat}). ${c.country}, ${ledgerWhen(c)}.`,
+    `- Legal status in the catalogue: ${s.legalStatus}. Outcome: ${s.outcome}. How it was caught: ${s.caught}. Scale band: ${s.band} (the headline loss, flow or penalty at the time).`,
+    `- Lens: ${s.lens.name}. ${s.lens.description}`,
+    '',
+    `Work this as ${s.family.analyst} with 15 years on cases like it, who also thinks like an investigative analyst and a research analyst: read the data trail (what the numbers looked like before anyone knew), follow the money, the paper and the people, and size it against the base rate (is this rare, or is it Tuesday?).`,
+    '',
+    '### Do this first',
+    '',
+    '1. Confirm the case and its legal status. Find the newest official document (judgment, order, settlement, indictment, charge-sheet or filing), date it, and say whether the status above has changed.',
+    window
+      ? `2. Why Now. Find the three most recent developments for this case inside ${window}, each dated and sourced.`
+      : '2. Why Now. Find the most recent development in the last 12 months: an appeal, extradition, sentence, reform, new enforcement action, or a new case with the same pattern. If there is none, say so.',
+    `3. Apply the ${s.lens.name} lens to the decisive moment of the case, not to a general description of it. ${s.lens.focus}`,
+    '4. If nothing happened in that window, widen it (30 days, then 12 months, then evergreen) and say so at the top of the research file.',
+    '5. The heat score is a seed and has never been refreshed. Your Why Now search is the refresh. If you cannot browse or cannot confirm the case is current, treat this as Evergreen and say so.',
+    '6. Echo. Find two cases from the last 12 months that show the same pattern, each dated and sourced.',
+  ]
+  if (c.note) out.push('', `Seed note from the catalogue (verify against the primary source before using it): ${c.note}`)
+  out.push('', `Seed fields (provisional, confirm each in the claims log): ${c.date ? 'latest development' : 'year'} ${ledgerWhen(c)}, country ${c.country}, scale band ${s.band}, outcome ${s.outcome}, how it was caught ${s.caught}.`)
+  if (c.sources?.length) {
+    out.push('', 'Seed leads (search results the case was found in, not yet verified):')
+    for (const l of c.sources) out.push(`- [${l.title}](${l.url})`)
+  }
+  out.push(
+    '',
+    `Chart these if primary data exists (8 or more points): ${s.family.charts.join(', ')}.`,
+    `Start from: ${s.region.sources}. For this typology also use: ${s.family.sources}.`,
+    `This typology needs these checks first: ${s.family.checks}`,
+    '',
+    '### How to work the case',
+    '',
+    '1. Research first, write second. Do the research as that analyst would, with the case file open, before you think about the story.',
+    '2. Be data-driven. Every section carries numbers, dates and comparisons ("41 days vs 9 months"). A claim with no number is a hunch, so label it.',
+    '3. Hunt patterns, real ones. For this case find: the pattern that repeated (across customers, accounts, periods, jurisdictions), the pattern that was missed, the first moment it was visible, and the same pattern in at least 3 other cases. Say how many cases you checked and how many fit. A pattern from one case is a story, not a pattern.',
+    '4. Test the obvious. Name the explanation everyone repeats, then look for evidence that breaks it. If it survives, say so. If it breaks, that is your hook.',
+    '5. Chase the odd detail: the number that does not add up, the date that is too early, the person who was in every room.',
+    '6. Say what the data cannot tell you. Unknowns are findings.',
+    '',
+    '### What the readers check',
+    '',
+    'Write the research so each of these three readers finds their answer in under a minute.',
+    '',
+    '**CEO and board.** They ask: could this cost us what it cost them?',
+    '- Money: penalty, forfeiture, remediation and compensation as a share of revenue and of pre-tax profit.',
+    '- Accountability: who signed off, who was named, any senior-manager or officer liability, any monitor or business restriction, any licence risk.',
+    '- Governance: did the board or audit committee receive the warnings, and what did growth targets do to the controls?',
+    '- Repeat pattern: any earlier order, letter or audit finding that was not closed.',
+    '',
+    '**Head of financial crime, MLRO or compliance VP.** They ask: which control failed, and is ours the same?',
+    '- Risk assessment: was this customer, product or corridor rated for the risk it carried?',
+    '- Onboarding: source of wealth, beneficial ownership, politically exposed person checks, third-party and introducer risk.',
+    '- Monitoring: scenario coverage, thresholds, alert backlog, false-positive rate, tuning decisions, staffing against volume.',
+    '- Reporting: timeliness and quality of suspicious activity reports, lookbacks, escalation and exit decisions.',
+    '- Sanctions: lists used, fuzzy matching, ownership tests, vessel and shipping data.',
+    "- Governance: independent testing, model validation, data lineage, three lines of defence, and whether the regulator's earlier findings were closed.",
+    '',
+    '**Lead fraud analyst or investigator.** They ask: what would I have seen in the data, and when?',
+    '- Entry point and the control that was bypassed.',
+    '- Red flags and data signatures: velocity, round amounts, structuring, dormant account spikes, new beneficiaries, shared devices or identifiers, mule churn, circular flows, related-party counterparties, duplicate pledges or invoices, reconciliation breaks, cash conversion that trails revenue.',
+    '- The detection rule: pattern, threshold, window, fields, false positives, next step for the analyst.',
+    '- Time to detect: months from first activity to first alert, and to action.',
+    '- Recovery: what could be frozen, charged back, clawed back or traced, and how fast it was tried.',
+    '- Evidence chain: ledger entries, payment messages, on-chain addresses, communications, and how confident each link is.',
+    '',
+    '### Beat rules',
+    '',
+    '1. Keep the four things apart: fraud (a victim was deceived), laundering (the origin of money was hidden), sanctions evasion, and control failure (an institution failed to look). A fine for weak controls is not a finding that crime happened. Say which one the sources support.',
+    '2. Use the legal-status ladder in every sentence about wrongdoing. Proven: conviction, judgment or regulator order, cite it. Settled: say whether the party admitted anything or agreed to pay without admitting. Alleged: say charged, indicted, or according to the filing. Attribution to a state or group is the named agency\'s claim, not a court finding.',
+    '3. Know the document you cite. An indictment, charge-sheet or ECIR is an allegation. A provisional attachment is not a conviction. A bank declaring an account fraud is not a court finding. An OFAC "apparent violation" is the agency\'s wording. A consent order, deferred prosecution agreement, civil money penalty and criminal plea are different things.',
+    '4. Keep the numbers apart: amount defrauded, amount lost net of recoveries, amount laundered (a flow), fines, forfeiture, compensation, market value destroyed. Separate peak paper value from real money. For crypto, give USD at the time of theft and say what was frozen, returned or recovered. State the currency, the date and the exchange rate. For rupee figures, give crore or lakh and the dollar equivalent with its rate.',
+    '5. Give the clock: when it started, when the first warning came, when it was detected, when it collapsed, when charges came, when it ended. Time undetected is a key number.',
+    '6. Record who caught it (whistleblower, journalist, auditor, regulator, short seller, a run, police, blockchain analytics, the firm itself).',
+    '7. Map the gatekeepers: banks, auditors, lawyers, service providers, rating agencies, regulators. What did each see?',
+    '8. Do not cite or guess at specific suspicious activity reports. They are confidential in most countries. Use public orders, filings and court records.',
+    '9. Name living people only where there is a conviction or a regulator or court finding. Otherwise describe the role and write alleged.',
+    '10. Describe typologies at red-flag level. No step-by-step method that helps someone evade controls.',
+    '',
+    '### In the research file',
+    '',
+    'Besides the claims log, gaps and HERO INSIGHT, the stub has a place for each of these:',
+    '- An executive read of three short blocks: CEO and board, head of financial crime, lead analyst. Each answers its question for this case in three lines.',
+    '- A detection rule written in plain English and as pseudo-SQL.',
+    '- A Pattern file: the pattern in one sentence, the evidence for it, the cases checked (count fit vs checked), the first visible moment, and the counter-example that does not fit.',
+    '- A Curiosity list: the 3 oddest facts or open questions, each with what you found.',
+    `- The legal note: ${ledgerLegalNote(s.legalStatus)}`,
+  )
+  return out
+}
+
 /** "## Your assignment": the spin, written as instructions. */
 export function assignmentSection(spin: BriefSpin): string {
   const meta = RANDOMIZER_META[spin.randomizer]
@@ -778,7 +877,9 @@ export function assignmentSection(spin: BriefSpin): string {
                       ? frontierAssignment(s)
                       : s.randomizer === 'curious'
                         ? curiousAssignment(s)
-                        : epicsAssignment(s)
+                        : s.randomizer === 'ledger'
+                          ? ledgerAssignment(s)
+                          : epicsAssignment(s)
   const ready = insightReady(spin)
   const eli5 = isEli5Spin(spin)
   const lead = ready
@@ -834,7 +935,9 @@ export function researchProtocolSection(spin: BriefSpin): string {
                       ? '\n8. The paper is the primary source for what it claims; cite it by table or figure, and the version you read. AI Daily\'s gate fields (area, headline, compute, scale, release) are leads, never sources. An arXiv preprint is labelled "preprint" wherever its result appears, and its claims are reported as claims ("the authors report") until an independent replication or a peer-reviewed version confirms them. A benchmark number goes on the page with its baseline and setting.'
                       : spin.randomizer === 'curious'
                         ? '\n8. Verify at the level of the claim, not the article. Split the anecdote into atomic claims and grade each. Two sources are independent only when neither descends from the other: a wire story and its reprints, a book and the articles that quote it, an interview and its retellings are one lineage and count once. The desk\'s grade is computed from the sources found so far; print it, and print your own if the research earns a different one, with the reason. A grade D or E claim is reported as repeated ("it is widely said that"), never as having happened. The evidence quote is the only verbatim text taken from a copyrighted source, and it stays under 300 characters.'
-                        : ''
+                        : spin.randomizer === 'ledger'
+                          ? '\n8. Use the legal-status ladder in every claim about wrongdoing: Proven needs the conviction, judgment or regulator order itself; Settled says whether anything was admitted; anything else is "alleged" and attributed to the filing that says it. Know the document: an indictment, charge-sheet or complaint is an allegation, a consent order or deferred prosecution agreement is not a conviction, and an attribution to a state or group is the named agency\'s claim. Log each amount as what it is (defrauded, lost net of recoveries, laundered flow, fine, forfeiture, compensation, market value destroyed) with its currency, date and exchange rate, and never add different kinds together. The catalogue\'s seed fields, note and links are leads, never sources. Never cite or guess at a suspicious activity report.'
+                          : ''
   const eli5Items = isEli5Spin(spin)
     ? `\n9. Because the reader is a five-year-old, add two more sections after HERO INSIGHT. \`STORY INSIGHT\`: the one thing the child should walk away knowing, in the format's own words; write the sentence a child would repeat to a parent, and if you cannot, pick a different insight. \`STAND-IN TABLE\`: one row per part of the stand-in, with columns Stand-in, Real thing, Claim row (for example: fibbing about hunger | private information | 5). A part of the stand-in with no claims log row does not go in the story. HERO INSIGHT is the research finding, for the research file and the grown-ups card; STORY INSIGHT is what the pages say.`
     : ''
@@ -1127,6 +1230,30 @@ Built like the best page of a fact desk: one claim, where it came from, who says
 13. **Sources and claims log summary.**`
 }
 
+function ledgerFormat(s: LedgerSubject): string {
+  const c = s.case
+  return `## Format: autopsy brief with charts
+
+Built like a case autopsy: how it worked, the signals that were missed, the loophole, the cost. The research is deep and the telling is simple: run the analysis at full depth, then write for a smart 12-year-old. Open with the strangest true fact; each part raises a question the next one answers; explain every term the first time. These parts are required content, not a page order; the layout is yours.
+
+1. **Headline** (one line, the strangest true fact, at the strength the legal status allows${s.legalStatus === 'Proven' || s.legalStatus === 'Settled' ? '' : ': "alleged" where nothing is proven'}) and **dek** (one line, why it matters now).
+2. **The case card:** ${c.name}, the year, the country, the typology (${s.typology.name}), the scale with what the number measures (a loss, a flow or a penalty), how it was caught, and the legal status (${s.legalStatus}) as a badge with what it means.
+3. **Chart 1, the clock:** a timeline from the start through the first warning, detection, collapse and charges to the outcome, with the time undetected as its headline number.
+4. **Mechanism:** how it worked, in plain words, at red-flag level. A diagram if it helps.
+5. **Money trail:** the route as an ordered table or flow, each hop with its source and status.
+6. **Missed signals:** who saw what, when, and what happened next, each marked Documented, Contested or Inferred.
+7. **The loophole:** the rule, gap or blind spot that made it possible, and who owned it.
+8. **Chart 2, the cost as a comparison:** loss against fine against recovery (never added together), each with its currency and date.
+9. **Chart 3, the lens chart:** ${s.family.charts[0]!.replace(/^./, (ch) => ch.toLowerCase())}, or the chart the ${s.lens.name} lens needs.
+10. **Lens read:** 150 words at most, applying the ${s.lens.name} lens.
+11. **Aftermath:** the laws and controls that changed, and whether the change lasted.
+12. **The rule that would have caught it:** the detection logic in plain English (the pseudo-SQL stays in the research file).
+13. **Counter-narrative:** the accused party's account and the disputed claims, stated fairly.
+14. **Three readers:** what a board, a head of financial crime and a lead analyst each take from it, three lines each.
+15. **Why now and echo:** the latest development, and where the same pattern showed up in the last 12 months.
+16. **Sources and claims log summary.**`
+}
+
 /** "## Format: …": the randomizer's output format, as required content. */
 export function formatSection(spin: BriefSpin): string {
   if (isEli5Spin(spin)) return eli5Format(spin)
@@ -1139,6 +1266,7 @@ export function formatSection(spin: BriefSpin): string {
   if (s.randomizer === 'evidence') return evidenceFormat(s)
   if (s.randomizer === 'frontier') return frontierFormat(s)
   if (s.randomizer === 'curious') return curiousFormat(s)
+  if (s.randomizer === 'ledger') return ledgerFormat(s)
   return s.randomizer === 'desk' ? deskFormat() : s.randomizer === 'atlas' ? atlasFormat(s) : epicsFormat(s)
 }
 
@@ -1203,6 +1331,12 @@ export function chartRules(spin: BriefSpin): string[] {
       'This paper\'s point is marked apart from the others (colour or label) and its setting matches theirs, or the chart says how it differs. A number from a paper\'s table cites the table; a compute or energy figure names its source and every assumption.',
     ]
   }
+  if (spin.randomizer === 'ledger') {
+    return [
+      'Autopsy series rules: one message per chart, the title states the takeaway at the strength the legal status allows ("alleged" where nothing is proven), the currency, the date and any exchange rate labelled, source and date in the footer, nothing decorative.',
+      'Amounts of different kinds (defrauded, lost net of recoveries, laundered flow, fine, forfeiture, market value destroyed) sit side by side and are never stacked or summed. Every point on the timeline names the document behind it. A money trail drawn as a flow shows only hops the claims log has Verified, and marks a Contested one apart.',
+    ]
+  }
   return [
     'Render the route as a map with D3-geo: the places from your route table as ordered points, joined by the path type you chose.',
     spin.randomizer === 'epics'
@@ -1254,7 +1388,7 @@ Give it to the user with the page, or append it to the research file under \`## 
 export function checklistSection(spin: BriefSpin): string {
   const items = [
     'The hero insight is one sentence and traces to two sources or one primary source.',
-    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence' || spin.randomizer === 'frontier' || spin.randomizer === 'curious'
+    spin.randomizer === 'desk' || spin.randomizer === 'footshorts' || spin.randomizer === 'viznba' || spin.randomizer === 'ocw' || spin.randomizer === 'landmark' || spin.randomizer === 'hundred' || spin.randomizer === 'evidence' || spin.randomizer === 'frontier' || spin.randomizer === 'curious' || spin.randomizer === 'ledger'
       ? 'Every chart has a takeaway title, units and a source.'
       : 'Every place has a status label.',
     ...(spin.randomizer === 'footshorts' ? ['Every score, minute and stat matches the match context; no rumour is stated as fact.'] : []),
@@ -1269,6 +1403,9 @@ export function checklistSection(spin: BriefSpin): string {
       : []),
     ...(spin.randomizer === 'curious'
       ? ['The grade printed on the page is the desk\'s, or yours with the reason it differs; every source is traced to its lineage and lineages are counted, not articles; the embellished part is labelled and never asserted; a grade D or E claim is reported as repeated, not as fact; the evidence document and its archive copy are linked.']
+      : []),
+    ...(spin.randomizer === 'ledger'
+      ? ['The legal status on the page matches the newest official document; every sentence about wrongdoing sits on the right rung (proven, settled, alleged); no living person is named as a wrongdoer without a conviction or finding; amounts of different kinds are never added; the mechanism stays at red-flag level; no suspicious activity report is cited.']
       : []),
     ...(spin.randomizer === 'hundred' ? ["Hart's rank and reasons are attributed to him and tested, not repeated; his text is paraphrased, not copied; tradition and record are labelled apart; the credit names the book and the data sources."] : []),
     'Contested claims are labelled and both sides stated fairly.',

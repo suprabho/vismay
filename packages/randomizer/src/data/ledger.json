@@ -1,0 +1,4429 @@
+{
+  "catalogue": {
+    "name": "Vizmaya Ledger",
+    "seeded": "2026-11-12",
+    "note": "Year, country, typology, scale band, outcome and detection route are seed values from public record, and heat values are seeds that have never been refreshed. Live cases carry the search results they were found in: leads, not verified sources."
+  },
+  "eras": [
+    {
+      "id": "breaking",
+      "name": "Breaking",
+      "sub": "last 30 days",
+      "max_days": 30
+    },
+    {
+      "id": "developing",
+      "name": "Developing",
+      "sub": "last 12 months",
+      "max_days": 365
+    },
+    {
+      "id": "modern",
+      "name": "2016 to now",
+      "sub": "modern era",
+      "from_year": 2016
+    },
+    {
+      "id": "postcrisis",
+      "name": "2008 to 2015",
+      "sub": "post-crisis era",
+      "from_year": 2008
+    },
+    {
+      "id": "boom",
+      "name": "1990 to 2007",
+      "sub": "boom years",
+      "from_year": 1990
+    },
+    {
+      "id": "classic",
+      "name": "Before 1990",
+      "sub": "classic era",
+      "from_year": null
+    }
+  ],
+  "sectors": [
+    {
+      "id": "retail-banking",
+      "name": "Retail and commercial banks"
+    },
+    {
+      "id": "central-bank-sovereign",
+      "name": "Central banks and sovereign funds"
+    },
+    {
+      "id": "private-correspondent",
+      "name": "Private and correspondent banking"
+    },
+    {
+      "id": "nbfc-shadow",
+      "name": "NBFCs and shadow banking"
+    },
+    {
+      "id": "capital-markets",
+      "name": "Capital markets"
+    },
+    {
+      "id": "insurance",
+      "name": "Insurance"
+    },
+    {
+      "id": "payments-fintech",
+      "name": "Payments and fintech"
+    },
+    {
+      "id": "crypto-web3",
+      "name": "Crypto and web3"
+    },
+    {
+      "id": "real-estate",
+      "name": "Real estate"
+    },
+    {
+      "id": "trade-shipping",
+      "name": "Trade and shipping"
+    },
+    {
+      "id": "corporates",
+      "name": "Corporates"
+    },
+    {
+      "id": "gambling",
+      "name": "Gambling"
+    },
+    {
+      "id": "art-luxury",
+      "name": "Art and luxury"
+    },
+    {
+      "id": "informal",
+      "name": "Informal and retail schemes"
+    }
+  ],
+  "families": [
+    {
+      "id": "fraud",
+      "name": "Fraud",
+      "analyst": "a senior fraud analyst",
+      "checks": "Where did the story part ways with the cash? Compare reported revenue with operating cash flow, receivable days, collateral counts with lender records, claimed returns with any plausible strategy. Ask who controlled the bank statements, the custodian or the confirmations.",
+      "charts": [
+        "Reported vs verified figure over time (revenue, balances, collateral or assets)",
+        "Inflows vs redemptions or new borrowing by period",
+        "Months between first red flag and collapse",
+        "Recoveries as a share of losses"
+      ],
+      "sources": "court filings and exhibits, bankruptcy examiner or trustee reports, company filings, auditor reports"
+    },
+    {
+      "id": "laundering",
+      "name": "Laundering",
+      "analyst": "a financial intelligence investigator",
+      "checks": "Source of funds and source of wealth, beneficial ownership, corridors, structuring below thresholds, third-party payments, shell and nominee layers, trade pricing against market, cash intensity. What did the bank know at onboarding and what did monitoring miss?",
+      "charts": [
+        "Flows by corridor and year",
+        "Alerts vs suspicious activity reports filed vs prosecutions",
+        "Share of volume from the top 10 customers",
+        "Penalty as a share of the flows involved"
+      ],
+      "sources": "enforcement orders, mutual evaluation reports, inquiry reports, leaked-document archives (ICIJ, OCCRP)"
+    },
+    {
+      "id": "sanctions-and-proliferation",
+      "name": "Sanctions and proliferation",
+      "analyst": "a financial intelligence investigator",
+      "checks": "The legal hook (USD clearing, US persons, controlled items). Ownership and control tests such as the 50 percent rule. Screening gaps. Vessel identity, AIS gaps, ship-to-ship transfers, flag changes. Origin documents against physical flows. Price against any cap.",
+      "charts": [
+        "Shipments or transaction value by quarter",
+        "AIS dark periods per voyage",
+        "Penalty vs value of the transactions"
+      ],
+      "sources": "OFAC and BIS enforcement releases, UK OFSI notices, UN panel reports, maritime tracking providers"
+    },
+    {
+      "id": "markets",
+      "name": "Markets",
+      "analyst": "a forensic research analyst",
+      "checks": "Order and trade data, timing against news, price and volume anomalies, communications, positions across related instruments, who benefited, and what surveillance alerts fired and what was done with them.",
+      "charts": [
+        "Price and volume around the key date",
+        "Positions vs limits over time",
+        "Profit vs penalty"
+      ],
+      "sources": "SEC, CFTC and exchange surveillance records, trial exhibits, regulator final notices"
+    },
+    {
+      "id": "corruption",
+      "name": "Corruption",
+      "analyst": "a forensic research analyst",
+      "checks": "Follow the contract: award process, intermediaries and agents, success fees, shell recipients, politically exposed persons, the gap between award and payment, bank due diligence on those persons, and the hit to the sovereign balance sheet.",
+      "charts": [
+        "Payments to intermediaries vs contract value",
+        "Debt raised vs funds received by the project",
+        "Amount diverted vs amount recovered"
+      ],
+      "sources": "DOJ and SEC resolutions, national prosecutor files, parliamentary inquiries, asset recovery reports"
+    },
+    {
+      "id": "tax",
+      "name": "Tax",
+      "analyst": "a forensic research analyst",
+      "checks": "Structure against substance, treaty or withholding arbitrage, the role of advisers and custodians, the date the law changed, who certified what, tax lost against tax recovered.",
+      "charts": [
+        "Tax lost vs recovered by year",
+        "Transaction volume vs date of the rule change"
+      ],
+      "sources": "court judgments, tax authority and parliamentary reports, investigative journalism archives"
+    },
+    {
+      "id": "insider-and-rogue",
+      "name": "Insider and rogue",
+      "analyst": "a senior fraud analyst",
+      "checks": "Position limits and breaches, unauthorized trades, fictitious hedges, supervision and mandatory leave, front-office to back-office reconciliation, reported profit against risk taken, access rights and segregation of duties.",
+      "charts": [
+        "Positions vs limits over time",
+        "Reported P&L vs risk taken",
+        "Losses by month until discovery"
+      ],
+      "sources": "internal inquiry reports, regulator reports, court records"
+    },
+    {
+      "id": "cyber-and-web3",
+      "name": "Cyber and web3",
+      "analyst": "a financial intelligence investigator",
+      "checks": "Entry route (key compromise, insider, social engineering, contract bug, oracle or bridge failure, supply chain). Signing and approval design. Hot and cold wallet split. Time from theft to first movement. Laundering path (swaps, bridges, mixers, off-ramps). Freezes and stablecoin blacklists. Funds returned. Who attributed it, on what evidence, and how confident they are. USD value at theft vs today.",
+      "charts": [
+        "Stolen vs frozen vs returned",
+        "Time to laundering by hop",
+        "Losses by month and attack route"
+      ],
+      "sources": "incident reports from the victim, FBI and DOJ filings, analytics firms (TRM, Chainalysis, Elliptic, PeckShield, CertiK), block explorers, DefiLlama hacks"
+    },
+    {
+      "id": "crime-proceeds",
+      "name": "Crime proceeds",
+      "analyst": "a senior fraud analyst",
+      "checks": "Placement and layering, cash intensity, front businesses, the human network behind the money, bank exposure, and what the indictment exhibits show about the money route.",
+      "charts": [
+        "Proceeds by route or channel",
+        "Seized or forfeited vs estimated proceeds"
+      ],
+      "sources": "indictments and forfeiture complaints, FATF typology reports, UNODC"
+    },
+    {
+      "id": "control-failure",
+      "name": "Control failure",
+      "analyst": "a forensic research analyst",
+      "checks": "The four pillars: risk assessment, policies and controls, independent testing, governance and training. Alert volumes and backlogs, tuning decisions, staffing against volume, report timeliness, lookbacks, repeat findings from earlier orders, remediation milestones. Fine as a share of pre-tax profit. Whether any actual crime was found, or only a failure to look.",
+      "charts": [
+        "Alert backlog or reports filed over time",
+        "Penalty as a share of pre-tax profit",
+        "Repeat findings across successive orders"
+      ],
+      "sources": "consent orders and final notices, annual reports, monitor reports, regulator speeches"
+    }
+  ],
+  "typologies": [
+    {
+      "id": "accounting-fraud",
+      "name": "Accounting fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "ponzi",
+      "name": "Ponzi scheme",
+      "family": "fraud"
+    },
+    {
+      "id": "loan-fraud",
+      "name": "Bank loan fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "insurance-fraud",
+      "name": "Insurance fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "payments-fraud",
+      "name": "Card and payments fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "synthetic-id",
+      "name": "Synthetic identity fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "procurement-fraud",
+      "name": "Procurement fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "app-scam",
+      "name": "Authorized push payment scam",
+      "family": "fraud"
+    },
+    {
+      "id": "pig-butchering",
+      "name": "Pig butchering scam",
+      "family": "fraud"
+    },
+    {
+      "id": "bec",
+      "name": "Business email compromise",
+      "family": "fraud"
+    },
+    {
+      "id": "deepfake-fraud",
+      "name": "Deepfake and AI-enabled fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "tbml",
+      "name": "Trade-based laundering",
+      "family": "laundering"
+    },
+    {
+      "id": "real-estate-ml",
+      "name": "Real estate laundering",
+      "family": "laundering"
+    },
+    {
+      "id": "shell-laundromat",
+      "name": "Shell company laundromat",
+      "family": "laundering"
+    },
+    {
+      "id": "casino-ml",
+      "name": "Casino laundering",
+      "family": "laundering"
+    },
+    {
+      "id": "mule-network",
+      "name": "Money mule network",
+      "family": "laundering"
+    },
+    {
+      "id": "correspondent-banking",
+      "name": "Correspondent banking abuse",
+      "family": "laundering"
+    },
+    {
+      "id": "hawala",
+      "name": "Hawala and informal transfer",
+      "family": "laundering"
+    },
+    {
+      "id": "art-luxury-ml",
+      "name": "Art and luxury laundering",
+      "family": "laundering"
+    },
+    {
+      "id": "sanctions-evasion",
+      "name": "Sanctions evasion",
+      "family": "sanctions-and-proliferation"
+    },
+    {
+      "id": "export-control",
+      "name": "Export control evasion",
+      "family": "sanctions-and-proliferation"
+    },
+    {
+      "id": "shadow-fleet",
+      "name": "Shadow fleet shipping",
+      "family": "sanctions-and-proliferation"
+    },
+    {
+      "id": "proliferation-finance",
+      "name": "Proliferation finance",
+      "family": "sanctions-and-proliferation"
+    },
+    {
+      "id": "manipulation",
+      "name": "Market manipulation",
+      "family": "markets"
+    },
+    {
+      "id": "insider-trading",
+      "name": "Insider trading",
+      "family": "markets"
+    },
+    {
+      "id": "spoofing",
+      "name": "Spoofing",
+      "family": "markets"
+    },
+    {
+      "id": "benchmark-rigging",
+      "name": "Benchmark rigging",
+      "family": "markets"
+    },
+    {
+      "id": "pump-dump",
+      "name": "Pump and dump",
+      "family": "markets"
+    },
+    {
+      "id": "front-running",
+      "name": "Front-running",
+      "family": "markets"
+    },
+    {
+      "id": "cum-ex",
+      "name": "Dividend arbitrage (cum-ex)",
+      "family": "markets"
+    },
+    {
+      "id": "bribery",
+      "name": "Bribery",
+      "family": "corruption"
+    },
+    {
+      "id": "kleptocracy",
+      "name": "Kleptocracy",
+      "family": "corruption"
+    },
+    {
+      "id": "sovereign-looting",
+      "name": "Sovereign fund looting",
+      "family": "corruption"
+    },
+    {
+      "id": "kickbacks",
+      "name": "Kickbacks",
+      "family": "corruption"
+    },
+    {
+      "id": "tax-evasion",
+      "name": "Tax evasion",
+      "family": "tax"
+    },
+    {
+      "id": "offshore-structures",
+      "name": "Offshore structures",
+      "family": "tax"
+    },
+    {
+      "id": "abusive-tax",
+      "name": "Abusive tax scheme",
+      "family": "tax"
+    },
+    {
+      "id": "rogue-trading",
+      "name": "Rogue trading",
+      "family": "insider-and-rogue"
+    },
+    {
+      "id": "embezzlement",
+      "name": "Embezzlement",
+      "family": "insider-and-rogue"
+    },
+    {
+      "id": "insider-fraud",
+      "name": "Insider fraud",
+      "family": "insider-and-rogue"
+    },
+    {
+      "id": "swift-heist",
+      "name": "SWIFT heist",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "exchange-hack",
+      "name": "Exchange hack",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "defi-exploit",
+      "name": "DeFi exploit",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "rug-pull",
+      "name": "Rug pull",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "custody-collapse",
+      "name": "Custody collapse",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "stablecoin-failure",
+      "name": "Stablecoin failure",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "mixer-laundering",
+      "name": "Mixer laundering",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "bridge-hack",
+      "name": "Bridge hack",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "nft-wash",
+      "name": "NFT wash trading",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "ransomware",
+      "name": "Ransomware proceeds",
+      "family": "cyber-and-web3"
+    },
+    {
+      "id": "terror-financing",
+      "name": "Terror financing",
+      "family": "crime-proceeds"
+    },
+    {
+      "id": "drug-proceeds",
+      "name": "Drug proceeds",
+      "family": "crime-proceeds"
+    },
+    {
+      "id": "trafficking-proceeds",
+      "name": "Trafficking proceeds",
+      "family": "crime-proceeds"
+    },
+    {
+      "id": "wildlife-crime",
+      "name": "Wildlife crime proceeds",
+      "family": "crime-proceeds"
+    },
+    {
+      "id": "aml-program-failure",
+      "name": "AML program failure",
+      "family": "control-failure"
+    },
+    {
+      "id": "sanctions-screening-failure",
+      "name": "Sanctions screening failure",
+      "family": "control-failure"
+    },
+    {
+      "id": "art-fraud",
+      "name": "Art and collectibles fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "pandemic-relief-fraud",
+      "name": "Pandemic relief fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "commodity-collateral-fraud",
+      "name": "Commodity collateral fraud",
+      "family": "fraud"
+    },
+    {
+      "id": "pro-laundering",
+      "name": "Professional money laundering network",
+      "family": "laundering"
+    },
+    {
+      "id": "illegal-betting",
+      "name": "Illegal betting proceeds",
+      "family": "crime-proceeds"
+    },
+    {
+      "id": "antiquities-trafficking",
+      "name": "Antiquities trafficking proceeds",
+      "family": "crime-proceeds"
+    }
+  ],
+  "lenses": [
+    {
+      "id": "missed-signals",
+      "name": "Missed signals",
+      "description": "Who saw a warning sign, when, and what happened to them?",
+      "short": "Who saw it and said nothing",
+      "focus": "Build a missed signals ledger: each warning, who saw it, the date, what they did with it, and what happened to them. Mark each Documented, Contested or Inferred. Count the months between the first warning and the first action."
+    },
+    {
+      "id": "loophole",
+      "name": "The loophole",
+      "description": "Which rule, gap or blind spot made this possible?",
+      "short": "The gap that let it happen",
+      "focus": "Name the exact rule, control or supervisory gap. Cite the rule or order by section number if one exists. Say who owned the gap: the firm, a regulator, a statute or the market structure."
+    },
+    {
+      "id": "enablers",
+      "name": "Who enabled it",
+      "description": "Which banks, auditors, lawyers or regulators made it easier, and what did they gain?",
+      "short": "The people holding the door",
+      "focus": "Map the gatekeepers: banks, auditors, lawyers, trust and company service providers, rating agencies, regulators. For each, say what they saw, what they signed off, what they earned and what happened to them after."
+    },
+    {
+      "id": "impact",
+      "name": "Impact",
+      "description": "Who lost what? Put the loss next to the fine, the sentence and the recovery.",
+      "short": "Losses next to consequences",
+      "focus": "Give every loss as a comparison: loss vs fine, fine vs profit, loss vs recovery, victims vs people compensated. Keep paper loss, cash loss and market value destroyed in separate lines."
+    },
+    {
+      "id": "aftermath",
+      "name": "What changed after",
+      "description": "Which law, control or habit changed because of it, and did the change last?",
+      "short": "Reforms and what stuck",
+      "focus": "List the laws, rules and internal controls that changed because of this case, with dates. Then test whether each change held, using a later case or enforcement action."
+    },
+    {
+      "id": "today",
+      "name": "Could it happen today",
+      "description": "Run the scheme against today's controls. Which step still works?",
+      "short": "Test against current rules",
+      "focus": "Take the mechanism and test it step by step against today's rules and tools. Say which step is closed, which is still open and which new tool opens a new route. Stay at red-flag level."
+    },
+    {
+      "id": "penalty",
+      "name": "Penalty vs profit",
+      "description": "Compare the money made with the money paid back. Who came out ahead?",
+      "short": "The crime math",
+      "focus": "Do the crime math: gross proceeds or benefit, costs, fines, forfeiture, compensation, sentences. Compare with the firm's profit or revenue in the same period. State who came out ahead."
+    },
+    {
+      "id": "escape",
+      "name": "Who got away",
+      "description": "Who was never charged or punished, and why?",
+      "short": "Gaps in accountability",
+      "focus": "List who was involved but never charged, fined or sanctioned, with the documented reason (no evidence, immunity, cooperation, jurisdiction, time limit, death, flight). Do not speculate beyond sources."
+    },
+    {
+      "id": "data-trail",
+      "name": "The data trail",
+      "description": "What pattern in the data would have flagged it, and what rule would catch it?",
+      "short": "The rule that would have caught it",
+      "focus": "Write the detection rule in plain English and as pseudo-SQL: the pattern, the threshold, the time window and the fields needed. List the likely false positives and what an analyst checks next."
+    }
+  ],
+  "regions": [
+    {
+      "id": "NA",
+      "name": "North America",
+      "sources": "DOJ, SEC, CFTC, FinCEN, OFAC, OCC, Federal Reserve, FDIC, court dockets (PACER, CourtListener)"
+    },
+    {
+      "id": "LA",
+      "name": "Latin America",
+      "sources": "national prosecutors and financial intelligence units, central bank orders, Brazil and Mexico court records, DOJ and SEC resolutions that name the country"
+    },
+    {
+      "id": "EU",
+      "name": "Europe",
+      "sources": "FCA Final Notices, BaFin, national prosecutors, Europol, ESMA, the new EU AML authority (AMLA), national court judgments"
+    },
+    {
+      "id": "MEA",
+      "name": "Middle East and Africa",
+      "sources": "national regulators and prosecutors, inquiry commissions, court judgments, DOJ and FCA actions that name the country, FATF mutual evaluations"
+    },
+    {
+      "id": "SA",
+      "name": "South Asia",
+      "sources": "ED and CBI press releases and charge-sheets, SEBI orders, RBI circulars, FIU-IND, MCA and SFIO, court and NCLT orders"
+    },
+    {
+      "id": "EA",
+      "name": "East and Southeast Asia",
+      "sources": "MAS, HKMA and SFC, Japan FSA, national court records, DOJ actions that name the country"
+    },
+    {
+      "id": "OC",
+      "name": "Oceania",
+      "sources": "AUSTRAC, ASIC, NZ regulators, court judgments"
+    },
+    {
+      "id": "GL",
+      "name": "Global or multi-region",
+      "sources": "FATF, Egmont Group, Europol, UNODC, ICIJ, OCCRP, plus the national regulators in each country touched"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "CONV",
+      "name": "Convicted",
+      "legal": "Proven"
+    },
+    {
+      "id": "PEN",
+      "name": "Penalty imposed",
+      "legal": "Proven"
+    },
+    {
+      "id": "SETT",
+      "name": "Settled",
+      "legal": "Settled"
+    },
+    {
+      "id": "ONG",
+      "name": "Ongoing",
+      "legal": "Alleged"
+    },
+    {
+      "id": "ACQ",
+      "name": "Acquitted or dismissed",
+      "legal": "Not proven"
+    },
+    {
+      "id": "FUG",
+      "name": "Fugitive",
+      "legal": "Alleged"
+    },
+    {
+      "id": "UNRES",
+      "name": "Unresolved",
+      "legal": "Unresolved"
+    }
+  ],
+  "routes": [
+    {
+      "id": "WHISTLE",
+      "name": "Whistleblower"
+    },
+    {
+      "id": "JOURN",
+      "name": "Journalist"
+    },
+    {
+      "id": "AUDIT",
+      "name": "Auditor"
+    },
+    {
+      "id": "REG",
+      "name": "Regulator exam"
+    },
+    {
+      "id": "SHORT",
+      "name": "Short seller"
+    },
+    {
+      "id": "LEAK",
+      "name": "Leak"
+    },
+    {
+      "id": "RUN",
+      "name": "Collapse or run"
+    },
+    {
+      "id": "LAW",
+      "name": "Law enforcement"
+    },
+    {
+      "id": "CHAIN",
+      "name": "Blockchain analytics"
+    },
+    {
+      "id": "SELF",
+      "name": "Self-disclosure"
+    },
+    {
+      "id": "CUST",
+      "name": "Customer complaint"
+    },
+    {
+      "id": "UNK",
+      "name": "Not yet researched"
+    }
+  ],
+  "bands": [
+    "Under $100M",
+    "$100M to $1B",
+    "$1B to $10B",
+    "Over $10B"
+  ],
+  "cases": [
+    {
+      "id": "charles-ponzi-and-the-reply-coupon-scheme",
+      "name": "Charles Ponzi and the reply-coupon scheme",
+      "year": 1920,
+      "country": "United States",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "capital-markets",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 30
+    },
+    {
+      "id": "equity-funding-corporation",
+      "name": "Equity Funding Corporation",
+      "year": 1973,
+      "country": "United States",
+      "region": "NA",
+      "typology": "insurance-fraud",
+      "sector": "insurance",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "WHISTLE",
+      "heat": 32
+    },
+    {
+      "id": "banco-ambrosiano-collapse",
+      "name": "Banco Ambrosiano collapse",
+      "year": 1982,
+      "country": "Italy",
+      "region": "EU",
+      "typology": "embezzlement",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 28
+    },
+    {
+      "id": "hunt-brothers-silver-squeeze",
+      "name": "Hunt brothers silver squeeze",
+      "year": 1980,
+      "country": "United States",
+      "region": "NA",
+      "typology": "manipulation",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "RUN",
+      "heat": 30
+    },
+    {
+      "id": "marcos-ill-gotten-wealth",
+      "name": "Marcos ill-gotten wealth",
+      "year": 1986,
+      "country": "Philippines",
+      "region": "EA",
+      "typology": "kleptocracy",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 32
+    },
+    {
+      "id": "bcci-collapse",
+      "name": "BCCI collapse",
+      "year": 1991,
+      "country": "Luxembourg and United Kingdom",
+      "region": "GL",
+      "typology": "correspondent-banking",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 40
+    },
+    {
+      "id": "harshad-mehta-securities-scam",
+      "name": "Harshad Mehta securities scam",
+      "year": 1992,
+      "country": "India",
+      "region": "SA",
+      "typology": "manipulation",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "JOURN",
+      "heat": 42
+    },
+    {
+      "id": "mmm-pyramid",
+      "name": "MMM pyramid",
+      "year": 1994,
+      "country": "Russia",
+      "region": "EU",
+      "typology": "ponzi",
+      "sector": "informal",
+      "band": -1,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 30
+    },
+    {
+      "id": "barings-bank-and-nick-leeson",
+      "name": "Barings Bank and Nick Leeson",
+      "year": 1995,
+      "country": "United Kingdom and Singapore",
+      "region": "GL",
+      "typology": "rogue-trading",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 55
+    },
+    {
+      "id": "sumitomo-copper-trading-losses",
+      "name": "Sumitomo copper trading losses",
+      "year": 1996,
+      "country": "Japan",
+      "region": "EA",
+      "typology": "rogue-trading",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 30
+    },
+    {
+      "id": "albanian-pyramid-schemes",
+      "name": "Albanian pyramid schemes",
+      "year": 1997,
+      "country": "Albania",
+      "region": "EU",
+      "typology": "ponzi",
+      "sector": "informal",
+      "band": 2,
+      "outcome": "UNRES",
+      "caught": "RUN",
+      "heat": 30
+    },
+    {
+      "id": "stratton-oakmont",
+      "name": "Stratton Oakmont",
+      "year": 1998,
+      "country": "United States",
+      "region": "NA",
+      "typology": "pump-dump",
+      "sector": "capital-markets",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 36
+    },
+    {
+      "id": "abacha-loot",
+      "name": "Abacha loot",
+      "year": 1998,
+      "country": "Nigeria",
+      "region": "MEA",
+      "typology": "kleptocracy",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 35
+    },
+    {
+      "id": "bank-of-new-york-russian-money-laundering",
+      "name": "Bank of New York Russian money laundering",
+      "year": 1999,
+      "country": "United States and Russia",
+      "region": "GL",
+      "typology": "shell-laundromat",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 34
+    },
+    {
+      "id": "enron",
+      "name": "Enron",
+      "year": 2001,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 48
+    },
+    {
+      "id": "ketan-parekh-market-manipulation",
+      "name": "Ketan Parekh market manipulation",
+      "year": 2001,
+      "country": "India",
+      "region": "SA",
+      "typology": "manipulation",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 30
+    },
+    {
+      "id": "worldcom",
+      "name": "WorldCom",
+      "year": 2002,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "WHISTLE",
+      "heat": 46
+    },
+    {
+      "id": "allied-irish-banks-rusnak-fx-losses",
+      "name": "Allied Irish Banks Rusnak FX losses",
+      "year": 2002,
+      "country": "Ireland and United States",
+      "region": "GL",
+      "typology": "rogue-trading",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 30
+    },
+    {
+      "id": "parmalat",
+      "name": "Parmalat",
+      "year": 2003,
+      "country": "Italy",
+      "region": "EU",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 40
+    },
+    {
+      "id": "riggs-bank",
+      "name": "Riggs Bank",
+      "year": 2004,
+      "country": "United States",
+      "region": "NA",
+      "typology": "aml-program-failure",
+      "sector": "private-correspondent",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 38
+    },
+    {
+      "id": "banco-delta-asia",
+      "name": "Banco Delta Asia",
+      "year": 2005,
+      "country": "Macau",
+      "region": "EA",
+      "typology": "proliferation-finance",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 34
+    },
+    {
+      "id": "siemens-bribery-scandal",
+      "name": "Siemens bribery scandal",
+      "year": 2006,
+      "country": "Germany",
+      "region": "EU",
+      "typology": "bribery",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "LAW",
+      "heat": 40
+    },
+    {
+      "id": "societe-generale-and-jerome-kerviel",
+      "name": "Societe Generale and Jerome Kerviel",
+      "year": 2008,
+      "country": "France",
+      "region": "EU",
+      "typology": "rogue-trading",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "SELF",
+      "heat": 45
+    },
+    {
+      "id": "lehman-brothers-repo-105",
+      "name": "Lehman Brothers Repo 105",
+      "year": 2008,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "capital-markets",
+      "band": 3,
+      "outcome": "UNRES",
+      "caught": "RUN",
+      "heat": 44
+    },
+    {
+      "id": "bernie-madoff-ponzi-scheme",
+      "name": "Bernie Madoff Ponzi scheme",
+      "year": 2008,
+      "country": "United States",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "capital-markets",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 62
+    },
+    {
+      "id": "allen-stanford-international-bank",
+      "name": "Allen Stanford International Bank",
+      "year": 2009,
+      "country": "Antigua and United States",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "REG",
+      "heat": 40
+    },
+    {
+      "id": "satyam-computer-services",
+      "name": "Satyam Computer Services",
+      "year": 2009,
+      "country": "India",
+      "region": "SA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "SELF",
+      "heat": 58
+    },
+    {
+      "id": "galleon-group-insider-trading",
+      "name": "Galleon Group insider trading",
+      "year": 2009,
+      "country": "United States",
+      "region": "NA",
+      "typology": "insider-trading",
+      "sector": "capital-markets",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 38
+    },
+    {
+      "id": "ubs-offshore-tax-evasion",
+      "name": "UBS offshore tax evasion",
+      "year": 2009,
+      "country": "Switzerland and United States",
+      "region": "EU",
+      "typology": "tax-evasion",
+      "sector": "private-correspondent",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "WHISTLE",
+      "heat": 40
+    },
+    {
+      "id": "ubs-and-kweku-adoboli",
+      "name": "UBS and Kweku Adoboli",
+      "year": 2011,
+      "country": "United Kingdom and Switzerland",
+      "region": "EU",
+      "typology": "rogue-trading",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 36
+    },
+    {
+      "id": "olympus-accounting-scandal",
+      "name": "Olympus accounting scandal",
+      "year": 2011,
+      "country": "Japan",
+      "region": "EA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "WHISTLE",
+      "heat": 40
+    },
+    {
+      "id": "libor-rigging",
+      "name": "Libor rigging",
+      "year": 2012,
+      "country": "United Kingdom and United States",
+      "region": "GL",
+      "typology": "benchmark-rigging",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 50
+    },
+    {
+      "id": "hsbc-mexico-and-drug-money",
+      "name": "HSBC Mexico and drug money",
+      "year": 2012,
+      "country": "United Kingdom and Mexico",
+      "region": "GL",
+      "typology": "drug-proceeds",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "LAW",
+      "heat": 48
+    },
+    {
+      "id": "jpmorgan-london-whale",
+      "name": "JPMorgan London Whale",
+      "year": 2012,
+      "country": "United States and United Kingdom",
+      "region": "GL",
+      "typology": "rogue-trading",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 40
+    },
+    {
+      "id": "cum-ex-dividend-arbitrage",
+      "name": "Cum-ex dividend arbitrage",
+      "year": 2012,
+      "country": "Germany",
+      "region": "EU",
+      "typology": "cum-ex",
+      "sector": "capital-markets",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 56
+    },
+    {
+      "id": "saradha-chit-fund",
+      "name": "Saradha chit fund",
+      "year": 2013,
+      "country": "India",
+      "region": "SA",
+      "typology": "ponzi",
+      "sector": "informal",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 32
+    },
+    {
+      "id": "mt-gox",
+      "name": "Mt. Gox",
+      "year": 2014,
+      "country": "Japan",
+      "region": "EA",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 48
+    },
+    {
+      "id": "bnp-paribas-sanctions-violations",
+      "name": "BNP Paribas sanctions violations",
+      "year": 2014,
+      "country": "France",
+      "region": "EU",
+      "typology": "sanctions-evasion",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "REG",
+      "heat": 46
+    },
+    {
+      "id": "banco-espirito-santo",
+      "name": "Banco Espirito Santo",
+      "year": 2014,
+      "country": "Portugal",
+      "region": "EU",
+      "typology": "accounting-fraud",
+      "sector": "retail-banking",
+      "band": 3,
+      "outcome": "ONG",
+      "caught": "REG",
+      "heat": 34
+    },
+    {
+      "id": "toshiba-accounting-scandal",
+      "name": "Toshiba accounting scandal",
+      "year": 2015,
+      "country": "Japan",
+      "region": "EA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "WHISTLE",
+      "heat": 34
+    },
+    {
+      "id": "navinder-sarao-and-the-2010-flash-crash",
+      "name": "Navinder Sarao and the 2010 flash crash",
+      "year": 2015,
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "spoofing",
+      "sector": "capital-markets",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 40
+    },
+    {
+      "id": "1mdb",
+      "name": "1MDB",
+      "year": 2015,
+      "country": "Malaysia",
+      "region": "EA",
+      "typology": "sovereign-looting",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "JOURN",
+      "heat": 72
+    },
+    {
+      "id": "bitfinex-hack",
+      "name": "Bitfinex hack",
+      "year": 2016,
+      "country": "Hong Kong",
+      "region": "EA",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "CHAIN",
+      "heat": 50
+    },
+    {
+      "id": "bangladesh-bank-swift-heist",
+      "name": "Bangladesh Bank SWIFT heist",
+      "year": 2016,
+      "country": "Bangladesh",
+      "region": "SA",
+      "typology": "swift-heist",
+      "sector": "central-bank-sovereign",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 55
+    },
+    {
+      "id": "panama-papers",
+      "name": "Panama Papers",
+      "year": 2016,
+      "country": "Panama",
+      "region": "LA",
+      "typology": "offshore-structures",
+      "sector": "corporates",
+      "band": -1,
+      "outcome": "UNRES",
+      "caught": "LEAK",
+      "heat": 55
+    },
+    {
+      "id": "wells-fargo-fake-accounts",
+      "name": "Wells Fargo fake accounts",
+      "year": 2016,
+      "country": "United States",
+      "region": "NA",
+      "typology": "insider-fraud",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "JOURN",
+      "heat": 45
+    },
+    {
+      "id": "odebrecht-and-operation-car-wash",
+      "name": "Odebrecht and Operation Car Wash",
+      "year": 2016,
+      "country": "Brazil",
+      "region": "LA",
+      "typology": "bribery",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "LAW",
+      "heat": 58
+    },
+    {
+      "id": "credit-suisse-mozambique-tuna-bonds",
+      "name": "Credit Suisse Mozambique tuna bonds",
+      "year": 2016,
+      "country": "Mozambique and United Kingdom",
+      "region": "MEA",
+      "typology": "kickbacks",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 40
+    },
+    {
+      "id": "vijay-mallya-and-kingfisher-airlines-loans",
+      "name": "Vijay Mallya and Kingfisher Airlines loans",
+      "year": 2016,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "FUG",
+      "caught": "UNK",
+      "heat": 46
+    },
+    {
+      "id": "steinhoff",
+      "name": "Steinhoff",
+      "year": 2017,
+      "country": "South Africa",
+      "region": "MEA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "AUDIT",
+      "heat": 44
+    },
+    {
+      "id": "troika-laundromat",
+      "name": "Troika Laundromat",
+      "year": 2017,
+      "country": "Russia and Lithuania",
+      "region": "EU",
+      "typology": "shell-laundromat",
+      "sector": "retail-banking",
+      "band": 3,
+      "outcome": "UNRES",
+      "caught": "JOURN",
+      "heat": 50
+    },
+    {
+      "id": "deutsche-bank-russian-mirror-trades",
+      "name": "Deutsche Bank Russian mirror trades",
+      "year": 2017,
+      "country": "Germany and Russia",
+      "region": "EU",
+      "typology": "shell-laundromat",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "UNK",
+      "heat": 50
+    },
+    {
+      "id": "onecoin",
+      "name": "OneCoin",
+      "year": 2017,
+      "country": "Bulgaria and Germany",
+      "region": "EU",
+      "typology": "ponzi",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "FUG",
+      "caught": "UNK",
+      "heat": 50
+    },
+    {
+      "id": "commonwealth-bank-austrac-case",
+      "name": "Commonwealth Bank AUSTRAC case",
+      "year": 2017,
+      "country": "Australia",
+      "region": "OC",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 44
+    },
+    {
+      "id": "zte-sanctions-and-export-control-violations",
+      "name": "ZTE sanctions and export control violations",
+      "year": 2017,
+      "country": "China",
+      "region": "EA",
+      "typology": "export-control",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 50
+    },
+    {
+      "id": "rimasauskas-email-fraud-on-facebook-and-google",
+      "name": "Rimasauskas email fraud on Facebook and Google",
+      "year": 2017,
+      "country": "Lithuania",
+      "region": "EU",
+      "typology": "bec",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 40
+    },
+    {
+      "id": "south-african-state-capture",
+      "name": "South African state capture",
+      "year": 2017,
+      "country": "South Africa",
+      "region": "MEA",
+      "typology": "kleptocracy",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "LEAK",
+      "heat": 44
+    },
+    {
+      "id": "bitconnect",
+      "name": "BitConnect",
+      "year": 2018,
+      "country": "India",
+      "region": "SA",
+      "typology": "ponzi",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "FUG",
+      "caught": "UNK",
+      "heat": 46
+    },
+    {
+      "id": "danske-bank-estonia-branch",
+      "name": "Danske Bank Estonia branch",
+      "year": 2018,
+      "country": "Denmark and Estonia",
+      "region": "EU",
+      "typology": "shell-laundromat",
+      "sector": "retail-banking",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "WHISTLE",
+      "heat": 70
+    },
+    {
+      "id": "punjab-national-bank-and-nirav-modi",
+      "name": "Punjab National Bank and Nirav Modi",
+      "year": 2018,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "FUG",
+      "caught": "SELF",
+      "heat": 62
+    },
+    {
+      "id": "il-and-fs-collapse",
+      "name": "IL&FS collapse",
+      "year": 2018,
+      "country": "India",
+      "region": "SA",
+      "typology": "accounting-fraud",
+      "sector": "nbfc-shadow",
+      "band": 3,
+      "outcome": "ONG",
+      "caught": "RUN",
+      "heat": 56
+    },
+    {
+      "id": "ing-money-laundering-settlement",
+      "name": "ING money laundering settlement",
+      "year": 2018,
+      "country": "Netherlands",
+      "region": "EU",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 46
+    },
+    {
+      "id": "abraaj-group",
+      "name": "Abraaj Group",
+      "year": 2018,
+      "country": "United Arab Emirates",
+      "region": "MEA",
+      "typology": "embezzlement",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 42
+    },
+    {
+      "id": "pmc-bank-collapse",
+      "name": "PMC Bank collapse",
+      "year": 2019,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "REG",
+      "heat": 48
+    },
+    {
+      "id": "westpac-austrac-case",
+      "name": "Westpac AUSTRAC case",
+      "year": 2019,
+      "country": "Australia",
+      "region": "OC",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 46
+    },
+    {
+      "id": "swedbank-baltic-laundering",
+      "name": "Swedbank Baltic laundering",
+      "year": 2019,
+      "country": "Sweden",
+      "region": "EU",
+      "typology": "shell-laundromat",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "JOURN",
+      "heat": 42
+    },
+    {
+      "id": "dhfl-bank-fraud",
+      "name": "DHFL bank fraud",
+      "year": 2019,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "nbfc-shadow",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 44
+    },
+    {
+      "id": "british-columbia-real-estate-and-casino-laundering",
+      "name": "British Columbia real estate and casino laundering",
+      "year": 2019,
+      "country": "Canada",
+      "region": "NA",
+      "typology": "real-estate-ml",
+      "sector": "real-estate",
+      "band": -1,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 40
+    },
+    {
+      "id": "yes-bank-collapse",
+      "name": "Yes Bank collapse",
+      "year": 2020,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "RUN",
+      "heat": 60
+    },
+    {
+      "id": "wirecard",
+      "name": "Wirecard",
+      "year": 2020,
+      "country": "Germany",
+      "region": "EU",
+      "typology": "accounting-fraud",
+      "sector": "payments-fintech",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "JOURN",
+      "heat": 66
+    },
+    {
+      "id": "luckin-coffee",
+      "name": "Luckin Coffee",
+      "year": 2020,
+      "country": "China",
+      "region": "EA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "SHORT",
+      "heat": 48
+    },
+    {
+      "id": "fincen-files",
+      "name": "FinCEN Files",
+      "year": 2020,
+      "country": "United States and Global",
+      "region": "GL",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": -1,
+      "outcome": "UNRES",
+      "caught": "LEAK",
+      "heat": 52
+    },
+    {
+      "id": "luanda-leaks",
+      "name": "Luanda Leaks",
+      "year": 2020,
+      "country": "Angola",
+      "region": "MEA",
+      "typology": "kleptocracy",
+      "sector": "central-bank-sovereign",
+      "band": -1,
+      "outcome": "UNRES",
+      "caught": "LEAK",
+      "heat": 40
+    },
+    {
+      "id": "archegos-capital",
+      "name": "Archegos Capital",
+      "year": 2021,
+      "country": "United States",
+      "region": "NA",
+      "typology": "manipulation",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 58
+    },
+    {
+      "id": "crown-resorts",
+      "name": "Crown Resorts",
+      "year": 2021,
+      "country": "Australia",
+      "region": "OC",
+      "typology": "casino-ml",
+      "sector": "gambling",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "JOURN",
+      "heat": 46
+    },
+    {
+      "id": "colonial-pipeline-ransom-recovery",
+      "name": "Colonial Pipeline ransom recovery",
+      "year": 2021,
+      "country": "United States",
+      "region": "NA",
+      "typology": "ransomware",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "CHAIN",
+      "heat": 44
+    },
+    {
+      "id": "squid-game-token-rug-pull",
+      "name": "Squid Game token rug pull",
+      "year": 2021,
+      "country": "Global",
+      "region": "GL",
+      "typology": "rug-pull",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "CUST",
+      "heat": 35
+    },
+    {
+      "id": "abg-shipyard-bank-fraud",
+      "name": "ABG Shipyard bank fraud",
+      "year": 2022,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "trade-shipping",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 50
+    },
+    {
+      "id": "ftx-collapse",
+      "name": "FTX collapse",
+      "year": 2022,
+      "country": "Bahamas and United States",
+      "region": "GL",
+      "typology": "custody-collapse",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 72
+    },
+    {
+      "id": "terra-and-luna-collapse",
+      "name": "Terra and Luna collapse",
+      "year": 2022,
+      "country": "South Korea and Singapore",
+      "region": "EA",
+      "typology": "stablecoin-failure",
+      "sector": "crypto-web3",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 66
+    },
+    {
+      "id": "celsius-network",
+      "name": "Celsius Network",
+      "year": 2022,
+      "country": "United States",
+      "region": "NA",
+      "typology": "custody-collapse",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 54
+    },
+    {
+      "id": "ronin-network-bridge-hack",
+      "name": "Ronin Network bridge hack",
+      "year": 2022,
+      "country": "Vietnam",
+      "region": "EA",
+      "typology": "bridge-hack",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "CUST",
+      "heat": 52
+    },
+    {
+      "id": "tornado-cash-prosecution",
+      "name": "Tornado Cash prosecution",
+      "year": 2022,
+      "country": "United States",
+      "region": "NA",
+      "typology": "mixer-laundering",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "CHAIN",
+      "heat": 64
+    },
+    {
+      "id": "lafarge-payments-to-armed-groups-in-syria",
+      "name": "Lafarge payments to armed groups in Syria",
+      "year": 2022,
+      "country": "France",
+      "region": "EU",
+      "typology": "terror-financing",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 42
+    },
+    {
+      "id": "binance-doj-plea",
+      "name": "Binance DOJ plea",
+      "year": 2023,
+      "country": "United States",
+      "region": "NA",
+      "typology": "aml-program-failure",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 70
+    },
+    {
+      "id": "singapore-s-3-billion-laundering-case",
+      "name": "Singapore S$3 billion laundering case",
+      "year": 2023,
+      "country": "Singapore",
+      "region": "EA",
+      "typology": "art-luxury-ml",
+      "sector": "private-correspondent",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 56
+    },
+    {
+      "id": "td-bank-aml-failures",
+      "name": "TD Bank AML failures",
+      "year": 2024,
+      "country": "Canada and United States",
+      "region": "NA",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 74
+    },
+    {
+      "id": "arup-deepfake-video-call-fraud",
+      "name": "Arup deepfake video call fraud",
+      "year": 2024,
+      "country": "Hong Kong",
+      "region": "EA",
+      "typology": "deepfake-fraud",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 52
+    },
+    {
+      "id": "bybit-hack",
+      "name": "Bybit hack",
+      "year": 2025,
+      "country": "United Arab Emirates",
+      "region": "MEA",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 70
+    },
+    {
+      "id": "water-station-ponzi-and-the-fund-that-bought-its-bonds",
+      "name": "Water Station Ponzi and the fund that bought its bonds",
+      "year": 2025,
+      "country": "United States",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 56
+    },
+    {
+      "id": "south-sea-bubble",
+      "name": "South Sea Bubble",
+      "year": 1720,
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "manipulation",
+      "sector": "capital-markets",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "RUN",
+      "heat": 22
+    },
+    {
+      "id": "credit-mobilier-scandal",
+      "name": "Credit Mobilier scandal",
+      "year": 1872,
+      "country": "United States",
+      "region": "NA",
+      "typology": "kickbacks",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "JOURN",
+      "heat": 20
+    },
+    {
+      "id": "panama-canal-company-scandal",
+      "name": "Panama Canal Company scandal",
+      "year": 1892,
+      "country": "France",
+      "region": "EU",
+      "typology": "bribery",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "JOURN",
+      "heat": 20
+    },
+    {
+      "id": "ivar-kreuger-match-empire-collapse",
+      "name": "Ivar Kreuger match empire collapse",
+      "year": 1932,
+      "country": "Sweden",
+      "region": "EU",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "UNRES",
+      "caught": "RUN",
+      "heat": 26
+    },
+    {
+      "id": "salad-oil-swindle",
+      "name": "Salad oil swindle",
+      "year": 1963,
+      "country": "United States",
+      "region": "NA",
+      "typology": "commodity-collateral-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "RUN",
+      "heat": 24
+    },
+    {
+      "id": "lockheed-foreign-payments-scandal",
+      "name": "Lockheed foreign payments scandal",
+      "year": 1976,
+      "country": "United States and Japan",
+      "region": "GL",
+      "typology": "bribery",
+      "sector": "corporates",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 34
+    },
+    {
+      "id": "ivan-boesky-and-drexel-insider-trading",
+      "name": "Ivan Boesky and Drexel insider trading",
+      "year": 1986,
+      "country": "United States",
+      "region": "NA",
+      "typology": "insider-trading",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 36
+    },
+    {
+      "id": "lincoln-savings-and-the-s-and-l-crisis",
+      "name": "Lincoln Savings and the S&L crisis",
+      "year": 1989,
+      "country": "United States",
+      "region": "NA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 3,
+      "outcome": "CONV",
+      "caught": "REG",
+      "heat": 32
+    },
+    {
+      "id": "salomon-brothers-treasury-auction-scandal",
+      "name": "Salomon Brothers Treasury auction scandal",
+      "year": 1991,
+      "country": "United States",
+      "region": "NA",
+      "typology": "manipulation",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 30
+    },
+    {
+      "id": "jain-hawala-diaries-case",
+      "name": "Jain hawala diaries case",
+      "year": 1991,
+      "country": "India",
+      "region": "SA",
+      "typology": "hawala",
+      "sector": "informal",
+      "band": 0,
+      "outcome": "ACQ",
+      "caught": "LAW",
+      "heat": 34
+    },
+    {
+      "id": "daiwa-bank-new-york-trading-losses",
+      "name": "Daiwa Bank New York trading losses",
+      "year": 1995,
+      "country": "Japan and United States",
+      "region": "GL",
+      "typology": "rogue-trading",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "SELF",
+      "heat": 30
+    },
+    {
+      "id": "bre-x-gold-fraud",
+      "name": "Bre-X gold fraud",
+      "year": 1997,
+      "country": "Canada and Indonesia",
+      "region": "GL",
+      "typology": "pump-dump",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "ACQ",
+      "caught": "AUDIT",
+      "heat": 32
+    },
+    {
+      "id": "al-barakaat-network-designation",
+      "name": "Al-Barakaat network designation",
+      "year": 2001,
+      "country": "Somalia and United Arab Emirates",
+      "region": "MEA",
+      "typology": "hawala",
+      "sector": "informal",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "LAW",
+      "heat": 30
+    },
+    {
+      "id": "tyco-and-dennis-kozlowski",
+      "name": "Tyco and Dennis Kozlowski",
+      "year": 2002,
+      "country": "United States",
+      "region": "NA",
+      "typology": "embezzlement",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 30
+    },
+    {
+      "id": "adelphia-and-the-rigas-family",
+      "name": "Adelphia and the Rigas family",
+      "year": 2002,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 28
+    },
+    {
+      "id": "healthsouth-accounting-fraud",
+      "name": "HealthSouth accounting fraud",
+      "year": 2003,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 28
+    },
+    {
+      "id": "kpmg-tax-shelters",
+      "name": "KPMG tax shelters",
+      "year": 2005,
+      "country": "United States",
+      "region": "NA",
+      "typology": "abusive-tax",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 28
+    },
+    {
+      "id": "refco-hidden-receivable-collapse",
+      "name": "Refco hidden receivable collapse",
+      "year": 2005,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 28
+    },
+    {
+      "id": "tjx-card-data-theft",
+      "name": "TJX card data theft",
+      "year": 2007,
+      "country": "United States",
+      "region": "NA",
+      "typology": "payments-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "SELF",
+      "heat": 32
+    },
+    {
+      "id": "heartland-payment-systems-breach",
+      "name": "Heartland Payment Systems breach",
+      "year": 2008,
+      "country": "United States",
+      "region": "NA",
+      "typology": "payments-fraud",
+      "sector": "payments-fintech",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 30
+    },
+    {
+      "id": "holy-land-foundation-trial",
+      "name": "Holy Land Foundation trial",
+      "year": 2008,
+      "country": "United States",
+      "region": "NA",
+      "typology": "terror-financing",
+      "sector": "informal",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 28
+    },
+    {
+      "id": "operation-phish-phry",
+      "name": "Operation Phish Phry",
+      "year": 2009,
+      "country": "United States and Egypt",
+      "region": "GL",
+      "typology": "mule-network",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 28
+    },
+    {
+      "id": "wachovia-and-mexican-casas-de-cambio",
+      "name": "Wachovia and Mexican casas de cambio",
+      "year": 2010,
+      "country": "United States and Mexico",
+      "region": "NA",
+      "typology": "drug-proceeds",
+      "sector": "retail-banking",
+      "band": -1,
+      "outcome": "SETT",
+      "caught": "WHISTLE",
+      "heat": 42
+    },
+    {
+      "id": "lebanese-canadian-bank-and-the-car-export-scheme",
+      "name": "Lebanese Canadian Bank and the car export scheme",
+      "year": 2011,
+      "country": "Lebanon",
+      "region": "MEA",
+      "typology": "tbml",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "LAW",
+      "heat": 34
+    },
+    {
+      "id": "knoedler-gallery-forgery-scandal",
+      "name": "Knoedler Gallery forgery scandal",
+      "year": 2011,
+      "country": "United States",
+      "region": "NA",
+      "typology": "art-fraud",
+      "sector": "art-luxury",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 30
+    },
+    {
+      "id": "national-spot-exchange-nsel-payment-default",
+      "name": "National Spot Exchange (NSEL) payment default",
+      "year": 2013,
+      "country": "India",
+      "region": "SA",
+      "typology": "commodity-collateral-fraud",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "RUN",
+      "heat": 30
+    },
+    {
+      "id": "glenn-defense-marine-asia-and-fat-leonard",
+      "name": "Glenn Defense Marine Asia and Fat Leonard",
+      "year": 2013,
+      "country": "United States and Singapore",
+      "region": "GL",
+      "typology": "procurement-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 38
+    },
+    {
+      "id": "target-payment-card-breach",
+      "name": "Target payment card breach",
+      "year": 2013,
+      "country": "United States",
+      "region": "NA",
+      "typology": "payments-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "LAW",
+      "heat": 34
+    },
+    {
+      "id": "carbanak-and-cobalt-bank-heists",
+      "name": "Carbanak and Cobalt bank heists",
+      "year": 2013,
+      "country": "Global",
+      "region": "GL",
+      "typology": "payments-fraud",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 36
+    },
+    {
+      "id": "qingdao-port-metal-financing-fraud",
+      "name": "Qingdao port metal financing fraud",
+      "year": 2014,
+      "country": "China",
+      "region": "EA",
+      "typology": "commodity-collateral-fraud",
+      "sector": "trade-shipping",
+      "band": 2,
+      "outcome": "UNRES",
+      "caught": "AUDIT",
+      "heat": 34
+    },
+    {
+      "id": "currency-market-rigging-cartel",
+      "name": "Currency market rigging cartel",
+      "year": 2015,
+      "country": "Global",
+      "region": "GL",
+      "typology": "benchmark-rigging",
+      "sector": "capital-markets",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "JOURN",
+      "heat": 36
+    },
+    {
+      "id": "khanani-money-laundering-organization",
+      "name": "Khanani money laundering organization",
+      "year": 2015,
+      "country": "Pakistan and United Arab Emirates",
+      "region": "GL",
+      "typology": "pro-laundering",
+      "sector": "informal",
+      "band": -1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 32
+    },
+    {
+      "id": "banco-del-austro-swift-theft",
+      "name": "Banco del Austro SWIFT theft",
+      "year": 2015,
+      "country": "Ecuador",
+      "region": "LA",
+      "typology": "swift-heist",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 26
+    },
+    {
+      "id": "swiss-leaks-hsbc-private-bank-files",
+      "name": "Swiss Leaks HSBC private bank files",
+      "year": 2015,
+      "country": "Switzerland",
+      "region": "EU",
+      "typology": "tax-evasion",
+      "sector": "private-correspondent",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "WHISTLE",
+      "heat": 38
+    },
+    {
+      "id": "bouvier-and-rybolovlev-art-dispute",
+      "name": "Bouvier and Rybolovlev art dispute",
+      "year": 2015,
+      "country": "Singapore and Monaco",
+      "region": "GL",
+      "typology": "art-fraud",
+      "sector": "art-luxury",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 34
+    },
+    {
+      "id": "alavi-foundation-and-650-fifth-avenue",
+      "name": "Alavi Foundation and 650 Fifth Avenue",
+      "year": 2017,
+      "country": "United States",
+      "region": "NA",
+      "typology": "real-estate-ml",
+      "sector": "real-estate",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "LAW",
+      "heat": 30
+    },
+    {
+      "id": "cosmos-bank-malware-attack",
+      "name": "Cosmos Bank malware attack",
+      "year": 2018,
+      "country": "India",
+      "region": "SA",
+      "typology": "payments-fraud",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 34
+    },
+    {
+      "id": "backpage-com-laundering-case",
+      "name": "Backpage.com laundering case",
+      "year": 2018,
+      "country": "United States",
+      "region": "NA",
+      "typology": "trafficking-proceeds",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 38
+    },
+    {
+      "id": "hajiyeva-unexplained-wealth-order",
+      "name": "Hajiyeva unexplained wealth order",
+      "year": 2018,
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "real-estate-ml",
+      "sector": "real-estate",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "LAW",
+      "heat": 32
+    },
+    {
+      "id": "xaysavang-wildlife-trafficking-network",
+      "name": "Xaysavang wildlife trafficking network",
+      "year": 2013,
+      "country": "Laos",
+      "region": "EA",
+      "typology": "wildlife-crime",
+      "sector": "informal",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "LAW",
+      "heat": 30
+    },
+    {
+      "id": "jpmorgan-precious-metals-spoofing",
+      "name": "JPMorgan precious metals spoofing",
+      "year": 2020,
+      "country": "United States",
+      "region": "NA",
+      "typology": "spoofing",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "LAW",
+      "heat": 40
+    },
+    {
+      "id": "paycheck-protection-program-fraud",
+      "name": "Paycheck Protection Program fraud",
+      "year": 2020,
+      "country": "United States",
+      "region": "NA",
+      "typology": "pandemic-relief-fraud",
+      "sector": "retail-banking",
+      "band": 3,
+      "outcome": "ONG",
+      "caught": "AUDIT",
+      "heat": 44
+    },
+    {
+      "id": "payoneer-ofac-screening-settlement",
+      "name": "Payoneer OFAC screening settlement",
+      "year": 2021,
+      "country": "United States",
+      "region": "NA",
+      "typology": "sanctions-screening-failure",
+      "sector": "payments-fintech",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 28
+    },
+    {
+      "id": "ocbc-phishing-scam",
+      "name": "OCBC phishing scam",
+      "year": 2021,
+      "country": "Singapore",
+      "region": "EA",
+      "typology": "app-scam",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "CUST",
+      "heat": 40
+    },
+    {
+      "id": "pandora-papers",
+      "name": "Pandora Papers",
+      "year": 2021,
+      "country": "Global",
+      "region": "GL",
+      "typology": "offshore-structures",
+      "sector": "private-correspondent",
+      "band": -1,
+      "outcome": "UNRES",
+      "caught": "JOURN",
+      "heat": 44
+    },
+    {
+      "id": "kaseya-vsa-ransomware-attack",
+      "name": "Kaseya VSA ransomware attack",
+      "year": 2021,
+      "country": "United States",
+      "region": "NA",
+      "typology": "ransomware",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 34
+    },
+    {
+      "id": "feeding-our-future",
+      "name": "Feeding Our Future",
+      "year": 2022,
+      "country": "United States",
+      "region": "NA",
+      "typology": "pandemic-relief-fraud",
+      "sector": "informal",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 52
+    },
+    {
+      "id": "inigo-philbrick-art-fraud",
+      "name": "Inigo Philbrick art fraud",
+      "year": 2022,
+      "country": "United States",
+      "region": "NA",
+      "typology": "art-fraud",
+      "sector": "art-luxury",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 34
+    },
+    {
+      "id": "glencore-bribery-and-price-manipulation-pleas",
+      "name": "Glencore bribery and price manipulation pleas",
+      "year": 2022,
+      "country": "Switzerland and United Kingdom",
+      "region": "GL",
+      "typology": "bribery",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "UNK",
+      "heat": 36
+    },
+    {
+      "id": "wormhole-bridge-hack",
+      "name": "Wormhole bridge hack",
+      "year": 2022,
+      "country": "Global",
+      "region": "GL",
+      "typology": "bridge-hack",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 42
+    },
+    {
+      "id": "nomad-bridge-hack",
+      "name": "Nomad bridge hack",
+      "year": 2022,
+      "country": "Global",
+      "region": "GL",
+      "typology": "bridge-hack",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 36
+    },
+    {
+      "id": "mango-markets-exploit",
+      "name": "Mango Markets exploit",
+      "year": 2022,
+      "country": "United States",
+      "region": "NA",
+      "typology": "defi-exploit",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "ACQ",
+      "caught": "SELF",
+      "heat": 38
+    },
+    {
+      "id": "opensea-nft-insider-trading-case",
+      "name": "OpenSea NFT insider trading case",
+      "year": 2022,
+      "country": "United States",
+      "region": "NA",
+      "typology": "front-running",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "ACQ",
+      "caught": "JOURN",
+      "heat": 40
+    },
+    {
+      "id": "hsbc-foreign-exchange-front-running-case",
+      "name": "HSBC foreign exchange front-running case",
+      "year": 2017,
+      "country": "United Kingdom and United States",
+      "region": "GL",
+      "typology": "front-running",
+      "sector": "capital-markets",
+      "band": 1,
+      "outcome": "ACQ",
+      "caught": "UNK",
+      "heat": 34
+    },
+    {
+      "id": "euler-finance-exploit",
+      "name": "Euler Finance exploit",
+      "year": 2023,
+      "country": "Global",
+      "region": "GL",
+      "typology": "defi-exploit",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 36
+    },
+    {
+      "id": "trafigura-nickel-fraud",
+      "name": "Trafigura nickel fraud",
+      "year": 2023,
+      "country": "Singapore and Switzerland",
+      "region": "GL",
+      "typology": "commodity-collateral-fraud",
+      "sector": "trade-shipping",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "SELF",
+      "heat": 40
+    },
+    {
+      "id": "mahadev-betting-app",
+      "name": "Mahadev betting app",
+      "year": 2023,
+      "country": "India",
+      "region": "SA",
+      "typology": "illegal-betting",
+      "sector": "gambling",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 50
+    },
+    {
+      "id": "pwc-australia-tax-leaks-scandal",
+      "name": "PwC Australia tax leaks scandal",
+      "year": 2023,
+      "country": "Australia",
+      "region": "OC",
+      "typology": "abusive-tax",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 40
+    },
+    {
+      "id": "philipp-v-barclays-uk-supreme-court-ruling",
+      "name": "Philipp v Barclays UK Supreme Court ruling",
+      "year": 2023,
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "app-scam",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "ACQ",
+      "caught": "CUST",
+      "heat": 36
+    },
+    {
+      "id": "suncity-junket-and-alvin-chau",
+      "name": "Suncity junket and Alvin Chau",
+      "year": 2023,
+      "country": "China (Macau)",
+      "region": "EA",
+      "typology": "casino-ml",
+      "sector": "gambling",
+      "band": -1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 40
+    },
+    {
+      "id": "samourai-wallet-prosecution",
+      "name": "Samourai Wallet prosecution",
+      "year": 2024,
+      "country": "United States",
+      "region": "NA",
+      "typology": "mixer-laundering",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 40
+    },
+    {
+      "id": "solo-capital-and-danish-dividend-tax-refund-fraud",
+      "name": "Solo Capital and Danish dividend tax refund fraud",
+      "year": 2024,
+      "country": "Denmark and United Kingdom",
+      "region": "EU",
+      "typology": "cum-ex",
+      "sector": "capital-markets",
+      "band": 2,
+      "outcome": "CONV",
+      "caught": "REG",
+      "heat": 40
+    },
+    {
+      "id": "monzo-fca-aml-fine",
+      "name": "Monzo FCA AML fine",
+      "year": 2025,
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "aml-program-failure",
+      "sector": "payments-fintech",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 42
+    },
+    {
+      "id": "miami-realtor-and-sanctioned-oligarchs-condos",
+      "name": "Miami realtor and sanctioned oligarchs' condos",
+      "year": 2025,
+      "country": "United States",
+      "region": "NA",
+      "typology": "real-estate-ml",
+      "sector": "real-estate",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 38
+    },
+    {
+      "id": "fincen-orders-against-cibanco-intercam-and-vector",
+      "name": "FinCEN orders against CIBanco, Intercam and Vector",
+      "year": 2025,
+      "country": "Mexico",
+      "region": "LA",
+      "typology": "drug-proceeds",
+      "sector": "retail-banking",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 52
+    },
+    {
+      "id": "libra-memecoin-collapse",
+      "name": "LIBRA memecoin collapse",
+      "year": 2025,
+      "country": "Argentina",
+      "region": "LA",
+      "typology": "rug-pull",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "CHAIN",
+      "heat": 44
+    },
+    {
+      "id": "balancer-exploit",
+      "name": "Balancer exploit",
+      "year": 2025,
+      "country": "Global",
+      "region": "GL",
+      "typology": "defi-exploit",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 40
+    },
+    {
+      "id": "upbit-hot-wallet-hack",
+      "name": "Upbit hot wallet hack",
+      "year": 2025,
+      "country": "South Korea",
+      "region": "EA",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 34
+    },
+    {
+      "id": "stream-finance-xusd-collapse",
+      "name": "Stream Finance xUSD collapse",
+      "year": 2025,
+      "country": "Global",
+      "region": "GL",
+      "typology": "stablecoin-failure",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "ONG",
+      "caught": "RUN",
+      "heat": 44
+    },
+    {
+      "id": "nft-wash-trading-on-looksrare",
+      "name": "NFT wash trading on LooksRare",
+      "year": 2022,
+      "country": "Global",
+      "region": "GL",
+      "typology": "nft-wash",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "CHAIN",
+      "heat": 34
+    },
+    {
+      "id": "serial-nft-wash-traders-on-ethereum",
+      "name": "Serial NFT wash traders on Ethereum",
+      "year": 2022,
+      "country": "Global",
+      "region": "GL",
+      "typology": "nft-wash",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "CHAIN",
+      "heat": 30
+    },
+    {
+      "id": "equifax-breach-and-synthetic-identity-supply",
+      "name": "Equifax breach and synthetic identity supply",
+      "year": 2017,
+      "country": "United States",
+      "region": "NA",
+      "typology": "synthetic-id",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "SELF",
+      "heat": 32
+    },
+    {
+      "id": "prince-group-and-the-15b-bitcoin-forfeiture",
+      "name": "Prince Group and the $15B bitcoin forfeiture",
+      "year": 2025,
+      "country": "Cambodia and United States",
+      "region": "EA",
+      "typology": "pig-butchering",
+      "sector": "crypto-web3",
+      "band": 3,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 70
+    },
+    {
+      "id": "huione-group-fincen-311-action",
+      "name": "Huione Group FinCEN 311 action",
+      "year": 2025,
+      "country": "Cambodia",
+      "region": "EA",
+      "typology": "pro-laundering",
+      "sector": "payments-fintech",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 56
+    },
+    {
+      "id": "facebook-and-google-invoice-scam-rimasauskas",
+      "name": "Facebook and Google invoice scam (Rimasauskas)",
+      "year": 2017,
+      "country": "United States and Lithuania",
+      "region": "GL",
+      "typology": "bec",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "UNK",
+      "heat": 32
+    },
+    {
+      "id": "ubiquiti-networks-bec-loss",
+      "name": "Ubiquiti Networks BEC loss",
+      "year": 2015,
+      "country": "United States and Hong Kong",
+      "region": "GL",
+      "typology": "bec",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "AUDIT",
+      "heat": 26
+    },
+    {
+      "id": "arup-hong-kong-deepfake-video-call-fraud",
+      "name": "Arup Hong Kong deepfake video call fraud",
+      "year": 2024,
+      "country": "Hong Kong",
+      "region": "EA",
+      "typology": "deepfake-fraud",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "CUST",
+      "heat": 52
+    },
+    {
+      "id": "deutsche-bank-mirror-trades",
+      "name": "Deutsche Bank mirror trades",
+      "year": 2017,
+      "country": "Russia and United Kingdom",
+      "region": "EU",
+      "typology": "correspondent-banking",
+      "sector": "private-correspondent",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 40
+    },
+    {
+      "id": "ablv-bank-fincen-311-action",
+      "name": "ABLV Bank FinCEN 311 action",
+      "year": 2018,
+      "country": "Latvia",
+      "region": "EU",
+      "typology": "correspondent-banking",
+      "sector": "private-correspondent",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 36
+    },
+    {
+      "id": "us-senate-report-on-the-art-market-and-sanctions",
+      "name": "US Senate report on the art market and sanctions",
+      "year": 2020,
+      "country": "United States",
+      "region": "NA",
+      "typology": "art-luxury-ml",
+      "sector": "art-luxury",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 34
+    },
+    {
+      "id": "banco-delta-asia-designation",
+      "name": "Banco Delta Asia designation",
+      "year": 2005,
+      "country": "Macau and North Korea",
+      "region": "EA",
+      "typology": "proliferation-finance",
+      "sector": "private-correspondent",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 32
+    },
+    {
+      "id": "bank-of-dandong-and-north-korean-fronts",
+      "name": "Bank of Dandong and North Korean fronts",
+      "year": 2017,
+      "country": "China and North Korea",
+      "region": "EA",
+      "typology": "proliferation-finance",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 36
+    },
+    {
+      "id": "abacha-loot-recoveries",
+      "name": "Abacha loot recoveries",
+      "year": 1998,
+      "country": "Nigeria and Switzerland",
+      "region": "MEA",
+      "typology": "sovereign-looting",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "JOURN",
+      "heat": 34
+    },
+    {
+      "id": "marcos-wealth-recovery",
+      "name": "Marcos wealth recovery",
+      "year": 1986,
+      "country": "Philippines and Switzerland",
+      "region": "EA",
+      "typology": "sovereign-looting",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "JOURN",
+      "heat": 28
+    },
+    {
+      "id": "wells-fargo-fake-accounts-scandal",
+      "name": "Wells Fargo fake accounts scandal",
+      "year": 2016,
+      "country": "United States",
+      "region": "NA",
+      "typology": "insider-fraud",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "JOURN",
+      "heat": 46
+    },
+    {
+      "id": "punjab-national-bank-letters-of-undertaking-fraud",
+      "name": "Punjab National Bank letters of undertaking fraud",
+      "year": 2018,
+      "country": "India",
+      "region": "SA",
+      "typology": "insider-fraud",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "AUDIT",
+      "heat": 48
+    },
+    {
+      "id": "jpmorgan-epstein-accounts-settlement",
+      "name": "JPMorgan Epstein accounts settlement",
+      "year": 2023,
+      "country": "United States",
+      "region": "NA",
+      "typology": "trafficking-proceeds",
+      "sector": "private-correspondent",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "JOURN",
+      "heat": 40
+    },
+    {
+      "id": "feisal-mohamed-ali-ivory-trafficking",
+      "name": "Feisal Mohamed Ali ivory trafficking",
+      "year": 2016,
+      "country": "Kenya",
+      "region": "MEA",
+      "typology": "wildlife-crime",
+      "sector": "informal",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 24
+    },
+    {
+      "id": "subhash-kapoor-antiquities-network",
+      "name": "Subhash Kapoor antiquities network",
+      "year": 2019,
+      "country": "India and United States",
+      "region": "GL",
+      "typology": "antiquities-trafficking",
+      "sector": "art-luxury",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 36
+    },
+    {
+      "id": "hobby-lobby-iraqi-artifacts-settlement",
+      "name": "Hobby Lobby Iraqi artifacts settlement",
+      "year": 2017,
+      "country": "United States",
+      "region": "NA",
+      "typology": "antiquities-trafficking",
+      "sector": "art-luxury",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "LAW",
+      "heat": 28
+    },
+    {
+      "id": "aig-and-general-re-finite-reinsurance",
+      "name": "AIG and General Re finite reinsurance",
+      "year": 2005,
+      "country": "United States",
+      "region": "NA",
+      "typology": "accounting-fraud",
+      "sector": "insurance",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "REG",
+      "heat": 30
+    },
+    {
+      "id": "operation-sideswipe-staged-crashes",
+      "name": "Operation Sideswipe staged crashes",
+      "year": 2020,
+      "country": "United States",
+      "region": "NA",
+      "typology": "insurance-fraud",
+      "sector": "insurance",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 34
+    },
+    {
+      "id": "synapse-missing-customer-funds",
+      "name": "Synapse missing customer funds",
+      "year": 2024,
+      "country": "United States",
+      "region": "NA",
+      "typology": "embezzlement",
+      "sector": "payments-fintech",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "AUDIT",
+      "heat": 50
+    },
+    {
+      "id": "cash-app-aml-penalties",
+      "name": "Cash App AML penalties",
+      "year": 2025,
+      "country": "United States",
+      "region": "NA",
+      "typology": "aml-program-failure",
+      "sector": "payments-fintech",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 44
+    },
+    {
+      "id": "manhattan-shell-company-luxury-purchases-and-gtos",
+      "name": "Manhattan shell company luxury purchases and GTOs",
+      "year": 2016,
+      "country": "United States",
+      "region": "NA",
+      "typology": "real-estate-ml",
+      "sector": "real-estate",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "JOURN",
+      "heat": 34
+    },
+    {
+      "id": "cullen-commission-on-money-laundering-in-british-columbia",
+      "name": "Cullen Commission on money laundering in British Columbia",
+      "year": 2022,
+      "country": "Canada",
+      "region": "NA",
+      "typology": "real-estate-ml",
+      "sector": "real-estate",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "JOURN",
+      "heat": 38
+    },
+    {
+      "id": "mozambique-tuna-bonds",
+      "name": "Mozambique tuna bonds",
+      "year": 2013,
+      "country": "Mozambique",
+      "region": "MEA",
+      "typology": "bribery",
+      "sector": "central-bank-sovereign",
+      "band": 1,
+      "outcome": "CONV",
+      "caught": "AUDIT",
+      "heat": 40
+    },
+    {
+      "id": "iraq-oil-for-food-programme-kickbacks",
+      "name": "Iraq oil-for-food programme kickbacks",
+      "year": 2005,
+      "country": "Iraq",
+      "region": "MEA",
+      "typology": "kickbacks",
+      "sector": "central-bank-sovereign",
+      "band": 2,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 28
+    },
+    {
+      "id": "dhfl-fraud",
+      "name": "DHFL fraud",
+      "year": 2019,
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "nbfc-shadow",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "JOURN",
+      "heat": 42
+    },
+    {
+      "id": "crown-resorts-austrac-penalty",
+      "name": "Crown Resorts AUSTRAC penalty",
+      "year": 2023,
+      "country": "Australia",
+      "region": "OC",
+      "typology": "casino-ml",
+      "sector": "gambling",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 46
+    },
+    {
+      "id": "binance-exchange-hack-oct-2026",
+      "name": "Binance exchange hack (Oct 2026)",
+      "year": 2026,
+      "date": "2026-10-29",
+      "date_label": "29 Oct 2026",
+      "country": "Global",
+      "region": "GL",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "SELF",
+      "heat": 98,
+      "note": "The FBI attributed the roughly $6.3B theft to TraderTraitor, a North Korean group, on 31 Oct. Binance says it restored about 90% of the funds. The attribution is a government claim, not a court finding.",
+      "sources": [
+        {
+          "title": "FBI links $6.3 billion Binance heist to North Korean hackers",
+          "url": "https://www.bleepingcomputer.com/news/security/fbi-links-63-billion-binance-crypto-heist-to-north-korean-hackers/"
+        },
+        {
+          "title": "FBI links Binance hack to North Korean cyber operation",
+          "url": "https://nationalcioreview.com/?p=81506"
+        }
+      ]
+    },
+    {
+      "id": "bank-of-america-aml-and-sanctions-penalties-oct-2026",
+      "name": "Bank of America AML and sanctions penalties (Oct 2026)",
+      "year": 2026,
+      "date": "2026-10-13",
+      "date_label": "13 Oct 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 94,
+      "note": "More than $1.21B in penalties, including a record $750M OCC fine. The bank admitted willful Bank Secrecy Act violations. Regulators cite more than $5B in unreported suspicious transactions, with Chinese money laundering networks and trade-based laundering flagged. Separate sanctions settlements covered Iran and Russia.",
+      "sources": [
+        {
+          "title": "Bank of America fined $1.21B over AML failures (OCCRP)",
+          "url": "https://www.occrp.org/en/news/bank-of-america-fined-121b-over-aml-failures"
+        },
+        {
+          "title": "Financial controls fail to deliver intelligence (Mishcon de Reya)",
+          "url": "https://www.mishcon.com/news/bank-of-america-financial-controls-fail-to-deliver-intelligence"
+        },
+        {
+          "title": "Money laundering failures land Bank of America with a $1.2 billion fine (Euronews)",
+          "url": "https://www.euronews.com/2026/10/14/money-laundering-failures-land-bank-of-america-with-a-12-billion-fine"
+        }
+      ]
+    },
+    {
+      "id": "american-express-national-bank-occ-order-oct-2026",
+      "name": "American Express National Bank OCC order (Oct 2026)",
+      "year": 2026,
+      "date": "2026-10-08",
+      "date_label": "8 Oct 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "tbml",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "UNK",
+      "heat": 76,
+      "note": "OCC cease-and-desist order and a $350M civil money penalty. Trade-based money laundering features prominently in the action.",
+      "sources": [
+        {
+          "title": "Recent bank enforcement actions highlight trade-based money laundering risks (Venable)",
+          "url": "https://www.venable.com/insights/publications/2026/11/recent-bank-enforcement-actions-highlight-trade"
+        }
+      ]
+    },
+    {
+      "id": "ubs-financial-services-repeat-bsa-failures-aug-2026",
+      "name": "UBS Financial Services repeat BSA failures (Aug 2026)",
+      "year": 2026,
+      "date": "2026-08-03",
+      "date_label": "3 Aug 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "aml-program-failure",
+      "sector": "private-correspondent",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 66,
+      "note": "$125M FinCEN penalty, the largest Bank Secrecy Act penalty on a broker-dealer. Based largely on failure to fix AML gaps after a 2018 consent order, including source-of-wealth checks for high-risk customers.",
+      "sources": [
+        {
+          "title": "FinCEN imposes $125 million civil penalty against UBSFS (Miller & Chevalier)",
+          "url": "https://www.millerchevalier.com/publication/fincen-imposes-125-million-civil-penalty-against-ubsfs-continued-anti-money-laundering"
+        },
+        {
+          "title": "$125M wake-up call (Troutman)",
+          "url": "https://www.troutman.com/insights/125m-wake-up-call-fincen-hammers-broker-dealer-for-repeat-bank-secrecy-act-failures/"
+        }
+      ]
+    },
+    {
+      "id": "adani-enterprises-iran-lpg-sanctions-settlement-may-2026",
+      "name": "Adani Enterprises Iran LPG sanctions settlement (May 2026)",
+      "year": 2026,
+      "date": "2026-05-18",
+      "date_label": "18 May 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "sanctions-evasion",
+      "sector": "trade-shipping",
+      "band": 1,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 82,
+      "note": "OFAC settlement of $275M for 32 apparent violations between Nov 2023 and Jun 2025, tied to Iranian-origin LPG. Indicators cited include vessel AIS manipulation. A settlement is not a court finding.",
+      "sources": [
+        {
+          "title": "OFAC enforcement release, 18 May 2026",
+          "url": "https://ofac.treasury.gov/media/935631/download"
+        },
+        {
+          "title": "United States announces $275 million OFAC settlement (Thomson Reuters)",
+          "url": "https://www.thomsonreuters.com/en-us/help/onesource-global-trade/regulatory-insights/2026/may-21th/us-275-m-ofac-adani-ent-ir-sanctions-violations"
+        }
+      ]
+    },
+    {
+      "id": "reliance-group-bank-loan-fraud-probe-india",
+      "name": "Reliance Group bank loan fraud probe (India)",
+      "year": 2026,
+      "date": "2026-11-03",
+      "date_label": "3 Nov 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "nbfc-shadow",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 85,
+      "note": "CBI and ED are investigating alleged bank loan fraud across group entities. A first CBI charge-sheet in Jul 2026 named Reliance Infrastructure, RHFL and five former RCFL executives over more than ₹4,097 crore. On 3 Nov the ED attached about Rs 510 crore more in two bank fraud cases, taking attachments and seizures against the group to about Rs 23,100 crore. A provisional attachment is not a conviction. All allegations are untested in court.",
+      "sources": [
+        {
+          "title": "Here's what ED and CBI found so far (Outlook Business)",
+          "url": "https://www.outlookbusiness.com/ampstories/corporate/anil-ambanis-17000-cr-bank-fraud-case-heres-what-ed-and-cbi-found-so-far"
+        },
+        {
+          "title": "CBI claims over Rs 73K crore bank fraud; ED flags IBC irregularities (TaxTMI)",
+          "url": "https://www.taxtmi.com/news?id=72253"
+        }
+      ]
+    },
+    {
+      "id": "tricolor-holdings-collapse",
+      "name": "Tricolor Holdings collapse",
+      "year": 2026,
+      "date": "2026-07-06",
+      "date_label": "Jul 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "loan-fraud",
+      "sector": "nbfc-shadow",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 88,
+      "note": "The Dec 2025 indictment alleges collateral was double-pledged from 2018 and lenders lost more than $900M. Three former executives have pleaded guilty and cooperate. The CEO faces the rarely used continuing financial crimes enterprise charge. A trial was set for 19 Oct 2026, so check current status.",
+      "sources": [
+        {
+          "title": "Tricolor indictment alleges nearly $1B defrauded from banks (American Banker)",
+          "url": "https://www.americanbanker.com/news/tricolor-ceo-coo-and-cfo-indicted-in-1b-auto-finance-fraud"
+        },
+        {
+          "title": "DOJ revives rare financial kingpin statute (NatLawReview)",
+          "url": "https://natlawreview.com/article/doj-revives-rare-financial-kingpin-statute-expanded-prosecution-tricolor-founder"
+        }
+      ]
+    },
+    {
+      "id": "first-brands-collapse",
+      "name": "First Brands collapse",
+      "year": 2026,
+      "date": "2026-01-29",
+      "date_label": "29 Jan 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "loan-fraud",
+      "sector": "corporates",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 90,
+      "note": "Founder Patrick James and his brother were indicted in Jan 2026 on charges including bank fraud, wire fraud and a continuing financial crimes enterprise. James denies the charges. The company filed for Chapter 11 on 28 Sep 2025 with more than $9B in liabilities.",
+      "sources": [
+        {
+          "title": "First Brands founder and his brother indicted for fraud (Reuters via WHBL)",
+          "url": "https://whbl.com/2026/01/29/first-brands-founder-patrick-james-and-his-brother-indicted-for-fraud/"
+        }
+      ]
+    },
+    {
+      "id": "bitget-exchange-hack-sep-2026",
+      "name": "Bitget exchange hack (Sep 2026)",
+      "year": 2026,
+      "date": "2026-09-15",
+      "date_label": "Sep 2026",
+      "country": "Global",
+      "region": "GL",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 78,
+      "note": "About $387.5M stolen. The company said attackers exploited a vulnerability in a third-party security product to get internal credentials and forge withdrawal commands. About $1.1M had been frozen by early October.",
+      "sources": [
+        {
+          "title": "Bitget's $388M hack pushes Q3 crypto security losses past $1B (Cointelegraph)",
+          "url": "https://cointelegraph.com/news/bitget-hack-q3-industry-losses-1-26-billion"
+        },
+        {
+          "title": "Q3 2026 crypto hacks report (ChangeNOW)",
+          "url": "https://changenow.io/blog/q3-2026-crypto-hacks-report"
+        }
+      ]
+    },
+    {
+      "id": "liquid-network-exploit-sep-2026",
+      "name": "Liquid Network exploit (Sep 2026)",
+      "year": 2026,
+      "date": "2026-09-15",
+      "date_label": "Sep 2026",
+      "country": "Global",
+      "region": "GL",
+      "typology": "defi-exploit",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "UNK",
+      "heat": 70,
+      "note": "About $320M exploited. Self-proclaimed white hats returned $272M, about 85% of the stolen value. The method needs confirming in research.",
+      "sources": [
+        {
+          "title": "Bitget and Liquid exploits push Q3 crypto hacks toward $1.2B (Cointelegraph)",
+          "url": "https://cointelegraph.com/news/bitget-liquid-exploits-push-crypto-hacks-near-12b-q3"
+        }
+      ]
+    },
+    {
+      "id": "prince-group-and-chen-zhi-scam-network",
+      "name": "Prince Group and Chen Zhi scam network",
+      "year": 2026,
+      "date": "2026-01-07",
+      "date_label": "Jan 2026 and later",
+      "country": "Cambodia",
+      "region": "EA",
+      "typology": "pig-butchering",
+      "sector": "crypto-web3",
+      "band": 3,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 84,
+      "note": "US indictment and a $15B bitcoin forfeiture in Oct 2025, the largest in DOJ history. Chen Zhi was arrested in Cambodia and sent to China in Jan 2026. Later US sanctions hit more individuals and entities. Allegations include forced-labor scam compounds.",
+      "sources": [
+        {
+          "title": "Feds sanction Cambodian conglomerate, seize $15 billion (The Record)",
+          "url": "https://therecord.media/feds-sanction-cambodian-conglomerate-scams-seize-15-billion"
+        },
+        {
+          "title": "Operation Prince (TRM Labs)",
+          "url": "https://www.trmlabs.com/resources/blog/operation-prince-inside-the-global-effort-that-led-to-the-largest-forfeiture-in-us-history"
+        },
+        {
+          "title": "New sanctions on Prince Group (Crypto Briefing)",
+          "url": "https://cryptobriefing.com/?p=266511"
+        }
+      ]
+    },
+    {
+      "id": "nationwide-building-society-aml-fine",
+      "name": "Nationwide Building Society AML fine",
+      "year": 2025,
+      "date": "2025-12-12",
+      "date_label": "12 Dec 2025",
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 55,
+      "note": "£44M FCA fine for serious weaknesses in anti-financial-crime systems. The FCA found no evidence of actual money laundering.",
+      "sources": [
+        {
+          "title": "FCA imposes £44 million penalty on Nationwide (Mishcon de Reya)",
+          "url": "https://www.mishcon.com/news/fca-imposes-44-million-penalty-on-nationwide-for-anti-money-laundering-failures"
+        },
+        {
+          "title": "FCA fines Nationwide £44m (Ocorian)",
+          "url": "https://www.ocorian.com/knowledge-hub/insights/fca-fines-nationwide-ps44m-aml-failings-what-means-your-business"
+        }
+      ]
+    },
+    {
+      "id": "wealthtek-and-the-banks-that-held-its-money",
+      "name": "WealthTek and the banks that held its money",
+      "year": 2026,
+      "date": "2026-06-19",
+      "date_label": "Jun 2026",
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "aml-program-failure",
+      "sector": "private-correspondent",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 58,
+      "note": "The FCA fined Barclays entities £42M in total across two cases, one about checks before opening a client money account for WealthTek. CACEIS Bank UK Branch was publicly censured in Jun 2026 over a WealthTek custody account. The scale of the WealthTek loss needs confirming.",
+      "sources": [
+        {
+          "title": "FCA final notices: Barclays Bank UK PLC and Barclays Bank PLC (CMS)",
+          "url": "https://cms.law/en/gbr/regulatory-news/fca-final-notices-barclays-bank-uk-plc-barclays-bank-plc"
+        },
+        {
+          "title": "CACEIS Bank UK Branch final notice (Learnsignal)",
+          "url": "https://www.learnsignal.com/blog/caceis-bank-uk-branch-fca-final-notice-wealthtek-public-censure-31-7-million-voluntary-payment-custody-aml-guide/"
+        }
+      ]
+    },
+    {
+      "id": "goliath-ventures-crypto-ponzi",
+      "name": "Goliath Ventures crypto Ponzi",
+      "year": 2026,
+      "date": "2026-02-24",
+      "date_label": "24 Feb 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 62,
+      "note": "DOJ says the CEO ran a $328M Ponzi scheme. Arrested 24 Feb 2026 on wire fraud and money laundering charges. The charges are allegations.",
+      "sources": [
+        {
+          "title": "Florida man arrested in $328M cryptocurrency Ponzi scheme (Fox 13)",
+          "url": "https://www.fox13news.com/news/christopher-alexander-delgado-arrest-goliath-ventures"
+        }
+      ]
+    },
+    {
+      "id": "asb-bank-aml-breaches-new-zealand",
+      "name": "ASB Bank AML breaches (New Zealand)",
+      "year": 2026,
+      "date": "2026-06-15",
+      "date_label": "Jun 2026",
+      "country": "New Zealand",
+      "region": "OC",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 45,
+      "note": "NZ$6.7M penalty after the bank admitted seven breaches of New Zealand AML law, the largest court penalty for AML failures in the country.",
+      "sources": [
+        {
+          "title": "ASB Bank fined record NZ$6.7M (AML Intelligence)",
+          "url": "https://www.amlintelligence.com/2026/06/news-asb-bank-fined-record-6-7m-for-breaching-new-zealands-aml-laws/"
+        }
+      ]
+    },
+    {
+      "id": "vindhyavasini-group-sbi-loan-fraud",
+      "name": "Vindhyavasini Group SBI loan fraud",
+      "year": 2026,
+      "date": "2026-06-30",
+      "date_label": "2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 52,
+      "note": "ED attached ₹81.88 crore of assets in an alleged ₹764.44 crore loan fraud against SBI. A businessman was also arrested over forged documents in a ₹764 crore SBI fraud case. Allegations only.",
+      "sources": [
+        {
+          "title": "ED attaches ₹81.88 crore assets (Free Press Journal)",
+          "url": "https://www.freepressjournal.in/amp/mumbai/ed-attaches-8188-crore-assets-in-76444-crore-sbi-loan-fraud-case-involving-vindhyavasini-group"
+        },
+        {
+          "title": "ED arrests businessman in ₹764 crore SBI fraud case (Free Press Journal)",
+          "url": "https://www.freepressjournal.in/amp/mumbai/mumbai-news-ed-arrests-businessman-in-764-crore-sbi-fraud-case-over-forged-documents"
+        }
+      ]
+    },
+    {
+      "id": "deepak-cables-consortium-bank-fraud",
+      "name": "Deepak Cables consortium bank fraud",
+      "year": 2026,
+      "date": "2026-06-02",
+      "date_label": "2 Jun 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 48,
+      "note": "ED arrested the managing director on 2 Jun 2026 under the PMLA in a case alleging ₹899 crore was defrauded from a consortium of banks. Allegations only.",
+      "sources": [
+        {
+          "title": "Consortium of banks defrauded by Rs 899 Cr (Fintech Biz News)",
+          "url": "https://fintechbiznews.com/govtregulators-authorities/consortium-of-banks-defrauded-by-rs899-cr-deepak-cables-md-arrested"
+        }
+      ]
+    },
+    {
+      "id": "hawaii-army-innovation-campus-bribery-case",
+      "name": "Hawaii Army innovation campus bribery case",
+      "year": 2026,
+      "date": "2026-10-28",
+      "date_label": "28 Oct 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "procurement-fraud",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 72,
+      "note": "A former Army Pacific civilian official pleaded guilty on 28 Oct to conspiracy, bribery and major fraud. Two defense contractors were charged in May and are presumed innocent. Prosecutors allege contract costs were inflated to cover bribe payments.",
+      "sources": [
+        {
+          "title": "Former Army official pleads guilty (Hawaii News Now)",
+          "url": "https://www.hawaiinewsnow.com/2026/10/29/former-army-official-pleads-guilty-hawaii-defense-contract-bribery-scheme/?outputType=amp"
+        },
+        {
+          "title": "Two defense contractors arrested (DOJ release via GlobalSecurity)",
+          "url": "https://www.globalsecurity.org/military/library/news/2026/05/mil-260520-doj01.htm"
+        }
+      ]
+    },
+    {
+      "id": "star-entertainment-a-260m-austrac-penalty",
+      "name": "Star Entertainment A$260M AUSTRAC penalty",
+      "year": 2026,
+      "date": "2026-10-28",
+      "date_label": "28 Oct 2026",
+      "country": "Australia",
+      "region": "OC",
+      "typology": "casino-ml",
+      "sector": "gambling",
+      "band": 1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 86,
+      "note": "On 28 Oct the Federal Court ordered A$195M against Star Sydney and A$65M against Star Queensland for AML/CTF breaches between Nov 2016 and Nov 2022. AUSTRAC said more than 1,200 high-risk customers could gamble through risky channels, including the Suncity junket. A news report says no executive has been criminally charged in this matter.",
+      "sources": [
+        {
+          "title": "Star penalty marks first contested AML/CTF case (Lawyers Weekly)",
+          "url": "https://www.lawyersweekly.com.au/biglaw/45347-star-penalty-marks-first-contested-aml-ctf-issue"
+        },
+        {
+          "title": "Federal Court orders Star to pay A$260 million (Casinos.com)",
+          "url": "https://www.casinos.com/news/federal-court-orders-star-entertainment-to-pay-a-260-million-over-aml-breaches"
+        }
+      ]
+    },
+    {
+      "id": "bet365-austrac-enforceable-undertaking",
+      "name": "bet365 AUSTRAC enforceable undertaking",
+      "year": 2026,
+      "date": "2026-07-06",
+      "date_label": "6 Jul 2026",
+      "country": "Australia",
+      "region": "OC",
+      "typology": "aml-program-failure",
+      "sector": "gambling",
+      "band": -1,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 50,
+      "note": "AUSTRAC issued a legally binding undertaking after finding serious gaps in the online bookmaker's AML and counter-terrorism financing risk assessment and controls. Breaches could attract civil penalties. A separate AUSTRAC Federal Court action against Entain is pending.",
+      "sources": [
+        {
+          "title": "Bet365 forced to overhaul anti-money laundering controls (The Nightly)",
+          "url": "https://thenightly.com.au/business/online-bookmaker-bet365-forced-to-overhaul-anti-money-laundering-controls-c-22537450"
+        },
+        {
+          "title": "AUSTRAC action on bet365 (ComplyCube)",
+          "url": "https://www.complycube.com/en/austrac-gambling-firm-bet365-aml-program-overhaul/"
+        }
+      ]
+    },
+    {
+      "id": "western-seizures-of-russian-shadow-fleet-tankers-2026",
+      "name": "Western seizures of Russian shadow fleet tankers (2026)",
+      "year": 2026,
+      "date": "2026-11-08",
+      "date_label": "Jan to Nov 2026",
+      "country": "Russia and Europe",
+      "region": "EU",
+      "typology": "shadow-fleet",
+      "sector": "trade-shipping",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 88,
+      "note": "Nine suspected shadow fleet tankers were seized across Europe in the first half of 2026, four of them by France. An Italian-led EU force boarded another on 2 Aug. On 8 Nov Bloomberg reported oil traders in talks with the US to get sanctioned ships back to sea, after Reuters reported on 14 Oct that Washington was weighing easing shadow fleet sanctions. Seizures are enforcement actions, not court findings.",
+      "sources": [
+        {
+          "title": "Oil traders in talks with US to get sanctioned ships back to sea (gCaptain, Bloomberg)",
+          "url": "https://gcaptain.com/oil-traders-in-talks-with-us-to-get-sanctioned-ships-back-to-sea/"
+        },
+        {
+          "title": "France seizes another tanker linked to Russian shadow fleet (Baird Maritime, Reuters)",
+          "url": "https://www.bairdmaritime.com/amp/story/shipping/tankers/video-france-seizes-another-tanker-linked-to-russian-shadow-fleet"
+        }
+      ]
+    },
+    {
+      "id": "skipper-tanker-seizure-and-the-iranian-oil-network",
+      "name": "Skipper tanker seizure and the Iranian oil network",
+      "year": 2025,
+      "date": "2025-12-10",
+      "date_label": "10 Dec 2025",
+      "country": "Venezuela and United States",
+      "region": "GL",
+      "typology": "shadow-fleet",
+      "sector": "trade-shipping",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 60,
+      "note": "The US Coast Guard seized the tanker Skipper off Venezuela on 10 Dec 2025. Treasury sanctioned it in Nov 2022 as part of a network that funneled revenue to the IRGC-QF and Hezbollah, per the report. Forfeiture status is unverified.",
+      "sources": [
+        {
+          "title": "U.S. seizure of shadow fleet tanker Skipper (gCaptain)",
+          "url": "https://gcaptain.com/u-s-seizure-of-shadow-fleet-tanker-skipper-ends-years-long-sanctions-evasion-run/"
+        }
+      ]
+    },
+    {
+      "id": "your-mule-cashout-ymco-money-mule-network",
+      "name": "Your Mule Cashout (YMCO) money mule network",
+      "year": 2026,
+      "date": "2026-10-08",
+      "date_label": "8 Oct 2026",
+      "country": "United States and Eastern Europe",
+      "region": "GL",
+      "typology": "mule-network",
+      "sector": "informal",
+      "band": -1,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 68,
+      "note": "A leader of YMCO pleaded guilty on 8 Oct to money laundering, aggravated identity theft and computer fraud conspiracies. The network recruited more than 15,000 US money mules to move hackers' funds abroad, mostly to Eastern Europe. Four others were extradited and convicted earlier. Sentencing is pending.",
+      "sources": [
+        {
+          "title": "Man admits to running network of 15,000 money mules (BleepingComputer)",
+          "url": "https://bleepingcomputer.com/news/security/ukrainian-russian-dual-citizen-admits-to-laundering-millions-for-cybercriminals"
+        },
+        {
+          "title": "15,000 Americans caught up in cybercrime laundering scheme (Bitdefender)",
+          "url": "https://www.bitdefender.com/en-au/blog/hotforsecurity/15-000-americans-massive-cybercrime-money-laundering-scheme"
+        }
+      ]
+    },
+    {
+      "id": "operation-jackal-iv-interpol",
+      "name": "Operation Jackal IV (INTERPOL)",
+      "year": 2026,
+      "date": "2026-08-26",
+      "date_label": "Nov 2025 to Jun 2026",
+      "country": "Global (22 countries)",
+      "region": "GL",
+      "typology": "mule-network",
+      "sector": "informal",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 50,
+      "note": "INTERPOL reported 58 arrests and 263 suspects tied to West African organized crime networks laundering scam, fraud and sextortion proceeds. It also identified a crime-as-a-service network supplying domains and laundering support, leading to 17 arrests. Italian investigators traced 845,000 euros through one account across 560 transactions.",
+      "sources": [
+        {
+          "title": "Operation Jackal IV: 58 arrests (Security Affairs)",
+          "url": "https://securityaffairs.com/?p=197843"
+        }
+      ]
+    },
+    {
+      "id": "chichester-nh-unlicensed-hawala-to-yemen",
+      "name": "Chichester NH unlicensed hawala to Yemen",
+      "year": 2026,
+      "date": "2026-09-03",
+      "date_label": "3 Sep 2026",
+      "country": "United States and Yemen",
+      "region": "NA",
+      "typology": "hawala",
+      "sector": "informal",
+      "band": 0,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 44,
+      "note": "A grand jury indicted a New Hampshire resident on 2 Sep for running an unlicensed money transmitting business. The indictment says it was a hawala that moved more than $25M between the US and Yemen for commissions. An indictment is an allegation.",
+      "sources": [
+        {
+          "title": "Chichester man indicted for operating a $25 million hawala (IRS-CI)",
+          "url": "https://www.irs.gov/compliance/criminal-investigation/chichester-man-indicted-for-operating-a-25-million-hawala"
+        },
+        {
+          "title": "Indictment (DOJ, D.N.H.)",
+          "url": "https://www.justice.gov/usao-nh/media/1460151/dl"
+        }
+      ]
+    },
+    {
+      "id": "pittsford-synthetic-identity-credit-card-scheme-wdny",
+      "name": "Pittsford synthetic identity credit card scheme (WDNY)",
+      "year": 2026,
+      "date": "2026-08-12",
+      "date_label": "12 Aug 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "synthetic-id",
+      "sector": "retail-banking",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 46,
+      "note": "A federal grand jury in Western New York indicted a father and son on 12 Aug. The indictment alleges a synthetic identity fraud scheme from about 2012 to July 2024, with charges including access device fraud and aggravated identity theft. An indictment is an allegation.",
+      "sources": [
+        {
+          "title": "Federal grand jury indicts Pittsford father and son (DOJ, WDNY)",
+          "url": "https://www.justice.gov/usao-wdny/pr/federal-grand-jury-indicts-pittsford-father-and-son-multiple-fraud-and-id-theft"
+        },
+        {
+          "title": "IRS-CI release",
+          "url": "https://www.irs.gov/compliance/criminal-investigation/federal-grand-jury-indicts-pittsford-father-and-son-on-multiple-fraud-and-id-theft-charges-in-credit-card-scam"
+        }
+      ]
+    },
+    {
+      "id": "bank-of-ireland-uk-confirmation-of-payee-fine",
+      "name": "Bank of Ireland UK Confirmation of Payee fine",
+      "year": 2026,
+      "date": "2026-02-19",
+      "date_label": "19 Feb 2026",
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "app-scam",
+      "sector": "retail-banking",
+      "band": -1,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 52,
+      "note": "The PSR fined Bank of Ireland UK 3.78M pounds for missing the 31 Oct 2023 Confirmation of Payee deadline. About 1.14M new payees were onboarded without name checking, on payments of about 6.9B pounds. The PSR opened its investigation in Jul 2024.",
+      "sources": [
+        {
+          "title": "Bank of Ireland UK fined 3.78m for CoP delay (Fintech Global)",
+          "url": "https://fintech.global/2026/04/30/bank-of-ireland-uk-fined-3-78m-for-cop-delay/"
+        },
+        {
+          "title": "Bank of Ireland UK CoP failure (RegTech Analyst)",
+          "url": "https://regtechanalyst.com/?p=85730"
+        }
+      ]
+    },
+    {
+      "id": "bank-of-america-ofac-screening-settlement",
+      "name": "Bank of America OFAC screening settlement",
+      "year": 2026,
+      "date": "2026-10-13",
+      "date_label": "13 Oct 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "sanctions-screening-failure",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "REG",
+      "heat": 78,
+      "note": "OFAC settled for $11,662,930 over 475 apparent violations across Russia, Belarus, Iran, Burma, Somalia, narcotics and terrorism programs. OFAC called them non-egregious and largely not voluntarily self-disclosed. Check how this relates to the FinCEN and OCC action in the Bank of America AML case.",
+      "sources": [
+        {
+          "title": "OFAC recent actions, 13 Oct 2026",
+          "url": "https://ofac.treasury.gov/recent-actions/20261013_33"
+        },
+        {
+          "title": "Sanctions screening lessons (Learnsignal)",
+          "url": "https://www.learnsignal.com/blog/ofac-bank-of-america-11-66-million-settlement-blocked-banks-payment-directory-watchlist-delays-guide/"
+        }
+      ]
+    },
+    {
+      "id": "tradestation-ofac-geo-blocking-settlement",
+      "name": "TradeStation OFAC geo-blocking settlement",
+      "year": 2026,
+      "date": "2026-03-17",
+      "date_label": "17 Mar 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "sanctions-screening-failure",
+      "sector": "capital-markets",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "SELF",
+      "heat": 46,
+      "note": "OFAC settled for $1,110,661 over nearly 500 trades by users in Iran, Syria and Crimea. The causes were geo-blocking failures and no testing of the controls since late 2021. The firm self-disclosed. A 2021 cautionary letter counted against it.",
+      "sources": [
+        {
+          "title": "OFAC settlement highlights testing of sanctions controls (Paul Hastings)",
+          "url": "https://www.paulhastings.com/insights/client-alerts/ofac-settlement-highlights-importance-of-testing-and-auditing-sanctions-compliance-controls"
+        }
+      ]
+    },
+    {
+      "id": "img-academy-ofac-settlement",
+      "name": "IMG Academy OFAC settlement",
+      "year": 2026,
+      "date": "2026-02-12",
+      "date_label": "12 Feb 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "sanctions-screening-failure",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "UNK",
+      "heat": 34,
+      "note": "OFAC settled for $1.72M over apparent violations of the counter-narcotics sanctions program. OFAC found reckless disregard based on a failure to conduct sanctions screening.",
+      "sources": [
+        {
+          "title": "OFAC enforcement update (Bass Berry and Sims via JD Supra)",
+          "url": "https://www.jdsupra.com/legalnews/ofac-enforcement-update-1-72m-2510015/"
+        }
+      ]
+    },
+    {
+      "id": "extreme-networks-russia-export-settlement",
+      "name": "Extreme Networks Russia export settlement",
+      "year": 2026,
+      "date": "2026-10-27",
+      "date_label": "27 Oct 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "export-control",
+      "sector": "corporates",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "SELF",
+      "heat": 56,
+      "note": "OFAC announced a $1.53M settlement over nine apparent Russia sanctions violations involving exports of networking equipment and services to a blocked Russian defense manufacturer. OFAC called them voluntarily self-disclosed and egregious. The date comes from an ABA roundup, so confirm it on OFAC's site.",
+      "sources": [
+        {
+          "title": "Recent news from OFAC, Nov 2 (ABA Banking Journal)",
+          "url": "https://bankingjournal.aba.com/?p=68564"
+        }
+      ]
+    },
+    {
+      "id": "mercado-bitcoin-exchange-hack-nov-2026",
+      "name": "Mercado Bitcoin exchange hack (Nov 2026)",
+      "year": 2026,
+      "date": "2026-11-02",
+      "date_label": "2 Nov 2026",
+      "country": "Brazil",
+      "region": "LA",
+      "typology": "exchange-hack",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 80,
+      "note": "DefiLlama records attackers moving more than $40M from exchange-associated wallets across chains on 2 Nov. The Brazilian exchange said it contained a security incident and suspended deposits and withdrawals.",
+      "sources": [
+        {
+          "title": "Mercado Bitcoin entry (DefiLlama hacks)",
+          "url": "https://defillama.com/hacks?id=blackhole-token"
+        },
+        {
+          "title": "There are too many crypto hacks happening (Gizmodo)",
+          "url": "https://gizmodo.com/there-are-too-many-crypto-hacks-happening-its-impossible-to-keep-up-2000833986"
+        }
+      ]
+    },
+    {
+      "id": "drift-protocol-exploit-apr-2026",
+      "name": "Drift Protocol exploit (Apr 2026)",
+      "year": 2026,
+      "date": "2026-04-01",
+      "date_label": "Apr 2026",
+      "country": "Global",
+      "region": "GL",
+      "typology": "defi-exploit",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 62,
+      "note": "Cointelegraph lists a $280M Drift Protocol exploit at the start of April 2026 among the year's two largest hacks before October. The Record reported alleged North Korean hackers behind a $290M theft days after a THORChain incident. Match the two reports to the same event before relying on either.",
+      "sources": [
+        {
+          "title": "Verus bridge reportedly exploited, lists Drift and Kelp (Cointelegraph)",
+          "url": "https://cointelegraph.com/news/verus-ethereum-bridge-reportedly-exploited-for-millions"
+        },
+        {
+          "title": "More than $10 million stolen from THORChain (The Record)",
+          "url": "https://therecord.media/more-than-10-million-stolen-crypto-platform-thorchain"
+        }
+      ]
+    },
+    {
+      "id": "kelp-exploit-apr-2026",
+      "name": "Kelp exploit (Apr 2026)",
+      "year": 2026,
+      "date": "2026-04-30",
+      "date_label": "Apr 2026",
+      "country": "Global",
+      "region": "GL",
+      "typology": "defi-exploit",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "UNRES",
+      "caught": "SELF",
+      "heat": 56,
+      "note": "Cointelegraph lists a $292M Kelp exploit in April 2026 as one of the year's two largest hacks before October. The exact day is not confirmed here.",
+      "sources": [
+        {
+          "title": "Verus bridge reportedly exploited, lists Drift and Kelp (Cointelegraph)",
+          "url": "https://cointelegraph.com/news/verus-ethereum-bridge-reportedly-exploited-for-millions"
+        }
+      ]
+    },
+    {
+      "id": "banco-master-collapse-brazil",
+      "name": "Banco Master collapse (Brazil)",
+      "year": 2025,
+      "date": "2025-11-18",
+      "date_label": "18 Nov 2025",
+      "country": "Brazil",
+      "region": "LA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "REG",
+      "heat": 84,
+      "note": "Brazil's central bank liquidated Banco Master on 18 Nov 2025 and federal police arrested its controlling shareholder the same day. Police put suspected fraud linked to deals with Banco de Brasilia at about BRL 12B (about $2.2B). The central bank says it tracked the bank from the first half of 2024. Allegations are untested in court.",
+      "sources": [
+        {
+          "title": "Brazil's Banco Master scandal (Covington)",
+          "url": "https://www.cov.com/en/news-and-insights/insights/2026/02/brazils-banco-master-scandal-and-why-it-matters-for-foreign-investors"
+        },
+        {
+          "title": "Brazil Central Bank details reasons for liquidation (bne IntelliNews)",
+          "url": "https://www.intellinews.com/brazil-central-bank-details-reasons-for-banco-master-liquidation-418705/"
+        }
+      ]
+    },
+    {
+      "id": "parekh-aluminex-bank-fraud-india",
+      "name": "Parekh Aluminex bank fraud (India)",
+      "year": 2026,
+      "date": "2026-11-02",
+      "date_label": "2 Nov 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "retail-banking",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "REG",
+      "heat": 70,
+      "note": "ED attached Rs 53.95 crore more on 2 Nov under PMLA, taking attachments to about Rs 546 crore. Accounts with an Indian Overseas Bank-led consortium were declared bad for about Rs 2,296 crore. The RBI had advised the bank to examine the account in Nov 2015. A provisional attachment is not a conviction.",
+      "sources": [
+        {
+          "title": "ED attaches Rs 53.95 crore (Oquilia)",
+          "url": "https://www.oquilia.com/news/ed-attaches-rs-53-95-crore-parekh-aluminex-bank-fraud-case"
+        },
+        {
+          "title": "Parekh Aluminex bank fraud (Inventiva)",
+          "url": "https://www.inventiva.co.in/?p=315585"
+        }
+      ]
+    },
+    {
+      "id": "lic-housing-finance-loan-fraud-ed-case-india",
+      "name": "LIC Housing Finance loan fraud ED case (India)",
+      "year": 2026,
+      "date": "2026-11-02",
+      "date_label": "2 Nov 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "nbfc-shadow",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 66,
+      "note": "Moneylife reports ED registered a money laundering case over an alleged Rs 1,322 crore loan fraud against LIC Housing Finance. This is a press report only. No court finding.",
+      "sources": [
+        {
+          "title": "ED roundup (Moneylife)",
+          "url": "https://www.moneylife.in/article/ed-attaches-2-aircraft-6-land-parcels-and-windmills-worth-510-crore-in-action-against-reliance-anil-ambani-group/82111.html"
+        }
+      ]
+    },
+    {
+      "id": "hashpe-crypto-investment-fraud-india",
+      "name": "Hashpe crypto investment fraud (India)",
+      "year": 2026,
+      "date": "2026-11-03",
+      "date_label": "3 Nov 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "ponzi",
+      "sector": "crypto-web3",
+      "band": 0,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 48,
+      "note": "ED filed a prosecution complaint and provisionally attached about Rs 14.16 crore over a crypto platform that allegedly offered 1% daily returns. The label Ponzi is a pattern read. Use ED's own wording for the charge.",
+      "sources": [
+        {
+          "title": "ED roundup (Moneylife)",
+          "url": "https://www.moneylife.in/article/ed-attaches-2-aircraft-6-land-parcels-and-windmills-worth-510-crore-in-action-against-reliance-anil-ambani-group/82111.html"
+        }
+      ]
+    },
+    {
+      "id": "amira-pure-foods-bank-fraud-and-singapore-accounts-india",
+      "name": "Amira Pure Foods bank fraud and Singapore accounts (India)",
+      "year": 2026,
+      "date": "2026-07-31",
+      "date_label": "Jul 2026",
+      "country": "India and Singapore",
+      "region": "SA",
+      "typology": "loan-fraud",
+      "sector": "corporates",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "UNK",
+      "heat": 52,
+      "note": "ED provisionally attached US$10.03M (about Rs 94.76 crore) held in Singapore bank accounts, in a money laundering probe tied to an alleged bank fraud of about Rs 1,201.85 crore. The attachment order is dated 25 May 2026.",
+      "sources": [
+        {
+          "title": "ED attaches Rs 94.76 crore in Singapore accounts (Moneylife)",
+          "url": "https://www.moneylife.in/article/ed-attaches-9476-crore-in-singapore-bank-accounts-in-amira-foods-money-laundering-case/81225.html"
+        }
+      ]
+    },
+    {
+      "id": "king567-betting-syndicate-india",
+      "name": "King567 betting syndicate (India)",
+      "year": 2026,
+      "date": "2026-10-27",
+      "date_label": "27 Oct 2026",
+      "country": "India",
+      "region": "SA",
+      "typology": "illegal-betting",
+      "sector": "gambling",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 64,
+      "note": "ED's Bengaluru office provisionally attached Rs 23.35 crore and says it traced proceeds of crime above Rs 2,300 crore in an alleged online betting and gambling syndicate. These are ED's figures. No court finding.",
+      "sources": [
+        {
+          "title": "ED roundup (Moneylife)",
+          "url": "https://www.moneylife.in/article/2296-crore-parekh-aluminex-bank-fraud-ed-attaches-5395-crore-properties-linked-to-jk-shah-group/82093.html"
+        }
+      ]
+    },
+    {
+      "id": "bg-wealth-sharing-and-dsj-exchange-ai-trading-scheme",
+      "name": "BG Wealth Sharing and DSJ Exchange AI trading scheme",
+      "year": 2026,
+      "date": "2026-10-29",
+      "date_label": "29 Oct 2026",
+      "country": "United States and abroad",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "crypto-web3",
+      "band": 1,
+      "outcome": "ONG",
+      "caught": "REG",
+      "heat": 70,
+      "note": "The SEC charged two foreign firms over an alleged US$130M scheme that promised risk-free returns from AI-generated crypto trading signals. It alleges the firms used false SEC filings to look registered and paid about US$25M in Ponzi-like payments. These are allegations.",
+      "sources": [
+        {
+          "title": "Fake AI trading scheme duped investors (Investment Executive)",
+          "url": "https://www.investmentexecutive.com/?p=118596"
+        }
+      ]
+    },
+    {
+      "id": "pacific-private-money-ponzi-like-scheme-sec",
+      "name": "Pacific Private Money Ponzi-like scheme (SEC)",
+      "year": 2026,
+      "date": "2026-09-01",
+      "date_label": "1 Sep 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "ponzi",
+      "sector": "nbfc-shadow",
+      "band": 0,
+      "outcome": "SETT",
+      "caught": "RUN",
+      "heat": 42,
+      "note": "The SEC says two fund managers raised about $80M from around 190 investors, many of them retirees, with false claims about real-estate loans. Both consented to judgments on the day of filing and penalties are unset. The funds filed for Chapter 11 on 16 Jun 2026.",
+      "sources": [
+        {
+          "title": "SEC alleges California fund managers ran $80 million Ponzi-like scheme (InvestmentNews)",
+          "url": "https://www.investmentnews.com/regulation-legal-compliance/sec-alleges-california-fund-managers-ran-80-million-ponzi-like-scheme/268049"
+        },
+        {
+          "title": "SEC press release 2026-82",
+          "url": "https://www.sec.gov/newsroom/press-releases/2026-82-sec-charges-san-francisco-bay-area-private-fund-executives-multimillion-dollar-ponzi-scheme"
+        }
+      ]
+    },
+    {
+      "id": "sec-decade-long-insider-trading-ring-21-charged",
+      "name": "SEC decade-long insider trading ring (21 charged)",
+      "year": 2026,
+      "date": "2026-05-06",
+      "date_label": "6 May 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "insider-trading",
+      "sector": "capital-markets",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 50,
+      "note": "The SEC charged 21 people over an alleged decade-long scheme that used information misappropriated from multiple global firms, with tippers taking kickbacks of trading profits. These are allegations.",
+      "sources": [
+        {
+          "title": "SEC charges 21 individuals (Newsfile SEC Press Digest)",
+          "url": "https://www.newsfilecorp.com/release/296389/SEC-Charges-21-Individuals-with-Alleged-WideReaching-Insider-Trading-Scheme"
+        }
+      ]
+    },
+    {
+      "id": "los-angeles-health-care-fraud-takedown-2b-in-claims",
+      "name": "Los Angeles health care fraud takedown ($2B in claims)",
+      "year": 2026,
+      "date": "2026-10-22",
+      "date_label": "22 Oct 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "insurance-fraud",
+      "sector": "insurance",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 72,
+      "note": "DOJ charged 15 defendants, six of them medical professionals, over schemes with about $2B in fraudulent claims to government and private insurers. The programs named include substance abuse treatment, hospice and Medicare. The figure is billed or intended loss, not paid loss. Charges are allegations.",
+      "sources": [
+        {
+          "title": "L.A. Health Care Fraud Takedown (IRS-CI)",
+          "url": "https://www.irs.gov/node/166791"
+        }
+      ]
+    },
+    {
+      "id": "2026-national-health-care-fraud-takedown",
+      "name": "2026 National Health Care Fraud Takedown",
+      "year": 2026,
+      "date": "2026-06-23",
+      "date_label": "23 Jun 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "insurance-fraud",
+      "sector": "insurance",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 60,
+      "note": "DOJ announced charges against 455 defendants, including 90 doctors and other licensed professionals, over more than $6.5B in alleged false claims. It said 295 defendants faced charges over more than $518M in false Medicaid claims. Figures are billed claims, not paid loss.",
+      "sources": [
+        {
+          "title": "National Health Care Fraud Takedown (DOJ)",
+          "url": "https://www.justice.gov/opa/pr/national-health-care-fraud-takedown-results-455-defendants-charged-connection-over-65"
+        },
+        {
+          "title": "90 physicians charged in DOJ sweep (Becker's)",
+          "url": "https://www.beckersasc.com/?p=105314"
+        }
+      ]
+    },
+    {
+      "id": "dark-bank-laundering-network-france",
+      "name": "Dark Bank laundering network (France)",
+      "year": 2026,
+      "date": "2026-02-15",
+      "date_label": "Feb 2026",
+      "country": "France and United States",
+      "region": "EU",
+      "typology": "pro-laundering",
+      "sector": "private-correspondent",
+      "band": 2,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 56,
+      "note": "AML Intelligence reports the US extradited an American citizen to France in Feb 2026 over a suspected 1B euro laundering network known as Dark Bank. The exact day is not confirmed here. Verify with French prosecutors.",
+      "sources": [
+        {
+          "title": "US Dark Bank suspect extradited to France (AML Intelligence)",
+          "url": "https://www.amlintelligence.com/2026/02/news-us-dark-bank-suspect-extradited-to-france-in-e1bn-money-laundering-case/"
+        }
+      ]
+    },
+    {
+      "id": "chinese-money-laundering-networks-us-advisory-and-cases",
+      "name": "Chinese money laundering networks (US advisory and cases)",
+      "year": 2026,
+      "date": "2026-01-08",
+      "date_label": "Jan 2026",
+      "country": "United States",
+      "region": "NA",
+      "typology": "pro-laundering",
+      "sector": "retail-banking",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "REG",
+      "heat": 60,
+      "note": "A Jan 2026 CRS report says FinCEN found US banks filed about $312B in potential Chinese money laundering network related suspicious activity over 2020 to 2024. A DEA release dated 22 Oct 2026 reports a sentencing for laundering drug proceeds. The $312B is reported suspicious activity, not proven laundering.",
+      "sources": [
+        {
+          "title": "Chinese Money Laundering Networks (CRS)",
+          "url": "https://www.everycrsreport.com/files/2026-01-08_R48786_b87269a9d3c97bbbc1899473492706ba7b823d9a.html"
+        },
+        {
+          "title": "Prolific Chinese money launderer sentenced (DEA, 22 Oct 2026)",
+          "url": "https://www.dea.gov/press-releases/2026/10/22/prolific-chinese-money-launderer-sentenced-for-laundering-drug"
+        }
+      ]
+    },
+    {
+      "id": "hamburg-court-convicts-antiquities-dealer-s-children-of-laundering",
+      "name": "Hamburg court convicts antiquities dealer's children of laundering",
+      "year": 2026,
+      "date": "2026-08-31",
+      "date_label": "31 Aug 2026",
+      "country": "Germany and France",
+      "region": "EU",
+      "typology": "antiquities-trafficking",
+      "sector": "art-luxury",
+      "band": 0,
+      "outcome": "CONV",
+      "caught": "LAW",
+      "heat": 46,
+      "note": "A Hamburg court convicted two children of an alleged antiquities dealer of money laundering and ordered confiscation of 32M euros in sales proceeds. They plan to appeal. The French case against the father is reported as stalled.",
+      "sources": [
+        {
+          "title": "Alleged antiquities smuggler's children convicted (The Art Newspaper)",
+          "url": "https://www.theartnewspaper.com/2026/08/31/alleged-antiquities-smuggler-serop-simonian-children-convicted-hamburg-court"
+        }
+      ]
+    },
+    {
+      "id": "hauser-and-wirth-uk-sanctions-prosecution",
+      "name": "Hauser and Wirth UK sanctions prosecution",
+      "year": 2026,
+      "date": "2026-06-01",
+      "date_label": "Jun 2026",
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "sanctions-evasion",
+      "sector": "art-luxury",
+      "band": -1,
+      "outcome": "ONG",
+      "caught": "LAW",
+      "heat": 56,
+      "note": "A UK criminal case against a gallery over Russia sanctions rules is set for trial in January 2028, and the gallery pleaded not guilty, per a law firm article. A 2026 ruling in R v Hauser and Wirth Gallery Limited is cited as an addition to UK sanctions case law. Not proven.",
+      "sources": [
+        {
+          "title": "Recognizing signs of money laundering (Loeb and Loeb)",
+          "url": "https://www.loeb.com/en/insights/publications/2026/06/recognizing-signs-of-money-laundering"
+        },
+        {
+          "title": "Fine art, gallery sales and sanctions versus Russia (Family Wealth Report)",
+          "url": "https://www.familywealthreport.com/article.php/Fine-Art%2C-Gallery-Sales-And-Sanctions-Versus-Russia-%E2%80%93-Thoughts-On-Recent-Court-Case?id=208493"
+        }
+      ]
+    },
+    {
+      "id": "standard-chartered-fca-102m-pound-aml-fine",
+      "name": "Standard Chartered FCA 102M pound AML fine",
+      "year": 2026,
+      "date": "2026-01-26",
+      "date_label": "26 Jan 2026",
+      "country": "United Kingdom",
+      "region": "EU",
+      "typology": "aml-program-failure",
+      "sector": "retail-banking",
+      "band": 0,
+      "outcome": "PEN",
+      "caught": "REG",
+      "heat": 58,
+      "note": "The FCA fined the bank 102.2M pounds for AML breaches, reported as its second largest AML penalty. Read the Final Notice for the period and the controls it names.",
+      "sources": [
+        {
+          "title": "FCA fines Standard Chartered 102m pounds (Professional Adviser)",
+          "url": "https://www.professionaladviser.com/news/3073922/fca-fines-standard-chartered-gbp1022m-aml-breaches"
+        }
+      ]
+    }
+  ]
+}

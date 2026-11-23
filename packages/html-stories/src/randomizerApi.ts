@@ -54,6 +54,10 @@
  *                                                     `paper` (an arXiv id), that paper and its live arXiv and
  *                                                     OpenAlex record
  *   GET  /api/randomizer/cron/frontier              the Frontier Desk's daily spin (Vercel Cron, CRON_SECRET)
+ *   GET  /api/randomizer/ledger?case=               Ledger's pool (vizmaya only): the catalogue of past
+ *                                                     financial crimes with its eras, sectors, typologies and
+ *                                                     lenses, each case with today's era and its legal status;
+ *                                                     with `case` (an id), that one case
  *
  * The brief for a spin is GET /api/html-stories/brief?spin=<id> (./briefApi)
  * on the spin's own site, with &format=book|board|deck for a paged story
@@ -62,7 +66,7 @@
  * Server only.
  */
 
-import { CURIOUS,DESK, EVIDENCE, FRONTIER, HUNDRED, LANDMARK, OCW, evidenceByNumber, frontierWindowOf, hundredByRank } from '@vismay/randomizer/datasets'
+import { CURIOUS,DESK, EVIDENCE, FRONTIER, HUNDRED, LANDMARK, LEDGER, OCW, evidenceByNumber, frontierWindowOf, hundredByRank, ledgerBand, ledgerEraOf, ledgerLegalStatus } from '@vismay/randomizer/datasets'
 import { DRAW_RULES } from '@vismay/randomizer/draw'
 import { loadEvidenceRecord } from '@vismay/randomizer/evidencePool'
 import { loadFrontierRecord } from '@vismay/randomizer/frontierPool'
@@ -443,6 +447,30 @@ export async function handleHundredPoolRequest(req: Request): Promise<Response> 
   const person = /^\d+$/.test(raw) ? hundredByRank(Number(raw)) : undefined
   if (!person) return json({ error: `rank must be a whole number from 1 to ${HUNDRED.people.length}` }, 400)
   return json({ person, profile: await loadHundredProfile(person) })
+}
+
+/**
+ * GET /api/randomizer/ledger on vizmaya: Ledger's pool. Without `case` it
+ * answers the whole catalogue (eras, sectors, typology families with their
+ * checks, charts and sources, typologies, lenses, regions, outcomes,
+ * detection routes, scale bands and the cases), each case with the era it
+ * sits in today, its legal status and its scale band written out; with
+ * `case` (a case id) that one case, for an agent that wants to look before
+ * locking it. Read-only, nothing is fetched: the catalogue is committed.
+ * Every field of a case is a seed value, and a live case's note and links
+ * are search leads, not verified sources.
+ */
+export async function handleLedgerPoolRequest(req: Request): Promise<Response> {
+  const denied = gate(req)
+  if (denied) return denied
+  if (req.method !== 'GET') return json({ error: 'method not allowed' }, 405)
+  const now = Date.now()
+  const view = (c: (typeof LEDGER.cases)[number]) => ({ ...c, era: ledgerEraOf(c, now).id, legal_status: ledgerLegalStatus(c), band_label: ledgerBand(c) })
+  const id = new URL(req.url).searchParams.get('case')?.trim()
+  if (!id) return json({ ...LEDGER, cases: LEDGER.cases.map(view), note: 'Pass case (a case id) for one case. Seed fields are provisional; notes and sources on live cases are search leads, not verified sources.' })
+  const found = LEDGER.cases.find((c) => c.id === id)
+  if (!found) return json({ error: `no case with id "${id}" in the catalogue` }, 404)
+  return json({ case: view(found) })
 }
 
 /**

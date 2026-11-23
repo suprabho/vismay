@@ -920,7 +920,16 @@ const CURIOUS_SPIN_RULES = [
   'The supported core and the embellishment are told apart on the page, each with its grade and earliest source. A claim naming what may be a private living person sticks to the sourced record and may leave the name off. Citation and entity data are Crossref, Google Books and Wikidata (CC0): credit them as the assignment says.',
 ]
 
+/** A Ledger spin's brief carries one past financial crime from the catalogue with its legal status and seed fields: how the page uses them. */
+const LEDGER_SPIN_RULES = [
+  'The legal status is on the page, beside the case name, with what it means, and every sentence about wrongdoing sits on its rung: proven with the judgment or order cited, settled with whether anything was admitted, otherwise "alleged" and attributed to the filing. An indictment, charge-sheet or complaint is an allegation; an attribution to a state or group is the named agency\'s claim.',
+  'Name a living person as a wrongdoer only where a conviction or a regulator or court finding says so; otherwise describe the role. Give the accused party\'s account fairly. Never cite or guess at a suspicious activity report.',
+  'Every amount says what it measures (defrauded, lost net of recoveries, laundered flow, fine, forfeiture, compensation, market value destroyed), in which currency, on what date and at what exchange rate; amounts of different kinds are compared, never added. A fine for weak controls is not a finding that a crime happened.',
+  'The mechanism is told at red-flag level: what it looked like and who could have seen it, never a step-by-step method that would help someone evade controls. The catalogue\'s seed fields, note and links are leads: the page cites the official documents and court records the research found.',
+]
+
 function spinContextRules(spin: BriefSpin, app: HtmlStoryApp, hasContext: boolean): string[] {
+  if (spin.randomizer === 'ledger') return LEDGER_SPIN_RULES
   if (spin.randomizer === 'curious') return CURIOUS_SPIN_RULES
   if (spin.randomizer === 'ocw') return OCW_SPIN_RULES
   if (spin.randomizer === 'landmark') return LANDMARK_SPIN_RULES

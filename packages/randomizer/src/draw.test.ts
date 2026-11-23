@@ -1,6 +1,7 @@
 /** Checks for the shared draw, the research stub and the brief sections.
  *  (run: npx tsx src/draw.test.ts) */
 import assert from 'node:assert/strict'
+import { LEDGER, ledgerBand, ledgerEraOf, ledgerLegalStatus } from './datasets'
 import { ATLAS, CURIOUS, curiousEraOf, DESK, EPICS, EVIDENCE, FOOTSHORTS, FRONTIER, frontierWindowOf, HUNDRED, evidenceByNumber, evidenceDesigns, LANDMARK, OCW, VIZNBA, epicRoute, hundredByRank, hundredEras, isHandsOn, isLiterary, isPhilosophical, isWorkLevel, landmarkLenses, landmarkStocked, reelPool } from './datasets'
 import { DRAW_RULES, draw, normalizeLocks, planLandmark, planOcw } from './draw'
 import {
@@ -29,6 +30,8 @@ import { enrichedOcwCourse, loadOcwPool, ocwFileFromHit, ocwPageOffset, type Ocw
 import { assignmentSection, deliverablesSection, formatSection, researchAppendix } from './spinBrief'
 import { CURIOUS_LENS_METRICS, curiousCreditLine, EVIDENCE_LENS_METRICS, FRONTIER_LENS_METRICS, HUNDRED_LENS_METRICS, evidenceCreditLine, frontierCreditLine, LANDMARK_CONTRIBUTION_LENS, LANDMARK_CONTRIBUTION_LENS_METRICS, LANDMARK_LENS_METRICS, landmarkFocus, landmarkLensDescription, OCW_LENS_METRICS, extractHeroInsight, gameSummary, hundredCreditLine, hundredLife, hundredYear, landmarkAwardLabel, landmarkBackgroundLabel, landmarkCreditLine, landmarkLicenceNote, ocwCourseLabel, ocwCreditLine, researchFileName, researchStub } from './stub'
 import { hasEmDash } from './text'
+import { LEDGER_LEGAL_MEANING } from './stub'
+import type { LedgerPicks, LedgerSubject } from './types'
 import {
   randomizersFor,
   type AtlasPicks,
@@ -323,7 +326,7 @@ const NEWS: FootshortsNews = {
 NEWS.teams[0]!.upcoming = [fx('f-ars-che', 'premier-league', NEWS.teams[0]!, NEWS.teams[1]!, -5, false)]
 
 assert.deepEqual(randomizersFor('footshorts'), ['footshorts'])
-assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious'])
+assert.deepEqual(randomizersFor('vizmaya-fyi'), ['desk', 'atlas', 'epics', 'ledger', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious'])
 assert.deepEqual(normalizeLocks('footshorts', ['team', 'pair']), ['competition', 'team'])
 assert.deepEqual(reelPool('footshorts', 'team', ['A', 'B']), ['A', 'B'])
 assert.throws(() => draw({ randomizer: 'footshorts', seed: 1, now: NOW }), /news snapshot/)
@@ -2216,11 +2219,188 @@ const CU_POOL = curiousPoolFromRows(CU_ROWS, CU_REFS, { asOf: NOW.toISOString() 
   }
 }
 
+// Ledger: the committed catalogue, then the draw (pure, one pass).
+{
+  const L = LEDGER
+  const liveAt = (now: Date) => L.cases.filter((c) => ledgerEraOf(c, now.getTime()).max_days !== undefined)
+  assert.equal(L.cases.length, 240)
+  assert.equal(new Set(L.cases.map((c) => c.id)).size, L.cases.length, 'case ids are unique')
+  assert.equal(new Set(L.cases.map((c) => c.name)).size, L.cases.length, 'case names are unique (the reel shows them)')
+  for (const c of L.cases) {
+    assert.ok(L.regions.some((r) => r.id === c.region), `${c.id}: region`)
+    assert.ok(L.typologies.some((t) => t.id === c.typology), `${c.id}: typology`)
+    assert.ok(L.sectors.some((x) => x.id === c.sector), `${c.id}: sector`)
+    assert.ok(L.outcomes.some((o) => o.id === c.outcome), `${c.id}: outcome`)
+    assert.ok(L.routes.some((r) => r.id === c.caught), `${c.id}: detection route`)
+    assert.ok(c.band >= -1 && c.band < L.bands.length, `${c.id}: band`)
+    assert.ok(c.heat >= 0 && c.heat <= 100, `${c.id}: heat`)
+    if (c.date) assert.match(c.date, /^\d{4}-\d{2}-\d{2}$/, `${c.id}: date`)
+    if (c.date) assert.ok(c.date_label, `${c.id}: a dated case has a label`)
+    for (const l of c.sources ?? []) assert.match(l.url, /^https:\/\//, `${c.id}: lead url`)
+    assert.ok(!hasEmDash(`${c.name}${c.note ?? ''}`), `${c.id}: em dash`)
+  }
+  for (const t of L.typologies) {
+    assert.ok(L.families.some((f) => f.id === t.family), `${t.id}: family`)
+    assert.ok(L.cases.some((c) => c.typology === t.id), `${t.id}: at least one case`)
+  }
+  for (const x of L.sectors) assert.ok(L.cases.some((c) => c.sector === x.id), `${x.id}: at least one case`)
+  for (const f of L.families) assert.ok(f.analyst && f.checks && f.charts.length && f.sources, f.id)
+  for (const l of L.lenses) assert.ok(l.description && l.short && l.focus, l.id)
+  assert.equal(reelPool('ledger', 'case').length, 240)
+  assert.deepEqual(normalizeLocks('ledger', ['case']), ['era', 'sector', 'typology', 'case'])
+  assert.deepEqual(normalizeLocks('ledger', ['typology', 'lens']), ['typology', 'lens'])
+
+  // A case's era follows the date: Breaking for 30 days, Developing for a year, then its year's era.
+  const dated = { year: 2026, date: '2026-09-20' }
+  assert.equal(ledgerEraOf(dated, Date.parse('2026-10-05T00:00:00Z')).id, 'breaking')
+  assert.equal(ledgerEraOf(dated, Date.parse('2026-12-05T00:00:00Z')).id, 'developing')
+  assert.equal(ledgerEraOf(dated, Date.parse('2027-12-05T00:00:00Z')).id, 'modern')
+  assert.deepEqual([2016, 2015, 2008, 2007, 1990, 1989, 1920].map((year) => ledgerEraOf({ year }, NOW.getTime()).id), ['modern', 'postcrisis', 'postcrisis', 'boom', 'boom', 'classic', 'classic'])
+  assert.equal(ledgerLegalStatus({ outcome: 'CONV', caught: 'LEAK' }), 'Leaked')
+  assert.deepEqual(['CONV', 'PEN', 'SETT', 'ONG', 'FUG', 'UNRES', 'ACQ'].map((outcome) => ledgerLegalStatus({ outcome, caught: 'REG' })), ['Proven', 'Proven', 'Settled', 'Alleged', 'Alleged', 'Unresolved', 'Not proven'])
+  assert.equal(ledgerBand({ band: -1 }), 'Not yet sized')
+  assert.ok(liveAt(NOW).length > 0, 'the catalogue has live cases at the test date')
+
+  // Determinism; the reels are the case's own; the rules every spin carries.
+  for (let seed = 0; seed < 80; seed++) {
+    const a = draw({ randomizer: 'ledger', seed, now: NOW })
+    assert.deepEqual(a, draw({ randomizer: 'ledger', seed, now: NOW }))
+    const s = a.subject as LedgerSubject
+    const p = a.picks as LedgerPicks
+    assert.equal(s.case.id, p.case)
+    assert.deepEqual([p.sector, p.typology], [s.case.sector, s.case.typology])
+    assert.equal(p.era, ledgerEraOf(s.case, NOW.getTime()).id)
+    assert.equal(s.family.id, s.typology.family)
+    assert.equal(s.legalStatus, ledgerLegalStatus(s.case))
+    assert.equal(s.live, s.era.max_days !== undefined)
+    assert.equal(a.primary, s.case.id)
+    assert.equal(a.combo, `${s.case.id}|${p.lens}`)
+    assert.deepEqual(a.meta, { region: s.case.region, family: s.family.id, era: s.era.id, heat: s.case.heat })
+    assert.deepEqual(Object.keys(a.reels), ['era', 'sector', 'typology', 'case', 'lens'])
+    for (const tag of ['weight', 'legal', 'seed', 'red flags']) assert.ok(a.rules.some((r) => r.tag === tag), `seed ${seed}: ${tag} rule`)
+    for (const r of a.rules) assert.ok(!hasEmDash(r.text), r.text)
+  }
+
+  // The balance: every region comes up, and the largest region does not dominate the way its case count would.
+  {
+    const regions = new Map<string, number>()
+    let live = 0
+    let heat = 0
+    const N = 2000
+    for (let seed = 0; seed < N; seed++) {
+      const a = draw({ randomizer: 'ledger', seed, now: NOW })
+      regions.set(a.meta.region!, (regions.get(a.meta.region!) ?? 0) + 1)
+      if ((a.subject as LedgerSubject).live) live++
+      if (a.rules.some((r) => r.tag === 'weight' && /Heat-weighted/.test(r.text))) heat++
+    }
+    assert.equal(regions.size, L.regions.length)
+    const share = (id: string) => L.cases.filter((c) => c.region === id).length / L.cases.length
+    assert.ok(regions.get('NA')! / N < share('NA'), 'North America is drawn less often than its share of the catalogue')
+    assert.ok(regions.get('OC')! / N > share('OC'), 'Oceania more often than its share')
+    assert.ok(live / N > DRAW_RULES.ledgerLiveShare, 'the live window is forced on 30% of spins, on top of its natural share')
+    assert.ok(Math.abs(heat / N - DRAW_RULES.heatShare) < 0.05, 'about 60% of spins are heat-weighted')
+  }
+
+  // Locks: a locked case stays and carries its reels; a locked era, sector or typology narrows the cases.
+  const first = draw({ randomizer: 'ledger', seed: 4, now: NOW })
+  const fp = first.picks as LedgerPicks
+  for (let seed = 5; seed < 40; seed++) {
+    const kept = draw({ randomizer: 'ledger', seed, now: NOW, prev: first, locks: ['case'] })
+    assert.equal((kept.picks as LedgerPicks).case, fp.case)
+    assert.ok(!kept.rules.some((r) => r.tag === 'weight'), 'a locked case is not drawn')
+    assert.equal((draw({ randomizer: 'ledger', seed, now: NOW, prev: first, locks: ['era'] }).picks as LedgerPicks).era, fp.era)
+    assert.equal((draw({ randomizer: 'ledger', seed, now: NOW, prev: first, locks: ['sector'] }).picks as LedgerPicks).sector, fp.sector)
+    assert.equal((draw({ randomizer: 'ledger', seed, now: NOW, prev: first, locks: ['typology'] }).picks as LedgerPicks).typology, fp.typology)
+    const both = draw({ randomizer: 'ledger', seed, now: NOW, prev: first, locks: ['sector', 'typology', 'lens'] }).picks as LedgerPicks
+    assert.deepEqual([both.sector, both.typology, both.lens], [fp.sector, fp.typology, fp.lens])
+  }
+  // A lock no case can meet today is ignored with a warning (a live case has aged out of Breaking).
+  {
+    const breaking = L.cases.find((c) => ledgerEraOf(c, NOW.getTime()).id === 'breaking')!
+    const prev = { picks: { era: 'breaking', sector: breaking.sector, typology: breaking.typology, case: breaking.id, lens: L.lenses[0]!.name } }
+    const later = draw({ randomizer: 'ledger', seed: 3, now: new Date('2029-01-01T00:00:00Z'), prev, locks: ['era'] })
+    assert.ok(later.rules.some((r) => r.tag === 'lock' && r.kind === 'warn' && /era lock is ignored/.test(r.text)))
+    assert.notEqual((later.picks as LedgerPicks).era, 'breaking')
+    const gone = draw({ randomizer: 'ledger', seed: 3, now: NOW, prev: { picks: { ...prev.picks, case: 'no-such-case' } }, locks: ['case'] })
+    assert.ok(gone.rules.some((r) => r.tag === 'lock' && /no longer in the catalogue/.test(r.text)))
+  }
+
+  // 30 days: a case just spun is left out; rejected spins do not count.
+  {
+    const only = L.cases.filter((c) => c.typology === fp.typology)
+    const spun = only.slice(0, -1).map((c, i) => entry(draw({ randomizer: 'ledger', seed: 1, now: NOW, prev: { picks: { ...fp, case: c.id } }, locks: ['case'] }), i + 1))
+    for (let seed = 0; seed < 20; seed++) {
+      const r = draw({ randomizer: 'ledger', seed, now: NOW, history: spun, prev: first, locks: ['typology'] })
+      if (only.length > 1) assert.equal((r.picks as LedgerPicks).case, only[only.length - 1]!.id, 'the one case of the typology not spun in 30 days')
+    }
+    const rejected = spun.map((e) => ({ ...e, status: 'rejected' as const }))
+    const seen = new Set<string>()
+    for (let seed = 0; seed < 60; seed++) seen.add((draw({ randomizer: 'ledger', seed, now: NOW, history: rejected, prev: first, locks: ['typology'] }).picks as LedgerPicks).case)
+    if (only.length > 2) assert.ok(seen.size > 1, 'rejected spins leave the pool whole')
+  }
+
+  // The same region twice in a row is re-drawn once.
+  {
+    let redrawn = false
+    for (let seed = 0; seed < 80 && !redrawn; seed++) {
+      const fresh = draw({ randomizer: 'ledger', seed, now: NOW })
+      redrawn = draw({ randomizer: 'ledger', seed, now: NOW, history: [{ ...entry(fresh, 40), primary: 'another-case', combo: 'another-case|x' }] }).rules.some((r) => r.tag === 'balance' && /twice in a row/.test(r.text))
+    }
+    assert.ok(redrawn, 'the same-region rule fires')
+  }
+
+  // 90 days: the lens is re-drawn for a case and lens that ran; locked, it repeats with a warning.
+  {
+    const ran = entry(draw({ randomizer: 'ledger', seed: 1, now: NOW, prev: first, locks: ['case', 'lens'] }), 40)
+    for (let seed = 0; seed < 30; seed++) {
+      assert.notEqual((draw({ randomizer: 'ledger', seed, now: NOW, history: [ran], prev: first, locks: ['case'] }).picks as LedgerPicks).lens, fp.lens)
+    }
+    const repeat = draw({ randomizer: 'ledger', seed: 2, now: NOW, history: [ran], prev: first, locks: ['case', 'lens'] })
+    assert.ok(repeat.rules.some((r) => r.tag === '90 days' && r.kind === 'warn' && /It repeats/.test(r.text)))
+  }
+
+  // The legal rule and the live rule say what the page may say; the stub and the brief carry the seed leads as leads.
+  {
+    const at = (id: string, now = NOW) => {
+      const c = L.cases.find((x) => x.id === id)!
+      return draw({ randomizer: 'ledger', seed: 7, now, prev: { picks: { era: '', sector: c.sector, typology: c.typology, case: c.id, lens: 'Impact' } }, locks: ['case', 'lens'] })
+    }
+    const kind = (status: string) => at(L.cases.find((c) => ledgerLegalStatus(c) === status)!.id).rules.find((r) => r.tag === 'legal')!
+    assert.equal(kind('Proven').kind, 'info')
+    assert.equal(kind('Settled').kind, 'info')
+    assert.match(kind('Alleged').text, /write "alleged"/)
+    assert.equal(kind('Alleged').kind, 'warn')
+    assert.match(kind('Leaked').text, /leaked documents/)
+    const liveCase = liveAt(NOW).find((c) => c.sources?.length && c.note)!
+    const live = at(liveCase.id)
+    assert.ok(live.rules.some((r) => r.tag === 'live' && r.kind === 'warn'))
+    const aged = at(liveCase.id, new Date('2029-01-01T00:00:00Z'))
+    assert.ok(!(aged.subject as LedgerSubject).live)
+    assert.ok(aged.rules.some((r) => r.tag === 'live' && r.kind === 'info' && /outside the live window/.test(r.text)))
+    const spin = asSpin(live)
+    const stub = researchStub(spin)
+    for (const h of ['## Seed fields (provisional', '## Seed note (unverified)', '## Seed leads (search results, not yet verified)', '## 1. Timeline', '## 3. Money trail', '## 4. Missed signals ledger', '## 8. Detection logic', '## 9. Counter-narrative', '## Lens read: Impact', '## Executive read', '## Pattern file', '## Curiosity list', '## Legal note']) {
+      assert.ok(stub.includes(h), `stub: ${h}`)
+    }
+    assert.ok(stub.includes(liveCase.sources![0]!.url))
+    assert.ok(researchFileName(spin).endsWith(`_ledger_${liveCase.id}.md`))
+    const brief = assignmentSection(spin)
+    assert.ok(brief.includes('Seed leads (search results the case was found in, not yet verified):') && brief.includes(liveCase.sources![0]!.url))
+    assert.ok(brief.includes(`inside the ${(live.subject as LedgerSubject).era.sub}`), 'a live case asks for developments inside its window')
+    assert.ok(assignmentSection(asSpin(aged)).includes('the most recent development in the last 12 months'))
+    for (const h of ['### Do this first', '### How to work the case', '### What the readers check', '### Beat rules', '### In the research file']) assert.ok(brief.includes(h), `brief: ${h}`)
+    assert.ok(brief.includes((live.subject as LedgerSubject).family.checks))
+    assert.ok(formatSection(spin).startsWith('## Format: autopsy brief with charts'))
+    assert.ok(deliverablesSection(spin, 'https://vizmaya.fyi').includes('A human approves the hero insight for Ledger spins'))
+    assert.ok(Object.keys(LEDGER_LEGAL_MEANING).includes((live.subject as LedgerSubject).legalStatus))
+  }
+}
+
 // Stub and brief sections.
 const OCW_POOL = poolFor(planOcw({ randomizer: 'ocw', seed: 21, now: NOW }))
 const LM_PLAN = planLandmark({ randomizer: 'landmark', seed: 21, now: NOW }, lmAwardsFor(planLandmark({ randomizer: 'landmark', seed: 21, now: NOW })))
 const LM_POOL = lmPoolFor(LM_PLAN, lmAwardsFor(LM_PLAN))
-for (const randomizer of ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba'] as const) {
+for (const randomizer of ['desk', 'atlas', 'epics', 'ledger', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba'] as const) {
   const spin = asSpin(draw({ randomizer, seed: 21, now: NOW, news: NEWS, nbaNews: NBA, ocwPool: OCW_POOL, landmarkPool: LM_POOL, frontierPool: FR_POOL, curiousPool: CU_POOL }))
   const stub = researchStub(spin)
   assert.ok(stub.includes('## Claims log'))

@@ -5,7 +5,8 @@
  * of the most influential persons in history, the Evidence Desk on an
  * annotated collection of research on social media's effects and the
  * Frontier Desk on the arXiv papers AI Daily ingests, and the Curious Desk
- * on the approved claims of the provenance-first claim pipeline), the
+ * on the approved claims of the provenance-first claim pipeline, and Ledger
+ * on a catalogue of past financial crimes, researched as autopsies), the
  * Footshorts one (teams, tournaments and their news) and the VizNBA one
  * (franchises, conferences and their news), their datasets (./data/*.json)
  * and the spins they produce.
@@ -13,9 +14,9 @@
  * Pure: no Supabase / Node imports, so admin client components can use them.
  */
 
-export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'frontier' | 'curious' | 'footshorts' | 'viznba'
+export type RandomizerId = 'desk' | 'atlas' | 'epics' | 'ledger' | 'ocw' | 'landmark' | 'hundred' | 'evidence' | 'frontier' | 'curious' | 'footshorts' | 'viznba'
 
-export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba']
+export const RANDOMIZERS: readonly RandomizerId[] = ['desk', 'atlas', 'epics', 'ledger', 'ocw', 'landmark', 'hundred', 'evidence', 'frontier', 'curious', 'footshorts', 'viznba']
 
 export function isRandomizerId(value: unknown): value is RandomizerId {
   return typeof value === 'string' && (RANDOMIZERS as readonly string[]).includes(value)
@@ -57,8 +58,9 @@ export interface RandomizerMeta {
    * sensitivity rules, for The 100 Desk, whose list runs from the
    * founders of religions to dictators, and for the Curious Desk, whose
    * claims arrive with a computed grade a human has approved but whose page
-   * still asserts something about the world; optional for the Desk,
-   * Footshorts and the NBA Desk).
+   * still asserts something about the world, and for Ledger, whose pages
+   * are about wrongdoing and often about people who have been charged but
+   * not convicted; optional for the Desk, Footshorts and the NBA Desk).
    */
   gated: boolean
 }
@@ -109,6 +111,22 @@ export const RANDOMIZER_META: Record<RandomizerId, RandomizerMeta> = {
       { key: 'lens', label: 'Lens' },
     ],
     option: { key: 'sequence', label: 'Sequence mode (continue the route)' },
+    gated: true,
+  },
+  ledger: {
+    id: 'ledger',
+    app: 'vizmaya-fyi',
+    name: 'Ledger',
+    hint: 'Financial crime · autopsy',
+    format: 'Autopsy brief with charts',
+    reels: [
+      { key: 'era', label: 'Era' },
+      { key: 'sector', label: 'Sector' },
+      { key: 'typology', label: 'Typology' },
+      { key: 'case', label: 'Case', parents: ['era', 'sector', 'typology'] },
+      { key: 'lens', label: 'Lens' },
+    ],
+    option: null,
     gated: true,
   },
   ocw: {
@@ -1470,6 +1488,157 @@ export interface CuriousSubject {
   from: string | null
 }
 
+/* ---------- Ledger ---------- */
+
+/**
+ * Where a case sits in time. Breaking and Developing are the live window:
+ * a case with a dated latest development is in one of them while that date
+ * is within `max_days` of the spin, and falls back to its year's era after.
+ * The four historic eras each start at `from_year` (null for the oldest).
+ */
+export interface LedgerEra {
+  id: string
+  name: string
+  /** "last 30 days", "post-crisis era". */
+  sub: string
+  max_days?: number
+  from_year?: number | null
+}
+
+/**
+ * A family of typologies (Fraud, Laundering, Markets, ...): the draw
+ * balances on it, and the brief takes its analyst, its first checks, its
+ * charts and its sources from it.
+ */
+export interface LedgerFamily {
+  id: string
+  name: string
+  /** "a financial intelligence investigator": who the brief asks the agent to work as. */
+  analyst: string
+  /** What this kind of case needs checked first. */
+  checks: string
+  charts: string[]
+  /** Where its primary documents are. */
+  sources: string
+}
+
+export interface LedgerTypology {
+  id: string
+  name: string
+  /** LedgerFamily.id */
+  family: string
+}
+
+/** A lens: the question (description), its short label, and what the research does with it. */
+export interface LedgerLens extends NamedOption {
+  id: string
+  short: string
+  focus: string
+}
+
+export interface LedgerRegion {
+  id: string
+  name: string
+  /** The regulators, prosecutors and court records to start from there. */
+  sources: string
+}
+
+/**
+ * What the page may say about wrongdoing, from the case's outcome (or its
+ * detection route, for a leak): Proven (a conviction, judgment or regulator
+ * order), Settled, Alleged (charged or under investigation), Unresolved,
+ * Leaked (from leaked documents), Not proven (acquitted or dismissed).
+ */
+export type LedgerLegalStatus = 'Proven' | 'Settled' | 'Alleged' | 'Unresolved' | 'Leaked' | 'Not proven'
+
+export interface LedgerOutcome {
+  id: string
+  name: string
+  legal: LedgerLegalStatus
+}
+
+/** A search result a live case was found in: a lead, not a verified source. */
+export interface LedgerLead {
+  title: string
+  url: string
+}
+
+/** One case in the catalogue. Every field but the name is a seed value: provisional until the claims log confirms it. */
+export interface LedgerCase {
+  id: string
+  name: string
+  year: number
+  /** The latest development the catalogue knows of (YYYY-MM-DD), on live cases. */
+  date?: string
+  /** "29 Oct 2026" */
+  date_label?: string
+  country: string
+  /** LedgerRegion.id */
+  region: string
+  /** LedgerTypology.id */
+  typology: string
+  /** A sector's id. */
+  sector: string
+  /** Index into LedgerDataset.bands (the headline loss, flow or penalty at the time); -1 when not yet sized. */
+  band: number
+  /** LedgerOutcome.id */
+  outcome: string
+  /** How it was caught: the id of a detection route ("UNK" when not yet researched). */
+  caught: string
+  /** 0 to 100. A seed: nothing refreshes it. */
+  heat: number
+  /** A seed note from the search the case was found in. Unverified. */
+  note?: string
+  sources?: LedgerLead[]
+}
+
+export interface LedgerDataset {
+  catalogue: { name: string; /** When the live cases were last seeded (YYYY-MM-DD). */ seeded: string; note: string }
+  eras: LedgerEra[]
+  sectors: Array<{ id: string; name: string }>
+  families: LedgerFamily[]
+  typologies: LedgerTypology[]
+  lenses: LedgerLens[]
+  regions: LedgerRegion[]
+  outcomes: LedgerOutcome[]
+  /** Detection routes: how a case was caught. */
+  routes: Array<{ id: string; name: string }>
+  bands: string[]
+  cases: LedgerCase[]
+}
+
+export interface LedgerPicks {
+  /** LedgerEra.id, as it stood when the spin was drawn. */
+  era: string
+  sector: string
+  typology: string
+  /** LedgerCase.id */
+  case: string
+  /** LedgerLens.name */
+  lens: string
+}
+
+export interface LedgerSubject {
+  randomizer: 'ledger'
+  era: LedgerEra
+  sector: { id: string; name: string }
+  typology: LedgerTypology
+  family: LedgerFamily
+  case: LedgerCase
+  region: LedgerRegion
+  lens: LedgerLens
+  /** The outcome and detection route, written out. */
+  outcome: string
+  caught: string
+  /** The scale band, written out ("$1B to $10B", "Not yet sized"). */
+  band: string
+  legalStatus: LedgerLegalStatus
+  /** The case is in the live window (Breaking or Developing) at the spin. */
+  live: boolean
+  /** Days since the case's dated latest development, or null when it has none. */
+  lastDevelopmentDays: number | null
+}
+
 /* ---------- Footshorts ---------- */
 
 export type FootshortsCompetitionKind = 'domestic' | 'continental' | 'international'
@@ -1831,8 +2000,8 @@ export interface ViznbaSubject {
   gameIds: string[]
 }
 
-export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FrontierSubject | CuriousSubject | FootshortsSubject | ViznbaSubject
-export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FrontierPicks | CuriousPicks | FootshortsPicks | ViznbaPicks
+export type SpinSubject = DeskSubject | AtlasSubject | EpicsSubject | OcwSubject | LandmarkSubject | HundredSubject | EvidenceSubject | FrontierSubject | CuriousSubject | LedgerSubject | FootshortsSubject | ViznbaSubject
+export type SpinPicks = DeskPicks | AtlasPicks | EpicsPicks | OcwPicks | LandmarkPicks | HundredPicks | EvidencePicks | FrontierPicks | CuriousPicks | LedgerPicks | FootshortsPicks | ViznbaPicks
 
 /** Balancing memory the next draw reads back. */
 export interface SpinMeta {
@@ -1865,6 +2034,8 @@ export interface SpinMeta {
   /** The Curious Desk: the era, for the same-era-twice rule, and the claim id, for pulling the thread (theme and region reuse the fields above). */
   era?: string
   claim?: string
+  /** Ledger: the typology family, with the region above, for the balance; `era` is the case's era at the spin. */
+  family?: string
 }
 
 export interface DrawResult {
@@ -1872,7 +2043,7 @@ export interface DrawResult {
   picks: SpinPicks
   subject: SpinSubject
   reels: Record<string, ReelValue>
-  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, team, course, laureate, person). */
+  /** The single primary reel value the 30-day block keys on (sub-industry, country, epic, case, team, course, laureate, person). */
   primary: string
   /** The full combination the 90-day block keys on. */
   combo: string
