@@ -6,7 +6,8 @@ import { useHtmlStories } from '@/lib/useHtmlStories';
 import type { EditorialEpicSummary, EditorialStorySummary } from '@footshorts/shared';
 import { HTML_STORY_FORMAT_META, isPagedHtmlStoryFormat } from '@vismay/html-stories/formats';
 import type { PublishedHtmlStory } from '@vismay/html-stories/htmlStories';
-import { AuraBackground } from '@/components/AuraBackground';
+import { storyUrl } from '@vismay/story-embed/url';
+import { LivePreview } from '@/components/LivePreview';
 
 /**
  * One magazine card, whichever table it came from: a viz-engine editorial story
@@ -19,9 +20,16 @@ interface MagazineCard {
   title: string;
   /** Sort key and the card's date: published_at, else created/updated. */
   date: string;
-  aura: string | null;
-  /** Inline background when the page declared its palette; else the slug gradient. */
+  /**
+   * The story itself, chrome-less, as the card previews it live (LivePreview):
+   * the render service's embed for an editorial story, the HTML story's own
+   * `?preview=1` (no site chrome, no format controls, no Listen player).
+   */
+  previewSrc: string;
+  /** The preview's ground until the story shows: the page's palette when it declared a dark one, else the slug gradient. */
   background: string;
+  /** The caption's ground, a solid colour the preview fades into. */
+  solid: string;
   /** True for /s/<slug>: rendered with <a>, not <Link>. */
   external: boolean;
   /** An HTML story's format when it isn't a scrolling page ("Book", "Board", "Deck"). */
@@ -42,6 +50,10 @@ function gradientFor(slug: string): string {
   return `linear-gradient(135deg, hsl(${hue} 70% 22%) 0%, hsl(${(hue + 60) % 360} 55% 12%) 100%)`;
 }
 
+function solidFor(slug: string): string {
+  return `hsl(${slugHue(slug)} 60% 14%)`;
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -54,8 +66,9 @@ function editorialCard(story: EditorialStorySummary): MagazineCard {
     href: `/editorial/${story.slug}`,
     title: story.title,
     date: story.publishedAt ?? story.createdAt,
-    aura: story.aura,
+    previewSrc: storyUrl(story.slug),
     background: gradientFor(story.slug),
+    solid: solidFor(story.slug),
     external: false,
     format: null,
   };
@@ -75,17 +88,18 @@ function isDark(hex: string | undefined): hex is string {
 /** An HTML story wears its own palette (its `vizmaya:theme` meta) when it declared a dark one. */
 function htmlStoryCard(story: PublishedHtmlStory): MagazineCard {
   const t = story.theme;
-  const background =
-    isDark(t?.background) && t?.accent
-      ? `linear-gradient(135deg, ${t.surface ?? t.background} 0%, ${t.background} 60%, ${t.accent}33 100%)`
-      : gradientFor(story.slug);
+  const themed = isDark(t?.background) && !!t?.accent;
+  const background = themed
+    ? `linear-gradient(135deg, ${t.surface ?? t.background} 0%, ${t.background} 60%, ${t.accent}33 100%)`
+    : gradientFor(story.slug);
   return {
     key: `html:${story.slug}`,
     href: `/s/${story.slug}`,
     title: story.title,
     date: story.publishedAt ?? story.updatedAt,
-    aura: story.aura,
+    previewSrc: `/s/${encodeURIComponent(story.slug)}?preview=1`,
     background,
+    solid: themed && t?.background ? t.background : solidFor(story.slug),
     external: true,
     // The listing API's JSON may predate the field; only a known paged format gets a label.
     format: isPagedHtmlStoryFormat(story.format) ? HTML_STORY_FORMAT_META[story.format].label : null,
@@ -118,32 +132,66 @@ function CardLink({
   );
 }
 
+/**
+ * The card's picture: the story itself, running live (only while on screen;
+ * see LivePreview), above the caption and fading into its colour, as the
+ * vizmaya.fyi home wall shows its stories. Until it loads (or for a reader
+ * saving data) the card's gradient shows.
+ */
+function CardPreview({ card }: { card: MagazineCard }) {
+  return (
+    <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: card.background }}>
+      <LivePreview
+        src={card.previewSrc}
+        title={card.title}
+        className="transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-10"
+        style={{ background: `linear-gradient(to top, ${card.solid}, transparent)` }}
+      />
+    </div>
+  );
+}
+
+/** "Board · Nov 23, 2026": the card's format, when it isn't a scrolling page, and its date. */
+function CardMeta({ card, lead }: { card: MagazineCard; lead?: boolean }) {
+  return (
+    <div
+      className={`flex items-center gap-2 overflow-hidden whitespace-nowrap uppercase opacity-75 ${lead ? 'text-[0.7rem] tracking-[0.18em]' : 'text-[0.65rem] tracking-[0.12em]'}`}
+    >
+      {lead && (
+        <>
+          <span>Editorial</span>
+          <span aria-hidden>·</span>
+        </>
+      )}
+      {card.format && (
+        <>
+          <span>{card.format}</span>
+          <span aria-hidden>·</span>
+        </>
+      )}
+      <time dateTime={card.date}>{formatDate(card.date)}</time>
+    </div>
+  );
+}
+
 function HeroCard({ card }: { card: MagazineCard }) {
   return (
     <CardLink
       card={card}
-      className="group relative block overflow-hidden rounded-2xl border border-border"
-      style={{ background: card.background, aspectRatio: '5 / 4' }}
+      className="group relative flex aspect-[4/5] flex-col overflow-hidden rounded-2xl border border-border text-white sm:aspect-[5/4]"
+      style={{ background: card.solid }}
     >
-      {card.aura && <AuraBackground slug={card.aura} />}
-      <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white">
-        <div className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] opacity-80">
-          <span>Editorial</span>
-          {card.format && (
-            <>
-              <span aria-hidden>·</span>
-              <span>{card.format}</span>
-            </>
-          )}
-          <span aria-hidden>·</span>
-          <time dateTime={card.date}>{formatDate(card.date)}</time>
-        </div>
-        <div>
-          <h2 className="font-serif text-2xl leading-tight md:text-3xl">{card.title}</h2>
-          <div className="mt-3 inline-flex items-center gap-1.5 text-sm opacity-80 group-hover:opacity-100">
-            Read story
-            <span aria-hidden>→</span>
-          </div>
+      <CardPreview card={card} />
+      <div className="flex-none px-5 pb-5 pt-2 md:px-6 md:pb-6">
+        <CardMeta card={card} lead />
+        <h2 className="mt-2 font-serif text-2xl leading-tight md:text-3xl">{card.title}</h2>
+        <div className="mt-3 inline-flex items-center gap-1.5 text-sm opacity-80 group-hover:opacity-100">
+          Read story
+          <span aria-hidden>→</span>
         </div>
       </div>
     </CardLink>
@@ -174,16 +222,13 @@ function GridCard({ card }: { card: MagazineCard }) {
   return (
     <CardLink
       card={card}
-      className="group relative block overflow-hidden rounded-xl border border-border"
-      style={{ background: card.background, aspectRatio: '4 / 5' }}
+      className="group relative flex aspect-[3/4] flex-col overflow-hidden rounded-xl border border-border text-white"
+      style={{ background: card.solid }}
     >
-      {card.aura && <AuraBackground slug={card.aura} />}
-      <div className="relative z-10 flex h-full flex-col justify-between p-4 text-white">
-        <div className="text-[0.65rem] uppercase tracking-[0.18em] opacity-75">
-          {card.format && <span>{card.format} · </span>}
-          <time dateTime={card.date}>{formatDate(card.date)}</time>
-        </div>
-        <h3 className="font-serif text-base leading-snug">{card.title}</h3>
+      <CardPreview card={card} />
+      <div className="flex-none px-3.5 pb-4 pt-1.5">
+        <CardMeta card={card} />
+        <h3 className="mt-1.5 line-clamp-3 font-serif text-base leading-snug">{card.title}</h3>
       </div>
     </CardLink>
   );

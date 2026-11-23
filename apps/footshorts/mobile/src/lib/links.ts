@@ -14,3 +14,8 @@ export const FOOTSHORTS_WEB_ORIGIN = (
 export function htmlStoryUrl(slug: string): string {
   return `${FOOTSHORTS_WEB_ORIGIN}/s/${encodeURIComponent(slug)}?embed=1`;
 }
+
+/** An HTML story as a magazine card previews it: an embed that also leaves out its format's controls and the Listen player. */
+export function htmlStoryPreviewUrl(slug: string): string {
+  return `${FOOTSHORTS_WEB_ORIGIN}/s/${encodeURIComponent(slug)}?preview=1`;
+}
