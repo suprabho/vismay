@@ -177,37 +177,93 @@ Transport is **stdio**. For remote use there is also the hosted endpoint below.
 
 ## Hosted endpoint
 
-vizmaya-fyi serves the same server over **Streamable HTTP** at
-`https://vizmaya.fyi/api/mcp` ([route](../../apps/vizmaya-fyi/app/api/mcp/route.ts) →
-[`src/hosted.ts`](src/hosted.ts)). It is stateless: every POST builds a fresh server
-and answers with JSON, so it runs on Vercel functions with no session store. GET and
-DELETE answer 405.
+vizmaya-fyi serves the same server over **Streamable HTTP** at two URLs
+([routes](../../apps/vizmaya-fyi/app/api/mcp/) → [`src/hosted.ts`](src/hosted.ts)):
+
+| URL | For |
+|-----|-----|
+| `https://vizmaya.fyi/api/mcp` | **Sign in.** An MCP client that connects with no credentials gets a 401 that opens the sign-in ([`src/oauth.ts`](src/oauth.ts)). Signed in, it has every hosted tool. |
+| `https://vizmaya.fyi/api/mcp/public` | **No sign-in.** The open tools for anyone. |
+
+Both are stateless: every POST builds a fresh server and answers with JSON, so they
+run on Vercel functions with no session store. GET and DELETE answer 405.
 
 | Caller | Tools |
 |--------|-------|
-| Anyone | `get_html_story_brief` (the plain brief, styles, formats; the match, race, game and trip contexts still need the token). With `CATALOG_BASE_URL` set on the vizmaya-fyi deployment, also `list_verticals`, `list_modules` and `embed_url`. |
-| With a publish token | Also `publish_html_story`, `save_story_image`, `generate_story_image` and every randomizer, pool and news tool. |
+| Anyone (`/public`) | `get_html_story_brief` (the plain brief, styles, formats; the match, race, game and trip contexts still need a token). With `CATALOG_BASE_URL` set on the vizmaya-fyi deployment, also `list_verticals`, `list_modules` and `embed_url`. |
+| Signed in (`/api/mcp`), or with a publish token (either URL) | Also `publish_html_story`, `save_story_image`, `generate_story_image` and every randomizer, pool and news tool. |
 | Nobody (local server only) | `render_module_image`, `render_story_video`, the HeyGen tools, and every `filePath` argument. |
 
-**Tokens are the caller's own.** Send the vizmaya-fyi publish token as
-`Authorization: Bearer <token>`. For the other sites send `x-footshorts-token`,
-`x-vizf1-token`, `x-viznba-token` or `x-travel-token`; each falls back to the bearer,
-like the env vars do locally. The endpoint forwards the token to the site, and the
-site checks it. It never uses the `HTML_STORIES_TOKEN` in its own env, so a wrong
-or missing token gets the site's 401, the same as calling the site's API directly.
-The gated tools only appear in `tools/list` when a token is sent.
+### Connect
 
-Connect from Claude Code:
+**Claude app:** Settings → Connectors → Add custom connector, paste
+`https://vizmaya.fyi/api/mcp`, click **Connect**. A vismay.xyz page asks you to sign
+in to admin (or just to click **Allow** if you're signed in), and you're back in
+Claude with every tool.
+
+**Claude Code:**
 
 ```
-claude mcp add --transport http vismay https://vizmaya.fyi/api/mcp --header "Authorization: Bearer <token>"
+claude mcp add --transport http vismay https://vizmaya.fyi/api/mcp
 ```
 
-From the Claude app: Settings → Connectors → Add custom connector, with the URL.
-Custom connectors there sign in with OAuth or not at all, so they get the open tools
-only until the endpoint offers an OAuth sign-in.
+then run `/mcp` and pick `vismay` to sign in in the browser. Cursor works the same
+way. The token header still works for scripts and CI:
+`--header "Authorization: Bearer <publish token>"`.
 
-Checks: `pnpm --filter @vismay/mcp test` ([src/hosted.test.ts](src/hosted.test.ts)).
+### How the sign-in works
+
+vizmaya.fyi is both the protected resource and its OAuth authorization server
+(issuer = the site's origin; previews and local dev get their own):
+
+1. The 401's `WWW-Authenticate` names the protected resource metadata
+   (`/.well-known/oauth-protected-resource/api/mcp`, RFC 9728), which names the issuer;
+   its metadata is at `/.well-known/oauth-authorization-server` (RFC 8414).
+2. The client registers itself (`/api/mcp/oauth/register`, RFC 7591): public clients
+   with PKCE, or secret ones.
+3. `/api/mcp/oauth/authorize` checks the request (registered redirect URI, PKCE S256,
+   the resource) and sends the browser to **admin's consent page**,
+   `vismay.xyz/mcp/authorize/<signed request>`. People only ever sign in on admin.
+4. Admin checks the admin session and shows the app's name and where the sign-in goes
+   (the redirect's origin, since the name is the app's own claim). **Allow** signs an
+   approval for exactly that request and sends the browser to
+   `/api/mcp/oauth/callback`, which issues a code. The request and approval are signed
+   with keys derived from `ADMIN_SESSION_SECRET`, which both deployments already hold
+   (`@vismay/admin-core/mcpConsent`, Scope B in [docs/auth.md](../../docs/auth.md)).
+5. `/api/mcp/oauth/token` swaps the code (with the PKCE verifier) for a 1-hour access
+   token bound to `/api/mcp` and a refresh token. A sign-in lasts at most 90 days
+   however often it is refreshed; then the app asks again.
+
+Everything is stateless (signed client ids, codes and tokens, no table). Two costs,
+accepted for a single-admin service: a code can be redeemed more than once in its 5
+minutes (PKCE still binds it to the app that asked), and tokens can't be revoked one
+at a time. **To sign every app out**, set or bump `MCP_TOKEN_GENERATION` on the
+vizmaya-fyi project. Rotating `ADMIN_SESSION_SECRET` also does it, and signs admins out.
+
+**Signed-in calls use the deployment's own publish tokens**, read like the local
+server's env: `HTML_STORIES_TOKEN`, and `FOOTSHORTS_HTML_STORIES_TOKEN`,
+`VIZF1_HTML_STORIES_TOKEN`, `VIZNBA_HTML_STORIES_TOKEN`, `TRAVEL_HTML_STORIES_TOKEN`
+each falling back to it. So footshorts, vizf1, viznba and travel only work for a
+signed-in app if their tokens are set on the vizmaya-fyi project, or the sites share
+one value.
+
+**Token callers** send the vizmaya-fyi publish token as `Authorization: Bearer <token>`,
+and `x-footshorts-token`, `x-vizf1-token`, `x-viznba-token` or `x-travel-token` for the
+other sites (each falls back to the bearer). The endpoint forwards the caller's token
+to the site, which checks it, so a wrong one gets the site's 401. An OAuth access token
+is never forwarded to a site, and the deployment's own tokens are only used for a
+verified sign-in.
+
+| Env on vizmaya-fyi | Needed for | Default |
+|--------------------|------------|---------|
+| `ADMIN_SESSION_SECRET` | the sign-in (must match admin's; both already have it) | — (without it the sign-in answers 503; token callers and `/public` still work) |
+| `NEXT_PUBLIC_ADMIN_URL` | where the consent page is | `https://vismay.xyz` |
+| `MCP_TOKEN_GENERATION` | signing every app out | `1` |
+| the publish tokens above | what a signed-in app can publish to | — |
+
+Checks: `pnpm --filter @vismay/mcp test` ([src/oauth.test.ts](src/oauth.test.ts),
+[src/hosted.test.ts](src/hosted.test.ts)) and
+`pnpm exec tsx packages/admin-core/src/mcpConsent.smoke.ts`.
 
 ## Notes
 

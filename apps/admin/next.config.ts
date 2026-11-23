@@ -56,6 +56,21 @@ const nextConfig: NextConfig = {
     '@vismay/viz-admin',
     '@footshorts/shared',
   ],
+  async headers() {
+    return [
+      {
+        // The MCP sign-in consent page (app/mcp/authorize): never framed, so an
+        // Allow click can't be hijacked, and no referrer, since its URL carries
+        // the signed request.
+        source: '/mcp/authorize/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig

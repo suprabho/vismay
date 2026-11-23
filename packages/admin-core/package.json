@@ -10,7 +10,8 @@
     "./middleware": "./src/middleware.ts",
     "./signedUrl": "./src/signedUrl.ts",
     "./signedMiddleware": "./src/signedMiddleware.ts",
-    "./actionToken": "./src/actionToken.ts"
+    "./actionToken": "./src/actionToken.ts",
+    "./mcpConsent": "./src/mcpConsent.ts"
   },
   "peerDependencies": {
     "next": "^16.0.0",

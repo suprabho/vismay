@@ -1,10 +1,11 @@
 /**
- * The public Vismay MCP endpoint, https://vizmaya.fyi/api/mcp (Streamable
- * HTTP, stateless). Anyone can read the HTML story brief; a caller who sends
- * a publish token as "Authorization: Bearer <token>" also gets the publishing,
- * story media and randomizer tools, with the token forwarded to the site that
- * checks it. Tool set and auth: packages/mcp/src/hosted.ts; setup:
- * packages/mcp/README.md ("Hosted endpoint").
+ * The Vismay MCP sign-in endpoint, https://vizmaya.fyi/api/mcp (Streamable
+ * HTTP, stateless). An MCP client that connects with no credentials gets a 401
+ * that starts the OAuth sign-in (packages/mcp/src/oauth.ts; people allow it on
+ * admin's /mcp/authorize page); signed in, it has every hosted tool. A caller
+ * who sends a publish token as "Authorization: Bearer <token>" gets the same
+ * tools with that token. No sign-in: /api/mcp/public. Tool set and auth:
+ * packages/mcp/src/hosted.ts; setup: packages/mcp/README.md ("Hosted endpoint").
  */
 
 import { handleHostedMcpRequest } from '@vismay/mcp/hosted'
