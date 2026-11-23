@@ -43,6 +43,15 @@ export interface VismayMcpConfig {
 /** The apps whose sites host HTML stories (mirrors @vismay/html-stories/apps). */
 export type HtmlStoryApp = 'vizmaya-fyi' | 'footshorts' | 'vizf1' | 'viznba' | 'travel'
 
+/** The env var that overrides each app's site URL, named in errors when a site redirects. */
+export const SITE_URL_ENV: Record<HtmlStoryApp, string> = {
+  'vizmaya-fyi': 'HTML_STORIES_URL',
+  footshorts: 'FOOTSHORTS_HTML_STORIES_URL',
+  vizf1: 'VIZF1_HTML_STORIES_URL',
+  viznba: 'VIZNBA_HTML_STORIES_URL',
+  travel: 'TRAVEL_HTML_STORIES_URL',
+}
+
 /** The hosting site for an app's HTML stories. */
 export function htmlStoriesUrlFor(config: VismayMcpConfig, app: HtmlStoryApp): string {
   if (app === 'footshorts') return config.footshortsHtmlStoriesUrl
@@ -63,8 +72,10 @@ export function loadConfig(): VismayMcpConfig {
     vizmayaBaseUrl: env('VIZMAYA_BASE_URL') ?? 'http://localhost:3000',
     repoRoot: env('VISMAY_REPO_ROOT'),
     screenshotDir: env('SCREENSHOT_DIR') ?? '/tmp/vismay-mcp-screenshots',
-    htmlStoriesUrl: (env('HTML_STORIES_URL') ?? 'https://vizmaya.fyi').replace(/\/$/, ''),
-    footshortsHtmlStoriesUrl: (env('FOOTSHORTS_HTML_STORIES_URL') ?? 'https://footshorts.com').replace(/\/$/, ''),
+    // www is canonical for both: the apex redirects to it, and a redirect to another host drops the
+    // Authorization header, so an apex default turned every token call into "unauthorized" (siteFetch.ts).
+    htmlStoriesUrl: (env('HTML_STORIES_URL') ?? 'https://www.vizmaya.fyi').replace(/\/$/, ''),
+    footshortsHtmlStoriesUrl: (env('FOOTSHORTS_HTML_STORIES_URL') ?? 'https://www.footshorts.com').replace(/\/$/, ''),
     // www is canonical: the apex redirects, and a redirected POST loses its body.
     vizf1HtmlStoriesUrl: (env('VIZF1_HTML_STORIES_URL') ?? 'https://www.vizf1.com').replace(/\/$/, ''),
     // Placeholder until the VizNBA domain is live: set VIZNBA_HTML_STORIES_URL.

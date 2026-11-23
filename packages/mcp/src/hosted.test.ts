@@ -94,7 +94,7 @@ assert.deepEqual(await toolNames(), ['get_html_story_brief'])
   const r = await callTool('get_html_story_brief', {})
   assert.equal(r.result.content[0].text, 'THE BRIEF')
   assert.equal(sent.length, 1)
-  assert.equal(sent[0]!.url, 'https://vizmaya.fyi/api/html-stories/brief')
+  assert.equal(sent[0]!.url, 'https://www.vizmaya.fyi/api/html-stories/brief')
   assert.equal(sent[0]!.auth, null, 'anonymous brief carries no token')
 }
 
@@ -146,7 +146,7 @@ assert.deepEqual(await toolNames(), ['get_html_story_brief'])
   const r = await callTool('publish_html_story', { html: '<html><title>x</title></html>', slug: 'x' }, bearer('caller-token'))
   assert.ok(!r.result.isError, r.result.content?.[0]?.text)
   assert.equal(sent.length, 1)
-  assert.equal(sent[0]!.url, 'https://vizmaya.fyi/api/html-stories')
+  assert.equal(sent[0]!.url, 'https://www.vizmaya.fyi/api/html-stories')
   assert.equal(sent[0]!.auth, 'Bearer caller-token')
 }
 
@@ -169,7 +169,7 @@ assert.deepEqual(await toolNames(), ['get_html_story_brief'])
   assert.deepEqual(
     sent.map((s) => [s.url, s.auth]),
     [
-      ['https://footshorts.com/api/html-stories', 'Bearer footshorts-token'],
+      ['https://www.footshorts.com/api/html-stories', 'Bearer footshorts-token'],
       ['https://www.vizf1.com/api/html-stories', 'Bearer caller-token'],
     ],
   )
@@ -269,6 +269,30 @@ assert.deepEqual(await toolNames(), ['get_html_story_brief'])
   assert.ok('filePath' in (byName.get('save_spin_research')!.inputSchema.properties ?? {}))
   await client.close()
   await server.close()
+}
+
+// A site URL that redirects to another host (the old apex default) fails clearly instead of as "unauthorized",
+// and the token is never sent to the redirect target.
+{
+  const { access } = await signIn()
+  process.env.HTML_STORIES_URL = 'https://vizmaya.fyi'
+  const stubbed = globalThis.fetch
+  const hits: Array<{ url: string; auth: string | null }> = []
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input)
+    hits.push({ url, auth: new Headers(init?.headers).get('authorization') })
+    if (url.startsWith('https://vizmaya.fyi/')) {
+      return new Response(null, { status: 308, headers: { location: url.replace('https://vizmaya.fyi/', 'https://www.vizmaya.fyi/') } })
+    }
+    return Response.json({ error: 'unauthorized' }, { status: 401 })
+  }) as typeof fetch
+  const r = await callTool('spin_randomizer', { randomizer: 'atlas' }, bearer(access), 'signin')
+  globalThis.fetch = stubbed
+  delete process.env.HTML_STORIES_URL
+  const text = JSON.stringify(r)
+  assert.match(text, /redirects to https:\/\/www\.vizmaya\.fyi/, 'the error names the redirect')
+  assert.match(text, /set HTML_STORIES_URL to https:\/\/www\.vizmaya\.fyi/)
+  assert.deepEqual(hits.map((h) => h.url), ['https://vizmaya.fyi/api/randomizer/spins'], 'nothing was sent to the www host')
 }
 
 // The request log: where a call came from, what it asked for, who was calling, and why a refusal happened.

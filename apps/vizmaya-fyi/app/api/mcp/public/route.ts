@@ -1,5 +1,5 @@
 /**
- * The Vismay MCP with no sign-in, https://vizmaya.fyi/api/mcp/public: the open
+ * The Vismay MCP with no sign-in, https://www.vizmaya.fyi/api/mcp/public: the open
  * tools for anyone, and the rest for a caller who sends a publish token. The
  * sign-in endpoint is /api/mcp. See packages/mcp/src/hosted.ts.
  */
