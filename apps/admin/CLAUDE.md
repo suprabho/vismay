@@ -198,7 +198,11 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   `[appSlug]/html-stories/[slug]|new` render
   [HtmlStoryEditorClient.tsx](components/html-stories/HtmlStoryEditorClient.tsx)
   (paste/upload, lint, preview in that site's chrome, publish, history, on vizmaya the **Category** picker that files the story under one of the home page's subjects (`html_stories.category`, migration 105), and
-  for a published story the **Section audio** panel,
+  for a published story the **Share image** panel,
+  [HtmlStoryShareImagePanel.tsx](components/html-stories/HtmlStoryShareImagePanel.tsx):
+  the generated link-preview card (a screenshot of the page beside its title
+  and description, served as og:image; publishing queues it) and **Regenerate**,
+  and the **Section audio** panel,
   [HtmlStoryAudioPanel.tsx](components/html-stories/HtmlStoryAudioPanel.tsx):
   whether the live page offers the Listen player, each section's clip,
   **Generate audio** (voices the sections that changed) and **Regenerate all**;
@@ -211,7 +215,9 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   `GET/POST /api/html-stories`, `GET/PATCH/DELETE /api/html-stories/[slug]`,
   `GET /api/html-stories/[slug]/versions/[id]`, `GET|POST /api/html-stories/[slug]/audio`
   (the section-audio manifest; POST `{ app, force? }` dispatches
-  `render-html-story-audio.yml`, `force` re-voicing every section), and `POST /api/html-stories/brief`
+  `render-html-story-audio.yml`, `force` re-voicing every section), `GET|POST /api/html-stories/[slug]/share-image`
+  (the link-preview card; POST `{ app, force? }` dispatches `render-html-story-og.yml`; the save, Publish and metadata
+  routes queue it too, skipped when nothing it is made from changed), and `POST /api/html-stories/brief`
   (`{ app, format?, tone?, style?, fixtureIds?, sessionKeys?, drivers?, gameIds?, tripSlug?, day?, prompt?, spinId? }` → markdown; a `spinId` must be the app's own: vizmaya for Desk, Atlas, Epics, footshorts for the Football Desk, viznba for the NBA Desk) for the Copy-brief button.
 - **Brief generator** ([BriefGenerator.tsx](components/html-stories/BriefGenerator.tsx)):
   the story format picker ([FormatPicker.tsx](components/html-stories/FormatPicker.tsx):

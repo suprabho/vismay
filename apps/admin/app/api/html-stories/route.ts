@@ -3,6 +3,7 @@ import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
 import { HtmlStorySlugTakenError, listHtmlStoriesForAdmin, saveHtmlStory } from '@vismay/html-stories/htmlStories'
 import { parseStoryCategory } from '@vismay/html-stories/categories'
 import { HTML_STORY_STATUSES, expiringUrlReason, isSafeSlug, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import { queueHtmlStoryShareImage } from '@vismay/html-stories/shareImage'
 import { isAuthed } from '@/lib/adminAuth'
 
 /**
@@ -71,7 +72,13 @@ export async function POST(req: Request) {
       source: str(b.source) === 'admin:restore' ? 'admin:restore' : 'admin',
     })
     // Section audio is not made here: the editor's Section audio panel starts it.
-    return NextResponse.json({ ok: true, created, story, warnings: lint.warnings })
+    // The link-preview card is: it is rendered from the page as published.
+    const warnings = [...lint.warnings]
+    if (story.status === 'published' && app !== 'travel') {
+      const queued = await queueHtmlStoryShareImage(story.slug, app)
+      if (queued.mode === 'failed') warnings.push(`Saved, but ${queued.reason}.`)
+    }
+    return NextResponse.json({ ok: true, created, story, warnings })
   } catch (e) {
     if (e instanceof HtmlStorySlugTakenError) return NextResponse.json({ error: e.message }, { status: 409 })
     return NextResponse.json({ error: e instanceof Error ? e.message : 'write failed' }, { status: 500 })

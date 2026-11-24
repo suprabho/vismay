@@ -47,6 +47,13 @@ export interface HtmlStorySummary {
   format: HtmlStoryFormat
   /** The subject area the story is filed under (./categories; migration 105). */
   category: StoryCategoryId | null
+  /**
+   * The generated link-preview card (./shareImage; migration 107): the page's
+   * first screen beside its title and description. Served as og:image /
+   * twitter:image in place of the author's cover (ogImageUrl), which listing
+   * cards keep using.
+   */
+  shareImageUrl: string | null
 }
 
 export interface HtmlStory extends HtmlStorySummary {
@@ -88,16 +95,16 @@ export interface HtmlStoryInput {
 
 const BASE_COLUMNS =
   'slug, app_slug, title, description, og_image_url, status, source, published_at, updated_at, created_at'
-const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura, format, category`
+const SUMMARY_COLUMNS = `${BASE_COLUMNS}, aura, format, category, share_image_url`
 const CATEGORY_MIGRATION_HINT = 'Setting a category needs migration 105_html_stories_category.sql applied'
 const AURA_MIGRATION_HINT = 'Setting an aura needs migration 087_html_stories_aura.sql applied'
 /**
  * Columns later migrations added, newest first: a database that predates one
- * is read and written without it (category: 105, format: 089, aura: 087,
- * theme_meta: 086),
+ * is read and written without it (share_image_url: 107, category: 105,
+ * format: 089, aura: 087, theme_meta: 086),
  * so the code can ship before the migrations do.
  */
-const LATER_COLUMNS = ['category', 'format', 'aura', 'theme_meta'] as const
+const LATER_COLUMNS = ['share_image_url', 'category', 'format', 'aura', 'theme_meta'] as const
 
 export function hasServiceEnv(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -118,6 +125,7 @@ function mapSummary(r: any): HtmlStorySummary {
     aura: r.aura ?? null,
     format: isHtmlStoryFormat(r.format) ? r.format : DEFAULT_HTML_STORY_FORMAT,
     category: isStoryCategory(r.category) ? r.category : null,
+    shareImageUrl: r.share_image_url ?? null,
   }
 }
 
@@ -297,10 +305,12 @@ export async function saveHtmlStory(
   let write: Record<string, unknown> = row
   let cols = SUMMARY_COLUMNS
   let { data, error } = await upsert(write, cols)
-  // Before migration 105 (category), 089 (format; its backfill picks it up), 087 (aura) or
-  // 086 (palette; likewise): drop the newest column and try again.
+  // Before migration 107 (share image; read only), 105 (category), 089 (format; its
+  // backfill picks it up), 087 (aura) or 086 (palette; likewise): drop the newest
+  // column and try again.
   for (const column of LATER_COLUMNS) {
     if (!isMissingColumn(error)) break
+    if (!cols.split(',').some((c) => c.trim() === column) && !(column in write)) continue
     if (column === 'category' && input.category != null) throw new Error(`${CATEGORY_MIGRATION_HINT} (${input.slug})`)
     if (column === 'aura' && input.aura != null) throw new Error(`${AURA_MIGRATION_HINT} (${input.slug})`)
     const { [column]: _dropped, ...rest } = write
@@ -354,17 +364,16 @@ export async function updateHtmlStoryMeta(
   if (patch.category !== undefined) update.category = patch.category
   const run = (cols: string) =>
     sb.from('html_stories').update(update).eq('slug', slug).eq('app_slug', app).select(cols).maybeSingle()
-  let { data, error } = await run(SUMMARY_COLUMNS)
-  if (isMissingColumn(error)) {
-    if (patch.category !== undefined) throw new Error(`${CATEGORY_MIGRATION_HINT} (${slug})`)
-    ;({ data, error } = await run(withoutColumn(SUMMARY_COLUMNS, 'category')))
-  }
-  if (isMissingColumn(error)) {
-    ;({ data, error } = await run(withoutColumn(withoutColumn(SUMMARY_COLUMNS, 'category'), 'format')))
-  }
-  if (isMissingColumn(error)) {
-    if (patch.aura !== undefined) throw new Error(`${AURA_MIGRATION_HINT} (${slug})`)
-    ;({ data, error } = await run(BASE_COLUMNS))
+  let cols = SUMMARY_COLUMNS
+  let { data, error } = await run(cols)
+  // Before a later migration: drop the newest column from the read and try again.
+  for (const column of LATER_COLUMNS) {
+    if (!isMissingColumn(error)) break
+    if (!cols.split(',').some((c) => c.trim() === column)) continue
+    if (column === 'category' && patch.category !== undefined) throw new Error(`${CATEGORY_MIGRATION_HINT} (${slug})`)
+    if (column === 'aura' && patch.aura !== undefined) throw new Error(`${AURA_MIGRATION_HINT} (${slug})`)
+    cols = withoutColumn(cols, column)
+    ;({ data, error } = await run(cols))
   }
   if (error) throw new Error(`updateHtmlStoryMeta ${slug}: ${error.message}`)
   return data ? mapSummary(data) : null

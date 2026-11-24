@@ -463,7 +463,7 @@ export function lintHtml(html: string, { app, slug }: LintOptions = {}): HtmlLin
   const meta = extractHtmlMeta(html)
   if (!meta.title) warnings.push('Missing <title>; the story will be listed under its slug.')
   if (!meta.description) warnings.push('Missing <meta name="description">; link previews will have no summary.')
-  if (!meta.ogImageUrl) warnings.push('Missing <meta property="og:image">; link previews will have no image.')
+  if (!meta.ogImageUrl) warnings.push('Missing <meta property="og:image">; listing cards will have no cover image (link previews use the card made from the page on publish).')
   lintFormat(html, metaTags(html), warnings)
   if (!extractThemeMeta(html)) {
     warnings.push(

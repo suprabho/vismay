@@ -451,7 +451,9 @@ A data story is not only charts. When it has real ${subjects}, show them.
 - **Treatment.** Full-bleed for the hero and for big moments; inside the text
   column otherwise. A slow scroll-linked zoom or a duotone in the palette is
   fine; no filters that make a photo hard to read.
-- **Share card.** The hero (cropped to 1200×630) is usually the right \`og:image\`.`
+- **Cover.** The hero (cropped to 1200×630) is usually the right \`og:image\`: it is
+  the story's cover on listing cards. Link previews get a card the site makes on
+  publish from a screenshot of your page's first screen, so make that screen count.`
 }
 
 /**
@@ -1101,6 +1103,9 @@ ${precedence}${toneBannerText}${eli5Banner(spin)}${formatIntro}${assignment}
    - \`<title>\`: the story headline. It becomes the story's title.
    - \`<meta name="description">\`: a one-sentence summary.
    - \`og:title\`, \`og:description\`, \`og:image\` (absolute https URL, 1200×630) and \`twitter:card\` = \`summary_large_image\`.
+     The \`og:image\` is the story's cover on listing cards. When the story is shared, the site's
+     own preview card goes out instead: a screenshot of your page's first screen beside the title
+     and description, made on publish. So the first screen (headline, hero, palette) is the preview.
    - \`<meta name="${THEME_META_NAME}" content="${themeMetaContent(storyPalette)}">\`:
      your page's colours, as hex. The ${meta.name} header, footer and logo are tinted
      to match. Copy it as given, and update it if you change the palette.${formatMeta}${tripMeta}
