@@ -18,8 +18,8 @@
 
 import { chromium, type Browser } from 'playwright'
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
-import { getHtmlStoryForAdmin, getHtmlStoryApp, type HtmlStory } from './htmlStories'
+import { HTML_STORY_APPS, HTML_STORY_APP_META, type HtmlStoryApp } from './apps'
+import { getHtmlStoryForAdmin, getHtmlStoryApp, listPublishedHtmlStories, type HtmlStory } from './htmlStories'
 import { extractThemeMeta, type ThemeColors } from './meta'
 import { siteOrigin } from './seo'
 import { htmlStoryResponse } from './serve'
@@ -287,21 +287,32 @@ export async function renderShareCard(
 
 export interface GenerateShareImageResult {
   slug: string
-  mode: 'rendered' | 'unchanged'
+  /** `stale`: would render, but this was a dry run. */
+  mode: 'rendered' | 'unchanged' | 'stale'
   url: string | null
+}
+
+function launchBrowser(): Promise<Browser> {
+  return chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] })
 }
 
 /**
  * Render, upload and record a story's card. Unchanged since the last card:
- * nothing happens, unless `force`.
+ * nothing happens, unless `force`. Pass `browser` to reuse one across
+ * stories (the backfill does); otherwise one is launched and closed here.
+ * `dryRun` only reports whether it would render.
  */
 export async function generateHtmlStoryShareImage({
   slug,
   force = false,
+  dryRun = false,
+  browser: shared,
   log = console.log,
 }: {
   slug: string
   force?: boolean
+  dryRun?: boolean
+  browser?: Browser
   log?: (m: string) => void
 }): Promise<GenerateShareImageResult> {
   const app = await getHtmlStoryApp(slug)
@@ -318,13 +329,18 @@ export async function generateHtmlStoryShareImage({
     return { slug, mode: 'unchanged', url: story.shareImageUrl }
   }
 
+  if (dryRun) {
+    log(`~ ${slug} (${app}): would render`)
+    return { slug, mode: 'stale', url: story.shareImageUrl }
+  }
+
   log(`→ ${slug} (${app})`)
-  const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] })
+  const browser = shared ?? (await launchBrowser())
   let jpeg: Buffer
   try {
     jpeg = await renderShareCard(browser, story, app, log)
   } finally {
-    await browser.close()
+    if (!shared) await browser.close()
   }
 
   const bucket = sb.storage.from(HTML_STORY_SHARE_IMAGE_BUCKET)
@@ -347,4 +363,69 @@ export async function generateHtmlStoryShareImage({
   if (stale.length) await bucket.remove(stale).catch(() => {})
 
   return { slug, mode: 'rendered', url }
+}
+
+export interface BackfillShareImagesResult {
+  rendered: string[]
+  unchanged: string[]
+  /** Dry run: the stories that would render. */
+  stale: string[]
+  failed: { slug: string; error: string }[]
+}
+
+/**
+ * Cards for every published public story (all public apps, or one), newest
+ * first, since those are the ones being shared: one browser for the whole run, stories whose card is current
+ * skipped (unless `force`), and a failure logged and passed over rather than
+ * ending the run.
+ */
+export async function backfillHtmlStoryShareImages({
+  app,
+  force = false,
+  dryRun = false,
+  limit,
+  log = console.log,
+}: {
+  app?: HtmlStoryApp
+  force?: boolean
+  dryRun?: boolean
+  /** At most this many renders (skipped stories don't count). */
+  limit?: number
+  log?: (m: string) => void
+} = {}): Promise<BackfillShareImagesResult> {
+  if (app === 'travel') throw new Error('travel stories are private to a trip, so they get no share image')
+  const apps = app ? [app] : HTML_STORY_APPS.filter((a) => a !== 'travel')
+  const slugs: string[] = []
+  for (const a of apps) {
+    const stories = await listPublishedHtmlStories(a)
+    log(`${a}: ${stories.length} published (${stories.filter((s) => !s.shareImageUrl).length} without a card)`)
+    slugs.push(...stories.map((s) => s.slug))
+  }
+
+  const result: BackfillShareImagesResult = { rendered: [], unchanged: [], stale: [], failed: [] }
+  const browser = dryRun ? undefined : await launchBrowser()
+  try {
+    for (const [i, slug] of slugs.entries()) {
+      if (limit != null && result.rendered.length >= limit) {
+        log(`limit of ${limit} renders reached; ${slugs.length - i} stories left for the next run`)
+        break
+      }
+      try {
+        const r = await generateHtmlStoryShareImage({ slug, force, dryRun, browser, log: (m) => log(`[${i + 1}/${slugs.length}] ${m}`) })
+        result[r.mode].push(slug)
+      } catch (e) {
+        const error = e instanceof Error ? e.message : String(e)
+        log(`[${i + 1}/${slugs.length}] ✗ ${slug}: ${error}`)
+        result.failed.push({ slug, error })
+      }
+    }
+  } finally {
+    await browser?.close()
+  }
+  log(
+    `done: ${result.rendered.length} rendered, ${result.unchanged.length} up to date` +
+      (dryRun ? `, ${result.stale.length} would render` : '') +
+      `, ${result.failed.length} failed`,
+  )
+  return result
 }
