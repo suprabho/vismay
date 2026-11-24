@@ -8,6 +8,7 @@ import {
 } from '@vismay/html-stories/htmlStories'
 import { parseStoryCategory } from '@vismay/html-stories/categories'
 import { HTML_STORY_STATUSES, expiringUrlReason, lintHtml, parseAuraSlug, type HtmlStoryStatus } from '@vismay/html-stories/meta'
+import { queueHtmlStoryShareImage } from '@vismay/html-stories/shareImage'
 import { isAuthed } from '@/lib/adminAuth'
 
 type Ctx = { params: Promise<{ slug: string }> }
@@ -64,7 +65,14 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const story = await updateHtmlStoryMeta(slug, patch, app)
     if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
     // Publishing doesn't voice the story: the Section audio panel starts that.
-    return NextResponse.json({ ok: true, story, warnings: [] })
+    // It does queue the link-preview card (a no-op when the title,
+    // description and aura it was made from are unchanged).
+    const warnings: string[] = []
+    if (story.status === 'published' && app !== 'travel') {
+      const queued = await queueHtmlStoryShareImage(slug, app)
+      if (queued.mode === 'failed') warnings.push(`Saved, but ${queued.reason}.`)
+    }
+    return NextResponse.json({ ok: true, story, warnings })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'write failed' }, { status: 500 })
   }

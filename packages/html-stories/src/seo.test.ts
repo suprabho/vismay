@@ -89,6 +89,37 @@ assert.equal(htmlStoryCanonicalUrl('footshorts', 'x'), 'https://www.footshorts.c
 // vizmaya.fyi's feed hangs off its /stories hub, not /editorial.
 assert.ok(injectHtmlStorySeo(bare, { ...story, app: 'vizmaya-fyi' }).includes('href="https://vizmaya.fyi/stories/rss.xml"'))
 
+// A generated share card replaces the author's own share-image tags, and only those.
+const card = 'https://cdn.example.com/html-story-og/verstappen-monza-tyre-strategy/abc.jpg'
+const withCard = injectHtmlStorySeo(
+  `<!doctype html><html><head>
+<meta property="og:image" content="https://a.example/x.png">
+<meta property="og:image:width" content="800">
+<meta name='twitter:image' content='https://a.example/x.png'>
+<meta name="twitter:card" content="summary">
+<meta property="og:title" content="Mine">
+<script>var s = '<meta property="og:image" content="in-a-script">'</script>
+</head><body><meta property="og:image" content="in-the-body"></body></html>`,
+  { ...story, shareImageUrl: card },
+)
+const cardHead = withCard.slice(0, withCard.indexOf('</head>'))
+assert.equal(cardHead.match(/<meta property="og:image" content="https:/g)?.length, 1)
+assert.ok(cardHead.includes(`<meta property="og:image" content="${card}">`))
+assert.ok(cardHead.includes('<meta property="og:image:width" content="1200">'))
+assert.ok(cardHead.includes('<meta property="og:image:height" content="630">'))
+assert.ok(cardHead.includes(`<meta name="twitter:image" content="${card}">`))
+assert.ok(cardHead.includes('<meta name="twitter:card" content="summary_large_image">'))
+assert.ok(!cardHead.includes('a.example/x.png'))
+assert.ok(cardHead.includes('<meta property="og:title" content="Mine">'))
+assert.ok(cardHead.includes('in-a-script'))
+assert.ok(withCard.includes('<body><meta property="og:image" content="in-the-body">'))
+// Until the card exists, the author's cover is the share image; JSON-LD keeps the cover either way.
+assert.ok(injectHtmlStorySeo(bare, story).includes('<meta property="og:image" content="https://img.example.com/monza.jpg">'))
+const cardLd = htmlStoryJsonLd({ ...story, shareImageUrl: card }) as { '@graph': Record<string, any>[] }
+assert.deepEqual(cardLd['@graph'][0]!.image, ['https://img.example.com/monza.jpg'])
+const coverless = htmlStoryJsonLd({ ...story, ogImageUrl: null, shareImageUrl: card }) as { '@graph': Record<string, any>[] }
+assert.deepEqual(coverless['@graph'][0]!.image, [card])
+
 // Headlines are cut on a word.
 assert.equal(clampHeadline('short'), 'short')
 const long = clampHeadline('word '.repeat(40))

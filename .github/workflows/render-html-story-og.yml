@@ -1,0 +1,70 @@
+name: Render HTML story share image
+
+# The link-preview card (og:image / twitter:image) for a published,
+# agent-authored HTML story: a screenshot of the page's first screen beside
+# its title and description, 1200×630 (packages/html-stories/src/shareImage.ts).
+# Dispatched with `workflow_dispatch` when a story is published or re-posted
+# with a changed page, title, description or aura (the publish API on every
+# site, and admin's editor), and by the editor's Share image panel
+# (force=true renders it even when nothing changed). Runs
+# packages/html-stories/scripts/generate-share-image.ts, which uploads the
+# card to story-assets/html-story-og/<slug>/ and records it on the row
+# (migration 107).
+#
+# Required repo secrets (under the `Production` environment, shared with the
+# other render workflows):
+#   NEXT_PUBLIC_SUPABASE_URL    — same value as in Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY   — service role key for the row and storage writes
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: HTML story slug
+        required: true
+        type: string
+      force:
+        description: Render it even when nothing changed since the last card
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: html-story-og-${{ inputs.slug }}
+  # A newer publish supersedes a card still being made from an older one.
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: Production
+    defaults:
+      run:
+        working-directory: packages/html-stories
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Render share image
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SLUG: ${{ inputs.slug }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: pnpm exec tsx scripts/generate-share-image.ts "$SLUG" $FORCE

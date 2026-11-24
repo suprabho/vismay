@@ -32,7 +32,10 @@
  * slug must sit under the trip's: the trip's password is the page's gate.
  *
  * Publishing does not voice the story: section audio (./audio) is started by
- * hand from admin's editor.
+ * hand from admin's editor. It does queue the story's link-preview card
+ * (./shareImage: a screenshot of the page beside its title and description),
+ * which becomes its og:image a minute or two later; `shareImage` in the
+ * response says whether it was queued.
  *
  * Without a slug, one is derived from the document's <title>. The response
  * carries lint `warnings` so the agent can fix and re-post to the same slug.
@@ -46,6 +49,7 @@ import { getSpin, isSpinId, linkSpinStory, spinAllowsPublish } from '@vismay/ran
 import { RANDOMIZER_META, type SpinRecord } from '@vismay/randomizer/types'
 import type { HtmlStoryApp } from './apps'
 import { HtmlStorySlugTakenError, saveHtmlStory } from './htmlStories'
+import { queueHtmlStoryShareImage, type QueueShareImageResult } from './shareImage'
 import {
   HTML_STORY_STATUSES,
   expiringUrlReason,
@@ -205,6 +209,13 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
         `No category: the home page files stories by category, so this one appears on the wall only. Re-post with category set to one of ${STORY_CATEGORY_IDS.join(', ')}.`,
       )
     }
+    // The link-preview card, rendered from the page as it now stands.
+    let shareImage: QueueShareImageResult['mode'] | undefined
+    if (story.status === 'published' && app !== 'travel') {
+      const queued = await queueHtmlStoryShareImage(story.slug, app)
+      shareImage = queued.mode
+      if (queued.mode === 'failed') warnings.push(`Saved, but ${queued.reason}.`)
+    }
     let spinOut: { id: string; status: string } | undefined
     if (spin) {
       try {
@@ -215,7 +226,18 @@ export async function handleHtmlStoryPublish(req: Request, app: HtmlStoryApp): P
       }
     }
     return json(
-      { ok: true, created, slug: story.slug, status: story.status, title: story.title, category: story.category, url, warnings, ...(spinOut ? { spin: spinOut } : {}) },
+      {
+        ok: true,
+        created,
+        slug: story.slug,
+        status: story.status,
+        title: story.title,
+        category: story.category,
+        url,
+        warnings,
+        ...(shareImage ? { shareImage } : {}),
+        ...(spinOut ? { spin: spinOut } : {}),
+      },
       created ? 201 : 200,
     )
   } catch (e) {

@@ -4,8 +4,11 @@
  * may have left out, NewsArticle JSON-LD, and the sitemap / RSS entries each
  * site lists its editorials in.
  *
- * The document is the author's, so nothing it declares is overridden: a tag
- * goes in only when the page lacks it. The canonical and JSON-LD always point
+ * The document is the author's, so nothing it declares is overridden (a tag
+ * goes in only when the page lacks it), with one exception: once the story has
+ * its generated link-preview card (./shareImage), that card replaces the
+ * page's own og:image / twitter:image, so a shared link shows the story
+ * itself. The canonical and JSON-LD always point
  * at the production origin (./apps), never the request's, so a preview or an
  * apex host never competes with the real URL.
  *
@@ -19,7 +22,8 @@ import type { HtmlStorySummary } from './htmlStories'
 export type HtmlStorySeoInput = Pick<
   HtmlStorySummary,
   'slug' | 'app' | 'title' | 'description' | 'ogImageUrl' | 'publishedAt' | 'updatedAt' | 'createdAt'
->
+> &
+  Partial<Pick<HtmlStorySummary, 'shareImageUrl'>>
 
 /** Each site's square publisher logo (served from its own public dir / app icon). */
 const PUBLISHER_LOGO: Record<HtmlStoryApp, string> = {
@@ -141,7 +145,9 @@ export function htmlStoryJsonLd(story: HtmlStorySeoInput): Record<string, unknow
     isAccessibleForFree: true,
   }
   if (story.description) article.description = story.description
-  if (story.ogImageUrl) article.image = [abs(app, story.ogImageUrl)]
+  // The author's cover when there is one: a photo or chart, not a card with the headline on it.
+  const image = story.ogImageUrl ?? story.shareImageUrl
+  if (image) article.image = [abs(app, image)]
   const breadcrumbs = {
     '@type': 'BreadcrumbList',
     itemListElement: [
@@ -172,6 +178,32 @@ function headOf(html: string): string {
 function hasMeta(head: string, key: string): boolean {
   const re = new RegExp(`<meta\\b[^>]*\\b(?:name|property)\\s*=\\s*["']?${key.replace(/[.:]/g, '\\$&')}["'\\s>]`, 'i')
   return re.test(head)
+}
+
+/** The tags a generated share card replaces (./shareImage). */
+const SHARE_IMAGE_KEY = /^(?:og:image(?::[a-z_]+)?|twitter:image(?::[a-z_]+)?|twitter:card)$/i
+
+/**
+ * The document without its own share-image tags (og:image and its
+ * width/height/alt, twitter:image, twitter:card), for a story whose generated
+ * card goes in instead. Only <head> is touched, and never inside a script.
+ */
+export function withoutShareImageTags(html: string): string {
+  const close = /<\/head\s*>/i.exec(html)
+  const end = close ? close.index : (/<body\b/i.exec(html)?.index ?? html.length)
+  const head = html
+    .slice(0, end)
+    .split(/(<script\b[\s\S]*?<\/script>)/i)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part.replace(/<meta\b[^>]*>\s*/gi, (tag) => {
+            const key = /\b(?:name|property)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i.exec(tag)
+            return key && SHARE_IMAGE_KEY.test((key[1] ?? key[2] ?? key[3] ?? '').trim()) ? '' : tag
+          }),
+    )
+    .join('')
+  return head + html.slice(end)
 }
 
 export interface HtmlStorySeoOptions {
@@ -209,15 +241,22 @@ export function htmlStorySeoHead(html: string, story: HtmlStorySeoInput, { embed
   metaTag('property', 'og:url', url)
   metaTag('property', 'og:title', story.title)
   metaTag('property', 'og:description', story.description)
-  metaTag('property', 'og:image', story.ogImageUrl ? abs(app, story.ogImageUrl) : null)
+  // The generated card (the page itself, titled) when it has been made; the author's cover until then.
+  const shareImage = story.shareImageUrl ? abs(app, story.shareImageUrl) : story.ogImageUrl ? abs(app, story.ogImageUrl) : null
+  metaTag('property', 'og:image', shareImage)
+  if (story.shareImageUrl) {
+    metaTag('property', 'og:image:width', '1200')
+    metaTag('property', 'og:image:height', '630')
+    metaTag('property', 'og:image:alt', story.title)
+  }
   metaTag('property', 'og:locale', app === 'footshorts' ? 'en_GB' : 'en_US')
   metaTag('property', 'article:published_time', published(story))
   metaTag('property', 'article:modified_time', story.updatedAt)
   metaTag('property', 'article:section', SITE_TOPIC[app])
-  metaTag('name', 'twitter:card', story.ogImageUrl ? 'summary_large_image' : 'summary')
+  metaTag('name', 'twitter:card', shareImage ? 'summary_large_image' : 'summary')
   metaTag('name', 'twitter:title', story.title)
   metaTag('name', 'twitter:description', story.description)
-  metaTag('name', 'twitter:image', story.ogImageUrl ? abs(app, story.ogImageUrl) : null)
+  metaTag('name', 'twitter:image', shareImage)
   const rss = editorialRssUrl(app)
   if (rss && !/<link\b[^>]*\brel\s*=\s*["']?alternate\b[^>]*rss/i.test(head)) {
     tags.push(`<link rel="alternate" type="application/rss+xml" title="${escapeAttr(`${meta.name} ${meta.storiesLabel}`)}" href="${rss}">`)
@@ -228,8 +267,13 @@ export function htmlStorySeoHead(html: string, story: HtmlStorySeoInput, { embed
   return tags.join('')
 }
 
-/** The document with htmlStorySeoHead's tags at the end of its <head> (or the start of the page). */
-export function injectHtmlStorySeo(html: string, story: HtmlStorySeoInput, opts: HtmlStorySeoOptions = {}): string {
+/**
+ * The document with htmlStorySeoHead's tags at the end of its <head> (or the
+ * start of the page). A story with a generated share card loses its own
+ * share-image tags first, so the card's are the only ones.
+ */
+export function injectHtmlStorySeo(source: string, story: HtmlStorySeoInput, opts: HtmlStorySeoOptions = {}): string {
+  const html = story.shareImageUrl ? withoutShareImageTags(source) : source
   const tags = htmlStorySeoHead(html, story, opts)
   if (!tags) return html
   const close = /<\/head\s*>/i.exec(html)

@@ -17,6 +17,7 @@ import {
   type HtmlStoryStatus,
 } from '@vismay/html-stories/meta'
 import { HtmlStoryAudioPanel } from './HtmlStoryAudioPanel'
+import { HtmlStoryShareImagePanel } from './HtmlStoryShareImagePanel'
 
 interface Version {
   id: number
@@ -514,7 +515,10 @@ export default function HtmlStoryEditorClient({
           </div>
 
           {!create && status === 'published' && app !== 'travel' && (
-            <HtmlStoryAudioPanel slug={slug} app={app} refreshKey={`${status}|${savedHtml.length}|${versions[0]?.id ?? ''}`} />
+            <>
+              <HtmlStoryShareImagePanel slug={slug} app={app} refreshKey={`${status}|${savedHtml.length}|${versions[0]?.id ?? ''}`} />
+              <HtmlStoryAudioPanel slug={slug} app={app} refreshKey={`${status}|${savedHtml.length}|${versions[0]?.id ?? ''}`} />
+            </>
           )}
 
           {!create && versions.length > 0 && (
