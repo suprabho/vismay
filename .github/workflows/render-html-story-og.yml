@@ -6,7 +6,9 @@ name: Render HTML story share image
 # Dispatched with `workflow_dispatch` when a story is published or re-posted
 # with a changed page, title, description or aura (the publish API on every
 # site, and admin's editor), and by the editor's Share image panel
-# (force=true renders it even when nothing changed). Runs
+# (force=true renders it even when nothing changed). Run it by hand with
+# all=true to backfill every published public story (the ones whose card is
+# current are skipped; app narrows it to one site). Runs
 # packages/html-stories/scripts/generate-share-image.ts, which uploads the
 # card to story-assets/html-story-og/<slug>/ and records it on the row
 # (migration 107).
@@ -20,9 +22,20 @@ on:
   workflow_dispatch:
     inputs:
       slug:
-        description: HTML story slug
-        required: true
+        description: HTML story slug (leave empty with all=true)
+        required: false
         type: string
+        default: ''
+      all:
+        description: Backfill every published public story instead of one slug
+        required: false
+        type: boolean
+        default: false
+      app:
+        description: With all=true, only this site (vizmaya-fyi, footshorts, vizf1, viznba)
+        required: false
+        type: string
+        default: ''
       force:
         description: Render it even when nothing changed since the last card
         required: false
@@ -30,14 +43,15 @@ on:
         default: false
 
 concurrency:
-  group: html-story-og-${{ inputs.slug }}
+  group: html-story-og-${{ inputs.all && 'all' || inputs.slug }}
   # A newer publish supersedes a card still being made from an older one.
   cancel-in-progress: true
 
 jobs:
   render:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # A single card takes well under a minute; a full backfill a few seconds per story.
+    timeout-minutes: ${{ inputs.all && 90 || 10 }}
     environment: Production
     defaults:
       run:
@@ -66,5 +80,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SLUG: ${{ inputs.slug }}
+          APP: ${{ inputs.app }}
           FORCE: ${{ inputs.force && '--force' || '' }}
-        run: pnpm exec tsx scripts/generate-share-image.ts "$SLUG" $FORCE
+        run: |
+          if [ "${{ inputs.all }}" = "true" ]; then
+            pnpm exec tsx scripts/generate-share-image.ts --all ${APP:+--app=$APP} $FORCE
+          else
+            pnpm exec tsx scripts/generate-share-image.ts "$SLUG" $FORCE
+          fi
