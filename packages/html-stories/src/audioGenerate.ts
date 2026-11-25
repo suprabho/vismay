@@ -11,10 +11,11 @@ import { createServiceClient } from '@vismay/content-source/supabase'
 import {
   HTML_STORY_AUDIO_BUCKET,
   getHtmlStoryAudio,
+  getHtmlStoryScript,
   writeAudio,
   type HtmlStoryAudioSection,
 } from './audio'
-import { extractNarrationSections, htmlHash, splitForSpeech } from './narration'
+import { extractNarrationSections, htmlHash, narrationScriptHash, splitForSpeech } from './narration'
 import { assertNarrationCredentials, makeSpeaker, narrationVoiceFromEnv, type NarrationVoice } from './narrationVoice'
 
 /** The `fmt ` chunk and PCM payload of a WAV, for joining clips. */
@@ -74,8 +75,9 @@ export interface GenerateHtmlStoryAudioResult {
 }
 
 /**
- * Voice a published story's sections and write its manifest. Sections whose
- * clip already exists (same text, same voice) reuse it. A section whose TTS
+ * Voice a published story's sections and write its manifest. A section with a
+ * line in the story's narration script is voiced from it, the rest from
+ * their on-screen text (./narration). Sections whose clip already exists (same text, same voice) reuse it. A section whose TTS
  * fails is left silent and the manifest is still written, marked failed with
  * the reason, so the rest plays; re-running fills the gaps.
  */
@@ -95,7 +97,8 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
   if (story.app_slug === 'travel') throw new Error(`${slug} is a travel story: travel stories get no public audio`)
 
   const html = story.html as string
-  const sections = extractNarrationSections(html, voice.key)
+  const script = await getHtmlStoryScript(slug)
+  const sections = extractNarrationSections(html, voice.key, script)
   const previous = await getHtmlStoryAudio(slug)
   const known = new Map<string, HtmlStoryAudioSection>()
   for (const s of previous?.sections ?? []) if (s.hash && s.url) known.set(s.hash, s)
@@ -108,9 +111,12 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
   const result: GenerateHtmlStoryAudioResult = { slug, sections: sections.length, voiced: 0, reused: 0, silent: 0, failed: 0 }
   let failure: string | null = null
 
-  console.log(`\n━━━ ${slug} ━━━  ${sections.length} sections, voice ${voice.key}`)
+  const scripted = sections.filter((s) => s.scripted).length
+  console.log(
+    `\n━━━ ${slug} ━━━  ${sections.length} sections${scripted ? ` (${scripted} from the script)` : ''}, voice ${voice.key}`,
+  )
   for (const s of sections) {
-    const tag = `  [${s.index + 1}/${sections.length}] ${s.label}`
+    const tag = `  [${s.index + 1}/${sections.length}] ${s.label}${s.scripted ? ' (script)' : ''}`
     if (!s.text) {
       console.log(`${tag}: silent`)
       out.push({ index: s.index, label: s.label, hash: null, url: null, durationMs: 0 })
@@ -174,6 +180,9 @@ export async function generateHtmlStoryAudio(opts: GenerateHtmlStoryAudioOptions
     error: failure,
     html_hash: htmlHash(html),
     voice: voice.key,
+    // Only written when there is (or was) a script, so a database without
+    // migration 108 (no script_hash column) still takes the manifest.
+    ...(script.length || previous?.scriptHash ? { script_hash: narrationScriptHash(script) } : {}),
     sections: out,
     duration_ms: out.reduce((n, s) => n + s.durationMs, 0),
     generated_at: new Date().toISOString(),

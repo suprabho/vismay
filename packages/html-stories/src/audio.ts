@@ -6,7 +6,9 @@
  * render-html-story-audio.yml, which runs scripts/generate-audio.ts →
  * generateHtmlStoryAudio (./audioGenerate): the page's sections (./narration) are voiced
  * one clip apiece by ElevenLabs or Gemini TTS (./narrationVoice) and the clips'
- * manifest lands in html_story_audio (migration 097). /s/<slug> reads the
+ * manifest lands in html_story_audio (migration 097). A section with a line in
+ * the story's narration script (html_story_scripts, migration 108, written in
+ * the same panel) is voiced from that line instead of its on-screen text. /s/<slug> reads the
  * manifest ({@link playableHtmlStoryAudio}) and injects the player
  * (./audioPlayer) while it matches the HTML being served.
  *
@@ -22,7 +24,7 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { dispatchWorker, isWorkerDispatchConfigured, type WorkerDef } from '@vismay/content-source/workerDispatch'
 import type { HtmlStoryApp } from './apps'
-import { htmlHash } from './narrationRule'
+import { htmlHash, narrationScriptHash, normalizeNarrationScript, type NarrationScriptEntry } from './narrationRule'
 
 export const HTML_STORY_AUDIO_BUCKET = 'story-audio'
 /** Gemini prebuilt voice, as the viz-engine story audio uses. */
@@ -52,6 +54,8 @@ export interface HtmlStoryAudio {
   status: HtmlStoryAudioStatus
   htmlHash: string | null
   voice: string | null
+  /** The narration script it was voiced from (narrationScriptHash); null when there was none. */
+  scriptHash: string | null
   sections: HtmlStoryAudioSection[]
   durationMs: number
   error: string | null
@@ -70,6 +74,7 @@ function mapAudio(r: any): HtmlStoryAudio {
     status: r.status,
     htmlHash: r.html_hash ?? null,
     voice: r.voice ?? null,
+    scriptHash: r.script_hash ?? null,
     sections: Array.isArray(r.sections) ? r.sections : [],
     durationMs: r.duration_ms ?? 0,
     error: r.error ?? null,
@@ -96,6 +101,33 @@ export function playableHtmlStoryAudio(audio: HtmlStoryAudio | null, html: strin
   return audio.sections.some((s) => s.url) ? audio.sections : null
 }
 
+/** Whether a manifest was voiced from this script (no script matches a manifest made without one). */
+export function audioMatchesScript(audio: HtmlStoryAudio | null, script: NarrationScriptEntry[]): boolean {
+  return (audio?.scriptHash ?? null) === narrationScriptHash(script)
+}
+
+/** A story's narration script (empty when there is none, or before migration 108). */
+export async function getHtmlStoryScript(slug: string): Promise<NarrationScriptEntry[]> {
+  const { data, error } = await createServiceClient().from('html_story_scripts').select('sections').eq('slug', slug).maybeSingle()
+  if (isMissingTable(error)) return []
+  if (error) throw new Error(`getHtmlStoryScript ${slug}: ${error.message}`)
+  return normalizeNarrationScript(data?.sections)
+}
+
+/** Replace a story's narration script; an empty one removes it. Returns what was stored. */
+export async function saveHtmlStoryScript(slug: string, script: unknown): Promise<NarrationScriptEntry[]> {
+  const sections = normalizeNarrationScript(script)
+  const sb = createServiceClient()
+  const { error } = sections.length
+    ? await sb
+        .from('html_story_scripts')
+        .upsert({ slug, sections, updated_at: new Date().toISOString() }, { onConflict: 'slug' })
+    : await sb.from('html_story_scripts').delete().eq('slug', slug)
+  if (isMissingTable(error)) throw new Error('narration scripts need migration 108_html_story_scripts.sql applied')
+  if (error) throw new Error(`html_story_scripts ${slug}: ${error.message}`)
+  return sections
+}
+
 /** Upsert a story's manifest row; a no-op before migration 097. */
 export async function writeAudio(slug: string, patch: Record<string, unknown>): Promise<void> {
   const { error } = await createServiceClient()
@@ -111,7 +143,7 @@ export type QueueAudioResult =
 
 /**
  * Queue section audio for a published story. A manifest already made from
- * this HTML is left alone unless `force`. Never throws: a failure comes back
+ * this HTML and the current narration script is left alone unless `force`. Never throws: a failure comes back
  * as a reason.
  */
 export async function queueHtmlStoryAudio(
@@ -127,7 +159,13 @@ export async function queueHtmlStoryAudio(
   try {
     if (!force && story.html) {
       const audio = await getHtmlStoryAudio(story.slug)
-      if (audio?.status === 'ready' && audio.htmlHash === htmlHash(story.html)) return { mode: 'unchanged' }
+      if (
+        audio?.status === 'ready' &&
+        audio.htmlHash === htmlHash(story.html) &&
+        audioMatchesScript(audio, await getHtmlStoryScript(story.slug))
+      ) {
+        return { mode: 'unchanged' }
+      }
     }
     await writeAudio(story.slug, { status: 'pending', error: null, requested_at: new Date().toISOString() })
     await dispatchWorker(HTML_STORY_AUDIO_WORKER, { slug: story.slug, force: force ? 'true' : 'false' })

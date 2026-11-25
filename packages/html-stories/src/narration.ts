@@ -13,21 +13,32 @@
  * player resolves the same list with the same rule before any runtime moves
  * the DOM, so a clip's index is its section's position in that list.
  *
- * Per section, the author can write `data-narration="…"` (read verbatim
- * instead of the section's text) or `data-no-narrate` (silent; also on any
- * element inside one, to leave it out). The text otherwise read is the
- * section's headings, paragraphs, list items and quotes: figures, tables,
- * charts, scripts, controls and anything `aria-hidden` are skipped, since
- * they read badly aloud (a chart's numbers are in the prose anyway).
+ * What the voice reads for a section, first match wins:
+ *   1. its line in the story's narration script (written in admin's Section
+ *      audio panel, html_story_scripts; see narrationRule's
+ *      NarrationScriptEntry), read as written, even for a silent section;
+ *   2. the author's `data-narration="…"`, read verbatim;
+ *   3. nothing, when it is marked `data-no-narrate` (also on any element
+ *      inside one, to leave just that out);
+ *   4. its on-screen text: headings, paragraphs, list items and quotes.
+ *      Figures, tables, charts, scripts, controls and anything `aria-hidden`
+ *      are skipped, since they read badly aloud (a chart's numbers are in the
+ *      prose anyway).
  *
  * Server only (cheerio, node:crypto), but no Supabase: tests run it as is.
  */
 
 import { createHash } from 'node:crypto'
 import { load, type CheerioAPI } from 'cheerio'
-import { NARRATION_SECTION_SELECTORS } from './narrationRule'
+import { NARRATION_SECTION_SELECTORS, normalizeNarrationScript, type NarrationScriptEntry } from './narrationRule'
 
-export { NARRATION_SECTION_SELECTORS, htmlHash } from './narrationRule'
+export {
+  NARRATION_SECTION_SELECTORS,
+  htmlHash,
+  narrationScriptHash,
+  normalizeNarrationScript,
+  type NarrationScriptEntry,
+} from './narrationRule'
 
 /** Never read: embedded media, charts, code, controls, credits. */
 const SKIP_SELECTOR = [
@@ -72,6 +83,10 @@ export interface NarrationSection {
   label: string
   /** What the voice reads. Empty for a silent section. */
   text: string
+  /** What it reads without a script: data-narration, else the on-screen text (empty when silent). */
+  pageText: string
+  /** Whether `text` comes from the narration script. */
+  scripted: boolean
   /** sha256 of the text (and voice, see narrationHash): the clip's identity. */
   hash: string
 }
@@ -131,18 +146,41 @@ export function narrationHash(text: string, voice: string): string {
   return createHash('sha256').update(`${voice}\n${text}`).digest('hex').slice(0, 32)
 }
 
+function wordCount(s: string): number {
+  return s.split(/\s+/).filter(Boolean).length
+}
+
+/** A script line as spoken: paragraphs run on with a pause, whitespace collapsed. */
+function scriptText(s: string): string {
+  return s
+    .split(/\n\s*\n/)
+    .map(clean)
+    .filter(Boolean)
+    .map(sentence)
+    .join(' ')
+}
+
 /**
- * The page's sections and what the voice reads for each. A section marked
- * `data-no-narrate`, or with fewer than three words, keeps its index with
- * empty text: it gets no clip, and the player skips it.
+ * The page's sections and what the voice reads for each (the order in the
+ * header). A section with nothing to read, or under three words of page text
+ * and no script line, keeps its index with empty text: it gets no clip, and the player skips it.
  */
-export function extractNarrationSections(html: string, voice = ''): NarrationSection[] {
+export function extractNarrationSections(
+  html: string,
+  voice = '',
+  script: NarrationScriptEntry[] = [],
+): NarrationSection[] {
   const $ = load(html)
+  const lines = new Map(normalizeNarrationScript(script).map((l) => [l.index, l.text]))
   return sectionElements($).map((el, index) => {
     const silent = $(el).is('[data-no-narrate]')
-    let text = silent ? '' : sectionText($, el)
-    if (text.split(' ').filter(Boolean).length < MIN_WORDS) text = ''
-    return { index, label: sectionLabel($, el, index), text, hash: text ? narrationHash(text, voice) : '' }
+    let pageText = silent ? '' : sectionText($, el)
+    if (wordCount(pageText) < MIN_WORDS) pageText = ''
+    const line = lines.get(index)
+    const scripted = line != null && wordCount(line) > 0
+    // A script line is read however short: someone wrote it to be heard.
+    const text = scripted ? scriptText(line) : pageText
+    return { index, label: sectionLabel($, el, index), text, pageText, scripted, hash: text ? narrationHash(text, voice) : '' }
   })
 }
 

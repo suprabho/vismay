@@ -2,7 +2,14 @@
  *  (run: npx tsx src/narration.test.ts) */
 import assert from 'node:assert/strict'
 import { audioPlayerHtml, audioPlayerLook } from './audioPlayer'
-import { extractNarrationSections, htmlHash, narrationHash, splitForSpeech } from './narration'
+import {
+  extractNarrationSections,
+  htmlHash,
+  narrationHash,
+  narrationScriptHash,
+  normalizeNarrationScript,
+  splitForSpeech,
+} from './narration'
 
 // Paged format: outermost [data-unit], labels, skipped bits, overrides, silence.
 const book = `<!doctype html><html><head><title>Odyssey</title></head><body>
@@ -40,6 +47,42 @@ assert.equal(s[3].hash, '')
 assert.equal(s[4].text, '', 'under three words is silent')
 assert.equal(s[1].hash, narrationHash(s[1].text, 'Orus'))
 assert.notEqual(narrationHash('a b c', 'Orus'), narrationHash('a b c', 'Kore'), 'the voice is part of the hash')
+
+// The narration script: its line wins over the page, data-narration and
+// data-no-narrate; a blank line reads the page; short lines still read.
+const scripted = extractNarrationSections(book, 'Orus', [
+  { index: 1, label: 'The distance', text: 'A thousand miles of sea.\n\nAnd every one   of them hard' },
+  { index: 2, label: '', text: '  ' },
+  { index: 3, label: '', text: 'Silence, broken' },
+  { index: 99, label: '', text: 'no such section' },
+])
+assert.equal(scripted.length, 5)
+assert.equal(scripted[0].text, s[0].text, 'no line: the page')
+assert.equal(scripted[0].scripted, false)
+assert.equal(scripted[1].text, 'A thousand miles of sea. And every one of them hard.', 'paragraphs pause, whitespace collapses')
+assert.equal(scripted[1].scripted, true)
+assert.equal(scripted[1].pageText, s[1].text, 'the page text is still reported')
+assert.notEqual(scripted[1].hash, s[1].hash, 'a new line is a new clip')
+assert.equal(scripted[2].text, 'Read this instead, word for word.', 'a blank line keeps data-narration')
+assert.equal(scripted[3].text, 'Silence, broken.', 'a line voices a silent section, however short')
+assert.equal(scripted[3].pageText, '')
+
+assert.deepEqual(
+  normalizeNarrationScript([{ index: 2, text: ' b ' }, { index: 0, label: 'x', text: 'a' }, { index: -1, text: 'x' }, { index: 1, text: '' }, null, 'x']),
+  [
+    { index: 0, label: 'x', text: 'a' },
+    { index: 2, label: '', text: 'b' },
+  ],
+)
+assert.equal(normalizeNarrationScript('nope').length, 0)
+assert.equal(narrationScriptHash([]), null, 'no script, no hash')
+assert.equal(narrationScriptHash([{ index: 0, label: '', text: '  ' }]), null)
+assert.equal(
+  narrationScriptHash([{ index: 0, label: 'a', text: 'x' }]),
+  narrationScriptHash([{ index: 0, label: 'b', text: 'x ' }]),
+  'labels and edge whitespace are not part of the hash',
+)
+assert.notEqual(narrationScriptHash([{ index: 0, label: '', text: 'x' }]), narrationScriptHash([{ index: 1, label: '', text: 'x' }]))
 
 // Scroll: [data-step] before <section>; plain <section> as the fallback.
 const steps = `<body><section><div data-step><h2>One</h2><p>First chapter text.</p></div>
