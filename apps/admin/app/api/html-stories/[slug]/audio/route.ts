@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server'
 import { parseHtmlStoryApp } from '@vismay/html-stories/apps'
-import { getHtmlStoryAudio, playableHtmlStoryAudio, queueHtmlStoryAudio } from '@vismay/html-stories/audio'
+import {
+  audioMatchesScript,
+  getHtmlStoryAudio,
+  getHtmlStoryScript,
+  playableHtmlStoryAudio,
+  queueHtmlStoryAudio,
+} from '@vismay/html-stories/audio'
 import { getHtmlStoryForAdmin } from '@vismay/html-stories/htmlStories'
 import { isAuthed } from '@/lib/adminAuth'
 
 /**
  * A story's section audio (`?app=`): GET the manifest (and whether it was made
- * from the HTML now stored, i.e. whether /s/<slug> offers the player), POST to
+ * from the HTML now stored, i.e. whether /s/<slug> offers the player, and
+ * from the current narration script, ./script), POST to
  * voice it (dispatches render-html-story-audio.yml; body `force: true`
  * re-voices every section, else unchanged clips are reused). This is the only
  * way audio gets made: publishing doesn't queue it. Published stories only;
@@ -23,8 +30,12 @@ export async function GET(req: Request, { params }: Ctx) {
   const story = await getHtmlStoryForAdmin(slug, app)
   if (!story) return NextResponse.json({ error: 'not found' }, { status: 404 })
   try {
-    const audio = await getHtmlStoryAudio(slug)
-    return NextResponse.json({ audio, current: !!playableHtmlStoryAudio(audio, story.html) })
+    const [audio, script] = await Promise.all([getHtmlStoryAudio(slug), getHtmlStoryScript(slug)])
+    return NextResponse.json({
+      audio,
+      current: !!playableHtmlStoryAudio(audio, story.html),
+      scriptCurrent: audioMatchesScript(audio, script),
+    })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'read failed' }, { status: 500 })
   }

@@ -205,7 +205,17 @@ table, scoped by `app_slug`; one set of admin code for every hosting app:
   and the **Section audio** panel,
   [HtmlStoryAudioPanel.tsx](components/html-stories/HtmlStoryAudioPanel.tsx):
   whether the live page offers the Listen player, each section's clip,
-  **Generate audio** (voices the sections that changed) and **Regenerate all**;
+  **Generate audio** (voices the sections that changed) and **Regenerate all**,
+  and **Script**, the narration script: per section, what the voice says
+  instead of the on-screen text (`/api/html-stories/[slug]/audio/script`,
+  `html_story_scripts`, migration 108; blank reads the page), with
+  **Draft with AI** (all blank sections, or one section's Draft / Redraft;
+  an optional direction for tone or length): `POST
+  /api/html-stories/[slug]/audio/script/draft` writes spoken narration from
+  what each section shows (text, captions, alt text, tables), keeping to the
+  page's facts, into the editor unsaved (marked "AI draft" until saved or
+  edited); model from the AI models page's *HTML story narration script*
+  (`narrationScript`, default `text.sonnet`), audited in `ai_generations`;
   publishing never queues audio, this panel is the only trigger; a book
   or deck in the preview reports pages/slides that overflow their frame, shown
   with the lint). The list badges book, board, deck, collage and recap stories (and diorama, a retired format, on the stories already published as one).
