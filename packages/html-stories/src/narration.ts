@@ -33,6 +33,7 @@ import { load, type CheerioAPI } from 'cheerio'
 import { NARRATION_SECTION_SELECTORS, normalizeNarrationScript, type NarrationScriptEntry } from './narrationRule'
 
 export {
+  MAX_SCRIPT_CHARS,
   NARRATION_SECTION_SELECTORS,
   htmlHash,
   narrationScriptHash,
@@ -140,6 +141,33 @@ function sectionLabel($: CheerioAPI, el: Element, index: number): string {
   if (named && clean(named)) return clean(named).slice(0, 80)
   const heading = clean($el.find('h1,h2,h3,h4').first().text())
   return heading ? heading.slice(0, 80) : `Section ${index + 1}`
+}
+
+/** Never part of a section's context: code and markup that isn't content. */
+const CONTEXT_SKIP = 'script,style,noscript,template,svg,canvas,iframe,video,audio,button,select,input,textarea,[hidden]'
+
+/**
+ * Everything a section shows, for someone writing its narration (the admin's
+ * Draft with AI): its text including figure captions, chart labels and table
+ * cells, plus images' alt text as `[image: …]`, which the voice itself never
+ * reads. Clipped to `max` characters per section, in the same section order.
+ */
+export function narrationSectionContext(html: string, max = 2000): string[] {
+  const $ = load(html)
+  return sectionElements($).map((el) => {
+    const copy = $(el).clone()
+    copy.find(CONTEXT_SKIP).remove()
+    copy.find('img[alt]').each((_, img) => {
+      const alt = clean($(img).attr('alt') ?? '')
+      $(img).replaceWith(alt ? ` [image: ${alt}] ` : ' ')
+    })
+    // Keep block boundaries as spaces so words don't run together.
+    copy.find('p,li,h1,h2,h3,h4,h5,h6,td,th,dt,dd,figcaption,blockquote,div,br').each((_, b) => {
+      $(b).append(' ')
+    })
+    const text = clean(copy.text())
+    return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text
+  })
 }
 
 export function narrationHash(text: string, voice: string): string {

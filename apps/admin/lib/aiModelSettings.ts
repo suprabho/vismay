@@ -94,6 +94,13 @@ export const AI_FEATURES: AiFeature[] = [
     description: 'Vision critique of a rendered section — needs a vision-capable model.',
   },
   {
+    key: 'narrationScript',
+    label: 'HTML story narration script',
+    modality: 'text',
+    default: 'text.sonnet',
+    description: 'The Section audio panel’s ✨ Draft with AI: rewrites each section of an HTML story as spoken narration.',
+  },
+  {
     key: 'generateImage',
     label: 'Image generate',
     modality: 'image',

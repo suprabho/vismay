@@ -5,6 +5,7 @@ import { audioPlayerHtml, audioPlayerLook } from './audioPlayer'
 import {
   extractNarrationSections,
   htmlHash,
+  narrationSectionContext,
   narrationHash,
   narrationScriptHash,
   normalizeNarrationScript,
@@ -83,6 +84,13 @@ assert.equal(
   'labels and edge whitespace are not part of the hash',
 )
 assert.notEqual(narrationScriptHash([{ index: 0, label: '', text: 'x' }]), narrationScriptHash([{ index: 1, label: '', text: 'x' }]))
+
+// The drafting context sees what the voice skips: captions, alt text, tables.
+const ctx = narrationSectionContext(book)
+assert.equal(ctx.length, 5)
+assert.ok(ctx[1].includes('[image: Map]') && ctx[1].includes('Photo: Wikimedia') && ctx[1].includes('42'))
+assert.ok(!ctx.join(' ').includes('never read'), 'no scripts')
+assert.ok(narrationSectionContext(book, 20)[1].length <= 21)
 
 // Scroll: [data-step] before <section>; plain <section> as the fallback.
 const steps = `<body><section><div data-step><h2>One</h2><p>First chapter text.</p></div>

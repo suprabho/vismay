@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowClockwise, Headphones, Scroll, Warning, Waveform } from '@phosphor-icons/react'
+import { ArrowClockwise, Headphones, Scroll, Sparkle, Warning, Waveform } from '@phosphor-icons/react'
 import type { HtmlStoryApp } from '@vismay/html-stories/apps'
 import type { HtmlStoryAudio } from '@vismay/html-stories/audio'
 
@@ -16,7 +16,8 @@ import type { HtmlStoryAudio } from '@vismay/html-stories/audio'
  * Script opens the narration script: per section, what the voice says
  * instead of the on-screen text (blank reads the page). It is saved on its
  * own (/api/html-stories/[slug]/audio/script) and heard once the audio is
- * generated again.
+ * generated again. Draft with AI (…/script/draft) writes the lines from what
+ * each section shows, into the editor only: nothing is saved until Save.
  */
 
 interface ScriptSection {
@@ -81,10 +82,15 @@ export function HtmlStoryAudioPanel({
   const [scriptOpen, setScriptOpen] = useState(false)
   const [scriptBusy, setScriptBusy] = useState(false)
   const [scriptMessage, setScriptMessage] = useState<string | null>(null)
+  const [guidance, setGuidance] = useState('')
+  /** Sections being drafted now, and those holding an AI draft not yet saved or edited. */
+  const [drafting, setDrafting] = useState<Set<number>>(new Set())
+  const [aiDrafted, setAiDrafted] = useState<Set<number>>(new Set())
 
   const applyScript = useCallback((view: ScriptView) => {
     setScript(view)
     setDraft(Object.fromEntries(view.sections.map((s) => [s.index, s.script])))
+    setAiDrafted(new Set())
   }, [])
 
   const loadScript = useCallback(async () => {
@@ -137,6 +143,69 @@ export function HtmlStoryAudioPanel({
     } finally {
       setScriptBusy(false)
     }
+  }
+
+  /**
+   * Draft lines with AI: the given sections, else every blank one (every
+   * section when none is blank, after a confirm). Lands in the editor unsaved.
+   */
+  async function draftWithAi(only?: number[]) {
+    if (!script || drafting.size) return
+    let indices = only
+    if (!indices) {
+      const blank = script.sections.filter((s) => !(draft[s.index] ?? '').trim()).map((s) => s.index)
+      if (blank.length) indices = blank
+      else {
+        if (!window.confirm('Every section has a line. Redraft them all? Your lines are replaced in the editor (nothing is saved until you Save script).')) return
+        indices = script.sections.map((s) => s.index)
+      }
+    }
+    if (!indices.length) return
+    const asked = new Set(indices)
+    setDrafting(asked)
+    setScriptMessage(null)
+    try {
+      const res = await fetch(`/api/html-stories/${slug}/audio/script/draft`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          app,
+          indices,
+          guidance: guidance.trim() || undefined,
+          current: script.sections
+            .filter((s) => !asked.has(s.index) && (draft[s.index] ?? '').trim())
+            .map((s) => ({ index: s.index, text: draft[s.index] })),
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error ?? 'drafting failed')
+      const lines = (body.lines ?? []) as { index: number; text: string }[]
+      setDraft((d) => ({ ...d, ...Object.fromEntries(lines.map((l) => [l.index, l.text])) }))
+      setAiDrafted((prev) => {
+        const next = new Set(prev)
+        for (const l of lines) if (l.text) next.add(l.index)
+        return next
+      })
+      const written = lines.filter((l) => l.text).length
+      const missed = indices.length - lines.length
+      setScriptMessage(
+        `Drafted ${written} section${written === 1 ? '' : 's'}${missed > 0 ? ` (${missed} came back empty)` : ''}. Check them against the page, then Save script.`,
+      )
+    } catch (e) {
+      setScriptMessage(e instanceof Error ? e.message : 'drafting failed')
+    } finally {
+      setDrafting(new Set())
+    }
+  }
+
+  function editLine(index: number, text: string) {
+    setDraft((d) => ({ ...d, [index]: text }))
+    setAiDrafted((prev) => {
+      if (!prev.has(index)) return prev
+      const next = new Set(prev)
+      next.delete(index)
+      return next
+    })
   }
 
   async function generate(force: boolean) {
@@ -237,6 +306,26 @@ export function HtmlStoryAudioPanel({
               Write what the voice says for each section. A blank section reads its on-screen text (shown greyed out).
               Paragraph breaks become pauses.
             </p>
+            {script && script.sections.length > 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  value={guidance}
+                  onChange={(e) => setGuidance(e.target.value)}
+                  maxLength={1000}
+                  placeholder="Direction for the AI (optional): e.g. warmer, for a young audience, under 60 words a section"
+                  className="min-w-0 flex-1 rounded border border-white/10 bg-black/30 px-2 py-1 text-neutral-200 placeholder:text-neutral-600 focus:border-white/25 focus:outline-none"
+                />
+                <button
+                  onClick={() => draftWithAi()}
+                  disabled={drafting.size > 0 || scriptBusy}
+                  title="Write spoken narration for every blank section from what it shows, keeping to the page's facts"
+                  className="inline-flex shrink-0 items-center gap-1 rounded bg-white/10 px-2 py-1 text-neutral-200 hover:bg-white/15 hover:text-white disabled:opacity-50"
+                >
+                  <Sparkle size={14} className={drafting.size ? 'animate-pulse' : undefined} />
+                  {drafting.size ? `Drafting ${drafting.size}…` : 'Draft with AI'}
+                </button>
+              </div>
+            )}
             {!script ? (
               <p className="text-neutral-500 mt-2">{scriptMessage ?? 'Loading…'}</p>
             ) : script.sections.length === 0 ? (
@@ -253,9 +342,23 @@ export function HtmlStoryAudioPanel({
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-5 shrink-0 text-right text-neutral-600">{s.index + 1}</span>
                           <span className="truncate flex-1 text-neutral-300">{s.label}</span>
+                          {aiDrafted.has(s.index) && (
+                            <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-violet-300">
+                              AI draft
+                            </span>
+                          )}
+                          <button
+                            onClick={() => draftWithAi([s.index])}
+                            disabled={drafting.size > 0 || scriptBusy}
+                            className="inline-flex items-center gap-0.5 text-neutral-500 hover:text-white disabled:opacity-50"
+                            title={value.trim() ? 'Redraft this line with AI' : 'Draft this line with AI'}
+                          >
+                            <Sparkle size={12} className={drafting.has(s.index) ? 'animate-pulse' : undefined} />
+                            {value.trim() ? 'Redraft' : 'Draft'}
+                          </button>
                           {value.trim() ? (
                             <button
-                              onClick={() => setDraft({ ...draft, [s.index]: '' })}
+                              onClick={() => editLine(s.index, '')}
                               className="text-neutral-500 hover:text-white"
                               title="Clear the line, so the section reads its on-screen text"
                             >
@@ -264,7 +367,7 @@ export function HtmlStoryAudioPanel({
                           ) : (
                             s.pageText && (
                               <button
-                                onClick={() => setDraft({ ...draft, [s.index]: s.pageText })}
+                                onClick={() => editLine(s.index, s.pageText)}
                                 className="text-neutral-500 hover:text-white"
                                 title="Start from the on-screen text and edit it"
                               >
@@ -280,10 +383,11 @@ export function HtmlStoryAudioPanel({
                         )}
                         <textarea
                           value={value}
-                          onChange={(e) => setDraft({ ...draft, [s.index]: e.target.value })}
+                          onChange={(e) => editLine(s.index, e.target.value)}
+                          disabled={drafting.has(s.index)}
                           placeholder={s.pageText || 'Silent on the page. Write a line to voice it.'}
                           rows={Math.min(8, Math.max(2, Math.ceil((value || s.pageText).length / 90)))}
-                          className="ml-7 w-[calc(100%-1.75rem)] rounded border border-white/10 bg-black/30 px-2 py-1.5 text-neutral-200 placeholder:text-neutral-600 focus:border-white/25 focus:outline-none"
+                          className="ml-7 w-[calc(100%-1.75rem)] rounded border border-white/10 bg-black/30 disabled:opacity-50 px-2 py-1.5 text-neutral-200 placeholder:text-neutral-600 focus:border-white/25 focus:outline-none"
                         />
                       </li>
                     )
