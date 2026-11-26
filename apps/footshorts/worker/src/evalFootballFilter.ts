@@ -19,7 +19,7 @@ import { classifyTopic } from './summarize';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // Label only — decide() resolves the same default/override itself.
-const MODEL = process.env.JEV_MODEL || 'typesafe-ai/jev';
+const MODEL = process.env.JEV_MODEL || 'typesafe-ai/jev-1.14.0';
 
 const SINCE = process.env.EVAL_SINCE ?? '2026-05-01T00:00:00Z';
 const MAX_ARTICLES = Number(process.env.EVAL_MAX ?? 3000);

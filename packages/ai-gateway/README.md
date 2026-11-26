@@ -211,7 +211,7 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 | `image.grokImage` | `xai/grok-imagine-image` |
 | `image.gptImage` | `openai/gpt-image-2.5-sunburst` |
 | `image.gptImageFlare` | `openai/gpt-image-2.5-flare` |
-| `decision.jev` | `typesafe-ai/jev` (typed decisions via `decide()`) |
+| `decision.jev` | `typesafe-ai/jev-1.14.0` (typed decisions via `decide()`) |
 | `speech.default` / `speech.lite` | `google/gemini-3.8-flash-tts` / `google/gemini-3.8-flash-lite-tts` |
 
 `generateImage` auto-detects whether a model id is a dedicated image model or

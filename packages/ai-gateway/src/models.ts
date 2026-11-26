@@ -135,8 +135,12 @@ export const MODELS = {
      * Jev (TypeSafe) — a System One decision model. State plus named typed
      * questions (boolean / choice / score) in, a calibrated probability per
      * question out, no prose. Call through `decide()`.
+     *
+     * Pinned to a version: on 2026-11-26 the gateway started rejecting the
+     * unversioned `typesafe-ai/jev` ("Unknown model: jev-latest") while the
+     * versioned ids still listed. Bump this when TypeSafe ships a new Jev.
      */
-    jev: 'typesafe-ai/jev',
+    jev: 'typesafe-ai/jev-1.14.0',
   },
   speech: {
     /**
