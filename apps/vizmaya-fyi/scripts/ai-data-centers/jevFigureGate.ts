@@ -29,7 +29,7 @@
  *   AI_GATEWAY_API_KEY           — the shared gateway key
  *   JEV_FIGURE_GATE=0            — kill switch, leaves credentials in place
  *   JEV_FIGURE_MIN_CONFIDENCE    — keep threshold, default 0.5
- *   JEV_MODEL                    — decision model id, default `typesafe-ai/jev`
+ *   JEV_MODEL                    — decision model id, default `typesafe-ai/jev-1.14.0`
  *                                  (read by decide() itself)
  *   AI_GATEWAY_DECIDE_TIMEOUT_MS — overall budget per request incl. retries,
  *                                  default 30000 (read by decide() itself)

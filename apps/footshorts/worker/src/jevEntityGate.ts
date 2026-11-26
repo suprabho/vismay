@@ -37,7 +37,7 @@
  *                                  injected OIDC token stands in for it
  *   JEV_ENTITY_GATE=0            — kill switch, leaves credentials in place
  *   JEV_ENTITY_MIN_CONFIDENCE    — keep threshold, default 0.55
- *   JEV_MODEL                    — decision model id, default `typesafe-ai/jev`
+ *   JEV_MODEL                    — decision model id, default `typesafe-ai/jev-1.14.0`
  *                                  (read by decide() itself)
  *   AI_GATEWAY_DECIDE_TIMEOUT_MS — overall budget per request incl. retries,
  *                                  default 30000 (read by decide() itself)
