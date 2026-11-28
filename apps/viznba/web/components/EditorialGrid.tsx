@@ -121,7 +121,9 @@ export function EditorialGrid({ stories }: { stories: Story[] }) {
               className="col-span-2 flex overflow-hidden rounded-[18px] border border-border bg-surface"
               style={s.accent ? { borderColor: `color-mix(in srgb, ${s.accent} 35%, transparent)` } : undefined}
             >
-              <div className="flex w-[132px] flex-none items-center justify-center bg-well">
+              {/* relative + overflow-hidden: an ESPN recap's photo thumb is absolute inset-0 and
+                  must stay inside this cell, not cover the page. */}
+              <div className="relative flex min-h-[88px] w-[132px] flex-none items-center justify-center overflow-hidden bg-well">
                 {s.thumb}
               </div>
               <div className="min-w-0 flex-1 py-3.5 pr-3.5 pl-3">
