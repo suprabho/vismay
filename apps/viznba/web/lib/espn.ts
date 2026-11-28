@@ -510,8 +510,14 @@ export type StandingRow = {
   diff: number
   ppg: number
   oppg: number
+  /** Total points scored / allowed, and their difference. */
+  pf: number
+  pa: number
+  pointDiff: number
   streak: string
   lastTen: string
+  /** NBA Cup only: 'in' once a team has won its group, 'out' once eliminated. */
+  clinch: 'in' | 'out' | null
 }
 
 export type Standings = {
@@ -519,42 +525,78 @@ export type Standings = {
   conferences: Array<{ name: string; rows: StandingRow[] }>
 }
 
-type EspnStandings = {
-  seasons?: Array<{ year: number; displayName?: string }>
-  season?: number
-  children?: Array<{
-    name: string
-    standings?: {
-      seasonDisplayName?: string
-      entries?: Array<{ team: { id: string; abbreviation?: string }; stats: Array<{ name: string; value?: number; displayValue?: string }> }>
+export type CupStandings = {
+  season: string
+  /** Whether any group game has been played yet this season. */
+  started: boolean
+  conferences: Array<{ name: string; groups: Array<{ name: string; rows: StandingRow[] }> }>
+}
+
+type EspnEntry = {
+  team: { id: string; abbreviation?: string }
+  stats: Array<{ name: string; value?: number; displayValue?: string }>
+}
+
+type EspnGroup = {
+  name: string
+  standings?: { seasonDisplayName?: string; entries?: EspnEntry[] }
+  children?: EspnGroup[]
+}
+
+type EspnStandings = { children?: EspnGroup[] }
+
+function standingRows(entries: EspnEntry[] | undefined): StandingRow[] {
+  const rows = (entries ?? []).map((e): StandingRow => {
+    const s = Object.fromEntries(e.stats.map((x) => [x.name, x]))
+    const num = (k: string) => Number(s[k]?.value ?? s[k]?.displayValue ?? 0) || 0
+    const clincher = s.clincher?.displayValue
+    return {
+      team: teamFromEspn(e.team.id, e.team.abbreviation),
+      wins: num('wins'),
+      losses: num('losses'),
+      pct: s.winPercent?.displayValue ?? '.000',
+      gb: s.gamesBehind?.displayValue ?? '-',
+      seed: num('playoffSeed'),
+      diff: num('differential'),
+      ppg: num('avgPointsFor'),
+      oppg: num('avgPointsAgainst'),
+      pf: num('pointsFor'),
+      pa: num('pointsAgainst'),
+      pointDiff: num('pointDifferential'),
+      streak: s.streak?.displayValue ?? '',
+      lastTen: s['Last Ten Games']?.displayValue ?? '',
+      clinch: clincher === 'e' ? 'out' : clincher ? 'in' : null,
     }
-  }>
+  })
+  return rows.sort(
+    (a, b) => (a.seed || 99) - (b.seed || 99) || b.wins - a.wins || a.losses - b.losses || b.pointDiff - a.pointDiff,
+  )
 }
 
 export async function standings(): Promise<Standings | null> {
   const data = await getJson<EspnStandings>(STANDINGS, 3600)
   if (!data?.children?.length) return null
-  const conferences = data.children.map((c) => {
-    const rows = (c.standings?.entries ?? []).map((e) => {
-      const s = Object.fromEntries(e.stats.map((x) => [x.name, x]))
-      const num = (k: string) => Number(s[k]?.value ?? s[k]?.displayValue ?? 0)
-      return {
-        team: teamFromEspn(e.team.id, e.team.abbreviation),
-        wins: num('wins'),
-        losses: num('losses'),
-        pct: s.winPercent?.displayValue ?? '.000',
-        gb: s.gamesBehind?.displayValue ?? '-',
-        seed: num('playoffSeed'),
-        diff: num('differential'),
-        ppg: num('avgPointsFor'),
-        oppg: num('avgPointsAgainst'),
-        streak: s.streak?.displayValue ?? '',
-        lastTen: s['Last Ten Games']?.displayValue ?? '',
-      }
-    })
-    rows.sort((a, b) => (a.seed || 99) - (b.seed || 99) || b.wins - a.wins)
-    return { name: c.name, rows }
-  })
+  const conferences = data.children.map((c) => ({ name: c.name, rows: standingRows(c.standings?.entries) }))
   const season = data.children[0].standings?.seasonDisplayName ?? ''
   return { season, conferences }
+}
+
+/**
+ * NBA Cup group tables: ESPN's "in season" standings, grouped at level 3
+ * (conference → Group A/B/C). Records and points count Cup group games only.
+ */
+export async function cupStandings(): Promise<CupStandings | null> {
+  const data = await getJson<EspnStandings>(`${STANDINGS}?seasontype=2&type=3&level=3`, 900)
+  const conferences = (data?.children ?? [])
+    .map((c) => ({
+      name: c.name,
+      groups: (c.children ?? [])
+        .map((g) => ({ name: g.name, rows: standingRows(g.standings?.entries) }))
+        .filter((g) => g.rows.length > 0),
+    }))
+    .filter((c) => c.groups.length > 0)
+  if (!conferences.length) return null
+  const rows = conferences.flatMap((c) => c.groups.flatMap((g) => g.rows))
+  const season = data?.children?.[0]?.children?.[0]?.standings?.seasonDisplayName ?? ''
+  return { season, started: rows.some((r) => r.wins + r.losses > 0), conferences }
 }

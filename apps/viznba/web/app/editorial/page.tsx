@@ -6,6 +6,7 @@ import { EditorialGrid, type Story } from '@/components/EditorialGrid'
 import { MarginHero, MarginSpark } from '@/components/MarginChart'
 import { DiffBars, WinsBars } from '@/components/StandingsCharts'
 import { espnNews, standings } from '@/lib/espn'
+import { confKey } from '@/lib/standings'
 import { recentRecaps } from '@/lib/feed'
 import { htmlStories } from '@/lib/htmlStories'
 import { getPrefs } from '@/lib/prefs'
@@ -43,13 +44,13 @@ export default async function EditorialPage() {
   const epics = table
     ? [
         {
-          href: '/editorial/standings#tracker',
+          href: '/for-you/standings#tracker',
           title: 'Season Tracker',
-          dek: `Point differential, all ${all.length} teams · ${table.season}`,
+          dek: `Point differential by conference · ${table.season}`,
           chart: <DiffBars rows={all} highlight={mine} />,
         },
         ...table.conferences.map((c) => ({
-          href: `/editorial/standings#${c.name.split(' ')[0].toLowerCase()}`,
+          href: `/for-you/standings?conf=${confKey(c.name)}`,
           title: c.name.replace(' Conference', ''),
           dek: `${c.rows[0]?.team.name ?? ''} lead · ${c.rows[0]?.wins ?? 0}–${c.rows[0]?.losses ?? 0}`,
           chart: <WinsBars rows={c.rows} />,
@@ -125,10 +126,10 @@ export default async function EditorialPage() {
       id: 'board-standings',
       kind: 'board',
       kicker: 'BOARD',
-      title: `Standings by point differential, ${table.season}`,
+      title: `Standings and point differential, ${table.season}`,
       dek: null,
       byline: null,
-      href: '/editorial/standings',
+      href: '/for-you/standings#tracker',
       external: false,
       thumb: (
         <div className="w-[150px]">

@@ -28,7 +28,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${origin}/`, changeFrequency: 'hourly', priority: 0.8 },
     { url: `${origin}/editorial`, lastModified: stories[0] ? new Date(stories[0].updatedAt) : new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${origin}/editorial/standings`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${origin}/for-you/standings`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${origin}/for-you/cup`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${origin}/calendar`, changeFrequency: 'daily', priority: 0.6 },
     ...htmlStorySitemapEntries(stories),
     ...games,

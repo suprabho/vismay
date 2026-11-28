@@ -4,7 +4,8 @@ import { Plus } from '@phosphor-icons/react/ssr'
 import { TeamBadge } from '@/components/ui'
 import { AutoRefresh } from '@/components/AutoRefresh'
 import { CompactRow, FinalCard, FinalMedium, LiveCard, PreviewCard, UpcomingMedium } from '@/components/ForYouCards'
-import { gameDetail, gamesByLocalDay, type Game } from '@/lib/espn'
+import { StandingsPreview, CupPreview } from '@/components/StandingsPreview'
+import { cupStandings, gameDetail, gamesByLocalDay, standings, type Game } from '@/lib/espn'
 import { getPrefs } from '@/lib/prefs'
 import { teamById } from '@/lib/teams'
 import { addDays, dayKey, dayRange, ET, todayKey, zoneLabel } from '@/lib/time'
@@ -50,7 +51,11 @@ export default async function ForYouPage({ searchParams }: { searchParams: Promi
   const followedIds = new Set(followed.map((t) => t.id))
   const ctx = { tz, today, followed: followedIds }
 
-  const byDay = await gamesByLocalDay(dayRange(addDays(today, -BACK), addDays(today, AHEAD)), tz)
+  const [byDay, table, cup] = await Promise.all([
+    gamesByLocalDay(dayRange(addDays(today, -BACK), addDays(today, AHEAD)), tz),
+    standings(),
+    cupStandings(),
+  ])
   const all = [...byDay.values()].flat()
   const mine = all.filter((g) => scope.has(g.home.team.id) || scope.has(g.away.team.id))
   const live = mine.filter((g) => g.state === 'in')
@@ -153,6 +158,8 @@ export default async function ForYouPage({ searchParams }: { searchParams: Promi
               : 'Pick a few teams and their games will show up here.'}
           </p>
         )}
+        {table && <StandingsPreview table={table} mine={scope} />}
+        {cup?.started && <CupPreview table={cup} mine={scope} />}
         <Link
           href="/calendar?view=week"
           className="flex min-h-12 items-center justify-center rounded-[14px] border border-dashed border-border-strong text-[13px] font-semibold text-soft"
