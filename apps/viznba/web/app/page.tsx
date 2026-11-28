@@ -4,6 +4,7 @@ import { CardActions } from '@/components/CardActions'
 import { MarginHero } from '@/components/MarginChart'
 import { TeamChip } from '@/components/ui'
 import { feed, type FeedItem } from '@/lib/feed'
+import { teamLogo, type Team } from '@/lib/teams'
 import { ago } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +63,48 @@ function Hero({ item }: { item: FeedItem }) {
           style={{ background: `radial-gradient(closest-side, ${b.bg}, transparent)` }}
         />
       )}
+      <HeroCrests teams={item.teams} />
+    </div>
+  )
+}
+
+/** Crest sizes for the image-less hero, keyed by how many teams are shown. */
+const CREST_PX = [0, 152, 120, 92] as const
+
+/**
+ * Large team crests centred in the upper part of a photo-less hero (the
+ * bottom of the hero fades under the headline). Up to three teams; sides
+ * without ESPN art (exhibition / TBD) fall back to a lettered disc.
+ */
+function HeroCrests({ teams }: { teams: Team[] }) {
+  const shown = teams.slice(0, 3)
+  if (!shown.length) return null
+  const px = CREST_PX[shown.length]
+  return (
+    <div className="absolute inset-x-0 top-0 bottom-[18%] flex items-center justify-center gap-6 px-6">
+      {shown.map((t) => {
+        const logo = teamLogo(t, px)
+        return logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- ESPN CDN crest, sized by the combiner
+          <img
+            key={t.id}
+            src={logo}
+            alt={t.name}
+            width={px}
+            height={px}
+            className="min-w-0 flex-none object-contain drop-shadow-[0_12px_28px_rgba(0,0,0,0.45)]"
+            style={{ width: px, height: px }}
+          />
+        ) : (
+          <span
+            key={t.id}
+            className="flex flex-none items-center justify-center rounded-full text-2xl font-extrabold wdth-80"
+            style={{ width: px * 0.8, height: px * 0.8, background: t.bg, color: t.fg }}
+          >
+            {t.abbr}
+          </span>
+        )
+      })}
     </div>
   )
 }
