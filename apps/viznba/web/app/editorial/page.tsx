@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { HTML_STORY_FORMAT_META } from '@vismay/html-stories/formats'
+import { CoverImage } from '@/components/CoverImage'
 import { EditorialGrid, type Story } from '@/components/EditorialGrid'
 import { MarginHero, MarginSpark } from '@/components/MarginChart'
 import { DiffBars, WinsBars } from '@/components/StandingsCharts'
@@ -26,11 +27,6 @@ function seasonLabel(): string {
   const y = Number(today.slice(0, 4))
   const start = Number(today.slice(5, 7)) >= 9 ? y : y - 1
   return `${start}–${String(start + 1).slice(2)}`
-}
-
-function Img({ src }: { src: string }) {
-  // eslint-disable-next-line @next/next/no-img-element -- remote ESPN images of unknown host
-  return <img src={src} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />
 }
 
 export default async function EditorialPage() {
@@ -77,15 +73,19 @@ export default async function EditorialPage() {
       href: `/s/${h.slug}`,
       external: false,
       document: true,
-      // Its og:image, else a wash of the story's own palette.
-      thumb: h.ogImageUrl ? (
-        <Img src={h.ogImageUrl} />
-      ) : (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(135deg, ${t?.surface ?? t?.background ?? 'var(--color-surface-raised)'} 0%, ${t?.background ?? 'var(--color-well)'} 60%, color-mix(in srgb, ${t?.accent ?? 'var(--color-accent)'} 30%, transparent) 100%)`,
-          }}
+      // Its cover, else its generated share card (hosted by us), else a wash
+      // of the story's own palette: a hotlinked cover can 404 or be rate-limited.
+      thumb: (
+        <CoverImage
+          srcs={[h.ogImageUrl, h.shareImageUrl]}
+          fallback={
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(135deg, ${t?.surface ?? t?.background ?? 'var(--color-surface-raised)'} 0%, ${t?.background ?? 'var(--color-well)'} 60%, color-mix(in srgb, ${t?.accent ?? 'var(--color-accent)'} 30%, transparent) 100%)`,
+              }}
+            />
+          }
         />
       ),
     })
@@ -147,7 +147,7 @@ export default async function EditorialPage() {
       byline: `ESPN · ${dayMonth(dayKey(n.published, tz))}`,
       href: n.url ?? '#',
       external: true,
-      thumb: n.image ? <Img src={n.image} /> : null,
+      thumb: n.image ? <CoverImage srcs={[n.image]} /> : null,
     })
   }
   // Our own stories lead, then recaps; features lead when there's neither.
