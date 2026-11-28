@@ -15,7 +15,9 @@ All sports data comes from ESPN's free public site API (no key); see
 | `/` Feed | Full-screen swipe cards: game recaps with a score-margin hero and the decisive run (`lib/margin.ts`), plus league headlines | `scoreboard`, `summary`, `news` |
 | `/for-you` | Followed teams: live card with margin sparkline, preview (win probability, last five, back-to-back, last meeting), finals with linescore and stat bars | `scoreboard` × 11 days, `summary` |
 | `/calendar?view=day\|week\|month&date=` | Day list with NOW rule and "My teams" switch; week block chart and team summaries; month grid with per-team dots | `scoreboard` per day |
-| `/editorial`, `/editorial/standings` | Epics (Season Tracker, conference races), recaps, boards and ESPN features with filter chips | `standings`, `summary`, `news` |
+| `/for-you/standings?conf=west\|east` | Regular-season table, one tab per conference, with point differential per game; the For you tab shows a preview card (`/editorial/standings` redirects here) | `standings` |
+| `/for-you/cup` | NBA Cup group tables (GP, W, L, Pts+, Pts-, Diff), with its own For you preview card once group play starts | `standings?seasontype=2&type=3&level=3` |
+| `/editorial` | Epics (Season Tracker, conference races), recaps, boards and ESPN features with filter chips | `standings`, `summary`, `news` |
 | `/game/[id]` | Score, margin chart, linescore, team stats, leaders, recap, plays; auto-refreshes while live | `summary` |
 | `/teams` | Follow picker | — |
 | `/api/remind/[id]` | "Remind me": an `.ics` event with a 30-minute alarm | `summary` |
