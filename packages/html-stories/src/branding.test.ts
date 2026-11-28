@@ -96,17 +96,18 @@ assert.ok(f1Themed.includes('--bg:#FAF7F2') && f1Themed.includes('--mark:#C2410C
 assert.ok(f1Themed.indexOf('<vizmaya-aura') < f1Themed.indexOf('<vizf1-header>'))
 console.log('branding (vizf1): ok')
 
-// VizNBA chrome: the ball mark in the brand orange, the app's links, no Rive.
+// VizNBA chrome: the app's ball-through-the-hoop mark, the app's links, no Rive.
 const nbaOut = brandHtmlStory(doc, { siteUrl: 'https://nba.vizmaya.fyi/', app: 'viznba' })
 assert.ok(nbaOut.includes('<BODY class="x"><style>:root{--vizmaya-chrome-h:61px}@media (max-width:480px){:root{--vizmaya-chrome-h:53px}}</style><viznba-header>'))
 assert.ok(/<\/viznba-footer><\/BODY><\/html>$/.test(nbaOut))
 assert.ok(!nbaOut.includes('vizmaya-header') && !nbaOut.includes('vizf1-header') && !nbaOut.includes('rive'))
 assert.ok(nbaOut.includes('href="https://nba.vizmaya.fyi/calendar"'))
 assert.ok(nbaOut.includes('href="https://nba.vizmaya.fyi/editorial"'))
-assert.ok(nbaOut.includes('--mark:#ff8a3d') && nbaOut.includes('--ink:#0b0d12'))
+assert.ok(nbaOut.includes('id="vn-logo-ball"') && nbaOut.includes('url(#vn-logo-net)') && nbaOut.includes('color:var(--fg)'))
+assert.ok(nbaOut.includes('--bg:#0b0d12') && !nbaOut.includes('--mark:'))
 assert.ok(!nbaOut.includes('nba.vizmaya.fyi//'))
 const nbaThemed = brandHtmlStory(fsThemedDoc, { siteUrl: 'https://nba.vizmaya.fyi', app: 'viznba', aura: 'some-scene' })
-assert.ok(nbaThemed.includes('--bg:#FAF7F2') && nbaThemed.includes('--mark:#C2410C') && nbaThemed.includes('--ink:#FAF7F2'))
+assert.ok(nbaThemed.includes('--bg:#FAF7F2') && nbaThemed.includes('id="vn-logo-ball"'))
 assert.ok(nbaThemed.indexOf('<vizmaya-aura') < nbaThemed.indexOf('<viznba-header>'))
 console.log('branding (viznba): ok')
 
