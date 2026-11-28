@@ -48,7 +48,9 @@ export function MarginHero({
   const winner = game[winnerSide].team
   const loser = game[loserSide].team
   const total = gameLength(detail.periods)
-  const TOP = labels ? 72 : 16
+  // Labels sit in their own header row above the plot (not overlaid on it),
+  // so the SVG only needs a little headroom for the curve.
+  const TOP = 12
   const BOTTOM = 14
   const { coords } = marginPath(margin, {
     width: innerW,
@@ -75,7 +77,28 @@ export function MarginHero({
   })
 
   return (
-    <div className="relative h-full w-full">
+    <div className="flex h-full w-full flex-col">
+      {labels && (
+        <div className="flex shrink-0 items-start justify-between gap-3 px-4 pt-4">
+          <div className="min-w-0 font-mono text-[10px] tracking-[0.04em] text-muted">
+            {winner.abbr} − {loser.abbr} · SCORE MARGIN
+          </div>
+          {run && (
+            <div className="shrink-0 text-right">
+              <div
+                className="text-[46px] leading-[0.9] font-extrabold tracking-[-0.02em] wdth-75 tabular-nums"
+                style={{ color: runColor }}
+              >
+                {run.for}–{run.against}
+              </div>
+              <div className="mt-1 font-mono text-[10px] text-text">
+                {game[run.side].team.abbr} {runLabel(run)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="relative min-h-0 flex-1">
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 size-full" aria-hidden="true">
         <defs>
           <clipPath id={`${clipId}-up`}>
@@ -104,34 +127,15 @@ export function MarginHero({
           />
         )}
       </svg>
-      {labels && (
-        <>
-          <div className="absolute top-4 left-4 font-mono text-[10px] tracking-[0.04em] text-muted">
-            {winner.abbr} − {loser.abbr} · SCORE MARGIN
-          </div>
-          {run && (
-            <div className="absolute top-[34px] right-[18px] text-right">
-              <div
-                className="text-[46px] leading-[0.9] font-extrabold tracking-[-0.02em] wdth-75 tabular-nums"
-                style={{ color: runColor }}
-              >
-                {run.for}–{run.against}
-              </div>
-              <div className="mt-1 font-mono text-[10px] text-text">
-                {game[run.side].team.abbr} {runLabel(run)}
-              </div>
-            </div>
-          )}
-          {lowIdx > 0 && low <= -5 && (
-            <div
-              className="absolute -translate-x-1/2 font-mono text-[10px] text-text"
-              style={{ left: `${(shifted[lowIdx][0] / W) * 100}%`, top: `calc(${(shifted[lowIdx][1] / H) * 100}% + 8px)` }}
-            >
-              −{Math.abs(low)}
-            </div>
-          )}
-        </>
+      {labels && lowIdx > 0 && low <= -5 && (
+        <div
+          className="absolute -translate-x-1/2 font-mono text-[10px] text-text"
+          style={{ left: `${(shifted[lowIdx][0] / W) * 100}%`, top: `calc(${(shifted[lowIdx][1] / H) * 100}% + 8px)` }}
+        >
+          −{Math.abs(low)}
+        </div>
       )}
+      </div>
     </div>
   )
 }
